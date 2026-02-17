@@ -624,7 +624,7 @@ private fun DeleteCacheConfirmationDialog(
     modifier: Modifier = Modifier,
 ) {
     val mediaTypeName = when (bookType) {
-        BookType.EBOOK -> stringResource(StringRes.books_media_ebook)
+        BookType.EBOOK, BookType.IMPORTED -> stringResource(StringRes.books_media_ebook)
         BookType.AUDIOBOOK -> stringResource(StringRes.books_media_audio)
         BookType.READALOUD -> stringResource(StringRes.books_media_readaloud)
     }

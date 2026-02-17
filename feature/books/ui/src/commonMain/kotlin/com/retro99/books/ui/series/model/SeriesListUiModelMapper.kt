@@ -4,7 +4,7 @@ import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.books.domain.model.SeriesDomainModel
 
 fun SeriesDomainModel.toListUiModel(
-    books: List<BookDomainModel>,
+    books: List<BookDomainModel.StorytellerBook>,
 ): SeriesListUiModel {
     // Find books that belong to this series
     val seriesBooks = books.filter { book ->

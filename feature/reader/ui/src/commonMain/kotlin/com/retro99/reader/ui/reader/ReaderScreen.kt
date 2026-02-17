@@ -112,7 +112,7 @@ fun ReaderScreen(
 }
 
 @Composable
-private fun ReaderScreenContent(
+internal fun ReaderScreenContent(
     bookUuid: String,
     viewState: ReaderViewState,
     intentDispatcher: IntentDispatcher<ReaderIntent>,

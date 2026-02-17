@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface BooksRepository {
 
-    fun getBooks(): Flow<AppResult<List<BookDomainModel>>>
+    fun getBooks(): Flow<AppResult<List<BookDomainModel.StorytellerBook>>>
 
-    fun getBook(uuid: String): Flow<AppResult<BookDomainModel>>
+    fun getBook(uuid: String): Flow<AppResult<BookDomainModel.StorytellerBook>>
 }
 

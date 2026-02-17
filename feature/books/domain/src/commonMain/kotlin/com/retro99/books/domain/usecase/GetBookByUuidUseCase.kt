@@ -11,7 +11,7 @@ import org.koin.core.annotation.Provided
 class GetBookByUuidUseCase(
     @Provided private val booksRepository: BooksRepository,
 ) {
-    operator fun invoke(uuid: String): Flow<AppResult<BookDomainModel>> {
+    operator fun invoke(uuid: String): Flow<AppResult<BookDomainModel.StorytellerBook>> {
         return booksRepository.getBook(uuid)
     }
 }

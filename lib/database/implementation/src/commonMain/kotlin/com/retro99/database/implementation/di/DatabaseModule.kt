@@ -6,6 +6,7 @@ import com.retro99.database.api.books.AuthorsDatabase
 import com.retro99.database.api.books.BooksDatabase
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.favorites.FavoritesDatabase
+import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.statistics.ReadingSessionDatabase
 import com.retro99.database.implementation.AppDatabase
 import com.retro99.database.implementation.dao.books.AuthorsDatabaseImpl
@@ -14,6 +15,8 @@ import com.retro99.database.implementation.dao.books.BooksDatabaseImpl
 import com.retro99.database.implementation.dao.books.BooksSqlDelightDao
 import com.retro99.database.implementation.dao.favorites.FavoritesDatabaseImpl
 import com.retro99.database.implementation.dao.favorites.FavoritesSqlDelightDao
+import com.retro99.database.implementation.dao.importedbooks.ImportedBooksDatabaseImpl
+import com.retro99.database.implementation.dao.importedbooks.ImportedBooksSqlDelightDao
 import com.retro99.database.implementation.dao.statistics.ReadingSessionDatabaseImpl
 import com.retro99.database.implementation.dao.statistics.ReadingSessionSqlDelightDao
 import org.koin.core.annotation.ComponentScan
@@ -82,6 +85,20 @@ class DatabaseModule {
         dao: ReadingSessionSqlDelightDao,
     ): ReadingSessionDatabase {
         return ReadingSessionDatabaseImpl(dao)
+    }
+
+    @Single
+    internal fun provideImportedBooksSqlDelightDao(
+        database: AppDatabase,
+    ): ImportedBooksSqlDelightDao {
+        return ImportedBooksSqlDelightDao(database)
+    }
+
+    @Single
+    internal fun provideImportedBooksDatabase(
+        dao: ImportedBooksSqlDelightDao,
+    ): ImportedBooksDatabase {
+        return ImportedBooksDatabaseImpl(dao)
     }
 
     @Single

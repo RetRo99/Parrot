@@ -150,6 +150,7 @@ class BookDetailViewModel(
             BookType.EBOOK -> currentState.ebookDownloadState
             BookType.AUDIOBOOK -> currentState.audiobookDownloadState
             BookType.READALOUD -> currentState.readaloudDownloadState
+            BookType.IMPORTED -> DownloadState.Cached // Imported books are always local
         }
 
         if (downloadState is DownloadState.Cached) {
@@ -257,10 +258,15 @@ class BookDetailViewModel(
 
     private fun toggleDownload(bookType: BookType) {
         val book = viewState.value.book ?: return
+
+        // Imported books don't need download management
+        if (bookType == BookType.IMPORTED) return
+
         val currentState = when (bookType) {
             BookType.EBOOK -> viewState.value.ebookDownloadState
             BookType.AUDIOBOOK -> viewState.value.audiobookDownloadState
             BookType.READALOUD -> viewState.value.readaloudDownloadState
+            BookType.IMPORTED -> return // Already handled above
         }
 
         // If currently downloading, cancel it
@@ -279,6 +285,7 @@ class BookDetailViewModel(
             BookType.EBOOK -> book.ebookFilepath
             BookType.AUDIOBOOK -> book.audiobookFilepath
             BookType.READALOUD -> book.readaloudFilepath
+            BookType.IMPORTED -> return // Imported books are already local
         } ?: return
 
         analytics.logEvent(

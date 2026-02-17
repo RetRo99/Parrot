@@ -28,8 +28,8 @@ data class BookLocalModel(
     override val readaloud: ReadaloudLocalModel?,
 ) : BookEntity
 
-fun BookLocalModel.toDomain(baseUrl: String?): BookDomainModel {
-    return BookDomainModel(
+fun BookLocalModel.toDomain(baseUrl: String?): BookDomainModel.StorytellerBook {
+    return BookDomainModel.StorytellerBook(
         uuid = uuid,
         title = title,
         id = id,
@@ -57,7 +57,7 @@ fun BookLocalModel.toDomain(baseUrl: String?): BookDomainModel {
     )
 }
 
-fun BookDomainModel.toLocal(): BookLocalModel {
+fun BookDomainModel.StorytellerBook.toLocal(): BookLocalModel {
     return BookLocalModel(
         uuid = uuid,
         id = id,

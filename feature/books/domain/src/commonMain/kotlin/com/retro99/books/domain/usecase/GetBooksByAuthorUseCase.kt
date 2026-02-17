@@ -13,7 +13,7 @@ import org.koin.core.annotation.Provided
 class GetBooksByAuthorUseCase(
     @Provided private val booksRepository: BooksRepository,
 ) {
-    operator fun invoke(authorUuid: String): Flow<AppResult<List<BookDomainModel>>> {
+    operator fun invoke(authorUuid: String): Flow<AppResult<List<BookDomainModel.StorytellerBook>>> {
         return booksRepository.getBooks().map { result ->
             result.map { books ->
                 books.filter { book ->

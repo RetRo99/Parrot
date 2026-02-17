@@ -3,7 +3,7 @@ package com.retro99.books.ui.model
 import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.books.domain.model.SeriesDomainModel
 
-fun BookDomainModel.toUiModel(): BookUiModel = BookUiModel(
+fun BookDomainModel.StorytellerBook.toUiModel(): BookUiModel = BookUiModel(
     uuid = uuid,
     title = title,
     subtitle = subtitle,

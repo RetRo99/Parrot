@@ -42,6 +42,7 @@ ksp = "2.3.5"
 sqlite = "2.6.2"
 sqldelight = "2.0.2"
 multiplatformMarkdown = "0.39.2"
+filekit = "0.8.8"
 
 
 [libraries]
@@ -146,6 +147,10 @@ sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sq
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+
+# FileKit (cross-platform file picker)
+filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
+filekit-compose = { module = "io.github.vinceglb:filekit-compose", version.ref = "filekit" }
 
 [bundles]
 ktorClientBundle = [

@@ -21,7 +21,7 @@ internal class BooksDataRepository(
     @Provided private val baseUrlProvider: BaseUrlProvider,
 ) : BooksRepository, BaseRepository {
 
-    override fun getBooks(): Flow<AppResult<List<BookDomainModel>>> {
+    override fun getBooks(): Flow<AppResult<List<BookDomainModel.StorytellerBook>>> {
         val baseUrl = baseUrlProvider.getBaseUrl()
         return cachedRemoteFlow(
             cacheSource = {
@@ -41,7 +41,7 @@ internal class BooksDataRepository(
         )
     }
 
-    override fun getBook(uuid: String): Flow<AppResult<BookDomainModel>> {
+    override fun getBook(uuid: String): Flow<AppResult<BookDomainModel.StorytellerBook>> {
         val baseUrl = baseUrlProvider.getBaseUrl()
         return cachedRemoteFlow(
             cacheSource = {

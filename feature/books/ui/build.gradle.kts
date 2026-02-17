@@ -35,11 +35,13 @@ kotlin {
             implementation(libs.navigation3.ui)
             implementation(libs.navigation3.viewmodel)
             implementation(libs.markdown)
+            implementation(libs.filekit.compose)
             implementation(projects.base)
             implementation(projects.baseUi)
             implementation(projects.translations)
             implementation(projects.feature.books.domain)
             implementation(projects.feature.reader.domain)
+            implementation(projects.feature.reader.data)
             implementation(projects.lib.analytics.api)
         }
     }

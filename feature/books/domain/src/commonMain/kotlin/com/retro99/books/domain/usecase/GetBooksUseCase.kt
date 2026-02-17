@@ -11,7 +11,7 @@ import org.koin.core.annotation.Provided
 class GetBooksUseCase(
     @Provided private val booksRepository: BooksRepository,
 ) {
-    operator fun invoke(): Flow<AppResult<List<BookDomainModel>>> {
+    operator fun invoke(): Flow<AppResult<List<BookDomainModel.StorytellerBook>>> {
         return booksRepository.getBooks()
     }
 }

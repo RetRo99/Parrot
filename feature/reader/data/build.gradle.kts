@@ -25,6 +25,7 @@ kotlin {
             api(libs.koin.annotations)
             implementation(libs.coroutines)
             implementation(libs.serialization)
+            api(libs.datetime)
             implementation(projects.base)
             implementation(projects.lib.network.api)
             implementation(projects.lib.preferences.api)
@@ -40,7 +41,6 @@ kotlin {
             implementation(libs.readium.navigator)
             implementation(libs.androidx.core.ktx)
             implementation(libs.koin.android)
-            api(libs.datetime)
         }
     }
 }

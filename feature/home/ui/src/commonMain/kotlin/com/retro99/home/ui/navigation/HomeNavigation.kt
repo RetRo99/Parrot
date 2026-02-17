@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
+import com.retro99.books.domain.model.BookType
 import com.retro99.books.ui.detail.BookDetailScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
@@ -104,6 +105,13 @@ fun HomeNavigation(
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(
                                         HomeDestination.BookDetail(book.uuid)
+                                    )
+                                )
+                            },
+                            onNavigateToImportedBook = { bookUuid ->
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(
+                                        HomeDestination.Reader(bookUuid, BookType.IMPORTED)
                                     )
                                 )
                             },

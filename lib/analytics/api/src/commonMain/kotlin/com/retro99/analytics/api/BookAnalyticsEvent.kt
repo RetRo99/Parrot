@@ -101,6 +101,18 @@ sealed interface BookAnalyticsEvent : AnalyticsEvent {
             "source" to source,
         )
     }
+
+    /**
+     * Tracks when user imports a local EPUB file.
+     */
+    data class BookImported(
+        val fileName: String,
+    ) : BookAnalyticsEvent {
+        override val name: String = "book_imported"
+        override val parameters: Map<String, Any> = mapOf(
+            "file_name" to fileName,
+        )
+    }
 }
 
 /**
