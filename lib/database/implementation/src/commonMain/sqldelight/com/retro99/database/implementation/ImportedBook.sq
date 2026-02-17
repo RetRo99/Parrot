@@ -1,0 +1,45 @@
+-- ============================================
+-- IMPORTED BOOKS TABLE (locally imported EPUBs)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS imported_books (
+    uuid TEXT NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    author TEXT,
+    description TEXT,
+    cover_path TEXT,
+    file_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    imported_at TEXT NOT NULL,
+    last_opened_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_imported_books_title ON imported_books(title);
+CREATE INDEX IF NOT EXISTS idx_imported_books_imported_at ON imported_books(imported_at);
+
+-- Queries for imported books
+upsertImportedBook:
+INSERT OR REPLACE INTO imported_books(uuid, title, author, description, cover_path, file_path, file_size, imported_at, last_opened_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getAllImportedBooks:
+SELECT * FROM imported_books ORDER BY imported_at DESC;
+
+getImportedBookByUuid:
+SELECT * FROM imported_books WHERE uuid = ?;
+
+deleteImportedBook:
+DELETE FROM imported_books WHERE uuid = ?;
+
+deleteAllImportedBooks:
+DELETE FROM imported_books;
+
+getImportedBooksCount:
+SELECT COUNT(*) FROM imported_books;
+
+updateLastOpenedAt:
+UPDATE imported_books SET last_opened_at = ? WHERE uuid = ?;
+
+searchImportedBooksByTitle:
+SELECT * FROM imported_books WHERE title LIKE ? ORDER BY title ASC;
+
