@@ -3,7 +3,6 @@ package com.retro99.reader.ui.playback
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import co.touchlab.kermit.Logger
 import com.retro99.analytics.api.Analytics
 import com.retro99.reader.ui.di.ReaderScope
 import com.retro99.reader.ui.model.PlaybackState
@@ -41,7 +40,7 @@ import org.koin.core.annotation.Scoped
  * Consumers should handle these transitions gracefully. StateFlow's conflation means
  * duplicate values won't emit, but rapid changes will.
  *
- * @param player The ExoPlayer instance to track
+ * @param mediaPlaybackController Controller to get the ExoPlayer from the service
  * @param analytics Analytics for logging errors
  * @param audioFocusManager Manager for audio focus (to abandon focus on playback end/error)
  * @param foregroundServiceController Controller for foreground service (to stop on playback end/error)
@@ -50,12 +49,15 @@ import org.koin.core.annotation.Scoped
 @Scope(ReaderScope::class)
 @Scoped
 class PlaybackStateTracker(
-    private val player: ExoPlayer,
+    private val mediaPlaybackController: MediaPlaybackController,
     private val analytics: Analytics,
     private val audioFocusManager: AudioFocusManager,
     private val foregroundServiceController: ForegroundServiceController,
     private val locatorTracker: LocatorTracker,
 ) {
+    /** Gets the ExoPlayer from the service. Throws if service not started. */
+    private val player: ExoPlayer
+        get() = mediaPlaybackController.player ?: error("Service not started")
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
@@ -147,8 +149,18 @@ class PlaybackStateTracker(
         }
     }
 
-    init {
-        player.addListener(playerListener)
+    /** Whether the listener has been registered */
+    private var listenerRegistered = false
+
+    /**
+     * Registers the player listener if not already registered.
+     * Called lazily when playback starts and player is available.
+     */
+    fun ensureListenerRegistered() {
+        if (!listenerRegistered) {
+            player.addListener(playerListener)
+            listenerRegistered = true
+        }
     }
 
     /**
@@ -181,6 +193,15 @@ class PlaybackStateTracker(
     }
 
     /**
+     * Sets the player ready state.
+     * Called when audio content is loaded and ready (clips parsed, duration set),
+     * allowing the UI to show controls even before ExoPlayer is actually prepared.
+     */
+    fun setPlayerReady(ready: Boolean) {
+        _isPlayerReady.value = ready
+    }
+
+    /**
      * Emits a chapter completion event.
      * Used when a chapter has no audio content and should be skipped.
      */
@@ -202,7 +223,10 @@ class PlaybackStateTracker(
      * Removes the player listener. Call when releasing the player.
      */
     fun release() {
-        player.removeListener(playerListener)
+        if (listenerRegistered) {
+            mediaPlaybackController.player?.removeListener(playerListener)
+            listenerRegistered = false
+        }
         _playbackState.value = PlaybackState.STOPPED
         _isPlayerReady.value = false
     }

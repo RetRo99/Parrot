@@ -1,125 +1,99 @@
 package com.retro99.reader.ui.playback
 
+import android.app.PendingIntent
+import androidx.media3.common.MediaMetadata
 import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.session.MediaSession
+import androidx.media3.session.MediaLibraryService.MediaLibrarySession
+import com.retro99.books.domain.model.BookType
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import org.koin.core.annotation.Single
-
-/**
- * Holds player and session together as an atomic unit.
- * This ensures both are always read/written together, preventing race conditions.
- */
-data class PlayerSessionPair(
-    val player: ExoPlayer,
-    val session: MediaSession,
-)
 
 /**
  * Koin-managed controller for media playback state.
  *
  * This class acts as a bridge between [MediaPlaybackService] (created by Android)
- * and other components like [MediaSessionManager] and [MediaOverlayPlayer].
+ * and other components like [MediaOverlayPlayer].
  *
- * It replaces the static singleton pattern previously used in [MediaPlaybackService]'s
- * companion object, enabling proper dependency injection and testability.
+ * With the consolidated architecture, this controller:
+ * - Provides access to the service's ExoPlayer (shared across all playback)
+ * - Forwards metadata updates to the service's MediaLibrarySession
+ * - Manages book info for notification deep links
  *
  * ## Thread Safety
  *
  * All public methods use synchronized blocks to ensure that compound operations
- * (read + write + side effect) are atomic. This prevents race conditions where
- * registerPlayer() and onServiceCreated() could both call addSession().
- *
- * Note: We use synchronized instead of @MainThread because onServiceCreated() is
- * called by the Android system and we cannot guarantee the thread. The synchronized
- * blocks provide actual runtime thread safety rather than lint-only annotations.
+ * (read + write + side effect) are atomic.
  */
 @Single
 class MediaPlaybackController {
 
     private val lock = Any()
 
-    // Guarded by lock
-    private var _playerSession: PlayerSessionPair? = null
+    // Flow to signal when the service is ready
+    private val _serviceReady = MutableStateFlow(false)
 
-    // Guarded by lock
+    /**
+     * Flow that emits true when the service is running and player is available.
+     */
+    val serviceReady: StateFlow<Boolean> = _serviceReady.asStateFlow()
+
+    // Service instance - guarded by lock
     private var _serviceInstance: MediaPlaybackService? = null
 
-    // Track which sessions have been added to the service to prevent duplicates
-    // Guarded by lock
-    private var sessionAddedToService: MediaSession? = null
+    // Player owned by service - guarded by lock
+    private var _player: ExoPlayer? = null
 
-    val currentPlayer: ExoPlayer?
-        get() = synchronized(lock) { _playerSession?.player }
+    // Session owned by service - guarded by lock
+    private var _session: MediaLibrarySession? = null
 
-    val currentSession: MediaSession?
-        get() = synchronized(lock) { _playerSession?.session }
+    // Metadata state - guarded by lock
+    private var _bookTitle: String = "Reading Aloud"
+    private var _chapterTitle: String? = null
+    private var _coverArtwork: ByteArray? = null
 
-    /**
-     * Returns true if a player/session pair is currently registered.
-     * Use this to check before registering a new session.
-     */
-    fun hasActiveSession(): Boolean {
-        return synchronized(lock) { _playerSession != null }
-    }
+    // Book identification for deep link navigation
+    private var _serverId: String? = null
+    private var _bookUuid: String? = null
+    private var _bookType: BookType? = null
 
     /**
-     * Registers the ExoPlayer and MediaSession with the controller.
-     * Called by MediaSessionManager when it creates the session.
-     *
-     * If the service is already running, the session will be added to it immediately.
-     *
-     * IMPORTANT: If a previous player/session pair exists, this method will release
-     * the old session before registering the new one. This prevents zombie notifications
-     * when opening a new book while another is playing.
-     *
-     * @param player The ExoPlayer instance
-     * @param session The MediaSession to register
+     * Returns the ExoPlayer owned by the service.
+     * Returns null if the service hasn't been created yet.
      */
-    fun registerPlayer(player: ExoPlayer, session: MediaSession) {
-        synchronized(lock) {
-            // Release previous session if it exists to prevent zombie notifications
-            val previousSession = _playerSession?.session
-            if (previousSession != null && previousSession != session) {
-                // Remove from service first
-                _serviceInstance?.removeSession(previousSession)
-                // Release the old session
-                previousSession.release()
-            }
-
-            _playerSession = PlayerSessionPair(player, session)
-            // Add the session to the service if it's already running and not already added
-            val service = _serviceInstance
-            if (service != null && sessionAddedToService != session) {
-                service.addSession(session)
-                sessionAddedToService = session
-            }
-        }
-    }
+    val player: ExoPlayer?
+        get() = synchronized(lock) { _player }
 
     /**
-     * Unregisters the player and session from the controller.
-     * Called when playback is stopped or the player is released.
+     * Returns the MediaLibrarySession owned by the service.
      */
-    fun unregisterPlayer() {
-        synchronized(lock) {
-            _playerSession = null
-            sessionAddedToService = null
-        }
+    val session: MediaLibrarySession?
+        get() = synchronized(lock) { _session }
+
+    /**
+     * Returns true if the service is running and player is available.
+     */
+    fun isServiceRunning(): Boolean {
+        return synchronized(lock) { _serviceInstance != null && _player != null }
     }
 
     /**
      * Called by [MediaPlaybackService] when it's created.
-     * If a session was registered before the service started, it will be added now.
+     * The service passes its player and session for other components to use.
      */
-    fun onServiceCreated(service: MediaPlaybackService) {
+    fun onServiceCreated(
+        service: MediaPlaybackService,
+        player: ExoPlayer,
+        session: MediaLibrarySession,
+    ) {
         synchronized(lock) {
             _serviceInstance = service
-            // If a session was registered before the service started, add it now
-            val session = _playerSession?.session
-            if (session != null && sessionAddedToService != session) {
-                service.addSession(session)
-                sessionAddedToService = session
-            }
+            _player = player
+            _session = session
         }
+        _serviceReady.value = true
     }
 
     /**
@@ -128,7 +102,94 @@ class MediaPlaybackController {
     fun onServiceDestroyed() {
         synchronized(lock) {
             _serviceInstance = null
-            sessionAddedToService = null
+            _player = null
+            _session = null
+        }
+        _serviceReady.value = false
+    }
+
+    /**
+     * Suspends until the service is ready and player is available.
+     * Use this after calling startService() to wait for the async service start to complete.
+     */
+    suspend fun awaitServiceReady() {
+        _serviceReady.first { it }
+    }
+
+    /**
+     * Sets the book identification for deep link navigation.
+     *
+     * This information is used to create a deep link URI when the notification is tapped,
+     * allowing the app to navigate directly to the reader screen for this book.
+     *
+     * @param serverId The ID of the server the book belongs to
+     * @param bookUuid The unique identifier of the book
+     * @param bookType The type of book (EBOOK, AUDIOBOOK, or READALOUD)
+     */
+    fun setBookInfo(serverId: String, bookUuid: String, bookType: BookType) {
+        synchronized(lock) {
+            _serverId = serverId
+            _bookUuid = bookUuid
+            _bookType = bookType
+            // Update the session activity if the session is already initialized
+            _serviceInstance?.updateSessionActivity(serverId, bookUuid, bookType)
+        }
+    }
+
+    /**
+     * Updates the stored metadata for notifications and lockscreen.
+     *
+     * @param bookTitle The title of the book
+     * @param chapterTitle Optional chapter title
+     * @param coverArtwork Optional cover image as PNG byte array. Pass null to keep existing.
+     */
+    fun updateMetadata(
+        bookTitle: String,
+        chapterTitle: String? = null,
+        coverArtwork: ByteArray? = null,
+    ) {
+        synchronized(lock) {
+            _bookTitle = bookTitle
+            _chapterTitle = chapterTitle
+            if (coverArtwork != null) {
+                _coverArtwork = coverArtwork
+            }
+        }
+    }
+
+    /**
+     * Builds the current MediaMetadata based on stored book/chapter titles and cover.
+     * Use this when creating a new MediaItem to ensure proper notification display.
+     */
+    fun buildCurrentMetadata(): MediaMetadata {
+        synchronized(lock) {
+            return MediaMetadata.Builder()
+                .setTitle(_chapterTitle ?: _bookTitle)
+                .setArtist(if (_chapterTitle != null) _bookTitle else "Parrot")
+                .setDisplayTitle(_chapterTitle ?: _bookTitle)
+                .apply {
+                    _coverArtwork?.let { artwork ->
+                        setArtworkData(artwork, MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                    }
+                }
+                .build()
+        }
+    }
+
+    /**
+     * Gets the current book info for session activity creation.
+     * Returns null if book info hasn't been set.
+     */
+    internal fun getBookInfo(): Triple<String, String, BookType>? {
+        return synchronized(lock) {
+            val server = _serverId
+            val uuid = _bookUuid
+            val type = _bookType
+            if (server != null && uuid != null && type != null) {
+                Triple(server, uuid, type)
+            } else {
+                null
+            }
         }
     }
 }

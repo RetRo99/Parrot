@@ -40,15 +40,23 @@
         </activity>
 
         <!-- Media playback foreground service for audio -->
-        <!-- exported=false is safe: MediaSessionService discovery works via MediaSession, not binding -->
+        <!-- exported=true required for Android Auto MediaBrowser connections -->
         <service
             android:name="com.retro99.reader.ui.playback.MediaPlaybackService"
-            android:exported="false"
+            android:exported="true"
             android:foregroundServiceType="mediaPlayback">
             <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService" />
+                <!-- Media3 MediaLibraryService action (primary) -->
+                <action android:name="androidx.media3.session.MediaLibraryService"/>
+                <!-- Legacy MediaBrowserService for Android Auto compatibility -->
+                <action android:name="android.media.browse.MediaBrowserService"/>
             </intent-filter>
         </service>
+
+        <!-- Android Auto media app declaration -->
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc"/>
 
         <!-- Download foreground service for ebooks -->
         <service

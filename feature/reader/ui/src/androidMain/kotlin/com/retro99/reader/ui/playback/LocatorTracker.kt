@@ -1,5 +1,8 @@
 package com.retro99.reader.ui.playback
 
+import android.util.Log
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.retro99.reader.ui.di.InitialAudioPosition
 import com.retro99.reader.ui.di.ReaderScope
@@ -27,6 +30,8 @@ import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.mediatype.MediaType
 
+private const val TAG = "LocatorTracker"
+
 /** Interval in milliseconds for position updates during playback */
 private const val POSITION_UPDATE_INTERVAL_MS = 100L
 
@@ -41,16 +46,35 @@ private const val SECONDS_TO_MS = 1000.0
  * - Finding the current clip based on position
  * - Emitting locators for text highlighting
  *
- * @param player The ExoPlayer instance to track position from
+ * @param mediaPlaybackController Controller to get the ExoPlayer from the service
  * @param initialAudioPosition Initial audio position from saved reading progress
  */
+@OptIn(UnstableApi::class)
 @Scope(ReaderScope::class)
 @Scoped
 class LocatorTracker(
-    private val player: ExoPlayer,
+    private val mediaPlaybackController: MediaPlaybackController,
     private val initialAudioPosition: InitialAudioPosition,
 ) {
+    /** Gets the ExoPlayer from the service. Returns null if service not started. */
+    private val player: ExoPlayer?
+        get() = mediaPlaybackController.player
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    /**
+     * Scheduler for precise clip change detection using ExoPlayer's message system.
+     *
+     * This complements the polling approach by firing callbacks at exact clip boundaries.
+     * Polling is still needed for position updates (seek bar), but clip highlighting
+     * uses message scheduling for precision.
+     */
+    @OptIn(UnstableApi::class)
+    private val clipMessageScheduler = ClipMessageScheduler { clip ->
+        onClipMessageReceived(clip)
+    }
+
+    /** Current track index in ExoPlayer's playlist (for message scheduling) */
+    private var currentTrackIndex: Int = 0
 
     /**
      * Current position in milliseconds (raw ExoPlayer position).
@@ -82,10 +106,19 @@ class LocatorTracker(
         (rawPosition - offset).coerceAtLeast(0L)
     }.stateIn(scope, SharingStarted.Eagerly, 0L)
 
-    init {
-        // Seek ExoPlayer to initial position if provided
-        initialAudioPosition.positionMs?.let {
-            player.seekTo(it)
+    /** Whether the initial seek has been applied */
+    private var initialSeekApplied = false
+
+    /**
+     * Applies the initial seek position if not already applied.
+     * Called lazily when playback starts and player is available.
+     */
+    fun ensureInitialSeekApplied() {
+        if (!initialSeekApplied) {
+            initialAudioPosition.positionMs?.let {
+                player?.seekTo(it)
+            }
+            initialSeekApplied = true
         }
     }
 
@@ -95,7 +128,7 @@ class LocatorTracker(
      */
     private fun setPosition(positionMs: Long) {
         _currentPosition.value = positionMs
-        player.seekTo(positionMs)
+        player?.seekTo(positionMs)
     }
 
     /**
@@ -178,11 +211,15 @@ class LocatorTracker(
      * after this to set up proper filtering for multi-audio-file chapters.
      */
     fun setChapterClips(clips: List<MediaOverlayClip>) {
+        // Cancel old clip messages since clips are changing
+        clipMessageScheduler.cancelAll()
+
         currentChapterClips = clips
         // Clear audio href and filtered clips - they'll be set by setCurrentAudioHref()
         // This prevents stale href from previous chapter causing issues
         currentAudioHref = null
         currentAudioFileClips = emptyList()
+        currentTrackIndex = 0
         // Reset completion flag for the new chapter
         hasNotifiedChapterExceeded = false
     }
@@ -212,12 +249,66 @@ class LocatorTracker(
      * overlapping time ranges. This filter ensures findClipAtTime returns the correct
      * clip for the currently playing audio file.
      *
+     * Also schedules ExoPlayer messages for precise clip change detection.
+     *
      * @param audioHref The href of the audio file currently being played
+     * @param trackIndex The index of this audio file in ExoPlayer's playlist (default 0)
      */
-    fun setCurrentAudioHref(audioHref: Url) {
-        if (audioHref != currentAudioHref) {
+    fun setCurrentAudioHref(audioHref: Url, trackIndex: Int = 0) {
+        if (audioHref != currentAudioHref || trackIndex != currentTrackIndex) {
             currentAudioHref = audioHref
+            currentTrackIndex = trackIndex
             currentAudioFileClips = currentChapterClips.filter { it.audioHref == audioHref }
+
+            // Schedule clip messages for precise clip change detection
+            scheduleClipMessages()
+        }
+    }
+
+    /**
+     * Schedules ExoPlayer messages for all clips in the current audio file.
+     * Messages fire at exact clip start times for precise text highlighting.
+     *
+     * This is called automatically when the audio file changes.
+     * Can also be called manually if clips are updated after setting audio href.
+     */
+    private fun scheduleClipMessages() {
+        // Cancel any previously scheduled messages
+        clipMessageScheduler.cancelAll()
+
+        // Schedule new messages for current audio file's clips
+        val p = player
+        if (p != null && currentAudioFileClips.isNotEmpty()) {
+            Log.d(TAG, "Scheduling ${currentAudioFileClips.size} clip messages for track $currentTrackIndex")
+            clipMessageScheduler.scheduleClips(
+                player = p,
+                clips = currentAudioFileClips,
+                trackIndex = currentTrackIndex,
+            )
+        }
+    }
+
+    /**
+     * Called when a scheduled clip message fires.
+     * Updates the current locator for text highlighting.
+     */
+    private fun onClipMessageReceived(clip: MediaOverlayClip) {
+        if (clip.fragmentId == null) return
+
+        // Create a locator for the clip
+        val locator = Locator(
+            href = clip.textHref,
+            mediaType = MediaType.XHTML,
+            locations = Locator.Locations(
+                fragments = listOf(clip.fragmentId),
+            ),
+        )
+
+        // Only update if this is a different fragment
+        val currentFragments = _currentLocatorWithClip.value?.locator?.locations?.fragments
+        if (currentFragments != locator.locations.fragments) {
+            Log.d(TAG, "Clip message: ${clip.fragmentId} at ${clip.startTime}s")
+            _currentLocatorWithClip.value = LocatorWithClip(locator, clip)
         }
     }
 
@@ -240,7 +331,7 @@ class LocatorTracker(
         stopPositionUpdates()
         positionUpdateJob = scope.launch {
             while (isActive) {
-                _currentPosition.update { player.currentPosition }
+                player?.let { p -> _currentPosition.update { p.currentPosition } }
                 updateCurrentLocator()
                 delay(POSITION_UPDATE_INTERVAL_MS)
             }
@@ -334,7 +425,7 @@ class LocatorTracker(
      * to trigger chapter completion manually since ExoPlayer won't fire STATE_ENDED.
      */
     private fun updateCurrentLocator() {
-        val currentTimeSeconds = player.currentPosition / SECONDS_TO_MS
+        val currentTimeSeconds = (player?.currentPosition ?: 0L) / SECONDS_TO_MS
 
         // Find the clip that contains the current time using binary search
         // This is O(log n) instead of O(n), important since this runs every 100ms
@@ -427,7 +518,7 @@ class LocatorTracker(
      * Called after seeking to ensure UI reflects the new position.
      */
     fun forceUpdatePosition() {
-        _currentPosition.value = player.currentPosition
+        player?.let { _currentPosition.value = it.currentPosition }
         updateCurrentLocator()
     }
 
@@ -436,9 +527,11 @@ class LocatorTracker(
      */
     fun release() {
         stopPositionUpdates()
+        clipMessageScheduler.cancelAll()
         currentChapterClips = emptyList()
         currentAudioFileClips = emptyList()
         currentAudioHref = null
+        currentTrackIndex = 0
         onChapterClipsExceeded = null
         hasNotifiedChapterExceeded = false
     }

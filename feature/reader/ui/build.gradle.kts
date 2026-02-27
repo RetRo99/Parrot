@@ -64,7 +64,9 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.fragment)
             implementation(libs.androidx.lifecycle.process)
+            implementation(libs.coroutines.guava)
             implementation(projects.feature.reader.data)
+            implementation(projects.lib.server.api)
         }
     }
 }

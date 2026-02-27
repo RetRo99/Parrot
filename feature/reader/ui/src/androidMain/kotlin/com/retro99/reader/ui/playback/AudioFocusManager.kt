@@ -41,8 +41,11 @@ import org.koin.core.annotation.Scoped
 @Scoped
 class AudioFocusManager(
     private val context: Context,
-    private val player: ExoPlayer,
+    private val mediaPlaybackController: MediaPlaybackController,
 ) {
+    /** Gets the ExoPlayer from the service. Returns null if service not started. */
+    private val player: ExoPlayer?
+        get() = mediaPlaybackController.player
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -82,16 +85,18 @@ class AudioFocusManager(
      */
     @MainThread
     private fun handleFocusChange(focusChange: Int) {
+        val currentPlayer = player ?: return // No player available, nothing to do
+
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> {
                 // Regained focus - restore volume and optionally resume
                 hasAudioFocus = true
                 pendingDelayedFocus = false
-                player.volume = volumeBeforeDuck
+                currentPlayer.volume = volumeBeforeDuck
 
                 // Only auto-resume if the SYSTEM paused us, not if user manually paused
                 if (wasPlayingBeforeSystemFocusLoss) {
-                    player.play()
+                    currentPlayer.play()
                     wasPlayingBeforeSystemFocusLoss = false
                 }
 
@@ -105,24 +110,24 @@ class AudioFocusManager(
                 hasAudioFocus = false
                 pendingDelayedFocus = false
                 // Don't set wasPlayingBeforeSystemFocusLoss - permanent loss shouldn't auto-resume
-                player.pause()
+                currentPlayer.pause()
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
                 // Temporary loss (e.g., phone call) - pause and remember for auto-resume
                 hasAudioFocus = false
                 // Only remember if we were actually playing when system interrupted
-                if (player.isPlaying) {
+                if (currentPlayer.isPlaying) {
                     wasPlayingBeforeSystemFocusLoss = true
-                    player.pause()
+                    currentPlayer.pause()
                 }
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 // Can duck - lower volume instead of pausing
                 hasAudioFocus = true
-                volumeBeforeDuck = player.volume
-                player.volume = DUCK_VOLUME
+                volumeBeforeDuck = currentPlayer.volume
+                currentPlayer.volume = DUCK_VOLUME
             }
         }
     }
@@ -210,18 +215,21 @@ class AudioFocusManager(
      * Should be called when creating the player.
      *
      * Note: We set handleAudioFocus=false because we manage audio focus manually
-     * via requestFocus() and abandonFocus(). This gives us more control over
-     * ducking behavior and focus change handling.
+     * Now that ExoPlayer handles audio focus automatically (handleAudioFocus=true in service),
+     * this method just ensures audio attributes are set if not already configured.
      */
     @MainThread
     fun configurePlayerAudioAttributes() {
+        val currentPlayer = player ?: return // Player not available yet, will be configured later
+
         val audioAttributes = androidx.media3.common.AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
             .build()
 
-        // handleAudioFocus=false because we manage focus manually in this class
-        player.setAudioAttributes(audioAttributes, false)
+        // handleAudioFocus=true lets ExoPlayer handle audio focus, which properly
+        // activates the audio session and routes audio to the correct output
+        currentPlayer.setAudioAttributes(audioAttributes, true)
     }
 
     companion object {
