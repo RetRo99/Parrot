@@ -1,7 +1,6 @@
 package com.retro99.reader.ui.reader
 
 import androidx.lifecycle.viewModelScope
-import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
@@ -12,26 +11,26 @@ import com.retro99.base.nowMillis
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
-import com.retro99.reader.domain.model.ChapterProgressDisplayMode
+import com.retro99.reader.domain.model.BookmarkDomainModel
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
-import com.retro99.reader.domain.model.BookmarkDomainModel
 import com.retro99.reader.domain.model.ReaderInitializationData
+import com.retro99.reader.domain.model.ReaderSettingsDomainModel
+import com.retro99.reader.domain.usecase.AddBookmarkUseCase
+import com.retro99.reader.domain.usecase.DeleteBookmarkUseCase
 import com.retro99.reader.domain.usecase.GetCustomReaderFontsUseCase
 import com.retro99.reader.domain.usecase.GetReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.InitializeReaderUseCase
+import com.retro99.reader.domain.usecase.ObserveBookmarksUseCase
+import com.retro99.reader.domain.usecase.ReorderBookmarksUseCase
 import com.retro99.reader.domain.usecase.SaveReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.domain.usecase.SetCurrentlyReadingUseCase
-import com.retro99.reader.domain.usecase.AddBookmarkUseCase
-import com.retro99.reader.domain.usecase.ObserveBookmarksUseCase
-import com.retro99.reader.domain.usecase.DeleteBookmarkUseCase
 import com.retro99.reader.domain.usecase.UpdateBookmarkTitleUseCase
-import com.retro99.reader.domain.usecase.ReorderBookmarksUseCase
 import com.retro99.reader.ui.di.InitialAudioPosition
 import com.retro99.reader.ui.di.ReaderScope
-import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.BookmarkUiModel
+import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.model.toDomainModel
 import com.retro99.reader.ui.model.toPositionUiModel
@@ -39,10 +38,23 @@ import com.retro99.reader.ui.model.toUiData
 import com.retro99.reader.ui.model.toUiModel
 import com.retro99.reader.ui.navigator.AudioController
 import com.retro99.reader.ui.navigator.BookController
+import com.retro99.reader.ui.navigator.NarrationController
+import com.retro99.reader.ui.navigator.TTS_SYSTEM_VOICE_KEY
+import com.retro99.reader.ui.navigator.TtsController
+import com.retro99.reader.ui.navigator.TtsPreviewState
 import com.retro99.reader.ui.publication.PublicationState
 import com.retro99.reader.ui.service.EpubPublicationService
+import com.retro99.reader.ui.tts.NeuralVoicePackage
+import com.retro99.reader.ui.tts.SupertonicTermsStore
+import com.retro99.reader.ui.tts.TtsPreparationProgress
+import com.retro99.reader.ui.tts.TtsVoicePreparationState
+import com.retro99.reader.ui.tts.neuralVoicePackage
 import com.retro99.statistics.domain.usecase.SaveReadingSessionUseCase
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -53,12 +65,14 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlin.time.TimeSource
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
 import org.koin.core.scope.Scope
 import org.koin.mp.KoinPlatform.getKoin
+import kotlin.time.TimeSource
 
 @KoinViewModel
 class ReaderViewModel(
@@ -81,10 +95,12 @@ class ReaderViewModel(
     @Provided private val reorderBookmarksUseCase: ReorderBookmarksUseCase,
     @Provided private val publicationService: EpubPublicationService,
     @Provided private val analytics: Analytics,
+    @Provided private val supertonicTermsStore: SupertonicTermsStore,
 ) : BaseViewModel<ReaderViewState, ReaderIntent>(
     ReaderViewState(
         bookUuid = bookUuid,
         bookType = bookType,
+        hasAcceptedSupertonicTerms = supertonicTermsStore.hasAcceptedCurrentTerms(),
     )
 ) {
 
@@ -116,6 +132,14 @@ class ReaderViewModel(
         }
     }
 
+    private val ttsController: TtsController by lazy {
+        readerScope.get<TtsController>().also { controller ->
+            addCloseable(controller)
+        }
+    }
+
+    private var activeNarrationController: NarrationController? = null
+
     private val syncCoordinator: ReaderSyncCoordinator by lazy {
         readerScope.get<ReaderSyncCoordinator>().also {
             addCloseable(it)
@@ -131,6 +155,15 @@ class ReaderViewModel(
 
     /** Job for the Read Aloud sleep timer countdown. */
     private var sleepTimerJob: Job? = null
+
+    /** Job for downloading and loading the selected neural voice model. */
+    private var ttsPreparationJob: Job? = null
+
+    /** Job for preparing sentence elements and enabling double-tap TTS playback. */
+    private var ttsSentencePlaybackJob: Job? = null
+
+    /** Serializes full reader-settings updates so concurrent controls cannot lose changes. */
+    private val readerSettingsSaveMutex = Mutex()
 
     /** Timestamp when the book was opened, used for calculating reading duration */
     private var bookOpenedTimestamp: Long = 0L
@@ -200,6 +233,30 @@ class ReaderViewModel(
             ReaderIntent.GoToNextPage -> goToNextPage()
             ReaderIntent.GoToPreviousPage -> goToPreviousPage()
             ReaderIntent.TogglePlayback -> togglePlayback()
+            is ReaderIntent.SelectTtsVoice -> selectTtsVoice(intent.voiceId)
+            is ReaderIntent.DownloadNeuralVoicePackage -> {
+                downloadNeuralVoicePackage(intent.voicePackage)
+            }
+
+            is ReaderIntent.DeleteNeuralVoicePackage -> {
+                deleteNeuralVoicePackage(intent.voicePackage)
+            }
+
+            is ReaderIntent.RetryTtsVoicePreparation -> {
+                retryTtsVoicePreparation(intent.voicePackage)
+            }
+
+            ReaderIntent.AcceptSupertonicTermsAndDownload -> {
+                acceptSupertonicTermsAndDownload()
+            }
+
+            is ReaderIntent.PreviewTtsVoice -> previewTtsVoice(intent.voiceId, intent.text)
+            ReaderIntent.StopTtsPreview -> stopTtsPreview()
+            ReaderIntent.OpenVoiceSettings -> openVoiceSettings()
+            ReaderIntent.CloseVoiceSettings -> closeVoiceSettings()
+            is ReaderIntent.SetTtsRate -> setTtsRate(intent.rate)
+            is ReaderIntent.SetTtsPitch -> setTtsPitch(intent.pitch)
+            is ReaderIntent.SetTtsEnabled -> setTtsEnabled(intent.enabled)
             ReaderIntent.ToggleAudioOnlyMode -> toggleAudioOnlyMode()
             is ReaderIntent.SeekTo -> seekTo(intent.audioTimestampMs)
             is ReaderIntent.SetPlaybackSpeed -> setPlaybackSpeed(intent.speed)
@@ -261,8 +318,16 @@ class ReaderViewModel(
         getReaderSettingsUseCase()
             .onEach { settings ->
                 val uiSettings = settings.toUiModel()
+                val previousTtsEnabled = viewState.value.publicationState?.settings?.ttsEnabled
                 bookController.setSettings(uiSettings)
                 updatePublicationState { it.copy(settings = uiSettings) }
+                if (
+                    viewState.value.isTtsReadAloud &&
+                    previousTtsEnabled != null &&
+                    previousTtsEnabled != uiSettings.ttsEnabled
+                ) {
+                    applyTtsEnabled(uiSettings.ttsEnabled)
+                }
             }
             .launchIn(viewModelScope)
     }
@@ -318,7 +383,9 @@ class ReaderViewModel(
             .combine(getReaderSettingsUseCase()) { wpm, settings -> wpm to settings }
             .onEach { (wpm, settings) ->
                 if (settings.readingSpeedWpm != wpm) {
-                    saveReaderSettingsUseCase(settings.copy(readingSpeedWpm = wpm))
+                    saveReaderSettingsUpdate { latestSettings ->
+                        latestSettings.copy(readingSpeedWpm = wpm)
+                    }
                 }
             }
             .launchIn(viewModelScope)
@@ -331,14 +398,6 @@ class ReaderViewModel(
                     positionMs = state.currentPositionMs,
                     totalDurationMs = state.totalDurationMs,
                 )
-            }
-            .launchIn(viewModelScope)
-
-        audioController.audioPlaybackState
-            .map { it.isPlaying }
-            .distinctUntilChanged()
-            .onEach { isPlaying ->
-                updatePlayingState(isPlaying)
             }
             .launchIn(viewModelScope)
 
@@ -422,12 +481,17 @@ class ReaderViewModel(
             // Initialize audio after publication is in state
             if (publication.hasMediaOverlays) {
                 initAudio()
-            } else if (bookType == BookType.READALOUD) {
-                // Track when a ReadAloud book is missing media overlays and show snackbar
-                analytics.logEvent(
-                    ReaderAnalyticsEvent.ReadAloudMissingMediaOverlays(bookUuid = data.bookUuid)
-                )
-                updateState { it.copy(showNoAudioMessage = true) }
+            } else {
+                if (bookType == BookType.READALOUD) {
+                    // Track when a ReadAloud book is missing media overlays and show snackbar
+                    analytics.logEvent(
+                        ReaderAnalyticsEvent.ReadAloudMissingMediaOverlays(
+                            bookUuid = data.bookUuid,
+                        ),
+                    )
+                    updateState { state -> state.copy(showNoAudioMessage = true) }
+                }
+                initTts()
             }
         }.onFailure { error ->
             analytics.logEvent(
@@ -450,9 +514,12 @@ class ReaderViewModel(
     }
 
     private fun initAudio() {
+        activeNarrationController = audioController
+        observeNarrationPlaybackState(audioController)
+
         // Start sync coordinator (this also triggers lazy initialization of audioController)
         // Note: Initial audio position is handled via constructor injection in AudioController
-        syncCoordinator.start(viewModelScope)
+        syncCoordinator.start(viewModelScope, audioController)
 
         // Set now-playing info for mini-player display
         val state = viewState.value
@@ -471,6 +538,511 @@ class ReaderViewModel(
             }
             .launchIn(viewModelScope)
         observeAudioPlaybackState()
+    }
+
+    private fun initTts() {
+        viewModelScope.launch {
+            bookController.currentLocator.first()
+            val hasContent = ttsController.hasReadableContent()
+            if (!hasContent) return@launch
+
+            val settings = getReaderSettingsUseCase().first()
+            val availableVoices = ttsController.availableVoices()
+            val savedVoice = availableVoices
+                .firstOrNull { voice -> voice.id == settings.ttsVoiceId }
+            val selectedVoiceId = settings.ttsVoiceId?.takeIf {
+                savedVoice != null &&
+                        (
+                                savedVoice.neuralVoicePackage != NeuralVoicePackage.SUPERTONIC ||
+                                        currentViewState().hasAcceptedSupertonicTerms
+                                )
+            }
+            activeNarrationController = ttsController
+            updateState { state ->
+                state.copy(
+                    isTtsReadAloud = true,
+                    showNoAudioMessage = false,
+                    ttsVoices = availableVoices,
+                    selectedTtsVoiceId = selectedVoiceId,
+                )
+            }
+
+            observeNarrationPlaybackState(ttsController)
+
+            observeTtsPreviewState()
+            observeTtsVoicePreparationState()
+
+            ttsController.selectVoice(selectedVoiceId)
+            if (settings.ttsVoiceId != selectedVoiceId) {
+                saveReaderSettingsUpdate { latestSettings ->
+                    if (latestSettings.ttsVoiceId == settings.ttsVoiceId) {
+                        latestSettings.copy(ttsVoiceId = selectedVoiceId)
+                    } else {
+                        latestSettings
+                    }
+                }
+            }
+            if (settings.ttsEnabled) {
+                enableTtsSentencePlayback()
+            }
+            val selectedVoice = availableVoices
+                .firstOrNull { voice -> voice.id == selectedVoiceId }
+            if (
+                settings.ttsEnabled &&
+                selectedVoice?.isNeural == true &&
+                !selectedVoice.needsDownload
+            ) {
+                prepareTtsVoice(selectedVoice.id)
+            }
+        }
+    }
+
+    private fun selectTtsVoice(voiceId: String?) {
+        val selectedVoice = viewState.value.ttsVoices
+            .firstOrNull { voice -> voice.id == voiceId }
+        if (selectedVoice?.needsDownload == true) return
+        if (
+            selectedVoice?.neuralVoicePackage == NeuralVoicePackage.SUPERTONIC &&
+            !currentViewState().hasAcceptedSupertonicTerms
+        ) {
+            return
+        }
+        val isNeural = selectedVoice?.isNeural == true
+        analytics.logEvent(
+            ReaderAnalyticsEvent.TtsVoiceSelected(
+                bookUuid = bookUuid,
+                voiceId = voiceId ?: TTS_SYSTEM_VOICE_KEY,
+                isNeural = isNeural,
+            ),
+        )
+        ttsController.stopPreview()
+        ttsController.selectVoice(voiceId)
+        updatePublicationState { publicationState ->
+            publicationState.copy(
+                settings = publicationState.settings.copy(ttsVoiceId = voiceId),
+            )
+        }
+        launchReaderSettingsUpdate { settings -> settings.copy(ttsVoiceId = voiceId) }
+        updateState { state ->
+            state.copy(
+                selectedTtsVoiceId = voiceId,
+                failedTtsVoicePackage = null,
+                failedTtsVoicePackageDeletion = null,
+                ttsPreviewingVoiceId = null,
+                isTtsPreviewPlaying = false,
+            )
+        }
+
+        if (isNeural && voiceId != null) {
+            prepareTtsVoice(voiceId)
+        } else {
+            ttsPreparationJob?.cancel()
+            ttsPreparationJob = null
+            updateState { state ->
+                state.copy(
+                    isTtsVoicePreparing = false,
+                    preparingTtsVoicePackage = null,
+                    ttsVoicePreparationProgress = null,
+                )
+            }
+        }
+    }
+
+    private fun downloadNeuralVoicePackage(voicePackage: NeuralVoicePackage) {
+        if (
+            voicePackage == NeuralVoicePackage.SUPERTONIC &&
+            !currentViewState().hasAcceptedSupertonicTerms
+        ) {
+            return
+        }
+        val neuralVoice = currentViewState().ttsVoices
+            .firstOrNull { voice ->
+                voice.neuralVoicePackage == voicePackage && voice.needsDownload
+            }
+            ?: return
+        prepareTtsVoice(neuralVoice.id)
+    }
+
+    private fun acceptSupertonicTermsAndDownload() {
+        supertonicTermsStore.acceptCurrentTerms()
+        updateState { state -> state.copy(hasAcceptedSupertonicTerms = true) }
+        downloadNeuralVoicePackage(NeuralVoicePackage.SUPERTONIC)
+    }
+
+    private fun retryTtsVoicePreparation(voicePackage: NeuralVoicePackage) {
+        val voiceId = currentViewState().ttsVoices
+            .firstOrNull { voice -> voice.neuralVoicePackage == voicePackage }
+            ?.id
+            ?: return
+        prepareTtsVoice(voiceId)
+    }
+
+    private fun prepareTtsVoice(
+        voiceId: String,
+        onPrepared: (() -> Unit)? = null,
+    ) {
+        val voicePackage = voiceId.neuralVoicePackage() ?: return
+        if (
+            voicePackage == NeuralVoicePackage.SUPERTONIC &&
+            !currentViewState().hasAcceptedSupertonicTerms
+        ) {
+            return
+        }
+        val activePackage = currentViewState().preparingTtsVoicePackage
+        if (currentViewState().isTtsVoicePreparing && activePackage != voicePackage) {
+            return
+        }
+        ttsPreparationJob?.cancel()
+        val initialProgress = currentViewState().ttsVoices
+            .firstOrNull { voice -> voice.id == voiceId }
+            ?.let { voice ->
+                if (voice.needsDownload) {
+                    TtsPreparationProgress.Downloading(
+                        downloadedBytes = 0L,
+                        totalBytes = voice.downloadSizeBytes,
+                    )
+                } else {
+                    TtsPreparationProgress.Finalizing
+                }
+            }
+            ?: TtsPreparationProgress.Finalizing
+        val preparationJob = viewModelScope.launch(start = CoroutineStart.LAZY) {
+            val runningJob = currentCoroutineContext()[Job]
+            updateState { state ->
+                state.copy(
+                    isTtsVoicePreparing = true,
+                    preparingTtsVoicePackage = voicePackage,
+                    ttsVoicePreparationProgress = initialProgress,
+                    failedTtsVoicePackage = null,
+                )
+            }
+            try {
+                val isPrepared = ttsController.prepareVoice(voiceId) { progress ->
+                    updateState { state ->
+                        state.copy(ttsVoicePreparationProgress = progress)
+                    }
+                }
+                if (isPrepared) {
+                    val refreshedVoices = ttsController.availableVoices()
+                    updateState { state ->
+                        state.copy(
+                            ttsVoices = refreshedVoices,
+                            failedTtsVoicePackage = null,
+                        )
+                    }
+                    onPrepared?.invoke()
+                } else {
+                    updateState { state ->
+                        state.copy(
+                            failedTtsVoicePackage = voicePackage,
+                            ttsPreviewingVoiceId = null,
+                            isTtsPreviewPlaying = false,
+                        )
+                    }
+                }
+            } finally {
+                if (ttsPreparationJob === runningJob) {
+                    updateState { state ->
+                        state.copy(
+                            isTtsVoicePreparing = false,
+                            preparingTtsVoicePackage = null,
+                            ttsVoicePreparationProgress = null,
+                        )
+                    }
+                    ttsPreparationJob = null
+                }
+            }
+        }
+        ttsPreparationJob = preparationJob
+        preparationJob.start()
+    }
+
+    private fun deleteNeuralVoicePackage(voicePackage: NeuralVoicePackage) {
+        val preparationJob = ttsPreparationJob
+        ttsPreparationJob = null
+        viewModelScope.launch {
+            preparationJob?.cancelAndJoin()
+            updateState { state ->
+                state.copy(
+                    deletingTtsVoicePackage = voicePackage,
+                    failedTtsVoicePackageDeletion = null,
+                )
+            }
+            try {
+                val deleted = ttsController.deleteNeuralVoicePackage(voicePackage)
+                val refreshedVoices = ttsController.availableVoices()
+                val packageStillDownloaded = refreshedVoices.any { voice ->
+                    voice.neuralVoicePackage == voicePackage && !voice.needsDownload
+                }
+                if (deleted || !packageStillDownloaded) {
+                    val selectedVoice = refreshedVoices.firstOrNull { voice ->
+                        voice.id == currentViewState().selectedTtsVoiceId
+                    }
+                    val selectedVoiceWasDeleted =
+                        selectedVoice?.neuralVoicePackage == voicePackage ||
+                                currentViewState().selectedTtsVoiceId.neuralVoicePackage() ==
+                                voicePackage
+                    if (selectedVoiceWasDeleted) {
+                        ttsController.selectVoice(null)
+                        updatePublicationState { publicationState ->
+                            publicationState.copy(
+                                settings = publicationState.settings.copy(ttsVoiceId = null),
+                            )
+                        }
+                        saveReaderSettingsUpdate { settings ->
+                            settings.copy(ttsVoiceId = null)
+                        }
+                    }
+                    updateState { state ->
+                        state.copy(
+                            ttsVoices = refreshedVoices,
+                            selectedTtsVoiceId = if (selectedVoiceWasDeleted) {
+                                null
+                            } else {
+                                state.selectedTtsVoiceId
+                            },
+                            isTtsVoicePreparing = false,
+                            preparingTtsVoicePackage = null,
+                            ttsVoicePreparationProgress = null,
+                            failedTtsVoicePackage = null,
+                            ttsPreviewingVoiceId = null,
+                            isTtsPreviewPlaying = false,
+                        )
+                    }
+                } else {
+                    updateState { state ->
+                        state.copy(failedTtsVoicePackageDeletion = voicePackage)
+                    }
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                analytics.logException(error, "Failed to delete neural voice package")
+                updateState { state ->
+                    state.copy(failedTtsVoicePackageDeletion = voicePackage)
+                }
+            } finally {
+                updateState { state -> state.copy(deletingTtsVoicePackage = null) }
+            }
+        }
+    }
+
+    private fun openVoiceSettings() {
+        analytics.logEvent(ReaderAnalyticsEvent.TtsVoiceSettingsOpened(bookUuid = bookUuid))
+        updateState { state -> state.copy(isVoiceSettingsVisible = true) }
+    }
+
+    private fun closeVoiceSettings() {
+        ttsController.stopPreview()
+        updateState { state -> state.copy(isVoiceSettingsVisible = false) }
+    }
+
+    private fun setTtsRate(rate: Float) {
+        analytics.logEvent(ReaderAnalyticsEvent.TtsRateChanged(bookUuid = bookUuid, rate = rate))
+        ttsController.stopPreview()
+        ttsController.setRate(rate)
+        updatePublicationState { publicationState ->
+            publicationState.copy(
+                settings = publicationState.settings.copy(ttsRate = rate),
+            )
+        }
+        launchReaderSettingsUpdate { settings -> settings.copy(ttsRate = rate) }
+    }
+
+    private fun setTtsPitch(pitch: Float) {
+        analytics.logEvent(
+            ReaderAnalyticsEvent.TtsPitchChanged(bookUuid = bookUuid, pitch = pitch),
+        )
+        ttsController.stopPreview()
+        ttsController.setPitch(pitch)
+        updatePublicationState { publicationState ->
+            publicationState.copy(
+                settings = publicationState.settings.copy(ttsPitch = pitch),
+            )
+        }
+        launchReaderSettingsUpdate { settings -> settings.copy(ttsPitch = pitch) }
+    }
+
+    private fun setTtsEnabled(enabled: Boolean) {
+        analytics.logEvent(ReaderAnalyticsEvent.TtsEnabledChanged(isEnabled = enabled))
+        updatePublicationState { publicationState ->
+            publicationState.copy(
+                settings = publicationState.settings.copy(ttsEnabled = enabled),
+            )
+        }
+        applyTtsEnabled(enabled)
+        launchReaderSettingsUpdate { settings -> settings.copy(ttsEnabled = enabled) }
+    }
+
+    private fun applyTtsEnabled(enabled: Boolean) {
+        if (!enabled) {
+            disableTtsSentencePlayback()
+            ttsPreparationJob?.cancel()
+            ttsPreparationJob = null
+            ttsController.stopPreview()
+        } else {
+            enableTtsSentencePlayback()
+            val selectedVoice = viewState.value.ttsVoices
+                .firstOrNull { voice -> voice.id == viewState.value.selectedTtsVoiceId }
+            when {
+                selectedVoice?.needsDownload == true -> openVoiceSettings()
+                selectedVoice?.neuralVoicePackage == NeuralVoicePackage.SUPERTONIC &&
+                        !currentViewState().hasAcceptedSupertonicTerms -> openVoiceSettings()
+
+                selectedVoice?.isNeural == true -> prepareTtsVoice(selectedVoice.id)
+            }
+        }
+    }
+
+    private fun enableTtsSentencePlayback() {
+        ttsSentencePlaybackJob?.cancel()
+        ttsSentencePlaybackJob = viewModelScope.launch {
+            if (!ttsController.enableSentencePlayback()) return@launch
+
+            syncCoordinator.startNarration(
+                scope = viewModelScope,
+                narrationController = ttsController,
+                playFromSentence = { event ->
+                    playTtsFromSentence(
+                        fragmentId = event.fragmentId,
+                        chapterHref = event.chapterHref,
+                    )
+                },
+            )
+        }
+    }
+
+    private fun disableTtsSentencePlayback() {
+        ttsSentencePlaybackJob?.cancel()
+        ttsSentencePlaybackJob = null
+        syncCoordinator.stopNarration()
+        ttsController.disableSentencePlayback()
+    }
+
+    private fun playTtsFromSentence(fragmentId: String, chapterHref: String?) {
+        val selectedVoice = viewState.value.ttsVoices
+            .firstOrNull { voice -> voice.id == viewState.value.selectedTtsVoiceId }
+        if (selectedVoice?.needsDownload == true) {
+            openVoiceSettings()
+            return
+        }
+        if (
+            selectedVoice?.neuralVoicePackage == NeuralVoicePackage.SUPERTONIC &&
+            !currentViewState().hasAcceptedSupertonicTerms
+        ) {
+            openVoiceSettings()
+            return
+        }
+
+        ttsController.playFromSentence(fragmentId, chapterHref)
+    }
+
+    private fun previewTtsVoice(voiceId: String?, text: String) {
+        val isNeural = viewState.value.ttsVoices
+            .firstOrNull { voice -> voice.id == voiceId }
+            ?.isNeural == true
+        analytics.logEvent(
+            ReaderAnalyticsEvent.TtsVoicePreviewed(
+                bookUuid = bookUuid,
+                voiceId = voiceId ?: TTS_SYSTEM_VOICE_KEY,
+                isNeural = isNeural,
+            ),
+        )
+        val voice = viewState.value.ttsVoices.firstOrNull { candidate ->
+            candidate.id == voiceId
+        }
+        if (voice?.needsDownload == true) return
+        if (
+            voice?.neuralVoicePackage == NeuralVoicePackage.SUPERTONIC &&
+            !currentViewState().hasAcceptedSupertonicTerms
+        ) {
+            return
+        }
+        startTtsPreview(voiceId, text)
+    }
+
+    private fun startTtsPreview(voiceId: String?, text: String) {
+        updateState { state ->
+            state.copy(
+                ttsPreviewingVoiceId = voiceId ?: TTS_SYSTEM_VOICE_KEY,
+                isTtsPreviewPlaying = false,
+            )
+        }
+        ttsController.previewVoice(voiceId, text)
+    }
+
+    private fun stopTtsPreview() {
+        ttsController.stopPreview()
+    }
+
+    private fun observeTtsPreviewState() {
+        ttsController.previewState
+            .onEach { state ->
+                when (state) {
+                    TtsPreviewState.IDLE -> updateState { viewState ->
+                        viewState.copy(
+                            ttsPreviewingVoiceId = null,
+                            isTtsPreviewPlaying = false,
+                        )
+                    }
+
+                    TtsPreviewState.LOADING -> updateState { viewState ->
+                        viewState.copy(isTtsPreviewPlaying = false)
+                    }
+
+                    TtsPreviewState.SPEAKING -> updateState { viewState ->
+                        viewState.copy(isTtsPreviewPlaying = true)
+                    }
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeTtsVoicePreparationState() {
+        ttsController.voicePreparationState
+            .onEach { preparationState ->
+                when (preparationState) {
+                    TtsVoicePreparationState.Idle -> updateState { state ->
+                        state.copy(
+                            isTtsVoicePreparing = false,
+                            preparingTtsVoicePackage = null,
+                            ttsVoicePreparationProgress = null,
+                        )
+                    }
+
+                    is TtsVoicePreparationState.Running -> updateState { state ->
+                        state.copy(
+                            isTtsVoicePreparing = true,
+                            preparingTtsVoicePackage = preparationState.voicePackage,
+                            ttsVoicePreparationProgress = preparationState.progress,
+                            failedTtsVoicePackage = null,
+                        )
+                    }
+
+                    is TtsVoicePreparationState.Complete -> {
+                        val refreshedVoices = ttsController.availableVoices()
+                        updateState { state ->
+                            state.copy(
+                                ttsVoices = refreshedVoices,
+                                isTtsVoicePreparing = false,
+                                preparingTtsVoicePackage = null,
+                                ttsVoicePreparationProgress = null,
+                                failedTtsVoicePackage = null,
+                            )
+                        }
+                    }
+
+                    is TtsVoicePreparationState.Failed -> updateState { state ->
+                        state.copy(
+                            isTtsVoicePreparing = false,
+                            preparingTtsVoicePackage = null,
+                            ttsVoicePreparationProgress = null,
+                            failedTtsVoicePackage = preparationState.voicePackage,
+                        )
+                    }
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun resolveConflictWithLocal() {
@@ -533,8 +1105,23 @@ class ReaderViewModel(
     }
 
     private fun updateSettings(settings: ReaderSettingsUiModel) {
-        viewModelScope.launch {
-            saveReaderSettingsUseCase(settings.toDomainModel())
+        updatePublicationState { publicationState ->
+            publicationState.copy(
+                settings = settings.copy(
+                    ttsVoiceId = publicationState.settings.ttsVoiceId,
+                    ttsRate = publicationState.settings.ttsRate,
+                    ttsPitch = publicationState.settings.ttsPitch,
+                    ttsEnabled = publicationState.settings.ttsEnabled,
+                ),
+            )
+        }
+        launchReaderSettingsUpdate { latestSettings ->
+            settings.toDomainModel().copy(
+                ttsVoiceId = latestSettings.ttsVoiceId,
+                ttsRate = latestSettings.ttsRate,
+                ttsPitch = latestSettings.ttsPitch,
+                ttsEnabled = latestSettings.ttsEnabled,
+            )
         }
     }
 
@@ -837,18 +1424,17 @@ class ReaderViewModel(
         }
     }
 
-    /**
-     * Toggles audio playback.
-     *
-     * The AudioController handles all the logic internally:
-     * - Whether to start fresh (with positioning) or resume
-     * - Permission checks, audio focus, foreground service
-     * - Uses the visible sentence set by ReaderSyncCoordinator for precise positioning
-     *
-     * The UI will update when the player reports its actual state.
-     */
+    /** Toggles the active ReadAloud or TTS narration implementation. */
     private fun togglePlayback() {
-        audioController.togglePlayback()
+        if (viewState.value.isTtsReadAloud) {
+            val selectedVoice = viewState.value.ttsVoices
+                .firstOrNull { voice -> voice.id == viewState.value.selectedTtsVoiceId }
+            if (selectedVoice?.needsDownload == true) {
+                openVoiceSettings()
+                return
+            }
+        }
+        activeNarrationController?.togglePlayback()
     }
 
     private fun toggleAudioOnlyMode() {
@@ -876,12 +1462,21 @@ class ReaderViewModel(
         analytics.logEvent(
             ReaderAnalyticsEvent.SettingChanged("playback_speed", speed.toString())
         )
-        audioController.setPlaybackSpeed(speed)
-        // Also save the speed to settings
-        val currentSettings = viewState.value.currentSettings
-        viewModelScope.launch {
-            currentSettings?.let { settings ->
-                saveReaderSettingsUseCase(settings.copy(playbackSpeed = speed).toDomainModel())
+        val isTts = viewState.value.isTtsReadAloud
+        activeNarrationController?.setPlaybackSpeed(speed)
+        updatePublicationState { publicationState ->
+            val updatedSettings = if (isTts) {
+                publicationState.settings.copy(ttsRate = speed)
+            } else {
+                publicationState.settings.copy(playbackSpeed = speed)
+            }
+            publicationState.copy(settings = updatedSettings)
+        }
+        launchReaderSettingsUpdate { settings ->
+            if (isTts) {
+                settings.copy(ttsRate = speed)
+            } else {
+                settings.copy(playbackSpeed = speed)
             }
         }
     }
@@ -926,7 +1521,7 @@ class ReaderViewModel(
                 }
             }
             if (viewState.value.isPlaying) {
-                audioController.togglePlayback()
+                togglePlayback()
                 saveCurrentAudioPosition()
             }
             updateState {
@@ -962,34 +1557,46 @@ class ReaderViewModel(
                 colorArgb = colorArgb,
             ),
         )
-        val currentSettings = viewState.value.currentSettings ?: return
-        val updatedSettings = currentSettings.copy(highlightColor = colorArgb)
-        updatePublicationState { it.copy(settings = updatedSettings) }
+        updatePublicationState { publicationState ->
+            publicationState.copy(
+                settings = publicationState.settings.copy(highlightColor = colorArgb),
+            )
+        }
+        launchReaderSettingsUpdate { settings -> settings.copy(highlightColor = colorArgb) }
+    }
+
+    private fun launchReaderSettingsUpdate(
+        update: (ReaderSettingsDomainModel) -> ReaderSettingsDomainModel,
+    ) {
         viewModelScope.launch {
-            saveReaderSettingsUseCase(updatedSettings.toDomainModel())
+            saveReaderSettingsUpdate(update)
         }
     }
 
-    /**
-     * Skips forward by a fixed increment (10 seconds).
-     * Delegates to the player which uses its authoritative position.
-     * The milliseconds parameter is ignored - the player uses a fixed 10-second increment.
-     */
+    private suspend fun saveReaderSettingsUpdate(
+        update: (ReaderSettingsDomainModel) -> ReaderSettingsDomainModel,
+    ) {
+        readerSettingsSaveMutex.withLock {
+            val currentSettings = getReaderSettingsUseCase().first()
+            val updatedSettings = update(currentSettings)
+            if (updatedSettings != currentSettings) {
+                saveReaderSettingsUseCase(updatedSettings)
+            }
+        }
+    }
+
+    /** Skips forward by 10 seconds for ReadAloud or by one sentence for TTS. */
     @Suppress("UNUSED_PARAMETER")
     private fun skipForward(milliseconds: Long) {
         analytics.logEvent(ReaderAnalyticsEvent.SkipForward(bookUuid = bookUuid))
-        audioController.skipForward()
+        activeNarrationController?.skipForward()
     }
 
-    /**
-     * Skips backward by a fixed increment (10 seconds).
-     * Delegates to the player which uses its authoritative position.
-     * The milliseconds parameter is ignored - the player uses a fixed 10-second increment.
-     */
+    /** Skips backward by 10 seconds for ReadAloud or by one sentence for TTS. */
     @Suppress("UNUSED_PARAMETER")
     private fun skipBackward(milliseconds: Long) {
         analytics.logEvent(ReaderAnalyticsEvent.SkipBackward(bookUuid = bookUuid))
-        audioController.skipBackward()
+        activeNarrationController?.skipBackward()
     }
 
     /**
@@ -1023,6 +1630,27 @@ class ReaderViewModel(
         if (!isPlaying) {
             saveCurrentAudioPosition()
         }
+    }
+
+    private fun observeNarrationPlaybackState(controller: NarrationController) {
+        controller.isPlaying
+            .distinctUntilChanged()
+            .onEach { isPlaying -> updatePlayingState(isPlaying) }
+            .launchIn(viewModelScope)
+
+        controller.isLoading
+            .distinctUntilChanged()
+            .onEach { isLoading ->
+                updateState { state -> state.copy(isNarrationLoading = isLoading) }
+            }
+            .launchIn(viewModelScope)
+
+        controller.isPlaybackStartPending
+            .distinctUntilChanged()
+            .onEach { isPending ->
+                updateState { state -> state.copy(isNarrationStartPending = isPending) }
+            }
+            .launchIn(viewModelScope)
     }
 
     /**

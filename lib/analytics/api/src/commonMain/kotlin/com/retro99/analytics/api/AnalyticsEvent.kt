@@ -253,5 +253,103 @@ sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
             "color_argb" to colorArgb,
         )
     }
+
+    /**
+     * Tracks when the on-device text-to-speech feature is enabled or disabled.
+     */
+    data class TtsEnabledChanged(
+        val isEnabled: Boolean,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_enabled_changed"
+        override val parameters: Map<String, Any> = mapOf(
+            "is_enabled" to isEnabled,
+        )
+    }
+
+    /**
+     * Tracks when the user picks a text-to-speech voice.
+     */
+    data class TtsVoiceSelected(
+        val bookUuid: String,
+        val voiceId: String,
+        val isNeural: Boolean,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_voice_selected"
+        override val parameters: Map<String, Any> = mapOf(
+            "book_uuid" to bookUuid,
+            "voice_id" to voiceId,
+            "is_neural" to isNeural,
+        )
+    }
+
+    /**
+     * Tracks when the user previews a text-to-speech voice.
+     */
+    data class TtsVoicePreviewed(
+        val bookUuid: String,
+        val voiceId: String,
+        val isNeural: Boolean,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_voice_previewed"
+        override val parameters: Map<String, Any> = mapOf(
+            "book_uuid" to bookUuid,
+            "voice_id" to voiceId,
+            "is_neural" to isNeural,
+        )
+    }
+
+    /**
+     * Tracks when the text-to-speech voice settings screen is opened.
+     */
+    data class TtsVoiceSettingsOpened(
+        val bookUuid: String,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_voice_settings_opened"
+        override val parameters: Map<String, Any> = mapOf(
+            "book_uuid" to bookUuid,
+        )
+    }
+
+    /**
+     * Tracks text-to-speech speed changes.
+     */
+    data class TtsRateChanged(
+        val bookUuid: String,
+        val rate: Float,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_rate_changed"
+        override val parameters: Map<String, Any> = mapOf(
+            "book_uuid" to bookUuid,
+            "rate" to rate,
+        )
+    }
+
+    /**
+     * Tracks text-to-speech pitch changes.
+     */
+    data class TtsPitchChanged(
+        val bookUuid: String,
+        val pitch: Float,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_pitch_changed"
+        override val parameters: Map<String, Any> = mapOf(
+            "book_uuid" to bookUuid,
+            "pitch" to pitch,
+        )
+    }
+
+    /**
+     * Tracks the on-device neural voice model preparation (download and load).
+     */
+    data class TtsModelPrepared(
+        val isSuccess: Boolean,
+        val durationMs: Long,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_model_prepared"
+        override val parameters: Map<String, Any> = mapOf(
+            "is_success" to isSuccess,
+            "duration_ms" to durationMs,
+        )
+    }
 }
 

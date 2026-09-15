@@ -9,6 +9,12 @@
     <!-- Download service permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:name="com.retro99.parrot.android.ParrotApplication"
         android:allowBackup="true"
@@ -59,6 +65,11 @@
         <!-- Download foreground service for ebooks -->
         <service
             android:name="com.retro99.reader.data.download.DownloadForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <service
+            android:name="com.retro99.reader.ui.tts.TtsVoicePreparationForegroundService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 

@@ -2,9 +2,9 @@ package com.retro99.settings.ui
 
 import com.retro99.reader.domain.model.ChapterProgressDisplayMode
 import com.retro99.reader.domain.model.HighlightStyle
+import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.domain.model.ProgressBarPosition
 import com.retro99.reader.domain.model.ProgressIndicatorMode
-import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.settings.ui.model.FontFamilyUiModel
 import com.retro99.settings.ui.model.ReaderSettingsUiModel
 import com.retro99.settings.ui.model.ReaderTextAlignUiModel
@@ -53,6 +53,7 @@ data class SettingsViewState(
     val doubleTapTimeoutMs: Int get() = readerSettings.doubleTapTimeoutMs
     val showAudioProgressBar: Boolean? get() = readerSettings.showAudioProgressBar
     val keepScreenOnDuringAudio: Boolean get() = readerSettings.keepScreenOnDuringAudio
+    val ttsEnabled: Boolean get() = readerSettings.ttsEnabled
 
     fun isSectionExpanded(section: SettingsSection): Boolean = section in expandedSections
 }
@@ -64,4 +65,3 @@ enum class SettingsSection {
     NAVIGATION,
     READALOUD,
 }
-

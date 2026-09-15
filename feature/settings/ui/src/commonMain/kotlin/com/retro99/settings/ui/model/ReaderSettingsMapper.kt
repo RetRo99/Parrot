@@ -1,7 +1,7 @@
 package com.retro99.settings.ui.model
 
-import com.retro99.reader.domain.model.ReaderSettingsDomainModel
 import com.retro99.reader.domain.model.CustomReaderFontDomainModel
+import com.retro99.reader.domain.model.ReaderSettingsDomainModel
 import com.retro99.reader.domain.model.ReaderTextAlign
 import com.retro99.reader.domain.model.ReaderTheme
 
@@ -38,6 +38,10 @@ fun ReaderSettingsDomainModel.toUiModel(): ReaderSettingsUiModel = ReaderSetting
     doubleTapTimeoutMs = doubleTapTimeoutMs,
     showAudioProgressBar = showAudioProgressBar,
     keepScreenOnDuringAudio = keepScreenOnDuringAudio,
+    ttsVoiceId = ttsVoiceId,
+    ttsRate = ttsRate,
+    ttsPitch = ttsPitch,
+    ttsEnabled = ttsEnabled,
 )
 
 fun ReaderSettingsUiModel.toDomainModel(): ReaderSettingsDomainModel = ReaderSettingsDomainModel(
@@ -73,6 +77,10 @@ fun ReaderSettingsUiModel.toDomainModel(): ReaderSettingsDomainModel = ReaderSet
     doubleTapTimeoutMs = doubleTapTimeoutMs,
     showAudioProgressBar = showAudioProgressBar,
     keepScreenOnDuringAudio = keepScreenOnDuringAudio,
+    ttsVoiceId = ttsVoiceId,
+    ttsRate = ttsRate,
+    ttsPitch = ttsPitch,
+    ttsEnabled = ttsEnabled,
 )
 
 fun ReaderTheme.toUiModel(): ReaderThemeUiModel = when (this) {

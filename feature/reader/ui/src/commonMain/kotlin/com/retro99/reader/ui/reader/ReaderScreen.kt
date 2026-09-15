@@ -21,8 +21,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -39,6 +42,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -74,17 +78,18 @@ import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.LoadingScreen
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.ChapterProgressDisplayMode
+import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.domain.model.ProgressBarPosition
 import com.retro99.reader.domain.model.ProgressIndicatorMode
-import com.retro99.reader.domain.model.NavigationAction
+import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.ChapterReadingTimeInfo
-import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.model.TocItemUiModel
 import com.retro99.reader.ui.model.backgroundColor
 import com.retro99.reader.ui.publication.PublicationState
+import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.translations.StringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -92,21 +97,25 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import resources.translations.general_close
+import resources.translations.reader_bookmark_added
+import resources.translations.reader_bookmark_already_exists
+import resources.translations.reader_bookmark_no_more_bookmarks
+import resources.translations.reader_bookmark_save_failed
+import resources.translations.reader_bookmark_undo
+import resources.translations.reader_bookmarks_title
+import resources.translations.reader_overflow_more
 import resources.translations.reader_readaloud_no_audio
 import resources.translations.reader_time_remaining_less_than_minute
 import resources.translations.reader_time_remaining_minutes
 import resources.translations.reader_toc_jumped_to_chapter
 import resources.translations.reader_toc_title
 import resources.translations.reader_toc_undo
-import resources.translations.reader_bookmark_added
-import resources.translations.reader_bookmark_already_exists
-import resources.translations.reader_bookmark_save_failed
-import resources.translations.reader_bookmark_no_more_bookmarks
-import resources.translations.reader_bookmark_undo
-import resources.translations.reader_bookmarks_title
-import resources.translations.reader_overflow_more
+import resources.translations.reader_tts_pause
+import resources.translations.reader_tts_read_aloud
+import resources.translations.reader_tts_voice_settings
 import resources.translations.settings_changed
 import resources.translations.settings_icon_content_description
+import resources.translations.settings_tts_enabled
 import resources.translations.settings_undo
 import kotlin.math.abs
 
@@ -155,7 +164,7 @@ private fun ReaderScreenContent(
     KeepScreenOn(
         enabled = viewState.currentSettings?.fullscreenMode == true ||
             (
-                viewState.isReadAloud &&
+                    (viewState.isReadAloud || viewState.isTtsReadAloud) &&
                     viewState.isPlaying &&
                     viewState.currentSettings?.keepScreenOnDuringAudio == true
                 ),
@@ -180,6 +189,47 @@ private fun ReaderScreenContent(
             viewState = viewState,
             intentDispatcher = intentDispatcher,
             onExit = { intentDispatcher(ReaderIntent.ToggleAudioOnlyMode) },
+        )
+        return
+    }
+
+    if (viewState.isVoiceSettingsVisible) {
+        VoiceSettingsScreen(
+            voices = viewState.ttsVoices,
+            selectedVoiceId = viewState.selectedTtsVoiceId,
+            isPreparing = viewState.isTtsVoicePreparing,
+            preparingVoicePackage = viewState.preparingTtsVoicePackage,
+            preparationProgress = viewState.ttsVoicePreparationProgress,
+            failedVoicePackage = viewState.failedTtsVoicePackage,
+            deletingVoicePackage = viewState.deletingTtsVoicePackage,
+            failedVoicePackageDeletion = viewState.failedTtsVoicePackageDeletion,
+            hasAcceptedSupertonicTerms = viewState.hasAcceptedSupertonicTerms,
+            rate = viewState.currentSettings?.ttsRate ?: 1f,
+            pitch = viewState.currentSettings?.ttsPitch ?: 1f,
+            previewingVoiceKey = viewState.ttsPreviewingVoiceId,
+            isPreviewPlaying = viewState.isTtsPreviewPlaying,
+            onVoiceSelected = { voiceId ->
+                intentDispatcher(ReaderIntent.SelectTtsVoice(voiceId))
+            },
+            onDownloadNeuralVoicePackage = { voicePackage ->
+                intentDispatcher(ReaderIntent.DownloadNeuralVoicePackage(voicePackage))
+            },
+            onDeleteNeuralVoicePackage = { voicePackage ->
+                intentDispatcher(ReaderIntent.DeleteNeuralVoicePackage(voicePackage))
+            },
+            onRetryVoicePreparation = { voicePackage ->
+                intentDispatcher(ReaderIntent.RetryTtsVoicePreparation(voicePackage))
+            },
+            onAcceptSupertonicTermsAndDownload = {
+                intentDispatcher(ReaderIntent.AcceptSupertonicTermsAndDownload)
+            },
+            onPreviewVoice = { voiceId, text ->
+                intentDispatcher(ReaderIntent.PreviewTtsVoice(voiceId, text))
+            },
+            onStopPreview = { intentDispatcher(ReaderIntent.StopTtsPreview) },
+            onRateChanged = { rate -> intentDispatcher(ReaderIntent.SetTtsRate(rate)) },
+            onPitchChanged = { pitch -> intentDispatcher(ReaderIntent.SetTtsPitch(pitch)) },
+            onClose = { intentDispatcher(ReaderIntent.CloseVoiceSettings) },
         )
         return
     }
@@ -209,7 +259,13 @@ private fun ReaderScreenContent(
                     bookTitle = viewState.bookTitle,
                     publicationState = viewState.publicationState,
                     isReadAloud = viewState.isReadAloud,
+                    isTtsReadAloud = viewState.isTtsReadAloud,
+                    ttsVoices = viewState.ttsVoices,
+                    selectedTtsVoiceId = viewState.selectedTtsVoiceId,
+                    isTtsVoicePreparing = viewState.isTtsVoicePreparing,
                     isPlaying = viewState.isPlaying,
+                    isNarrationLoading = viewState.isNarrationLoading,
+                    isNarrationStartPending = viewState.isNarrationStartPending,
                     currentAudioPositionMs = viewState.currentAudioPositionMs,
                     totalDurationMs = viewState.totalDurationMs,
                     sleepTimerRemainingMs = viewState.sleepTimerRemainingMs,
@@ -438,7 +494,13 @@ private fun ReaderContent(
     bookTitle: String,
     publicationState: PublicationState,
     isReadAloud: Boolean,
+    isTtsReadAloud: Boolean,
+    ttsVoices: List<TtsVoice>,
+    selectedTtsVoiceId: String?,
+    isTtsVoicePreparing: Boolean,
     isPlaying: Boolean,
+    isNarrationLoading: Boolean,
+    isNarrationStartPending: Boolean,
     currentAudioPositionMs: Long,
     totalDurationMs: Long?,
     sleepTimerRemainingMs: Long?,
@@ -468,8 +530,15 @@ private fun ReaderContent(
     val settingChangedMessage = stringResource(StringRes.settings_changed)
     val undoLabel = stringResource(StringRes.settings_undo)
 
-    LaunchedEffect(areControlsVisible, lastInteractionTime, isAudioControlsDialogVisible) {
-        if (areControlsVisible && !isAudioControlsDialogVisible) {
+    LaunchedEffect(
+        areControlsVisible,
+        lastInteractionTime,
+        isAudioControlsDialogVisible,
+        isNarrationStartPending,
+    ) {
+        if (isNarrationStartPending) {
+            areControlsVisible = true
+        } else if (areControlsVisible && !isAudioControlsDialogVisible) {
             delay(CONTROLS_AUTO_HIDE_DELAY_MS)
             areControlsVisible = false
         }
@@ -502,7 +571,8 @@ private fun ReaderContent(
                     .padding(vertical = settings.marginVertical.dp)
                     .readerGestures(
                         containerSize = containerSize,
-                        detectDoubleTaps = isReadAloud,
+                        detectDoubleTaps = isReadAloud ||
+                                (isTtsReadAloud && settings.ttsEnabled),
                         doubleTapTimeoutMs = settings.doubleTapTimeoutMs,
                         tapNavigationEnabled = settings.tapNavigationEnabled,
                         onZoomChange = { scale ->
@@ -585,7 +655,7 @@ private fun ReaderContent(
             }
 
             // ReadAloud audio controls
-            if (isReadAloud && isAudioPlayerReady) {
+            if ((isReadAloud && isAudioPlayerReady) || (isTtsReadAloud && settings.ttsEnabled)) {
                 this@Column.AnimatedVisibility(
                     visible = areControlsVisible,
                     enter = fadeIn() + slideInVertically { it },
@@ -596,13 +666,27 @@ private fun ReaderContent(
                 ) {
                     ReadAloudControls(
                         isPlaying = isPlaying,
+                        isLoading = isNarrationLoading,
                         currentPositionMs = currentAudioPositionMs,
                         totalDurationMs = totalDurationMs,
-                        playbackSpeed = settings.playbackSpeed,
+                        playbackSpeed = if (isTtsReadAloud && !isReadAloud) {
+                            settings.ttsRate
+                        } else {
+                            settings.playbackSpeed
+                        },
                         sleepTimerRemainingMs = sleepTimerRemainingMs,
-                        showAudioProgressBar = settings.showAudioProgressBar,
+                        showAudioProgressBar = if (isTtsReadAloud && !isReadAloud) {
+                            false
+                        } else {
+                            settings.showAudioProgressBar
+                        },
                         areControlsVisible = areControlsVisible,
+                        voices = ttsVoices,
+                        selectedVoiceId = selectedTtsVoiceId,
+                        isVoicePreparing = isTtsVoicePreparing,
+                        showAudioOnlyAction = isReadAloud,
                         intentDispatcher = intentDispatcher,
+                        onOpenVoiceSettings = { intentDispatcher(ReaderIntent.OpenVoiceSettings) },
                         onInteraction = onControlsInteraction,
                         onSwipeDown = { areControlsVisible = false },
                         onControlsDialogVisibilityChanged = { isVisible ->
@@ -628,6 +712,14 @@ private fun ReaderContent(
                     onTocClick = { intentDispatcher(ReaderIntent.ToggleToc) },
                     onBookmarksClick = { intentDispatcher(ReaderIntent.ToggleBookmarks) },
                     onSettingsClick = { intentDispatcher(ReaderIntent.OnSettingsClicked) },
+                    showTtsAction = isTtsReadAloud,
+                    ttsEnabled = settings.ttsEnabled,
+                    isTtsPlaying = isPlaying,
+                    onTtsEnabledChange = { enabled ->
+                        intentDispatcher(ReaderIntent.SetTtsEnabled(enabled))
+                    },
+                    onTtsPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
+                    onVoiceSettings = { intentDispatcher(ReaderIntent.OpenVoiceSettings) },
                     onInteraction = onControlsInteraction,
                 )
             }
@@ -744,6 +836,12 @@ private fun ReaderToolbar(
     onTocClick: () -> Unit,
     onBookmarksClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    showTtsAction: Boolean,
+    ttsEnabled: Boolean,
+    isTtsPlaying: Boolean,
+    onTtsEnabledChange: (Boolean) -> Unit,
+    onTtsPlayPause: () -> Unit,
+    onVoiceSettings: () -> Unit,
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -784,6 +882,86 @@ private fun ReaderToolbar(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+
+            if (showTtsAction) {
+                Box {
+                    var ttsExpanded by remember { mutableStateOf(false) }
+                    IconButton(onClick = {
+                        onInteraction()
+                        ttsExpanded = true
+                    }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                            contentDescription = stringResource(StringRes.reader_tts_read_aloud),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = ttsExpanded,
+                        onDismissRequest = { ttsExpanded = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(StringRes.settings_tts_enabled)) },
+                            trailingIcon = {
+                                Switch(
+                                    checked = ttsEnabled,
+                                    onCheckedChange = null,
+                                )
+                            },
+                            onClick = {
+                                onInteraction()
+                                onTtsEnabledChange(!ttsEnabled)
+                            },
+                        )
+                        if (ttsEnabled) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        if (isTtsPlaying) {
+                                            stringResource(StringRes.reader_tts_pause)
+                                        } else {
+                                            stringResource(StringRes.reader_tts_read_aloud)
+                                        },
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (isTtsPlaying) {
+                                            Icons.Default.Pause
+                                        } else {
+                                            Icons.Default.PlayArrow
+                                        },
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                },
+                                onClick = {
+                                    ttsExpanded = false
+                                    onInteraction()
+                                    onTtsPlayPause()
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(stringResource(StringRes.reader_tts_voice_settings))
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Settings,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                },
+                                onClick = {
+                                    ttsExpanded = false
+                                    onInteraction()
+                                    onVoiceSettings()
+                                },
+                            )
+                        }
+                    }
+                }
+            }
 
             Box {
                 IconButton(onClick = {

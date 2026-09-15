@@ -8,12 +8,12 @@ import com.retro99.books.domain.model.BookType
 import com.retro99.reader.ui.media.MediaOverlayClip
 import com.retro99.reader.ui.model.AudioLocatorState
 import com.retro99.reader.ui.model.PlaybackState
+import com.retro99.reader.ui.tts.TtsChapterTimeline
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -147,6 +147,9 @@ class MediaPlaybackController {
     private val _nowPlayingBook = MutableStateFlow<PlayingBookInfo?>(null)
     private val _nextChapterRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val _previousChapterRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _nextTtsSentenceRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _previousTtsSentenceRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private val _ttsChapterPositionRequest = MutableSharedFlow<Long>(extraBufferCapacity = 1)
 
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -159,11 +162,46 @@ class MediaPlaybackController {
     val nowPlayingBook: StateFlow<PlayingBookInfo?> = _nowPlayingBook.asStateFlow()
     val nextChapterRequest: Flow<Unit> = _nextChapterRequest
     val previousChapterRequest: Flow<Unit> = _previousChapterRequest
+    val nextTtsSentenceRequest: Flow<Unit> = _nextTtsSentenceRequest
+    val previousTtsSentenceRequest: Flow<Unit> = _previousTtsSentenceRequest
+    val ttsChapterPositionRequest: Flow<Long> = _ttsChapterPositionRequest
 
     // ==================== State Flow Setters (delegate to service) ====================
 
     fun setChapterClips(clips: List<MediaOverlayClip>) {
         synchronized(lock) { _serviceInstance?.setChapterClips(clips) }
+    }
+
+    fun prepareForTtsPlayback(
+        bookTitle: String,
+        chapterTitle: String?,
+        coverArtwork: ByteArray?,
+    ) {
+        synchronized(lock) {
+            _serviceInstance?.prepareForTtsPlayback(
+                bookTitle = bookTitle,
+                chapterTitle = chapterTitle,
+                coverArtwork = coverArtwork,
+            )
+        }
+    }
+
+    fun prepareForMediaOverlayPlayback() {
+        synchronized(lock) {
+            _serviceInstance?.prepareForMediaOverlayPlayback()
+        }
+    }
+
+    internal fun updateTtsChapterTimeline(
+        chapterTimeline: TtsChapterTimeline,
+        sentenceIndex: Int,
+    ) {
+        synchronized(lock) {
+            _serviceInstance?.updateTtsChapterTimeline(
+                chapterTimeline = chapterTimeline,
+                sentenceIndex = sentenceIndex,
+            )
+        }
     }
 
     fun getChapterClips(): List<MediaOverlayClip> {
@@ -422,6 +460,18 @@ class MediaPlaybackController {
         _previousChapterRequest.tryEmit(Unit)
     }
 
+    fun requestNextTtsSentence() {
+        _nextTtsSentenceRequest.tryEmit(Unit)
+    }
+
+    fun requestPreviousTtsSentence() {
+        _previousTtsSentenceRequest.tryEmit(Unit)
+    }
+
+    fun requestTtsChapterPosition(positionMs: Long) {
+        _ttsChapterPositionRequest.tryEmit(positionMs)
+    }
+
     // ==================== Clip Scheduling ====================
 
     /**
@@ -612,4 +662,3 @@ class MediaPlaybackController {
         private const val SERVICE_READY_TIMEOUT_MS = 5000L
     }
 }
-

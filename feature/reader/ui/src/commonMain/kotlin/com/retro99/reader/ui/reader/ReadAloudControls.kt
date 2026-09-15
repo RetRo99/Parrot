@@ -3,18 +3,15 @@ package com.retro99.reader.ui.reader
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Pause
@@ -34,6 +32,7 @@ import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TimerOff
 import androidx.compose.material.icons.outlined.Headphones
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -55,22 +54,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.IntentDispatcher
+import com.retro99.reader.ui.tts.TtsVoice
+import com.retro99.translations.StringRes
+import org.jetbrains.compose.resources.stringResource
+import resources.translations.reader_tts_preparing
+import resources.translations.reader_tts_system
+import resources.translations.reader_tts_voice
 
 private const val DISMISS_THRESHOLD_DP = 80
 
 @Composable
 internal fun ReadAloudControls(
     isPlaying: Boolean,
+    isLoading: Boolean,
     currentPositionMs: Long,
     totalDurationMs: Long?,
     playbackSpeed: Float,
     sleepTimerRemainingMs: Long?,
     showAudioProgressBar: Boolean?,
     areControlsVisible: Boolean,
+    voices: List<TtsVoice>,
+    selectedVoiceId: String?,
+    isVoicePreparing: Boolean,
+    showAudioOnlyAction: Boolean,
     intentDispatcher: IntentDispatcher<ReaderIntent>,
+    onOpenVoiceSettings: () -> Unit,
     onInteraction: () -> Unit = {},
     onSwipeDown: () -> Unit = {},
     onControlsDialogVisibilityChanged: (Boolean) -> Unit = {},
@@ -134,13 +147,9 @@ internal fun ReadAloudControls(
         ) {
             PlaybackControlsRow(
                 isPlaying = isPlaying,
-                playbackSpeed = playbackSpeed,
-                currentPositionMs = currentPositionMs,
-                totalDurationMs = totalDurationMs,
-                sleepTimerRemainingMs = sleepTimerRemainingMs,
+                isLoading = isLoading,
                 isExpanded = isExpanded,
                 intentDispatcher = interactingDispatcher,
-                onControlsDialogVisibilityChanged = onControlsDialogVisibilityChanged,
                 onToggleExpand = {
                     isExpanded = !isExpanded
                     onInteraction()
@@ -152,13 +161,78 @@ internal fun ReadAloudControls(
                 enter = fadeIn(tween(300)) + expandVertically(tween(300)),
                 exit = fadeOut(tween(300)) + shrinkVertically(tween(300)),
             ) {
-                if (showAudioProgressBar != false && areControlsVisible) {
-                    SeekBar(
+                Column {
+                    SecondaryControlsRow(
+                        playbackSpeed = playbackSpeed,
+                        voices = voices,
+                        selectedVoiceId = selectedVoiceId,
+                        isVoicePreparing = isVoicePreparing,
+                        showAudioOnlyAction = showAudioOnlyAction,
+                        sleepTimerRemainingMs = sleepTimerRemainingMs,
                         currentPositionMs = currentPositionMs,
                         totalDurationMs = totalDurationMs,
-                        onInteraction = onInteraction,
-                    ) { interactingDispatcher(ReaderIntent.SeekTo(it)) }
+                        intentDispatcher = interactingDispatcher,
+                        onOpenVoiceSettings = onOpenVoiceSettings,
+                        onControlsDialogVisibilityChanged = onControlsDialogVisibilityChanged,
+                    )
+
+                    if (showAudioProgressBar != false && areControlsVisible) {
+                        SeekBar(
+                            currentPositionMs = currentPositionMs,
+                            totalDurationMs = totalDurationMs,
+                            onInteraction = onInteraction,
+                        ) { positionMs -> interactingDispatcher(ReaderIntent.SeekTo(positionMs)) }
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SecondaryControlsRow(
+    playbackSpeed: Float,
+    voices: List<TtsVoice>,
+    selectedVoiceId: String?,
+    isVoicePreparing: Boolean,
+    showAudioOnlyAction: Boolean,
+    sleepTimerRemainingMs: Long?,
+    currentPositionMs: Long,
+    totalDurationMs: Long?,
+    intentDispatcher: IntentDispatcher<ReaderIntent>,
+    onOpenVoiceSettings: () -> Unit,
+    onControlsDialogVisibilityChanged: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceEvenly,
+    ) {
+        PlaybackSpeedButton(playbackSpeed) { speed ->
+            intentDispatcher(ReaderIntent.SetPlaybackSpeed(speed))
+        }
+        if (voices.isNotEmpty()) {
+            VoiceButton(
+                voices = voices,
+                selectedVoiceId = selectedVoiceId,
+                isPreparing = isVoicePreparing,
+                onOpenVoiceSettings = onOpenVoiceSettings,
+            )
+        }
+        SleepTimerButton(
+            currentPositionMs = currentPositionMs,
+            totalDurationMs = totalDurationMs,
+            sleepTimerRemainingMs = sleepTimerRemainingMs,
+            intentDispatcher = intentDispatcher,
+            onTimerMenuVisibilityChanged = onControlsDialogVisibilityChanged,
+        )
+        if (showAudioOnlyAction) {
+            IconButton(onClick = { intentDispatcher(ReaderIntent.ToggleAudioOnlyMode) }) {
+                Icon(
+                    imageVector = Icons.Outlined.Headphones,
+                    contentDescription = "Audio only mode",
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
     }
@@ -167,13 +241,9 @@ internal fun ReadAloudControls(
 @Composable
 private fun PlaybackControlsRow(
     isPlaying: Boolean,
-    playbackSpeed: Float,
-    currentPositionMs: Long,
-    totalDurationMs: Long?,
-    sleepTimerRemainingMs: Long?,
+    isLoading: Boolean,
     isExpanded: Boolean,
     intentDispatcher: IntentDispatcher<ReaderIntent>,
-    onControlsDialogVisibilityChanged: (Boolean) -> Unit,
     onToggleExpand: () -> Unit,
 ) {
     Row(
@@ -181,55 +251,36 @@ private fun PlaybackControlsRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = fadeIn(tween(300)) + expandHorizontally(tween(300)),
-                exit = fadeOut(tween(300)) + shrinkHorizontally(tween(300)),
-            ) {
-                PlaybackSpeedButton(playbackSpeed) { intentDispatcher(ReaderIntent.SetPlaybackSpeed(it)) }
-            }
-
         IconButton(onClick = { intentDispatcher(ReaderIntent.SkipBackward()) }) {
             Icon(Icons.Default.Replay10, "Skip backward", Modifier.size(28.dp))
         }
         IconButton(
             onClick = { intentDispatcher(ReaderIntent.TogglePlayback) },
+            enabled = !isLoading,
             modifier = Modifier
                 .size(48.dp)
                 .background(MaterialTheme.colorScheme.primary, CircleShape),
         ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) "Pause" else "Play",
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.onPrimary,
-            )
+            if (isLoading) {
+                val loadingDescription = stringResource(StringRes.reader_tts_preparing)
+                CircularProgressIndicator(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .semantics { contentDescription = loadingDescription },
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onPrimary,
+                )
+            }
         }
         IconButton(onClick = { intentDispatcher(ReaderIntent.SkipForward()) }) {
             Icon(Icons.Default.Forward10, "Skip forward", Modifier.size(28.dp))
-        }
-
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = fadeIn(tween(300)) + expandHorizontally(tween(300)),
-            exit = fadeOut(tween(300)) + shrinkHorizontally(tween(300)),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SleepTimerButton(
-                    currentPositionMs = currentPositionMs,
-                    totalDurationMs = totalDurationMs,
-                    sleepTimerRemainingMs = sleepTimerRemainingMs,
-                    intentDispatcher = intentDispatcher,
-                    onTimerMenuVisibilityChanged = onControlsDialogVisibilityChanged,
-                )
-                IconButton(onClick = { intentDispatcher(ReaderIntent.ToggleAudioOnlyMode) }) {
-                    Icon(
-                        imageVector = Icons.Outlined.Headphones,
-                        contentDescription = "Audio only mode",
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
         }
 
         IconButton(onClick = onToggleExpand) {
@@ -271,6 +322,40 @@ private fun SeekBar(
             Text(formatDuration(currentPositionMs), style = MaterialTheme.typography.bodySmall)
             Text(formatDuration(duration), style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
+
+@Composable
+private fun VoiceButton(
+    voices: List<TtsVoice>,
+    selectedVoiceId: String?,
+    isPreparing: Boolean,
+    onOpenVoiceSettings: () -> Unit,
+) {
+    val selectedName = voices
+        .firstOrNull { voice -> voice.id == selectedVoiceId }
+        ?.name
+        ?.substringBefore('(')
+        ?.trim()
+        .takeUnless { selectedVoiceName -> selectedVoiceName.isNullOrEmpty() }
+        ?: stringResource(StringRes.reader_tts_system)
+    TextButton(onClick = onOpenVoiceSettings) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+            contentDescription = stringResource(StringRes.reader_tts_voice),
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = if (isPreparing) {
+                stringResource(StringRes.reader_tts_preparing)
+            } else {
+                selectedName
+            },
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            softWrap = false,
+        )
     }
 }
 
@@ -337,6 +422,8 @@ private fun SleepTimerButton(
         Text(
             text = sleepTimerRemainingMs?.let { formatSleepTimerLabel(it) } ?: "Timer",
             style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            softWrap = false,
         )
         DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
             SleepTimerPreset.entries.forEach { preset ->

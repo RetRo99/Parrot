@@ -1,6 +1,5 @@
 package com.retro99.reader.ui.navigator
 
-import com.retro99.base.nowMillis
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_DOUBLE_TAP_TIMEOUT_MS
 import com.retro99.reader.ui.bridge.AudioLocator
 import com.retro99.reader.ui.bridge.EpubReaderBridge
@@ -45,9 +44,11 @@ class IosBookController(
 
     /**
      * SharedFlow for emitting double-tap events on sentence elements.
-     * Uses replay=1 to ensure late subscribers receive the most recent event.
+     * Gesture events are not replayed to late subscribers.
      */
-    private val _sentenceDoubleTapEvents = MutableSharedFlow<SentenceDoubleTapEvent>(replay = 1)
+    private val _sentenceDoubleTapEvents = MutableSharedFlow<SentenceDoubleTapEvent>(
+        extraBufferCapacity = 1,
+    )
     override val sentenceDoubleTapEvents: Flow<SentenceDoubleTapEvent> = _sentenceDoubleTapEvents
 
     private var controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -65,25 +66,17 @@ class IosBookController(
     private val chapterWordCountCache = mutableMapOf<String, Int>()
 
     /**
-     * Timestamp of the last tap event from JavaScript, used for native double-tap detection.
-     */
-    private var lastTapTimeMs: Long = 0L
-
-    /**
-     * Fragment ID from the last tap event, used for native double-tap detection.
-     */
-    private var lastTapFragmentId: String? = null
-
-    /**
      * Current double-tap timeout in milliseconds.
      */
     private var doubleTapTimeoutMs: Int = DEFAULT_DOUBLE_TAP_TIMEOUT_MS
+
+    private val sentenceDoubleTapRecognizer = SentenceDoubleTapRecognizer()
 
     init {
         setupCallbacks()
         // Only inject tap detection script for ReadAloud books
         if (bridge.hasMediaOverlays()) {
-            injectTapDetectionScript()
+            enableSentenceTapDetection()
         }
     }
 
@@ -123,27 +116,20 @@ class IosBookController(
      * We handle double-tap detection natively for consistent timing control.
      */
     private fun onSentenceTap(fragmentId: String) {
-        val currentTimeMs = nowMillis()
-        val timeSinceLastTap = currentTimeMs - lastTapTimeMs
+        val isDoubleTap = sentenceDoubleTapRecognizer.registerTap(
+            fragmentId = fragmentId,
+            timeoutMs = doubleTapTimeoutMs,
+        )
+        if (!isDoubleTap) return
 
-        if (timeSinceLastTap < doubleTapTimeoutMs && fragmentId.isNotEmpty()) {
-            // This is a double-tap on a sentence element
-            lastTapTimeMs = 0L
-            lastTapFragmentId = null
-
-            val currentHref = _currentLocator.replayCache.firstOrNull()?.href
-            controllerScope.launch {
-                _sentenceDoubleTapEvents.emit(
-                    SentenceDoubleTapEvent(
-                        fragmentId = fragmentId,
-                        chapterHref = currentHref,
-                    )
-                )
-            }
-        } else {
-            // First tap - record time and fragment ID
-            lastTapTimeMs = currentTimeMs
-            lastTapFragmentId = fragmentId
+        val currentHref = _currentLocator.replayCache.firstOrNull()?.href
+        controllerScope.launch {
+            _sentenceDoubleTapEvents.emit(
+                SentenceDoubleTapEvent(
+                    fragmentId = fragmentId,
+                    chapterHref = currentHref,
+                ),
+            )
         }
     }
 
@@ -206,7 +192,7 @@ class IosBookController(
      * Uses a small delay to ensure the WebView content is loaded.
      * The script has built-in protection against multiple injections.
      */
-    private fun injectTapDetectionScript() {
+    override fun enableSentenceTapDetection() {
         controllerScope.launch {
             // Small delay to ensure WebView content is loaded
             delay(SCRIPT_INJECTION_DELAY_MS)
@@ -264,7 +250,6 @@ class IosBookController(
     ) {
         val fragmentId = locator.fragments?.firstOrNull()
 
-        // Apply the highlight decoration immediately
         bridge.applyAudioHighlight(locator.toAudioLocator())
 
         // Check visibility and handle page turn if needed
@@ -347,6 +332,7 @@ class IosBookController(
 
     override fun close() {
         pendingPageTurnJob?.cancel()
+        sentenceDoubleTapRecognizer.reset()
         // Note: No need to call getRemoveTapDetectorScript() here.
         // The WebView and its JavaScript context will be destroyed when the
         // navigator is closed, so the event listener will be cleaned up automatically.

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="tts_voice_preparation_channel_name" tools:ignore="MissingTranslation">Neural voice preparation</string>
+    <string name="tts_voice_preparation_channel_description" tools:ignore="MissingTranslation">Shows neural voice pack preparation progress</string>
+    <string name="tts_voice_preparation_notification_title" tools:ignore="MissingTranslation">Preparing neural voices</string>
+    <string name="tts_voice_preparation_notification_downloading" tools:ignore="MissingTranslation">Downloading %1$d%% · %2$d of %3$d MB</string>
+    <string name="tts_voice_preparation_notification_downloading_unknown" tools:ignore="MissingTranslation">Downloading · %1$d MB received</string>
+    <string name="tts_voice_preparation_notification_preparing" tools:ignore="MissingTranslation">Preparing %1$d%% · %2$d of %3$d MB</string>
+    <string name="tts_voice_preparation_notification_finalizing" tools:ignore="MissingTranslation">Finishing neural voice setup…</string>
+    <string name="tts_voice_preparation_notification_cancel" tools:ignore="MissingTranslation">Cancel</string>
+</resources>

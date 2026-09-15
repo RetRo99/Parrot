@@ -39,8 +39,9 @@ object VisibleSentenceDetector : KoinComponent {
             const vw = window.innerWidth;
             const vh = window.innerHeight;
 
-            // Get all elements with an ID containing "sentence" - these are SMIL-linked elements
-            const elementsWithId = document.querySelectorAll('[id*="sentence"]');
+            // Match only app-generated spans and the media-overlay IDs supported by the reader.
+            const sentenceSelector = '.parrot-sentence, [id*=".xhtml-sentence"]';
+            const elementsWithId = document.querySelectorAll(sentenceSelector);
 
             let topMostElement = null;
             let topMostY = Infinity;
@@ -135,4 +136,3 @@ internal data class VisibleSentenceResult(
     @SerialName("topY")
     val topY: Double? = null,
 )
-

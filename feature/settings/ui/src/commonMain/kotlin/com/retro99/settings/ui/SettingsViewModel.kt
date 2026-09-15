@@ -1,6 +1,8 @@
 package com.retro99.settings.ui
 
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.onFailure
+import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.analytics.api.ReaderAnalyticsEvent
@@ -13,8 +15,6 @@ import com.retro99.reader.domain.usecase.SaveReaderSettingsUseCase
 import com.retro99.settings.ui.model.ReaderSettingsUiModel
 import com.retro99.settings.ui.model.toDomainModel
 import com.retro99.settings.ui.model.toUiModel
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -263,6 +263,19 @@ class SettingsViewModel(
             ) {
                 it.copy(keepScreenOnDuringAudio = intent.enabled)
             }
+
+            is SettingsIntent.OnTtsEnabledChanged -> {
+                analytics.logEvent(
+                    ReaderAnalyticsEvent.TtsEnabledChanged(isEnabled = intent.enabled),
+                )
+                updateReaderSetting(
+                    "tts_enabled",
+                    intent.enabled.toString(),
+                ) { settings ->
+                    settings.copy(ttsEnabled = intent.enabled)
+                }
+            }
+
         }
     }
 
@@ -377,4 +390,3 @@ class SettingsViewModel(
         updateState { it.copy(undoReaderSettings = null) }
     }
 }
-

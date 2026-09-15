@@ -38,6 +38,7 @@ import com.retro99.reader.ui.playback.auto.AutoMediaBrowser
 import com.retro99.reader.ui.playback.auto.AutoMediaIds
 import com.retro99.reader.ui.playback.auto.HeadlessPlaybackSession
 import com.retro99.reader.ui.playback.auto.HeadlessSessionFactory
+import com.retro99.reader.ui.tts.TtsChapterTimeline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,7 +58,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.koin.android.ext.android.inject
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.util.Url
@@ -82,6 +82,11 @@ private const val TAG = "čič123"
 @OptIn(UnstableApi::class)
 class MediaPlaybackService : MediaLibraryService() {
 
+    private enum class PlaybackContentType {
+        MEDIA_OVERLAY,
+        TTS,
+    }
+
     private val controller: MediaPlaybackController by inject()
     private val clipRepository: SmilClipRepository by inject()
     private val autoMediaBrowser: AutoMediaBrowser by inject()
@@ -89,6 +94,7 @@ class MediaPlaybackService : MediaLibraryService() {
 
     // Service owns these - they survive ReaderScope destruction
     private var player: ExoPlayer? = null
+    private var sessionPlayer: TtsSessionPlayer? = null
     private var mediaSession: MediaLibrarySession? = null
 
     // Active headless playback session (for Android Auto playback without phone app)
@@ -105,6 +111,8 @@ class MediaPlaybackService : MediaLibraryService() {
     private var bookTitle: String = "Reading Aloud"
     private var chapterTitle: String? = null
     private var coverArtwork: ByteArray? = null
+    private var playbackContentType = PlaybackContentType.MEDIA_OVERLAY
+    private var ttsSessionTimeline: TtsSessionTimeline? = null
 
     // Book identification for deep link navigation
     private var serverId: String? = null
@@ -208,6 +216,17 @@ class MediaPlaybackService : MediaLibraryService() {
     }
 
     private val playerListener = object : Player.Listener {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            if (mediaItem != null) {
+                playbackContentType = if (mediaItem.mediaId.startsWith(TTS_MEDIA_ID_PREFIX)) {
+                    PlaybackContentType.TTS
+                } else {
+                    ttsSessionTimeline = null
+                    PlaybackContentType.MEDIA_OVERLAY
+                }
+            }
+        }
+
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             Log.d(TAG, "SERVICE onIsPlayingChanged: isPlaying=$isPlaying, clipsCount=${currentChapterClips.size}")
             _isPlaying.value = isPlaying
@@ -239,11 +258,17 @@ class MediaPlaybackService : MediaLibraryService() {
             when (playerState) {
                 Player.STATE_ENDED -> {
                     _isPlaying.value = false
-                    _chapterAudioCompleted.tryEmit(Unit)
+                    if (playbackContentType == PlaybackContentType.MEDIA_OVERLAY) {
+                        _chapterAudioCompleted.tryEmit(Unit)
+                    }
                 }
                 Player.STATE_READY -> {
                     val duration = p.duration
-                    if (duration > 0 && _totalDuration.value == null) {
+                    if (playbackContentType == PlaybackContentType.TTS) {
+                        ttsSessionTimeline?.let { timeline ->
+                            _totalDuration.value = timeline.chapterTimeline.durationMs
+                        }
+                    } else if (duration > 0 && _totalDuration.value == null) {
                         _totalDuration.value = duration
                     }
                 }
@@ -268,59 +293,39 @@ class MediaPlaybackService : MediaLibraryService() {
             .setUsage(C.USAGE_MEDIA)
             .build()
 
-        player = ExoPlayer.Builder(this)
+        val playbackPlayer = ExoPlayer.Builder(this)
             .setAudioAttributes(audioAttributes, true)
             .setSeekBackIncrementMs(SEEK_INCREMENT_MS)
             .setSeekForwardIncrementMs(SEEK_INCREMENT_MS)
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
+        player = playbackPlayer
 
-        player?.addListener(playerListener)
+        playbackPlayer.addListener(playerListener)
         Log.d(TAG, "ExoPlayer created: ${player != null}")
+
+        val notificationPlayer = TtsSessionPlayer(
+            player = playbackPlayer,
+            timelineProvider = {
+                if (playbackContentType == PlaybackContentType.TTS) {
+                    ttsSessionTimeline
+                } else {
+                    null
+                }
+            },
+            seekRequester = { positionMs ->
+                controller.requestTtsChapterPosition(positionMs)
+            },
+        )
+        sessionPlayer = notificationPlayer
 
         // Create MediaLibrarySession - for Android Auto support
         val sessionActivityIntent = createSessionActivityIntent()
 
-        // Define custom session commands for chapter navigation
-        val previousChapterCommand = SessionCommand(COMMAND_PREVIOUS_CHAPTER, Bundle.EMPTY)
-        val nextChapterCommand = SessionCommand(COMMAND_NEXT_CHAPTER, Bundle.EMPTY)
-
-        // Create chapter navigation buttons using custom SessionCommands
-        // These go in the overflow slots (4 and 5 in the notification)
-        val previousChapterButton = CommandButton.Builder(CommandButton.ICON_PREVIOUS)
-            .setDisplayName("Previous chapter")
-            .setSessionCommand(previousChapterCommand)
-            .build()
-
-        val nextChapterButton = CommandButton.Builder(CommandButton.ICON_NEXT)
-            .setDisplayName("Next chapter")
-            .setSessionCommand(nextChapterCommand)
-            .build()
-
-        // Create seek buttons (10 second skip) - use primary slots
-        val seekBackwardButton = CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
-            .setDisplayName("Seek back 10 seconds")
-            .setPlayerCommand(Player.COMMAND_SEEK_BACK)
-            .setSlots(CommandButton.SLOT_BACK)
-            .build()
-
-        val seekForwardButton = CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
-            .setDisplayName("Seek forward 10 seconds")
-            .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
-            .setSlots(CommandButton.SLOT_FORWARD)
-            .build()
-
-        mediaSession = MediaLibrarySession.Builder(this, player!!, LibraryCallback())
+        mediaSession = MediaLibrarySession.Builder(this, notificationPlayer, LibraryCallback())
             .setSessionActivity(sessionActivityIntent)
-            .setMediaButtonPreferences(
-                ImmutableList.of(
-                    previousChapterButton,
-                    seekBackwardButton,
-                    seekForwardButton,
-                    nextChapterButton,
-                )
-            )
+            .setMediaButtonPreferences(createMediaButtonPreferences())
             .build()
         Log.d(TAG, "MediaLibrarySession created: ${mediaSession != null}")
 
@@ -338,7 +343,7 @@ class MediaPlaybackService : MediaLibraryService() {
 
         // Notify controller that service is ready
         Log.d(TAG, "Calling controller.onServiceCreated()")
-        controller.onServiceCreated(this, player!!, mediaSession!!)
+        controller.onServiceCreated(this, playbackPlayer, mediaSession!!)
         Log.d(TAG, "onCreate() completed")
     }
 
@@ -377,15 +382,18 @@ class MediaPlaybackService : MediaLibraryService() {
 
         mediaSession?.release()
         mediaSession = null
+        sessionPlayer = null
 
         player?.removeListener(playerListener)
         player?.release()
         player = null
 
         // Reset state
+        playbackContentType = PlaybackContentType.MEDIA_OVERLAY
         currentChapterClips = emptyList()
         currentAudioFileClips = emptyList()
         currentAudioHref = null
+        ttsSessionTimeline = null
         onChapterClipsExceeded = null
 
         super.onDestroy()
@@ -430,6 +438,77 @@ class MediaPlaybackService : MediaLibraryService() {
             .build()
     }
 
+    fun prepareForTtsPlayback(
+        bookTitle: String,
+        chapterTitle: String?,
+        coverArtwork: ByteArray?,
+    ) {
+        playbackContentType = PlaybackContentType.TTS
+        ttsSessionTimeline = null
+        clearScheduledClips()
+        currentChapterClips = emptyList()
+        currentAudioHref = null
+        currentAudioFileClips = emptyList()
+        hasNotifiedChapterExceeded = false
+        onChapterClipsExceeded = null
+        _chapterStartOffset.value = 0L
+        _totalDuration.value = null
+        _currentPosition.value = 0L
+        _currentLocatorWithClip.value = null
+        this.bookTitle = bookTitle
+        this.chapterTitle = chapterTitle
+        this.coverArtwork = coverArtwork
+        updateSessionActivity()
+        mediaSession?.setMediaButtonPreferences(createMediaButtonPreferences())
+    }
+
+    fun prepareForMediaOverlayPlayback() {
+        playbackContentType = PlaybackContentType.MEDIA_OVERLAY
+        ttsSessionTimeline = null
+        mediaSession?.setMediaButtonPreferences(createMediaButtonPreferences())
+    }
+
+    internal fun updateTtsChapterTimeline(
+        chapterTimeline: TtsChapterTimeline,
+        sentenceIndex: Int,
+    ) {
+        ttsSessionTimeline = TtsSessionTimeline(
+            chapterTimeline = chapterTimeline,
+            sentenceIndex = sentenceIndex,
+        )
+        _totalDuration.value = chapterTimeline.durationMs
+    }
+
+    private fun createMediaButtonPreferences(): ImmutableList<CommandButton> {
+        val navigationTarget = if (playbackContentType == PlaybackContentType.TTS) {
+            "sentence"
+        } else {
+            "chapter"
+        }
+        return ImmutableList.of(
+            CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
+                .setDisplayName("Seek forward 10 seconds")
+                .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
+                .setSlots(CommandButton.SLOT_FORWARD)
+                .build(),
+            CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
+                .setDisplayName("Seek back 10 seconds")
+                .setPlayerCommand(Player.COMMAND_SEEK_BACK)
+                .setSlots(CommandButton.SLOT_BACK)
+                .build(),
+            CommandButton.Builder(CommandButton.ICON_PREVIOUS)
+                .setDisplayName("Previous $navigationTarget")
+                .setSessionCommand(SessionCommand(COMMAND_PREVIOUS_CHAPTER, Bundle.EMPTY))
+                .setSlots(CommandButton.SLOT_OVERFLOW)
+                .build(),
+            CommandButton.Builder(CommandButton.ICON_NEXT)
+                .setDisplayName("Next $navigationTarget")
+                .setSessionCommand(SessionCommand(COMMAND_NEXT_CHAPTER, Bundle.EMPTY))
+                .setSlots(CommandButton.SLOT_OVERFLOW)
+                .build(),
+        )
+    }
+
     private fun createSessionActivityIntent(): PendingIntent {
         val intent = if (serverId != null && bookUuid != null && bookType != null) {
             val deepLinkUri = DeepLinkUriBuilder.buildReaderUri(serverId!!, bookUuid!!, bookType!!.value)
@@ -452,7 +531,7 @@ class MediaPlaybackService : MediaLibraryService() {
     }
 
     private fun updateSessionActivity() {
-        mediaSession?.setSessionActivity(createSessionActivityIntent())
+        mediaSession?.sessionActivity = createSessionActivityIntent()
     }
 
     // ==================== Android Auto Support ====================
@@ -578,32 +657,7 @@ class MediaPlaybackService : MediaLibraryService() {
 
             // Create buttons for seek (primary) and chapter navigation (overflow)
             // Following the same pattern as official Storyteller app
-            val allButtons = ImmutableList.of(
-                // Seek forward 10s - primary forward slot
-                CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_10)
-                    .setDisplayName("Seek forward 10 seconds")
-                    .setPlayerCommand(Player.COMMAND_SEEK_FORWARD)
-                    .setSlots(CommandButton.SLOT_FORWARD)
-                    .build(),
-                // Seek back 10s - primary back slot
-                CommandButton.Builder(CommandButton.ICON_SKIP_BACK_10)
-                    .setDisplayName("Seek back 10 seconds")
-                    .setPlayerCommand(Player.COMMAND_SEEK_BACK)
-                    .setSlots(CommandButton.SLOT_BACK)
-                    .build(),
-                // Previous chapter - overflow menu
-                CommandButton.Builder(CommandButton.ICON_PREVIOUS)
-                    .setDisplayName("Previous chapter")
-                    .setSessionCommand(SessionCommand(COMMAND_PREVIOUS_CHAPTER, Bundle.EMPTY))
-                    .setSlots(CommandButton.SLOT_OVERFLOW)
-                    .build(),
-                // Next chapter - overflow menu
-                CommandButton.Builder(CommandButton.ICON_NEXT)
-                    .setDisplayName("Next chapter")
-                    .setSessionCommand(SessionCommand(COMMAND_NEXT_CHAPTER, Bundle.EMPTY))
-                    .setSlots(CommandButton.SLOT_OVERFLOW)
-                    .build(),
-            )
+            val allButtons = createMediaButtonPreferences()
 
             // Set button preferences for notification controller
             if (session.isMediaNotificationController(controller)) {
@@ -793,6 +847,9 @@ class MediaPlaybackService : MediaLibraryService() {
     private suspend fun startHeadlessPlayback(serverId: String, bookUuid: String) {
         Log.d(TAG, "startHeadlessPlayback: serverId=$serverId, bookUuid=$bookUuid")
 
+        // Android Auto uses the shared service, which may still be configured for TTS.
+        prepareForMediaOverlayPlayback()
+
         // Close any existing headless session
         activeHeadlessSession?.let { session ->
             Log.d(TAG, "startHeadlessPlayback: Closing existing session")
@@ -848,6 +905,10 @@ class MediaPlaybackService : MediaLibraryService() {
     }
 
     private fun seekForward() {
+        if (playbackContentType == PlaybackContentType.TTS) {
+            sessionPlayer?.seekForward()
+            return
+        }
         val currentPlayer = player ?: return
         val newPosition = (currentPlayer.currentPosition + SEEK_INCREMENT_MS)
             .coerceAtMost(currentPlayer.duration.coerceAtLeast(0L))
@@ -855,6 +916,10 @@ class MediaPlaybackService : MediaLibraryService() {
     }
 
     private fun seekBackward() {
+        if (playbackContentType == PlaybackContentType.TTS) {
+            sessionPlayer?.seekBack()
+            return
+        }
         val currentPlayer = player ?: return
         val newPosition = (currentPlayer.currentPosition - SEEK_INCREMENT_MS)
             .coerceAtLeast(0L)
@@ -870,6 +935,10 @@ class MediaPlaybackService : MediaLibraryService() {
      */
     private suspend fun navigateToNextChapter() {
         Log.d(TAG, "navigateToNextChapter()")
+        if (playbackContentType == PlaybackContentType.TTS) {
+            controller.requestNextTtsSentence()
+            return
+        }
         val headless = activeHeadlessSession
         if (headless != null) {
             headless.skipToNextChapter()
@@ -885,6 +954,10 @@ class MediaPlaybackService : MediaLibraryService() {
      */
     private suspend fun navigateToPreviousChapter() {
         Log.d(TAG, "navigateToPreviousChapter()")
+        if (playbackContentType == PlaybackContentType.TTS) {
+            controller.requestPreviousTtsSentence()
+            return
+        }
         val headless = activeHeadlessSession
         if (headless != null) {
             headless.skipToPreviousChapter()
@@ -900,7 +973,7 @@ class MediaPlaybackService : MediaLibraryService() {
         positionUpdateJob = serviceScope.launch {
             while (isActive) {
                 player?.let { p ->
-                    _currentPosition.update { p.currentPosition }
+                    _currentPosition.update { currentChapterPosition(p) }
                     updateCurrentLocator()
                 }
                 delay(POSITION_UPDATE_INTERVAL_MS)
@@ -1083,15 +1156,29 @@ class MediaPlaybackService : MediaLibraryService() {
     /** Forces an update of the current position and locator. */
     fun forceUpdatePosition() {
         player?.let { p ->
-            _currentPosition.value = p.currentPosition
+            _currentPosition.value = currentChapterPosition(p)
             updateCurrentLocator()
         }
+    }
+
+    private fun currentChapterPosition(playbackPlayer: ExoPlayer): Long {
+        if (playbackContentType != PlaybackContentType.TTS) {
+            return playbackPlayer.currentPosition
+        }
+
+        val timeline = ttsSessionTimeline ?: return playbackPlayer.currentPosition
+        return timeline.chapterTimeline.chapterPositionMs(
+            sentenceIndex = timeline.sentenceIndex,
+            sentencePositionMs = playbackPlayer.currentPosition,
+            sentenceDurationMs = playbackPlayer.duration,
+        )
     }
 
     companion object {
         private const val SEEK_INCREMENT_MS = 10_000L
         private const val POSITION_UPDATE_INTERVAL_MS = 100L
         private const val SECONDS_TO_MS = 1000.0
+        private const val TTS_MEDIA_ID_PREFIX = "tts:"
 
         // Custom session command for clip changes
         const val COMMAND_CLIP_CHANGED = "com.retro99.CLIP_CHANGED"
@@ -1105,4 +1192,3 @@ class MediaPlaybackService : MediaLibraryService() {
         const val COMMAND_NEXT_CHAPTER = "com.retro99.NEXT_CHAPTER"
     }
 }
-

@@ -4,6 +4,7 @@ import com.retro99.base.ui.BaseIntent
 import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
+import com.retro99.reader.ui.tts.NeuralVoicePackage
 
 sealed interface ReaderIntent : BaseIntent {
     data class UpdateSettings(
@@ -90,6 +91,36 @@ sealed interface ReaderIntent : BaseIntent {
      * Toggle audio playback (play/pause).
      */
     data object TogglePlayback : ReaderIntent
+
+    data class SelectTtsVoice(val voiceId: String?) : ReaderIntent
+
+    data class DownloadNeuralVoicePackage(
+        val voicePackage: NeuralVoicePackage,
+    ) : ReaderIntent
+
+    data class DeleteNeuralVoicePackage(
+        val voicePackage: NeuralVoicePackage,
+    ) : ReaderIntent
+
+    data class RetryTtsVoicePreparation(
+        val voicePackage: NeuralVoicePackage,
+    ) : ReaderIntent
+
+    data object AcceptSupertonicTermsAndDownload : ReaderIntent
+
+    data class PreviewTtsVoice(val voiceId: String?, val text: String) : ReaderIntent
+
+    data object StopTtsPreview : ReaderIntent
+
+    data object OpenVoiceSettings : ReaderIntent
+
+    data object CloseVoiceSettings : ReaderIntent
+
+    data class SetTtsRate(val rate: Float) : ReaderIntent
+
+    data class SetTtsPitch(val pitch: Float) : ReaderIntent
+
+    data class SetTtsEnabled(val enabled: Boolean) : ReaderIntent
 
     /**
      * Toggle between the EPUB text view and the audiobook-style audio-only UI.
@@ -184,4 +215,3 @@ sealed interface ReaderIntent : BaseIntent {
 
     data class GoToBookmark(val bookmark: BookmarkUiModel) : ReaderIntent
 }
-

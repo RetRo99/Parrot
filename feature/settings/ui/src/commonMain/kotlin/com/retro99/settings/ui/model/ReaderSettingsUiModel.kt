@@ -2,12 +2,12 @@ package com.retro99.settings.ui.model
 
 import com.retro99.reader.domain.model.ChapterProgressDisplayMode
 import com.retro99.reader.domain.model.HighlightStyle
+import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.domain.model.ProgressBarPosition
 import com.retro99.reader.domain.model.ProgressIndicatorMode
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_DOUBLE_TAP_TIMEOUT_MS
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_HIGHLIGHT_COLOR
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_UNDERLINE_COLOR
-import com.retro99.reader.domain.model.NavigationAction
 
 data class ReaderSettingsUiModel(
     val fontSize: Double = 1.0,
@@ -64,6 +64,10 @@ data class ReaderSettingsUiModel(
     val showAudioProgressBar: Boolean? = null,
     // Whether to keep the screen awake while ReadAloud audio is playing
     val keepScreenOnDuringAudio: Boolean = true,
+    val ttsVoiceId: String? = null,
+    val ttsRate: Float = 1.0f,
+    val ttsPitch: Float = 1.0f,
+    val ttsEnabled: Boolean = false,
 )
 
 enum class ReaderThemeUiModel {
@@ -121,4 +125,3 @@ data class FontFamilyUiModel(
 }
 
 internal expect fun platformBundledReaderFonts(): List<FontFamilyUiModel>
-

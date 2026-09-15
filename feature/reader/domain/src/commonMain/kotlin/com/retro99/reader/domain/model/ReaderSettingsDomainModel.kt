@@ -20,6 +20,10 @@ data class ReaderSettingsDomainModel(
     // Media playback settings for ReadAloud books
     val playbackSpeed: Float = 1.0f,
     val volume: Float = 1.0f,
+    val ttsVoiceId: String? = null,
+    val ttsRate: Float = 1.0f,
+    val ttsPitch: Float = 1.0f,
+    val ttsEnabled: Boolean = false,
     // Highlight color for ReadAloud text highlighting (ARGB Int value)
     val highlightColor: Int = DEFAULT_HIGHLIGHT_COLOR,
     // Underline color for ReadAloud text highlighting (ARGB Int value)

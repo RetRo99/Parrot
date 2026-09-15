@@ -1,6 +1,5 @@
 package com.retro99.reader.ui.navigator
 
-import com.retro99.base.nowMillis
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_DOUBLE_TAP_TIMEOUT_MS
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_HIGHLIGHT_COLOR
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_UNDERLINE_COLOR
@@ -12,6 +11,7 @@ import com.retro99.reader.ui.model.ReadAloudHighlightStyle
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.model.ReaderTextAlignUi
 import com.retro99.reader.ui.model.ReaderThemeUi
+import com.retro99.reader.ui.tts.TtsSentence
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -95,6 +95,8 @@ class AndroidBookController internal constructor() : BookController {
      */
     private var doubleTapTimeoutMs: Int = DEFAULT_DOUBLE_TAP_TIMEOUT_MS
 
+    private val sentenceDoubleTapRecognizer = SentenceDoubleTapRecognizer()
+
     /**
      * Current highlighted locator, used to refresh decoration when settings change.
      */
@@ -121,9 +123,11 @@ class AndroidBookController internal constructor() : BookController {
 
     /**
      * SharedFlow for emitting double-tap events on sentence elements.
-     * Uses replay=1 to ensure late subscribers receive the most recent event.
+     * Gesture events are not replayed to late subscribers.
      */
-    private val _sentenceDoubleTapEvents = MutableSharedFlow<SentenceDoubleTapEvent>(replay = 1)
+    private val _sentenceDoubleTapEvents = MutableSharedFlow<SentenceDoubleTapEvent>(
+        extraBufferCapacity = 1,
+    )
 
     /**
      * Flow of double-tap events on sentence elements.
@@ -131,16 +135,6 @@ class AndroidBookController internal constructor() : BookController {
      */
     override val sentenceDoubleTapEvents: Flow<SentenceDoubleTapEvent> =
         _sentenceDoubleTapEvents.asSharedFlow()
-
-    /**
-     * Timestamp of the last tap event from JavaScript, used for native double-tap detection.
-     */
-    private var lastTapTimeMs: Long = 0L
-
-    /**
-     * Fragment ID from the last tap event, used for native double-tap detection.
-     */
-    private var lastTapFragmentId: String? = null
 
     /**
      * Whether this book has media overlays (ReadAloud capability).
@@ -189,9 +183,9 @@ class AndroidBookController internal constructor() : BookController {
         // Execute any pending actions that were queued before initialization
         executePendingActions(navigator)
 
-        // Only inject tap detection script for ReadAloud books
+        // Media-overlay books already contain addressable sentence elements.
         if (hasMediaOverlays) {
-            injectTapDetectionScript()
+            enableSentenceTapDetection()
         }
     }
 
@@ -213,7 +207,7 @@ class AndroidBookController internal constructor() : BookController {
      * Uses a small delay to ensure the WebView content is loaded.
      * The script has built-in protection against multiple injections.
      */
-    private fun injectTapDetectionScript() {
+    override fun enableSentenceTapDetection() {
         controllerScope.launch {
             // Small delay to ensure WebView content is loaded
             delay(SCRIPT_INJECTION_DELAY_MS)
@@ -228,28 +222,23 @@ class AndroidBookController internal constructor() : BookController {
      * We handle double-tap detection natively for consistent timing control.
      */
     fun onSentenceTap(fragmentId: String) {
-        val currentTimeMs = nowMillis()
-        val timeSinceLastTap = currentTimeMs - lastTapTimeMs
+        val isDoubleTap = sentenceDoubleTapRecognizer.registerTap(
+            fragmentId = fragmentId,
+            timeoutMs = doubleTapTimeoutMs,
+        )
+        if (!isDoubleTap) return
 
-        if (timeSinceLastTap < doubleTapTimeoutMs && fragmentId.isNotEmpty()) {
-            // This is a double-tap on a sentence element
-            lastTapTimeMs = 0L
-            lastTapFragmentId = null
-
-            controllerScope.launch {
-                // Access navigator state on Main thread for thread safety
-                val currentHref = withNavigatorOrNull { it.currentLocator.value.href.toString() }
-                _sentenceDoubleTapEvents.emit(
-                    SentenceDoubleTapEvent(
-                        fragmentId = fragmentId,
-                        chapterHref = currentHref,
-                    )
-                )
+        controllerScope.launch {
+            // Access navigator state on Main thread for thread safety
+            val currentHref = withNavigatorOrNull { navigator ->
+                navigator.currentLocator.value.href.toString()
             }
-        } else {
-            // First tap - record time and fragment ID
-            lastTapTimeMs = currentTimeMs
-            lastTapFragmentId = fragmentId
+            _sentenceDoubleTapEvents.emit(
+                SentenceDoubleTapEvent(
+                    fragmentId = fragmentId,
+                    chapterHref = currentHref,
+                ),
+            )
         }
     }
 
@@ -426,13 +415,10 @@ class AndroidBookController internal constructor() : BookController {
             val androidLocator = locator.toAndroidLocator() ?: return@withNavigatorOrNull
             val fragmentId = locator.fragments?.firstOrNull()
 
-            // Track current highlighted locator for refreshing when settings change
-            currentHighlightedLocator = androidLocator
-
             // First navigate to the locator to ensure the sentence is visible
             nav.go(androidLocator)
 
-            // Apply highlight decorations
+            currentHighlightedLocator = androidLocator
             val decorations = createDecorations(androidLocator)
             decorableNavigator.applyDecorations(decorations, READALOUD_DECORATION_GROUP)
 
@@ -500,6 +486,27 @@ class AndroidBookController internal constructor() : BookController {
             val cleanJson = cleanWebViewJson(rawResult)
             VisibleSentenceDetector.parseResult(cleanJson)
         }
+    }
+
+    override suspend fun hasReadableContent(): Boolean {
+        return withNavigatorOrNull { nav ->
+            val rawResult = nav.evaluateJavascript(
+                ChapterSentenceExtractor.getReadableContentCheckScript(),
+            ) ?: return@withNavigatorOrNull false
+
+            rawResult.trim().removeSurrounding("\"").equals("true", ignoreCase = true)
+        } ?: false
+    }
+
+    override suspend fun getChapterSentences(): List<TtsSentence> {
+        return withNavigatorOrNull { nav ->
+            val script = ChapterSentenceExtractor.getScript()
+            val rawResult = nav.evaluateJavascript(script)
+                ?: return@withNavigatorOrNull emptyList()
+
+            val cleanJson = cleanWebViewJson(rawResult)
+            ChapterSentenceExtractor.parseResult(cleanJson)
+        } ?: emptyList()
     }
 
     /**
@@ -571,6 +578,7 @@ class AndroidBookController internal constructor() : BookController {
         pendingPageTurnJob?.cancel()
         pendingActions.clear()
         currentHighlightedLocator = null
+        sentenceDoubleTapRecognizer.reset()
         // Note: No need to call getRemoveDoubleTapDetectorScript() here.
         // The WebView and its JavaScript context will be destroyed when the
         // fragment is removed, so the event listener will be cleaned up automatically.

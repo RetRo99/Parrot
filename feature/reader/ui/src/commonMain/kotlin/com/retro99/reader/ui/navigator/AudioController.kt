@@ -6,6 +6,8 @@ import com.retro99.reader.ui.model.LocatorState
 import com.retro99.reader.ui.model.PlaybackState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * Controller interface for audio playback in ReadAloud books.
@@ -19,7 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
  * - Android: Uses ExoPlayer with SMIL parsing
  * - iOS: Bridges to Swift MediaOverlayPlayer with AVPlayer
  */
-interface AudioController : AutoCloseable {
+interface AudioController : NarrationController {
 
     // State observation flows
 
@@ -28,6 +30,16 @@ interface AudioController : AutoCloseable {
      * Includes position, playing state, playback state, and readiness.
      */
     val audioPlaybackState: Flow<AudioPlaybackState>
+
+    override val isPlaying: Flow<Boolean>
+        get() = audioPlaybackState
+            .map { playbackState -> playbackState.isPlaying }
+            .distinctUntilChanged()
+
+    override val isLoading: Flow<Boolean>
+        get() = audioPlaybackState
+            .map { playbackState -> playbackState.playbackState == PlaybackState.BUFFERING }
+            .distinctUntilChanged()
 
     /**
      * Flow of playback state changes for ReadAloud books.
@@ -74,7 +86,7 @@ interface AudioController : AutoCloseable {
      *
      * Uses the visible sentence ID set via [setVisibleSentenceId] for precise positioning.
      */
-    fun togglePlayback()
+    override fun togglePlayback()
 
     /**
      * Resets the playback state so the next play starts fresh.
@@ -110,19 +122,19 @@ interface AudioController : AutoCloseable {
      *
      * @param speed The playback speed (e.g., 0.5, 1.0, 1.5, 2.0)
      */
-    fun setPlaybackSpeed(speed: Float)
+    override fun setPlaybackSpeed(speed: Float)
 
     /**
      * Skips forward by a fixed increment (10 seconds).
      * Uses the player's authoritative position rather than ViewModel state.
      */
-    fun skipForward()
+    override fun skipForward()
 
     /**
      * Skips backward by a fixed increment (10 seconds).
      * Uses the player's authoritative position rather than ViewModel state.
      */
-    fun skipBackward()
+    override fun skipBackward()
 
     /**
      * Starts audio playback from a specific text fragment (sentence).
@@ -132,6 +144,14 @@ interface AudioController : AutoCloseable {
      * @param chapterHref Optional chapter href. If null, uses the current chapter.
      */
     fun playFromFragment(fragmentId: String, chapterHref: String? = null)
+
+    override fun playFromSentence(fragmentId: String, chapterHref: String?) {
+        playFromFragment(fragmentId, chapterHref)
+    }
+
+    override fun playFromChapterStart(chapterHref: String) {
+        playFromFragment(fragmentId = "", chapterHref = chapterHref)
+    }
 
     /**
      * Updates the audio position to match a given text fragment ID without starting playback.
@@ -176,4 +196,7 @@ interface AudioController : AutoCloseable {
      * to skip to the next chapter.
      */
     val chapterAudioCompleted: Flow<String>
+
+    override val chapterCompleted: Flow<String>
+        get() = chapterAudioCompleted
 }

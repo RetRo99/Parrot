@@ -20,6 +20,8 @@ kotlin {
         androidResources {
             enable = true
         }
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -64,11 +66,24 @@ kotlin {
             implementation(libs.media3.session)
             implementation(libs.coroutines.guava)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core.ktx)
             implementation(libs.androidx.fragment)
             implementation(libs.androidx.lifecycle.process)
             implementation(projects.feature.reader.data)
             implementation(projects.lib.server.api)
+            implementation(files("libs/sherpa-onnx-1.13.8.aar"))
+            implementation(libs.commons.compress)
+        }
+
+        commonTest.dependencies {
+            implementation(libs.coroutines.test)
+            implementation(libs.kotlin.test)
+        }
+
+        named("androidHostTest") {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+            }
         }
     }
 }
-

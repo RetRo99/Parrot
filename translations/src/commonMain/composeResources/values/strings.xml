@@ -386,4 +386,75 @@
     <string name="app_settings_current_book_cleared" tools:ignore="MissingTranslation">Current book cleared</string>
     <string name="app_settings_show_continue_reading" tools:ignore="MissingTranslation">Show Continue Reading</string>
     <string name="app_settings_show_continue_reading_description" tools:ignore="MissingTranslation">Display the continue reading shortcut on the books list</string>
+    <string name="settings_tts_enabled" tools:ignore="MissingTranslation">Text-to-Speech</string>
+    <string name="settings_tts_enabled_description" tools:ignore="MissingTranslation">Read books aloud with on-device voices</string>
+    <string name="reader_tts_voice" tools:ignore="MissingTranslation">Voice</string>
+    <string name="reader_tts_preview_text" tools:ignore="MissingTranslation">Preview text</string>
+    <string name="reader_tts_preview_default" tools:ignore="MissingTranslation">This is a preview of the selected voice.</string>
+    <string name="reader_tts_speed" tools:ignore="MissingTranslation">Speed</string>
+    <string name="reader_tts_pitch" tools:ignore="MissingTranslation">Pitch</string>
+    <string name="reader_tts_system" tools:ignore="MissingTranslation">System</string>
+    <string name="reader_tts_system_voice" tools:ignore="MissingTranslation">System voice</string>
+    <string name="reader_tts_on_device" tools:ignore="MissingTranslation">On-device</string>
+    <string name="reader_tts_preparing_voice" tools:ignore="MissingTranslation">Preparing neural voices…</string>
+    <string name="reader_tts_preparing" tools:ignore="MissingTranslation">Preparing…</string>
+    <string name="reader_tts_stop_preview" tools:ignore="MissingTranslation">Stop preview</string>
+    <string name="reader_tts_preview_voice" tools:ignore="MissingTranslation">Preview voice</string>
+    <string name="reader_tts_reset" tools:ignore="MissingTranslation">Reset</string>
+    <string name="reader_tts_read_aloud" tools:ignore="MissingTranslation">Read aloud</string>
+    <string name="reader_tts_pause" tools:ignore="MissingTranslation">Pause</string>
+    <string name="reader_tts_voice_settings" tools:ignore="MissingTranslation">Voice settings</string>
+    <string name="reader_tts_download" tools:ignore="MissingTranslation">Download</string>
+    <string name="reader_tts_download_failed" tools:ignore="MissingTranslation">Download failed. Check your connection.</string>
+    <string name="reader_tts_neural_voices" tools:ignore="MissingTranslation">High-quality neural voices</string>
+    <string name="reader_tts_system_voices" tools:ignore="MissingTranslation">System voices by language</string>
+    <string name="reader_tts_downloading_progress" tools:ignore="MissingTranslation">Downloading %1$d% · %2$d of %3$d MB</string>
+    <string name="reader_tts_downloading_unknown_size" tools:ignore="MissingTranslation">Downloading · %1$d MB received</string>
+    <string name="reader_tts_delete_dialog_title" tools:ignore="MissingTranslation">Delete neural voice pack?</string>
+    <string name="reader_tts_delete_dialog_message" tools:ignore="MissingTranslation">This removes the shared neural voice pack and makes all neural voices unavailable until you download it again. System voices remain available.</string>
+    <string name="reader_tts_delete" tools:ignore="MissingTranslation">Delete</string>
+    <string name="reader_tts_deleting_voices" tools:ignore="MissingTranslation">Deleting neural voice pack…</string>
+    <string name="reader_tts_delete_failed" tools:ignore="MissingTranslation">Couldn’t delete the neural voice pack. Try again.</string>
+    <string name="reader_tts_neural_voice_pack" tools:ignore="MissingTranslation">Shared neural voice pack</string>
+    <string name="reader_tts_neural_voice_pack_not_downloaded" tools:ignore="MissingTranslation">Not downloaded · unlocks all %1$d voices</string>
+    <string name="reader_tts_neural_voice_pack_downloaded" tools:ignore="MissingTranslation">Downloaded · all %1$d voices available offline</string>
+    <string name="reader_tts_download_voice_pack" tools:ignore="MissingTranslation">Download %1$d MB</string>
+    <string name="reader_tts_delete_voice_pack" tools:ignore="MissingTranslation">Delete voice pack</string>
+    <string name="reader_tts_preparing_progress" tools:ignore="MissingTranslation">Preparing %1$d% · %2$d of %3$d MB</string>
+    <string name="reader_tts_finalizing_voice_pack" tools:ignore="MissingTranslation">Finishing neural voice setup…</string>
+    <string name="reader_tts_download_to_preview" tools:ignore="MissingTranslation">Download the neural voice pack to preview this voice.</string>
+    <string name="reader_tts_selected_voice" tools:ignore="MissingTranslation">Selected: %1$s</string>
+    <string name="reader_tts_neural_voices_description" tools:ignore="MissingTranslation">Natural-sounding voices for offline listening</string>
+    <string name="reader_tts_selected_voice_label" tools:ignore="MissingTranslation">Selected voice</string>
+    <string name="reader_tts_choose_voice" tools:ignore="MissingTranslation">Choose a voice</string>
+    <string name="reader_tts_neural" tools:ignore="MissingTranslation">Neural</string>
+    <string name="reader_tts_device" tools:ignore="MissingTranslation">Device</string>
+    <string name="reader_tts_device_default_description" tools:ignore="MissingTranslation">Follows system settings</string>
+    <string name="reader_tts_manage" tools:ignore="MissingTranslation">Manage</string>
+    <string name="reader_tts_neural_voice_pack_downloaded_compact" tools:ignore="MissingTranslation">%1$d voices · %2$d MB downloaded</string>
+    <string name="reader_tts_neural_voice_pack_not_downloaded_compact" tools:ignore="MissingTranslation">%1$d voices · %2$d MB download</string>
+    <string name="reader_tts_voice_offline_details" tools:ignore="MissingTranslation">%1$s · Offline</string>
+    <string name="reader_tts_slower" tools:ignore="MissingTranslation">Slower</string>
+    <string name="reader_tts_normal" tools:ignore="MissingTranslation">Normal</string>
+    <string name="reader_tts_faster" tools:ignore="MissingTranslation">Faster</string>
+    <string name="reader_tts_preview" tools:ignore="MissingTranslation">Preview</string>
+    <string name="reader_tts_best_quality" tools:ignore="MissingTranslation">Best quality</string>
+    <string name="reader_tts_neural_benefit" tools:ignore="MissingTranslation">Natural, expressive narration</string>
+    <string name="reader_tts_kokoro_pack_name" tools:ignore="MissingTranslation">Kokoro voices</string>
+    <string name="reader_tts_supertonic_pack_name" tools:ignore="MissingTranslation">Supertonic 3 voices</string>
+    <string name="reader_tts_ai_generated_disclosure" tools:ignore="MissingTranslation">AI-generated speech · Runs entirely on this device</string>
+    <string name="reader_tts_supertonic_terms_required" tools:ignore="MissingTranslation">Review and accept the model terms before downloading.</string>
+    <string name="reader_tts_supertonic_terms_accepted" tools:ignore="MissingTranslation">OpenRAIL-M terms accepted</string>
+    <string name="reader_tts_supertonic_terms_title" tools:ignore="MissingTranslation">Supertonic 3 model terms</string>
+    <string name="reader_tts_supertonic_terms_message" tools:ignore="MissingTranslation">Supertonic 3 speech is AI-generated. By continuing, you accept the OpenRAIL-M license and agree to its use restrictions, including lawful use, clear disclosure of machine-generated output, and no harmful, deceptive, discriminatory, or non-consensual impersonation uses.</string>
+    <string name="reader_tts_view_full_license" tools:ignore="MissingTranslation">View full license</string>
+    <string name="reader_tts_agree_and_download" tools:ignore="MissingTranslation">I agree and download</string>
+    <string name="reader_tts_model_license_title" tools:ignore="MissingTranslation">Supertonic 3 OpenRAIL-M license</string>
+    <string name="reader_tts_model_license_loading" tools:ignore="MissingTranslation">Loading license…</string>
+    <string name="reader_tts_delete_package_dialog_title" tools:ignore="MissingTranslation">Delete %1$s?</string>
+    <string name="reader_tts_delete_package_dialog_message" tools:ignore="MissingTranslation">This removes %1$s and makes its voices unavailable until you download the pack again. Other voices remain available.</string>
+    <string name="reader_tts_kokoro_tab" tools:ignore="MissingTranslation">Kokoro</string>
+    <string name="reader_tts_supertonic_tab" tools:ignore="MissingTranslation">Supertonic</string>
+    <string name="reader_tts_high_quality" tools:ignore="MissingTranslation">High quality</string>
+    <string name="reader_tts_system_source" tools:ignore="MissingTranslation">System</string>
 </resources>

@@ -2,13 +2,16 @@ package com.retro99.reader.ui.reader
 
 import com.retro99.base.result.AppError
 import com.retro99.books.domain.model.BookType
+import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.ChapterReadingTimeInfo
-import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.PositionConflictUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.TocItemUiModel
 import com.retro99.reader.ui.publication.PublicationState
+import com.retro99.reader.ui.tts.NeuralVoicePackage
+import com.retro99.reader.ui.tts.TtsPreparationProgress
+import com.retro99.reader.ui.tts.TtsVoice
 
 data class ReaderViewState(
     val bookType: BookType,
@@ -24,6 +27,8 @@ data class ReaderViewState(
     val currentTime: String = "",
     // Media playback state for ReadAloud books
     val isPlaying: Boolean = false,
+    val isNarrationLoading: Boolean = false,
+    val isNarrationStartPending: Boolean = false,
     val currentAudioPositionMs: Long = 0L,
     val totalDurationMs: Long? = null,
     // Whether the media player is ready (for ReadAloud books)
@@ -57,6 +62,19 @@ data class ReaderViewState(
     val showNoMoreBookmarks: Boolean = false,
     // When true, shows the audiobook-style audio-only UI instead of the EPUB text view
     val isAudioOnlyMode: Boolean = false,
+    val isTtsReadAloud: Boolean = false,
+    val ttsVoices: List<TtsVoice> = emptyList(),
+    val selectedTtsVoiceId: String? = null,
+    val isTtsVoicePreparing: Boolean = false,
+    val preparingTtsVoicePackage: NeuralVoicePackage? = null,
+    val ttsVoicePreparationProgress: TtsPreparationProgress? = null,
+    val failedTtsVoicePackage: NeuralVoicePackage? = null,
+    val deletingTtsVoicePackage: NeuralVoicePackage? = null,
+    val failedTtsVoicePackageDeletion: NeuralVoicePackage? = null,
+    val hasAcceptedSupertonicTerms: Boolean = false,
+    val ttsPreviewingVoiceId: String? = null,
+    val isTtsPreviewPlaying: Boolean = false,
+    val isVoiceSettingsVisible: Boolean = false,
 ) {
     /**
      * Whether this is a ReadAloud book with media overlay support.
@@ -78,4 +96,3 @@ data class ReaderViewState(
      */
     val currentPosition get() = publicationState?.position
 }
-

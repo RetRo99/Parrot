@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import com.retro99.reader.domain.model.ChapterProgressDisplayMode
 import com.retro99.reader.domain.model.HighlightStyle
+import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.domain.model.ProgressBarPosition
 import com.retro99.reader.domain.model.ProgressIndicatorMode
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel
@@ -14,7 +15,6 @@ import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAU
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_UNDERLINE_COLOR
 import com.retro99.reader.domain.model.ReaderTextAlign
 import com.retro99.reader.domain.model.ReaderTheme
-import com.retro99.reader.domain.model.NavigationAction
 
 data class ReaderSettingsUiModel(
     val fontSize: Double = 1.0,
@@ -33,6 +33,10 @@ data class ReaderSettingsUiModel(
     // Media playback settings for ReadAloud books
     val playbackSpeed: Float = 1.0f,
     val volume: Float = 1.0f,
+    val ttsVoiceId: String? = null,
+    val ttsRate: Float = 1.0f,
+    val ttsPitch: Float = 1.0f,
+    val ttsEnabled: Boolean = false,
     // Highlight color for ReadAloud text highlighting (ARGB Int value)
     val highlightColor: Int = DEFAULT_HIGHLIGHT_COLOR,
     // Underline color for ReadAloud text highlighting (ARGB Int value)
@@ -135,6 +139,10 @@ fun ReaderSettingsDomainModel.toUiModel(): ReaderSettingsUiModel = ReaderSetting
     publisherStyles = publisherStyles,
     playbackSpeed = playbackSpeed,
     volume = volume,
+    ttsVoiceId = ttsVoiceId,
+    ttsRate = ttsRate,
+    ttsPitch = ttsPitch,
+    ttsEnabled = ttsEnabled,
     highlightColor = highlightColor,
     underlineColor = underlineColor,
     highlightStyle = highlightStyle.toUiHighlightStyle(),
@@ -173,6 +181,10 @@ fun ReaderSettingsUiModel.toDomainModel(): ReaderSettingsDomainModel = ReaderSet
     publisherStyles = publisherStyles,
     playbackSpeed = playbackSpeed,
     volume = volume,
+    ttsVoiceId = ttsVoiceId,
+    ttsRate = ttsRate,
+    ttsPitch = ttsPitch,
+    ttsEnabled = ttsEnabled,
     highlightColor = highlightColor,
     underlineColor = underlineColor,
     highlightStyle = highlightStyle.toDomainHighlightStyle(),

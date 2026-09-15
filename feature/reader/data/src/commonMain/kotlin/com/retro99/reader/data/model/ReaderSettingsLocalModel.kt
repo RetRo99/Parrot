@@ -2,12 +2,12 @@ package com.retro99.reader.data.model
 
 import com.retro99.reader.domain.model.ChapterProgressDisplayMode
 import com.retro99.reader.domain.model.HighlightStyle
+import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.domain.model.ProgressBarPosition
 import com.retro99.reader.domain.model.ProgressIndicatorMode
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel
 import com.retro99.reader.domain.model.ReaderTextAlign
 import com.retro99.reader.domain.model.ReaderTheme
-import com.retro99.reader.domain.model.NavigationAction
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -41,6 +41,14 @@ data class ReaderSettingsLocalModel(
     val playbackSpeed: Float = 1.0f,
     @SerialName("volume")
     val volume: Float = 1.0f,
+    @SerialName("tts_voice_id")
+    val ttsVoiceId: String? = null,
+    @SerialName("tts_rate")
+    val ttsRate: Float = 1.0f,
+    @SerialName("tts_pitch")
+    val ttsPitch: Float = 1.0f,
+    @SerialName("tts_enabled")
+    val ttsEnabled: Boolean = false,
     // Highlight color as ARGB Int value
     @SerialName("highlight_color_argb")
     val highlightColorArgb: Int = ReaderSettingsDomainModel.DEFAULT_HIGHLIGHT_COLOR,
@@ -127,6 +135,10 @@ fun ReaderSettingsLocalModel.toDomain(): ReaderSettingsDomainModel {
         publisherStyles = publisherStyles,
         playbackSpeed = playbackSpeed,
         volume = volume,
+        ttsVoiceId = ttsVoiceId,
+        ttsRate = ttsRate,
+        ttsPitch = ttsPitch,
+        ttsEnabled = ttsEnabled,
         // Treat 0 (fully transparent black) as invalid and use default
         highlightColor = if (highlightColorArgb == 0) {
             ReaderSettingsDomainModel.DEFAULT_HIGHLIGHT_COLOR
@@ -208,6 +220,10 @@ fun ReaderSettingsDomainModel.toLocal(): ReaderSettingsLocalModel {
         publisherStyles = publisherStyles,
         playbackSpeed = playbackSpeed,
         volume = volume,
+        ttsVoiceId = ttsVoiceId,
+        ttsRate = ttsRate,
+        ttsPitch = ttsPitch,
+        ttsEnabled = ttsEnabled,
         highlightColorArgb = highlightColor,
         underlineColorArgb = underlineColor,
         highlightStyle = highlightStyle.name,

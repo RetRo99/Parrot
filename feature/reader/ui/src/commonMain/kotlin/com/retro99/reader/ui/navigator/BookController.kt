@@ -4,6 +4,7 @@ import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.LocatorState
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
+import com.retro99.reader.ui.tts.TtsSentence
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -64,6 +65,11 @@ interface BookController : AutoCloseable {
      * Used to start audio playback from a specific sentence in ReadAloud books.
      */
     val sentenceDoubleTapEvents: Flow<SentenceDoubleTapEvent>
+
+    /**
+     * Enables forwarding taps from addressable sentence elements to [sentenceDoubleTapEvents].
+     */
+    fun enableSentenceTapDetection() = Unit
 
     /**
      * Navigates to the next page.
@@ -149,4 +155,17 @@ interface BookController : AutoCloseable {
      * @return The element ID of the first visible sentence, or null if not found
      */
     suspend fun getVisibleSentenceId(): String?
+
+    /**
+     * Returns whether the current chapter contains readable text without modifying its content.
+     */
+    suspend fun hasReadableContent(): Boolean = false
+
+    /**
+     * Returns the ordered list of sentences for the currently rendered chapter.
+     *
+     * Used by the on-device TTS pipeline to synthesize and highlight speech without
+     * requiring media overlays. Platforms that do not support TTS return an empty list.
+     */
+    suspend fun getChapterSentences(): List<TtsSentence> = emptyList()
 }

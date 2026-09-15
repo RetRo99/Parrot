@@ -14,6 +14,8 @@ kotlin {
         namespace = "com.retro99.feature.reader.data"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -47,6 +49,11 @@ kotlin {
             implementation(libs.androidx.core.ktx)
             implementation(libs.koin.android)
         }
+
+        named("androidHostTest") {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+            }
+        }
     }
 }
-

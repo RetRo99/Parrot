@@ -20,7 +20,6 @@ import com.retro99.reader.ui.playback.NotificationPermissionHandler
 import com.retro99.reader.ui.playback.PermissionDenialState
 import com.retro99.reader.ui.playback.SchedulableClip
 import com.retro99.reader.ui.publication.EpubPublication
-import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +36,7 @@ import org.koin.core.annotation.Scope
 import org.koin.core.annotation.Scoped
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.Url
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val TAG = "čič123"
 
@@ -385,6 +385,7 @@ class MediaOverlayPlayer(
             return
         }
         Log.d(TAG, "playInternal: service ready, player=$player")
+        mediaPlaybackController.prepareForMediaOverlayPlayback()
 
         // Register this book as currently playing for reconnection support
         // Include book title for NowPlayingProvider display
