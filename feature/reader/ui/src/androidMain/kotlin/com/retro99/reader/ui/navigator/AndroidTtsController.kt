@@ -73,8 +73,6 @@ class AndroidTtsController(
     private val readyChapterHref = MutableStateFlow<String?>(null)
 
     private val playbackRequestPending = MutableStateFlow(false)
-    private var reanchorJob: Job? = null
-
     override val isPlaying: Flow<Boolean> = engine.isPlaying
 
     override val isLoading: Flow<Boolean> = combine(
@@ -111,20 +109,9 @@ class AndroidTtsController(
                 if (previousLocator != null && previousLocator.href != locator.href) {
                     sentences = emptyList()
                     sentencesChapterHref = null
-                    reanchorJob?.cancel()
                     engine.stop()
                     if (isSentencePlaybackEnabled) {
                         loadChapterSentences()
-                    }
-                } else if (
-                    previousLocator != null &&
-                    previousLocator != locator &&
-                    engine.currentSentence.value != null
-                ) {
-                    if (engine.isPlaying.value || engine.isLoading.value) {
-                        reanchorFromVisibleSentence(locator)
-                    } else {
-                        engine.stop()
                     }
                 }
                 readyChapterHref.value = locator.href
@@ -327,7 +314,6 @@ class AndroidTtsController(
         playbackRequestPending.value = false
         sentences = emptyList()
         sentencesChapterHref = null
-        reanchorJob?.cancel()
         engine.stop()
     }
 
@@ -450,7 +436,6 @@ class AndroidTtsController(
     override fun close() {
         stopPreview()
         previewPlayer.close()
-        reanchorJob?.cancel()
         controllerScope.cancel()
     }
 
@@ -499,36 +484,6 @@ class AndroidTtsController(
             chapterTitle = lastLocator?.title,
             coverArtwork = coverArtwork,
         )
-    }
-
-    private fun reanchorFromVisibleSentence(locator: LocatorState) {
-        reanchorJob?.cancel()
-        reanchorJob = controllerScope.launch {
-            val visibleSentenceId = bookController.getVisibleSentenceId()
-            val currentSentenceId = engine.currentSentence.value?.elementId
-            if (visibleSentenceId == null) {
-                if (locator.fragments?.contains(currentSentenceId) != true) {
-                    engine.stop()
-                }
-                return@launch
-            }
-            if (visibleSentenceId == currentSentenceId) return@launch
-
-            val sentenceIndex = sentences.indexOfFirst { sentence ->
-                sentence.elementId == visibleSentenceId
-            }
-            if (sentenceIndex < 0) {
-                engine.stop()
-                return@launch
-            }
-
-            playbackRequestPending.value = true
-            try {
-                startPlayback(sentenceIndex)
-            } finally {
-                playbackRequestPending.value = false
-            }
-        }
     }
 
     private suspend fun awaitChapter(chapterHref: String?): Boolean {
