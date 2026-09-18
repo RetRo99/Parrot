@@ -74,6 +74,19 @@ sealed class PreferencesKey(val name: String) {
     data object UserProfiles : PreferencesKey("UserProfiles")
     data object ActiveProfileId : PreferencesKey("ActiveProfileId")
     data object ProfileMigrationVersion : PreferencesKey("ProfileMigrationVersion")
+    data object CloudProfileLinks : PreferencesKey("CloudProfileLinks")
+
+    data class CloudSessionAccount(val localProfileId: String) :
+        PreferencesKey("cloud_session_account_$localProfileId")
+
+    data class CloudReauthenticationAccount(val localProfileId: String) :
+        PreferencesKey("cloud_reauthentication_account_$localProfileId")
+
+    data class CloudSession(val localProfileId: String, val cloudUserId: String) :
+        PreferencesKey("cloud_session_${localProfileId}_$cloudUserId")
+
+    data class PendingCloudAuthentication(val localProfileId: String) :
+        PreferencesKey("pending_cloud_authentication_$localProfileId")
 
     /**
      * Dynamic key for user-scoped preferences.

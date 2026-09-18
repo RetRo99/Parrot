@@ -8,6 +8,9 @@ import com.retro99.base.ui.di.BaseUiModule
 import com.retro99.books.data.di.BooksDataModule
 import com.retro99.books.domain.di.BooksDomainModule
 import com.retro99.books.ui.di.BooksUiModule
+import com.retro99.cloud.implementation.di.CloudModule
+import com.retro99.cloudaccount.data.di.CloudAccountDataModule
+import com.retro99.cloudaccount.domain.di.CloudAccountDomainModule
 import com.retro99.database.implementation.di.DatabaseModule
 import com.retro99.home.data.di.HomeDataModule
 import com.retro99.home.ui.di.HomeUiModule
@@ -40,6 +43,7 @@ import org.koin.core.annotation.Module
         AnalyticsModule::class,
         PreferencesModule::class,
         UserModule::class,  // Must be before modules that depend on UserRegistry
+        CloudModule::class,
         DatabaseModule::class,
         NetworkingModule::class,
         ServerModule::class,
@@ -53,6 +57,8 @@ import org.koin.core.annotation.Module
         // Feature modules
         AuthDomainModule::class,
         AuthDataModule::class,
+        CloudAccountDomainModule::class,
+        CloudAccountDataModule::class,
         LoginUiModule::class,
         LoginDomainModule::class,
         LoginDataModule::class,
@@ -75,4 +81,3 @@ import org.koin.core.annotation.Module
 @Configuration
 @ComponentScan("com.retro99.parrot")
 class AppModule
-
