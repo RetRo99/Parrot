@@ -23,6 +23,10 @@ internal class ImportedBooksDatabaseImpl(
         return sqlDelightDao.getImportedBookByUuid(uuid)
     }
 
+    override suspend fun getImportedBookByContentHash(contentHash: String): ImportedBookEntity? {
+        return sqlDelightDao.getImportedBookByContentHash(contentHash)
+    }
+
     override suspend fun deleteImportedBook(uuid: String) {
         sqlDelightDao.deleteImportedBook(uuid)
     }
@@ -43,4 +47,3 @@ internal class ImportedBooksDatabaseImpl(
         return sqlDelightDao.searchImportedBooksByTitle(query)
     }
 }
-

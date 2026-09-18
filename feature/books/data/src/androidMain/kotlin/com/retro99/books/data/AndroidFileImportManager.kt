@@ -101,6 +101,8 @@ class AndroidFileImportManager(
                     coverUrl = coverPath?.let { "file://$it" },
                     filePath = destFile.absolutePath,
                     fileSize = fileSize,
+                    contentHash = calculateFileContentHash(destFile.absolutePath),
+                    contentHashAlgorithm = CONTENT_HASH_ALGORITHM,
                     importedAt = Clock.System.now().toString(),
                     lastOpenedAt = null,
                     bookType = bookType,
@@ -152,4 +154,3 @@ class AndroidFileImportManager(
         }
     }
 }
-

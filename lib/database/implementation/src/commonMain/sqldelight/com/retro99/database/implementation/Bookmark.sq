@@ -13,7 +13,9 @@ CREATE TABLE IF NOT EXISTS bookmarks (
     chapter_index INTEGER,
     position INTEGER,
     created_at TEXT NOT NULL,
-    sort_order INTEGER NOT NULL DEFAULT 0
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    remote_revision INTEGER,
+    deleted_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_bookmarks_book ON bookmarks(book_uuid);
@@ -22,21 +24,18 @@ CREATE INDEX IF NOT EXISTS idx_bookmarks_created ON bookmarks(created_at);
 insertBookmark:
 INSERT OR REPLACE INTO bookmarks(
     id, book_uuid, locator_href, locator_type, locator_title,
-    progression, total_progression, chapter_index, position, created_at, sort_order
+    progression, total_progression, chapter_index, position, created_at, sort_order,
+    remote_revision, deleted_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getBookmarksByBookUuid:
-SELECT * FROM bookmarks WHERE book_uuid = ? ORDER BY sort_order ASC, created_at DESC;
+SELECT * FROM bookmarks
+WHERE book_uuid = ? AND deleted_at IS NULL
+ORDER BY sort_order ASC, created_at DESC;
 
-updateBookmarkTitle:
-UPDATE bookmarks SET locator_title = ? WHERE id = ?;
-
-updateBookmarkSortOrders:
-UPDATE bookmarks SET sort_order = ? WHERE id = ?;
-
-deleteBookmark:
-DELETE FROM bookmarks WHERE id = ?;
+getBookmarkById:
+SELECT * FROM bookmarks WHERE id = ?;
 
 deleteBookmarksByBookUuid:
 DELETE FROM bookmarks WHERE book_uuid = ?;

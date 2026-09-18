@@ -14,6 +14,8 @@ kotlin {
         namespace = "com.retro99.feature.books.data"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -40,6 +42,15 @@ kotlin {
             implementation(libs.readium.streamer)
             implementation(libs.koin.android)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+
+        named("androidHostTest") {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+            }
+        }
     }
 }
-

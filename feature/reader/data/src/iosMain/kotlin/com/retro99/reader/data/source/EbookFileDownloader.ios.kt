@@ -150,6 +150,7 @@ actual class EbookFileDownloader(
         )
     }
 
+    @OptIn(ExperimentalForeignApi::class)
     private suspend fun downloadMultipleFiles(
         ebookFilePath: String,
         bookUuid: String,
@@ -179,6 +180,7 @@ actual class EbookFileDownloader(
         return Ok(targetDir)
     }
 
+    @OptIn(ExperimentalForeignApi::class)
     private suspend fun downloadMultipleFilesWithProgress(
         ebookFilePath: String,
         bookUuid: String,

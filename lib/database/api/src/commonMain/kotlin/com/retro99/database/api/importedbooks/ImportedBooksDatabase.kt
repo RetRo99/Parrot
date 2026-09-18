@@ -13,6 +13,8 @@ interface ImportedBooksDatabase {
 
     suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity?
 
+    suspend fun getImportedBookByContentHash(contentHash: String): ImportedBookEntity?
+
     suspend fun deleteImportedBook(uuid: String)
 
     suspend fun deleteAllImportedBooks()
@@ -23,4 +25,3 @@ interface ImportedBooksDatabase {
 
     suspend fun searchImportedBooksByTitle(query: String): List<ImportedBookEntity>
 }
-

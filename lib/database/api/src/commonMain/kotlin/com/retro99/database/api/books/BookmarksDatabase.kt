@@ -7,17 +7,15 @@ interface BookmarksDatabase : DataClearable {
 
     suspend fun addBookmark(bookmark: BookmarkEntity)
 
+    suspend fun upsertBookmarksWithMutations(mutations: List<BookmarkMutation>)
+
     fun observeBookmarks(bookUuid: String): Flow<List<BookmarkEntity>>
 
     suspend fun getBookmarks(bookUuid: String): List<BookmarkEntity>
 
-    suspend fun deleteBookmark(id: String)
+    suspend fun getBookmark(id: String): BookmarkEntity?
 
     suspend fun deleteBookmarksForBook(bookUuid: String)
-
-    suspend fun updateBookmarkTitle(id: String, title: String)
-
-    suspend fun updateBookmarkSortOrders(orders: List<Pair<String, Int>>)
 
     override suspend fun clearAllData()
 }

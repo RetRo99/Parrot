@@ -34,6 +34,12 @@ internal class ImportedBooksRoomDataSource(
         return importedBooksDatabase.getImportedBookByUuid(uuid)?.toDomainModel()
     }
 
+    override suspend fun getImportedBookByContentHash(
+        contentHash: String,
+    ): BookDomainModel.LocalBook? {
+        return importedBooksDatabase.getImportedBookByContentHash(contentHash)?.toDomainModel()
+    }
+
     override suspend fun deleteImportedBook(uuid: String): CompletableResult {
         return databaseExecutor.executeDatabaseOperation {
             importedBooksDatabase.deleteImportedBook(uuid)
@@ -46,4 +52,3 @@ internal class ImportedBooksRoomDataSource(
         }
     }
 }
-

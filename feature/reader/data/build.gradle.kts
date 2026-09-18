@@ -50,6 +50,10 @@ kotlin {
             implementation(libs.koin.android)
         }
 
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+
         named("androidHostTest") {
             dependencies {
                 implementation(libs.kotlin.testJunit)

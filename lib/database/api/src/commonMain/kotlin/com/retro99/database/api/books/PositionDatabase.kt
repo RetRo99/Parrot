@@ -1,6 +1,7 @@
 package com.retro99.database.api.books
 
 import com.retro99.database.api.DataClearable
+import com.retro99.database.api.sync.SyncOutboxEntry
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -9,6 +10,11 @@ import kotlinx.coroutines.flow.Flow
 interface PositionDatabase : DataClearable {
 
     suspend fun upsertPosition(position: PositionEntity)
+
+    suspend fun upsertPositionWithMutation(
+        position: PositionEntity,
+        mutation: SyncOutboxEntry,
+    )
 
     suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity?
 

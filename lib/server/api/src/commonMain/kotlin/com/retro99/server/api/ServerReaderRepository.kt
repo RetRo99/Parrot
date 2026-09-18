@@ -2,6 +2,7 @@ package com.retro99.server.api
 
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
+import kotlinx.serialization.Serializable
 
 /**
  * Server-aware reader repository interface for reading progress.
@@ -73,6 +74,7 @@ interface ServerReaderRepository {
  * This is a server-agnostic representation that each server implementation
  * converts to/from its own API format.
  */
+@Serializable
 data class ServerPosition(
     val bookUuid: String,
     val serverId: String,
@@ -94,4 +96,3 @@ data class ServerPosition(
     val position: Int?,
     val cssSelector: String? = null,
 )
-

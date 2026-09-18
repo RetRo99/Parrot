@@ -12,4 +12,8 @@ interface BookmarkEntity {
     val position: Int?
     val createdAt: String
     val sortOrder: Int
+    val remoteRevision: Long?
+        get() = null
+    val deletedAt: String?
+        get() = null
 }

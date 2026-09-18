@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS imported_books (
     cover_path TEXT,
     file_path TEXT NOT NULL,
     file_size INTEGER NOT NULL,
+    content_hash TEXT,
+    content_hash_algorithm TEXT,
     imported_at TEXT NOT NULL,
     last_opened_at TEXT,
     book_type TEXT NOT NULL DEFAULT 'ebook',
@@ -18,17 +20,35 @@ CREATE TABLE IF NOT EXISTS imported_books (
 
 CREATE INDEX IF NOT EXISTS idx_imported_books_title ON imported_books(title);
 CREATE INDEX IF NOT EXISTS idx_imported_books_imported_at ON imported_books(imported_at);
+CREATE INDEX IF NOT EXISTS idx_imported_books_content_hash ON imported_books(content_hash);
 
 -- Queries for imported books
 upsertImportedBook:
-INSERT OR REPLACE INTO imported_books(uuid, title, author, description, cover_path, file_path, file_size, imported_at, last_opened_at, book_type, publication_date)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO imported_books(
+    uuid,
+    title,
+    author,
+    description,
+    cover_path,
+    file_path,
+    file_size,
+    content_hash,
+    content_hash_algorithm,
+    imported_at,
+    last_opened_at,
+    book_type,
+    publication_date
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getAllImportedBooks:
 SELECT * FROM imported_books ORDER BY imported_at DESC;
 
 getImportedBookByUuid:
 SELECT * FROM imported_books WHERE uuid = ?;
+
+getImportedBookByContentHash:
+SELECT * FROM imported_books WHERE content_hash = ?;
 
 deleteImportedBook:
 DELETE FROM imported_books WHERE uuid = ?;
@@ -44,4 +64,3 @@ UPDATE imported_books SET last_opened_at = ? WHERE uuid = ?;
 
 searchImportedBooksByTitle:
 SELECT * FROM imported_books WHERE title LIKE ? ORDER BY title ASC;
-

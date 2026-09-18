@@ -1,6 +1,7 @@
 package com.retro99.database.implementation.dao.books
 
 import com.retro99.database.api.books.BookmarkEntity
+import com.retro99.database.api.books.BookmarkMutation
 import com.retro99.database.api.books.BookmarksDatabase
 import kotlinx.coroutines.flow.Flow
 
@@ -12,6 +13,10 @@ internal class BookmarksDatabaseImpl(
         sqlDelightDao.insertBookmark(bookmark)
     }
 
+    override suspend fun upsertBookmarksWithMutations(mutations: List<BookmarkMutation>) {
+        sqlDelightDao.upsertBookmarksWithMutations(mutations)
+    }
+
     override fun observeBookmarks(bookUuid: String): Flow<List<BookmarkEntity>> {
         return sqlDelightDao.observeBookmarks(bookUuid)
     }
@@ -20,20 +25,12 @@ internal class BookmarksDatabaseImpl(
         return sqlDelightDao.getBookmarks(bookUuid)
     }
 
-    override suspend fun deleteBookmark(id: String) {
-        sqlDelightDao.deleteBookmark(id)
+    override suspend fun getBookmark(id: String): BookmarkEntity? {
+        return sqlDelightDao.getBookmark(id)
     }
 
     override suspend fun deleteBookmarksForBook(bookUuid: String) {
         sqlDelightDao.deleteBookmarksForBook(bookUuid)
-    }
-
-    override suspend fun updateBookmarkTitle(id: String, title: String) {
-        sqlDelightDao.updateBookmarkTitle(id, title)
-    }
-
-    override suspend fun updateBookmarkSortOrders(orders: List<Pair<String, Int>>) {
-        sqlDelightDao.updateBookmarkSortOrders(orders)
     }
 
     override suspend fun clearAllData() {

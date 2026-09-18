@@ -15,8 +15,9 @@ interface ImportedBooksLocalSource {
 
     suspend fun getImportedBookByUuid(uuid: String): BookDomainModel.LocalBook?
 
+    suspend fun getImportedBookByContentHash(contentHash: String): BookDomainModel.LocalBook?
+
     suspend fun deleteImportedBook(uuid: String): CompletableResult
 
     suspend fun updateLastOpenedAt(uuid: String): CompletableResult
 }
-

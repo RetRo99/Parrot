@@ -13,6 +13,7 @@ import com.retro99.database.api.books.SeriesEntity
 import com.retro99.database.api.books.SeriesWithPositionEntity
 import com.retro99.database.api.books.StatusEntity
 import com.retro99.database.api.books.TagEntity
+import com.retro99.database.api.sync.SyncOutboxEntry
 import kotlinx.coroutines.flow.Flow
 
 internal class BooksDatabaseImpl(
@@ -215,6 +216,16 @@ internal class BooksDatabaseImpl(
 
     override suspend fun upsertPosition(position: PositionEntity) {
         sqlDelightDao.upsertPosition(position.toSqlDelightEntity())
+    }
+
+    override suspend fun upsertPositionWithMutation(
+        position: PositionEntity,
+        mutation: SyncOutboxEntry,
+    ) {
+        sqlDelightDao.upsertPositionWithMutation(
+            position = position.toSqlDelightEntity(),
+            mutation = mutation,
+        )
     }
 
     override suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity? {

@@ -11,9 +11,10 @@ interface ImportedBookEntity {
     val coverPath: String?
     val filePath: String
     val fileSize: Long
+    val contentHash: String?
+    val contentHashAlgorithm: String?
     val importedAt: String
     val lastOpenedAt: String?
     val bookType: String
     val publicationDate: String?
 }
-

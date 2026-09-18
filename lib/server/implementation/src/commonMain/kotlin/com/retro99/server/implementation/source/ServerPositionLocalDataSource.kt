@@ -2,11 +2,17 @@ package com.retro99.server.implementation.source
 
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
+import com.retro99.base.server.LOCAL_SERVER_ID
 import com.retro99.database.api.DatabaseExecutor
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
+import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerPositionLocalSource
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Provided
@@ -20,6 +26,7 @@ import org.koin.core.annotation.Single
 class ServerPositionLocalDataSource(
     @Provided private val positionDatabase: PositionDatabase,
     @Provided private val databaseExecutor: DatabaseExecutor,
+    @Provided private val importedBooksDatabase: ImportedBooksDatabase,
 ) : ServerPositionLocalSource {
 
     override suspend fun getPosition(bookUuid: String): AppResult<ServerPosition?> {
@@ -30,7 +37,19 @@ class ServerPositionLocalDataSource(
 
     override suspend fun savePosition(position: ServerPosition): CompletableResult {
         return databaseExecutor.executeDatabaseOperation {
-            positionDatabase.upsertPosition(position.toPositionEntity())
+            val localPosition = position.toPositionEntity()
+            if (position.serverId == LOCAL_SERVER_ID) {
+                val importedBook = importedBooksDatabase.getImportedBookByUuid(position.bookUuid)
+                positionDatabase.upsertPositionWithMutation(
+                    position = localPosition,
+                    mutation = position.toSyncOutboxEntry(
+                        contentHash = importedBook?.contentHash,
+                        contentHashAlgorithm = importedBook?.contentHashAlgorithm,
+                    ),
+                )
+            } else {
+                positionDatabase.upsertPosition(localPosition)
+            }
         }
     }
 
@@ -56,6 +75,39 @@ class ServerPositionLocalDataSource(
             .map { positions -> positions.map { it.toServerPosition() } }
     }
 }
+
+private fun ServerPosition.toSyncOutboxEntry(
+    contentHash: String?,
+    contentHashAlgorithm: String?,
+): SyncOutboxEntry {
+    return SyncOutboxEntry.new(
+        entityType = SyncOutboxEntry.ENTITY_TYPE_READING_POSITION,
+        entityId = bookUuid,
+        operation = SyncOutboxEntry.OPERATION_UPSERT,
+        payload = mutationJson.encodeToString(
+            LocalReadingPositionMutation(
+                bookUuid = bookUuid,
+                contentHash = contentHash,
+                contentHashAlgorithm = contentHashAlgorithm,
+                position = this,
+            ),
+        ),
+    )
+}
+
+private val mutationJson = Json {
+    encodeDefaults = true
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+}
+
+@Serializable
+private data class LocalReadingPositionMutation(
+    val bookUuid: String,
+    val contentHash: String?,
+    val contentHashAlgorithm: String?,
+    val position: ServerPosition,
+)
 
 /**
  * Converts a PositionEntity to ServerPosition.
@@ -126,4 +178,3 @@ private data class ServerPositionEntity(
     override val totalProgression: Double?,
     override val position: Int?,
 ) : PositionEntity
-

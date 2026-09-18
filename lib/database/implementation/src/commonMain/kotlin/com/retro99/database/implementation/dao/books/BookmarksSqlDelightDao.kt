@@ -3,8 +3,10 @@ package com.retro99.database.implementation.dao.books
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import com.retro99.database.api.books.BookmarkEntity
+import com.retro99.database.api.books.BookmarkMutation
 import com.retro99.database.implementation.Bookmarks
 import com.retro99.database.implementation.DatabaseManager
+import com.retro99.database.implementation.dao.sync.enqueue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -14,23 +16,24 @@ import kotlinx.coroutines.withContext
 internal class BookmarksSqlDelightDao(
     private val databaseManager: DatabaseManager,
 ) {
+    private val database get() = databaseManager.getDatabase()
     private val bookmarkQueries get() = databaseManager.getDatabase().bookmarkQueries
+    private val syncOutboxQueries get() = database.syncOutboxQueries
 
     suspend fun insertBookmark(bookmark: BookmarkEntity) {
         withContext(Dispatchers.IO) {
-            bookmarkQueries.insertBookmark(
-                id = bookmark.id,
-                book_uuid = bookmark.bookUuid,
-                locator_href = bookmark.locatorHref,
-                locator_type = bookmark.locatorType,
-                locator_title = bookmark.locatorTitle,
-                progression = bookmark.progression,
-                total_progression = bookmark.totalProgression,
-                chapter_index = bookmark.chapterIndex?.toLong(),
-                position = bookmark.position?.toLong(),
-                created_at = bookmark.createdAt,
-                sort_order = bookmark.sortOrder.toLong(),
-            )
+            insertBookmarkRow(bookmark)
+        }
+    }
+
+    suspend fun upsertBookmarksWithMutations(mutations: List<BookmarkMutation>) {
+        withContext(Dispatchers.IO) {
+            database.transaction {
+                mutations.forEach { mutation ->
+                    insertBookmarkRow(mutation.bookmark)
+                    syncOutboxQueries.enqueue(mutation.outboxEntry)
+                }
+            }
         }
     }
 
@@ -49,9 +52,9 @@ internal class BookmarksSqlDelightDao(
         }
     }
 
-    suspend fun deleteBookmark(id: String) {
-        withContext(Dispatchers.IO) {
-            bookmarkQueries.deleteBookmark(id)
+    suspend fun getBookmark(id: String): BookmarkEntity? {
+        return withContext(Dispatchers.IO) {
+            bookmarkQueries.getBookmarkById(id).executeAsOneOrNull()?.toBookmarkEntity()
         }
     }
 
@@ -64,22 +67,6 @@ internal class BookmarksSqlDelightDao(
     suspend fun deleteAllBookmarks() {
         withContext(Dispatchers.IO) {
             bookmarkQueries.deleteAllBookmarks()
-        }
-    }
-
-    suspend fun updateBookmarkTitle(id: String, title: String) {
-        withContext(Dispatchers.IO) {
-            bookmarkQueries.updateBookmarkTitle(title, id)
-        }
-    }
-
-    suspend fun updateBookmarkSortOrders(orders: List<Pair<String, Int>>) {
-        withContext(Dispatchers.IO) {
-            bookmarkQueries.transaction {
-                orders.forEach { (id, sortOrder) ->
-                    bookmarkQueries.updateBookmarkSortOrders(sortOrder.toLong(), id)
-                }
-            }
         }
     }
 
@@ -96,6 +83,26 @@ internal class BookmarksSqlDelightDao(
             position = position?.toInt(),
             createdAt = created_at,
             sortOrder = sort_order.toInt(),
+            remoteRevision = remote_revision,
+            deletedAt = deleted_at,
+        )
+    }
+
+    private fun insertBookmarkRow(bookmark: BookmarkEntity) {
+        bookmarkQueries.insertBookmark(
+            id = bookmark.id,
+            book_uuid = bookmark.bookUuid,
+            locator_href = bookmark.locatorHref,
+            locator_type = bookmark.locatorType,
+            locator_title = bookmark.locatorTitle,
+            progression = bookmark.progression,
+            total_progression = bookmark.totalProgression,
+            chapter_index = bookmark.chapterIndex?.toLong(),
+            position = bookmark.position?.toLong(),
+            created_at = bookmark.createdAt,
+            sort_order = bookmark.sortOrder.toLong(),
+            remote_revision = bookmark.remoteRevision,
+            deleted_at = bookmark.deletedAt,
         )
     }
 }
@@ -112,4 +119,6 @@ private data class BookmarkEntityImpl(
     override val position: Int?,
     override val createdAt: String,
     override val sortOrder: Int,
+    override val remoteRevision: Long?,
+    override val deletedAt: String?,
 ) : BookmarkEntity

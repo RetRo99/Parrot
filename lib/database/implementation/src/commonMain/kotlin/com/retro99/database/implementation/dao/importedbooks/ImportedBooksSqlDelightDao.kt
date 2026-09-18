@@ -29,6 +29,8 @@ internal class ImportedBooksSqlDelightDao(
                 cover_path = book.coverPath,
                 file_path = book.filePath,
                 file_size = book.fileSize,
+                content_hash = book.contentHash,
+                content_hash_algorithm = book.contentHashAlgorithm,
                 imported_at = book.importedAt,
                 last_opened_at = book.lastOpenedAt,
                 book_type = book.bookType,
@@ -47,6 +49,12 @@ internal class ImportedBooksSqlDelightDao(
     suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity? {
         return withContext(Dispatchers.IO) {
             queries.getImportedBookByUuid(uuid).executeAsOneOrNull()?.toEntity()
+        }
+    }
+
+    suspend fun getImportedBookByContentHash(contentHash: String): ImportedBookEntity? {
+        return withContext(Dispatchers.IO) {
+            queries.getImportedBookByContentHash(contentHash).executeAsOneOrNull()?.toEntity()
         }
     }
 
@@ -88,6 +96,8 @@ internal class ImportedBooksSqlDelightDao(
         coverPath = cover_path,
         filePath = file_path,
         fileSize = file_size,
+        contentHash = content_hash,
+        contentHashAlgorithm = content_hash_algorithm,
         importedAt = imported_at,
         lastOpenedAt = last_opened_at,
         bookType = book_type,
@@ -106,9 +116,10 @@ private data class ImportedBookEntityImpl(
     override val coverPath: String?,
     override val filePath: String,
     override val fileSize: Long,
+    override val contentHash: String?,
+    override val contentHashAlgorithm: String?,
     override val importedAt: String,
     override val lastOpenedAt: String?,
     override val bookType: String,
     override val publicationDate: String?,
 ) : ImportedBookEntity
-

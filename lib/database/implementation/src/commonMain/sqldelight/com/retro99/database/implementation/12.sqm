@@ -1,0 +1,2 @@
+-- No schema change for this version. The bookmarks table was introduced
+-- directly in Bookmark.sq when the schema version was bumped to 11.

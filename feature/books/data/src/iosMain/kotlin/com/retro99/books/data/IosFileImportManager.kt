@@ -152,6 +152,8 @@ class IosFileImportManager(
                     coverUrl = coverPath?.let { "file://$it" },
                     filePath = destPath,
                     fileSize = fileSize,
+                    contentHash = calculateFileContentHash(destPath),
+                    contentHashAlgorithm = CONTENT_HASH_ALGORITHM,
                     importedAt = Clock.System.now().toString(),
                     lastOpenedAt = null,
                     bookType = bookType,
@@ -238,4 +240,3 @@ private fun writeBytesToFile(bytes: ByteArray, filePath: String) {
         fileHandle.closeFile()
     }
 }
-

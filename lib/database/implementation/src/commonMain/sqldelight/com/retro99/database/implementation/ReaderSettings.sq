@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS reader_settings (
+    setting_key TEXT NOT NULL PRIMARY KEY,
+    setting_value TEXT NOT NULL,
+    remote_revision INTEGER,
+    deleted_at TEXT
+);
+
+upsertReaderSettings:
+INSERT OR REPLACE INTO reader_settings(
+    setting_key,
+    setting_value,
+    remote_revision,
+    deleted_at
+)
+VALUES (?, ?, ?, ?);
+
+getAllReaderSettings:
+SELECT * FROM reader_settings;

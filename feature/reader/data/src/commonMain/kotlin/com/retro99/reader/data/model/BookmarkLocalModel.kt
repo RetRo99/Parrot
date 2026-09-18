@@ -15,6 +15,8 @@ data class BookmarkLocalModel(
     override val position: Int?,
     override val createdAt: String,
     override val sortOrder: Int = 0,
+    override val remoteRevision: Long? = null,
+    override val deletedAt: String? = null,
 ) : BookmarkEntity
 
 fun BookmarkLocalModel.toDomain(): BookmarkDomainModel {
@@ -62,5 +64,7 @@ fun BookmarkEntity.toLocalModel(): BookmarkLocalModel {
         position = position,
         createdAt = createdAt,
         sortOrder = sortOrder,
+        remoteRevision = remoteRevision,
+        deletedAt = deletedAt,
     )
 }

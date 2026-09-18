@@ -3,7 +3,9 @@ package com.retro99.database.implementation.dao.books
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOneOrNull
+import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.database.implementation.DatabaseManager
+import com.retro99.database.implementation.dao.sync.enqueue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -32,6 +34,7 @@ internal class BooksSqlDelightDao(
     private val mediaFileQueries get() = database.mediaFileQueries
     private val readaloudQueries get() = database.readaloudQueries
     private val positionQueries get() = database.positionQueries
+    private val syncOutboxQueries get() = database.syncOutboxQueries
     private val bookmarkQueries get() = database.bookmarkQueries
 
     // ==================== BOOK OPERATIONS ====================
@@ -569,6 +572,34 @@ internal class BooksSqlDelightDao(
                 total_progression = position.totalProgression,
                 position = position.position?.toLong(),
             )
+        }
+    }
+
+    suspend fun upsertPositionWithMutation(
+        position: PositionSqlDelightEntity,
+        mutation: SyncOutboxEntry,
+    ) {
+        withContext(Dispatchers.IO) {
+            database.transaction {
+                positionQueries.upsertPosition(
+                    book_uuid = position.bookUuid,
+                    timestamp = position.timestamp,
+                    created_at = position.createdAt,
+                    updated_at = position.updatedAt,
+                    locator_href = position.locatorHref,
+                    locator_type = position.locatorType,
+                    locator_title = position.locatorTitle,
+                    locator_target = position.locatorTarget?.toLong(),
+                    audio_timestamp_ms = position.audioTimestampMs,
+                    chapter_index = position.chapterIndex?.toLong(),
+                    progression = position.progression,
+                    total_chapters = position.totalChapters?.toLong(),
+                    total_duration_ms = position.totalDurationMs,
+                    total_progression = position.totalProgression,
+                    position = position.position?.toLong(),
+                )
+                syncOutboxQueries.enqueue(mutation)
+            }
         }
     }
 
