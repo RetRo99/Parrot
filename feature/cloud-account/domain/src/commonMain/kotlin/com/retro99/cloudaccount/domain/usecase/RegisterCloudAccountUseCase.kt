@@ -19,15 +19,17 @@ class RegisterCloudAccountUseCase(
         val localProfileId = userRegistry.getActiveProfileIdOrDefault()
         return accountRepository.withProfileSession(localProfileId) {
             val result = accountRepository.register(localProfileId, email, password)
-            if (result is CloudRegistrationResult.SignedIn) {
-                pendingAuthenticationRepository.save(
-                    PendingCloudAuthentication(
-                        localProfileId = localProfileId,
-                        cloudUserId = result.account.id,
-                        createdAt = Clock.System.now().toEpochMilliseconds(),
-                    ),
-                )
+            check(userRegistry.getActiveProfileIdOrDefault() == localProfileId) {
+                "Cloud registration completed for an inactive profile"
             }
+            pendingAuthenticationRepository.save(
+                PendingCloudAuthentication(
+                    localProfileId = localProfileId,
+                    cloudUserId = (result as? CloudRegistrationResult.SignedIn)?.account?.id,
+                    email = email,
+                    createdAt = Clock.System.now().toEpochMilliseconds(),
+                ),
+            )
             result
         }
     }

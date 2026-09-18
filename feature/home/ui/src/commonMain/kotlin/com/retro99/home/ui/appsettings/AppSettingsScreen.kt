@@ -25,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Dns
@@ -83,6 +84,8 @@ import resources.translations.app_settings_open_last_book_description
 import resources.translations.app_settings_section_account
 import resources.translations.app_settings_servers
 import resources.translations.app_settings_servers_description
+import resources.translations.app_settings_sync_backup
+import resources.translations.app_settings_sync_backup_description
 import resources.translations.app_settings_section_reading
 import resources.translations.app_settings_section_support
 import resources.translations.app_settings_share_logs
@@ -98,6 +101,7 @@ import resources.translations.statistics_title
 fun AppSettingsScreen(
     onNavigateToStatistics: () -> Unit,
     onNavigateToServerManagement: () -> Unit,
+    onNavigateToSyncAndBackup: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AppSettingsViewModel = koinViewModel(),
 ) {
@@ -109,6 +113,7 @@ fun AppSettingsScreen(
             viewState = viewState,
             onNavigateToStatistics = onNavigateToStatistics,
             onNavigateToServerManagement = onNavigateToServerManagement,
+            onNavigateToSyncAndBackup = onNavigateToSyncAndBackup,
             intentDispatcher = intentDispatcher,
         )
     }
@@ -119,6 +124,7 @@ private fun AppSettingsScreenContent(
     viewState: AppSettingsViewState,
     onNavigateToStatistics: () -> Unit,
     onNavigateToServerManagement: () -> Unit,
+    onNavigateToSyncAndBackup: () -> Unit,
     intentDispatcher: IntentDispatcher<AppSettingsIntent>,
     modifier: Modifier = Modifier,
     buildConfig: BuildConfig = koinInject(),
@@ -324,6 +330,13 @@ private fun AppSettingsScreenContent(
                 title = stringResource(StringRes.app_settings_servers),
                 description = stringResource(StringRes.app_settings_servers_description),
                 onClick = onNavigateToServerManagement,
+            )
+
+            SettingsItem(
+                icon = Icons.Default.Cloud,
+                title = stringResource(StringRes.app_settings_sync_backup),
+                description = stringResource(StringRes.app_settings_sync_backup_description),
+                onClick = onNavigateToSyncAndBackup,
             )
 
             HorizontalDivider()

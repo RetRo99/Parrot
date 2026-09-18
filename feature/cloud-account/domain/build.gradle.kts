@@ -25,5 +25,10 @@ kotlin {
             implementation(libs.coroutines)
             implementation(projects.lib.user.api)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.coroutines.test)
+        }
     }
 }

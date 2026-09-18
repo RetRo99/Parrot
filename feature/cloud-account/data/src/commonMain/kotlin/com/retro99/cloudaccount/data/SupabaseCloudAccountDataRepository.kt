@@ -1,6 +1,7 @@
 package com.retro99.cloudaccount.data
 
 import com.retro99.cloud.implementation.SupabaseClientProvider
+import com.retro99.cloudaccount.domain.CloudAccountException
 import com.retro99.cloudaccount.domain.CloudAccountRepository
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.cloudaccount.domain.model.CloudAccount
@@ -80,8 +81,9 @@ class SupabaseCloudAccountDataRepository(
         return account
     }
 
-    override suspend fun restoreSession() {
-        clientProvider.restoreSession()
+    override suspend fun restoreSession(localProfileId: String): CloudAuthState {
+        if (!clientProvider.isConfigured) return CloudAuthState.SignedOut
+        return clientProvider.restoreSession(localProfileId).toCloudAuthState()
     }
 
     override suspend fun signOut(localProfileId: String) {
@@ -98,9 +100,7 @@ class SupabaseCloudAccountDataRepository(
     }
 
     private fun requireConfigured() {
-        check(clientProvider.isConfigured) {
-            "Cloud account is not configured"
-        }
+        if (!clientProvider.isConfigured) throw CloudAccountException.NotConfigured()
     }
 
     private suspend fun validateAccountForProfile(
@@ -112,6 +112,6 @@ class SupabaseCloudAccountDataRepository(
         if (existingLink == null || existingLink.cloudUserId == account.id) return
 
         clientProvider.replaceCurrentProfileSession(localProfileId, previousSession)
-        error("Cloud profile is already linked to a different account")
+        throw CloudAccountException.ProfileAlreadyLinked()
     }
 }

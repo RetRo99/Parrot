@@ -26,6 +26,7 @@ class PendingCloudAuthenticationDataRepository(
             PendingCloudAuthenticationRecord(
                 localProfileId = authentication.localProfileId,
                 cloudUserId = authentication.cloudUserId,
+                email = authentication.email,
                 createdAt = authentication.createdAt,
             ),
         )
@@ -39,7 +40,8 @@ class PendingCloudAuthenticationDataRepository(
 @Serializable
 private data class PendingCloudAuthenticationRecord(
     val localProfileId: String,
-    val cloudUserId: String,
+    val cloudUserId: String? = null,
+    val email: String? = null,
     val createdAt: Long,
 )
 
@@ -47,6 +49,7 @@ private fun PendingCloudAuthenticationRecord.toDomain(): PendingCloudAuthenticat
     return PendingCloudAuthentication(
         localProfileId = localProfileId,
         cloudUserId = cloudUserId,
+        email = email,
         createdAt = createdAt,
     )
 }

@@ -19,6 +19,7 @@ import androidx.navigation3.runtime.entryProvider
 import com.retro99.books.ui.detail.BookDetailScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
+import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
 import com.retro99.home.ui.series.SeriesListScreen
 import com.retro99.books.domain.model.BookType
@@ -271,6 +272,11 @@ fun HomeNavigation(
                                     HomeNavigationIntent.NavigateTo(HomeDestination.ServerManagement)
                                 )
                             },
+                            onNavigateToSyncAndBackup = {
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(HomeDestination.SyncAndBackup)
+                                )
+                            },
                         )
                     }
 
@@ -279,6 +285,12 @@ fun HomeNavigation(
                             onNavigateToLogin = onNavigateToLogin,
                             onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
                             modifier = Modifier,
+                        )
+                    }
+
+                    entry<HomeDestination.SyncAndBackup> {
+                        CloudAccountScreen(
+                            onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
                         )
                     }
 
@@ -355,4 +367,3 @@ private fun HomeBottomNavigationBar(
         }
     }
 }
-

@@ -11,6 +11,7 @@ import com.retro99.books.ui.di.BooksUiModule
 import com.retro99.cloud.implementation.di.CloudModule
 import com.retro99.cloudaccount.data.di.CloudAccountDataModule
 import com.retro99.cloudaccount.domain.di.CloudAccountDomainModule
+import com.retro99.cloudaccount.ui.di.CloudAccountUiModule
 import com.retro99.database.implementation.di.DatabaseModule
 import com.retro99.home.data.di.HomeDataModule
 import com.retro99.home.ui.di.HomeUiModule
@@ -59,6 +60,7 @@ import org.koin.core.annotation.Module
         AuthDataModule::class,
         CloudAccountDomainModule::class,
         CloudAccountDataModule::class,
+        CloudAccountUiModule::class,
         LoginUiModule::class,
         LoginDomainModule::class,
         LoginDataModule::class,

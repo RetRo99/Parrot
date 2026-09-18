@@ -20,7 +20,7 @@ interface CloudAccountRepository {
 
     suspend fun signIn(localProfileId: String, email: String, password: String): CloudAccount
 
-    suspend fun restoreSession()
+    suspend fun restoreSession(localProfileId: String): CloudAuthState
 
     suspend fun signOut(localProfileId: String)
 }

@@ -26,6 +26,7 @@ class SignInCloudAccountUseCase(
                 PendingCloudAuthentication(
                     localProfileId = localProfileId,
                     cloudUserId = account.id,
+                    email = account.email ?: email,
                     createdAt = Clock.System.now().toEpochMilliseconds(),
                 ),
             )

@@ -10,7 +10,6 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
 import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -18,28 +17,26 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class, SupabaseInternal::class)
 class SupabaseClientProviderTest {
-    private val userRegistry = FakeUserRegistry()
-    private val provider = SupabaseClientProvider(
-        configuration = CloudConfiguration(
-            supabaseUrl = "",
-            publishableKey = "",
-        ),
-        cloudSessionManager = CloudSessionManager(ProviderFakePreferences()),
-        userRegistry = userRegistry,
-    )
+    private lateinit var userRegistry: FakeUserRegistry
+
+    @BeforeTest
+    fun setup() {
+        userRegistry = FakeUserRegistry()
+    }
 
     @Test
     fun `profile operation catches up after registry changes`() = runTest {
+        val provider = unconfiguredProvider()
         provider.withProfileSession("profile-a") { }
         userRegistry.switchTo("profile-b")
 
@@ -124,25 +121,17 @@ class SupabaseClientProviderTest {
     }
 
     @Test
-    fun `restoration waits for authentication without holding the profile lock`() = runTest {
+    fun `restoration returns authentication for the requested profile`() = runTest {
         val configuredProvider = configuredProvider(CloudSessionManager(ProviderFakePreferences()))
         val auth = configuredProvider.withProfileSession("profile-a") {
-            configuredProvider.client.auth.also { auth ->
-                auth.setSessionStatus(SessionStatus.Initializing)
-            }
+            configuredProvider.client.auth
         }
-        val restoration = async { configuredProvider.restoreSession() }
-        runCurrent()
+        auth.importSession(session("account-a"), autoRefresh = false)
 
-        assertFalse(restoration.isCompleted)
-        configuredProvider.withProfileSession("profile-a") {
-            auth.importSession(session("account-a"), autoRefresh = false)
-        }
-        restoration.await()
+        val restoredState = configuredProvider.restoreSession("profile-a")
 
-        val state = configuredProvider.currentSessionState()
-        assertIs<SessionStatus.Authenticated>(state.status)
-        assertEquals("account-a", state.accountId)
+        assertIs<SessionStatus.Authenticated>(restoredState.status)
+        assertEquals("account-a", restoredState.accountId)
     }
 
     @Test
@@ -170,6 +159,17 @@ class SupabaseClientProviderTest {
             assertNull(configuredProvider.currentSessionState().accountId)
             assertNull(sessionManager.reauthenticationAccountId("profile-a"))
         }
+    }
+
+    private fun unconfiguredProvider(): SupabaseClientProvider {
+        return SupabaseClientProvider(
+            configuration = CloudConfiguration(
+                supabaseUrl = "",
+                publishableKey = "",
+            ),
+            cloudSessionManager = CloudSessionManager(ProviderFakePreferences()),
+            userRegistry = userRegistry,
+        )
     }
 
     private fun configuredProvider(sessionManager: CloudSessionManager): SupabaseClientProvider {

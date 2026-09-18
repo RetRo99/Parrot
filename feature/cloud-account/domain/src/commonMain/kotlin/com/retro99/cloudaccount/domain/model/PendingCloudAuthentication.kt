@@ -2,6 +2,7 @@ package com.retro99.cloudaccount.domain.model
 
 data class PendingCloudAuthentication(
     val localProfileId: String,
-    val cloudUserId: String,
+    val cloudUserId: String?,
+    val email: String?,
     val createdAt: Long,
 )

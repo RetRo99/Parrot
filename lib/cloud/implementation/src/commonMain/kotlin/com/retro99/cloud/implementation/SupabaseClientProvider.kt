@@ -187,10 +187,14 @@ class SupabaseClientProvider(
         state.sessionManager?.invalidate(clearStoredSession = true)
     }
 
-    suspend fun restoreSession() {
-        if (!isConfigured) return
-        val auth = withProfileSession(currentProfileId()) { client.auth }
+    suspend fun restoreSession(localProfileId: String): CloudSessionState {
+        if (!isConfigured) return CloudSessionState(SessionStatus.NotAuthenticated())
+        val auth = withProfileSession(localProfileId) { client.auth }
         auth.awaitInitialization()
+        check(currentProfileId() == localProfileId) {
+            "Cloud session restored for an inactive profile"
+        }
+        return sessionState(localProfileId, auth.sessionStatus.value)
     }
 
     @OptIn(SupabaseInternal::class)
