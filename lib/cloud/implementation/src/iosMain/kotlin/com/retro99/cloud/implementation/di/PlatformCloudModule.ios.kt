@@ -1,9 +1,12 @@
 package com.retro99.cloud.implementation.di
 
 import com.retro99.cloud.implementation.CloudConfiguration
+import com.retro99.cloud.implementation.CloudOAuthUrlLauncher
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import platform.Foundation.NSBundle
+import platform.Foundation.NSURL
+import platform.UIKit.UIApplication
 
 @Module
 actual class PlatformCloudModule {
@@ -20,5 +23,18 @@ actual class PlatformCloudModule {
                 ) as? String
             ).orEmpty(),
         )
+    }
+
+    @Single
+    fun provideCloudOAuthUrlLauncher(): CloudOAuthUrlLauncher {
+        return IosCloudOAuthUrlLauncher()
+    }
+}
+
+private class IosCloudOAuthUrlLauncher : CloudOAuthUrlLauncher {
+    override fun open(url: String) {
+        NSURL.URLWithString(url)?.let { oauthUrl ->
+            UIApplication.sharedApplication.openURL(oauthUrl)
+        }
     }
 }

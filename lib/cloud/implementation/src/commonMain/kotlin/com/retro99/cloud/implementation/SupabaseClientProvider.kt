@@ -57,6 +57,9 @@ class SupabaseClientProvider(
     val isConfigured: Boolean
         get() = configuration.isConfigured
 
+    val redirectUrl: String
+        get() = configuration.redirectUrl
+
     val client: SupabaseClient
         get() {
             val currentState = clientState.value

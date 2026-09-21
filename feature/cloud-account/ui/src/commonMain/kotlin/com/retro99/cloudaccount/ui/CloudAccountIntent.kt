@@ -7,6 +7,8 @@ sealed interface CloudAccountIntent : BaseIntent {
 
     data object OnSubmitClicked : CloudAccountIntent
 
+    data object OnGoogleSignInClicked : CloudAccountIntent
+
     data object OnSwitchToSignInClicked : CloudAccountIntent
 
     data object OnSwitchToCreateAccountClicked : CloudAccountIntent

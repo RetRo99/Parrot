@@ -484,4 +484,5 @@
     <string name="cloud_account_link_profile" tools:ignore="MissingTranslation">Connect profile</string>
     <string name="cloud_account_enable_sync" tools:ignore="MissingTranslation">Enable sync</string>
     <string name="cloud_account_sync_now" tools:ignore="MissingTranslation">Sync now</string>
+    <string name="cloud_account_sign_in_with_google" tools:ignore="MissingTranslation">Continue with Google</string>
 </resources>

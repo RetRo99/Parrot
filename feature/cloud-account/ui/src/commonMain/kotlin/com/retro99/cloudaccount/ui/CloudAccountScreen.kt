@@ -5,10 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -31,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -77,6 +78,7 @@ import resources.translations.cloud_account_profile_already_linked
 import resources.translations.cloud_account_reauthentication_required
 import resources.translations.cloud_account_refresh_unavailable
 import resources.translations.cloud_account_sign_in
+import resources.translations.cloud_account_sign_in_with_google
 import resources.translations.cloud_account_sign_out
 import resources.translations.cloud_account_switch_to_create
 import resources.translations.cloud_account_switch_to_sign_in
@@ -301,6 +303,16 @@ private fun AccountFormContent(
                     ),
                 )
             }
+        }
+
+        OutlinedButton(
+            onClick = {
+                intentDispatcher(CloudAccountIntent.OnGoogleSignInClicked)
+            },
+            enabled = !viewState.isLoading,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(stringResource(StringRes.cloud_account_sign_in_with_google))
         }
 
         TextButton(

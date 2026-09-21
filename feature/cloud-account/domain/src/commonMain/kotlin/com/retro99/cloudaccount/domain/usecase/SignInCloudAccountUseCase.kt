@@ -17,8 +17,25 @@ class SignInCloudAccountUseCase(
 ) {
     suspend operator fun invoke(email: String, password: String): CloudAccount {
         val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+        return completeSignIn(localProfileId, email) {
+            accountRepository.signIn(localProfileId, email, password)
+        }
+    }
+
+    suspend fun signInWithGoogle(): CloudAccount {
+        val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+        return completeSignIn(localProfileId, fallbackEmail = null) {
+            accountRepository.signInWithGoogle(localProfileId)
+        }
+    }
+
+    private suspend fun completeSignIn(
+        localProfileId: String,
+        fallbackEmail: String?,
+        signIn: suspend () -> CloudAccount,
+    ): CloudAccount {
         return accountRepository.withProfileSession(localProfileId) {
-            val account = accountRepository.signIn(localProfileId, email, password)
+            val account = signIn()
             check(userRegistry.getActiveProfileIdOrDefault() == localProfileId) {
                 "Cloud sign-in completed for an inactive profile"
             }
@@ -26,7 +43,7 @@ class SignInCloudAccountUseCase(
                 PendingCloudAuthentication(
                     localProfileId = localProfileId,
                     cloudUserId = account.id,
-                    email = account.email ?: email,
+                    email = account.email ?: fallbackEmail,
                     createdAt = Clock.System.now().toEpochMilliseconds(),
                 ),
             )

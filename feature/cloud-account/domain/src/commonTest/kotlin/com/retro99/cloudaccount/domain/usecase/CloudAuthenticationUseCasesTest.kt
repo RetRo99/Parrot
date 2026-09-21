@@ -47,6 +47,23 @@ class CloudAuthenticationUseCasesTest {
     }
 
     @Test
+    fun `google sign in preserves the originating profile`() = runTest {
+        val classUnderTest = SignInCloudAccountUseCase(
+            accountRepository = accountRepository,
+            pendingAuthenticationRepository = pendingAuthenticationRepository,
+            userRegistry = userRegistry,
+        )
+        accountRepository.onGoogleSignIn = { account }
+
+        val result = classUnderTest.signInWithGoogle()
+
+        assertEquals(account, result)
+        val pendingAuthentication = pendingAuthenticationRepository.get("profile-a")
+        assertEquals(account.id, pendingAuthentication?.cloudUserId)
+        assertEquals(account.email, pendingAuthentication?.email)
+    }
+
+    @Test
     fun `restored signed in session can continue profile linking`() = runTest {
         val classUnderTest = RestoreCloudSessionUseCase(
             accountRepository = accountRepository,
@@ -236,6 +253,7 @@ private class FakeCloudAccountRepository : CloudAccountRepository {
             ),
         )
     }
+    var onGoogleSignIn: suspend () -> CloudAccount = { error("Not used") }
     var onRestore: suspend () -> Unit = {}
 
     override fun observeAuthState(): Flow<CloudAuthState> = flowOf(authState)
@@ -258,6 +276,8 @@ private class FakeCloudAccountRepository : CloudAccountRepository {
         email: String,
         password: String,
     ): CloudAccount = error("Not used")
+
+    override suspend fun signInWithGoogle(localProfileId: String): CloudAccount = onGoogleSignIn()
 
     override suspend fun restoreSession(localProfileId: String): CloudAuthState {
         onRestore()

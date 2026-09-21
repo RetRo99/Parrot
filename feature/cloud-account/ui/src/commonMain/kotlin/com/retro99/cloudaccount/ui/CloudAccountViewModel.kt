@@ -55,6 +55,7 @@ class CloudAccountViewModel(
         when (intent) {
             CloudAccountIntent.OnBackClicked -> onBack()
             CloudAccountIntent.OnSubmitClicked -> submit()
+            CloudAccountIntent.OnGoogleSignInClicked -> signInWithGoogle()
             CloudAccountIntent.OnSwitchToSignInClicked -> switchMode(CloudAccountMode.SignIn)
             CloudAccountIntent.OnSwitchToCreateAccountClicked -> {
                 switchMode(CloudAccountMode.CreateAccount)
@@ -189,6 +190,29 @@ class CloudAccountViewModel(
                         }
                     }
                 }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                showError(exception)
+            }
+        }
+    }
+
+    private fun signInWithGoogle() {
+        if (viewState.value.isLoading) return
+        updateState {
+            it.copy(
+                isLoading = true,
+                isSubmitEnabled = false,
+                showVerificationMessage = false,
+                error = null,
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                val account = signInCloudAccountUseCase.signInWithGoogle()
+                prepareAuthenticatedAccount(account)
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {

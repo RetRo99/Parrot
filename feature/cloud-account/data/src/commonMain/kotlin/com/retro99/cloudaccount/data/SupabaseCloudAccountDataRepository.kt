@@ -1,5 +1,7 @@
 package com.retro99.cloudaccount.data
 
+import com.retro99.cloud.implementation.CloudOAuthCallbackRegistry
+import com.retro99.cloud.implementation.CloudOAuthUrlLauncher
 import com.retro99.cloud.implementation.SupabaseClientProvider
 import com.retro99.cloudaccount.domain.CloudAccountException
 import com.retro99.cloudaccount.domain.CloudAccountRepository
@@ -9,6 +11,7 @@ import com.retro99.cloudaccount.domain.model.CloudAuthState
 import com.retro99.cloudaccount.domain.model.CloudRegistrationResult
 import io.github.jan.supabase.auth.SignOutScope
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.NonCancellable
@@ -22,6 +25,7 @@ import org.koin.core.annotation.Single
 @Single(binds = [CloudAccountRepository::class])
 class SupabaseCloudAccountDataRepository(
     @Provided private val clientProvider: SupabaseClientProvider,
+    @Provided private val oauthUrlLauncher: CloudOAuthUrlLauncher,
     @Provided private val profileLinkRepository: CloudProfileLinkRepository,
 ) : CloudAccountRepository {
     override fun observeAuthState(): Flow<CloudAuthState> {
@@ -77,6 +81,24 @@ class SupabaseCloudAccountDataRepository(
         }
         val account = auth.currentUserOrNull()?.toCloudAccount()
             ?: error("Cloud sign-in did not return an account")
+        validateAccountForProfile(localProfileId, account, previousSession)
+        return account
+    }
+
+    override suspend fun signInWithGoogle(localProfileId: String): CloudAccount {
+        requireConfigured()
+        val auth = clientProvider.client.auth
+        val previousSession = auth.currentSessionOrNull()
+        val oauthUrl = auth.getOAuthUrl(
+            provider = Google,
+            redirectUrl = clientProvider.redirectUrl,
+        )
+        val code = CloudOAuthCallbackRegistry.awaitCode {
+            oauthUrlLauncher.open(oauthUrl)
+        }
+        auth.exchangeCodeForSession(code)
+        val account = auth.currentUserOrNull()?.toCloudAccount()
+            ?: error("Google sign-in did not return an account")
         validateAccountForProfile(localProfileId, account, previousSession)
         return account
     }
