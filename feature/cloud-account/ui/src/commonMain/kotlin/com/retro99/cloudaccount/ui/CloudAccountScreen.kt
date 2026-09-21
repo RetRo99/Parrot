@@ -65,6 +65,7 @@ import resources.translations.cloud_account_connected
 import resources.translations.cloud_account_create_account
 import resources.translations.cloud_account_description
 import resources.translations.cloud_account_email_label
+import resources.translations.cloud_account_enable_sync
 import resources.translations.cloud_account_generic_error
 import resources.translations.cloud_account_link_pending
 import resources.translations.cloud_account_link_profile
@@ -81,6 +82,7 @@ import resources.translations.cloud_account_switch_to_create
 import resources.translations.cloud_account_switch_to_sign_in
 import resources.translations.cloud_account_sync_enabled
 import resources.translations.cloud_account_sync_not_enabled
+import resources.translations.cloud_account_sync_now
 import resources.translations.cloud_account_title
 import resources.translations.cloud_account_verification_message
 import resources.translations.general_back
@@ -181,6 +183,9 @@ private fun CloudAccountScreenContent(
                         error = viewState.error,
                         onSignOut = {
                             intentDispatcher(CloudAccountIntent.OnSignOutClicked)
+                        },
+                        onSync = {
+                            intentDispatcher(CloudAccountIntent.OnSyncClicked)
                         },
                     )
                 }
@@ -375,6 +380,7 @@ private fun ConnectedAccountContent(
     isLoading: Boolean,
     error: CloudAccountError?,
     onSignOut: () -> Unit,
+    onSync: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -411,6 +417,33 @@ private fun ConnectedAccountContent(
                     },
                     style = MaterialTheme.typography.bodySmall,
                 )
+
+                if (profileLink != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onSync,
+                        enabled = !isLoading,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                        } else {
+                            Text(
+                                stringResource(
+                                    if (profileLink.syncEnabled) {
+                                        StringRes.cloud_account_sync_now
+                                    } else {
+                                        StringRes.cloud_account_enable_sync
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                }
             }
         }
 

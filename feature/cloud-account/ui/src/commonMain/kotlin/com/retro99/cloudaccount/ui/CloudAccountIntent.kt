@@ -13,6 +13,8 @@ sealed interface CloudAccountIntent : BaseIntent {
 
     data object OnSignOutClicked : CloudAccountIntent
 
+    data object OnSyncClicked : CloudAccountIntent
+
     data object OnLinkConfirmed : CloudAccountIntent
 
     data object OnLinkDismissed : CloudAccountIntent

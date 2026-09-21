@@ -557,6 +557,7 @@ internal class BooksSqlDelightDao(
         withContext(Dispatchers.IO) {
             positionQueries.upsertPosition(
                 book_uuid = position.bookUuid,
+                remote_revision = position.remoteRevision,
                 timestamp = position.timestamp,
                 created_at = position.createdAt,
                 updated_at = position.updatedAt,
@@ -583,6 +584,7 @@ internal class BooksSqlDelightDao(
             database.transaction {
                 positionQueries.upsertPosition(
                     book_uuid = position.bookUuid,
+                    remote_revision = position.remoteRevision,
                     timestamp = position.timestamp,
                     created_at = position.createdAt,
                     updated_at = position.updatedAt,
@@ -609,6 +611,7 @@ internal class BooksSqlDelightDao(
                 .executeAsOneOrNull()?.let { row ->
                     PositionSqlDelightEntity(
                         bookUuid = row.book_uuid,
+                        remoteRevision = row.remote_revision,
                         timestamp = row.timestamp,
                         createdAt = row.created_at,
                         updatedAt = row.updated_at,
@@ -639,6 +642,7 @@ internal class BooksSqlDelightDao(
             positionQueries.getAllPositions().executeAsList().map { row ->
                 PositionSqlDelightEntity(
                     bookUuid = row.book_uuid,
+                    remoteRevision = row.remote_revision,
                     timestamp = row.timestamp,
                     createdAt = row.created_at,
                     updatedAt = row.updated_at,
@@ -670,6 +674,7 @@ internal class BooksSqlDelightDao(
                 row?.let {
                     PositionSqlDelightEntity(
                         bookUuid = it.book_uuid,
+                        remoteRevision = it.remote_revision,
                         timestamp = it.timestamp,
                         createdAt = it.created_at,
                         updatedAt = it.updated_at,
@@ -701,6 +706,7 @@ internal class BooksSqlDelightDao(
                 list.map { row ->
                     PositionSqlDelightEntity(
                         bookUuid = row.book_uuid,
+                        remoteRevision = row.remote_revision,
                         timestamp = row.timestamp,
                         createdAt = row.created_at,
                         updatedAt = row.updated_at,

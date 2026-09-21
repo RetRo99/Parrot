@@ -91,14 +91,18 @@ class LibraryBookQueriesTest {
                 remoteRevision = 3,
             ),
         )
-        database.syncOutboxQueries.enqueue(outboxEntry(entityId = "unsynced"))
-        database.syncOutboxQueries.enqueue(outboxEntry(entityId = "synced"))
+        database.syncOutboxQueries.enqueue(
+            outboxEntry(entityId = "unsynced", cloudUserId = "cloud-user"),
+        )
+        database.syncOutboxQueries.enqueue(
+            outboxEntry(entityId = "synced", cloudUserId = "cloud-user"),
+        )
 
         database.deleteOrphanedLibraryBookState()
 
         assertNull(database.libraryBookQueries.getLibraryBookById("unsynced").executeAsOneOrNull())
         assertNotNull(database.libraryBookQueries.getLibraryBookById("synced").executeAsOneOrNull())
-        val pendingEntityIds = database.syncOutboxQueries.getPendingMutations()
+        val pendingEntityIds = database.syncOutboxQueries.getPendingMutations("cloud-user")
             .executeAsList()
             .map { mutation -> mutation.entity_id }
         assertEquals(listOf("synced"), pendingEntityIds)
@@ -108,7 +112,30 @@ class LibraryBookQueriesTest {
     fun migrationChainProducesLibraryBookSchema() {
         val migrationDriver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         try {
-            AppDatabase.Schema.migrate(migrationDriver, 17, 19)
+            migrationDriver.execute(
+                identifier = null,
+                sql = """
+                    CREATE TABLE position (
+                        book_uuid TEXT NOT NULL PRIMARY KEY,
+                        timestamp INTEGER,
+                        created_at TEXT,
+                        updated_at TEXT,
+                        locator_href TEXT,
+                        locator_type TEXT,
+                        locator_title TEXT,
+                        locator_target INTEGER,
+                        audio_timestamp_ms INTEGER,
+                        chapter_index INTEGER,
+                        progression REAL,
+                        total_chapters INTEGER,
+                        total_duration_ms INTEGER,
+                        total_progression REAL,
+                        position INTEGER
+                    );
+                """.trimIndent(),
+                parameters = 0,
+            )
+            AppDatabase.Schema.migrate(migrationDriver, 17, 20)
             val migrated = AppDatabase(migrationDriver)
 
             migrated.libraryBookQueries.upsertLibraryBook(
@@ -152,11 +179,12 @@ class LibraryBookQueriesTest {
         assertNotNull(database.libraryBookQueries.getLibraryBookById("hash-3").executeAsOneOrNull())
     }
 
-    private fun outboxEntry(entityId: String) = SyncOutboxEntry.new(
+    private fun outboxEntry(entityId: String, cloudUserId: String) = SyncOutboxEntry.new(
         entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
         entityId = entityId,
         operation = SyncOutboxEntry.OPERATION_UPSERT,
         payload = "{}",
+        cloudUserId = cloudUserId,
     )
 }
 

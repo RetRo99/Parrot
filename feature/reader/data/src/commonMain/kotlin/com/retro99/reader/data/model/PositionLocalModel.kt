@@ -5,6 +5,7 @@ import com.retro99.reader.domain.model.PositionDomainModel
 
 data class PositionLocalModel(
     override val bookUuid: String,
+    override val remoteRevision: Long? = null,
     override val timestamp: Long?,
     override val createdAt: String?,
     override val updatedAt: String?,
@@ -46,6 +47,7 @@ fun PositionDomainModel.toLocal(): PositionLocalModel {
     // Note: serverId is not stored locally - it's passed through the call chain
     return PositionLocalModel(
         bookUuid = bookUuid,
+        remoteRevision = null,
         timestamp = timestamp,
         createdAt = createdAt,
         updatedAt = updatedAt,
@@ -66,6 +68,7 @@ fun PositionDomainModel.toLocal(): PositionLocalModel {
 fun PositionEntity.toLocalModel(): PositionLocalModel {
     return PositionLocalModel(
         bookUuid = bookUuid,
+        remoteRevision = remoteRevision,
         timestamp = timestamp,
         createdAt = createdAt,
         updatedAt = updatedAt,
@@ -82,4 +85,3 @@ fun PositionEntity.toLocalModel(): PositionLocalModel {
         position = position,
     )
 }
-

@@ -84,7 +84,10 @@ class ReaderLocalDataSource(
         progress: PositionLocalModel,
     ): CompletableResult {
         return databaseExecutor.executeDatabaseOperation {
-            positionDatabase.upsertPosition(progress)
+            val storedPosition = positionDatabase.getPositionByBookUuid(progress.bookUuid)
+            positionDatabase.upsertPosition(
+                progress.copy(remoteRevision = storedPosition?.remoteRevision),
+            )
         }
     }
 

@@ -90,6 +90,27 @@ class CloudAuthenticationUseCasesTest {
     }
 
     @Test
+    fun `enabling cloud sync enables the active profile link`() = runTest {
+        profileLinkRepository.addLink(
+            CloudProfileLink(
+                localProfileId = "profile-a",
+                cloudUserId = account.id,
+                syncEnabled = false,
+                initialMergeCompleted = false,
+            ),
+        )
+        val classUnderTest = EnableCloudSyncUseCase(
+            profileLinkRepository = profileLinkRepository,
+            userRegistry = userRegistry,
+        )
+
+        val result = classUnderTest()
+
+        assertEquals(true, result.syncEnabled)
+        assertEquals(false, result.initialMergeCompleted)
+    }
+
+    @Test
     fun `registration awaiting verification preserves the originating profile`() = runTest {
         val classUnderTest = RegisterCloudAccountUseCase(
             accountRepository = accountRepository,
@@ -275,7 +296,12 @@ private class FakeCloudProfileLinkRepository : CloudProfileLinkRepository {
         return CloudProfileLinkResult.Linked(link)
     }
 
-    override suspend fun setSyncEnabled(localProfileId: String, enabled: Boolean) = Unit
+    override suspend fun setSyncEnabled(localProfileId: String, enabled: Boolean) {
+        val index = links.indexOfFirst { link -> link.localProfileId == localProfileId }
+        if (index >= 0) {
+            links[index] = links[index].copy(syncEnabled = enabled)
+        }
+    }
 
     override suspend fun markInitialMergeCompleted(localProfileId: String) = Unit
 }

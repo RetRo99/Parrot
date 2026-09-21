@@ -170,6 +170,7 @@ colorpicker-compose = { module = "com.github.skydoves:colorpicker-compose", vers
 # Reorderable (drag-and-drop reordering for Compose Multiplatform)
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt", version.ref = "supabase" }
+supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt", version.ref = "supabase" }
 
 [bundles]
 ktorClientBundle = [

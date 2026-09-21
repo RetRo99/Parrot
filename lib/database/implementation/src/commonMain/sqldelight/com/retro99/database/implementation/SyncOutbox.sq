@@ -32,9 +32,20 @@ INSERT INTO sync_outbox(
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
+bindUnassignedMutations:
+UPDATE sync_outbox
+SET cloud_user_id = ?
+WHERE cloud_user_id IS NULL;
+
 getPendingMutations:
 SELECT * FROM sync_outbox
+WHERE cloud_user_id = ?
 ORDER BY local_mutation_sequence ASC;
+
+updateBaseRevision:
+UPDATE sync_outbox
+SET base_revision = ?
+WHERE mutation_id = ?;
 
 deletePendingMutationsForEntity:
 DELETE FROM sync_outbox WHERE entity_type = ? AND entity_id = ?;

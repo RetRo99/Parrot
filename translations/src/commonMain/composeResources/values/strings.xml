@@ -482,4 +482,6 @@
     <string name="cloud_account_link_profile_title" tools:ignore="MissingTranslation">Connect this profile?</string>
     <string name="cloud_account_link_profile_description" tools:ignore="MissingTranslation">This permanently associates the current local profile with this cloud account. You will review and confirm how library data is merged before sync is enabled.</string>
     <string name="cloud_account_link_profile" tools:ignore="MissingTranslation">Connect profile</string>
+    <string name="cloud_account_enable_sync" tools:ignore="MissingTranslation">Enable sync</string>
+    <string name="cloud_account_sync_now" tools:ignore="MissingTranslation">Sync now</string>
 </resources>

@@ -86,6 +86,8 @@ kotlin {
             implementation(projects.feature.cloudAccount.domain)
             implementation(projects.feature.cloudAccount.data)
             implementation(projects.feature.cloudAccount.ui)
+            implementation(projects.feature.sync.domain)
+            implementation(projects.feature.sync.data)
             implementation(projects.feature.auth.domain)
             implementation(projects.feature.auth.data)
             implementation(projects.feature.login.ui)

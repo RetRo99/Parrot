@@ -35,6 +35,7 @@ kotlin {
             implementation(projects.baseUi)
             implementation(projects.translations)
             implementation(projects.feature.cloudAccount.domain)
+            implementation(projects.feature.sync.domain)
         }
 
         commonTest.dependencies {

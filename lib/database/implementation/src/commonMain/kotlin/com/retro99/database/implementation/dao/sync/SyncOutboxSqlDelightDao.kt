@@ -17,9 +17,23 @@ internal class SyncOutboxSqlDelightDao(
         }
     }
 
-    suspend fun getPending(): List<SyncOutboxEntry> {
+    suspend fun bindUnassignedMutations(cloudUserId: String) {
+        withContext(Dispatchers.IO) {
+            queries.bindUnassignedMutations(cloudUserId)
+        }
+    }
+
+    suspend fun getPending(cloudUserId: String): List<SyncOutboxEntry> {
         return withContext(Dispatchers.IO) {
-            queries.getPendingMutations().executeAsList().map { mutation -> mutation.toEntry() }
+            queries.getPendingMutations(cloudUserId)
+                .executeAsList()
+                .map { mutation -> mutation.toEntry() }
+        }
+    }
+
+    suspend fun updateBaseRevision(mutationId: String, baseRevision: Long) {
+        withContext(Dispatchers.IO) {
+            queries.updateBaseRevision(baseRevision, mutationId)
         }
     }
 

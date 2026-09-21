@@ -33,6 +33,8 @@ import com.retro99.settings.ui.di.SettingsUiModule
 import com.retro99.statistics.data.di.StatisticsDataModule
 import com.retro99.statistics.domain.di.StatisticsDomainModule
 import com.retro99.statistics.ui.di.StatisticsUiModule
+import com.retro99.sync.data.di.SyncDataModule
+import com.retro99.sync.domain.di.SyncDomainModule
 import com.retro99.user.implementation.di.UserModule
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
@@ -61,6 +63,8 @@ import org.koin.core.annotation.Module
         CloudAccountDomainModule::class,
         CloudAccountDataModule::class,
         CloudAccountUiModule::class,
+        SyncDomainModule::class,
+        SyncDataModule::class,
         LoginUiModule::class,
         LoginDomainModule::class,
         LoginDataModule::class,

@@ -334,6 +334,7 @@ internal class BooksDatabaseImpl(
     private fun PositionEntity.toSqlDelightEntity(): PositionSqlDelightEntity {
         return PositionSqlDelightEntity(
             bookUuid = bookUuid,
+            remoteRevision = remoteRevision,
             timestamp = timestamp,
             createdAt = createdAt,
             updatedAt = updatedAt,

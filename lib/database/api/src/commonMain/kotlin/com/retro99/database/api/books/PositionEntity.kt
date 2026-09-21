@@ -7,6 +7,8 @@ package com.retro99.database.api.books
  */
 interface PositionEntity {
     val bookUuid: String
+    val remoteRevision: Long?
+        get() = null
     val timestamp: Long?
     val createdAt: String?
     val updatedAt: String?
@@ -26,4 +28,3 @@ interface PositionEntity {
     val totalProgression: Double?
     val position: Int?
 }
-

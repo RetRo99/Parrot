@@ -10,6 +10,7 @@ import com.retro99.cloudaccount.domain.model.CloudAuthState
 import com.retro99.cloudaccount.domain.model.CloudProfileLinkResult
 import com.retro99.cloudaccount.domain.model.CloudRegistrationResult
 import com.retro99.cloudaccount.domain.usecase.ActivateCloudProfileUseCase
+import com.retro99.cloudaccount.domain.usecase.EnableCloudSyncUseCase
 import com.retro99.cloudaccount.domain.usecase.GetCloudProfileLinkUseCase
 import com.retro99.cloudaccount.domain.usecase.LinkCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.ObserveCloudAuthStateUseCase
@@ -17,6 +18,8 @@ import com.retro99.cloudaccount.domain.usecase.RegisterCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.RestoreCloudSessionUseCase
 import com.retro99.cloudaccount.domain.usecase.SignInCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.SignOutCloudAccountUseCase
+import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.usecase.SyncNowUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -35,6 +38,8 @@ class CloudAccountViewModel(
     @Provided private val linkCloudAccountUseCase: LinkCloudAccountUseCase,
     @Provided private val signOutCloudAccountUseCase: SignOutCloudAccountUseCase,
     @Provided private val activateCloudProfileUseCase: ActivateCloudProfileUseCase,
+    @Provided private val enableCloudSyncUseCase: EnableCloudSyncUseCase,
+    @Provided private val syncNowUseCase: SyncNowUseCase,
     @InjectedParam private val onBack: () -> Unit,
 ) : BaseViewModel<CloudAccountViewState, CloudAccountIntent>(CloudAccountViewState()) {
     val emailState = TextFieldState()
@@ -55,6 +60,7 @@ class CloudAccountViewModel(
                 switchMode(CloudAccountMode.CreateAccount)
             }
             CloudAccountIntent.OnSignOutClicked -> signOut()
+            CloudAccountIntent.OnSyncClicked -> sync()
             CloudAccountIntent.OnLinkConfirmed -> linkAccount()
             CloudAccountIntent.OnLinkDismissed -> signOut()
         }
@@ -317,6 +323,42 @@ class CloudAccountViewModel(
         }
     }
 
+    private fun sync() {
+        if (viewState.value.isLoading || viewState.value.profileLink == null) return
+        updateState {
+            it.copy(
+                isLoading = true,
+                error = null,
+            )
+        }
+        viewModelScope.launch {
+            try {
+                val enabledProfileLink = enableCloudSyncUseCase()
+                updateState { currentState ->
+                    currentState.copy(profileLink = enabledProfileLink)
+                }
+                when (syncNowUseCase()) {
+                    is SyncResult.Completed -> {
+                        val profileLink = getCloudProfileLinkUseCase()
+                        updateState {
+                            it.copy(
+                                profileLink = profileLink,
+                                isLoading = false,
+                                error = null,
+                            )
+                        }
+                    }
+                    SyncResult.NotConfigured -> showError(CloudAccountError.NotConfigured)
+                    else -> showError(CloudAccountError.Generic)
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                showError(exception)
+            }
+        }
+    }
+
     private fun switchMode(mode: CloudAccountMode) {
         updateState {
             it.copy(
@@ -342,6 +384,16 @@ class CloudAccountViewModel(
                 error = exception.toCloudAccountError(),
                 showLinkConfirmation = it.authState is CloudAuthState.SignedIn &&
                     it.profileLink == null,
+            )
+        }
+        updateFormState(emailState.text.toString(), passwordState.text.toString())
+    }
+
+    private fun showError(error: CloudAccountError) {
+        updateState {
+            it.copy(
+                isLoading = false,
+                error = error,
             )
         }
         updateFormState(emailState.text.toString(), passwordState.text.toString())

@@ -9,6 +9,7 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserSession
 import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.postgrest.Postgrest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -84,6 +85,7 @@ class SupabaseClientProvider(
             supabaseUrl = configuration.supabaseUrl,
             supabaseKey = configuration.publishableKey,
         ) {
+            install(Postgrest)
             install(Auth) {
                 flowType = FlowType.PKCE
                 scheme = configuration.redirectScheme

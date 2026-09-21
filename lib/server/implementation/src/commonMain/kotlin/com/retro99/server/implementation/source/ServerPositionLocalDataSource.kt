@@ -37,7 +37,8 @@ class ServerPositionLocalDataSource(
 
     override suspend fun savePosition(position: ServerPosition): CompletableResult {
         return databaseExecutor.executeDatabaseOperation {
-            val localPosition = position.toPositionEntity()
+            val storedPosition = positionDatabase.getPositionByBookUuid(position.bookUuid)
+            val localPosition = position.toPositionEntity(storedPosition?.remoteRevision)
             if (position.serverId == LOCAL_SERVER_ID) {
                 val importedBook = importedBooksDatabase.getImportedBookByUuid(position.bookUuid)
                 positionDatabase.upsertPositionWithMutation(
@@ -45,6 +46,7 @@ class ServerPositionLocalDataSource(
                     mutation = position.toSyncOutboxEntry(
                         contentHash = importedBook?.contentHash,
                         contentHashAlgorithm = importedBook?.contentHashAlgorithm,
+                        baseRevision = storedPosition?.remoteRevision,
                     ),
                 )
             } else {
@@ -79,6 +81,7 @@ class ServerPositionLocalDataSource(
 private fun ServerPosition.toSyncOutboxEntry(
     contentHash: String?,
     contentHashAlgorithm: String?,
+    baseRevision: Long?,
 ): SyncOutboxEntry {
     return SyncOutboxEntry.new(
         entityType = SyncOutboxEntry.ENTITY_TYPE_READING_POSITION,
@@ -92,6 +95,7 @@ private fun ServerPosition.toSyncOutboxEntry(
                 position = this,
             ),
         ),
+        baseRevision = baseRevision,
     )
 }
 
@@ -138,9 +142,10 @@ private fun PositionEntity.toServerPosition(): ServerPosition {
 /**
  * Converts a ServerPosition to a PositionEntity for database storage.
  */
-private fun ServerPosition.toPositionEntity(): PositionEntity {
+private fun ServerPosition.toPositionEntity(remoteRevision: Long?): PositionEntity {
     return ServerPositionEntity(
         bookUuid = bookUuid,
+        remoteRevision = remoteRevision,
         timestamp = timestamp,
         createdAt = createdAt,
         updatedAt = updatedAt,
@@ -163,6 +168,7 @@ private fun ServerPosition.toPositionEntity(): PositionEntity {
  */
 private data class ServerPositionEntity(
     override val bookUuid: String,
+    override val remoteRevision: Long?,
     override val timestamp: Long?,
     override val createdAt: String?,
     override val updatedAt: String?,

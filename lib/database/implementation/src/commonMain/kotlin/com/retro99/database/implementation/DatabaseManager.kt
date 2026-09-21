@@ -2,6 +2,7 @@
 
 import app.cash.sqldelight.db.SqlDriver
 import co.touchlab.kermit.Logger
+import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +26,7 @@ import org.koin.core.annotation.Single
 class DatabaseManager(
     @Provided private val userRegistry: UserRegistry,
     private val driverFactory: SqlDriverFactory,
-) {
+) : ProfileDatabaseSession {
     private val logger = Logger.withTag("čič")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val mutex = Mutex()
@@ -50,21 +51,23 @@ class DatabaseManager(
 
     private suspend fun switchToUser(userId: String?) {
         mutex.withLock {
-            // Close current database
-            currentDriver?.close()
-            currentDriver = null
-            currentDatabase = null
-            currentUserId = userId
+            switchToUserLocked(userId)
+        }
+    }
 
-            if (userId != null) {
-                // Open new database for the user
-                val driver = driverFactory.createDriver(userId)
-                currentDriver = driver
-                currentDatabase = AppDatabase(driver)
-                logger.d { "Opened database for user $userId" }
-            } else {
-                logger.d { "No active user, database closed" }
-            }
+    private suspend fun switchToUserLocked(userId: String?) {
+        currentDriver?.close()
+        currentDriver = null
+        currentDatabase = null
+        currentUserId = userId
+
+        if (userId != null) {
+            val driver = driverFactory.createDriver(userId)
+            currentDriver = driver
+            currentDatabase = AppDatabase(driver)
+            logger.d { "Opened database for user $userId" }
+        } else {
+            logger.d { "No active user, database closed" }
         }
     }
 
@@ -91,6 +94,25 @@ class DatabaseManager(
         return currentUserId
     }
 
+    override suspend fun <T> withProfile(
+        localProfileId: String,
+        operation: suspend () -> T,
+    ): T {
+        return mutex.withLock {
+            check(userRegistry.getActiveProfileIdOrDefault() == localProfileId) {
+                "Database operation started for an inactive profile"
+            }
+            if (currentUserId != localProfileId || currentDatabase == null) {
+                switchToUserLocked(localProfileId)
+            }
+            val result = operation()
+            check(userRegistry.getActiveProfileIdOrDefault() == localProfileId) {
+                "Database operation completed for an inactive profile"
+            }
+            result
+        }
+    }
+
     /**
      * Close the current database. Called when the app is shutting down.
      */
@@ -103,4 +125,3 @@ class DatabaseManager(
         }
     }
 }
-

@@ -6,7 +6,11 @@ interface SyncOutboxDatabase : DataClearable {
 
     suspend fun enqueue(entry: SyncOutboxEntry)
 
-    suspend fun getPending(): List<SyncOutboxEntry>
+    suspend fun bindUnassignedMutations(cloudUserId: String)
+
+    suspend fun getPending(cloudUserId: String): List<SyncOutboxEntry>
+
+    suspend fun updateBaseRevision(mutationId: String, baseRevision: Long)
 
     suspend fun delete(mutationId: String)
 
