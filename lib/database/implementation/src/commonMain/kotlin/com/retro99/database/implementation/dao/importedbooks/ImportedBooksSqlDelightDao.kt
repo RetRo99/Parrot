@@ -3,8 +3,14 @@ package com.retro99.database.implementation.dao.importedbooks
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import com.retro99.database.api.importedbooks.ImportedBookEntity
+import com.retro99.database.api.library.LibraryBookMutation
+import com.retro99.database.implementation.AppDatabase
 import com.retro99.database.implementation.DatabaseManager
 import com.retro99.database.implementation.Imported_books
+import com.retro99.database.implementation.dao.library.deleteOrphanedLibraryBookState
+import com.retro99.database.implementation.dao.library.upsertLocalBookFileRow
+import com.retro99.database.implementation.dao.library.upsertLocalLibraryBookRow
+import com.retro99.database.implementation.dao.sync.enqueue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -17,30 +23,30 @@ import kotlinx.coroutines.withContext
 internal class ImportedBooksSqlDelightDao(
     private val databaseManager: DatabaseManager,
 ) {
-    private val queries get() = databaseManager.getDatabase().importedBookQueries
 
     suspend fun upsertImportedBook(book: ImportedBookEntity) {
         withContext(Dispatchers.IO) {
-            queries.upsertImportedBook(
-                uuid = book.uuid,
-                title = book.title,
-                author = book.author,
-                description = book.description,
-                cover_path = book.coverPath,
-                file_path = book.filePath,
-                file_size = book.fileSize,
-                content_hash = book.contentHash,
-                content_hash_algorithm = book.contentHashAlgorithm,
-                imported_at = book.importedAt,
-                last_opened_at = book.lastOpenedAt,
-                book_type = book.bookType,
-                publication_date = book.publicationDate,
-            )
+            databaseManager.getDatabase().upsertImportedBookRow(book)
+        }
+    }
+
+    suspend fun upsertImportedBookWithLibraryMapping(
+        book: ImportedBookEntity,
+        mutation: LibraryBookMutation,
+    ) {
+        withContext(Dispatchers.IO) {
+            val database = databaseManager.getDatabase()
+            database.transaction {
+                database.upsertImportedBookRow(book)
+                database.upsertLocalLibraryBookRow(mutation.libraryBook)
+                database.upsertLocalBookFileRow(mutation.localBookFile)
+                database.syncOutboxQueries.enqueue(mutation.outboxEntry)
+            }
         }
     }
 
     fun getAllImportedBooks(): Flow<List<ImportedBookEntity>> {
-        return queries.getAllImportedBooks()
+        return databaseManager.getDatabase().importedBookQueries.getAllImportedBooks()
             .asFlow()
             .mapToList(Dispatchers.IO)
             .map { list -> list.map { it.toEntity() } }
@@ -48,43 +54,65 @@ internal class ImportedBooksSqlDelightDao(
 
     suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity? {
         return withContext(Dispatchers.IO) {
-            queries.getImportedBookByUuid(uuid).executeAsOneOrNull()?.toEntity()
+            databaseManager.getDatabase().importedBookQueries
+                .getImportedBookByUuid(uuid)
+                .executeAsOneOrNull()
+                ?.toEntity()
         }
     }
 
     suspend fun getImportedBookByContentHash(contentHash: String): ImportedBookEntity? {
         return withContext(Dispatchers.IO) {
-            queries.getImportedBookByContentHash(contentHash).executeAsOneOrNull()?.toEntity()
+            databaseManager.getDatabase().importedBookQueries
+                .getImportedBookByContentHash(contentHash)
+                .executeAsOneOrNull()
+                ?.toEntity()
         }
     }
 
     suspend fun deleteImportedBook(uuid: String) {
         withContext(Dispatchers.IO) {
-            queries.deleteImportedBook(uuid)
+            val database = databaseManager.getDatabase()
+            database.transaction {
+                database.localBookFileQueries.deleteLocalBookFileByImportedBookUuid(uuid)
+                database.importedBookQueries.deleteImportedBook(uuid)
+                database.deleteOrphanedLibraryBookState()
+            }
         }
     }
 
     suspend fun deleteAllImportedBooks() {
         withContext(Dispatchers.IO) {
-            queries.deleteAllImportedBooks()
+            val database = databaseManager.getDatabase()
+            database.transaction {
+                database.localBookFileQueries.deleteAllLocalBookFiles()
+                database.importedBookQueries.deleteAllImportedBooks()
+                database.deleteOrphanedLibraryBookState()
+            }
         }
     }
 
     suspend fun getImportedBooksCount(): Int {
         return withContext(Dispatchers.IO) {
-            queries.getImportedBooksCount().executeAsOne().toInt()
+            databaseManager.getDatabase().importedBookQueries
+                .getImportedBooksCount()
+                .executeAsOne()
+                .toInt()
         }
     }
 
     suspend fun updateLastOpenedAt(uuid: String, lastOpenedAt: String) {
         withContext(Dispatchers.IO) {
-            queries.updateLastOpenedAt(lastOpenedAt, uuid)
+            databaseManager.getDatabase().importedBookQueries.updateLastOpenedAt(lastOpenedAt, uuid)
         }
     }
 
     suspend fun searchImportedBooksByTitle(query: String): List<ImportedBookEntity> {
         return withContext(Dispatchers.IO) {
-            queries.searchImportedBooksByTitle("%$query%").executeAsList().map { it.toEntity() }
+            databaseManager.getDatabase().importedBookQueries
+                .searchImportedBooksByTitle("%$query%")
+                .executeAsList()
+                .map { it.toEntity() }
         }
     }
 
@@ -102,6 +130,24 @@ internal class ImportedBooksSqlDelightDao(
         lastOpenedAt = last_opened_at,
         bookType = book_type,
         publicationDate = publication_date,
+    )
+}
+
+private fun AppDatabase.upsertImportedBookRow(book: ImportedBookEntity) {
+    importedBookQueries.upsertImportedBook(
+        uuid = book.uuid,
+        title = book.title,
+        author = book.author,
+        description = book.description,
+        cover_path = book.coverPath,
+        file_path = book.filePath,
+        file_size = book.fileSize,
+        content_hash = book.contentHash,
+        content_hash_algorithm = book.contentHashAlgorithm,
+        imported_at = book.importedAt,
+        last_opened_at = book.lastOpenedAt,
+        book_type = book.bookType,
+        publication_date = book.publicationDate,
     )
 }
 

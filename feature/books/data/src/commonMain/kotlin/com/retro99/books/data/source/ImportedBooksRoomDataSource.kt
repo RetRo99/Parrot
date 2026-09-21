@@ -2,11 +2,16 @@ package com.retro99.books.data.source
 
 import com.retro99.base.formatCurrentTime
 import com.retro99.base.result.CompletableResult
+import com.retro99.books.data.model.LibraryBookJsonCodec
+import com.retro99.books.data.model.LocalBookFileLocalModel
 import com.retro99.books.data.model.toDomainModel
+import com.retro99.books.data.model.toLibraryBookLocalModel
 import com.retro99.books.data.model.toLocalModel
 import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.database.api.DatabaseExecutor
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.library.LibraryBookMutation
+import com.retro99.database.api.sync.SyncOutboxEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Provided
@@ -20,7 +25,27 @@ internal class ImportedBooksRoomDataSource(
 
     override suspend fun saveImportedBook(book: BookDomainModel.LocalBook): CompletableResult {
         return databaseExecutor.executeDatabaseOperation {
-            importedBooksDatabase.upsertImportedBook(book.toLocalModel())
+            val libraryBook = book.toLibraryBookLocalModel()
+            if (libraryBook == null) {
+                importedBooksDatabase.upsertImportedBook(book.toLocalModel())
+            } else {
+                importedBooksDatabase.upsertImportedBookWithLibraryMapping(
+                    book = book.toLocalModel(),
+                    mutation = LibraryBookMutation(
+                        libraryBook = libraryBook,
+                        localBookFile = LocalBookFileLocalModel(
+                            libraryBookId = libraryBook.libraryBookId,
+                            importedBookUuid = book.uuid,
+                        ),
+                        outboxEntry = SyncOutboxEntry.new(
+                            entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                            entityId = libraryBook.libraryBookId,
+                            operation = SyncOutboxEntry.OPERATION_UPSERT,
+                            payload = LibraryBookJsonCodec.encode(libraryBook),
+                        ),
+                    ),
+                )
+            }
         }
     }
 

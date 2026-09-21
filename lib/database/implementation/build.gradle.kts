@@ -15,6 +15,8 @@ kotlin {
         namespace = "com.retro99.database.implementation"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -42,6 +44,17 @@ kotlin {
         iosMain.dependencies {
             implementation(libs.sqldelight.native.driver)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+
+        named("androidHostTest") {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+                implementation(libs.sqldelight.sqlite.driver)
+            }
+        }
     }
 }
 
@@ -49,7 +62,7 @@ sqldelight {
     databases {
         create("AppDatabase") {
             packageName.set("com.retro99.database.implementation")
-            version = 17
+            version = 19
         }
     }
 }

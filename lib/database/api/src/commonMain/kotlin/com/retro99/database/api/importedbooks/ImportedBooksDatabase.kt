@@ -1,5 +1,6 @@
 package com.retro99.database.api.importedbooks
 
+import com.retro99.database.api.library.LibraryBookMutation
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -8,6 +9,11 @@ import kotlinx.coroutines.flow.Flow
 interface ImportedBooksDatabase {
 
     suspend fun upsertImportedBook(book: ImportedBookEntity)
+
+    suspend fun upsertImportedBookWithLibraryMapping(
+        book: ImportedBookEntity,
+        mutation: LibraryBookMutation,
+    )
 
     fun getAllImportedBooks(): Flow<List<ImportedBookEntity>>
 

@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS library_books (
+    library_book_id TEXT NOT NULL PRIMARY KEY,
+    content_hash TEXT,
+    title TEXT NOT NULL,
+    author TEXT,
+    format TEXT NOT NULL,
+    remote_revision INTEGER,
+    deleted_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_library_books_content_hash
+ON library_books(content_hash);
+
+CREATE TABLE IF NOT EXISTS local_book_files (
+    library_book_id TEXT NOT NULL,
+    imported_book_uuid TEXT NOT NULL PRIMARY KEY
+);
+
+CREATE INDEX IF NOT EXISTS idx_local_book_files_library_book
+ON local_book_files(library_book_id);

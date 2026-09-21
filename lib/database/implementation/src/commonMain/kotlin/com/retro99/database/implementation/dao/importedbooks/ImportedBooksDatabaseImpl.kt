@@ -2,6 +2,7 @@ package com.retro99.database.implementation.dao.importedbooks
 
 import com.retro99.database.api.importedbooks.ImportedBookEntity
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.library.LibraryBookMutation
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -13,6 +14,13 @@ internal class ImportedBooksDatabaseImpl(
 
     override suspend fun upsertImportedBook(book: ImportedBookEntity) {
         sqlDelightDao.upsertImportedBook(book)
+    }
+
+    override suspend fun upsertImportedBookWithLibraryMapping(
+        book: ImportedBookEntity,
+        mutation: LibraryBookMutation,
+    ) {
+        sqlDelightDao.upsertImportedBookWithLibraryMapping(book, mutation)
     }
 
     override fun getAllImportedBooks(): Flow<List<ImportedBookEntity>> {

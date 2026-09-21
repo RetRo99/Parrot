@@ -7,6 +7,7 @@ import com.retro99.database.api.books.BooksDatabase
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.favorites.FavoritesDatabase
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.reader.ReaderSettingsDatabase
 import com.retro99.database.api.statistics.ReadingSessionDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
@@ -21,6 +22,8 @@ import com.retro99.database.implementation.dao.favorites.FavoritesDatabaseImpl
 import com.retro99.database.implementation.dao.favorites.FavoritesSqlDelightDao
 import com.retro99.database.implementation.dao.importedbooks.ImportedBooksDatabaseImpl
 import com.retro99.database.implementation.dao.importedbooks.ImportedBooksSqlDelightDao
+import com.retro99.database.implementation.dao.library.LibraryBooksDatabaseImpl
+import com.retro99.database.implementation.dao.library.LibraryBooksSqlDelightDao
 import com.retro99.database.implementation.dao.reader.ReaderSettingsDatabaseImpl
 import com.retro99.database.implementation.dao.reader.ReaderSettingsSqlDelightDao
 import com.retro99.database.implementation.dao.statistics.ReadingSessionDatabaseImpl
@@ -121,6 +124,20 @@ class DatabaseModule {
         importedBooksSqlDelightDao: ImportedBooksSqlDelightDao,
     ): ImportedBooksDatabase {
         return ImportedBooksDatabaseImpl(importedBooksSqlDelightDao)
+    }
+
+    @Single
+    internal fun provideLibraryBooksSqlDelightDao(
+        databaseManager: DatabaseManager,
+    ): LibraryBooksSqlDelightDao {
+        return LibraryBooksSqlDelightDao(databaseManager)
+    }
+
+    @Single
+    internal fun provideLibraryBooksDatabase(
+        libraryBooksSqlDelightDao: LibraryBooksSqlDelightDao,
+    ): LibraryBooksDatabase {
+        return LibraryBooksDatabaseImpl(libraryBooksSqlDelightDao)
     }
 
     @Single

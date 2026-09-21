@@ -1,0 +1,1 @@
+ALTER TABLE library_books ADD COLUMN content_hash_algorithm TEXT;

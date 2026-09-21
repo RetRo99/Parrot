@@ -39,6 +39,15 @@ ORDER BY local_mutation_sequence ASC;
 deletePendingMutationsForEntity:
 DELETE FROM sync_outbox WHERE entity_type = ? AND entity_id = ?;
 
+deletePendingMutationsForMissingLibraryBooks:
+DELETE FROM sync_outbox
+WHERE entity_type = ?
+AND NOT EXISTS (
+    SELECT 1
+    FROM library_books
+    WHERE library_books.library_book_id = sync_outbox.entity_id
+);
+
 deleteMutation:
 DELETE FROM sync_outbox WHERE mutation_id = ?;
 

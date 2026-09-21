@@ -1,0 +1,68 @@
+CREATE TABLE IF NOT EXISTS library_books (
+    library_book_id TEXT NOT NULL PRIMARY KEY,
+    content_hash TEXT,
+    content_hash_algorithm TEXT,
+    title TEXT NOT NULL,
+    author TEXT,
+    format TEXT NOT NULL,
+    remote_revision INTEGER,
+    deleted_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_library_books_content_hash
+ON library_books(content_hash);
+
+upsertLibraryBook:
+INSERT OR REPLACE INTO library_books(
+    library_book_id,
+    content_hash,
+    content_hash_algorithm,
+    title,
+    author,
+    format,
+    remote_revision,
+    deleted_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+insertLocalLibraryBook:
+INSERT OR IGNORE INTO library_books(
+    library_book_id,
+    content_hash,
+    content_hash_algorithm,
+    title,
+    author,
+    format
+)
+VALUES (?, ?, ?, ?, ?, ?);
+
+updateLocalLibraryBook:
+UPDATE library_books
+SET content_hash = ?,
+    content_hash_algorithm = ?,
+    title = ?,
+    author = ?,
+    format = ?
+WHERE library_book_id = ?;
+
+getAllLibraryBooks:
+SELECT * FROM library_books
+WHERE deleted_at IS NULL
+ORDER BY title ASC;
+
+getLibraryBookById:
+SELECT * FROM library_books WHERE library_book_id = ?;
+
+getLibraryBookByContentHash:
+SELECT * FROM library_books
+WHERE content_hash = ? AND deleted_at IS NULL;
+
+deleteUnreferencedUnsyncedLibraryBooks:
+DELETE FROM library_books
+WHERE remote_revision IS NULL
+AND deleted_at IS NULL
+AND NOT EXISTS (
+    SELECT 1
+    FROM local_book_files
+    WHERE local_book_files.library_book_id = library_books.library_book_id
+);
