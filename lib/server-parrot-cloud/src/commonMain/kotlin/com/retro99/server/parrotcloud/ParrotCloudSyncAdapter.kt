@@ -8,15 +8,12 @@ import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressSyncTransport
 import com.retro99.sync.domain.LegacySyncTransport
-import com.retro99.sync.domain.SyncMutationResponse
 import com.retro99.sync.data.ProgressIdentity
 import com.retro99.sync.data.ProgressIdentityResolver
 import com.retro99.sync.data.ProgressOutboxCodec
 import com.retro99.sync.data.ProgressSyncEngine
-import com.retro99.sync.data.LegacyMutationApplier
 import com.retro99.sync.data.LegacySyncEngine
 import com.retro99.sync.data.LibraryBookSyncApplier
-import com.retro99.sync.data.SyncLibraryBookSnapshot
 import com.retro99.sync.data.SyncPass
 import com.retro99.sync.data.SyncExecutionContext
 import com.retro99.sync.data.SyncOutboxPreflight
@@ -42,6 +39,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val legacySyncEngine: LegacySyncEngine,
     @Provided private val syncBoundedPass: SyncBoundedPass,
     @Provided private val syncPageAdapter: ParrotCloudSyncPageAdapter,
+    @Provided private val legacyMutationApplier: ParrotCloudLegacyMutationApplier,
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
 ) : SyncPass {
     private val outboxCapability = SyncOutboxCapability(
@@ -149,27 +147,7 @@ class ParrotCloudSyncAdapter(
             entries = entries,
             transport = legacyTransport,
             cursor = cursor,
-            applier = object : LegacyMutationApplier {
-                override suspend fun onAccepted(
-                    entry: SyncOutboxEntry,
-                    response: com.retro99.sync.domain.SyncMutationResponse,
-                ) {
-                    applyAcceptedMetadata(entry, response)
-                }
-
-                override suspend fun onConflict(
-                    entry: SyncOutboxEntry,
-                    response: com.retro99.sync.domain.SyncMutationResponse,
-                ) {
-                    response.payload?.let { payload ->
-                        applyRemoteConflict(
-                            entry = entry,
-                            payload = json.decodeFromString<JsonElement>(payload),
-                            revision = response.revision,
-                        )
-                    }
-                }
-            },
+            applier = legacyMutationApplier,
         )
         return summary.acknowledgedCount + summary.conflictCount
     }
@@ -200,48 +178,7 @@ class ParrotCloudSyncAdapter(
         }
     }
 
-    private suspend fun applyRemoteConflict(
-        entry: SyncOutboxEntry,
-        payload: JsonElement,
-        revision: Long?,
-    ) {
-        if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK) {
-            val book = json.decodeFromJsonElement<ParrotCloudBookPayload>(payload)
-            libraryBookSyncApplier.applyRemote(
-                book.toSyncLibraryBookSnapshot(revision),
-            )
-        }
-    }
-
-    private suspend fun applyAcceptedMetadata(
-        entry: SyncOutboxEntry,
-        response: SyncMutationResponse,
-    ) {
-        val payload = json.decodeFromString<ParrotCloudBookPayload>(entry.payload)
-        libraryBookSyncApplier.applyAccepted(
-            entry = entry,
-            response = response,
-            snapshot = payload.toSyncLibraryBookSnapshot(response.revision),
-        )
-    }
-
     private companion object {
         const val SYNC_BATCH_SIZE = 50
     }
-}
-
-private fun ParrotCloudBookPayload.toSyncLibraryBookSnapshot(
-    revision: Long?,
-): SyncLibraryBookSnapshot {
-    return SyncLibraryBookSnapshot(
-        libraryBookId = libraryBookId,
-        cloudBookId = cloudBookId,
-        contentHash = contentHash,
-        contentHashAlgorithm = contentHashAlgorithm,
-        title = title,
-        author = author,
-        format = format,
-        remoteRevision = revision ?: remoteRevision,
-        metadataJson = metadataJson,
-    )
 }
