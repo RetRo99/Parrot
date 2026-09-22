@@ -105,7 +105,7 @@ class StorytellerProgressTransportTest {
     )
 }
 
-private class RecordingNetworkClient(
+internal class RecordingNetworkClient(
     override val serverId: String = "storyteller-1",
     override val baseUrl: String = "https://storyteller.example",
     var getResult: AppResult<Any?> = Ok(null),
