@@ -1,0 +1,25 @@
+CREATE TABLE IF NOT EXISTS sync_checkpoints (
+    destination_id TEXT NOT NULL,
+    remote_account_id TEXT NOT NULL,
+    cursor TEXT,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (destination_id, remote_account_id)
+);
+
+upsertCheckpoint:
+INSERT OR REPLACE INTO sync_checkpoints(
+    destination_id,
+    remote_account_id,
+    cursor,
+    updated_at
+)
+VALUES (?, ?, ?, ?);
+
+getCheckpoint:
+SELECT *
+FROM sync_checkpoints
+WHERE destination_id = ?
+  AND remote_account_id = ?;
+
+deleteAllCheckpoints:
+DELETE FROM sync_checkpoints;

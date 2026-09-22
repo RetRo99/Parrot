@@ -12,6 +12,7 @@ import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.reader.ReaderSettingsDatabase
 import com.retro99.database.api.statistics.ReadingSessionDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
+import com.retro99.database.api.sync.SyncCheckpointDatabase
 import com.retro99.database.implementation.DatabaseManager
 import com.retro99.database.implementation.dao.books.AuthorsDatabaseImpl
 import com.retro99.database.implementation.dao.books.AuthorsSqlDelightDao
@@ -31,6 +32,8 @@ import com.retro99.database.implementation.dao.statistics.ReadingSessionDatabase
 import com.retro99.database.implementation.dao.statistics.ReadingSessionSqlDelightDao
 import com.retro99.database.implementation.dao.sync.SyncOutboxDatabaseImpl
 import com.retro99.database.implementation.dao.sync.SyncOutboxSqlDelightDao
+import com.retro99.database.implementation.dao.sync.SyncCheckpointDatabaseImpl
+import com.retro99.database.implementation.dao.sync.SyncCheckpointSqlDelightDao
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
@@ -163,6 +166,20 @@ class DatabaseModule {
     }
 
     @Single
+    internal fun provideSyncCheckpointSqlDelightDao(
+        databaseManager: DatabaseManager,
+    ): SyncCheckpointSqlDelightDao {
+        return SyncCheckpointSqlDelightDao(databaseManager)
+    }
+
+    @Single
+    internal fun provideSyncCheckpointDatabase(
+        syncCheckpointSqlDelightDao: SyncCheckpointSqlDelightDao,
+    ): SyncCheckpointDatabase {
+        return SyncCheckpointDatabaseImpl(syncCheckpointSqlDelightDao)
+    }
+
+    @Single
     internal fun provideReaderSettingsSqlDelightDao(
         databaseManager: DatabaseManager,
     ): ReaderSettingsSqlDelightDao {
@@ -184,6 +201,7 @@ class DatabaseModule {
         authorsDatabase: AuthorsDatabase,
         readingSessionDatabase: ReadingSessionDatabase,
         syncOutboxDatabase: SyncOutboxDatabase,
+        syncCheckpointDatabase: SyncCheckpointDatabase,
     ): List<DataClearable> {
         return listOf(
             booksDatabase,
@@ -192,6 +210,7 @@ class DatabaseModule {
             authorsDatabase,
             readingSessionDatabase,
             syncOutboxDatabase,
+            syncCheckpointDatabase,
         )
     }
 }

@@ -30,7 +30,6 @@ kotlin {
             implementation(projects.base)
             implementation(projects.lib.cloud.implementation)
             implementation(projects.lib.database.api)
-            implementation(projects.lib.preferences.api)
             implementation(projects.lib.server.api)
             implementation(projects.lib.user.api)
             implementation(projects.feature.cloudAccount.domain)

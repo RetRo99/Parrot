@@ -1,5 +1,6 @@
 package com.retro99.server.parrotcloud
 
+import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.cloud.implementation.SupabaseClientProvider
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.database.api.ProfileDatabaseSession
@@ -10,8 +11,8 @@ import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
-import com.retro99.preferences.api.Preferences
-import com.retro99.preferences.api.PreferencesKey
+import com.retro99.database.api.sync.SyncCheckpoint
+import com.retro99.database.api.sync.SyncCheckpointDatabase
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.ProgressKind
@@ -46,7 +47,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val clientProvider: SupabaseClientProvider,
     @Provided private val profileLinkRepository: CloudProfileLinkRepository,
     @Provided private val profileDatabaseSession: ProfileDatabaseSession,
-    @Provided private val preferences: Preferences,
+    @Provided private val syncCheckpointDatabase: SyncCheckpointDatabase,
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val importedBooksDatabase: ImportedBooksDatabase,
@@ -74,7 +75,7 @@ class ParrotCloudSyncAdapter(
                     return@withProfileSession SyncResult.NotAuthenticated
                 }
                 profileDatabaseSession.withProfile(localProfileId) {
-                    synchronizeProfile(localProfileId, link.cloudUserId)
+                    synchronizeProfile(link.cloudUserId)
                 }
             }
         } catch (exception: CancellationException) {
@@ -85,19 +86,22 @@ class ParrotCloudSyncAdapter(
     }
 
     private suspend fun synchronizeProfile(
-        localProfileId: String,
         cloudUserId: String,
     ): SyncResult {
         syncOutboxDatabase.bindUnassignedMutations(cloudUserId)
         syncOutboxDatabase.deleteByEntityType(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS)
         repairDuplicatePositions()
-        var cursor = preferences.getLong(PreferencesKey.SyncCursor(localProfileId, cloudUserId))
+        var cursor = syncCheckpointDatabase
+            .getCheckpoint(PARROT_CLOUD_SERVER_ID, cloudUserId)
+            ?.cursor
+            ?.toLongOrNull()
+            ?: 0L
         var pulledCount = 0
         do {
-            val pull = pullAndApply(localProfileId, cloudUserId, cursor)
+            val pull = pullAndApply(cloudUserId, cursor)
             pulledCount += pull.first
             cursor = pull.second
-            preferences.putLong(PreferencesKey.SyncCursor(localProfileId, cloudUserId), cursor)
+            saveCheckpoint(cloudUserId, cursor)
         } while (pull.third)
 
         val entries = syncOutboxDatabase.getEligible(cloudUserId, Clock.System.now().toString())
@@ -107,21 +111,32 @@ class ParrotCloudSyncAdapter(
         if (entries.isNotEmpty()) {
             var hasMore: Boolean
             do {
-                val pull = pullAndApply(localProfileId, cloudUserId, cursor)
+                val pull = pullAndApply(cloudUserId, cursor)
                 pulledCount += pull.first
                 cursor = pull.second
                 hasMore = pull.third
-                preferences.putLong(
-                    PreferencesKey.SyncCursor(localProfileId, cloudUserId),
-                    cursor,
-                )
+                saveCheckpoint(cloudUserId, cursor)
             } while (hasMore)
         }
-        preferences.putLong(PreferencesKey.SyncCursor(localProfileId, cloudUserId), cursor)
+        saveCheckpoint(cloudUserId, cursor)
         return SyncResult.Completed(
             pushedMutationCount = pushedCount,
             pulledChangeCount = pulledCount,
             pendingMutationCount = syncOutboxDatabase.getPending(cloudUserId).size,
+        )
+    }
+
+    private suspend fun saveCheckpoint(
+        cloudUserId: String,
+        cursor: Long,
+    ) {
+        syncCheckpointDatabase.saveCheckpoint(
+            SyncCheckpoint(
+                destinationId = PARROT_CLOUD_SERVER_ID,
+                remoteAccountId = cloudUserId,
+                cursor = cursor.toString(),
+                updatedAt = Clock.System.now().toString(),
+            ),
         )
     }
 
@@ -245,7 +260,6 @@ class ParrotCloudSyncAdapter(
     }
 
     private suspend fun pullAndApply(
-        localProfileId: String,
         cloudUserId: String,
         cursor: Long,
     ): Triple<Int, Long, Boolean> {
