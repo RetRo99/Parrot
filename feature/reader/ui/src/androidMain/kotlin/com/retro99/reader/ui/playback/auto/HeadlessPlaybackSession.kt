@@ -2,6 +2,7 @@ package com.retro99.reader.ui.playback.auto
 
 import android.util.Log
 import androidx.media3.exoplayer.ExoPlayer
+import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.base.nowMillis
 import com.retro99.reader.domain.model.PositionDomainModel
@@ -9,10 +10,17 @@ import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.ui.media.HeadlessMediaOverlayPlayer
 import com.retro99.reader.ui.media.smil.SmilLoadingManager
 import com.retro99.reader.ui.publication.EpubPublication
+import com.retro99.sync.domain.RoutineSyncScheduler
+import com.retro99.sync.domain.SyncRequest
+import com.retro99.sync.domain.SyncScope
+import com.retro99.sync.domain.SyncTriggerReason
+import com.retro99.sync.domain.SyncUrgency
+import com.retro99.sync.domain.usecase.SyncNowUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -43,6 +51,7 @@ class HeadlessPlaybackSession(
     private val player: HeadlessMediaOverlayPlayer,
     private val smilLoadingManager: SmilLoadingManager,
     private val saveProgressUseCase: SaveReadingProgressUseCase,
+    private val syncNowUseCase: SyncNowUseCase,
     private val analytics: Analytics,
     private val exoPlayer: ExoPlayer,
     private val initialChapterHref: String?,
@@ -50,6 +59,19 @@ class HeadlessPlaybackSession(
 ) : AutoCloseable {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val routineSyncScheduler = RoutineSyncScheduler(
+        scope = scope,
+        nowMillis = ::nowMillis,
+        requestSync = {
+            syncNowUseCase(
+                SyncRequest(
+                    reason = SyncTriggerReason.ROUTINE_PROGRESS,
+                    scope = SyncScope.Books(setOf(bookUuid)),
+                    urgency = SyncUrgency.ROUTINE,
+                ),
+            )
+        },
+    )
     private var positionSaveJob: Job? = null
     private var currentChapterHref: String? = initialChapterHref
 
@@ -174,28 +196,39 @@ class HeadlessPlaybackSession(
         val chapterHref = currentChapterHref ?: return
         val audioPositionMs = exoPlayer.currentPosition
 
+        savePosition(buildPosition(chapterHref, audioPositionMs))
+    }
+
+    private fun buildPosition(
+        chapterHref: String,
+        audioPositionMs: Long,
+    ): PositionDomainModel {
+        val now = Clock.System.now().toString()
+        return PositionDomainModel(
+            bookUuid = bookUuid,
+            serverId = serverId,
+            timestamp = nowMillis(),
+            createdAt = null,
+            updatedAt = now,
+            locatorHref = chapterHref,
+            locatorType = "application/xhtml+xml",
+            locatorTitle = null,
+            locatorTarget = null,
+            audioTimestampMs = audioPositionMs,
+            chapterIndex = null,
+            progression = null,
+            totalChapters = null,
+            totalDurationMs = exoPlayer.duration.takeIf { it > 0 },
+            totalProgression = null,
+            position = null,
+        )
+    }
+
+    private suspend fun savePosition(position: PositionDomainModel) {
         try {
-            val now = Clock.System.now().toString()
-            val position = PositionDomainModel(
-                bookUuid = bookUuid,
-                serverId = serverId,
-                timestamp = nowMillis(),
-                createdAt = null,
-                updatedAt = now,
-                locatorHref = chapterHref,
-                locatorType = "application/xhtml+xml",
-                locatorTitle = null,
-                locatorTarget = null,
-                audioTimestampMs = audioPositionMs,
-                chapterIndex = null,
-                progression = null,
-                totalChapters = null,
-                totalDurationMs = exoPlayer.duration.takeIf { it > 0 },
-                totalProgression = null,
-                position = null,
-            )
             saveProgressUseCase(position)
-            Log.d(TAG, "HeadlessSession: Saved position at $audioPositionMs ms")
+                .onSuccess { routineSyncScheduler.markDirty() }
+            Log.d(TAG, "HeadlessSession: Saved position at ${position.audioTimestampMs} ms")
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -205,13 +238,23 @@ class HeadlessPlaybackSession(
 
     override fun close() {
         Log.d(TAG, "HeadlessSession: close()")
-        // Save final position
-        scope.launch {
-            saveCurrentPosition()
+        val finalPosition = currentChapterHref?.let { chapterHref ->
+            buildPosition(chapterHref, exoPlayer.currentPosition)
+        }
+        // Save final position and request an urgent application-scoped flush.
+        scope.launch(NonCancellable) {
+            finalPosition?.let { position -> savePosition(position) }
+            routineSyncScheduler.close()
+            syncNowUseCase(
+                SyncRequest(
+                    reason = SyncTriggerReason.READER_CHECKPOINT,
+                    scope = SyncScope.Books(setOf(bookUuid)),
+                    urgency = SyncUrgency.URGENT,
+                ),
+            )
+            scope.cancel()
         }
         positionSaveJob?.cancel()
-        scope.cancel()
         player.release()
     }
 }
-

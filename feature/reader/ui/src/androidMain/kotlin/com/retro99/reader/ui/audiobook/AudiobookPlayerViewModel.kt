@@ -8,6 +8,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.exoplayer.ExoPlayer
 import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.getOrElse
+import com.github.michaelbull.result.onSuccess
 import com.retro99.base.nowMillis
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
@@ -20,6 +21,12 @@ import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.ui.playback.ForegroundServiceController
 import com.retro99.reader.ui.playback.MediaPlaybackController
 import com.retro99.reader.ui.playback.NotificationPermissionHandler
+import com.retro99.sync.domain.RoutineSyncScheduler
+import com.retro99.sync.domain.SyncRequest
+import com.retro99.sync.domain.SyncScope
+import com.retro99.sync.domain.SyncTriggerReason
+import com.retro99.sync.domain.SyncUrgency
+import com.retro99.sync.domain.usecase.SyncNowUseCase
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -41,6 +48,7 @@ class AudiobookPlayerViewModel(
     @Provided private val notificationPermissionHandler: NotificationPermissionHandler,
     @Provided private val readerSettingsRepository: ReaderSettingsRepository,
     @Provided private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
+    @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val getReadingProgressWithConflictUseCase: GetReadingProgressWithConflictUseCase,
     @Provided private val getBookByUuidUseCase: GetBookByUuidUseCase,
 ) : BaseViewModel<AudiobookPlayerViewState, AudiobookPlayerIntent>(
@@ -52,6 +60,19 @@ class AudiobookPlayerViewModel(
     private var positionUpdateJob: Job? = null
     private var hasRestoredPosition = false
     private var pendingAudioFiles: List<File> = emptyList()
+    private val routineSyncScheduler = RoutineSyncScheduler(
+        scope = viewModelScope,
+        nowMillis = ::nowMillis,
+        requestSync = {
+            syncNowUseCase(
+                SyncRequest(
+                    reason = SyncTriggerReason.ROUTINE_PROGRESS,
+                    scope = SyncScope.Books(setOf(bookUuid)),
+                    urgency = SyncUrgency.ROUTINE,
+                ),
+            )
+        },
+    )
 
     init {
         loadBookInfoAndAudioFiles()
@@ -371,6 +392,10 @@ class AudiobookPlayerViewModel(
     private fun saveProgress() {
         val p = player ?: return
 
+        saveProgress(buildProgress(p))
+    }
+
+    private fun buildProgress(p: ExoPlayer): PositionDomainModel {
         val position = p.currentPosition.coerceAtLeast(0L)
         val trackIndex = p.currentMediaItemIndex
         val totalDuration = p.duration.coerceAtLeast(0L)
@@ -380,7 +405,7 @@ class AudiobookPlayerViewModel(
             null
         }
 
-        val progress = PositionDomainModel(
+        return PositionDomainModel(
             bookUuid = bookUuid,
             serverId = serverId,
             timestamp = nowMillis(),
@@ -398,9 +423,13 @@ class AudiobookPlayerViewModel(
             totalProgression = totalProgression,
             position = null,
         )
+    }
+
+    private fun saveProgress(progress: PositionDomainModel) {
         viewModelScope.launch(NonCancellable) {
             try {
                 saveReadingProgressUseCase(progress)
+                    .onSuccess { routineSyncScheduler.markDirty() }
             } catch (e: Exception) {
                 Logger.w(e) { "Failed to save audiobook progress" }
             }
@@ -469,7 +498,18 @@ class AudiobookPlayerViewModel(
     fun close() {
         val p = player
         val isPlaybackActive = p != null && p.isPlaying
-        saveProgress()
+        val finalProgress = p?.let(::buildProgress)
+        viewModelScope.launch(NonCancellable) {
+            finalProgress?.let { progress -> saveProgressAndWait(progress) }
+            routineSyncScheduler.close()
+            syncNowUseCase(
+                SyncRequest(
+                    reason = SyncTriggerReason.READER_CHECKPOINT,
+                    scope = SyncScope.Books(setOf(bookUuid)),
+                    urgency = SyncUrgency.URGENT,
+                ),
+            )
+        }
 
         if (!isPlaybackActive) {
             foregroundServiceController.stopService()
@@ -484,6 +524,7 @@ class AudiobookPlayerViewModel(
     }
 
     override fun onCleared() {
+        routineSyncScheduler.close()
         super.onCleared()
         stopPositionUpdates()
         playerListener?.let { player?.removeListener(it) }
@@ -494,6 +535,14 @@ class AudiobookPlayerViewModel(
             foregroundServiceController.stopService()
         }
         player = null
+    }
+
+    private suspend fun saveProgressAndWait(progress: PositionDomainModel) {
+        try {
+            saveReadingProgressUseCase(progress)
+        } catch (e: Exception) {
+            Logger.w(e) { "Failed to save final audiobook progress" }
+        }
     }
 
     companion object {

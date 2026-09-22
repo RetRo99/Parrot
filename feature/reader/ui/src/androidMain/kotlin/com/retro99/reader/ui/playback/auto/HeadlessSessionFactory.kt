@@ -19,6 +19,7 @@ import com.retro99.reader.ui.media.smil.SmilParser
 import com.retro99.reader.ui.media.smil.SmilQuickScanner
 import com.retro99.reader.ui.playback.MAX_EMBEDDED_ARTWORK_BYTES
 import com.retro99.reader.ui.service.EpubPublicationService
+import com.retro99.sync.domain.usecase.SyncNowUseCase
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.ServerTokenProvider
 import kotlinx.coroutines.Dispatchers
@@ -49,6 +50,7 @@ class HeadlessSessionFactory(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
     @Provided private val ebookFileDownloader: EbookFileDownloader,
     @Provided private val saveProgressUseCase: SaveReadingProgressUseCase,
+    @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val smilParser: SmilParser,
     @Provided private val quickScanner: SmilQuickScanner,
     @Provided private val clipRepository: SmilClipRepository,
@@ -172,6 +174,7 @@ class HeadlessSessionFactory(
             player = headlessPlayer,
             smilLoadingManager = smilLoadingManager,
             saveProgressUseCase = saveProgressUseCase,
+            syncNowUseCase = syncNowUseCase,
             analytics = analytics,
             exoPlayer = exoPlayer,
             initialChapterHref = initialChapterHref,
@@ -231,4 +234,3 @@ class HeadlessSessionFactory(
         }
     }
 }
-
