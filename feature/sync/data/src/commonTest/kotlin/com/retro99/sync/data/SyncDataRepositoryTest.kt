@@ -140,6 +140,49 @@ class SyncDataRepositoryTest {
         )
         assertTrue(outbox.deletedEntityTypes.isEmpty())
     }
+
+    @Test
+    fun preflightScopesSelectionAndCountToTheRequestedAccount() = runTest {
+        val outbox = RecordingOutbox().apply {
+            eligibleEntries = listOf(
+                testEntry(
+                    mutationId = "account-a-pending",
+                    entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                    state = SyncOutboxEntry.STATE_PENDING,
+                    cloudUserId = "account-a",
+                ),
+                testEntry(
+                    mutationId = "account-a-conflict",
+                    entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                    state = SyncOutboxEntry.STATE_CONFLICT_PRESERVED,
+                    cloudUserId = "account-a",
+                ),
+                testEntry(
+                    mutationId = "account-b-pending",
+                    entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                    state = SyncOutboxEntry.STATE_PENDING,
+                    cloudUserId = "account-b",
+                ),
+            )
+        }
+        val preflight = SyncOutboxPreflight(outbox)
+
+        val selected = preflight.selectEligible(
+            remoteAccountId = "account-a",
+            maxEntries = 10,
+            now = "2026-09-22T00:00:00Z",
+        )
+
+        assertEquals(listOf("account-a-pending"), selected.map { entry -> entry.mutationId })
+        assertEquals(2, preflight.pendingCount("account-a"))
+        assertEquals(listOf("account-a"), outbox.eligibleAccounts)
+        assertEquals(listOf("account-a"), outbox.pendingAccounts)
+        assertEquals(
+            setOf("account-a-pending", "account-a-conflict", "account-b-pending"),
+            outbox.eligibleEntries.map { entry -> entry.mutationId }.toSet(),
+        )
+        assertTrue(outbox.deletedEntityTypes.isEmpty())
+    }
 }
 
 private class RecordingSyncPass : SyncPass {
@@ -188,6 +231,7 @@ private class RecordingContextProvider(
 private class RecordingOutbox : SyncOutboxDatabase {
     val boundAccounts = mutableListOf<String>()
     val eligibleAccounts = mutableListOf<String>()
+    val pendingAccounts = mutableListOf<String>()
     val eligibleTimes = mutableListOf<String>()
     val deletedEntityTypes = mutableListOf<String>()
     var eligibleEntries: List<SyncOutboxEntry> = emptyList()
@@ -198,7 +242,10 @@ private class RecordingOutbox : SyncOutboxDatabase {
         boundAccounts += cloudUserId
     }
 
-    override suspend fun getPending(cloudUserId: String): List<SyncOutboxEntry> = eligibleEntries
+    override suspend fun getPending(cloudUserId: String): List<SyncOutboxEntry> {
+        pendingAccounts += cloudUserId
+        return eligibleEntries.filter { entry -> entry.cloudUserId == cloudUserId }
+    }
 
     override suspend fun getEligible(
         cloudUserId: String,
@@ -206,7 +253,7 @@ private class RecordingOutbox : SyncOutboxDatabase {
     ): List<SyncOutboxEntry> {
         eligibleAccounts += cloudUserId
         eligibleTimes += now
-        return eligibleEntries
+        return eligibleEntries.filter { entry -> entry.cloudUserId == cloudUserId }
     }
 
     override suspend fun updateBaseRevision(mutationId: String, baseRevision: Long) = Unit
@@ -240,10 +287,11 @@ private fun testEntry(
     mutationId: String,
     entityType: String,
     state: String,
+    cloudUserId: String = "remote-account",
 ): SyncOutboxEntry {
     return SyncOutboxEntry(
         mutationId = mutationId,
-        cloudUserId = "remote-account",
+        cloudUserId = cloudUserId,
         entityType = entityType,
         entityId = mutationId,
         operation = SyncOutboxEntry.OPERATION_UPSERT,
