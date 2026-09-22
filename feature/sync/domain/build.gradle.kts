@@ -24,5 +24,10 @@ kotlin {
             api(libs.koin.annotations)
             implementation(libs.coroutines)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.coroutines.test)
+        }
     }
 }
