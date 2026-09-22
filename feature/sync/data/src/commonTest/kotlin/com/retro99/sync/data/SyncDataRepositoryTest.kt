@@ -76,6 +76,46 @@ class SyncDataRepositoryTest {
     }
 
     @Test
+    fun contextIsPinnedPerExecutionWhenTheActiveProfileChangesBetweenPasses() = runTest {
+        val pass = RecordingSyncPass()
+        val contextProvider = RecordingContextProvider(
+            context = SyncExecutionContext(
+                localProfileId = "profile-a",
+                remoteAccountId = "account-a",
+            ),
+        )
+        val outbox = RecordingOutbox()
+        val repository = SyncDataRepository(
+            syncPass = pass,
+            executionContextProvider = contextProvider,
+            syncOutboxPreflight = SyncOutboxPreflight(outbox),
+        )
+
+        val first = async { repository.requestSync(SyncRequest(SyncTriggerReason.STARTUP)) }
+        pass.firstStarted.await()
+        val second = async {
+            repository.requestSync(SyncRequest(SyncTriggerReason.RECOVERY))
+        }
+        contextProvider.context = SyncExecutionContext(
+            localProfileId = "profile-b",
+            remoteAccountId = "account-b",
+        )
+        pass.releaseFirst.complete(Unit)
+
+        first.await()
+        second.await()
+
+        assertEquals(
+            listOf("profile-a", "profile-b"),
+            pass.contexts.map { context -> context.localProfileId },
+        )
+        assertEquals(
+            listOf("account-a", "account-b"),
+            outbox.boundAccounts,
+        )
+    }
+
+    @Test
     fun preflightResultSkipsPassExecution() = runTest {
         val pass = RecordingSyncPass()
         val contextProvider = RecordingContextProvider(
@@ -388,7 +428,7 @@ private class RecordingDestination(
 }
 
 private class RecordingContextProvider(
-    val context: SyncExecutionContext = SyncExecutionContext(
+    var context: SyncExecutionContext = SyncExecutionContext(
         localProfileId = "profile",
         remoteAccountId = "remote-account",
     ),
