@@ -11,8 +11,6 @@ import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
-import com.retro99.database.api.sync.SyncCheckpoint
-import com.retro99.database.api.sync.SyncCheckpointDatabase
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.ProgressKind
@@ -26,6 +24,8 @@ import com.retro99.sync.data.ProgressOutboxCodec
 import com.retro99.sync.data.ProgressSyncEngine
 import com.retro99.sync.data.LegacyMutationApplier
 import com.retro99.sync.data.LegacySyncEngine
+import com.retro99.sync.data.SyncPullEngine
+import com.retro99.sync.data.SyncPullPage
 import com.retro99.sync.data.SyncPass
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.CancellationException
@@ -43,7 +43,6 @@ class ParrotCloudSyncAdapter(
     @Provided private val clientProvider: SupabaseClientProvider,
     @Provided private val profileLinkRepository: CloudProfileLinkRepository,
     @Provided private val profileDatabaseSession: ProfileDatabaseSession,
-    @Provided private val syncCheckpointDatabase: SyncCheckpointDatabase,
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val importedBooksDatabase: ImportedBooksDatabase,
@@ -53,6 +52,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val legacyTransport: LegacySyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
     @Provided private val legacySyncEngine: LegacySyncEngine,
+    @Provided private val syncPullEngine: SyncPullEngine,
 ) : SyncPass {
     private val json = Json {
         encodeDefaults = true
@@ -89,34 +89,19 @@ class ParrotCloudSyncAdapter(
         syncOutboxDatabase.bindUnassignedMutations(cloudUserId)
         syncOutboxDatabase.deleteByEntityType(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS)
         repairDuplicatePositions()
-        var cursor = syncCheckpointDatabase
-            .getCheckpoint(PARROT_CLOUD_SERVER_ID, cloudUserId)
-            ?.cursor
-            ?.toLongOrNull()
-            ?: 0L
-        var pulledCount = 0
-        do {
-            val pull = pullAndApply(cloudUserId, cursor)
-            pulledCount += pull.first
-            cursor = pull.second
-            saveCheckpoint(cloudUserId, cursor)
-        } while (pull.third)
+        val initialPull = pullUntilCaughtUp(cloudUserId)
+        var cursor = initialPull.cursor?.toLongOrNull() ?: 0L
+        var pulledCount = initialPull.pulledChangeCount
 
         val entries = syncOutboxDatabase.getEligible(cloudUserId, Clock.System.now().toString())
             .filter { entry -> entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS }
             .take(SYNC_BATCH_SIZE)
         val pushedCount = pushMutations(entries, cloudUserId, cursor)
         if (entries.isNotEmpty()) {
-            var hasMore: Boolean
-            do {
-                val pull = pullAndApply(cloudUserId, cursor)
-                pulledCount += pull.first
-                cursor = pull.second
-                hasMore = pull.third
-                saveCheckpoint(cloudUserId, cursor)
-            } while (hasMore)
+            val afterPushPull = pullUntilCaughtUp(cloudUserId)
+            pulledCount += afterPushPull.pulledChangeCount
+            cursor = afterPushPull.cursor?.toLongOrNull() ?: cursor
         }
-        saveCheckpoint(cloudUserId, cursor)
         return SyncResult.Completed(
             pushedMutationCount = pushedCount,
             pulledChangeCount = pulledCount,
@@ -124,19 +109,23 @@ class ParrotCloudSyncAdapter(
         )
     }
 
-    private suspend fun saveCheckpoint(
-        cloudUserId: String,
-        cursor: Long,
-    ) {
-        syncCheckpointDatabase.saveCheckpoint(
-            SyncCheckpoint(
-                destinationId = PARROT_CLOUD_SERVER_ID,
-                remoteAccountId = cloudUserId,
-                cursor = cursor.toString(),
-                updatedAt = Clock.System.now().toString(),
-            ),
-        )
-    }
+    private suspend fun pullUntilCaughtUp(cloudUserId: String) =
+        syncPullEngine.pullUntilCaughtUp(
+            destinationId = PARROT_CLOUD_SERVER_ID,
+            remoteAccountId = cloudUserId,
+            limit = SYNC_BATCH_SIZE,
+        ) { cursor, limit ->
+            val page = pullAndApply(
+                cloudUserId = cloudUserId,
+                cursor = cursor?.toLongOrNull() ?: 0L,
+                limit = limit,
+            )
+            SyncPullPage(
+                changeCount = page.first,
+                nextCursor = page.second.toString(),
+                hasMore = page.third,
+            )
+        }
 
     private suspend fun pushMutations(
         entries: List<SyncOutboxEntry>,
@@ -228,10 +217,11 @@ class ParrotCloudSyncAdapter(
     private suspend fun pullAndApply(
         cloudUserId: String,
         cursor: Long,
+        limit: Int,
     ): Triple<Int, Long, Boolean> {
         val legacyResponse = legacyTransport.pull(
             cursor = cursor.toString(),
-            limit = SYNC_BATCH_SIZE,
+            limit = limit,
         )
         legacyResponse.changes
             .filter { change -> change.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION }
@@ -245,7 +235,7 @@ class ParrotCloudSyncAdapter(
 
         val progressPage = progressTransport.fetchChanges(
             cursor = cursor.toString(),
-            limit = SYNC_BATCH_SIZE,
+            limit = limit,
         )
         progressPage.changes.forEach { remote ->
             applyRemoteProgress(remote, cloudUserId)
