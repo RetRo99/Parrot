@@ -115,10 +115,17 @@ class ParrotCloudProgressTransport(
                 )
 
                 STATUS_CONFLICT -> {
-                    val payload = result.payload ?: return@mapNotNull null
-                    val remote = json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(payload)
-                        .toRemoteProgressSnapshot(result.revision)
-                    ProgressPushResult.Conflict(result.mutationId, remote)
+                    val payload = result.payload
+                    if (payload == null) {
+                        ProgressPushResult.Rejected(
+                            mutationId = result.mutationId,
+                            reason = "Parrot Cloud conflict response omitted payload",
+                        )
+                    } else {
+                        val remote = json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(payload)
+                            .toRemoteProgressSnapshot(result.revision)
+                        ProgressPushResult.Conflict(result.mutationId, remote)
+                    }
                 }
 
                 else -> ProgressPushResult.Rejected(
@@ -152,32 +159,6 @@ class ParrotCloudProgressTransport(
         )
     }
 
-    private fun ProgressSnapshot.toServerPosition(
-        bookUuid: String,
-        libraryBookId: String,
-    ): ServerPosition {
-        return ServerPosition(
-            bookUuid = bookUuid,
-            serverId = PARROT_CLOUD_SERVER_ID,
-            libraryBookId = libraryBookId,
-            timestamp = timestamp,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            locatorHref = locator?.href,
-            locatorType = locator?.type,
-            locatorTitle = locator?.title,
-            locatorTarget = locator?.target,
-            audioTimestampMs = audioTimestampMs,
-            chapterIndex = chapterIndex,
-            progression = progression,
-            totalChapters = totalChapters,
-            totalDurationMs = totalDurationMs,
-            totalProgression = totalProgression,
-            position = position,
-            cssSelector = locator?.cssSelector,
-        )
-    }
-
     private fun ParrotCloudReadingPositionPayload.toRemoteProgressSnapshot(
         revision: Long?,
     ): RemoteProgressSnapshot {
@@ -186,31 +167,9 @@ class ParrotCloudProgressTransport(
             remoteBookId = cloudBookId,
             libraryBookId = libraryBookId,
             kind = ProgressKind.EBOOK,
-            snapshot = position.toProgressSnapshot(),
+            snapshot = position.toProgressSyncSnapshot(),
             version = revision?.toString(),
             observedAt = position.updatedAt ?: position.createdAt,
-        )
-    }
-
-    private fun ServerPosition.toProgressSnapshot(): ProgressSnapshot {
-        return ProgressSnapshot(
-            timestamp = timestamp,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            locator = com.retro99.sync.domain.ProgressLocator(
-                href = locatorHref,
-                type = locatorType,
-                title = locatorTitle,
-                target = locatorTarget,
-                cssSelector = cssSelector,
-            ),
-            audioTimestampMs = audioTimestampMs,
-            chapterIndex = chapterIndex,
-            progression = progression,
-            totalChapters = totalChapters,
-            totalDurationMs = totalDurationMs,
-            totalProgression = totalProgression,
-            position = position,
         )
     }
 
@@ -221,6 +180,54 @@ class ParrotCloudProgressTransport(
         const val STATUS_CONFLICT = "conflict"
         const val MAX_BATCH_SIZE = 50
     }
+}
+
+internal fun ProgressSnapshot.toServerPosition(
+    bookUuid: String,
+    libraryBookId: String,
+): ServerPosition {
+    return ServerPosition(
+        bookUuid = bookUuid,
+        serverId = PARROT_CLOUD_SERVER_ID,
+        libraryBookId = libraryBookId,
+        timestamp = timestamp,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        locatorHref = locator?.href,
+        locatorType = locator?.type,
+        locatorTitle = locator?.title,
+        locatorTarget = locator?.target,
+        audioTimestampMs = audioTimestampMs,
+        chapterIndex = chapterIndex,
+        progression = progression,
+        totalChapters = totalChapters,
+        totalDurationMs = totalDurationMs,
+        totalProgression = totalProgression,
+        position = position,
+        cssSelector = locator?.cssSelector,
+    )
+}
+
+internal fun ServerPosition.toProgressSyncSnapshot(): ProgressSnapshot {
+    return ProgressSnapshot(
+        timestamp = timestamp,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        locator = com.retro99.sync.domain.ProgressLocator(
+            href = locatorHref,
+            type = locatorType,
+            title = locatorTitle,
+            target = locatorTarget,
+            cssSelector = cssSelector,
+        ),
+        audioTimestampMs = audioTimestampMs,
+        chapterIndex = chapterIndex,
+        progression = progression,
+        totalChapters = totalChapters,
+        totalDurationMs = totalDurationMs,
+        totalProgression = totalProgression,
+        position = position,
+    )
 }
 
 @Serializable
