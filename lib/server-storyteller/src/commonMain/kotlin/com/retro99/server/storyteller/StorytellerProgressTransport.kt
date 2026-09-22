@@ -12,7 +12,6 @@ import com.retro99.sync.domain.ProgressPushResult
 import com.retro99.sync.domain.ProgressSyncTransport
 import com.retro99.sync.domain.ProgressTransportCapabilities
 import com.retro99.sync.domain.RemoteProgressSnapshot
-import org.koin.core.annotation.Single
 import retro99.network.api.get
 import retro99.network.api.post
 
@@ -23,7 +22,6 @@ import retro99.network.api.post
  * revision, change feed, or idempotency token. The shared engine must not
  * infer those capabilities from the endpoint shape.
  */
-@Single
 class StorytellerProgressTransport(
     private val networkClient: ServerNetworkClient,
 ) : ProgressSyncTransport {
