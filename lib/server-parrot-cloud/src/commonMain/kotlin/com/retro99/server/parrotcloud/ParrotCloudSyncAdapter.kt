@@ -1,9 +1,6 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
-import com.retro99.cloud.implementation.SupabaseClientProvider
-import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
-import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
@@ -28,8 +25,8 @@ import com.retro99.sync.data.SyncLibraryBookSnapshot
 import com.retro99.sync.data.SyncPullEngine
 import com.retro99.sync.data.SyncPullPage
 import com.retro99.sync.data.SyncPass
+import com.retro99.sync.data.SyncExecutionContext
 import com.retro99.user.api.UserRegistry
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -41,14 +38,10 @@ import org.koin.core.annotation.Single
 
 @Single(binds = [SyncPass::class])
 class ParrotCloudSyncAdapter(
-    @Provided private val clientProvider: SupabaseClientProvider,
-    @Provided private val profileLinkRepository: CloudProfileLinkRepository,
-    @Provided private val profileDatabaseSession: ProfileDatabaseSession,
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val importedBooksDatabase: ImportedBooksDatabase,
     @Provided private val positionDatabase: PositionDatabase,
-    @Provided private val userRegistry: UserRegistry,
     @Provided private val progressTransport: ProgressSyncTransport,
     @Provided private val legacyTransport: LegacySyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
@@ -62,33 +55,16 @@ class ParrotCloudSyncAdapter(
         coerceInputValues = true
     }
 
-    override suspend fun execute(request: SyncRequest): SyncResult {
-        if (!clientProvider.isConfigured) return SyncResult.NotConfigured
-        val localProfileId = userRegistry.getActiveProfileIdOrDefault()
-        val link = profileLinkRepository.getForLocalProfile(localProfileId)
-            ?: return SyncResult.ProfileNotLinked
-        if (!link.syncEnabled) return SyncResult.SyncDisabled
-
-        return try {
-            clientProvider.withProfileSession(localProfileId) {
-                if (clientProvider.currentSessionState().accountId != link.cloudUserId) {
-                    return@withProfileSession SyncResult.NotAuthenticated
-                }
-                profileDatabaseSession.withProfile(localProfileId) {
-                    synchronizeProfile(link.cloudUserId)
-                }
-            }
-        } catch (exception: CancellationException) {
-            throw exception
-        } catch (exception: Exception) {
-            SyncResult.Failed(exception.message ?: "Cloud synchronization failed")
-        }
+    override suspend fun execute(
+        request: SyncRequest,
+        context: SyncExecutionContext,
+    ): SyncResult {
+        return synchronizeProfile(context.remoteAccountId)
     }
 
     private suspend fun synchronizeProfile(
         cloudUserId: String,
     ): SyncResult {
-        syncOutboxDatabase.bindUnassignedMutations(cloudUserId)
         syncOutboxDatabase.deleteByEntityType(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS)
         repairDuplicatePositions()
         val initialPull = pullUntilCaughtUp(cloudUserId)

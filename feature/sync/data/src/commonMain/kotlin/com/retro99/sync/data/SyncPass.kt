@@ -11,5 +11,8 @@ import com.retro99.sync.domain.SyncResult
  * behavior; a destination pass only performs one pinned execution.
  */
 interface SyncPass {
-    suspend fun execute(request: SyncRequest): SyncResult
+    suspend fun execute(
+        request: SyncRequest,
+        context: SyncExecutionContext,
+    ): SyncResult
 }

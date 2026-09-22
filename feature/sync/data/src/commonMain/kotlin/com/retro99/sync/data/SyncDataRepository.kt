@@ -3,6 +3,7 @@ package com.retro99.sync.data
 import com.retro99.sync.domain.SyncRepository
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
+import com.retro99.database.api.sync.SyncOutboxDatabase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
@@ -20,6 +21,8 @@ import org.koin.core.annotation.Single
 @Single(binds = [SyncRepository::class])
 class SyncDataRepository(
     @Provided private val syncPass: SyncPass,
+    @Provided private val executionContextProvider: SyncExecutionContextProvider,
+    @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
 ) : SyncRepository {
     private val mutex = Mutex()
     private var activeRun: ActiveRun? = null
@@ -57,7 +60,18 @@ class SyncDataRepository(
                 } ?: break
 
                 run.activeRequest = nextRequest
-                lastResult = syncPass.execute(nextRequest)
+                val execution = executionContextProvider.withPinnedContext { context ->
+                    syncOutboxDatabase.bindUnassignedMutations(context.remoteAccountId)
+                    syncPass.execute(nextRequest, context)
+                }
+                lastResult = when (execution) {
+                    is SyncExecutionResult.Ready -> execution.value
+                    SyncExecutionResult.NotConfigured -> SyncResult.NotConfigured
+                    SyncExecutionResult.NotAuthenticated -> SyncResult.NotAuthenticated
+                    SyncExecutionResult.ProfileNotLinked -> SyncResult.ProfileNotLinked
+                    SyncExecutionResult.SyncDisabled -> SyncResult.SyncDisabled
+                    is SyncExecutionResult.Failed -> SyncResult.Failed(execution.message)
+                }
             }
             run.result.complete(lastResult)
             return lastResult
