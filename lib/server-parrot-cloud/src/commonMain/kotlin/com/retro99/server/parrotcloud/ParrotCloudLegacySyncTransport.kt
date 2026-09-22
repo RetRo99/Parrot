@@ -61,6 +61,7 @@ class ParrotCloudLegacySyncTransport(
                 revision = result.revision,
                 payload = result.payload?.let(json::encodeToString),
                 reason = result.reason,
+                retryAfterMillis = result.retryAfterMillis,
             )
         }
     }
@@ -133,6 +134,8 @@ private data class ParrotCloudLegacyMutationResponse(
     val revision: Long? = null,
     val payload: JsonElement? = null,
     val reason: String? = null,
+    @SerialName("retry_after_ms")
+    val retryAfterMillis: Long? = null,
 )
 
 @Serializable

@@ -33,6 +33,7 @@ data class SyncMutationResponse(
     val revision: Long?,
     val payload: String?,
     val reason: String?,
+    val retryAfterMillis: Long? = null,
 )
 
 data class SyncChangePage(

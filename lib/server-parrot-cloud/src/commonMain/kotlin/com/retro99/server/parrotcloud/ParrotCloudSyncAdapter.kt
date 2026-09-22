@@ -19,12 +19,13 @@ import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressSyncTransport
 import com.retro99.sync.domain.LegacySyncTransport
-import com.retro99.sync.domain.SyncMutationRequest
 import com.retro99.sync.domain.SyncMutationResponse
 import com.retro99.sync.data.ProgressIdentity
 import com.retro99.sync.data.ProgressIdentityResolver
 import com.retro99.sync.data.ProgressOutboxCodec
 import com.retro99.sync.data.ProgressSyncEngine
+import com.retro99.sync.data.LegacyMutationApplier
+import com.retro99.sync.data.LegacySyncEngine
 import com.retro99.sync.data.SyncPass
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.CancellationException
@@ -33,9 +34,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.put
-import kotlin.math.min
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.seconds
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -53,6 +52,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val progressTransport: ProgressSyncTransport,
     @Provided private val legacyTransport: LegacySyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
+    @Provided private val legacySyncEngine: LegacySyncEngine,
 ) : SyncPass {
     private val json = Json {
         encodeDefaults = true
@@ -150,7 +150,7 @@ class ParrotCloudSyncAdapter(
             entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
         }
         return pushProgressMutations(progressEntries) +
-            pushLegacyMutations(legacyEntries, cloudUserId, cursor)
+            pushLegacyMutations(legacyEntries, cursor)
     }
 
     private suspend fun pushProgressMutations(
@@ -193,67 +193,36 @@ class ParrotCloudSyncAdapter(
 
     private suspend fun pushLegacyMutations(
         entries: List<SyncOutboxEntry>,
-        cloudUserId: String,
         cursor: Long,
     ): Int {
         if (entries.isEmpty()) return 0
-        val requests = entries.map { entry ->
-            SyncMutationRequest(
-                mutationId = entry.mutationId,
-                entityType = entry.entityType,
-                entityId = entry.entityId,
-                operation = entry.operation,
-                payload = entry.payload,
-                baseRevision = entry.baseRevision,
-                createdAt = entry.createdAt,
-            )
-        }
-        entries.forEach { entry ->
-            syncOutboxDatabase.markDispatched(entry.mutationId)
-        }
-        val response = legacyTransport.push(
-            mutations = requests,
+        val summary = legacySyncEngine.push(
+            entries = entries,
+            transport = legacyTransport,
             cursor = cursor.toString(),
-        )
-        val responsesByMutationId = response.associateBy { mutation -> mutation.mutationId }
-        var handled = 0
-        entries.forEach { entry ->
-            val mutationResponse = responsesByMutationId[entry.mutationId]
-                ?: error("Sync response omitted mutation ${entry.mutationId}")
-            when (mutationResponse.status) {
-                STATUS_ACCEPTED -> {
-                    applyAcceptedMetadata(entry, mutationResponse)
-                    syncOutboxDatabase.delete(entry.mutationId)
-                    handled++
+            applier = object : LegacyMutationApplier {
+                override suspend fun onAccepted(
+                    entry: SyncOutboxEntry,
+                    response: com.retro99.sync.domain.SyncMutationResponse,
+                ) {
+                    applyAcceptedMetadata(entry, response)
                 }
 
-                STATUS_CONFLICT -> {
-                    mutationResponse.payload?.let { payload ->
+                override suspend fun onConflict(
+                    entry: SyncOutboxEntry,
+                    response: com.retro99.sync.domain.SyncMutationResponse,
+                ) {
+                    response.payload?.let { payload ->
                         applyRemoteConflict(
                             entry = entry,
                             payload = json.decodeFromString<JsonElement>(payload),
-                            revision = mutationResponse.revision,
+                            revision = response.revision,
                         )
                     }
-                    syncOutboxDatabase.markConflict(
-                        mutationId = entry.mutationId,
-                        error = mutationResponse.reason ?: "Remote progress conflict",
-                    )
-                    handled++
                 }
-
-                else -> {
-                    val attempt = entry.attemptCount.coerceAtLeast(0)
-                    val delaySeconds = 1L shl min(attempt, MAX_BACKOFF_POWER)
-                    syncOutboxDatabase.recordFailure(
-                        mutationId = entry.mutationId,
-                        nextAttemptAt = Clock.System.now().plus(delaySeconds.seconds).toString(),
-                        error = mutationResponse.reason ?: "Cloud mutation rejected",
-                    )
-                }
-            }
-        }
-        return handled
+            },
+        )
+        return summary.acknowledgedCount + summary.conflictCount
     }
 
     private suspend fun pullAndApply(
@@ -457,9 +426,6 @@ class ParrotCloudSyncAdapter(
     }
 
     private companion object {
-        const val STATUS_ACCEPTED = "accepted"
-        const val STATUS_CONFLICT = "conflict"
         const val SYNC_BATCH_SIZE = 50
-        const val MAX_BACKOFF_POWER = 6
     }
 }
