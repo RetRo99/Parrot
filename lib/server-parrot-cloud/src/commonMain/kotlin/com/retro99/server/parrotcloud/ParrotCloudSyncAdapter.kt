@@ -16,8 +16,11 @@ import com.retro99.sync.domain.SyncRepository
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
-import com.retro99.sync.domain.ProgressPushResult
 import com.retro99.sync.domain.ProgressSyncTransport
+import com.retro99.sync.data.ProgressIdentity
+import com.retro99.sync.data.ProgressIdentityResolver
+import com.retro99.sync.data.ProgressOutboxCodec
+import com.retro99.sync.data.ProgressSyncEngine
 import com.retro99.user.api.UserRegistry
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CancellationException
@@ -51,6 +54,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val positionDatabase: PositionDatabase,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val progressTransport: ProgressSyncTransport,
+    @Provided private val progressSyncEngine: ProgressSyncEngine,
 ) : SyncRepository {
     private val mutex = Mutex()
     private val json = Json {
@@ -142,60 +146,38 @@ class ParrotCloudSyncAdapter(
         entries: List<SyncOutboxEntry>,
     ): Int {
         if (entries.isEmpty()) return 0
+        val summary = progressSyncEngine.push(
+            entries = entries,
+            transport = progressTransport,
+            codec = ProgressOutboxCodec { entry ->
+                val payload = json.decodeFromString<ParrotCloudReadingPositionPayload>(entry.payload)
+                ProgressMutation(
+                    mutationId = entry.mutationId,
+                    entityId = entry.entityId,
+                    remoteBookId = payload.cloudBookId,
+                    libraryBookId = payload.libraryBookId,
+                    kind = ProgressKind.EBOOK,
+                    snapshot = payload.position.toProgressSyncSnapshot(),
+                    baseVersion = entry.baseRevision?.toString(),
+                    observedAt = entry.createdAt,
+                )
+            },
+            identityResolver = parrotProgressIdentityResolver(),
+        )
+        return summary.acknowledgedCount + summary.conflictCount
+    }
 
-        entries.forEach { entry ->
-            syncOutboxDatabase.markDispatched(entry.mutationId)
-        }
-        val mutations = entries.map { entry ->
-            val payload = json.decodeFromString<ParrotCloudReadingPositionPayload>(entry.payload)
-            ProgressMutation(
-                mutationId = entry.mutationId,
-                entityId = entry.entityId,
-                remoteBookId = payload.cloudBookId,
-                libraryBookId = payload.libraryBookId,
-                kind = ProgressKind.EBOOK,
-                snapshot = payload.position.toProgressSyncSnapshot(),
-                baseVersion = entry.baseRevision?.toString(),
-                observedAt = entry.createdAt,
-            )
-        }
-        val results = progressTransport.pushProgress(mutations)
-        val resultsByMutationId = results.associateBy { result -> result.mutationId }
-        var handled = 0
-        entries.forEach { entry ->
-            when (val result = resultsByMutationId[entry.mutationId]) {
-                is ProgressPushResult.Accepted -> {
-                    applyAcceptedProgressMetadata(entry, result.version?.toLongOrNull())
-                    syncOutboxDatabase.delete(entry.mutationId)
-                    handled++
-                }
-
-                is ProgressPushResult.Conflict -> {
-                    applyRemoteConflict(result.remote, entry)
-                    syncOutboxDatabase.markConflict(
-                        mutationId = entry.mutationId,
-                        error = "Remote progress conflict",
-                    )
-                    handled++
-                }
-
-                is ProgressPushResult.Rejected -> {
-                    val attempt = entry.attemptCount.coerceAtLeast(0)
-                    val delaySeconds = result.retryAfterMillis
-                        ?.div(1000L)
-                        ?.coerceAtLeast(1L)
-                        ?: (1L shl min(attempt, MAX_BACKOFF_POWER))
-                    syncOutboxDatabase.recordFailure(
-                        mutationId = entry.mutationId,
-                        nextAttemptAt = Clock.System.now().plus(delaySeconds.seconds).toString(),
-                        error = result.reason,
-                    )
-                }
-
-                null -> Unit
-            }
-        }
-        return handled
+    private fun parrotProgressIdentityResolver() = ProgressIdentityResolver { remote ->
+        val libraryBookId = remote.libraryBookId ?: remote.entityId ?: remote.remoteBookId
+        val localBookUuid = resolveLocalBookUuid(
+            libraryBookId = libraryBookId,
+            cloudBookId = remote.remoteBookId,
+            fallback = remote.entityId ?: libraryBookId,
+        )
+        ProgressIdentity(
+            localBookUuid = localBookUuid,
+            libraryBookId = libraryBookId,
+        )
     }
 
     private suspend fun pushLegacyMutations(
@@ -313,39 +295,17 @@ class ParrotCloudSyncAdapter(
         remote: com.retro99.sync.domain.RemoteProgressSnapshot,
         cloudUserId: String,
     ) {
-        val libraryBookId = remote.libraryBookId ?: remote.entityId ?: remote.remoteBookId
-        val localBookUuid = resolveLocalBookUuid(
-            libraryBookId = libraryBookId,
-            cloudBookId = remote.remoteBookId,
-            fallback = remote.entityId ?: libraryBookId,
+        progressSyncEngine.applyRemote(
+            remote = remote,
+            accountId = cloudUserId,
+            identityResolver = parrotProgressIdentityResolver(),
         )
-        val localPosition = remote.snapshot.toServerPosition(
-            bookUuid = localBookUuid,
-            libraryBookId = libraryBookId,
-        ).toParrotCloudPositionEntity(
-            remoteRevision = remote.version?.toLongOrNull(),
-            bookUuid = localBookUuid,
-            libraryBookId = libraryBookId,
-        )
-        val pendingMutations = syncOutboxDatabase.getPending(cloudUserId)
-        if (pendingMutations.hasPendingProgressFor(
-                localBookUuid = localBookUuid,
-                libraryBookId = libraryBookId,
-                cloudBookId = remote.remoteBookId,
-            )
-        ) {
-            positionDatabase.upsertRemotePosition(localPosition)
-        } else {
-            positionDatabase.upsertPosition(localPosition)
-            positionDatabase.deleteRemotePosition(localBookUuid)
-        }
     }
 
     private suspend fun applyRemoteChange(
         entityType: String,
         payload: JsonElement,
         revision: Long?,
-        pendingMutations: List<SyncOutboxEntry> = emptyList(),
     ) {
         when (entityType) {
             SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
@@ -370,33 +330,6 @@ class ParrotCloudSyncAdapter(
                     ),
                 )
             }
-
-            SyncOutboxEntry.ENTITY_TYPE_READING_POSITION -> {
-                val position = json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(payload)
-                val existingBook = libraryBooksDatabase.getLibraryBookByCloudBookId(position.cloudBookId)
-                val libraryBookId = existingBook?.libraryBookId ?: position.libraryBookId
-                val localBookUuid = resolveLocalBookUuid(
-                    libraryBookId = libraryBookId,
-                    cloudBookId = position.cloudBookId,
-                    fallback = position.position.bookUuid,
-                )
-                val localPosition = position.position.toParrotCloudPositionEntity(
-                    remoteRevision = revision,
-                    bookUuid = localBookUuid,
-                    libraryBookId = libraryBookId,
-                )
-                if (pendingMutations.hasPendingProgressFor(
-                        localBookUuid = localBookUuid,
-                        libraryBookId = libraryBookId,
-                        cloudBookId = position.cloudBookId,
-                    )
-                ) {
-                    positionDatabase.upsertRemotePosition(localPosition)
-                } else {
-                    positionDatabase.upsertPosition(localPosition)
-                    positionDatabase.deleteRemotePosition(localBookUuid)
-                }
-            }
         }
     }
 
@@ -413,66 +346,7 @@ class ParrotCloudSyncAdapter(
         payload: JsonElement,
         revision: Long?,
     ) {
-        if (entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION) {
-            applyRemoteChange(entry, payload, revision)
-            return
-        }
-
-        val position = json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(payload)
-        val existingBook = libraryBooksDatabase.getLibraryBookByCloudBookId(position.cloudBookId)
-        val libraryBookId = existingBook?.libraryBookId ?: position.libraryBookId
-        val localBookUuid = resolveLocalBookUuid(
-            libraryBookId = libraryBookId,
-            cloudBookId = position.cloudBookId,
-            fallback = position.position.bookUuid,
-        )
-        positionDatabase.upsertRemotePosition(
-            position.position.toParrotCloudPositionEntity(
-                remoteRevision = revision,
-                bookUuid = localBookUuid,
-                libraryBookId = libraryBookId,
-            ),
-        )
-    }
-
-    private suspend fun applyRemoteConflict(
-        remote: com.retro99.sync.domain.RemoteProgressSnapshot,
-        entry: SyncOutboxEntry,
-    ) {
-        val libraryBookId = remote.libraryBookId ?: entry.entityId
-        val localBookUuid = resolveLocalBookUuid(
-            libraryBookId = libraryBookId,
-            cloudBookId = remote.remoteBookId,
-            fallback = remote.entityId ?: entry.entityId,
-        )
-        positionDatabase.upsertRemotePosition(
-            remote.snapshot.toServerPosition(
-                bookUuid = localBookUuid,
-                libraryBookId = libraryBookId,
-            ).toParrotCloudPositionEntity(
-                remoteRevision = remote.version?.toLongOrNull(),
-                bookUuid = localBookUuid,
-                libraryBookId = libraryBookId,
-            ),
-        )
-    }
-
-    private suspend fun applyAcceptedProgressMetadata(
-        entry: SyncOutboxEntry,
-        revision: Long?,
-    ) {
-        if (revision == null) return
-        val payload = json.decodeFromString<ParrotCloudReadingPositionPayload>(entry.payload)
-        val localBookUuid = resolveLocalBookUuid(
-            libraryBookId = payload.libraryBookId,
-            cloudBookId = payload.cloudBookId,
-            fallback = entry.entityId,
-        )
-        positionDatabase.updateRemoteRevision(
-            bookUuid = localBookUuid,
-            remoteRevision = revision,
-            expectedLocalGeneration = entry.localGeneration,
-        )
+        applyRemoteChange(entry, payload, revision)
     }
 
     private suspend fun applyAcceptedMetadata(
@@ -583,17 +457,6 @@ class ParrotCloudSyncAdapter(
         const val STATUS_CONFLICT = "conflict"
         const val SYNC_BATCH_SIZE = 50
         const val MAX_BACKOFF_POWER = 6
-    }
-}
-
-private fun List<SyncOutboxEntry>.hasPendingProgressFor(
-    localBookUuid: String,
-    libraryBookId: String,
-    cloudBookId: String,
-): Boolean {
-    return any { mutation ->
-        mutation.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION &&
-            mutation.entityId in setOf(localBookUuid, libraryBookId, cloudBookId)
     }
 }
 

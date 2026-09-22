@@ -34,6 +34,7 @@ class ProgressSyncEngine(
         entries: List<SyncOutboxEntry>,
         transport: ProgressSyncTransport,
         codec: ProgressOutboxCodec,
+        identityResolver: ProgressIdentityResolver = ProgressIdentityResolver.Default,
     ): ProgressPushSummary {
         val progressEntries = entries.filter { entry ->
             entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
@@ -64,7 +65,7 @@ class ProgressSyncEngine(
                 }
 
                 is ProgressPushResult.Conflict -> {
-                    preserveConflict(entry, result.remote)
+                    preserveConflict(entry, result.remote, identityResolver)
                     conflictCount++
                 }
 
@@ -133,10 +134,12 @@ class ProgressSyncEngine(
     private suspend fun preserveConflict(
         entry: SyncOutboxEntry,
         remote: RemoteProgressSnapshot,
+        identityResolver: ProgressIdentityResolver,
     ) {
         applyRemote(
             remote = remote,
             accountId = entry.cloudUserId ?: "",
+            identityResolver = identityResolver,
         )
         syncOutboxDatabase.markConflict(
             mutationId = entry.mutationId,
