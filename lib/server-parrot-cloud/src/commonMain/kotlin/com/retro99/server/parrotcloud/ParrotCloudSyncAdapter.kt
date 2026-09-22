@@ -26,19 +26,20 @@ import com.retro99.sync.data.SyncPullEngine
 import com.retro99.sync.data.SyncPullPage
 import com.retro99.sync.data.SyncPass
 import com.retro99.sync.data.SyncExecutionContext
+import com.retro99.sync.data.SyncOutboxPreflight
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.put
-import kotlin.time.Clock
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 @Single(binds = [SyncPass::class])
 class ParrotCloudSyncAdapter(
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
+    @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val importedBooksDatabase: ImportedBooksDatabase,
     @Provided private val positionDatabase: PositionDatabase,
@@ -71,9 +72,10 @@ class ParrotCloudSyncAdapter(
         var cursor = initialPull.cursor?.toLongOrNull() ?: 0L
         var pulledCount = initialPull.pulledChangeCount
 
-        val entries = syncOutboxDatabase.getEligible(cloudUserId, Clock.System.now().toString())
-            .filter { entry -> entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS }
-            .take(SYNC_BATCH_SIZE)
+        val entries = syncOutboxPreflight.selectEligible(
+            remoteAccountId = cloudUserId,
+            maxEntries = SYNC_BATCH_SIZE,
+        ) { entry -> entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS }
         val pushedCount = pushMutations(entries, cloudUserId, cursor)
         if (entries.isNotEmpty()) {
             val afterPushPull = pullUntilCaughtUp(cloudUserId)
@@ -83,7 +85,7 @@ class ParrotCloudSyncAdapter(
         return SyncResult.Completed(
             pushedMutationCount = pushedCount,
             pulledChangeCount = pulledCount,
-            pendingMutationCount = syncOutboxDatabase.getPending(cloudUserId).size,
+            pendingMutationCount = syncOutboxPreflight.pendingCount(cloudUserId),
         )
     }
 

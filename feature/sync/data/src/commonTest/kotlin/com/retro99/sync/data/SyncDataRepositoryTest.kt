@@ -22,7 +22,11 @@ class SyncDataRepositoryTest {
         val pass = RecordingSyncPass()
         val contextProvider = RecordingContextProvider()
         val outbox = RecordingOutbox()
-        val repository = SyncDataRepository(pass, contextProvider, outbox)
+        val repository = SyncDataRepository(
+            pass,
+            contextProvider,
+            SyncOutboxPreflight(outbox),
+        )
 
         val first = async {
             repository.requestSync(
@@ -75,11 +79,57 @@ class SyncDataRepositoryTest {
         val repository = SyncDataRepository(
             syncPass = pass,
             executionContextProvider = contextProvider,
-            syncOutboxDatabase = RecordingOutbox(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
         )
 
         assertEquals(SyncResult.NotAuthenticated, repository.sync())
         assertTrue(pass.requests.isEmpty())
+    }
+
+    @Test
+    fun preflightSelectsDispatchableEntriesWithoutDroppingPreservedMutations() = runTest {
+        val outbox = RecordingOutbox().apply {
+            eligibleEntries = listOf(
+                testEntry(
+                    mutationId = "pending-book",
+                    entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                    state = SyncOutboxEntry.STATE_PENDING,
+                ),
+                testEntry(
+                    mutationId = "dispatched-position",
+                    entityType = SyncOutboxEntry.ENTITY_TYPE_READING_POSITION,
+                    state = SyncOutboxEntry.STATE_DISPATCHED,
+                ),
+                testEntry(
+                    mutationId = "preserved-conflict",
+                    entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                    state = SyncOutboxEntry.STATE_CONFLICT_PRESERVED,
+                ),
+                testEntry(
+                    mutationId = "reader-settings",
+                    entityType = SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS,
+                    state = SyncOutboxEntry.STATE_PENDING,
+                ),
+            )
+        }
+        val preflight = SyncOutboxPreflight(outbox)
+
+        val selected = preflight.selectEligible(
+            remoteAccountId = "remote-account",
+            maxEntries = 10,
+            now = "2026-09-22T00:00:00Z",
+            include = { entry ->
+                entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS
+            },
+        )
+
+        assertEquals(
+            listOf("pending-book", "dispatched-position"),
+            selected.map { entry -> entry.mutationId },
+        )
+        assertEquals(listOf("remote-account"), outbox.eligibleAccounts)
+        assertEquals(listOf("2026-09-22T00:00:00Z"), outbox.eligibleTimes)
+        assertTrue(outbox.deletedEntityTypes.isEmpty())
     }
 }
 
@@ -128,6 +178,10 @@ private class RecordingContextProvider(
 
 private class RecordingOutbox : SyncOutboxDatabase {
     val boundAccounts = mutableListOf<String>()
+    val eligibleAccounts = mutableListOf<String>()
+    val eligibleTimes = mutableListOf<String>()
+    val deletedEntityTypes = mutableListOf<String>()
+    var eligibleEntries: List<SyncOutboxEntry> = emptyList()
 
     override suspend fun enqueue(entry: SyncOutboxEntry) = Unit
 
@@ -135,7 +189,16 @@ private class RecordingOutbox : SyncOutboxDatabase {
         boundAccounts += cloudUserId
     }
 
-    override suspend fun getPending(cloudUserId: String): List<SyncOutboxEntry> = emptyList()
+    override suspend fun getPending(cloudUserId: String): List<SyncOutboxEntry> = eligibleEntries
+
+    override suspend fun getEligible(
+        cloudUserId: String,
+        now: String,
+    ): List<SyncOutboxEntry> {
+        eligibleAccounts += cloudUserId
+        eligibleTimes += now
+        return eligibleEntries
+    }
 
     override suspend fun updateBaseRevision(mutationId: String, baseRevision: Long) = Unit
 
@@ -145,7 +208,9 @@ private class RecordingOutbox : SyncOutboxDatabase {
 
     override suspend fun delete(mutationId: String) = Unit
 
-    override suspend fun deleteByEntityType(entityType: String) = Unit
+    override suspend fun deleteByEntityType(entityType: String) {
+        deletedEntityTypes += entityType
+    }
 
     override suspend fun recordFailure(
         mutationId: String,
@@ -160,4 +225,25 @@ private class RecordingOutbox : SyncOutboxDatabase {
     ) = Unit
 
     override suspend fun clearAllData() = Unit
+}
+
+private fun testEntry(
+    mutationId: String,
+    entityType: String,
+    state: String,
+): SyncOutboxEntry {
+    return SyncOutboxEntry(
+        mutationId = mutationId,
+        cloudUserId = "remote-account",
+        entityType = entityType,
+        entityId = mutationId,
+        operation = SyncOutboxEntry.OPERATION_UPSERT,
+        payload = "{}",
+        baseRevision = null,
+        createdAt = "2026-09-22T00:00:00Z",
+        attemptCount = 0,
+        nextAttemptAt = null,
+        lastError = null,
+        state = state,
+    )
 }

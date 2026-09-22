@@ -3,7 +3,6 @@ package com.retro99.sync.data
 import com.retro99.sync.domain.SyncRepository
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
-import com.retro99.database.api.sync.SyncOutboxDatabase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
@@ -22,7 +21,7 @@ import org.koin.core.annotation.Single
 class SyncDataRepository(
     @Provided private val syncPass: SyncPass,
     @Provided private val executionContextProvider: SyncExecutionContextProvider,
-    @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
+    @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
 ) : SyncRepository {
     private val mutex = Mutex()
     private var activeRun: ActiveRun? = null
@@ -61,7 +60,7 @@ class SyncDataRepository(
 
                 run.activeRequest = nextRequest
                 val execution = executionContextProvider.withPinnedContext { context ->
-                    syncOutboxDatabase.bindUnassignedMutations(context.remoteAccountId)
+                    syncOutboxPreflight.bindUnassignedMutations(context.remoteAccountId)
                     syncPass.execute(nextRequest, context)
                 }
                 lastResult = when (execution) {
