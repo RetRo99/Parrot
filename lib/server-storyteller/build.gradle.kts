@@ -33,6 +33,7 @@ kotlin {
             implementation(projects.lib.server.implementation)
             implementation(projects.lib.network.implementation)
             implementation(projects.lib.database.api)
+            implementation(projects.feature.sync.domain)
         }
 
         commonTest.dependencies {
@@ -40,4 +41,3 @@ kotlin {
         }
     }
 }
-
