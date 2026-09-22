@@ -17,7 +17,7 @@ class LibraryBookLocalModelTest {
 
         val libraryBook = book.toLibraryBookLocalModel()
 
-        assertEquals("hash-1", libraryBook?.libraryBookId)
+        assertEquals("sha256:hash-1", libraryBook?.libraryBookId)
         assertEquals("hash-1", libraryBook?.contentHash)
         assertEquals("sha256", libraryBook?.contentHashAlgorithm)
         assertEquals("A book", libraryBook?.title)

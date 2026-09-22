@@ -105,5 +105,6 @@ interface ServerRegistry {
      * Clear all credentials (logout from all servers).
      */
     suspend fun clearAllCredentials()
-}
 
+    suspend fun deactivateServer(serverId: String)
+}

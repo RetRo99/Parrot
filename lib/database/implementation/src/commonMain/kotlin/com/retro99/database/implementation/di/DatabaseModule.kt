@@ -12,7 +12,6 @@ import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.reader.ReaderSettingsDatabase
 import com.retro99.database.api.statistics.ReadingSessionDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
-import com.retro99.database.api.sync.SyncPendingChangesDatabase
 import com.retro99.database.implementation.DatabaseManager
 import com.retro99.database.implementation.dao.books.AuthorsDatabaseImpl
 import com.retro99.database.implementation.dao.books.AuthorsSqlDelightDao
@@ -32,8 +31,6 @@ import com.retro99.database.implementation.dao.statistics.ReadingSessionDatabase
 import com.retro99.database.implementation.dao.statistics.ReadingSessionSqlDelightDao
 import com.retro99.database.implementation.dao.sync.SyncOutboxDatabaseImpl
 import com.retro99.database.implementation.dao.sync.SyncOutboxSqlDelightDao
-import com.retro99.database.implementation.dao.sync.SyncPendingChangesDatabaseImpl
-import com.retro99.database.implementation.dao.sync.SyncPendingChangesSqlDelightDao
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
@@ -166,20 +163,6 @@ class DatabaseModule {
     }
 
     @Single
-    internal fun provideSyncPendingChangesSqlDelightDao(
-        databaseManager: DatabaseManager,
-    ): SyncPendingChangesSqlDelightDao {
-        return SyncPendingChangesSqlDelightDao(databaseManager)
-    }
-
-    @Single
-    internal fun provideSyncPendingChangesDatabase(
-        syncPendingChangesSqlDelightDao: SyncPendingChangesSqlDelightDao,
-    ): SyncPendingChangesDatabase {
-        return SyncPendingChangesDatabaseImpl(syncPendingChangesSqlDelightDao)
-    }
-
-    @Single
     internal fun provideReaderSettingsSqlDelightDao(
         databaseManager: DatabaseManager,
     ): ReaderSettingsSqlDelightDao {
@@ -201,7 +184,6 @@ class DatabaseModule {
         authorsDatabase: AuthorsDatabase,
         readingSessionDatabase: ReadingSessionDatabase,
         syncOutboxDatabase: SyncOutboxDatabase,
-        syncPendingChangesDatabase: SyncPendingChangesDatabase,
     ): List<DataClearable> {
         return listOf(
             booksDatabase,
@@ -210,7 +192,6 @@ class DatabaseModule {
             authorsDatabase,
             readingSessionDatabase,
             syncOutboxDatabase,
-            syncPendingChangesDatabase,
         )
     }
 }

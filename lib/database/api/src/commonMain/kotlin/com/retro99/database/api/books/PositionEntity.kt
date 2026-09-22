@@ -7,6 +7,8 @@ package com.retro99.database.api.books
  */
 interface PositionEntity {
     val bookUuid: String
+    val libraryBookId: String
+        get() = bookUuid
     val remoteRevision: Long?
         get() = null
     val timestamp: Long?

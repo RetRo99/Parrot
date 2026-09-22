@@ -96,7 +96,6 @@ class CloudAuthenticationUseCasesTest {
                 localProfileId = "profile-a",
                 cloudUserId = account.id,
                 syncEnabled = false,
-                initialMergeCompleted = false,
             ),
         )
 
@@ -113,7 +112,6 @@ class CloudAuthenticationUseCasesTest {
                 localProfileId = "profile-a",
                 cloudUserId = account.id,
                 syncEnabled = false,
-                initialMergeCompleted = false,
             ),
         )
         val classUnderTest = EnableCloudSyncUseCase(
@@ -124,7 +122,6 @@ class CloudAuthenticationUseCasesTest {
         val result = classUnderTest()
 
         assertEquals(true, result.syncEnabled)
-        assertEquals(false, result.initialMergeCompleted)
     }
 
     @Test
@@ -310,7 +307,6 @@ private class FakeCloudProfileLinkRepository : CloudProfileLinkRepository {
             localProfileId = localProfileId,
             cloudUserId = cloudUserId,
             syncEnabled = false,
-            initialMergeCompleted = false,
         )
         links += link
         return CloudProfileLinkResult.Linked(link)
@@ -323,7 +319,17 @@ private class FakeCloudProfileLinkRepository : CloudProfileLinkRepository {
         }
     }
 
-    override suspend fun markInitialMergeCompleted(localProfileId: String) = Unit
+    override fun observeForLocalProfile(localProfileId: String): Flow<CloudProfileLink?> {
+        return flowOf(links.firstOrNull { link -> link.localProfileId == localProfileId })
+    }
+
+    override suspend fun deactivate(localProfileId: String) {
+        setSyncEnabled(localProfileId, enabled = false)
+    }
+
+    override suspend fun unlink(localProfileId: String) {
+        links.removeAll { link -> link.localProfileId == localProfileId }
+    }
 }
 
 private class FakePendingCloudAuthenticationRepository : PendingCloudAuthenticationRepository {

@@ -78,6 +78,7 @@ interface ServerReaderRepository {
 data class ServerPosition(
     val bookUuid: String,
     val serverId: String,
+    val libraryBookId: String? = null,
     val timestamp: Long?,
     val createdAt: String?,
     val updatedAt: String?,

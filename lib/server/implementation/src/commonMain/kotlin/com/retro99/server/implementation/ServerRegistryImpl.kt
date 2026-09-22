@@ -6,6 +6,7 @@ import com.retro99.preferences.api.PreferencesKey
 import com.retro99.preferences.api.getObject
 import com.retro99.preferences.api.putObject
 import com.retro99.server.api.ServerAuthState
+import com.retro99.server.api.ServerAuthStateProvider
 import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerCredentials
 import com.retro99.server.api.ServerRegistry
@@ -18,6 +19,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -34,6 +37,7 @@ import kotlin.uuid.Uuid
 class ServerRegistryImpl(
     private val preferences: Preferences,
     @Provided private val userRegistry: UserRegistry,
+    @Provided private val authStateProviders: List<ServerAuthStateProvider>,
 ) : ServerRegistry {
 
     private val logger = Logger.withTag("ServerRegistry")
@@ -161,6 +165,9 @@ class ServerRegistryImpl(
     }
 
     override suspend fun removeServer(serverId: String) = mutex.withLock {
+        val server = _servers.value[serverId]
+        authStateProviders.firstOrNull { provider -> provider.serverType == server?.type }
+            ?.clearAuthentication(server ?: return@withLock)
         _servers.update { it - serverId }
         _credentials.update { it - serverId }
 
@@ -175,39 +182,55 @@ class ServerRegistryImpl(
     // ==================== Authentication State ====================
 
     override fun observeAllAuthStates(): Flow<Map<String, ServerAuthState>> {
-        return combine(_servers, _credentials) { servers, creds ->
-            servers.keys.associateWith { serverId ->
-                getAuthStateForServer(serverId, creds[serverId])
+        return _servers.flatMapLatest { servers ->
+            if (servers.isEmpty()) {
+                flowOf(emptyMap())
+            } else {
+                val states = servers.values.map { server -> observeAuthState(server.id) }
+                combine(states) { authStates ->
+                    authStates.map { state -> state as ServerAuthState }
+                        .associateBy { state -> state.serverId }
+                }
             }
         }
     }
 
     override fun observeAuthState(serverId: String): Flow<ServerAuthState> {
-        return _credentials.map { creds ->
-            getAuthStateForServer(serverId, creds[serverId])
-        }
+        return _servers.map { servers -> servers[serverId] }
+            .flatMapLatest { server ->
+                if (server == null) {
+                    flowOf(ServerAuthState.NotAuthenticated(serverId))
+                } else {
+                    val provider = authStateProviders.firstOrNull { authProvider ->
+                        authProvider.serverType == server.type
+                    }
+                    provider?.observeAuthState(server)
+                        ?: _credentials.map { credentials ->
+                            getAuthStateForServer(serverId, credentials[serverId])
+                        }
+                }
+            }
     }
 
     override fun observeAuthenticatedServers(): Flow<List<ServerConfig>> {
-        return combine(_servers, _credentials) { servers, creds ->
-            logger.d { "observeAuthenticatedServers: ${servers.size} servers, ${creds.size} credentials" }
-            logger.d { "Servers: ${servers.values.map { it.name }}" }
-            logger.d { "Credentials for: ${creds.keys}" }
+        return combine(_servers, observeAllAuthStates()) { servers, authStates ->
             servers.values.filter { server ->
-                creds.containsKey(server.id)
-            }.toList().also {
-                logger.d { "Authenticated servers: ${it.size} - ${it.map { s -> s.name }}" }
+                authStates[server.id] is ServerAuthState.Authenticated
             }
         }
     }
 
     override suspend fun isAuthenticated(serverId: String): Boolean {
-        return _credentials.value.containsKey(serverId)
+        val server = _servers.value[serverId] ?: return false
+        val provider = authStateProviders.firstOrNull { authProvider ->
+            authProvider.serverType == server.type
+        }
+        return provider?.isAuthenticated(server)
+            ?: _credentials.value.containsKey(serverId)
     }
 
     override suspend fun getAuthenticatedServers(): List<ServerConfig> {
-        val creds = _credentials.value
-        return _servers.value.values.filter { creds.containsKey(it.id) }
+        return _servers.value.values.filter { server -> isAuthenticated(server.id) }
     }
 
     private fun getAuthStateForServer(
@@ -234,6 +257,10 @@ class ServerRegistryImpl(
     // ==================== Credentials Management ====================
 
     override suspend fun saveCredentials(credentials: ServerCredentials) = mutex.withLock {
+        val server = _servers.value[credentials.serverId]
+        check(authStateProviders.none { provider -> provider.serverType == server?.type }) {
+            "Managed servers do not store ServerCredentials"
+        }
         _credentials.update { it + (credentials.serverId to credentials) }
         persistCredentials()
     }
@@ -243,13 +270,29 @@ class ServerRegistryImpl(
     }
 
     override suspend fun clearCredentials(serverId: String) = mutex.withLock {
+        val server = _servers.value[serverId]
+        val provider = authStateProviders.firstOrNull { authProvider ->
+            authProvider.serverType == server?.type
+        }
+        if (server != null && provider != null) {
+            provider.clearAuthentication(server)
+        }
         _credentials.update { it - serverId }
         persistCredentials()
     }
 
     override suspend fun clearAllCredentials() = mutex.withLock {
+        val servers = _servers.value.values.toList()
+        servers.forEach { server ->
+            authStateProviders.firstOrNull { provider -> provider.serverType == server.type }
+                ?.clearAuthentication(server)
+        }
         _credentials.value = emptyMap()
         persistCredentials()
+    }
+
+    override suspend fun deactivateServer(serverId: String) {
+        clearCredentials(serverId)
     }
 
     // ==================== Persistence ====================
@@ -268,4 +311,3 @@ class ServerRegistryImpl(
         preferences.putObject(key, credentialsList)
     }
 }
-

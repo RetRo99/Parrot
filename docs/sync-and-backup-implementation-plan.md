@@ -1,5 +1,11 @@
 # Sync and Backup implementation plan
 
+> **Superseded direction:** Parrot Cloud is now planned as a first-class book
+> server with incremental progress-only and full-book storage support. See
+> `docs/parrot-cloud-server-implementation-plan.md`. Keep this document as the
+> record of the original metadata-only design; follow the newer plan wherever
+> the two conflict.
+
 ## Goal and release scope
 
 Offer an optional paid Parrot cloud account so readers can continue their reading

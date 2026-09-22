@@ -56,8 +56,14 @@ class ObserveBookWithProgressUseCase(
             booksRepository.getBook(bookUuid).flatMapLatest { bookResult ->
                 bookResult.fold(
                     success = { serverBook ->
-                        // Observe local position changes
-                        positionLocalSource.observePosition(bookUuid).map { localPosition ->
+                        positionLocalSource.observeAllPositions().map { positions ->
+                            val localPosition = positions.firstOrNull { position ->
+                                position.bookUuid == bookUuid
+                            } ?: serverBook.libraryBookId?.let { libraryBookId ->
+                                positions.firstOrNull { position ->
+                                    position.libraryBookId == libraryBookId
+                                }
+                            }
                             buildBookWithProgress(serverId, bookUuid, serverBook, localPosition)
                         }
                     },

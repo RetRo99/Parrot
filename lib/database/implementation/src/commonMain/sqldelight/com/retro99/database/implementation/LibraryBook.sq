@@ -6,11 +6,20 @@ CREATE TABLE IF NOT EXISTS library_books (
     author TEXT,
     format TEXT NOT NULL,
     remote_revision INTEGER,
-    deleted_at TEXT
+    deleted_at TEXT,
+    cloud_book_id TEXT,
+    metadata_json TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_library_books_content_hash
 ON library_books(content_hash);
+
+CREATE INDEX IF NOT EXISTS idx_library_books_hash_identity
+ON library_books(content_hash_algorithm, content_hash);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_library_books_cloud_book
+ON library_books(cloud_book_id)
+WHERE cloud_book_id IS NOT NULL;
 
 upsertLibraryBook:
 INSERT OR REPLACE INTO library_books(
@@ -21,9 +30,11 @@ INSERT OR REPLACE INTO library_books(
     author,
     format,
     remote_revision,
-    deleted_at
+    deleted_at,
+    cloud_book_id,
+    metadata_json
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 insertLocalLibraryBook:
 INSERT OR IGNORE INTO library_books(
@@ -56,6 +67,21 @@ SELECT * FROM library_books WHERE library_book_id = ?;
 getLibraryBookByContentHash:
 SELECT * FROM library_books
 WHERE content_hash = ? AND deleted_at IS NULL;
+
+getLibraryBookByContentHashAndAlgorithm:
+SELECT * FROM library_books
+WHERE content_hash_algorithm = ?
+AND content_hash = ?
+AND deleted_at IS NULL;
+
+getLibraryBookByCloudBookId:
+SELECT * FROM library_books
+WHERE cloud_book_id = ? AND deleted_at IS NULL;
+
+attachCloudBookId:
+UPDATE library_books
+SET cloud_book_id = ?
+WHERE library_book_id = ?;
 
 deleteUnreferencedUnsyncedLibraryBooks:
 DELETE FROM library_books

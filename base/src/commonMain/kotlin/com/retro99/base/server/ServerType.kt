@@ -5,6 +5,7 @@ package com.retro99.base.server
  * Used to identify the local/imported books server.
  */
 const val LOCAL_SERVER_ID = "local"
+const val PARROT_CLOUD_SERVER_ID = "parrot-cloud"
 
 /**
  * Represents the type of media server.
@@ -22,6 +23,10 @@ enum class ServerType(
         identifier = "audiobookshelf",
         displayName = "Audiobookshelf",
     ),
+    ParrotCloud(
+        identifier = PARROT_CLOUD_SERVER_ID,
+        displayName = "Parrot Cloud",
+    ),
     Local(
         identifier = LOCAL_SERVER_ID,
         displayName = "Local",
@@ -33,4 +38,3 @@ enum class ServerType(
         }
     }
 }
-

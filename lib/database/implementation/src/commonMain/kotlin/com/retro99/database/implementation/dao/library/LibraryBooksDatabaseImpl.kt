@@ -28,6 +28,21 @@ internal class LibraryBooksDatabaseImpl(
         return sqlDelightDao.getLibraryBookByContentHash(contentHash)
     }
 
+    override suspend fun getLibraryBookByContentHash(
+        contentHashAlgorithm: String,
+        contentHash: String,
+    ): LibraryBookEntity? {
+        return sqlDelightDao.getLibraryBookByContentHash(contentHashAlgorithm, contentHash)
+    }
+
+    override suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity? {
+        return sqlDelightDao.getLibraryBookByCloudBookId(cloudBookId)
+    }
+
+    override suspend fun attachCloudBookId(libraryBookId: String, cloudBookId: String) {
+        sqlDelightDao.attachCloudBookId(libraryBookId, cloudBookId)
+    }
+
     override suspend fun upsertLocalBookFile(file: LocalBookFileEntity) {
         sqlDelightDao.upsertLocalBookFile(file)
     }

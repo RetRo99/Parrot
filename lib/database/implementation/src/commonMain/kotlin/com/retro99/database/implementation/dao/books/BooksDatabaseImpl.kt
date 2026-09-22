@@ -228,8 +228,16 @@ internal class BooksDatabaseImpl(
         )
     }
 
+    override suspend fun updateRemoteRevision(bookUuid: String, remoteRevision: Long) {
+        sqlDelightDao.updateRemoteRevision(bookUuid, remoteRevision)
+    }
+
     override suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity? {
         return sqlDelightDao.getPositionByBookUuid(bookUuid)
+    }
+
+    override suspend fun getPositionByLibraryBookId(libraryBookId: String): PositionEntity? {
+        return sqlDelightDao.getPositionByLibraryBookId(libraryBookId)
     }
 
     override suspend fun getAllPositions(): List<PositionEntity> {
@@ -242,6 +250,10 @@ internal class BooksDatabaseImpl(
 
     override fun observePositionByBookUuid(bookUuid: String): Flow<PositionEntity?> {
         return sqlDelightDao.observePositionByBookUuid(bookUuid)
+    }
+
+    override fun observePositionByLibraryBookId(libraryBookId: String): Flow<PositionEntity?> {
+        return sqlDelightDao.observePositionByLibraryBookId(libraryBookId)
     }
 
     override fun observeAllPositions(): Flow<List<PositionEntity>> {
@@ -334,6 +346,7 @@ internal class BooksDatabaseImpl(
     private fun PositionEntity.toSqlDelightEntity(): PositionSqlDelightEntity {
         return PositionSqlDelightEntity(
             bookUuid = bookUuid,
+            libraryBookId = libraryBookId,
             remoteRevision = remoteRevision,
             timestamp = timestamp,
             createdAt = createdAt,

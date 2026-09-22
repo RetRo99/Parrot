@@ -214,7 +214,11 @@ private fun LoginScreenContent(
                     expanded = serverTypeExpanded,
                     onDismissRequest = { serverTypeExpanded = false },
                 ) {
-                    ServerType.entries.filter { it != ServerType.Local }.forEach { type ->
+                    ServerType.entries
+                        .filter { serverType ->
+                            serverType != ServerType.Local && serverType != ServerType.ParrotCloud
+                        }
+                        .forEach { type ->
                         DropdownMenuItem(
                             text = { Text(type.displayName) },
                             onClick = {

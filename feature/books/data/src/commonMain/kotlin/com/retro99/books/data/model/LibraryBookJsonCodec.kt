@@ -22,6 +22,8 @@ internal object LibraryBookJsonCodec {
                 format = book.format,
                 remoteRevision = book.remoteRevision,
                 deletedAt = book.deletedAt,
+                cloudBookId = book.cloudBookId,
+                metadataJson = book.metadataJson,
             ),
         )
     }
@@ -46,4 +48,8 @@ private data class LibraryBookPayload(
     override val remoteRevision: Long?,
     @SerialName("deleted_at")
     override val deletedAt: String?,
+    @SerialName("cloud_book_id")
+    override val cloudBookId: String? = null,
+    @SerialName("metadata_json")
+    override val metadataJson: String? = null,
 ) : LibraryBookEntity

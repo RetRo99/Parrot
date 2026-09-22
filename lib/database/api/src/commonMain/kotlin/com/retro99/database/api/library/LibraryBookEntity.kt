@@ -12,4 +12,8 @@ interface LibraryBookEntity {
         get() = null
     val deletedAt: String?
         get() = null
+    val cloudBookId: String?
+        get() = null
+    val metadataJson: String?
+        get() = null
 }

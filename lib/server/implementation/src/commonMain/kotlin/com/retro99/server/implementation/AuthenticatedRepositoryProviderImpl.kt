@@ -8,6 +8,7 @@ import com.retro99.server.api.ServerBooksRepository
 import com.retro99.server.api.ServerReaderRepository
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerSeriesRepository
+import com.retro99.server.api.getCapabilities
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
@@ -55,14 +56,14 @@ class AuthenticatedRepositoryProviderImpl(
     override fun observeSeriesRepositories(): Flow<List<ServerSeriesRepository>> {
         return serverRegistry.observeAuthenticatedServers()
             .map { servers ->
-                servers.map { server ->
-                    seriesRepositoryFactory.create(server)
-                }
+                servers.filter { server -> server.type.getCapabilities().supportsSeries }
+                    .map { server -> seriesRepositoryFactory.create(server) }
             }
     }
 
     override suspend fun getSeriesRepositories(): List<ServerSeriesRepository> {
         val servers = serverRegistry.getAuthenticatedServers()
-        return servers.map { seriesRepositoryFactory.create(it) }
+        return servers.filter { server -> server.type.getCapabilities().supportsSeries }
+            .map { server -> seriesRepositoryFactory.create(server) }
     }
 }

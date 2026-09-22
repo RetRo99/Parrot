@@ -42,13 +42,29 @@ SELECT * FROM sync_outbox
 WHERE cloud_user_id = ?
 ORDER BY local_mutation_sequence ASC;
 
+getEligibleMutations:
+SELECT * FROM sync_outbox
+WHERE cloud_user_id = ?
+AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
+ORDER BY local_mutation_sequence ASC;
+
 updateBaseRevision:
 UPDATE sync_outbox
 SET base_revision = ?
 WHERE mutation_id = ?;
 
+recordMutationFailure:
+UPDATE sync_outbox
+SET attempt_count = attempt_count + 1,
+    next_attempt_at = ?,
+    last_error = ?
+WHERE mutation_id = ?;
+
 deletePendingMutationsForEntity:
-DELETE FROM sync_outbox WHERE entity_type = ? AND entity_id = ?;
+DELETE FROM sync_outbox
+WHERE cloud_user_id IS ?
+AND entity_type = ?
+AND entity_id = ?;
 
 deletePendingMutationsForMissingLibraryBooks:
 DELETE FROM sync_outbox

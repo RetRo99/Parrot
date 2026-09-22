@@ -31,6 +31,14 @@ internal class SyncOutboxSqlDelightDao(
         }
     }
 
+    suspend fun getEligible(cloudUserId: String, now: String): List<SyncOutboxEntry> {
+        return withContext(Dispatchers.IO) {
+            queries.getEligibleMutations(cloudUserId, now)
+                .executeAsList()
+                .map { mutation -> mutation.toEntry() }
+        }
+    }
+
     suspend fun updateBaseRevision(mutationId: String, baseRevision: Long) {
         withContext(Dispatchers.IO) {
             queries.updateBaseRevision(baseRevision, mutationId)
@@ -40,6 +48,25 @@ internal class SyncOutboxSqlDelightDao(
     suspend fun delete(mutationId: String) {
         withContext(Dispatchers.IO) {
             queries.deleteMutation(mutationId)
+        }
+    }
+
+    suspend fun recordFailure(mutationId: String, nextAttemptAt: String, error: String) {
+        withContext(Dispatchers.IO) {
+            queries.recordMutationFailure(nextAttemptAt, error, mutationId)
+        }
+    }
+
+    suspend fun coalesce(entityType: String, entityId: String, entry: SyncOutboxEntry) {
+        withContext(Dispatchers.IO) {
+            databaseManager.getDatabase().transaction {
+                queries.deletePendingMutationsForEntity(
+                    entry.cloudUserId,
+                    entityType,
+                    entityId,
+                )
+                queries.enqueue(entry)
+            }
         }
     }
 

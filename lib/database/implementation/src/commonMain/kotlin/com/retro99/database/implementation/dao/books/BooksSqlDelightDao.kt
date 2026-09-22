@@ -5,6 +5,7 @@ import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.coroutines.mapToOneOrNull
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.database.implementation.DatabaseManager
+import com.retro99.database.implementation.Position
 import com.retro99.database.implementation.dao.sync.enqueue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -557,6 +558,7 @@ internal class BooksSqlDelightDao(
         withContext(Dispatchers.IO) {
             positionQueries.upsertPosition(
                 book_uuid = position.bookUuid,
+                library_book_id = position.libraryBookId,
                 remote_revision = position.remoteRevision,
                 timestamp = position.timestamp,
                 created_at = position.createdAt,
@@ -584,6 +586,7 @@ internal class BooksSqlDelightDao(
             database.transaction {
                 positionQueries.upsertPosition(
                     book_uuid = position.bookUuid,
+                    library_book_id = position.libraryBookId,
                     remote_revision = position.remoteRevision,
                     timestamp = position.timestamp,
                     created_at = position.createdAt,
@@ -605,12 +608,19 @@ internal class BooksSqlDelightDao(
         }
     }
 
+    suspend fun updateRemoteRevision(bookUuid: String, remoteRevision: Long) {
+        withContext(Dispatchers.IO) {
+            positionQueries.updateRemoteRevision(remoteRevision, bookUuid)
+        }
+    }
+
     suspend fun getPositionByBookUuid(bookUuid: String): PositionSqlDelightEntity? {
         return withContext(Dispatchers.IO) {
             positionQueries.getPositionByBookUuid(bookUuid)
                 .executeAsOneOrNull()?.let { row ->
                     PositionSqlDelightEntity(
                         bookUuid = row.book_uuid,
+                        libraryBookId = row.library_book_id ?: row.book_uuid,
                         remoteRevision = row.remote_revision,
                         timestamp = row.timestamp,
                         createdAt = row.created_at,
@@ -631,6 +641,14 @@ internal class BooksSqlDelightDao(
         }
     }
 
+    suspend fun getPositionByLibraryBookId(libraryBookId: String): PositionSqlDelightEntity? {
+        return withContext(Dispatchers.IO) {
+            positionQueries.getPositionByLibraryBookId(libraryBookId)
+                .executeAsOneOrNull()
+                ?.toPositionEntity()
+        }
+    }
+
     suspend fun deletePosition(bookUuid: String) {
         withContext(Dispatchers.IO) {
             positionQueries.deletePosition(bookUuid)
@@ -642,6 +660,7 @@ internal class BooksSqlDelightDao(
             positionQueries.getAllPositions().executeAsList().map { row ->
                 PositionSqlDelightEntity(
                     bookUuid = row.book_uuid,
+                    libraryBookId = row.library_book_id ?: row.book_uuid,
                     remoteRevision = row.remote_revision,
                     timestamp = row.timestamp,
                     createdAt = row.created_at,
@@ -674,6 +693,7 @@ internal class BooksSqlDelightDao(
                 row?.let {
                     PositionSqlDelightEntity(
                         bookUuid = it.book_uuid,
+                        libraryBookId = it.library_book_id ?: it.book_uuid,
                         remoteRevision = it.remote_revision,
                         timestamp = it.timestamp,
                         createdAt = it.created_at,
@@ -694,6 +714,13 @@ internal class BooksSqlDelightDao(
             }
     }
 
+    fun observePositionByLibraryBookId(libraryBookId: String): Flow<PositionSqlDelightEntity?> {
+        return positionQueries.getPositionByLibraryBookId(libraryBookId)
+            .asFlow()
+            .mapToOneOrNull(Dispatchers.IO)
+            .map { row -> row?.toPositionEntity() }
+    }
+
     /**
      * Observes all position changes.
      * Emits whenever any position is updated in the database.
@@ -706,6 +733,7 @@ internal class BooksSqlDelightDao(
                 list.map { row ->
                     PositionSqlDelightEntity(
                         bookUuid = row.book_uuid,
+                        libraryBookId = row.library_book_id ?: row.book_uuid,
                         remoteRevision = row.remote_revision,
                         timestamp = row.timestamp,
                         createdAt = row.created_at,
@@ -724,6 +752,28 @@ internal class BooksSqlDelightDao(
                     )
                 }
             }
+    }
+
+    private fun Position.toPositionEntity(): PositionSqlDelightEntity {
+        return PositionSqlDelightEntity(
+            bookUuid = book_uuid,
+            libraryBookId = library_book_id ?: book_uuid,
+            remoteRevision = remote_revision,
+            timestamp = timestamp,
+            createdAt = created_at,
+            updatedAt = updated_at,
+            locatorHref = locator_href,
+            locatorType = locator_type,
+            locatorTitle = locator_title,
+            locatorTarget = locator_target?.toInt(),
+            audioTimestampMs = audio_timestamp_ms,
+            chapterIndex = chapter_index?.toInt(),
+            progression = progression,
+            totalChapters = total_chapters?.toInt(),
+            totalDurationMs = total_duration_ms,
+            totalProgression = total_progression,
+            position = position?.toInt(),
+        )
     }
 
     // ==================== TRANSACTION SUPPORT ====================

@@ -67,11 +67,24 @@ data class ServerBook(
     // Local book flag
     val isLocal: Boolean = false,
     val serverType: ServerType? = null,
+    val libraryBookId: String? = null,
+    val contentHash: String? = null,
+    val contentHashAlgorithm: String? = null,
+    val remoteFileAvailability: RemoteFileAvailability = RemoteFileAvailability.None,
+    val remoteRevision: Long? = null,
 )
+
+enum class RemoteFileAvailability {
+    None,
+    Available,
+    UploadPending,
+    Uploading,
+    UploadFailed,
+    Deleting,
+}
 
 data class ServerBookSeries(
     val id: String?,
     val name: String,
     val sequence: Float?,
 )
-

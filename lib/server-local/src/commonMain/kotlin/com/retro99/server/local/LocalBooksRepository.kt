@@ -56,6 +56,7 @@ class LocalBooksRepository(
 private fun BookDomainModel.LocalBook.toServerBook(serverId: String): ServerBook {
     val isEbook = bookType == com.retro99.books.domain.model.BookType.EBOOK
     val isReadaloud = bookType == com.retro99.books.domain.model.BookType.READALOUD
+    val normalizedHashAlgorithm = contentHashAlgorithm ?: "sha-256-v1"
 
     return ServerBook(
         uuid = uuid,
@@ -84,6 +85,8 @@ private fun BookDomainModel.LocalBook.toServerBook(serverId: String): ServerBook
         publicationDate = publicationDate,
         isLocal = true,
         serverType = ServerType.Local,
+        libraryBookId = contentHash?.let { hash -> "$normalizedHashAlgorithm:$hash" },
+        contentHash = contentHash,
+        contentHashAlgorithm = normalizedHashAlgorithm,
     )
 }
-

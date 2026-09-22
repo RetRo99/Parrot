@@ -4,6 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS position (
     book_uuid TEXT NOT NULL PRIMARY KEY,
+    library_book_id TEXT,
     remote_revision INTEGER,
     timestamp INTEGER,
     created_at TEXT,
@@ -23,19 +24,26 @@ CREATE TABLE IF NOT EXISTS position (
 
 CREATE INDEX IF NOT EXISTS idx_position_updated ON position(updated_at);
 CREATE INDEX IF NOT EXISTS idx_position_progression ON position(progression);
+CREATE INDEX IF NOT EXISTS idx_position_library_book ON position(library_book_id);
 
 -- Queries
 upsertPosition:
 INSERT OR REPLACE INTO position(
-    book_uuid, remote_revision, timestamp, created_at, updated_at,
+    book_uuid, library_book_id, remote_revision, timestamp, created_at, updated_at,
     locator_href, locator_type, locator_title, locator_target,
     audio_timestamp_ms, chapter_index, progression, total_chapters,
     total_duration_ms, total_progression, position
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateRemoteRevision:
+UPDATE position SET remote_revision = ? WHERE book_uuid = ?;
 
 getPositionByBookUuid:
 SELECT * FROM position WHERE book_uuid = ?;
+
+getPositionByLibraryBookId:
+SELECT * FROM position WHERE library_book_id = ?;
 
 getAllPositions:
 SELECT * FROM position ORDER BY updated_at DESC;

@@ -6,6 +6,7 @@ import com.retro99.base.result.AppResult
 import com.retro99.books.domain.model.BookProgressInfoDomainModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.books.domain.model.BookWithProgressDomainModel
+import com.retro99.books.domain.model.aggregateBookReplicas
 import com.retro99.books.domain.model.toBookDomainModel
 import com.retro99.reader.domain.ReaderSettingsRepository
 import com.retro99.server.api.AuthenticatedRepositoryProvider
@@ -20,10 +21,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
-import com.github.michaelbull.result.map as resultMap
 
 /**
  * Combined use case that observes all books with their progress information.
@@ -55,9 +54,7 @@ class ObserveAllBooksWithProgressUseCase(
         return repositoryProvider.observeBooksRepositories()
             .flatMapLatest { repositories ->
                 val bookFlows = repositories.map { repo ->
-                    repo.getBooks().mapToFlow { books ->
-                        books.map { it to repo.serverId }
-                    }
+                    repo.getBooks()
                 }
 
                 if (bookFlows.isEmpty()) {
@@ -66,12 +63,14 @@ class ObserveAllBooksWithProgressUseCase(
                     // Combine all book flows with position observation and refresh trigger
                     combine(
                         combine(bookFlows) { results ->
-                            results.flatMap { it.getOrElse { emptyList() } }
+                            results
+                                .flatMap { result -> result.getOrElse { emptyList() } }
+                                .aggregateBookReplicas()
                         },
                         positionLocalSource.observeAllPositions(),
                         refreshTrigger
-                    ) { booksWithServers, localPositions, _ ->
-                        buildBooksWithProgress(booksWithServers, localPositions)
+                    ) { books, localPositions, _ ->
+                        buildBooksWithProgress(books, localPositions)
                     }
                 }
             }
@@ -109,14 +108,19 @@ class ObserveAllBooksWithProgressUseCase(
     }
 
     private suspend fun buildBooksWithProgress(
-        booksWithServers: List<Pair<ServerBook, String>>,
+        books: List<ServerBook>,
         localPositions: List<ServerPosition>,
     ): AppResult<List<BookWithProgressDomainModel>> {
         val localPositionMap = localPositions.associateBy { it.bookUuid }
 
-        val booksWithProgress = booksWithServers.map { (serverBook, _) ->
+        val booksWithProgress = books.map { serverBook ->
             val bookUuid = serverBook.uuid
             val localPosition = localPositionMap[bookUuid]
+                ?: serverBook.libraryBookId?.let { libraryBookId ->
+                    localPositions.firstOrNull { position ->
+                        position.libraryBookId == libraryBookId
+                    }
+                }
             val remoteProgression = remoteProgressionCache[bookUuid]
 
             val progressInfo = createProgressInfo(
@@ -160,11 +164,5 @@ class ObserveAllBooksWithProgressUseCase(
         } else {
             null
         }
-    }
-
-    private fun <T, R> Flow<AppResult<T>>.mapToFlow(
-        transform: (T) -> R
-    ): Flow<AppResult<R>> = this.map { result: AppResult<T> ->
-        result.resultMap { value: T -> transform(value) }
     }
 }

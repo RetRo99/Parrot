@@ -19,12 +19,31 @@ internal class SyncOutboxDatabaseImpl(
         return sqlDelightDao.getPending(cloudUserId)
     }
 
+    override suspend fun getEligible(
+        cloudUserId: String,
+        now: String,
+    ): List<SyncOutboxEntry> {
+        return sqlDelightDao.getEligible(cloudUserId, now)
+    }
+
     override suspend fun updateBaseRevision(mutationId: String, baseRevision: Long) {
         sqlDelightDao.updateBaseRevision(mutationId, baseRevision)
     }
 
     override suspend fun delete(mutationId: String) {
         sqlDelightDao.delete(mutationId)
+    }
+
+    override suspend fun recordFailure(
+        mutationId: String,
+        nextAttemptAt: String,
+        error: String,
+    ) {
+        sqlDelightDao.recordFailure(mutationId, nextAttemptAt, error)
+    }
+
+    override suspend fun coalesce(entityType: String, entityId: String, entry: SyncOutboxEntry) {
+        sqlDelightDao.coalesce(entityType, entityId, entry)
     }
 
     override suspend fun clearAllData() {

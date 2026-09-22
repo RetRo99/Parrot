@@ -13,6 +13,12 @@ data class ServerCapabilities(
     val supportsSeries: Boolean,
     val supportsSearch: Boolean,
     val supportsUserLibrary: Boolean,
+    val supportsBookUpload: Boolean = false,
+    val supportsBookDownload: Boolean = false,
+    val supportsBookDeletion: Boolean = false,
+    val supportsAutomaticSync: Boolean = false,
+    val supportsOfflineMutationQueue: Boolean = false,
+    val supportsCloudFileStatus: Boolean = false,
 )
 
 fun ServerType.getCapabilities(): ServerCapabilities = when (this) {
@@ -46,5 +52,21 @@ fun ServerType.getCapabilities(): ServerCapabilities = when (this) {
         supportsSearch = true,
         supportsUserLibrary = false,
     )
+    ServerType.ParrotCloud -> ServerCapabilities(
+        supportsEbooks = true,
+        supportsAudiobooks = false,
+        supportsReadAloud = false,
+        supportsReadingProgress = true,
+        supportsCollections = false,
+        supportsSeries = false,
+        supportsSearch = true,
+        supportsUserLibrary = true,
+        supportsAutomaticSync = true,
+        supportsOfflineMutationQueue = true,
+        supportsCloudFileStatus = true,
+    )
 }
 
+fun ServerType.isManaged(): Boolean {
+    return this == ServerType.Local || this == ServerType.ParrotCloud
+}

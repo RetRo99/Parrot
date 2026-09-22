@@ -30,7 +30,9 @@ class StorytellerAuthenticatorFactory(
             ServerType.Audiobookshelf -> authenticatorMap[serverType]
                 ?: throw IllegalArgumentException("Audiobookshelf authenticator not registered")
             ServerType.Local -> throw IllegalArgumentException("Local server type does not require authentication")
+            ServerType.ParrotCloud -> throw IllegalArgumentException(
+                "Parrot Cloud authentication is managed by the Cloud account provider",
+            )
         }
     }
 }
-

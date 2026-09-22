@@ -44,6 +44,8 @@ class LibraryBookQueriesTest {
             format = "ebook",
             remote_revision = 7,
             deleted_at = "2026-09-18T10:00:00Z",
+            cloud_book_id = "cloud-book-1",
+            metadata_json = null,
         )
 
         database.upsertLocalLibraryBookRow(
@@ -56,8 +58,9 @@ class LibraryBookQueriesTest {
         val row = database.libraryBookQueries.getLibraryBookById("hash-1").executeAsOne()
         assertEquals("Re-imported title", row.title)
         assertEquals("sha256", row.content_hash_algorithm)
-        assertEquals(7L, row.remote_revision)
-        assertEquals("2026-09-18T10:00:00Z", row.deleted_at)
+            assertEquals(7L, row.remote_revision)
+            assertEquals("2026-09-18T10:00:00Z", row.deleted_at)
+            assertEquals("cloud-book-1", row.cloud_book_id)
     }
 
     @Test
@@ -135,7 +138,7 @@ class LibraryBookQueriesTest {
                 """.trimIndent(),
                 parameters = 0,
             )
-            AppDatabase.Schema.migrate(migrationDriver, 17, 20)
+            AppDatabase.Schema.migrate(migrationDriver, 17, AppDatabase.Schema.version)
             val migrated = AppDatabase(migrationDriver)
 
             migrated.libraryBookQueries.upsertLibraryBook(
@@ -147,6 +150,8 @@ class LibraryBookQueriesTest {
                 format = "ebook",
                 remote_revision = null,
                 deleted_at = null,
+                cloud_book_id = null,
+                metadata_json = null,
             )
 
             val row = migrated.libraryBookQueries

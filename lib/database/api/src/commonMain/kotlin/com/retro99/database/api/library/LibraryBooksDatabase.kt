@@ -13,6 +13,17 @@ interface LibraryBooksDatabase {
 
     suspend fun getLibraryBookByContentHash(contentHash: String): LibraryBookEntity?
 
+    suspend fun getLibraryBookByContentHash(
+        contentHashAlgorithm: String,
+        contentHash: String,
+    ): LibraryBookEntity? {
+        return getLibraryBookByContentHash(contentHash)
+    }
+
+    suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity?
+
+    suspend fun attachCloudBookId(libraryBookId: String, cloudBookId: String)
+
     suspend fun upsertLocalBookFile(file: LocalBookFileEntity)
 
     suspend fun getLocalBookFiles(libraryBookId: String): List<LocalBookFileEntity>

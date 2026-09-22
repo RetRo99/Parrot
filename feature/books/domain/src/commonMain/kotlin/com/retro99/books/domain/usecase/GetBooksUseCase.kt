@@ -6,6 +6,7 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map as resultMap
 import com.retro99.base.result.AppResult
 import com.retro99.books.domain.model.BookDomainModel
+import com.retro99.books.domain.model.aggregateBookReplicas
 import com.retro99.books.domain.model.toBookDomainModel
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import kotlinx.coroutines.flow.Flow
@@ -40,7 +41,7 @@ class GetBooksUseCase(
                         logger.d { "Repo ${repo.serverId} books result: $result" }
                     }.mapToFlow { books ->
                         logger.d { "Repo ${repo.serverId} returned ${books.size} books" }
-                        books.map { it.toBookDomainModel() }
+                        books
                     }
                 }
 
@@ -49,16 +50,22 @@ class GetBooksUseCase(
                     flowOf(Ok(emptyList()))
                 } else {
                     combine(flows) { results ->
-                        val allBooks = results.flatMap { it.getOrElse { emptyList() } }
-                        logger.d { "Combined ${allBooks.size} total books from ${results.size} sources" }
-                        Ok(allBooks.sortedBy { it.title.lowercase() })
+                        val aggregatedBooks = results
+                            .flatMap { result -> result.getOrElse { emptyList() } }
+                            .aggregateBookReplicas()
+                            .map { book -> book.toBookDomainModel() }
+                            .sortedBy { book -> book.title.lowercase() }
+                        logger.d {
+                            "Combined ${aggregatedBooks.size} total books from ${results.size} sources"
+                        }
+                        Ok(aggregatedBooks)
                     }
                 }
             }
     }
 
     private fun <T, R> Flow<AppResult<T>>.mapToFlow(
-        transform: (T) -> R
+        transform: (T) -> R,
     ): Flow<AppResult<R>> = this.flowMap { result: AppResult<T> ->
         result.resultMap { value: T -> transform(value) }
     }

@@ -88,9 +88,6 @@ sealed class PreferencesKey(val name: String) {
     data class SyncCursor(val localProfileId: String, val cloudUserId: String) :
         PreferencesKey("sync_cursor_${localProfileId}_$cloudUserId")
 
-    data class SyncInitialSnapshot(val localProfileId: String, val cloudUserId: String) :
-        PreferencesKey("sync_initial_snapshot_${localProfileId}_$cloudUserId")
-
     data class PendingCloudAuthentication(val localProfileId: String) :
         PreferencesKey("pending_cloud_authentication_$localProfileId")
 

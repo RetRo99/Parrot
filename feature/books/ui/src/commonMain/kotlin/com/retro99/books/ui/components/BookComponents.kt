@@ -560,16 +560,19 @@ fun ServerTypeBadge(
     val containerColor = when (serverType) {
         ServerType.Storyteller -> MaterialTheme.colorScheme.primaryContainer
         ServerType.Audiobookshelf -> MaterialTheme.colorScheme.tertiaryContainer
+        ServerType.ParrotCloud -> MaterialTheme.colorScheme.surfaceVariant
         ServerType.Local -> MaterialTheme.colorScheme.secondaryContainer
     }
     val contentColor = when (serverType) {
         ServerType.Storyteller -> MaterialTheme.colorScheme.onPrimaryContainer
         ServerType.Audiobookshelf -> MaterialTheme.colorScheme.onTertiaryContainer
+        ServerType.ParrotCloud -> MaterialTheme.colorScheme.onSurfaceVariant
         ServerType.Local -> MaterialTheme.colorScheme.onSecondaryContainer
     }
     val dotColor = when (serverType) {
         ServerType.Storyteller -> MaterialTheme.colorScheme.primary
         ServerType.Audiobookshelf -> MaterialTheme.colorScheme.tertiary
+        ServerType.ParrotCloud -> MaterialTheme.colorScheme.primary
         ServerType.Local -> MaterialTheme.colorScheme.secondary
     }
     Surface(
@@ -651,4 +654,3 @@ fun BookSearchBar(
         shape = RoundedCornerShape(12.dp),
     )
 }
-

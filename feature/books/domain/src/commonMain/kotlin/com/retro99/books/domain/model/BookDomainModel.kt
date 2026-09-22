@@ -1,6 +1,7 @@
 package com.retro99.books.domain.model
 
 import com.retro99.server.api.ServerType
+import com.retro99.server.api.RemoteFileAvailability
 
 /**
  * Sealed class representing a book in the domain layer.
@@ -13,6 +14,21 @@ sealed class BookDomainModel {
     abstract val title: String
     abstract val description: String?
     abstract val coverUrl: String?
+
+    open val libraryBookId: String?
+        get() = null
+
+    open val contentHash: String?
+        get() = null
+
+    open val contentHashAlgorithm: String?
+        get() = null
+
+    open val remoteFileAvailability: RemoteFileAvailability
+        get() = RemoteFileAvailability.None
+
+    open val remoteRevision: Long?
+        get() = null
 
     abstract val series: List<SeriesDomainModel>
 
@@ -46,6 +62,11 @@ sealed class BookDomainModel {
         val ebook: MediaFileDomainModel?,
         val audiobook: MediaFileDomainModel?,
         val readaloud: ReadaloudDomainModel?,
+        override val libraryBookId: String? = null,
+        override val contentHash: String? = null,
+        override val contentHashAlgorithm: String? = null,
+        override val remoteFileAvailability: RemoteFileAvailability = RemoteFileAvailability.None,
+        override val remoteRevision: Long? = null,
     ) : BookDomainModel()
 
     /**
@@ -61,13 +82,16 @@ sealed class BookDomainModel {
         val author: String?,
         val filePath: String,
         val fileSize: Long,
-        val contentHash: String? = null,
-        val contentHashAlgorithm: String? = null,
+        override val contentHash: String? = null,
+        override val contentHashAlgorithm: String? = null,
         val importedAt: String,
         val lastOpenedAt: String?,
         val bookType: BookType,
         val publicationDate: String?,
     ) : BookDomainModel() {
         override val series: List<SeriesDomainModel> = emptyList()
+
+        override val libraryBookId: String?
+            get() = contentHash?.let { hash -> "${contentHashAlgorithm ?: "sha-256-v1"}:$hash" }
     }
 }

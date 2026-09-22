@@ -16,7 +16,13 @@ interface PositionDatabase : DataClearable {
         mutation: SyncOutboxEntry,
     )
 
+    suspend fun updateRemoteRevision(bookUuid: String, remoteRevision: Long)
+
     suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity?
+
+    suspend fun getPositionByLibraryBookId(libraryBookId: String): PositionEntity? {
+        return getPositionByBookUuid(libraryBookId)
+    }
 
     suspend fun getAllPositions(): List<PositionEntity>
 
@@ -27,6 +33,10 @@ interface PositionDatabase : DataClearable {
      * Emits whenever the position for this book is updated in the database.
      */
     fun observePositionByBookUuid(bookUuid: String): Flow<PositionEntity?>
+
+    fun observePositionByLibraryBookId(libraryBookId: String): Flow<PositionEntity?> {
+        return observePositionByBookUuid(libraryBookId)
+    }
 
     /**
      * Observes all position changes.

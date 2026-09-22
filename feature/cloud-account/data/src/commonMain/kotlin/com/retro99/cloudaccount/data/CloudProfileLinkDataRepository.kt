@@ -10,6 +10,9 @@ import com.retro99.preferences.api.putObject
 import com.retro99.user.api.UserProfile
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.Serializable
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
@@ -19,24 +22,33 @@ class CloudProfileLinkDataRepository(
     @Provided private val preferences: Preferences,
 ) : CloudProfileLinkRepository {
     private val mutex = Mutex()
+    private val links = MutableStateFlow(readLinks())
 
     override suspend fun getForLocalProfile(localProfileId: String): CloudProfileLink? = mutex.withLock {
-        readLinks().firstOrNull { record -> record.localProfileId == localProfileId }
+        links.value.firstOrNull { record -> record.localProfileId == localProfileId }
             ?.toDomain()
     }
 
     override suspend fun getForCloudAccount(cloudUserId: String): CloudProfileLink? = mutex.withLock {
-        readLinks().firstOrNull { record -> record.cloudUserId == cloudUserId }
+        links.value.firstOrNull { record -> record.cloudUserId == cloudUserId }
             ?.toDomain()
+    }
+
+    override fun observeForLocalProfile(localProfileId: String): Flow<CloudProfileLink?> {
+        return links.map { records ->
+            records.firstOrNull { record -> record.localProfileId == localProfileId }
+                ?.toDomain()
+        }
     }
 
     override suspend fun link(
         localProfileId: String,
         cloudUserId: String,
     ): CloudProfileLinkResult = mutex.withLock {
-        val links = removeOrphanedLinks(readLinks())
-        writeLinksIfChanged(readLinks(), links)
-        val localLink = links.firstOrNull { record -> record.localProfileId == localProfileId }
+        val currentLinks = links.value
+        val validLinks = removeOrphanedLinks(currentLinks)
+        writeLinksIfChanged(currentLinks, validLinks)
+        val localLink = validLinks.firstOrNull { record -> record.localProfileId == localProfileId }
         if (localLink != null) {
             return@withLock if (localLink.cloudUserId == cloudUserId) {
                 CloudProfileLinkResult.Linked(localLink.toDomain())
@@ -45,7 +57,7 @@ class CloudProfileLinkDataRepository(
             }
         }
 
-        val accountLink = links.firstOrNull { record -> record.cloudUserId == cloudUserId }
+        val accountLink = validLinks.firstOrNull { record -> record.cloudUserId == cloudUserId }
         if (accountLink != null) {
             return@withLock CloudProfileLinkResult.CloudAccountAlreadyLinked(accountLink.toDomain())
         }
@@ -54,9 +66,8 @@ class CloudProfileLinkDataRepository(
             localProfileId = localProfileId,
             cloudUserId = cloudUserId,
             syncEnabled = false,
-            initialMergeCompleted = false,
         )
-        writeLinks(links + link)
+        writeLinks(validLinks + link)
         CloudProfileLinkResult.Linked(link.toDomain())
     }
 
@@ -64,18 +75,26 @@ class CloudProfileLinkDataRepository(
         updateLink(localProfileId) { link -> link.copy(syncEnabled = enabled) }
     }
 
-    override suspend fun markInitialMergeCompleted(localProfileId: String) = mutex.withLock {
-        updateLink(localProfileId) { link -> link.copy(initialMergeCompleted = true) }
+    override suspend fun deactivate(localProfileId: String) = mutex.withLock {
+        updateLink(localProfileId) { link -> link.copy(syncEnabled = false) }
+    }
+
+    override suspend fun unlink(localProfileId: String) = mutex.withLock {
+        val link = links.value.firstOrNull { record -> record.localProfileId == localProfileId }
+        if (link != null) {
+            writeLinks(links.value.filterNot { record -> record.localProfileId == localProfileId })
+            preferences.remove(PreferencesKey.SyncCursor(localProfileId, link.cloudUserId))
+        }
     }
 
     private fun updateLink(
         localProfileId: String,
         transform: (CloudProfileLinkRecord) -> CloudProfileLinkRecord,
     ) {
-        val links = readLinks()
-        val index = links.indexOfFirst { record -> record.localProfileId == localProfileId }
+        val currentLinks = links.value
+        val index = currentLinks.indexOfFirst { record -> record.localProfileId == localProfileId }
         if (index < 0) return
-        writeLinks(links.toMutableList().apply { this[index] = transform(this[index]) })
+        writeLinks(currentLinks.toMutableList().apply { this[index] = transform(this[index]) })
     }
 
     private fun readLinks(): List<CloudProfileLinkRecord> {
@@ -86,6 +105,7 @@ class CloudProfileLinkDataRepository(
 
     private fun writeLinks(links: List<CloudProfileLinkRecord>) {
         preferences.putObject(PreferencesKey.CloudProfileLinks, links)
+        this.links.value = links
     }
 
     private fun writeLinksIfChanged(
@@ -111,7 +131,6 @@ private data class CloudProfileLinkRecord(
     val localProfileId: String,
     val cloudUserId: String,
     val syncEnabled: Boolean,
-    val initialMergeCompleted: Boolean,
 )
 
 private fun CloudProfileLinkRecord.toDomain(): CloudProfileLink {
@@ -119,6 +138,5 @@ private fun CloudProfileLinkRecord.toDomain(): CloudProfileLink {
         localProfileId = localProfileId,
         cloudUserId = cloudUserId,
         syncEnabled = syncEnabled,
-        initialMergeCompleted = initialMergeCompleted,
     )
 }

@@ -6,6 +6,7 @@ import com.retro99.database.implementation.SyncOutboxQueries
 
 internal fun SyncOutboxQueries.enqueue(mutation: SyncOutboxEntry) {
     deletePendingMutationsForEntity(
+        cloud_user_id = mutation.cloudUserId,
         entity_type = mutation.entityType,
         entity_id = mutation.entityId,
     )

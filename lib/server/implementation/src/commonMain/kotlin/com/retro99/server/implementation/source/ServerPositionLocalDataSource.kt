@@ -122,6 +122,7 @@ private fun PositionEntity.toServerPosition(): ServerPosition {
     return ServerPosition(
         bookUuid = bookUuid,
         serverId = "", // Not stored in DB - will be set by repository
+        libraryBookId = libraryBookId,
         timestamp = timestamp,
         createdAt = createdAt,
         updatedAt = updatedAt,
@@ -145,6 +146,7 @@ private fun PositionEntity.toServerPosition(): ServerPosition {
 private fun ServerPosition.toPositionEntity(remoteRevision: Long?): PositionEntity {
     return ServerPositionEntity(
         bookUuid = bookUuid,
+        libraryBookId = libraryBookId ?: bookUuid,
         remoteRevision = remoteRevision,
         timestamp = timestamp,
         createdAt = createdAt,
@@ -168,6 +170,7 @@ private fun ServerPosition.toPositionEntity(remoteRevision: Long?): PositionEnti
  */
 private data class ServerPositionEntity(
     override val bookUuid: String,
+    override val libraryBookId: String,
     override val remoteRevision: Long?,
     override val timestamp: Long?,
     override val createdAt: String?,

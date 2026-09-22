@@ -27,6 +27,9 @@ kotlin {
             implementation(projects.lib.server.api)
             implementation(libs.filekit.core)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
-

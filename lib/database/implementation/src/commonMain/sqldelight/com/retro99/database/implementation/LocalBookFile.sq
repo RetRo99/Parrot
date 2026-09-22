@@ -1,14 +1,19 @@
 CREATE TABLE IF NOT EXISTS local_book_files (
     library_book_id TEXT NOT NULL,
-    imported_book_uuid TEXT NOT NULL PRIMARY KEY
+    imported_book_uuid TEXT NOT NULL PRIMARY KEY,
+    file_availability TEXT NOT NULL DEFAULT 'available'
 );
 
 CREATE INDEX IF NOT EXISTS idx_local_book_files_library_book
 ON local_book_files(library_book_id);
 
 upsertLocalBookFile:
-INSERT OR REPLACE INTO local_book_files(library_book_id, imported_book_uuid)
-VALUES (?, ?);
+INSERT OR REPLACE INTO local_book_files(
+    library_book_id,
+    imported_book_uuid,
+    file_availability
+)
+VALUES (?, ?, ?);
 
 getLocalBookFiles:
 SELECT * FROM local_book_files WHERE library_book_id = ?;

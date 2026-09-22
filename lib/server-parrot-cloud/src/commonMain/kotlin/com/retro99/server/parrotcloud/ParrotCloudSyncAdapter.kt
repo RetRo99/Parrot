@@ -1,0 +1,334 @@
+package com.retro99.server.parrotcloud
+
+import com.retro99.cloud.implementation.SupabaseClientProvider
+import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
+import com.retro99.database.api.ProfileDatabaseSession
+import com.retro99.database.api.books.PositionDatabase
+import com.retro99.database.api.library.LibraryBookEntity
+import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.database.api.sync.SyncOutboxDatabase
+import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.preferences.api.Preferences
+import com.retro99.preferences.api.PreferencesKey
+import com.retro99.sync.domain.SyncRepository
+import com.retro99.sync.domain.SyncResult
+import com.retro99.user.api.UserRegistry
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
+import kotlin.math.min
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
+import org.koin.core.annotation.Provided
+import org.koin.core.annotation.Single
+
+@Single(binds = [SyncRepository::class])
+class ParrotCloudSyncAdapter(
+    @Provided private val clientProvider: SupabaseClientProvider,
+    @Provided private val profileLinkRepository: CloudProfileLinkRepository,
+    @Provided private val profileDatabaseSession: ProfileDatabaseSession,
+    @Provided private val preferences: Preferences,
+    @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
+    @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
+    @Provided private val positionDatabase: PositionDatabase,
+    @Provided private val userRegistry: UserRegistry,
+) : SyncRepository {
+    private val mutex = Mutex()
+    private val json = Json {
+        encodeDefaults = true
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
+
+    override suspend fun sync(): SyncResult = mutex.withLock {
+        if (!clientProvider.isConfigured) return SyncResult.NotConfigured
+        val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+        val link = profileLinkRepository.getForLocalProfile(localProfileId)
+            ?: return SyncResult.ProfileNotLinked
+        if (!link.syncEnabled) return SyncResult.SyncDisabled
+
+        try {
+            clientProvider.withProfileSession(localProfileId) {
+                if (clientProvider.currentSessionState().accountId != link.cloudUserId) {
+                    return@withProfileSession SyncResult.NotAuthenticated
+                }
+                profileDatabaseSession.withProfile(localProfileId) {
+                    synchronizeProfile(localProfileId, link.cloudUserId)
+                }
+            }
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            SyncResult.Failed(exception.message ?: "Cloud synchronization failed")
+        }
+    }
+
+    private suspend fun synchronizeProfile(
+        localProfileId: String,
+        cloudUserId: String,
+    ): SyncResult {
+        syncOutboxDatabase.bindUnassignedMutations(cloudUserId)
+        var cursor = preferences.getLong(PreferencesKey.SyncCursor(localProfileId, cloudUserId))
+        var pulledCount = 0
+        val firstPull = pullAndApply(localProfileId, cloudUserId, cursor)
+        pulledCount += firstPull.first
+        cursor = firstPull.second
+
+        val entries = syncOutboxDatabase.getEligible(cloudUserId, Clock.System.now().toString())
+            .take(SYNC_BATCH_SIZE)
+        val pushedCount = pushMutations(entries, cloudUserId, cursor)
+        if (entries.isNotEmpty()) {
+            val secondPull = pullAndApply(localProfileId, cloudUserId, cursor)
+            pulledCount += secondPull.first
+            cursor = secondPull.second
+        }
+        preferences.putLong(PreferencesKey.SyncCursor(localProfileId, cloudUserId), cursor)
+        return SyncResult.Completed(
+            pushedMutationCount = pushedCount,
+            pulledChangeCount = pulledCount,
+            pendingMutationCount = syncOutboxDatabase.getPending(cloudUserId).size,
+        )
+    }
+
+    private suspend fun pushMutations(
+        entries: List<SyncOutboxEntry>,
+        cloudUserId: String,
+        cursor: Long,
+    ): Int {
+        if (entries.isEmpty()) return 0
+        val requests = entries.map { entry ->
+            CloudMutationRequest(
+                mutationId = entry.mutationId,
+                entityType = entry.entityType,
+                entityId = entry.entityId,
+                operation = entry.operation,
+                payload = json.decodeFromString<JsonElement>(entry.payload),
+                baseRevision = entry.baseRevision,
+                createdAt = entry.createdAt,
+            )
+        }
+        val response = clientProvider.client.postgrest
+            .rpc(
+                "push_sync_changes",
+                buildJsonObject {
+                    put("mutations", json.encodeToJsonElement(requests))
+                    put("client_cursor", cursor)
+                },
+            )
+            .decodeAs<List<CloudMutationResponse>>()
+        val responsesByMutationId = response.associateBy { mutation -> mutation.mutationId }
+        var handled = 0
+        entries.forEach { entry ->
+            val mutationResponse = responsesByMutationId[entry.mutationId]
+                ?: error("Sync response omitted mutation ${entry.mutationId}")
+            when (mutationResponse.status) {
+                STATUS_ACCEPTED -> {
+                    applyAcceptedMetadata(entry, mutationResponse)
+                    syncOutboxDatabase.delete(entry.mutationId)
+                    handled++
+                }
+
+                STATUS_CONFLICT -> {
+                    mutationResponse.payload?.let { payload -> applyRemoteChange(entry, payload, mutationResponse.revision) }
+                    syncOutboxDatabase.delete(entry.mutationId)
+                    handled++
+                }
+
+                else -> {
+                    val attempt = entry.attemptCount.coerceAtLeast(0)
+                    val delaySeconds = 1L shl min(attempt, MAX_BACKOFF_POWER)
+                    syncOutboxDatabase.recordFailure(
+                        mutationId = entry.mutationId,
+                        nextAttemptAt = Clock.System.now().plus(delaySeconds.seconds).toString(),
+                        error = mutationResponse.reason ?: "Cloud mutation rejected",
+                    )
+                }
+            }
+        }
+        return handled
+    }
+
+    private suspend fun pullAndApply(
+        localProfileId: String,
+        cloudUserId: String,
+        cursor: Long,
+    ): Pair<Int, Long> {
+        val response = clientProvider.client.postgrest
+            .rpc(
+                "pull_sync_changes",
+                buildJsonObject {
+                    put("cursor", cursor)
+                    put("limit", SYNC_BATCH_SIZE)
+                },
+            )
+            .decodeAs<CloudPullResponse>()
+        response.changes.forEach { change ->
+            applyRemoteChange(change.entityType, change.payload, change.revision)
+        }
+        return response.changes.size to response.nextCursor
+    }
+
+    private suspend fun applyRemoteChange(
+        entityType: String,
+        payload: JsonElement,
+        revision: Long?,
+    ) {
+        when (entityType) {
+            SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
+                val book = json.decodeFromJsonElement<ParrotCloudBookPayload>(payload)
+                val existing = libraryBooksDatabase.getLibraryBookByCloudBookId(book.cloudBookId ?: "")
+                    ?: libraryBooksDatabase.getLibraryBookByContentHash(
+                        book.contentHashAlgorithm,
+                        book.contentHash,
+                    )
+                val libraryBookId = existing?.libraryBookId ?: book.libraryBookId
+                libraryBooksDatabase.upsertLibraryBook(
+                    ParrotCloudLibraryBookEntity(
+                        libraryBookId = libraryBookId,
+                        cloudBookId = book.cloudBookId,
+                        contentHash = book.contentHash,
+                        contentHashAlgorithm = book.contentHashAlgorithm,
+                        title = book.title,
+                        author = book.author,
+                        format = book.format,
+                        remoteRevision = revision ?: book.remoteRevision,
+                        metadataJson = book.metadataJson,
+                    ),
+                )
+            }
+
+            SyncOutboxEntry.ENTITY_TYPE_READING_POSITION -> {
+                val position = json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(payload)
+                val existingBook = libraryBooksDatabase.getLibraryBookByCloudBookId(position.cloudBookId)
+                val libraryBookId = existingBook?.libraryBookId ?: position.libraryBookId
+                positionDatabase.upsertPosition(
+                        position.position.toParrotCloudPositionEntity(revision).let { entity ->
+                        ParrotCloudPositionEntityWithLibraryId(entity, libraryBookId)
+                    },
+                )
+            }
+        }
+    }
+
+    private suspend fun applyRemoteChange(
+        entry: SyncOutboxEntry,
+        payload: JsonElement,
+        revision: Long?,
+    ) {
+        applyRemoteChange(entry.entityType, payload, revision)
+    }
+
+    private suspend fun applyAcceptedMetadata(
+        entry: SyncOutboxEntry,
+        response: CloudMutationResponse,
+    ) {
+        when (entry.entityType) {
+            SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
+                val cloudBookId = response.cloudBookId ?: return
+                val existing = libraryBooksDatabase.getLibraryBookById(entry.entityId)
+                if (existing == null) {
+                    val payload = json.decodeFromString<ParrotCloudBookPayload>(entry.payload)
+                    libraryBooksDatabase.upsertLibraryBook(
+                        ParrotCloudLibraryBookEntity(
+                            libraryBookId = payload.libraryBookId,
+                            cloudBookId = cloudBookId,
+                            contentHash = payload.contentHash,
+                            contentHashAlgorithm = payload.contentHashAlgorithm,
+                            title = payload.title,
+                            author = payload.author,
+                            format = payload.format,
+                            remoteRevision = response.revision ?: payload.remoteRevision,
+                            metadataJson = payload.metadataJson,
+                        ),
+                    )
+                } else {
+                    libraryBooksDatabase.upsertLibraryBook(
+                        ParrotCloudLibraryBookEntity(
+                            libraryBookId = existing.libraryBookId,
+                            contentHash = existing.contentHash,
+                            contentHashAlgorithm = existing.contentHashAlgorithm,
+                            title = existing.title,
+                            author = existing.author,
+                            format = existing.format,
+                            remoteRevision = response.revision ?: existing.remoteRevision,
+                            deletedAt = existing.deletedAt,
+                            cloudBookId = cloudBookId,
+                            metadataJson = existing.metadataJson,
+                        ),
+                    )
+                }
+            }
+
+            SyncOutboxEntry.ENTITY_TYPE_READING_POSITION -> {
+                response.revision?.let { revision ->
+                    positionDatabase.updateRemoteRevision(entry.entityId, revision)
+                }
+            }
+        }
+    }
+
+    private companion object {
+        const val STATUS_ACCEPTED = "accepted"
+        const val STATUS_CONFLICT = "conflict"
+        const val SYNC_BATCH_SIZE = 50
+        const val MAX_BACKOFF_POWER = 6
+    }
+}
+
+@Serializable
+private data class CloudMutationRequest(
+    @SerialName("mutation_id")
+    val mutationId: String,
+    @SerialName("entity_type")
+    val entityType: String,
+    @SerialName("entity_id")
+    val entityId: String,
+    val operation: String,
+    val payload: JsonElement,
+    @SerialName("base_revision")
+    val baseRevision: Long?,
+    @SerialName("created_at")
+    val createdAt: String,
+)
+
+@Serializable
+private data class CloudMutationResponse(
+    @SerialName("mutation_id")
+    val mutationId: String,
+    val status: String,
+    @SerialName("cloud_book_id")
+    val cloudBookId: String? = null,
+    val revision: Long? = null,
+    val payload: JsonElement? = null,
+    val reason: String? = null,
+)
+
+@Serializable
+private data class CloudPullResponse(
+    val changes: List<CloudRemoteChange>,
+    @SerialName("next_cursor")
+    val nextCursor: Long,
+)
+
+@Serializable
+private data class CloudRemoteChange(
+    @SerialName("entity_type")
+    val entityType: String,
+    val payload: JsonElement,
+    val revision: Long,
+)
+
+private class ParrotCloudPositionEntityWithLibraryId(
+    private val delegate: com.retro99.database.api.books.PositionEntity,
+    override val libraryBookId: String,
+) : com.retro99.database.api.books.PositionEntity by delegate

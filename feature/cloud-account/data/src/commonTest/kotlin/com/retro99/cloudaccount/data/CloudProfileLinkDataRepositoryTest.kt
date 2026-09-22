@@ -38,19 +38,16 @@ class CloudProfileLinkDataRepositoryTest {
     fun `sync state changes are persisted`() = runTest {
         repository.link("profile-a", "account-a")
         repository.setSyncEnabled("profile-a", enabled = true)
-        repository.markInitialMergeCompleted("profile-a")
 
         val link = repository.getForLocalProfile("profile-a")
 
         assertEquals(true, link?.syncEnabled)
-        assertEquals(true, link?.initialMergeCompleted)
     }
 
     @Test
     fun `conflicting account does not change the existing link state`() = runTest {
         repository.link("profile-a", "account-a")
         repository.setSyncEnabled("profile-a", enabled = true)
-        repository.markInitialMergeCompleted("profile-a")
 
         val result = repository.link("profile-a", "account-b")
 
@@ -58,7 +55,6 @@ class CloudProfileLinkDataRepositoryTest {
         val link = repository.getForLocalProfile("profile-a")
         assertEquals("account-a", link?.cloudUserId)
         assertEquals(true, link?.syncEnabled)
-        assertEquals(true, link?.initialMergeCompleted)
     }
 }
 

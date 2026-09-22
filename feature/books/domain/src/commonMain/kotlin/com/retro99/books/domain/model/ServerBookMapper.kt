@@ -33,6 +33,8 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             lastOpenedAt = lastOpenedAt,
             bookType = bookType,
             publicationDate = publicationDate,
+            contentHash = contentHash,
+            contentHashAlgorithm = contentHashAlgorithm,
         )
     } else {
         BookDomainModel.StorytellerBook(
@@ -119,7 +121,11 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
                 createdAt = null,
                 updatedAt = null,
             ) else null,
+            libraryBookId = libraryBookId,
+            contentHash = contentHash,
+            contentHashAlgorithm = contentHashAlgorithm,
+            remoteFileAvailability = remoteFileAvailability,
+            remoteRevision = remoteRevision,
         )
     }
 }
-

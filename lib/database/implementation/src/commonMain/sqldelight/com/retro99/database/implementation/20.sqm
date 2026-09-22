@@ -1,0 +1,18 @@
+ALTER TABLE position ADD COLUMN library_book_id TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_position_library_book ON position(library_book_id);
+
+ALTER TABLE library_books ADD COLUMN cloud_book_id TEXT;
+
+ALTER TABLE library_books ADD COLUMN metadata_json TEXT;
+
+ALTER TABLE local_book_files ADD COLUMN file_availability TEXT NOT NULL DEFAULT 'available';
+
+CREATE INDEX IF NOT EXISTS idx_library_books_hash_identity
+ON library_books(content_hash_algorithm, content_hash);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_library_books_cloud_book
+ON library_books(cloud_book_id)
+WHERE cloud_book_id IS NOT NULL;
+
+DROP TABLE IF EXISTS sync_pending_changes;

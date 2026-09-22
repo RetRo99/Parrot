@@ -57,6 +57,34 @@ internal class LibraryBooksSqlDelightDao(
         }
     }
 
+    suspend fun getLibraryBookByContentHash(
+        contentHashAlgorithm: String,
+        contentHash: String,
+    ): LibraryBookEntity? {
+        return withContext(Dispatchers.IO) {
+            databaseManager.getDatabase().libraryBookQueries
+                .getLibraryBookByContentHashAndAlgorithm(contentHashAlgorithm, contentHash)
+                .executeAsOneOrNull()
+                ?.toEntity()
+        }
+    }
+
+    suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity? {
+        return withContext(Dispatchers.IO) {
+            databaseManager.getDatabase().libraryBookQueries
+                .getLibraryBookByCloudBookId(cloudBookId)
+                .executeAsOneOrNull()
+                ?.toEntity()
+        }
+    }
+
+    suspend fun attachCloudBookId(libraryBookId: String, cloudBookId: String) {
+        withContext(Dispatchers.IO) {
+            databaseManager.getDatabase().libraryBookQueries
+                .attachCloudBookId(cloudBookId, libraryBookId)
+        }
+    }
+
     suspend fun upsertLocalBookFile(file: LocalBookFileEntity) {
         withContext(Dispatchers.IO) {
             databaseManager.getDatabase().upsertLocalBookFileRow(file)
@@ -99,6 +127,8 @@ internal class LibraryBooksSqlDelightDao(
             format = format,
             remoteRevision = remote_revision,
             deletedAt = deleted_at,
+            cloudBookId = cloud_book_id,
+            metadataJson = metadata_json,
         )
     }
 
@@ -106,6 +136,7 @@ internal class LibraryBooksSqlDelightDao(
         return LocalBookFileEntityImpl(
             libraryBookId = library_book_id,
             importedBookUuid = imported_book_uuid,
+            fileAvailability = file_availability,
         )
     }
 }
@@ -120,6 +151,8 @@ internal fun AppDatabase.upsertLibraryBookRow(book: LibraryBookEntity) {
         format = book.format,
         remote_revision = book.remoteRevision,
         deleted_at = book.deletedAt,
+        cloud_book_id = book.cloudBookId,
+        metadata_json = book.metadataJson,
     )
 }
 
@@ -146,6 +179,7 @@ internal fun AppDatabase.upsertLocalBookFileRow(file: LocalBookFileEntity) {
     localBookFileQueries.upsertLocalBookFile(
         library_book_id = file.libraryBookId,
         imported_book_uuid = file.importedBookUuid,
+        file_availability = file.fileAvailability,
     )
 }
 
@@ -165,9 +199,12 @@ private data class LibraryBookEntityImpl(
     override val format: String,
     override val remoteRevision: Long?,
     override val deletedAt: String?,
+    override val cloudBookId: String?,
+    override val metadataJson: String?,
 ) : LibraryBookEntity
 
 private data class LocalBookFileEntityImpl(
     override val libraryBookId: String,
     override val importedBookUuid: String,
+    override val fileAvailability: String,
 ) : LocalBookFileEntity
