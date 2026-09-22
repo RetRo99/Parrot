@@ -121,6 +121,52 @@ class SyncDataRepositoryTest {
     }
 
     @Test
+    fun oneApplicationRequestFansOutThroughParrotAndStorytellerDestinations() = runTest {
+        val parrotPass = ImmediateSyncPass()
+        val storytellerDestination = RecordingDestination(
+            result = SyncResult.Completed(0, 0, 0),
+        )
+        val repository = SyncDataRepository(
+            syncPass = parrotPass,
+            executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            destinations = listOf(storytellerDestination),
+        )
+        val request = SyncRequest(reason = SyncTriggerReason.STARTUP)
+
+        repository.requestSync(request)
+
+        assertEquals(listOf(request), parrotPass.requests)
+        assertEquals(listOf(request), storytellerDestination.requests)
+    }
+
+    @Test
+    fun configuredStorytellerDestinationRunsWhenParrotCloudIsUnauthenticated() = runTest {
+        val storytellerDestination = RecordingDestination(
+            result = SyncResult.Completed(
+                pushedMutationCount = 1,
+                pulledChangeCount = 0,
+                pendingMutationCount = 0,
+            ),
+        )
+        val repository = SyncDataRepository(
+            syncPass = ImmediateSyncPass(),
+            executionContextProvider = RecordingContextProvider(
+                result = SyncExecutionResult.NotAuthenticated,
+            ),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            destinations = listOf(storytellerDestination),
+        )
+        val request = SyncRequest(reason = SyncTriggerReason.CONNECTIVITY)
+
+        assertEquals(
+            SyncResult.Completed(1, 0, 0),
+            repository.requestSync(request),
+        )
+        assertEquals(listOf(request), storytellerDestination.requests)
+    }
+
+    @Test
     fun destinationFailureIsNotHiddenByACompletedCloudPass() = runTest {
         val repository = SyncDataRepository(
             syncPass = ImmediateSyncPass(),
@@ -263,10 +309,15 @@ private class RecordingSyncPass : SyncPass {
 private class ImmediateSyncPass(
     private val result: SyncResult = SyncResult.Completed(0, 0, 0),
 ) : SyncPass {
+    val requests = mutableListOf<SyncRequest>()
+
     override suspend fun execute(
         request: SyncRequest,
         context: SyncExecutionContext,
-    ): SyncResult = result
+    ): SyncResult {
+        requests += request
+        return result
+    }
 }
 
 private class RecordingDestination(

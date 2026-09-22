@@ -12,12 +12,14 @@ import org.koin.core.annotation.Provided
 class SyncNowUseCase(
     @Provided private val syncRepository: SyncRepository,
 ) {
-    suspend operator fun invoke(): SyncResult {
+    suspend operator fun invoke(
+        request: SyncRequest = SyncRequest(
+            reason = SyncTriggerReason.MANUAL,
+            urgency = SyncUrgency.URGENT,
+        ),
+    ): SyncResult {
         return syncRepository.requestSync(
-            SyncRequest(
-                reason = SyncTriggerReason.MANUAL,
-                urgency = SyncUrgency.URGENT,
-            ),
+            request,
         )
     }
 }

@@ -33,6 +33,20 @@ class SyncNowUseCaseTest {
             repository.request,
         )
     }
+
+    @Test
+    fun forwardsLifecycleRequestWithoutChangingItsReasonOrUrgency() = runTest {
+        val repository = RecordingSyncRepository()
+        val request = SyncRequest(
+            reason = SyncTriggerReason.LIFECYCLE,
+            scope = SyncScope.Books(setOf("book-1")),
+            urgency = SyncUrgency.ROUTINE,
+        )
+
+        SyncNowUseCase(repository)(request)
+
+        assertEquals(request, repository.request)
+    }
 }
 
 private class RecordingSyncRepository : SyncRepository {

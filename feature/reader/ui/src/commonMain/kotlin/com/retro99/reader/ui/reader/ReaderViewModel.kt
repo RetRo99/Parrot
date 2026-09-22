@@ -50,6 +50,11 @@ import com.retro99.reader.ui.tts.TtsPreparationProgress
 import com.retro99.reader.ui.tts.TtsVoicePreparationState
 import com.retro99.reader.ui.tts.neuralVoicePackage
 import com.retro99.statistics.domain.usecase.SaveReadingSessionUseCase
+import com.retro99.sync.domain.SyncRequest
+import com.retro99.sync.domain.SyncScope
+import com.retro99.sync.domain.SyncTriggerReason
+import com.retro99.sync.domain.SyncUrgency
+import com.retro99.sync.domain.usecase.SyncNowUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -87,6 +92,7 @@ class ReaderViewModel(
     @Provided private val getCustomReaderFontsUseCase: GetCustomReaderFontsUseCase,
     @Provided private val saveReaderSettingsUseCase: SaveReaderSettingsUseCase,
     @Provided private val saveReadingSessionUseCase: SaveReadingSessionUseCase,
+    @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val setCurrentlyReadingUseCase: SetCurrentlyReadingUseCase,
     @Provided private val addBookmarkUseCase: AddBookmarkUseCase,
     @Provided private val observeBookmarksUseCase: ObserveBookmarksUseCase,
@@ -1419,6 +1425,14 @@ class ReaderViewModel(
                     )
                 )
             }
+
+            syncNowUseCase(
+                SyncRequest(
+                    reason = SyncTriggerReason.READER_CHECKPOINT,
+                    scope = SyncScope.Books(setOf(bookUuid)),
+                    urgency = SyncUrgency.URGENT,
+                ),
+            )
 
             onClose()
         }
