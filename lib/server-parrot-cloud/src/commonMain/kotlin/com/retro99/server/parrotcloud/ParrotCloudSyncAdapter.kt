@@ -18,23 +18,20 @@ import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressSyncTransport
+import com.retro99.sync.domain.LegacySyncTransport
+import com.retro99.sync.domain.SyncMutationRequest
+import com.retro99.sync.domain.SyncMutationResponse
 import com.retro99.sync.data.ProgressIdentity
 import com.retro99.sync.data.ProgressIdentityResolver
 import com.retro99.sync.data.ProgressOutboxCodec
 import com.retro99.sync.data.ProgressSyncEngine
 import com.retro99.sync.data.SyncPass
 import com.retro99.user.api.UserRegistry
-import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
 import kotlin.math.min
 import kotlin.time.Clock
@@ -54,6 +51,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val positionDatabase: PositionDatabase,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val progressTransport: ProgressSyncTransport,
+    @Provided private val legacyTransport: LegacySyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
 ) : SyncPass {
     private val json = Json {
@@ -200,12 +198,12 @@ class ParrotCloudSyncAdapter(
     ): Int {
         if (entries.isEmpty()) return 0
         val requests = entries.map { entry ->
-            CloudMutationRequest(
+            SyncMutationRequest(
                 mutationId = entry.mutationId,
                 entityType = entry.entityType,
                 entityId = entry.entityId,
                 operation = entry.operation,
-                payload = json.decodeFromString<JsonElement>(entry.payload),
+                payload = entry.payload,
                 baseRevision = entry.baseRevision,
                 createdAt = entry.createdAt,
             )
@@ -213,15 +211,10 @@ class ParrotCloudSyncAdapter(
         entries.forEach { entry ->
             syncOutboxDatabase.markDispatched(entry.mutationId)
         }
-        val response = clientProvider.client.postgrest
-            .rpc(
-                "push_sync_changes",
-                buildJsonObject {
-                    put("mutations", json.encodeToJsonElement(requests))
-                    put("client_cursor", cursor)
-                },
-            )
-            .decodeAs<List<CloudMutationResponse>>()
+        val response = legacyTransport.push(
+            mutations = requests,
+            cursor = cursor.toString(),
+        )
         val responsesByMutationId = response.associateBy { mutation -> mutation.mutationId }
         var handled = 0
         entries.forEach { entry ->
@@ -236,7 +229,11 @@ class ParrotCloudSyncAdapter(
 
                 STATUS_CONFLICT -> {
                     mutationResponse.payload?.let { payload ->
-                        applyRemoteConflict(entry, payload, mutationResponse.revision)
+                        applyRemoteConflict(
+                            entry = entry,
+                            payload = json.decodeFromString<JsonElement>(payload),
+                            revision = mutationResponse.revision,
+                        )
                     }
                     syncOutboxDatabase.markConflict(
                         mutationId = entry.mutationId,
@@ -263,21 +260,16 @@ class ParrotCloudSyncAdapter(
         cloudUserId: String,
         cursor: Long,
     ): Triple<Int, Long, Boolean> {
-        val legacyResponse = clientProvider.client.postgrest
-            .rpc(
-                "pull_sync_changes",
-                buildJsonObject {
-                    put("cursor", cursor)
-                    put("limit", SYNC_BATCH_SIZE)
-                },
-            )
-            .decodeAs<CloudPullResponse>()
+        val legacyResponse = legacyTransport.pull(
+            cursor = cursor.toString(),
+            limit = SYNC_BATCH_SIZE,
+        )
         legacyResponse.changes
             .filter { change -> change.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION }
             .forEach { change ->
                 applyRemoteChange(
                     entityType = change.entityType,
-                    payload = change.payload,
+                    payload = json.decodeFromString<JsonElement>(change.payload),
                     revision = change.revision,
                 )
             }
@@ -291,7 +283,7 @@ class ParrotCloudSyncAdapter(
         }
 
         val nextCursor = maxOf(
-            legacyResponse.nextCursor,
+            legacyResponse.nextCursor?.toLongOrNull() ?: cursor,
             progressPage.nextCursor?.toLongOrNull() ?: cursor,
         )
         return Triple(
@@ -363,7 +355,7 @@ class ParrotCloudSyncAdapter(
 
     private suspend fun applyAcceptedMetadata(
         entry: SyncOutboxEntry,
-        response: CloudMutationResponse,
+        response: SyncMutationResponse,
     ) {
         when (entry.entityType) {
             SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
@@ -471,48 +463,3 @@ class ParrotCloudSyncAdapter(
         const val MAX_BACKOFF_POWER = 6
     }
 }
-
-@Serializable
-private data class CloudMutationRequest(
-    @SerialName("mutation_id")
-    val mutationId: String,
-    @SerialName("entity_type")
-    val entityType: String,
-    @SerialName("entity_id")
-    val entityId: String,
-    val operation: String,
-    val payload: JsonElement,
-    @SerialName("base_revision")
-    val baseRevision: Long?,
-    @SerialName("created_at")
-    val createdAt: String,
-)
-
-@Serializable
-private data class CloudMutationResponse(
-    @SerialName("mutation_id")
-    val mutationId: String,
-    val status: String,
-    @SerialName("cloud_book_id")
-    val cloudBookId: String? = null,
-    val revision: Long? = null,
-    val payload: JsonElement? = null,
-    val reason: String? = null,
-)
-
-@Serializable
-private data class CloudPullResponse(
-    val changes: List<CloudRemoteChange>,
-    @SerialName("next_cursor")
-    val nextCursor: Long,
-    @SerialName("has_more")
-    val hasMore: Boolean = false,
-)
-
-@Serializable
-private data class CloudRemoteChange(
-    @SerialName("entity_type")
-    val entityType: String,
-    val payload: JsonElement,
-    val revision: Long,
-)
