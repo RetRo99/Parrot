@@ -232,6 +232,18 @@ internal class BooksDatabaseImpl(
         sqlDelightDao.updateRemoteRevision(bookUuid, remoteRevision)
     }
 
+    override suspend fun upsertRemotePosition(position: PositionEntity) {
+        sqlDelightDao.upsertRemotePosition(position.toSqlDelightEntity())
+    }
+
+    override suspend fun getRemotePositionByBookUuid(bookUuid: String): PositionEntity? {
+        return sqlDelightDao.getRemotePositionByBookUuid(bookUuid)
+    }
+
+    override suspend fun deleteRemotePosition(bookUuid: String) {
+        sqlDelightDao.deleteRemotePosition(bookUuid)
+    }
+
     override suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity? {
         return sqlDelightDao.getPositionByBookUuid(bookUuid)
     }

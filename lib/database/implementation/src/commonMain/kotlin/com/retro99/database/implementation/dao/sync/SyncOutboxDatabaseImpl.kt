@@ -34,6 +34,10 @@ internal class SyncOutboxDatabaseImpl(
         sqlDelightDao.delete(mutationId)
     }
 
+    override suspend fun deleteByEntityType(entityType: String) {
+        sqlDelightDao.deleteByEntityType(entityType)
+    }
+
     override suspend fun recordFailure(
         mutationId: String,
         nextAttemptAt: String,

@@ -35,6 +35,7 @@ internal class BooksSqlDelightDao(
     private val mediaFileQueries get() = database.mediaFileQueries
     private val readaloudQueries get() = database.readaloudQueries
     private val positionQueries get() = database.positionQueries
+    private val remotePositionQueries get() = database.remotePositionQueries
     private val syncOutboxQueries get() = database.syncOutboxQueries
     private val bookmarkQueries get() = database.bookmarkQueries
 
@@ -614,6 +615,44 @@ internal class BooksSqlDelightDao(
         }
     }
 
+    suspend fun upsertRemotePosition(position: PositionSqlDelightEntity) {
+        withContext(Dispatchers.IO) {
+            remotePositionQueries.upsertRemotePosition(
+                book_uuid = position.bookUuid,
+                library_book_id = position.libraryBookId,
+                remote_revision = position.remoteRevision,
+                timestamp = position.timestamp,
+                created_at = position.createdAt,
+                updated_at = position.updatedAt,
+                locator_href = position.locatorHref,
+                locator_type = position.locatorType,
+                locator_title = position.locatorTitle,
+                locator_target = position.locatorTarget?.toLong(),
+                audio_timestamp_ms = position.audioTimestampMs,
+                chapter_index = position.chapterIndex?.toLong(),
+                progression = position.progression,
+                total_chapters = position.totalChapters?.toLong(),
+                total_duration_ms = position.totalDurationMs,
+                total_progression = position.totalProgression,
+                position = position.position?.toLong(),
+            )
+        }
+    }
+
+    suspend fun getRemotePositionByBookUuid(bookUuid: String): PositionSqlDelightEntity? {
+        return withContext(Dispatchers.IO) {
+            remotePositionQueries.getRemotePositionByBookUuid(bookUuid)
+                .executeAsOneOrNull()
+                ?.toPositionEntity()
+        }
+    }
+
+    suspend fun deleteRemotePosition(bookUuid: String) {
+        withContext(Dispatchers.IO) {
+            remotePositionQueries.deleteRemotePosition(bookUuid)
+        }
+    }
+
     suspend fun getPositionByBookUuid(bookUuid: String): PositionSqlDelightEntity? {
         return withContext(Dispatchers.IO) {
             positionQueries.getPositionByBookUuid(bookUuid)
@@ -776,6 +815,28 @@ internal class BooksSqlDelightDao(
         )
     }
 
+    private fun RemotePosition.toPositionEntity(): PositionSqlDelightEntity {
+        return PositionSqlDelightEntity(
+            bookUuid = book_uuid,
+            libraryBookId = library_book_id ?: book_uuid,
+            remoteRevision = remote_revision,
+            timestamp = timestamp,
+            createdAt = created_at,
+            updatedAt = updated_at,
+            locatorHref = locator_href,
+            locatorType = locator_type,
+            locatorTitle = locator_title,
+            locatorTarget = locator_target?.toInt(),
+            audioTimestampMs = audio_timestamp_ms,
+            chapterIndex = chapter_index?.toInt(),
+            progression = progression,
+            totalChapters = total_chapters?.toInt(),
+            totalDurationMs = total_duration_ms,
+            totalProgression = total_progression,
+            position = position?.toInt(),
+        )
+    }
+
     // ==================== TRANSACTION SUPPORT ====================
 
     suspend fun <T> transaction(block: suspend () -> T): T {
@@ -798,6 +859,7 @@ internal class BooksSqlDelightDao(
                 mediaFileQueries.deleteAllMediaFiles()
                 readaloudQueries.deleteAllReadalouds()
                 positionQueries.deleteAllPositions()
+                remotePositionQueries.deleteAllRemotePositions()
                 bookmarkQueries.deleteAllBookmarks()
                 personQueries.deleteAllPersons()
                 seriesQueries.deleteAllSeries()

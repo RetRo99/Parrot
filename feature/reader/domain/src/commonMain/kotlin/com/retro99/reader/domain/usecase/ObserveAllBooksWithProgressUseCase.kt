@@ -112,15 +112,20 @@ class ObserveAllBooksWithProgressUseCase(
         localPositions: List<ServerPosition>,
     ): AppResult<List<BookWithProgressDomainModel>> {
         val localPositionMap = localPositions.associateBy { it.bookUuid }
+        val libraryPositionMap = localPositions
+            .filter { position -> position.libraryBookId != null }
+            .groupBy { position -> position.libraryBookId }
+            .mapValues { (_, positions) ->
+                positions.maxWithOrNull(
+                    compareBy({ position -> position.remoteRevision }, { position -> position.updatedAt }),
+                )
+            }
 
         val booksWithProgress = books.map { serverBook ->
             val bookUuid = serverBook.uuid
-            val localPosition = localPositionMap[bookUuid]
-                ?: serverBook.libraryBookId?.let { libraryBookId ->
-                    localPositions.firstOrNull { position ->
-                        position.libraryBookId == libraryBookId
-                    }
-                }
+            val localPosition = serverBook.libraryBookId?.let { libraryBookId ->
+                libraryPositionMap[libraryBookId]
+            } ?: localPositionMap[bookUuid]
             val remoteProgression = remoteProgressionCache[bookUuid]
 
             val progressInfo = createProgressInfo(

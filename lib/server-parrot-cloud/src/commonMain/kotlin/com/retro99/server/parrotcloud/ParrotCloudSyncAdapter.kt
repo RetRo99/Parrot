@@ -4,8 +4,10 @@ import com.retro99.cloud.implementation.SupabaseClientProvider
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.books.PositionDatabase
+import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.preferences.api.Preferences
@@ -17,6 +19,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -40,6 +43,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val preferences: Preferences,
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
+    @Provided private val importedBooksDatabase: ImportedBooksDatabase,
     @Provided private val positionDatabase: PositionDatabase,
     @Provided private val userRegistry: UserRegistry,
 ) : SyncRepository {
@@ -78,19 +82,33 @@ class ParrotCloudSyncAdapter(
         cloudUserId: String,
     ): SyncResult {
         syncOutboxDatabase.bindUnassignedMutations(cloudUserId)
+        syncOutboxDatabase.deleteByEntityType(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS)
+        repairDuplicatePositions()
         var cursor = preferences.getLong(PreferencesKey.SyncCursor(localProfileId, cloudUserId))
         var pulledCount = 0
-        val firstPull = pullAndApply(localProfileId, cloudUserId, cursor)
-        pulledCount += firstPull.first
-        cursor = firstPull.second
+        do {
+            val pull = pullAndApply(localProfileId, cloudUserId, cursor)
+            pulledCount += pull.first
+            cursor = pull.second
+            preferences.putLong(PreferencesKey.SyncCursor(localProfileId, cloudUserId), cursor)
+        } while (pull.third)
 
         val entries = syncOutboxDatabase.getEligible(cloudUserId, Clock.System.now().toString())
+            .filter { entry -> entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS }
             .take(SYNC_BATCH_SIZE)
         val pushedCount = pushMutations(entries, cloudUserId, cursor)
         if (entries.isNotEmpty()) {
-            val secondPull = pullAndApply(localProfileId, cloudUserId, cursor)
-            pulledCount += secondPull.first
-            cursor = secondPull.second
+            var hasMore: Boolean
+            do {
+                val pull = pullAndApply(localProfileId, cloudUserId, cursor)
+                pulledCount += pull.first
+                cursor = pull.second
+                hasMore = pull.third
+                preferences.putLong(
+                    PreferencesKey.SyncCursor(localProfileId, cloudUserId),
+                    cursor,
+                )
+            } while (hasMore)
         }
         preferences.putLong(PreferencesKey.SyncCursor(localProfileId, cloudUserId), cursor)
         return SyncResult.Completed(
@@ -162,7 +180,7 @@ class ParrotCloudSyncAdapter(
         localProfileId: String,
         cloudUserId: String,
         cursor: Long,
-    ): Pair<Int, Long> {
+    ): Triple<Int, Long, Boolean> {
         val response = clientProvider.client.postgrest
             .rpc(
                 "pull_sync_changes",
@@ -175,7 +193,7 @@ class ParrotCloudSyncAdapter(
         response.changes.forEach { change ->
             applyRemoteChange(change.entityType, change.payload, change.revision)
         }
-        return response.changes.size to response.nextCursor
+        return Triple(response.changes.size, response.nextCursor, response.hasMore)
     }
 
     private suspend fun applyRemoteChange(
@@ -211,10 +229,18 @@ class ParrotCloudSyncAdapter(
                 val position = json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(payload)
                 val existingBook = libraryBooksDatabase.getLibraryBookByCloudBookId(position.cloudBookId)
                 val libraryBookId = existingBook?.libraryBookId ?: position.libraryBookId
+                val localBookUuid = resolveLocalBookUuid(
+                    libraryBookId = libraryBookId,
+                    cloudBookId = position.cloudBookId,
+                    fallback = position.position.bookUuid,
+                )
+                val localPosition = position.position.toParrotCloudPositionEntity(
+                    remoteRevision = revision,
+                    bookUuid = localBookUuid,
+                    libraryBookId = libraryBookId,
+                )
                 positionDatabase.upsertPosition(
-                        position.position.toParrotCloudPositionEntity(revision).let { entity ->
-                        ParrotCloudPositionEntityWithLibraryId(entity, libraryBookId)
-                    },
+                    localPosition,
                 )
             }
         }
@@ -271,8 +297,58 @@ class ParrotCloudSyncAdapter(
 
             SyncOutboxEntry.ENTITY_TYPE_READING_POSITION -> {
                 response.revision?.let { revision ->
-                    positionDatabase.updateRemoteRevision(entry.entityId, revision)
+                    val payload = json.decodeFromString<ParrotCloudReadingPositionPayload>(entry.payload)
+                    val localBookUuid = resolveLocalBookUuid(
+                        libraryBookId = payload.libraryBookId,
+                        cloudBookId = payload.cloudBookId,
+                        fallback = entry.entityId,
+                    )
+                    positionDatabase.updateRemoteRevision(localBookUuid, revision)
                 }
+            }
+        }
+    }
+
+    private suspend fun resolveLocalBookUuid(
+        libraryBookId: String,
+        cloudBookId: String,
+        fallback: String,
+    ): String {
+        val libraryBook = libraryBooksDatabase.getLibraryBookById(libraryBookId)
+            ?: libraryBooksDatabase.getLibraryBookByCloudBookId(cloudBookId)
+        val contentHash = libraryBook?.contentHash
+        return importedBooksDatabase.getAllImportedBooks()
+            .first()
+            .firstOrNull { book ->
+                book.contentHash == contentHash &&
+                    book.contentHash != null
+            }
+            ?.uuid
+            ?: fallback
+    }
+
+    private suspend fun repairDuplicatePositions() {
+        val positionsByLibraryBookId = positionDatabase.getAllPositions()
+            .filter { position -> position.libraryBookId.isNotBlank() }
+            .groupBy { position -> position.libraryBookId }
+        positionsByLibraryBookId.forEach { (libraryBookId, positions) ->
+            if (positions.size > 1) {
+                val winner = positions.maxWithOrNull(
+                    compareBy<PositionEntity>({ position -> position.remoteRevision }, { position -> position.updatedAt }),
+                ) ?: return@forEach
+                val localBookUuid = resolveLocalBookUuid(
+                    libraryBookId = libraryBookId,
+                    cloudBookId = libraryBooksDatabase.getLibraryBookById(libraryBookId)?.cloudBookId.orEmpty(),
+                    fallback = winner.bookUuid,
+                )
+                val repaired = winner.toParrotCloudPositionEntity(
+                    remoteRevision = winner.remoteRevision,
+                    bookUuid = localBookUuid,
+                    libraryBookId = libraryBookId,
+                )
+                positions.filter { position -> position.bookUuid != localBookUuid }
+                    .forEach { position -> positionDatabase.deletePosition(position.bookUuid) }
+                positionDatabase.upsertPosition(repaired)
             }
         }
     }
@@ -318,6 +394,8 @@ private data class CloudPullResponse(
     val changes: List<CloudRemoteChange>,
     @SerialName("next_cursor")
     val nextCursor: Long,
+    @SerialName("has_more")
+    val hasMore: Boolean = false,
 )
 
 @Serializable
@@ -327,8 +405,3 @@ private data class CloudRemoteChange(
     val payload: JsonElement,
     val revision: Long,
 )
-
-private class ParrotCloudPositionEntityWithLibraryId(
-    private val delegate: com.retro99.database.api.books.PositionEntity,
-    override val libraryBookId: String,
-) : com.retro99.database.api.books.PositionEntity by delegate

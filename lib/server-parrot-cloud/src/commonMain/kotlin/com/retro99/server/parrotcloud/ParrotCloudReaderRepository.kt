@@ -39,6 +39,7 @@ class ParrotCloudReaderRepository(
     ): CompletableResult {
         return try {
             val libraryBookId = resolveLibraryBookId(bookUuid, position.libraryBookId)
+            val cloudBookId = resolveCloudBookId(libraryBookId, bookUuid)
             val stored = positionDatabase.getPositionByLibraryBookId(libraryBookId)
             val normalizedPosition = position.copy(
                 bookUuid = bookUuid,
@@ -53,7 +54,7 @@ class ParrotCloudReaderRepository(
                     operation = SyncOutboxEntry.OPERATION_UPSERT,
                     payload = json.encodeToString(
                         ParrotCloudReadingPositionPayload(
-                            cloudBookId = bookUuid,
+                            cloudBookId = cloudBookId,
                             libraryBookId = libraryBookId,
                             position = normalizedPosition,
                         ),
@@ -89,13 +90,19 @@ class ParrotCloudReaderRepository(
     }
 
     override suspend fun getRemotePosition(bookUuid: String): AppResult<ServerPosition?> {
-        return Ok(null)
+        return getLocalPosition(bookUuid)
     }
 
     private suspend fun resolveLibraryBookId(bookUuid: String, fallback: String?): String {
-        return fallback
-            ?: libraryBooksDatabase.getLibraryBookByCloudBookId(bookUuid)?.libraryBookId
+        return libraryBooksDatabase.getLibraryBookByCloudBookId(bookUuid)?.libraryBookId
+            ?: fallback
             ?: bookUuid
+    }
+
+    private suspend fun resolveCloudBookId(libraryBookId: String, fallback: String): String {
+        return libraryBooksDatabase.getLibraryBookById(libraryBookId)?.cloudBookId
+            ?: libraryBooksDatabase.getLibraryBookByCloudBookId(fallback)?.cloudBookId
+            ?: fallback
     }
 }
 
@@ -127,6 +134,7 @@ private fun PositionEntity.toServerPosition(bookUuid: String): ServerPosition {
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        remoteRevision = remoteRevision,
     )
 }
 
@@ -152,7 +160,59 @@ internal fun ServerPosition.toParrotCloudPositionEntity(remoteRevision: Long?): 
     )
 }
 
-private data class ParrotCloudPositionEntity(
+internal fun ServerPosition.toParrotCloudPositionEntity(
+    remoteRevision: Long?,
+    bookUuid: String,
+    libraryBookId: String,
+): PositionEntity {
+    return ParrotCloudPositionEntity(
+        bookUuid = bookUuid,
+        libraryBookId = libraryBookId,
+        remoteRevision = remoteRevision,
+        timestamp = timestamp,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        locatorHref = locatorHref,
+        locatorType = locatorType,
+        locatorTitle = locatorTitle,
+        locatorTarget = locatorTarget,
+        audioTimestampMs = audioTimestampMs,
+        chapterIndex = chapterIndex,
+        progression = progression,
+        totalChapters = totalChapters,
+        totalDurationMs = totalDurationMs,
+        totalProgression = totalProgression,
+        position = position,
+    )
+}
+
+internal fun PositionEntity.toParrotCloudPositionEntity(
+    remoteRevision: Long?,
+    bookUuid: String,
+    libraryBookId: String,
+): PositionEntity {
+    return ParrotCloudPositionEntity(
+        bookUuid = bookUuid,
+        libraryBookId = libraryBookId,
+        remoteRevision = remoteRevision,
+        timestamp = timestamp,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        locatorHref = locatorHref,
+        locatorType = locatorType,
+        locatorTitle = locatorTitle,
+        locatorTarget = locatorTarget,
+        audioTimestampMs = audioTimestampMs,
+        chapterIndex = chapterIndex,
+        progression = progression,
+        totalChapters = totalChapters,
+        totalDurationMs = totalDurationMs,
+        totalProgression = totalProgression,
+        position = position,
+    )
+}
+
+internal data class ParrotCloudPositionEntity(
     override val bookUuid: String,
     override val libraryBookId: String,
     override val remoteRevision: Long?,

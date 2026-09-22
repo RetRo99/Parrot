@@ -57,12 +57,17 @@ class ObserveBookWithProgressUseCase(
                 bookResult.fold(
                     success = { serverBook ->
                         positionLocalSource.observeAllPositions().map { positions ->
-                            val localPosition = positions.firstOrNull { position ->
+                            val localPosition = serverBook.libraryBookId?.let { libraryBookId ->
+                                positions
+                                    .filter { position -> position.libraryBookId == libraryBookId }
+                                    .maxWithOrNull(
+                                        compareBy(
+                                            { position -> position.remoteRevision },
+                                            { position -> position.updatedAt },
+                                        ),
+                                    )
+                            } ?: positions.firstOrNull { position ->
                                 position.bookUuid == bookUuid
-                            } ?: serverBook.libraryBookId?.let { libraryBookId ->
-                                positions.firstOrNull { position ->
-                                    position.libraryBookId == libraryBookId
-                                }
                             }
                             buildBookWithProgress(serverId, bookUuid, serverBook, localPosition)
                         }

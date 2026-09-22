@@ -21,6 +21,8 @@ interface SyncOutboxDatabase : DataClearable {
 
     suspend fun delete(mutationId: String)
 
+    suspend fun deleteByEntityType(entityType: String)
+
     suspend fun recordFailure(
         mutationId: String,
         nextAttemptAt: String,

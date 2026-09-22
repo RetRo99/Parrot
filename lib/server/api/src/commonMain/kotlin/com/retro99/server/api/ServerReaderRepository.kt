@@ -96,4 +96,5 @@ data class ServerPosition(
     val totalProgression: Double?,
     val position: Int?,
     val cssSelector: String? = null,
+    val remoteRevision: Long? = null,
 )

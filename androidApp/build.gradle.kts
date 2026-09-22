@@ -68,6 +68,7 @@ dependencies {
     implementation(projects.feature.login.data)
     implementation(projects.feature.home.ui)
     implementation(projects.feature.reader.ui)
+    implementation(projects.feature.sync.domain)
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.androidx.activity.compose)
     implementation(libs.koin.android)

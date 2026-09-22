@@ -9,18 +9,22 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import com.retro99.home.ui.deeplink.DeepLinkHandler
 import com.retro99.login.data.oauth.StorytellerOAuthCallbackRegistry
 import com.retro99.parrot.App
 import com.retro99.parrot.CloudOAuthCallbackBridge
 import com.retro99.reader.ui.fragment.EpubFragmentFactoryHelper
 import com.retro99.reader.ui.playback.NotificationPermissionHandler
+import com.retro99.sync.domain.usecase.SyncNowUseCase
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 
 class MainActivity : FragmentActivity() {
 
     private val notificationPermissionHandler: NotificationPermissionHandler by inject()
     private val deepLinkHandler: DeepLinkHandler by inject()
+    private val syncNowUseCase: SyncNowUseCase by inject()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val cancelOAuthRunnable = Runnable {
         if (wasBackgrounded) {
@@ -70,6 +74,9 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        lifecycleScope.launch {
+            syncNowUseCase()
+        }
         if (wasBackgrounded) {
             mainHandler.removeCallbacks(cancelOAuthRunnable)
             mainHandler.postDelayed(cancelOAuthRunnable, OAUTH_RETURN_CANCEL_DELAY_MS)

@@ -18,10 +18,18 @@ interface PositionDatabase : DataClearable {
 
     suspend fun updateRemoteRevision(bookUuid: String, remoteRevision: Long)
 
+    suspend fun upsertRemotePosition(position: PositionEntity)
+
+    suspend fun getRemotePositionByBookUuid(bookUuid: String): PositionEntity?
+
+    suspend fun deleteRemotePosition(bookUuid: String)
+
     suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity?
 
     suspend fun getPositionByLibraryBookId(libraryBookId: String): PositionEntity? {
-        return getPositionByBookUuid(libraryBookId)
+        return getAllPositions()
+            .filter { position -> position.libraryBookId == libraryBookId }
+            .maxWithOrNull(compareBy({ position -> position.updatedAt }, { position -> position.remoteRevision }))
     }
 
     suspend fun getAllPositions(): List<PositionEntity>

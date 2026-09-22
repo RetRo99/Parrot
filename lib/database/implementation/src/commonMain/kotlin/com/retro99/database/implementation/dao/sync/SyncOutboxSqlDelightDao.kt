@@ -51,6 +51,12 @@ internal class SyncOutboxSqlDelightDao(
         }
     }
 
+    suspend fun deleteByEntityType(entityType: String) {
+        withContext(Dispatchers.IO) {
+            queries.deleteMutationsByEntityType(entityType)
+        }
+    }
+
     suspend fun recordFailure(mutationId: String, nextAttemptAt: String, error: String) {
         withContext(Dispatchers.IO) {
             queries.recordMutationFailure(nextAttemptAt, error, mutationId)

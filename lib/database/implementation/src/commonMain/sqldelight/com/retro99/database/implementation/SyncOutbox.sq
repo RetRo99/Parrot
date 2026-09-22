@@ -78,5 +78,8 @@ AND NOT EXISTS (
 deleteMutation:
 DELETE FROM sync_outbox WHERE mutation_id = ?;
 
+deleteMutationsByEntityType:
+DELETE FROM sync_outbox WHERE entity_type = ?;
+
 deleteAllMutations:
 DELETE FROM sync_outbox;

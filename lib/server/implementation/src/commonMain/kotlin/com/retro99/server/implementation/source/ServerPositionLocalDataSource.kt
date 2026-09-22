@@ -31,13 +31,18 @@ class ServerPositionLocalDataSource(
 
     override suspend fun getPosition(bookUuid: String): AppResult<ServerPosition?> {
         return databaseExecutor.executeDatabaseOperation {
-            positionDatabase.getPositionByBookUuid(bookUuid)?.toServerPosition()
+            (positionDatabase.getPositionByBookUuid(bookUuid)
+                ?: positionDatabase.getPositionByLibraryBookId(bookUuid))
+                ?.toServerPosition()
         }
     }
 
     override suspend fun savePosition(position: ServerPosition): CompletableResult {
         return databaseExecutor.executeDatabaseOperation {
             val storedPosition = positionDatabase.getPositionByBookUuid(position.bookUuid)
+                ?: position.libraryBookId?.let { libraryBookId ->
+                    positionDatabase.getPositionByLibraryBookId(libraryBookId)
+                }
             val localPosition = position.toPositionEntity(storedPosition?.remoteRevision)
             if (position.serverId == LOCAL_SERVER_ID) {
                 val importedBook = importedBooksDatabase.getImportedBookByUuid(position.bookUuid)
@@ -137,6 +142,7 @@ private fun PositionEntity.toServerPosition(): ServerPosition {
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        remoteRevision = remoteRevision,
     )
 }
 
