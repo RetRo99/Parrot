@@ -1,12 +1,17 @@
 package com.retro99.sync.data
 
 import com.retro99.sync.domain.SyncRepository
+import com.retro99.sync.domain.SyncActionRequired
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.SyncStatus
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -26,6 +31,9 @@ class SyncDataRepository(
 ) : SyncRepository {
     private val mutex = Mutex()
     private var activeRun: ActiveRun? = null
+    private val status = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
+
+    override fun observeStatus(): StateFlow<SyncStatus> = status.asStateFlow()
 
     override suspend fun sync(): SyncResult {
         return requestSync(SyncRequest())
@@ -44,6 +52,8 @@ class SyncDataRepository(
         }
 
         if (!owner) return run.result.await()
+
+        status.value = SyncStatus.Synchronizing(request)
 
         var lastResult: SyncResult = SyncResult.Failed("Synchronization did not execute")
         try {
@@ -86,11 +96,13 @@ class SyncDataRepository(
                 lastResult = combineResults(cloudResult, destinationResults)
             }
             run.result.complete(lastResult)
+            status.value = lastResult.toStatus()
             return lastResult
         } catch (exception: CancellationException) {
             mutex.withLock {
                 if (activeRun === run) activeRun = null
             }
+            status.value = SyncStatus.Idle
             run.result.cancel(exception)
             throw exception
         } catch (exception: Exception) {
@@ -100,6 +112,7 @@ class SyncDataRepository(
             val failed = SyncResult.Failed(
                 exception.message ?: "Synchronization failed",
             )
+            status.value = failed.toStatus()
             run.result.complete(failed)
             return failed
         }
@@ -136,6 +149,23 @@ class SyncDataRepository(
         val result = CompletableDeferred<SyncResult>()
         var pendingRequest: SyncRequest? = request
         var activeRequest: SyncRequest? = null
+    }
+}
+
+private fun SyncResult.toStatus(): SyncStatus {
+    return when (this) {
+        is SyncResult.Completed -> {
+            if (pendingMutationCount > 0) {
+                SyncStatus.Pending(pendingMutationCount)
+            } else {
+                SyncStatus.UpToDate
+            }
+        }
+        SyncResult.NotConfigured -> SyncStatus.ActionRequired(SyncActionRequired.NOT_CONFIGURED)
+        SyncResult.NotAuthenticated -> SyncStatus.ActionRequired(SyncActionRequired.NOT_AUTHENTICATED)
+        SyncResult.ProfileNotLinked -> SyncStatus.ActionRequired(SyncActionRequired.PROFILE_NOT_LINKED)
+        SyncResult.SyncDisabled -> SyncStatus.ActionRequired(SyncActionRequired.SYNC_DISABLED)
+        is SyncResult.Failed -> SyncStatus.Failed(message)
     }
 }
 

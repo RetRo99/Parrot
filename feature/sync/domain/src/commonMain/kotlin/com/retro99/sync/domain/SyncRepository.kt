@@ -1,7 +1,12 @@
 package com.retro99.sync.domain
 
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+
 interface SyncRepository {
     suspend fun sync(): SyncResult
+
+    fun observeStatus(): Flow<SyncStatus> = flowOf(SyncStatus.Idle)
 
     /**
      * Requests work through the shared synchronization boundary.

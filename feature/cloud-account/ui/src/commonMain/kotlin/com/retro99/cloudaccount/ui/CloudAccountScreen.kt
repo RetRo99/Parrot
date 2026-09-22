@@ -55,6 +55,7 @@ import com.retro99.base.ui.IntentDispatcher
 import com.retro99.cloudaccount.domain.model.CloudAccount
 import com.retro99.cloudaccount.domain.model.CloudAuthState
 import com.retro99.cloudaccount.domain.model.CloudProfileLink
+import com.retro99.sync.domain.SyncStatus
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -85,6 +86,11 @@ import resources.translations.cloud_account_switch_to_sign_in
 import resources.translations.cloud_account_sync_enabled
 import resources.translations.cloud_account_sync_not_enabled
 import resources.translations.cloud_account_sync_now
+import resources.translations.cloud_account_sync_status_action_required
+import resources.translations.cloud_account_sync_status_failed
+import resources.translations.cloud_account_sync_status_pending
+import resources.translations.cloud_account_sync_status_synchronizing
+import resources.translations.cloud_account_sync_status_up_to_date
 import resources.translations.cloud_account_title
 import resources.translations.cloud_account_verification_message
 import resources.translations.general_back
@@ -181,6 +187,7 @@ private fun CloudAccountScreenContent(
                     ConnectedAccountContent(
                         account = authState.account,
                         profileLink = viewState.profileLink,
+                        syncStatus = viewState.syncStatus,
                         isLoading = viewState.isLoading,
                         error = viewState.error,
                         onSignOut = {
@@ -389,6 +396,7 @@ private fun PasswordField(
 private fun ConnectedAccountContent(
     account: CloudAccount,
     profileLink: CloudProfileLink?,
+    syncStatus: SyncStatus,
     isLoading: Boolean,
     error: CloudAccountError?,
     onSignOut: () -> Unit,
@@ -430,6 +438,7 @@ private fun ConnectedAccountContent(
                     style = MaterialTheme.typography.bodySmall,
                 )
 
+                SyncStatusMessage(status = syncStatus)
                 if (profileLink != null) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
@@ -475,6 +484,26 @@ private fun ConnectedAccountContent(
             }
         }
     }
+}
+
+@Composable
+private fun SyncStatusMessage(
+    status: SyncStatus,
+    modifier: Modifier = Modifier,
+) {
+    val message = when (status) {
+        SyncStatus.Idle -> return
+        is SyncStatus.Synchronizing -> stringResource(
+            StringRes.cloud_account_sync_status_synchronizing,
+        )
+        SyncStatus.UpToDate -> stringResource(StringRes.cloud_account_sync_status_up_to_date)
+        is SyncStatus.Pending -> stringResource(StringRes.cloud_account_sync_status_pending)
+        is SyncStatus.ActionRequired -> stringResource(
+            StringRes.cloud_account_sync_status_action_required,
+        )
+        is SyncStatus.Failed -> stringResource(StringRes.cloud_account_sync_status_failed)
+    }
+    StatusMessage(message = message, modifier = modifier)
 }
 
 @Composable

@@ -19,6 +19,7 @@ import com.retro99.cloudaccount.domain.usecase.RestoreCloudSessionUseCase
 import com.retro99.cloudaccount.domain.usecase.SignInCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.SignOutCloudAccountUseCase
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.usecase.ObserveSyncStatusUseCase
 import com.retro99.sync.domain.usecase.SyncNowUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.launchIn
@@ -39,6 +40,7 @@ class CloudAccountViewModel(
     @Provided private val signOutCloudAccountUseCase: SignOutCloudAccountUseCase,
     @Provided private val activateCloudProfileUseCase: ActivateCloudProfileUseCase,
     @Provided private val enableCloudSyncUseCase: EnableCloudSyncUseCase,
+    @Provided private val observeSyncStatusUseCase: ObserveSyncStatusUseCase,
     @Provided private val syncNowUseCase: SyncNowUseCase,
     @InjectedParam private val onBack: () -> Unit,
 ) : BaseViewModel<CloudAccountViewState, CloudAccountIntent>(CloudAccountViewState()) {
@@ -48,6 +50,7 @@ class CloudAccountViewModel(
     init {
         observeFormState()
         observeAuthState()
+        observeSyncStatus()
         restoreSession()
     }
 
@@ -85,6 +88,14 @@ class CloudAccountViewModel(
                 } catch (exception: Exception) {
                     showError(exception)
                 }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeSyncStatus() {
+        observeSyncStatusUseCase()
+            .onEach { syncStatus ->
+                updateState { it.copy(syncStatus = syncStatus) }
             }
             .launchIn(viewModelScope)
     }

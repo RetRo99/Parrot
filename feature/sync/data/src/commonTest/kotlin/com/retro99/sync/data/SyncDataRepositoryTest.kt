@@ -5,6 +5,8 @@ import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncScope
+import com.retro99.sync.domain.SyncActionRequired
+import com.retro99.sync.domain.SyncStatus
 import com.retro99.sync.domain.SyncTriggerReason
 import com.retro99.sync.domain.SyncUrgency
 import kotlinx.coroutines.CompletableDeferred
@@ -38,6 +40,7 @@ class SyncDataRepositoryTest {
             )
         }
         pass.firstStarted.await()
+        assertTrue(repository.observeStatus().value is SyncStatus.Synchronizing)
 
         val secondReady = CompletableDeferred<Unit>()
         val second = async(start = CoroutineStart.UNDISPATCHED) {
@@ -84,6 +87,10 @@ class SyncDataRepositoryTest {
 
         assertEquals(SyncResult.NotAuthenticated, repository.sync())
         assertTrue(pass.requests.isEmpty())
+        assertEquals(
+            SyncStatus.ActionRequired(SyncActionRequired.NOT_AUTHENTICATED),
+            repository.observeStatus().value,
+        )
     }
 
     @Test
@@ -118,6 +125,7 @@ class SyncDataRepositoryTest {
             repository.requestSync(request),
         )
         assertEquals(listOf(request), destination.requests)
+        assertEquals(SyncStatus.Pending(10), repository.observeStatus().value)
     }
 
     @Test
@@ -183,6 +191,10 @@ class SyncDataRepositoryTest {
         assertEquals(
             SyncResult.Failed("Storyteller unavailable"),
             repository.sync(),
+        )
+        assertEquals(
+            SyncStatus.Failed("Storyteller unavailable"),
+            repository.observeStatus().value,
         )
     }
 
