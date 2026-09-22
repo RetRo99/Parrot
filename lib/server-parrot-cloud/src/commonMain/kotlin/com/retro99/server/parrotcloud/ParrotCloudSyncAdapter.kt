@@ -19,13 +19,13 @@ import com.retro99.sync.data.LegacyMutationApplier
 import com.retro99.sync.data.LegacySyncEngine
 import com.retro99.sync.data.LibraryBookSyncApplier
 import com.retro99.sync.data.SyncLibraryBookSnapshot
-import com.retro99.sync.data.SyncPullEngine
 import com.retro99.sync.data.SyncPullPage
 import com.retro99.sync.data.SyncPass
 import com.retro99.sync.data.SyncExecutionContext
 import com.retro99.sync.data.SyncOutboxPreflight
 import com.retro99.sync.data.DuplicatePositionRepair
 import com.retro99.sync.data.LocalBookUuidResolver
+import com.retro99.sync.data.SyncBoundedPass
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -44,7 +44,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val legacyTransport: LegacySyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
     @Provided private val legacySyncEngine: LegacySyncEngine,
-    @Provided private val syncPullEngine: SyncPullEngine,
+    @Provided private val syncBoundedPass: SyncBoundedPass,
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
 ) : SyncPass {
     private val json = Json {
@@ -65,58 +65,31 @@ class ParrotCloudSyncAdapter(
     ): SyncResult {
         syncOutboxDatabase.deleteByEntityType(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS)
         duplicatePositionRepair.repair()
-        val initialPull = pullUntilCaughtUp(cloudUserId)
-        var cursor = initialPull.cursor?.toLongOrNull() ?: 0L
-        var pulledCount = initialPull.pulledChangeCount
-
-        val entries = syncOutboxPreflight.selectEligible(
-            remoteAccountId = cloudUserId,
-            maxEntries = SYNC_BATCH_SIZE,
-        ) { entry -> entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS }
-        val pushedCount = pushMutations(entries, cloudUserId, cursor)
-        if (entries.isNotEmpty()) {
-            val afterPushPull = pullUntilCaughtUp(cloudUserId)
-            pulledCount += afterPushPull.pulledChangeCount
-            cursor = afterPushPull.cursor?.toLongOrNull() ?: cursor
-        }
-        return SyncResult.Completed(
-            pushedMutationCount = pushedCount,
-            pulledChangeCount = pulledCount,
-            pendingMutationCount = syncOutboxPreflight.pendingCount(cloudUserId),
-        )
-    }
-
-    private suspend fun pullUntilCaughtUp(cloudUserId: String) =
-        syncPullEngine.pullUntilCaughtUp(
+        return syncBoundedPass.execute(
             destinationId = PARROT_CLOUD_SERVER_ID,
             remoteAccountId = cloudUserId,
-            limit = SYNC_BATCH_SIZE,
-        ) { cursor, limit ->
-            val page = pullAndApply(
-                cloudUserId = cloudUserId,
-                cursor = cursor?.toLongOrNull() ?: 0L,
-                limit = limit,
-            )
-            SyncPullPage(
-                changeCount = page.first,
-                nextCursor = page.second.toString(),
-                hasMore = page.third,
-            )
-        }
-
-    private suspend fun pushMutations(
-        entries: List<SyncOutboxEntry>,
-        cloudUserId: String,
-        cursor: Long,
-    ): Int {
-        val progressEntries = entries.filter { entry ->
-            entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
-        }
-        val legacyEntries = entries.filter { entry ->
-            entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
-        }
-        return pushProgressMutations(progressEntries) +
-            pushLegacyMutations(legacyEntries, cursor)
+            batchSize = SYNC_BATCH_SIZE,
+            selectEntries = {
+                syncOutboxPreflight.selectEligible(
+                    remoteAccountId = cloudUserId,
+                    maxEntries = SYNC_BATCH_SIZE,
+                ) { entry -> entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS }
+            },
+            pushProgressEntries = ::pushProgressMutations,
+            pushLegacyEntries = { entries, cursor ->
+                pushLegacyMutations(entries, cursor ?: "0")
+            },
+            fetchAndApply = { cursor, limit ->
+                pullAndApply(
+                    cloudUserId = cloudUserId,
+                    cursor = cursor ?: "0",
+                    limit = limit,
+                )
+            },
+            pendingMutationCount = {
+                syncOutboxPreflight.pendingCount(cloudUserId)
+            },
+        )
     }
 
     private suspend fun pushProgressMutations(
@@ -159,13 +132,13 @@ class ParrotCloudSyncAdapter(
 
     private suspend fun pushLegacyMutations(
         entries: List<SyncOutboxEntry>,
-        cursor: Long,
+        cursor: String,
     ): Int {
         if (entries.isEmpty()) return 0
         val summary = legacySyncEngine.push(
             entries = entries,
             transport = legacyTransport,
-            cursor = cursor.toString(),
+            cursor = cursor,
             applier = object : LegacyMutationApplier {
                 override suspend fun onAccepted(
                     entry: SyncOutboxEntry,
@@ -193,11 +166,11 @@ class ParrotCloudSyncAdapter(
 
     private suspend fun pullAndApply(
         cloudUserId: String,
-        cursor: Long,
+        cursor: String,
         limit: Int,
-    ): Triple<Int, Long, Boolean> {
+    ): SyncPullPage {
         val legacyResponse = legacyTransport.pull(
-            cursor = cursor.toString(),
+            cursor = cursor,
             limit = limit,
         )
         legacyResponse.changes
@@ -211,7 +184,7 @@ class ParrotCloudSyncAdapter(
             }
 
         val progressPage = progressTransport.fetchChanges(
-            cursor = cursor.toString(),
+            cursor = cursor,
             limit = limit,
         )
         progressPage.changes.forEach { remote ->
@@ -219,15 +192,15 @@ class ParrotCloudSyncAdapter(
         }
 
         val nextCursor = maxOf(
-            legacyResponse.nextCursor?.toLongOrNull() ?: cursor,
-            progressPage.nextCursor?.toLongOrNull() ?: cursor,
+            legacyResponse.nextCursor?.toLongOrNull() ?: cursor.toLongOrNull() ?: 0L,
+            progressPage.nextCursor?.toLongOrNull() ?: cursor.toLongOrNull() ?: 0L,
         )
-        return Triple(
-            legacyResponse.changes.count { change ->
+        return SyncPullPage(
+            changeCount = legacyResponse.changes.count { change ->
                 change.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
             } + progressPage.changes.size,
-            nextCursor,
-            legacyResponse.hasMore || progressPage.hasMore,
+            nextCursor = nextCursor.toString(),
+            hasMore = legacyResponse.hasMore || progressPage.hasMore,
         )
     }
 
