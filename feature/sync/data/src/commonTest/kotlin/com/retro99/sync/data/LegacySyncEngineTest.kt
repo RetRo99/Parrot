@@ -58,6 +58,10 @@ class LegacySyncEngineTest {
         assertEquals(listOf(accepted.mutationId), outbox.deletedIds)
         assertEquals(listOf(rejected.mutationId), outbox.failureIds)
         assertEquals(listOf(accepted.mutationId), applier.acceptedIds)
+        assertEquals(
+            listOf(accepted.mutationId, rejected.mutationId, omitted.mutationId),
+            transport.receivedMutationIds,
+        )
         assertEquals("opaque-cursor", transport.receivedCursor)
     }
 
@@ -80,12 +84,14 @@ private class RecordingLegacyTransport(
     private val responses: List<SyncMutationResponse>,
 ) : LegacySyncTransport {
     var receivedCursor: String? = null
+    var receivedMutationIds: List<String> = emptyList()
 
     override suspend fun push(
         mutations: List<com.retro99.sync.domain.SyncMutationRequest>,
         cursor: String?,
     ): List<SyncMutationResponse> {
         receivedCursor = cursor
+        receivedMutationIds = mutations.map { mutation -> mutation.mutationId }
         return responses
     }
 
