@@ -71,6 +71,7 @@ dependencies {
     implementation(projects.feature.sync.domain)
     implementation(libs.compose.uiToolingPreview)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.koin.android)
     implementation(libs.kotzilla.sdk.compose)
     implementation(libs.datetime)

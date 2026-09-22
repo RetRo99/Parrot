@@ -13,6 +13,6 @@ class ParrotApplication : Application() {
             androidLogger()
             androidContext(this@ParrotApplication)
         }
+        SyncWorkScheduler.enqueue(this)
     }
 }
-

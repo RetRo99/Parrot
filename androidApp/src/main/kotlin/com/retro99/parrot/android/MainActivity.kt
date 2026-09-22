@@ -39,6 +39,7 @@ class MainActivity : FragmentActivity() {
             val wasUnavailable = !isNetworkAvailable
             isNetworkAvailable = true
             if (wasUnavailable && hasStarted) {
+                SyncWorkScheduler.enqueue(this@MainActivity)
                 requestConnectivitySync()
             }
         }
@@ -116,12 +117,14 @@ class MainActivity : FragmentActivity() {
         }
         if (!isChangingConfigurations) {
             SyncTriggerBridge.shared.onBackground()
+            SyncWorkScheduler.enqueue(this)
         }
         super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
+        SyncWorkScheduler.enqueue(this)
         val reason = if (hasStarted) {
             SyncTriggerReason.LIFECYCLE
         } else {

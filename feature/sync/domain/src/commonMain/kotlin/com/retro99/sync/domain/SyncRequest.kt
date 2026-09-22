@@ -21,6 +21,7 @@ sealed interface SyncScope {
 
 enum class SyncTriggerReason {
     STARTUP,
+    RECOVERY,
     FOREGROUND,
     LIFECYCLE,
     CONNECTIVITY,
