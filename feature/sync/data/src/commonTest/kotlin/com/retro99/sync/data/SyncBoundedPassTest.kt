@@ -13,6 +13,8 @@ class SyncBoundedPassTest {
     fun ordersPullSelectionPushPullAndPendingCount() = runTest {
         val checkpoints = BoundedRecordingCheckpointDatabase()
         val events = mutableListOf<String>()
+        val progressEntityTypes = mutableListOf<String>()
+        val legacyEntityTypes = mutableListOf<String>()
         var fetchCount = 0
         val coordinator = SyncBoundedPass(SyncPullEngine(checkpoints))
 
@@ -34,10 +36,12 @@ class SyncBoundedPassTest {
                 )
             },
             pushProgressEntries = { entries ->
+                progressEntityTypes += entries.map { entry -> entry.entityType }
                 events += "progress:${entries.size}"
                 1
             },
             pushLegacyEntries = { entries, cursor ->
+                legacyEntityTypes += entries.map { entry -> entry.entityType }
                 events += "legacy:${entries.size}:$cursor"
                 2
             },
@@ -54,6 +58,14 @@ class SyncBoundedPassTest {
                 events += "pending"
                 4
             },
+        )
+        assertEquals(
+            listOf(SyncOutboxEntry.ENTITY_TYPE_READING_POSITION),
+            progressEntityTypes,
+        )
+        assertEquals(
+            listOf(SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK),
+            legacyEntityTypes,
         )
 
         assertEquals(

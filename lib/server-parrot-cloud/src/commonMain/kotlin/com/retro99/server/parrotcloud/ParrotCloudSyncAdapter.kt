@@ -1,7 +1,6 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
-import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncRequest
@@ -35,7 +34,6 @@ import org.koin.core.annotation.Single
 @Single(binds = [SyncPass::class])
 class ParrotCloudSyncAdapter(
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
-    @Provided private val positionDatabase: PositionDatabase,
     @Provided private val localBookUuidResolver: LocalBookUuidResolver,
     @Provided private val duplicatePositionRepair: DuplicatePositionRepair,
     @Provided private val legacyTransport: LegacySyncTransport,
@@ -219,32 +217,12 @@ class ParrotCloudSyncAdapter(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     ) {
-        when (entry.entityType) {
-            SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
-                val payload = json.decodeFromString<ParrotCloudBookPayload>(entry.payload)
-                libraryBookSyncApplier.applyAccepted(
-                    entry = entry,
-                    response = response,
-                    snapshot = payload.toSyncLibraryBookSnapshot(response.revision),
-                )
-            }
-
-            SyncOutboxEntry.ENTITY_TYPE_READING_POSITION -> {
-                response.revision?.let { revision ->
-                    val payload = json.decodeFromString<ParrotCloudReadingPositionPayload>(entry.payload)
-                    val localBookUuid = localBookUuidResolver.resolve(
-                        libraryBookId = payload.libraryBookId,
-                        cloudBookId = payload.cloudBookId,
-                        fallback = entry.entityId,
-                    )
-                    positionDatabase.updateRemoteRevision(
-                        bookUuid = localBookUuid,
-                        remoteRevision = revision,
-                        expectedLocalGeneration = entry.localGeneration,
-                    )
-                }
-            }
-        }
+        val payload = json.decodeFromString<ParrotCloudBookPayload>(entry.payload)
+        libraryBookSyncApplier.applyAccepted(
+            entry = entry,
+            response = response,
+            snapshot = payload.toSyncLibraryBookSnapshot(response.revision),
+        )
     }
 
     private companion object {
