@@ -25,7 +25,7 @@ class SyncOutboxPreflight(
         remoteAccountId: String,
         maxEntries: Int,
         now: String = Clock.System.now().toString(),
-        include: (SyncOutboxEntry) -> Boolean = { true },
+        capability: SyncOutboxCapability = SyncOutboxCapability.All,
     ): List<SyncOutboxEntry> {
         require(maxEntries >= 0) { "Maximum outbox candidates cannot be negative" }
 
@@ -35,12 +35,16 @@ class SyncOutboxPreflight(
                 entry.state == SyncOutboxEntry.STATE_PENDING ||
                     entry.state == SyncOutboxEntry.STATE_DISPATCHED
             }
-            .filter(include)
+            .filter { entry -> capability.supports(entry) }
             .take(maxEntries)
             .toList()
     }
 
-    suspend fun pendingCount(remoteAccountId: String): Int {
-        return database.getPending(remoteAccountId).size
+    suspend fun pendingCount(
+        remoteAccountId: String,
+        capability: SyncOutboxCapability = SyncOutboxCapability.All,
+    ): Int {
+        return database.getPending(remoteAccountId)
+            .count { entry -> capability.supports(entry) }
     }
 }

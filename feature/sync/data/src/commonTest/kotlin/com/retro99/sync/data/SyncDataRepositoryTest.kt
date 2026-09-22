@@ -118,9 +118,9 @@ class SyncDataRepositoryTest {
             remoteAccountId = "remote-account",
             maxEntries = 10,
             now = "2026-09-22T00:00:00Z",
-            include = { entry ->
-                entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS
-            },
+            capability = SyncOutboxCapability(
+                unsupportedEntityTypes = setOf(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS),
+            ),
         )
 
         assertEquals(
@@ -129,6 +129,15 @@ class SyncDataRepositoryTest {
         )
         assertEquals(listOf("remote-account"), outbox.eligibleAccounts)
         assertEquals(listOf("2026-09-22T00:00:00Z"), outbox.eligibleTimes)
+        assertEquals(
+            3,
+            preflight.pendingCount(
+                remoteAccountId = "remote-account",
+                capability = SyncOutboxCapability(
+                    unsupportedEntityTypes = setOf(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS),
+                ),
+            ),
+        )
         assertTrue(outbox.deletedEntityTypes.isEmpty())
     }
 }
