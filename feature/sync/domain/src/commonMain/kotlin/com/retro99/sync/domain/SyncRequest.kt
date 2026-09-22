@@ -25,6 +25,7 @@ enum class SyncTriggerReason {
     LIFECYCLE,
     CONNECTIVITY,
     BOOK_OPEN,
+    ROUTINE_PROGRESS,
     READER_CHECKPOINT,
     MANUAL,
 }

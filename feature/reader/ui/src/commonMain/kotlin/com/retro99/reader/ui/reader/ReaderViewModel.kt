@@ -50,6 +50,7 @@ import com.retro99.reader.ui.tts.TtsPreparationProgress
 import com.retro99.reader.ui.tts.TtsVoicePreparationState
 import com.retro99.reader.ui.tts.neuralVoicePackage
 import com.retro99.statistics.domain.usecase.SaveReadingSessionUseCase
+import com.retro99.sync.domain.RoutineSyncScheduler
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncScope
 import com.retro99.sync.domain.SyncTriggerReason
@@ -179,6 +180,20 @@ class ReaderViewModel(
 
     /** Tracks the previous playing state to detect play/pause transitions */
     private var wasPlaying: Boolean = false
+
+    private val routineSyncScheduler = RoutineSyncScheduler(
+        scope = viewModelScope,
+        nowMillis = ::nowMillis,
+        requestSync = {
+            syncNowUseCase(
+                SyncRequest(
+                    reason = SyncTriggerReason.ROUTINE_PROGRESS,
+                    scope = SyncScope.Books(setOf(bookUuid)),
+                    urgency = SyncUrgency.ROUTINE,
+                ),
+            )
+        },
+    )
 
     init {
         initializeReader()
@@ -1114,6 +1129,7 @@ class ReaderViewModel(
 
         viewModelScope.launch {
             saveReadingProgressUseCase(positionDomainModel)
+                .onSuccess { routineSyncScheduler.markDirty() }
         }
     }
 
@@ -1381,6 +1397,7 @@ class ReaderViewModel(
             if (viewState.value.isReadAloud) {
                 saveCurrentAudioPositionSync()
             }
+            routineSyncScheduler.close()
             cancelSleepTimer()
 
             // Track book closed event with reading duration and progress
@@ -1722,9 +1739,11 @@ class ReaderViewModel(
             position = currentPosition.position,
         )
         saveReadingProgressUseCase(positionDomainModel)
+            .onSuccess { routineSyncScheduler.markDirty() }
     }
 
     override fun onCleared() {
+        routineSyncScheduler.close()
         super.onCleared()
         readerScope.close()
     }
