@@ -129,6 +129,27 @@ class ProgressSyncEngineTest {
         assertTrue(positions.localPositions.isEmpty())
     }
 
+    @Test
+    fun refreshRemoteBookIdsAppliesCleanRemoteProgressWithoutAnOutboxMutation() = runTest {
+        val outbox = RecordingOutboxDatabase(emptyList())
+        val positions = RecordingPositionDatabase()
+        val transport = RecordingTransport(
+            fetchResults = mapOf("remote-book-1" to remoteSnapshot()),
+        )
+        val engine = ProgressSyncEngine(outbox, positions)
+
+        val refreshed = engine.refreshRemoteBookIds(
+            remoteBookIds = setOf("remote-book-1"),
+            accountId = "account-1",
+            transport = transport,
+        )
+
+        assertEquals(1, refreshed)
+        assertEquals(setOf("remote-book-1"), transport.fetchedBookIds)
+        assertEquals("book-1", positions.localPositions.single().bookUuid)
+        assertEquals(listOf("book-1"), positions.deletedRemoteBookIds)
+    }
+
     private fun outboxEntry(
         mutationId: String,
         entityId: String = "book-1",

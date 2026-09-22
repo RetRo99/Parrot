@@ -424,6 +424,13 @@ class ReaderViewModel(
 
     private fun initializeReader() {
         viewModelScope.launch {
+            syncNowUseCase(
+                SyncRequest(
+                    reason = SyncTriggerReason.BOOK_OPEN,
+                    scope = SyncScope.Books(setOf(bookUuid)),
+                    urgency = SyncUrgency.ROUTINE,
+                ),
+            )
             initializeReaderUseCase(serverId, bookUuid, bookType)
                 .onSuccess { data ->
                     openPublication(data)

@@ -17,6 +17,8 @@ import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.SyncScope
+import com.retro99.sync.domain.SyncTriggerReason
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
@@ -55,7 +57,7 @@ class StorytellerProgressSyncAdapter(
             } else {
                 val results = servers.map { server ->
                     try {
-                        execute(networkClientProvider.create(server))
+                        execute(request, networkClientProvider.create(server))
                     } catch (exception: CancellationException) {
                         throw exception
                     } catch (exception: Exception) {
@@ -71,6 +73,13 @@ class StorytellerProgressSyncAdapter(
     }
 
     suspend fun execute(
+        networkClient: ServerNetworkClient,
+    ): SyncResult.Completed {
+        return execute(SyncRequest(), networkClient)
+    }
+
+    suspend fun execute(
+        request: SyncRequest,
         networkClient: ServerNetworkClient,
     ): SyncResult.Completed {
         val transport = StorytellerProgressTransport(networkClient)
@@ -93,6 +102,16 @@ class StorytellerProgressSyncAdapter(
                 snapshot = position.toRemoteProgressSnapshot(position.bookUuid).snapshot,
                 baseVersion = entry.baseRevision?.toString(),
                 observedAt = entry.createdAt,
+            )
+        }
+
+        if (request.reason == SyncTriggerReason.BOOK_OPEN) {
+            val bookIds = (request.scope as? SyncScope.Books)?.bookIds.orEmpty()
+            progressSyncEngine.refreshRemoteBookIds(
+                remoteBookIds = bookIds,
+                accountId = networkClient.serverId,
+                transport = transport,
+                identityResolver = ProgressIdentityResolver.Default,
             )
         }
 

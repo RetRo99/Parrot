@@ -133,6 +133,22 @@ class ProgressSyncEngine(
             .map(codec::decode)
             .map { mutation -> mutation.remoteBookId }
             .toSet()
+        return refreshRemoteBookIds(
+            remoteBookIds = remoteBookIds,
+            accountId = accountId,
+            transport = transport,
+            identityResolver = identityResolver,
+        )
+    }
+
+    suspend fun refreshRemoteBookIds(
+        remoteBookIds: Set<String>,
+        accountId: String,
+        transport: ProgressSyncTransport,
+        identityResolver: ProgressIdentityResolver = ProgressIdentityResolver.Default,
+    ): Int {
+        if (remoteBookIds.isEmpty()) return 0
+
         val remoteSnapshots = transport.fetchProgress(remoteBookIds)
         remoteSnapshots.values.forEach { remote ->
             applyRemote(

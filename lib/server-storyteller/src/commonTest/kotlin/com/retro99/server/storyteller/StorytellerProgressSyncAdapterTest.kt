@@ -25,6 +25,8 @@ import com.retro99.sync.data.SyncOutboxPreflight
 import com.retro99.sync.data.SyncPullEngine
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.SyncScope
+import com.retro99.sync.domain.SyncTriggerReason
 import com.retro99.user.api.UserProfile
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.Flow
@@ -76,6 +78,29 @@ class StorytellerProgressSyncAdapterTest {
         assertEquals(listOf(mutation.mutationId), outbox.deletedIds)
         assertEquals(listOf(bookmark.mutationId), outbox.remainingIds)
         assertEquals(1, positions.remotePositions.size)
+    }
+
+    @Test
+    fun bookOpenRefreshesOnlyTheSelectedBookBeforeReaderInitialization() = runTest {
+        val outbox = RecordingAdapterOutbox(emptyList())
+        val positions = RecordingAdapterPositions()
+        val client = RecordingNetworkClient(
+            serverId = "storyteller-1",
+            getResult = Ok(StorytellerPositionApiModel(timestamp = 9L)),
+            postResult = Ok(Unit),
+        )
+
+        val result = createAdapter(outbox, positions).execute(
+            request = SyncRequest(
+                reason = SyncTriggerReason.BOOK_OPEN,
+                scope = SyncScope.Books(setOf("book-1")),
+            ),
+            networkClient = client,
+        )
+
+        assertEquals(SyncResult.Completed(0, 0, 0), result)
+        assertEquals(listOf("GET:/api/v2/books/book-1/positions"), client.calls)
+        assertEquals(1, positions.localPositions.size)
     }
 
     @Test
@@ -334,9 +359,12 @@ private class RecordingAdapterOutbox(
 }
 
 private class RecordingAdapterPositions : PositionDatabase {
+    val localPositions = mutableListOf<PositionEntity>()
     val remotePositions = mutableListOf<PositionEntity>()
 
-    override suspend fun upsertPosition(position: PositionEntity) = Unit
+    override suspend fun upsertPosition(position: PositionEntity) {
+        localPositions += position
+    }
 
     override suspend fun upsertPositionWithMutation(
         position: PositionEntity,
