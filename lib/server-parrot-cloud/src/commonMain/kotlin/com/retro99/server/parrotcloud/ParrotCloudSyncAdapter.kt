@@ -6,7 +6,6 @@ import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
-import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
@@ -24,6 +23,8 @@ import com.retro99.sync.data.ProgressOutboxCodec
 import com.retro99.sync.data.ProgressSyncEngine
 import com.retro99.sync.data.LegacyMutationApplier
 import com.retro99.sync.data.LegacySyncEngine
+import com.retro99.sync.data.LibraryBookSyncApplier
+import com.retro99.sync.data.SyncLibraryBookSnapshot
 import com.retro99.sync.data.SyncPullEngine
 import com.retro99.sync.data.SyncPullPage
 import com.retro99.sync.data.SyncPass
@@ -53,6 +54,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val progressSyncEngine: ProgressSyncEngine,
     @Provided private val legacySyncEngine: LegacySyncEngine,
     @Provided private val syncPullEngine: SyncPullEngine,
+    @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
 ) : SyncPass {
     private val json = Json {
         encodeDefaults = true
@@ -273,35 +275,11 @@ class ParrotCloudSyncAdapter(
         when (entityType) {
             SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
                 val book = json.decodeFromJsonElement<ParrotCloudBookPayload>(payload)
-                val existing = libraryBooksDatabase.getLibraryBookByCloudBookId(book.cloudBookId ?: "")
-                    ?: libraryBooksDatabase.getLibraryBookByContentHash(
-                        book.contentHashAlgorithm,
-                        book.contentHash,
-                    )
-                val libraryBookId = existing?.libraryBookId ?: book.libraryBookId
-                libraryBooksDatabase.upsertLibraryBook(
-                    ParrotCloudLibraryBookEntity(
-                        libraryBookId = libraryBookId,
-                        cloudBookId = book.cloudBookId,
-                        contentHash = book.contentHash,
-                        contentHashAlgorithm = book.contentHashAlgorithm,
-                        title = book.title,
-                        author = book.author,
-                        format = book.format,
-                        remoteRevision = revision ?: book.remoteRevision,
-                        metadataJson = book.metadataJson,
-                    ),
+                libraryBookSyncApplier.applyRemote(
+                    book.toSyncLibraryBookSnapshot(revision),
                 )
             }
         }
-    }
-
-    private suspend fun applyRemoteChange(
-        entry: SyncOutboxEntry,
-        payload: JsonElement,
-        revision: Long?,
-    ) {
-        applyRemoteChange(entry.entityType, payload, revision)
     }
 
     private suspend fun applyRemoteConflict(
@@ -309,7 +287,12 @@ class ParrotCloudSyncAdapter(
         payload: JsonElement,
         revision: Long?,
     ) {
-        applyRemoteChange(entry, payload, revision)
+        if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK) {
+            val book = json.decodeFromJsonElement<ParrotCloudBookPayload>(payload)
+            libraryBookSyncApplier.applyRemote(
+                book.toSyncLibraryBookSnapshot(revision),
+            )
+        }
     }
 
     private suspend fun applyAcceptedMetadata(
@@ -318,39 +301,12 @@ class ParrotCloudSyncAdapter(
     ) {
         when (entry.entityType) {
             SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
-                val cloudBookId = response.cloudBookId ?: return
-                val existing = libraryBooksDatabase.getLibraryBookById(entry.entityId)
-                if (existing == null) {
-                    val payload = json.decodeFromString<ParrotCloudBookPayload>(entry.payload)
-                    libraryBooksDatabase.upsertLibraryBook(
-                        ParrotCloudLibraryBookEntity(
-                            libraryBookId = payload.libraryBookId,
-                            cloudBookId = cloudBookId,
-                            contentHash = payload.contentHash,
-                            contentHashAlgorithm = payload.contentHashAlgorithm,
-                            title = payload.title,
-                            author = payload.author,
-                            format = payload.format,
-                            remoteRevision = response.revision ?: payload.remoteRevision,
-                            metadataJson = payload.metadataJson,
-                        ),
-                    )
-                } else {
-                    libraryBooksDatabase.upsertLibraryBook(
-                        ParrotCloudLibraryBookEntity(
-                            libraryBookId = existing.libraryBookId,
-                            contentHash = existing.contentHash,
-                            contentHashAlgorithm = existing.contentHashAlgorithm,
-                            title = existing.title,
-                            author = existing.author,
-                            format = existing.format,
-                            remoteRevision = response.revision ?: existing.remoteRevision,
-                            deletedAt = existing.deletedAt,
-                            cloudBookId = cloudBookId,
-                            metadataJson = existing.metadataJson,
-                        ),
-                    )
-                }
+                val payload = json.decodeFromString<ParrotCloudBookPayload>(entry.payload)
+                libraryBookSyncApplier.applyAccepted(
+                    entry = entry,
+                    response = response,
+                    snapshot = payload.toSyncLibraryBookSnapshot(response.revision),
+                )
             }
 
             SyncOutboxEntry.ENTITY_TYPE_READING_POSITION -> {
@@ -418,4 +374,20 @@ class ParrotCloudSyncAdapter(
     private companion object {
         const val SYNC_BATCH_SIZE = 50
     }
+}
+
+private fun ParrotCloudBookPayload.toSyncLibraryBookSnapshot(
+    revision: Long?,
+): SyncLibraryBookSnapshot {
+    return SyncLibraryBookSnapshot(
+        libraryBookId = libraryBookId,
+        cloudBookId = cloudBookId,
+        contentHash = contentHash,
+        contentHashAlgorithm = contentHashAlgorithm,
+        title = title,
+        author = author,
+        format = format,
+        remoteRevision = revision ?: remoteRevision,
+        metadataJson = metadataJson,
+    )
 }
