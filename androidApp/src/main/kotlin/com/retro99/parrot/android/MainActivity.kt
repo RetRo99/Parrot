@@ -16,6 +16,7 @@ import com.retro99.home.ui.deeplink.DeepLinkHandler
 import com.retro99.login.data.oauth.StorytellerOAuthCallbackRegistry
 import com.retro99.parrot.App
 import com.retro99.parrot.CloudOAuthCallbackBridge
+import com.retro99.parrot.SyncTriggerBridge
 import com.retro99.reader.ui.fragment.EpubFragmentFactoryHelper
 import com.retro99.reader.ui.playback.NotificationPermissionHandler
 import com.retro99.sync.domain.SyncRequest
@@ -112,6 +113,9 @@ class MainActivity : FragmentActivity() {
         if (isConnectivityCallbackRegistered) {
             connectivityManager.unregisterNetworkCallback(connectivityCallback)
             isConnectivityCallbackRegistered = false
+        }
+        if (!isChangingConfigurations) {
+            SyncTriggerBridge.shared.onBackground()
         }
         super.onStop()
     }

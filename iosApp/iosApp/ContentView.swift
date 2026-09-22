@@ -44,6 +44,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var connectivityObserver = SyncConnectivityObserver()
     @State private var didRequestStartupSync = false
+    @State private var didRequestBackgroundSync = false
 
     var body: some View {
         ComposeView()
@@ -66,7 +67,12 @@ struct ContentView: View {
             }
             .onChange(of: scenePhase) { oldPhase, newPhase in
                 if newPhase == .active && oldPhase != .active {
+                    didRequestBackgroundSync = false
                     SyncTriggerBridge.shared.onForeground()
+                }
+                if newPhase == .background && !didRequestBackgroundSync {
+                    didRequestBackgroundSync = true
+                    SyncTriggerBridge.shared.onBackground()
                 }
                 if oldPhase == .background && newPhase == .active {
                     _ = CloudOAuthCallbackBridge.shared.cancelPending(

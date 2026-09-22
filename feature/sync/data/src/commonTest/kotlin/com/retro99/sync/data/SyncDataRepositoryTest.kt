@@ -121,7 +121,7 @@ class SyncDataRepositoryTest {
     }
 
     @Test
-    fun oneApplicationRequestFansOutThroughParrotAndStorytellerDestinations() = runTest {
+    fun oneUrgentLifecycleRequestFansOutThroughParrotAndStorytellerDestinations() = runTest {
         val parrotPass = ImmediateSyncPass()
         val storytellerDestination = RecordingDestination(
             result = SyncResult.Completed(0, 0, 0),
@@ -132,7 +132,10 @@ class SyncDataRepositoryTest {
             syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
             destinations = listOf(storytellerDestination),
         )
-        val request = SyncRequest(reason = SyncTriggerReason.STARTUP)
+        val request = SyncRequest(
+            reason = SyncTriggerReason.LIFECYCLE,
+            urgency = SyncUrgency.URGENT,
+        )
 
         repository.requestSync(request)
 

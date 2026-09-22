@@ -40,7 +40,7 @@ class SyncNowUseCaseTest {
         val request = SyncRequest(
             reason = SyncTriggerReason.LIFECYCLE,
             scope = SyncScope.Books(setOf("book-1")),
-            urgency = SyncUrgency.ROUTINE,
+            urgency = SyncUrgency.URGENT,
         )
 
         SyncNowUseCase(repository)(request)

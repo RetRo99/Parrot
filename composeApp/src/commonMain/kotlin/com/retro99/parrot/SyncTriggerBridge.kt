@@ -26,15 +26,23 @@ object SyncTriggerBridge {
 
     fun onForeground() = request(SyncTriggerReason.LIFECYCLE)
 
+    fun onBackground() = request(
+        reason = SyncTriggerReason.LIFECYCLE,
+        urgency = SyncUrgency.URGENT,
+    )
+
     fun onConnectivityRestored() = request(SyncTriggerReason.CONNECTIVITY)
 
-    private fun request(reason: SyncTriggerReason) {
+    private fun request(
+        reason: SyncTriggerReason,
+        urgency: SyncUrgency = SyncUrgency.ROUTINE,
+    ) {
         val useCase = syncNowUseCase ?: return
         scope.launch {
             useCase(
                 SyncRequest(
                     reason = reason,
-                    urgency = SyncUrgency.ROUTINE,
+                    urgency = urgency,
                 ),
             )
         }
