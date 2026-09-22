@@ -375,6 +375,7 @@ internal class BooksDatabaseImpl(
             locatorType = locatorType,
             locatorTitle = locatorTitle,
             locatorTarget = locatorTarget,
+            cssSelector = cssSelector,
             audioTimestampMs = audioTimestampMs,
             chapterIndex = chapterIndex,
             progression = progression,

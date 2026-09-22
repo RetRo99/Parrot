@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS position (
     locator_type TEXT,
     locator_title TEXT,
     locator_target INTEGER,
+    css_selector TEXT,
     audio_timestamp_ms INTEGER,
     chapter_index INTEGER,
     progression REAL,
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS remote_position (
     locator_type TEXT,
     locator_title TEXT,
     locator_target INTEGER,
+    css_selector TEXT,
     audio_timestamp_ms INTEGER,
     chapter_index INTEGER,
     progression REAL,
@@ -51,11 +53,11 @@ CREATE TABLE IF NOT EXISTS remote_position (
 upsertPosition:
 INSERT OR REPLACE INTO position(
     book_uuid, library_book_id, local_generation, remote_revision, timestamp, created_at, updated_at,
-    locator_href, locator_type, locator_title, locator_target,
+    locator_href, locator_type, locator_title, locator_target, css_selector,
     audio_timestamp_ms, chapter_index, progression, total_chapters,
     total_duration_ms, total_progression, position
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateRemoteRevision:
 UPDATE position SET remote_revision = ? WHERE book_uuid = ?;
@@ -67,11 +69,11 @@ WHERE book_uuid = ? AND local_generation = ?;
 upsertRemotePosition:
 INSERT OR REPLACE INTO remote_position(
     book_uuid, library_book_id, remote_revision, timestamp, created_at, updated_at,
-    locator_href, locator_type, locator_title, locator_target,
+    locator_href, locator_type, locator_title, locator_target, css_selector,
     audio_timestamp_ms, chapter_index, progression, total_chapters,
     total_duration_ms, total_progression, position
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getRemotePositionByBookUuid:
 SELECT * FROM remote_position WHERE book_uuid = ?;

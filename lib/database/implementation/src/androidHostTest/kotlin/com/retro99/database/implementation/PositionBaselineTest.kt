@@ -37,6 +37,7 @@ class PositionBaselineTest {
             locator_type = "epub",
             locator_title = "Chapter 1",
             locator_target = 10L,
+            css_selector = "#chapter-1 p:nth-of-type(2)",
             audio_timestamp_ms = null,
             chapter_index = 1L,
             progression = 0.2,
@@ -56,6 +57,7 @@ class PositionBaselineTest {
             locator_type = "epub",
             locator_title = "Chapter 4",
             locator_target = 40L,
+            css_selector = "#chapter-4 p:nth-of-type(1)",
             audio_timestamp_ms = null,
             chapter_index = 4L,
             progression = 0.8,
@@ -72,8 +74,10 @@ class PositionBaselineTest {
 
         assertEquals(3L, local.local_generation)
         assertEquals(0.2, local.progression)
+        assertEquals("#chapter-1 p:nth-of-type(2)", local.css_selector)
         assertEquals(7L, local.remote_revision)
         assertEquals(0.8, remote.progression)
+        assertEquals("#chapter-4 p:nth-of-type(1)", remote.css_selector)
         assertEquals(8L, remote.remote_revision)
     }
 }

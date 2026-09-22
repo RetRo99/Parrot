@@ -5,6 +5,7 @@ import com.retro99.reader.domain.model.PositionDomainModel
 
 data class PositionLocalModel(
     override val bookUuid: String,
+    override val localGeneration: Long = 0L,
     override val remoteRevision: Long? = null,
     override val timestamp: Long?,
     override val createdAt: String?,
@@ -13,6 +14,7 @@ data class PositionLocalModel(
     override val locatorType: String?,
     override val locatorTitle: String?,
     override val locatorTarget: Int?,
+    override val cssSelector: String? = null,
     override val audioTimestampMs: Long?,
     override val chapterIndex: Int?,
     override val progression: Double?,
@@ -33,6 +35,7 @@ fun PositionLocalModel.toDomain(serverId: String): PositionDomainModel {
         locatorType = locatorType,
         locatorTitle = locatorTitle,
         locatorTarget = locatorTarget,
+        cssSelector = cssSelector,
         audioTimestampMs = audioTimestampMs,
         chapterIndex = chapterIndex,
         progression = progression,
@@ -55,6 +58,7 @@ fun PositionDomainModel.toLocal(): PositionLocalModel {
         locatorType = locatorType,
         locatorTitle = locatorTitle,
         locatorTarget = locatorTarget,
+        cssSelector = cssSelector,
         audioTimestampMs = audioTimestampMs,
         chapterIndex = chapterIndex,
         progression = progression,
@@ -68,6 +72,7 @@ fun PositionDomainModel.toLocal(): PositionLocalModel {
 fun PositionEntity.toLocalModel(): PositionLocalModel {
     return PositionLocalModel(
         bookUuid = bookUuid,
+        localGeneration = localGeneration,
         remoteRevision = remoteRevision,
         timestamp = timestamp,
         createdAt = createdAt,
@@ -76,6 +81,7 @@ fun PositionEntity.toLocalModel(): PositionLocalModel {
         locatorType = locatorType,
         locatorTitle = locatorTitle,
         locatorTarget = locatorTarget,
+        cssSelector = cssSelector,
         audioTimestampMs = audioTimestampMs,
         chapterIndex = chapterIndex,
         progression = progression,

@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS remote_position (
+    book_uuid TEXT NOT NULL PRIMARY KEY,
+    library_book_id TEXT,
+    remote_revision INTEGER,
+    timestamp INTEGER,
+    created_at TEXT,
+    updated_at TEXT,
+    locator_href TEXT,
+    locator_type TEXT,
+    locator_title TEXT,
+    locator_target INTEGER,
+    audio_timestamp_ms INTEGER,
+    chapter_index INTEGER,
+    progression REAL,
+    total_chapters INTEGER,
+    total_duration_ms INTEGER,
+    total_progression REAL,
+    position INTEGER
+);
+
+ALTER TABLE position ADD COLUMN css_selector TEXT;
+
+ALTER TABLE remote_position ADD COLUMN css_selector TEXT;

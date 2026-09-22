@@ -23,6 +23,8 @@ interface PositionEntity {
     val locatorType: String?
     val locatorTitle: String?
     val locatorTarget: Int?
+    val cssSelector: String?
+        get() = null
 
     // Location fields
     val audioTimestampMs: Long?

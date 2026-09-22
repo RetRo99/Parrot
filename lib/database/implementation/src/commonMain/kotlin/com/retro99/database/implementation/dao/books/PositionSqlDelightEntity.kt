@@ -14,6 +14,7 @@ data class PositionSqlDelightEntity(
     override val locatorType: String?,
     override val locatorTitle: String?,
     override val locatorTarget: Int?,
+    override val cssSelector: String? = null,
     override val audioTimestampMs: Long?,
     override val chapterIndex: Int?,
     override val progression: Double?,
