@@ -269,7 +269,7 @@ class ParrotCloudSyncAdapter(
         cloudUserId: String,
         cursor: Long,
     ): Triple<Int, Long, Boolean> {
-        val response = clientProvider.client.postgrest
+        val legacyResponse = clientProvider.client.postgrest
             .rpc(
                 "pull_sync_changes",
                 buildJsonObject {
@@ -278,15 +278,67 @@ class ParrotCloudSyncAdapter(
                 },
             )
             .decodeAs<CloudPullResponse>()
-        for (change in response.changes) {
-            applyRemoteChange(
-                entityType = change.entityType,
-                payload = change.payload,
-                revision = change.revision,
-                pendingMutations = syncOutboxDatabase.getPending(cloudUserId),
-            )
+        legacyResponse.changes
+            .filter { change -> change.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION }
+            .forEach { change ->
+                applyRemoteChange(
+                    entityType = change.entityType,
+                    payload = change.payload,
+                    revision = change.revision,
+                )
+            }
+
+        val progressPage = progressTransport.fetchChanges(
+            cursor = cursor.toString(),
+            limit = SYNC_BATCH_SIZE,
+        )
+        progressPage.changes.forEach { remote ->
+            applyRemoteProgress(remote, cloudUserId)
         }
-        return Triple(response.changes.size, response.nextCursor, response.hasMore)
+
+        val nextCursor = maxOf(
+            legacyResponse.nextCursor,
+            progressPage.nextCursor?.toLongOrNull() ?: cursor,
+        )
+        return Triple(
+            legacyResponse.changes.count { change ->
+                change.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
+            } + progressPage.changes.size,
+            nextCursor,
+            legacyResponse.hasMore || progressPage.hasMore,
+        )
+    }
+
+    private suspend fun applyRemoteProgress(
+        remote: com.retro99.sync.domain.RemoteProgressSnapshot,
+        cloudUserId: String,
+    ) {
+        val libraryBookId = remote.libraryBookId ?: remote.entityId ?: remote.remoteBookId
+        val localBookUuid = resolveLocalBookUuid(
+            libraryBookId = libraryBookId,
+            cloudBookId = remote.remoteBookId,
+            fallback = remote.entityId ?: libraryBookId,
+        )
+        val localPosition = remote.snapshot.toServerPosition(
+            bookUuid = localBookUuid,
+            libraryBookId = libraryBookId,
+        ).toParrotCloudPositionEntity(
+            remoteRevision = remote.version?.toLongOrNull(),
+            bookUuid = localBookUuid,
+            libraryBookId = libraryBookId,
+        )
+        val pendingMutations = syncOutboxDatabase.getPending(cloudUserId)
+        if (pendingMutations.hasPendingProgressFor(
+                localBookUuid = localBookUuid,
+                libraryBookId = libraryBookId,
+                cloudBookId = remote.remoteBookId,
+            )
+        ) {
+            positionDatabase.upsertRemotePosition(localPosition)
+        } else {
+            positionDatabase.upsertPosition(localPosition)
+            positionDatabase.deleteRemotePosition(localBookUuid)
+        }
     }
 
     private suspend fun applyRemoteChange(
