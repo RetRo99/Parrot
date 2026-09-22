@@ -2,6 +2,9 @@ package com.retro99.sync.domain.usecase
 
 import com.retro99.sync.domain.SyncRepository
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.SyncRequest
+import com.retro99.sync.domain.SyncTriggerReason
+import com.retro99.sync.domain.SyncUrgency
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
 
@@ -10,6 +13,11 @@ class SyncNowUseCase(
     @Provided private val syncRepository: SyncRepository,
 ) {
     suspend operator fun invoke(): SyncResult {
-        return syncRepository.sync()
+        return syncRepository.requestSync(
+            SyncRequest(
+                reason = SyncTriggerReason.MANUAL,
+                urgency = SyncUrgency.URGENT,
+            ),
+        )
     }
 }
