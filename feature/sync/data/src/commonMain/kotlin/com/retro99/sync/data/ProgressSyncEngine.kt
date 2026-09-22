@@ -117,6 +117,33 @@ class ProgressSyncEngine(
         }
     }
 
+    suspend fun refreshRemote(
+        entries: List<SyncOutboxEntry>,
+        accountId: String,
+        transport: ProgressSyncTransport,
+        codec: ProgressOutboxCodec,
+        identityResolver: ProgressIdentityResolver = ProgressIdentityResolver.Default,
+    ): Int {
+        val progressEntries = entries.filter { entry ->
+            entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
+        }
+        if (progressEntries.isEmpty()) return 0
+
+        val remoteBookIds = progressEntries
+            .map(codec::decode)
+            .map { mutation -> mutation.remoteBookId }
+            .toSet()
+        val remoteSnapshots = transport.fetchProgress(remoteBookIds)
+        remoteSnapshots.values.forEach { remote ->
+            applyRemote(
+                remote = remote,
+                accountId = accountId,
+                identityResolver = identityResolver,
+            )
+        }
+        return remoteSnapshots.size
+    }
+
     private suspend fun acknowledge(
         entry: SyncOutboxEntry,
         version: String?,

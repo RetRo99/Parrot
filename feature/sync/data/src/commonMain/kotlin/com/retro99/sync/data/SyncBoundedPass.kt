@@ -19,6 +19,7 @@ class SyncBoundedPass(
         remoteAccountId: String,
         batchSize: Int,
         selectEntries: suspend () -> List<SyncOutboxEntry>,
+        refreshProgressEntries: suspend (entries: List<SyncOutboxEntry>) -> Unit = {},
         pushProgressEntries: suspend (entries: List<SyncOutboxEntry>) -> Int,
         pushLegacyEntries: suspend (
             entries: List<SyncOutboxEntry>,
@@ -26,19 +27,29 @@ class SyncBoundedPass(
         ) -> Int,
         fetchAndApply: suspend (cursor: String?, limit: Int) -> SyncPullPage,
         pendingMutationCount: suspend () -> Int,
+        pullEnabled: Boolean = true,
     ): SyncResult.Completed {
         require(batchSize > 0) { "Sync batch size must be positive" }
 
-        val initialPull = syncPullEngine.pullUntilCaughtUp(
-            destinationId = destinationId,
-            remoteAccountId = remoteAccountId,
-            limit = batchSize,
-            fetchAndApply = fetchAndApply,
-        )
+        val initialPull = if (pullEnabled) {
+            syncPullEngine.pullUntilCaughtUp(
+                destinationId = destinationId,
+                remoteAccountId = remoteAccountId,
+                limit = batchSize,
+                fetchAndApply = fetchAndApply,
+            )
+        } else {
+            SyncPullSummary(
+                cursor = null,
+                pulledChangeCount = 0,
+                pageCount = 0,
+            )
+        }
         val entries = selectEntries().take(batchSize)
         val pushedCount = if (entries.isEmpty()) {
             0
         } else {
+            refreshProgressEntries(entries)
             val progressEntries = entries.filter { entry ->
                 entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
             }
@@ -57,7 +68,7 @@ class SyncBoundedPass(
             }
             progressCount + legacyCount
         }
-        val afterPushPull = if (entries.isNotEmpty()) {
+        val afterPushPull = if (entries.isNotEmpty() && pullEnabled) {
             syncPullEngine.pullUntilCaughtUp(
                 destinationId = destinationId,
                 remoteAccountId = remoteAccountId,

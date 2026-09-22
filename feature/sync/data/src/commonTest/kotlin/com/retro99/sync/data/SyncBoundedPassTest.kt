@@ -35,6 +35,9 @@ class SyncBoundedPassTest {
                     ),
                 )
             },
+            refreshProgressEntries = { entries ->
+                events += "refresh:${entries.size}"
+            },
             pushProgressEntries = { entries ->
                 progressEntityTypes += entries.map { entry -> entry.entityType }
                 events += "progress:${entries.size}"
@@ -69,7 +72,7 @@ class SyncBoundedPassTest {
         )
 
         assertEquals(
-            listOf("pull:null", "select", "progress:1", "legacy:1:1", "pull:1", "pending"),
+            listOf("pull:null", "select", "refresh:2", "progress:1", "legacy:1:1", "pull:1", "pending"),
             events,
         )
         assertEquals(
@@ -116,6 +119,46 @@ class SyncBoundedPassTest {
 
         assertEquals(listOf("pull:null", "select", "pending"), events)
         assertEquals(0, result.pushedMutationCount)
+        assertEquals(0, result.pulledChangeCount)
+    }
+
+    @Test
+    fun skipsChangeFeedPullForDestinationsWithoutChangeFeeds() = runTest {
+        val checkpoints = BoundedRecordingCheckpointDatabase()
+        val events = mutableListOf<String>()
+        val coordinator = SyncBoundedPass(SyncPullEngine(checkpoints))
+
+        val result = coordinator.execute(
+            destinationId = "storyteller",
+            remoteAccountId = "server-account",
+            batchSize = 1,
+            selectEntries = {
+                events += "select"
+                listOf(
+                    testEntry(
+                        mutationId = "progress",
+                        entityType = SyncOutboxEntry.ENTITY_TYPE_READING_POSITION,
+                    ),
+                )
+            },
+            refreshProgressEntries = { entries ->
+                events += "refresh:${entries.size}"
+            },
+            pushProgressEntries = { entries ->
+                events += "progress:${entries.size}"
+                1
+            },
+            pushLegacyEntries = { _, _ -> error("Storyteller has no legacy mutations") },
+            fetchAndApply = { _, _ -> error("Storyteller has no change feed") },
+            pendingMutationCount = {
+                events += "pending"
+                0
+            },
+            pullEnabled = false,
+        )
+
+        assertEquals(listOf("select", "refresh:1", "progress:1", "pending"), events)
+        assertEquals(1, result.pushedMutationCount)
         assertEquals(0, result.pulledChangeCount)
     }
 }

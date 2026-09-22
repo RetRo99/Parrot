@@ -106,6 +106,29 @@ class ProgressSyncEngineTest {
         assertEquals(listOf("book-1"), positions.deletedRemoteBookIds)
     }
 
+    @Test
+    fun refreshRemoteFetchesSelectedBooksAndPreservesLocalProgress() = runTest {
+        val mutation = outboxEntry(mutationId = "pending-refresh")
+        val outbox = RecordingOutboxDatabase(listOf(mutation))
+        val positions = RecordingPositionDatabase()
+        val transport = RecordingTransport(
+            fetchResults = mapOf("remote-book-1" to remoteSnapshot()),
+        )
+        val engine = ProgressSyncEngine(outbox, positions)
+
+        val refreshed = engine.refreshRemote(
+            entries = listOf(mutation),
+            accountId = "account-1",
+            transport = transport,
+            codec = ProgressOutboxCodec { entry -> entry.toProgressMutation() },
+        )
+
+        assertEquals(1, refreshed)
+        assertEquals(setOf("remote-book-1"), transport.fetchedBookIds)
+        assertEquals(1, positions.remotePositions.size)
+        assertTrue(positions.localPositions.isEmpty())
+    }
+
     private fun outboxEntry(
         mutationId: String,
         entityId: String = "book-1",
@@ -162,8 +185,11 @@ class ProgressSyncEngineTest {
 }
 
 private class RecordingTransport(
-    private val pushResults: List<ProgressPushResult>,
+    private val pushResults: List<ProgressPushResult> = emptyList(),
+    private val fetchResults: Map<String, RemoteProgressSnapshot> = emptyMap(),
 ) : ProgressSyncTransport {
+    var fetchedBookIds: Set<String> = emptySet()
+
     override val capabilities = ProgressTransportCapabilities(
         supportsBatching = true,
         maxBatchSize = 50,
@@ -175,7 +201,10 @@ private class RecordingTransport(
 
     override suspend fun fetchProgress(
         remoteBookIds: Set<String>,
-    ): Map<String, RemoteProgressSnapshot> = emptyMap()
+    ): Map<String, RemoteProgressSnapshot> {
+        fetchedBookIds = remoteBookIds
+        return fetchResults
+    }
 
     override suspend fun fetchChanges(cursor: String?, limit: Int): ProgressChangePage =
         ProgressChangePage(emptyList(), cursor, false)
