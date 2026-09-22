@@ -198,8 +198,13 @@ class ParrotCloudSyncAdapter(
                 },
             )
             .decodeAs<CloudPullResponse>()
-        response.changes.forEach { change ->
-            applyRemoteChange(change.entityType, change.payload, change.revision)
+        for (change in response.changes) {
+            applyRemoteChange(
+                entityType = change.entityType,
+                payload = change.payload,
+                revision = change.revision,
+                pendingMutations = syncOutboxDatabase.getPending(cloudUserId),
+            )
         }
         return Triple(response.changes.size, response.nextCursor, response.hasMore)
     }
@@ -208,6 +213,7 @@ class ParrotCloudSyncAdapter(
         entityType: String,
         payload: JsonElement,
         revision: Long?,
+        pendingMutations: List<SyncOutboxEntry> = emptyList(),
     ) {
         when (entityType) {
             SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
@@ -247,9 +253,17 @@ class ParrotCloudSyncAdapter(
                     bookUuid = localBookUuid,
                     libraryBookId = libraryBookId,
                 )
-                positionDatabase.upsertPosition(
-                    localPosition,
-                )
+                if (pendingMutations.hasPendingProgressFor(
+                        localBookUuid = localBookUuid,
+                        libraryBookId = libraryBookId,
+                        cloudBookId = position.cloudBookId,
+                    )
+                ) {
+                    positionDatabase.upsertRemotePosition(localPosition)
+                } else {
+                    positionDatabase.upsertPosition(localPosition)
+                    positionDatabase.deleteRemotePosition(localBookUuid)
+                }
             }
         }
     }
@@ -397,6 +411,17 @@ class ParrotCloudSyncAdapter(
         const val STATUS_CONFLICT = "conflict"
         const val SYNC_BATCH_SIZE = 50
         const val MAX_BACKOFF_POWER = 6
+    }
+}
+
+private fun List<SyncOutboxEntry>.hasPendingProgressFor(
+    localBookUuid: String,
+    libraryBookId: String,
+    cloudBookId: String,
+): Boolean {
+    return any { mutation ->
+        mutation.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION &&
+            mutation.entityId in setOf(localBookUuid, libraryBookId, cloudBookId)
     }
 }
 

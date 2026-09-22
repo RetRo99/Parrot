@@ -95,7 +95,12 @@ class ParrotCloudReaderRepository(
     }
 
     override suspend fun getRemotePosition(bookUuid: String): AppResult<ServerPosition?> {
-        return getLocalPosition(bookUuid)
+        return try {
+            val remotePosition = positionDatabase.getRemotePositionByBookUuid(bookUuid)
+            Ok(remotePosition?.toServerPosition(bookUuid))
+        } catch (exception: Exception) {
+            Err(AppError.UnknownError(exception))
+        }
     }
 
     private suspend fun resolveLibraryBookId(bookUuid: String, fallback: String?): String {
