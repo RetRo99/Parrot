@@ -2,9 +2,6 @@ package com.retro99.server.parrotcloud
 
 import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.database.api.books.PositionDatabase
-import com.retro99.database.api.books.PositionEntity
-import com.retro99.database.api.library.LibraryBooksDatabase
-import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.sync.domain.SyncResult
@@ -27,8 +24,8 @@ import com.retro99.sync.data.SyncPullPage
 import com.retro99.sync.data.SyncPass
 import com.retro99.sync.data.SyncExecutionContext
 import com.retro99.sync.data.SyncOutboxPreflight
-import com.retro99.user.api.UserRegistry
-import kotlinx.coroutines.flow.first
+import com.retro99.sync.data.DuplicatePositionRepair
+import com.retro99.sync.data.LocalBookUuidResolver
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -40,9 +37,9 @@ import org.koin.core.annotation.Single
 class ParrotCloudSyncAdapter(
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
-    @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
-    @Provided private val importedBooksDatabase: ImportedBooksDatabase,
     @Provided private val positionDatabase: PositionDatabase,
+    @Provided private val localBookUuidResolver: LocalBookUuidResolver,
+    @Provided private val duplicatePositionRepair: DuplicatePositionRepair,
     @Provided private val progressTransport: ProgressSyncTransport,
     @Provided private val legacyTransport: LegacySyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
@@ -67,7 +64,7 @@ class ParrotCloudSyncAdapter(
         cloudUserId: String,
     ): SyncResult {
         syncOutboxDatabase.deleteByEntityType(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS)
-        repairDuplicatePositions()
+        duplicatePositionRepair.repair()
         val initialPull = pullUntilCaughtUp(cloudUserId)
         var cursor = initialPull.cursor?.toLongOrNull() ?: 0L
         var pulledCount = initialPull.pulledChangeCount
@@ -149,7 +146,7 @@ class ParrotCloudSyncAdapter(
 
     private fun parrotProgressIdentityResolver() = ProgressIdentityResolver { remote ->
         val libraryBookId = remote.libraryBookId ?: remote.entityId ?: remote.remoteBookId
-        val localBookUuid = resolveLocalBookUuid(
+        val localBookUuid = localBookUuidResolver.resolve(
             libraryBookId = libraryBookId,
             cloudBookId = remote.remoteBookId,
             fallback = remote.entityId ?: libraryBookId,
@@ -290,7 +287,7 @@ class ParrotCloudSyncAdapter(
             SyncOutboxEntry.ENTITY_TYPE_READING_POSITION -> {
                 response.revision?.let { revision ->
                     val payload = json.decodeFromString<ParrotCloudReadingPositionPayload>(entry.payload)
-                    val localBookUuid = resolveLocalBookUuid(
+                    val localBookUuid = localBookUuidResolver.resolve(
                         libraryBookId = payload.libraryBookId,
                         cloudBookId = payload.cloudBookId,
                         fallback = entry.entityId,
@@ -301,50 +298,6 @@ class ParrotCloudSyncAdapter(
                         expectedLocalGeneration = entry.localGeneration,
                     )
                 }
-            }
-        }
-    }
-
-    private suspend fun resolveLocalBookUuid(
-        libraryBookId: String,
-        cloudBookId: String,
-        fallback: String,
-    ): String {
-        val libraryBook = libraryBooksDatabase.getLibraryBookById(libraryBookId)
-            ?: libraryBooksDatabase.getLibraryBookByCloudBookId(cloudBookId)
-        val contentHash = libraryBook?.contentHash
-        return importedBooksDatabase.getAllImportedBooks()
-            .first()
-            .firstOrNull { book ->
-                book.contentHash == contentHash &&
-                    book.contentHash != null
-            }
-            ?.uuid
-            ?: fallback
-    }
-
-    private suspend fun repairDuplicatePositions() {
-        val positionsByLibraryBookId = positionDatabase.getAllPositions()
-            .filter { position -> position.libraryBookId.isNotBlank() }
-            .groupBy { position -> position.libraryBookId }
-        positionsByLibraryBookId.forEach { (libraryBookId, positions) ->
-            if (positions.size > 1) {
-                val winner = positions.maxWithOrNull(
-                    compareBy<PositionEntity>({ position -> position.remoteRevision }, { position -> position.updatedAt }),
-                ) ?: return@forEach
-                val localBookUuid = resolveLocalBookUuid(
-                    libraryBookId = libraryBookId,
-                    cloudBookId = libraryBooksDatabase.getLibraryBookById(libraryBookId)?.cloudBookId.orEmpty(),
-                    fallback = winner.bookUuid,
-                )
-                val repaired = winner.toParrotCloudPositionEntity(
-                    remoteRevision = winner.remoteRevision,
-                    bookUuid = localBookUuid,
-                    libraryBookId = libraryBookId,
-                )
-                positions.filter { position -> position.bookUuid != localBookUuid }
-                    .forEach { position -> positionDatabase.deletePosition(position.bookUuid) }
-                positionDatabase.upsertPosition(repaired)
             }
         }
     }
