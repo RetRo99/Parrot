@@ -3,6 +3,10 @@ CREATE TABLE IF NOT EXISTS sync_checkpoints (
     remote_account_id TEXT NOT NULL,
     cursor TEXT,
     updated_at TEXT NOT NULL,
+    status TEXT,
+    pending_mutation_count INTEGER NOT NULL DEFAULT 0,
+    last_successful_at TEXT,
+    last_error TEXT,
     PRIMARY KEY (destination_id, remote_account_id)
 );
 
@@ -11,9 +15,13 @@ INSERT OR REPLACE INTO sync_checkpoints(
     destination_id,
     remote_account_id,
     cursor,
-    updated_at
+    updated_at,
+    status,
+    pending_mutation_count,
+    last_successful_at,
+    last_error
 )
-VALUES (?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 getCheckpoint:
 SELECT *

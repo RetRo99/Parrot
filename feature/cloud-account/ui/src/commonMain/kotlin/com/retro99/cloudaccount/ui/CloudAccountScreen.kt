@@ -91,6 +91,7 @@ import resources.translations.cloud_account_sync_status_failed
 import resources.translations.cloud_account_sync_status_pending
 import resources.translations.cloud_account_sync_status_synchronizing
 import resources.translations.cloud_account_sync_status_up_to_date
+import resources.translations.cloud_account_sync_status_last_successful
 import resources.translations.cloud_account_title
 import resources.translations.cloud_account_verification_message
 import resources.translations.general_back
@@ -491,17 +492,30 @@ private fun SyncStatusMessage(
     status: SyncStatus,
     modifier: Modifier = Modifier,
 ) {
-    val message = when (status) {
+    val baseMessage = when (status) {
         SyncStatus.Idle -> return
         is SyncStatus.Synchronizing -> stringResource(
             StringRes.cloud_account_sync_status_synchronizing,
         )
-        SyncStatus.UpToDate -> stringResource(StringRes.cloud_account_sync_status_up_to_date)
+        is SyncStatus.UpToDate -> stringResource(StringRes.cloud_account_sync_status_up_to_date)
         is SyncStatus.Pending -> stringResource(StringRes.cloud_account_sync_status_pending)
         is SyncStatus.ActionRequired -> stringResource(
             StringRes.cloud_account_sync_status_action_required,
         )
         is SyncStatus.Failed -> stringResource(StringRes.cloud_account_sync_status_failed)
+    }
+    val lastSuccessfulAt = when (status) {
+        is SyncStatus.Synchronizing -> status.lastSuccessfulAt
+        is SyncStatus.UpToDate -> status.lastSuccessfulAt
+        is SyncStatus.Pending -> status.lastSuccessfulAt
+        is SyncStatus.ActionRequired -> status.lastSuccessfulAt
+        is SyncStatus.Failed -> status.lastSuccessfulAt
+        SyncStatus.Idle -> null
+    }
+    val message = if (lastSuccessfulAt == null) {
+        baseMessage
+    } else {
+        "$baseMessage\n${stringResource(StringRes.cloud_account_sync_status_last_successful, lastSuccessfulAt)}"
     }
     StatusMessage(message = message, modifier = modifier)
 }

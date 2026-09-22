@@ -489,5 +489,6 @@
     <string name="cloud_account_sync_status_pending" tools:ignore="MissingTranslation">Changes are saved and waiting for delivery.</string>
     <string name="cloud_account_sync_status_action_required" tools:ignore="MissingTranslation">Sync requires attention.</string>
     <string name="cloud_account_sync_status_failed" tools:ignore="MissingTranslation">The last sync attempt failed. It will retry.</string>
+    <string name="cloud_account_sync_status_last_successful" tools:ignore="MissingTranslation">Last successful delivery: %s</string>
     <string name="cloud_account_sign_in_with_google" tools:ignore="MissingTranslation">Continue with Google</string>
 </resources>

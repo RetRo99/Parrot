@@ -5,20 +5,26 @@ sealed interface SyncStatus {
 
     data class Synchronizing(
         val request: SyncRequest,
+        val lastSuccessfulAt: String? = null,
     ) : SyncStatus
 
-    data object UpToDate : SyncStatus
+    data class UpToDate(
+        val lastSuccessfulAt: String? = null,
+    ) : SyncStatus
 
     data class Pending(
         val pendingMutationCount: Int,
+        val lastSuccessfulAt: String? = null,
     ) : SyncStatus
 
     data class ActionRequired(
         val reason: SyncActionRequired,
+        val lastSuccessfulAt: String? = null,
     ) : SyncStatus
 
     data class Failed(
         val message: String,
+        val lastSuccessfulAt: String? = null,
     ) : SyncStatus
 }
 

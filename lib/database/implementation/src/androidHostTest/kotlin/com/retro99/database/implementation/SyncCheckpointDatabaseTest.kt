@@ -33,6 +33,10 @@ class SyncCheckpointDatabaseTest {
             remoteAccountId = "account-a",
             cursor = "opaque:0007/commit-token",
             updatedAt = "2026-09-22T12:00:00Z",
+            status = "up_to_date",
+            pendingMutationCount = 0,
+            lastSuccessfulAt = "2026-09-22T12:00:00Z",
+            lastError = null,
         )
 
         database.syncCheckpointQueries.upsert(checkpoint)

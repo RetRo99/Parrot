@@ -12,6 +12,14 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import com.retro99.database.api.sync.SyncCheckpoint
+import com.retro99.database.api.sync.SyncCheckpointDatabase
+import kotlin.time.Clock
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -28,10 +36,21 @@ class SyncDataRepository(
     @Provided private val executionContextProvider: SyncExecutionContextProvider,
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
     @Provided private val destinations: List<SyncDestination> = emptyList(),
+    @Provided internal val syncCheckpointDatabase: SyncCheckpointDatabase? = null,
 ) : SyncRepository {
     private val mutex = Mutex()
     private var activeRun: ActiveRun? = null
     private val status = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
+    private val diagnosticsScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val diagnosticsLoadJob: Job = diagnosticsScope.launch {
+        val checkpoint = syncCheckpointDatabase?.getCheckpoint(
+            destinationId = DIAGNOSTICS_DESTINATION_ID,
+            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
+        )
+        checkpoint?.toStatus()?.let { persistedStatus ->
+            status.value = persistedStatus
+        }
+    }
 
     override fun observeStatus(): StateFlow<SyncStatus> = status.asStateFlow()
 
@@ -53,7 +72,9 @@ class SyncDataRepository(
 
         if (!owner) return run.result.await()
 
-        status.value = SyncStatus.Synchronizing(request)
+        diagnosticsLoadJob.join()
+        val previousStatus = status.value
+        status.value = SyncStatus.Synchronizing(request, previousStatus.lastSuccessfulAt())
 
         var lastResult: SyncResult = SyncResult.Failed("Synchronization did not execute")
         try {
@@ -96,7 +117,9 @@ class SyncDataRepository(
                 lastResult = combineResults(cloudResult, destinationResults)
             }
             run.result.complete(lastResult)
-            status.value = lastResult.toStatus()
+            val terminalStatus = lastResult.toStatus(status.value.lastSuccessfulAt())
+            status.value = terminalStatus
+            persistStatus(terminalStatus)
             return lastResult
         } catch (exception: CancellationException) {
             mutex.withLock {
@@ -112,7 +135,9 @@ class SyncDataRepository(
             val failed = SyncResult.Failed(
                 exception.message ?: "Synchronization failed",
             )
-            status.value = failed.toStatus()
+            val terminalStatus = failed.toStatus(status.value.lastSuccessfulAt())
+            status.value = terminalStatus
+            persistStatus(terminalStatus)
             run.result.complete(failed)
             return failed
         }
@@ -152,20 +177,102 @@ class SyncDataRepository(
     }
 }
 
-private fun SyncResult.toStatus(): SyncStatus {
+private const val DIAGNOSTICS_DESTINATION_ID = "__application_sync_status__"
+private const val DIAGNOSTICS_ACCOUNT_ID = "__application__"
+
+private fun SyncResult.toStatus(lastSuccessfulAt: String?): SyncStatus {
     return when (this) {
         is SyncResult.Completed -> {
+            val successfulAt = Clock.System.now().toString()
             if (pendingMutationCount > 0) {
-                SyncStatus.Pending(pendingMutationCount)
+                SyncStatus.Pending(pendingMutationCount, successfulAt)
             } else {
-                SyncStatus.UpToDate
+                SyncStatus.UpToDate(successfulAt)
             }
         }
-        SyncResult.NotConfigured -> SyncStatus.ActionRequired(SyncActionRequired.NOT_CONFIGURED)
-        SyncResult.NotAuthenticated -> SyncStatus.ActionRequired(SyncActionRequired.NOT_AUTHENTICATED)
-        SyncResult.ProfileNotLinked -> SyncStatus.ActionRequired(SyncActionRequired.PROFILE_NOT_LINKED)
-        SyncResult.SyncDisabled -> SyncStatus.ActionRequired(SyncActionRequired.SYNC_DISABLED)
-        is SyncResult.Failed -> SyncStatus.Failed(message)
+        SyncResult.NotConfigured -> SyncStatus.ActionRequired(SyncActionRequired.NOT_CONFIGURED, lastSuccessfulAt)
+        SyncResult.NotAuthenticated -> SyncStatus.ActionRequired(SyncActionRequired.NOT_AUTHENTICATED, lastSuccessfulAt)
+        SyncResult.ProfileNotLinked -> SyncStatus.ActionRequired(SyncActionRequired.PROFILE_NOT_LINKED, lastSuccessfulAt)
+        SyncResult.SyncDisabled -> SyncStatus.ActionRequired(SyncActionRequired.SYNC_DISABLED, lastSuccessfulAt)
+        is SyncResult.Failed -> SyncStatus.Failed(message, lastSuccessfulAt)
+    }
+}
+
+private fun SyncCheckpoint.toStatus(): SyncStatus? {
+    return when (status) {
+        "up_to_date" -> SyncStatus.UpToDate(lastSuccessfulAt)
+        "pending" -> SyncStatus.Pending(pendingMutationCount, lastSuccessfulAt)
+        "failed" -> SyncStatus.Failed(lastError ?: "Synchronization failed", lastSuccessfulAt)
+        "action_required" -> SyncStatus.ActionRequired(
+            reason = lastError?.let { reason ->
+                runCatching { SyncActionRequired.valueOf(reason) }.getOrNull()
+            } ?: SyncActionRequired.NOT_AUTHENTICATED,
+            lastSuccessfulAt = lastSuccessfulAt,
+        )
+        else -> null
+    }
+}
+
+private fun SyncStatus.lastSuccessfulAt(): String? {
+    return when (this) {
+        SyncStatus.Idle -> null
+        is SyncStatus.Synchronizing -> lastSuccessfulAt
+        is SyncStatus.UpToDate -> lastSuccessfulAt
+        is SyncStatus.Pending -> lastSuccessfulAt
+        is SyncStatus.ActionRequired -> lastSuccessfulAt
+        is SyncStatus.Failed -> lastSuccessfulAt
+    }
+}
+
+private suspend fun SyncDataRepository.persistStatus(status: SyncStatus) {
+    val database = syncCheckpointDatabase ?: return
+    val now = Clock.System.now().toString()
+    val checkpoint = when (status) {
+        SyncStatus.Idle,
+        is SyncStatus.Synchronizing,
+        -> return
+        is SyncStatus.UpToDate -> SyncCheckpoint(
+            destinationId = DIAGNOSTICS_DESTINATION_ID,
+            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
+            cursor = null,
+            updatedAt = now,
+            status = "up_to_date",
+            lastSuccessfulAt = status.lastSuccessfulAt,
+        )
+        is SyncStatus.Pending -> SyncCheckpoint(
+            destinationId = DIAGNOSTICS_DESTINATION_ID,
+            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
+            cursor = null,
+            updatedAt = now,
+            status = "pending",
+            pendingMutationCount = status.pendingMutationCount,
+            lastSuccessfulAt = status.lastSuccessfulAt,
+        )
+        is SyncStatus.ActionRequired -> SyncCheckpoint(
+            destinationId = DIAGNOSTICS_DESTINATION_ID,
+            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
+            cursor = null,
+            updatedAt = now,
+            status = "action_required",
+            lastSuccessfulAt = status.lastSuccessfulAt,
+            lastError = status.reason.name,
+        )
+        is SyncStatus.Failed -> SyncCheckpoint(
+            destinationId = DIAGNOSTICS_DESTINATION_ID,
+            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
+            cursor = null,
+            updatedAt = now,
+            status = "failed",
+            lastSuccessfulAt = status.lastSuccessfulAt,
+            lastError = status.message,
+        )
+    }
+    try {
+        database.saveCheckpoint(checkpoint)
+    } catch (exception: CancellationException) {
+        throw exception
+    } catch (_: Exception) {
+        // Diagnostics must never turn a completed sync into a failed sync.
     }
 }
 

@@ -2,6 +2,8 @@ package com.retro99.sync.data
 
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.database.api.sync.SyncCheckpoint
+import com.retro99.database.api.sync.SyncCheckpointDatabase
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncScope
@@ -94,6 +96,44 @@ class SyncDataRepositoryTest {
     }
 
     @Test
+    fun restoresAndPersistsTerminalDiagnostics() = runTest {
+        val pass = RecordingSyncPass()
+        val checkpointDatabase = StatusRecordingCheckpointDatabase(
+            SyncCheckpoint(
+                destinationId = "__application_sync_status__",
+                remoteAccountId = "__application__",
+                cursor = null,
+                updatedAt = "2026-09-22T12:00:00Z",
+                status = "up_to_date",
+                lastSuccessfulAt = "2026-09-22T11:59:00Z",
+            ),
+        )
+        val repository = SyncDataRepository(
+            syncPass = pass,
+            executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            syncCheckpointDatabase = checkpointDatabase,
+        )
+
+        val request = SyncRequest(reason = SyncTriggerReason.STARTUP)
+        val run = async { repository.requestSync(request) }
+        pass.firstStarted.await()
+
+        assertEquals(
+            SyncStatus.Synchronizing(
+                request = request,
+                lastSuccessfulAt = "2026-09-22T11:59:00Z",
+            ),
+            repository.observeStatus().value,
+        )
+
+        pass.releaseFirst.complete(Unit)
+        assertEquals(SyncResult.Completed(0, 0, 0), run.await())
+        assertEquals("up_to_date", checkpointDatabase.checkpoint?.status)
+        assertTrue(checkpointDatabase.checkpoint?.lastSuccessfulAt != null)
+    }
+
+    @Test
     fun executesConfiguredDestinationsAndAggregatesCompletedWork() = runTest {
         val destination = RecordingDestination(
             result = SyncResult.Completed(
@@ -125,7 +165,8 @@ class SyncDataRepositoryTest {
             repository.requestSync(request),
         )
         assertEquals(listOf(request), destination.requests)
-        assertEquals(SyncStatus.Pending(10), repository.observeStatus().value)
+        val status = repository.observeStatus().value
+        assertTrue(status is SyncStatus.Pending && status.pendingMutationCount == 10)
     }
 
     @Test
@@ -418,6 +459,29 @@ private class RecordingOutbox : SyncOutboxDatabase {
     ) = Unit
 
     override suspend fun clearAllData() = Unit
+}
+
+private class StatusRecordingCheckpointDatabase(
+    initialCheckpoint: SyncCheckpoint? = null,
+) : SyncCheckpointDatabase {
+    var checkpoint: SyncCheckpoint? = initialCheckpoint
+
+    override suspend fun getCheckpoint(
+        destinationId: String,
+        remoteAccountId: String,
+    ): SyncCheckpoint? {
+        return checkpoint?.takeIf {
+            it.destinationId == destinationId && it.remoteAccountId == remoteAccountId
+        }
+    }
+
+    override suspend fun saveCheckpoint(checkpoint: SyncCheckpoint) {
+        this.checkpoint = checkpoint
+    }
+
+    override suspend fun clearAllData() {
+        checkpoint = null
+    }
 }
 
 private fun testEntry(

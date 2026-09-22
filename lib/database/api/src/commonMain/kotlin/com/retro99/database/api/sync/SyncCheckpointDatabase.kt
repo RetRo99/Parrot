@@ -20,4 +20,8 @@ data class SyncCheckpoint(
     val remoteAccountId: String,
     val cursor: String?,
     val updatedAt: String,
+    val status: String? = null,
+    val pendingMutationCount: Int = 0,
+    val lastSuccessfulAt: String? = null,
+    val lastError: String? = null,
 )
