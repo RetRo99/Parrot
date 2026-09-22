@@ -25,7 +25,9 @@ data class ProgressTransportCapabilities(
 
 data class ProgressMutation(
     val mutationId: String,
+    val entityId: String,
     val remoteBookId: String,
+    val libraryBookId: String?,
     val kind: ProgressKind,
     val snapshot: ProgressSnapshot,
     val baseVersion: String?,
@@ -33,6 +35,9 @@ data class ProgressMutation(
 )
 
 data class ProgressSnapshot(
+    val timestamp: Long?,
+    val createdAt: String?,
+    val updatedAt: String?,
     val locator: ProgressLocator?,
     val audioTimestampMs: Long?,
     val chapterIndex: Int?,
@@ -57,7 +62,9 @@ enum class ProgressKind {
 }
 
 data class RemoteProgressSnapshot(
+    val entityId: String?,
     val remoteBookId: String,
+    val libraryBookId: String?,
     val kind: ProgressKind,
     val snapshot: ProgressSnapshot,
     val version: String?,
