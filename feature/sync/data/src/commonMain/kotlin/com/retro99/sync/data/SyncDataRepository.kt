@@ -22,6 +22,7 @@ class SyncDataRepository(
     @Provided private val syncPass: SyncPass,
     @Provided private val executionContextProvider: SyncExecutionContextProvider,
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
+    @Provided private val destinations: List<SyncDestination> = emptyList(),
 ) : SyncRepository {
     private val mutex = Mutex()
     private var activeRun: ActiveRun? = null
@@ -63,7 +64,7 @@ class SyncDataRepository(
                     syncOutboxPreflight.bindUnassignedMutations(context.remoteAccountId)
                     syncPass.execute(nextRequest, context)
                 }
-                lastResult = when (execution) {
+                val cloudResult = when (execution) {
                     is SyncExecutionResult.Ready -> execution.value
                     SyncExecutionResult.NotConfigured -> SyncResult.NotConfigured
                     SyncExecutionResult.NotAuthenticated -> SyncResult.NotAuthenticated
@@ -71,6 +72,18 @@ class SyncDataRepository(
                     SyncExecutionResult.SyncDisabled -> SyncResult.SyncDisabled
                     is SyncExecutionResult.Failed -> SyncResult.Failed(execution.message)
                 }
+                val destinationResults = destinations.mapNotNull { destination ->
+                    try {
+                        destination.execute(nextRequest)
+                    } catch (exception: CancellationException) {
+                        throw exception
+                    } catch (exception: Exception) {
+                        SyncResult.Failed(
+                            exception.message ?: "Synchronization destination failed",
+                        )
+                    }
+                }
+                lastResult = combineResults(cloudResult, destinationResults)
             }
             run.result.complete(lastResult)
             return lastResult
@@ -90,6 +103,33 @@ class SyncDataRepository(
             run.result.complete(failed)
             return failed
         }
+    }
+
+    private fun combineResults(
+        cloudResult: SyncResult,
+        destinationResults: List<SyncResult>,
+    ): SyncResult {
+        val results = buildList {
+            add(cloudResult)
+            addAll(destinationResults)
+        }
+        val failures = results.filterIsInstance<SyncResult.Failed>()
+        if (failures.isNotEmpty()) {
+            return SyncResult.Failed(
+                failures.joinToString(separator = "; ") { failure -> failure.message },
+            )
+        }
+
+        val completed = results.filterIsInstance<SyncResult.Completed>()
+        if (completed.isNotEmpty()) {
+            return SyncResult.Completed(
+                pushedMutationCount = completed.sumOf { result -> result.pushedMutationCount },
+                pulledChangeCount = completed.sumOf { result -> result.pulledChangeCount },
+                pendingMutationCount = completed.sumOf { result -> result.pendingMutationCount },
+            )
+        }
+
+        return results.first()
     }
 
     private class ActiveRun(request: SyncRequest) {

@@ -1,16 +1,24 @@
 package com.retro99.server.storyteller
 
+import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.server.api.ServerNetworkClientProvider
 import com.retro99.server.api.ServerNetworkClient
+import com.retro99.server.api.ServerRegistry
+import com.retro99.server.api.ServerType
 import com.retro99.sync.data.ProgressIdentityResolver
 import com.retro99.sync.data.ProgressOutboxCodec
 import com.retro99.sync.data.ProgressSyncEngine
 import com.retro99.sync.data.SyncBoundedPass
+import com.retro99.sync.data.SyncDestination
 import com.retro99.sync.data.SyncOutboxCapability
 import com.retro99.sync.data.SyncOutboxPreflight
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
+import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
+import com.retro99.user.api.UserRegistry
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Provided
@@ -21,16 +29,45 @@ import org.koin.core.annotation.Single
  * The network client is supplied per configured Storyteller server; this class
  * therefore does not bind a second application-wide SyncPass.
  */
-@Single
+@Single(binds = [SyncDestination::class])
 class StorytellerProgressSyncAdapter(
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
     @Provided private val syncBoundedPass: SyncBoundedPass,
-) {
+    @Provided private val serverRegistry: ServerRegistry,
+    @Provided private val networkClientProvider: ServerNetworkClientProvider,
+    @Provided private val profileDatabaseSession: ProfileDatabaseSession,
+    @Provided private val userRegistry: UserRegistry,
+) : SyncDestination {
     private val json = Json {
         encodeDefaults = true
         ignoreUnknownKeys = true
         coerceInputValues = true
+    }
+
+    override suspend fun execute(request: SyncRequest): SyncResult? {
+        val profileId = userRegistry.getActiveProfileIdOrDefault()
+        return profileDatabaseSession.withProfile(profileId) {
+            val servers = serverRegistry.getAuthenticatedServers()
+                .filter { server -> server.type == ServerType.Storyteller }
+            if (servers.isEmpty()) {
+                null
+            } else {
+                val results = servers.map { server ->
+                    try {
+                        execute(networkClientProvider.create(server))
+                    } catch (exception: CancellationException) {
+                        throw exception
+                    } catch (exception: Exception) {
+                        SyncResult.Failed(
+                            exception.message
+                                ?: "Storyteller synchronization failed for ${server.id}",
+                        )
+                    }
+                }
+                results.fold(SyncResult.Completed(0, 0, 0), ::combineResults)
+            }
+        }
     }
 
     suspend fun execute(
@@ -108,6 +145,22 @@ class StorytellerProgressSyncAdapter(
 
     private companion object {
         const val BATCH_SIZE = 1
+
+        fun combineResults(
+            first: SyncResult,
+            second: SyncResult,
+        ): SyncResult {
+            if (first is SyncResult.Failed) return first
+            if (second is SyncResult.Failed) return second
+            if (first is SyncResult.Completed && second is SyncResult.Completed) {
+                return SyncResult.Completed(
+                    pushedMutationCount = first.pushedMutationCount + second.pushedMutationCount,
+                    pulledChangeCount = first.pulledChangeCount + second.pulledChangeCount,
+                    pendingMutationCount = first.pendingMutationCount + second.pendingMutationCount,
+                )
+            }
+            return if (first is SyncResult.Completed) first else second
+        }
     }
 }
 

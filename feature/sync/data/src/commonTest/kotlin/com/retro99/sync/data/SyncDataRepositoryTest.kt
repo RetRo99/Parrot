@@ -87,6 +87,57 @@ class SyncDataRepositoryTest {
     }
 
     @Test
+    fun executesConfiguredDestinationsAndAggregatesCompletedWork() = runTest {
+        val destination = RecordingDestination(
+            result = SyncResult.Completed(
+                pushedMutationCount = 2,
+                pulledChangeCount = 3,
+                pendingMutationCount = 4,
+            ),
+        )
+        val repository = SyncDataRepository(
+            syncPass = ImmediateSyncPass(
+                result = SyncResult.Completed(
+                    pushedMutationCount = 1,
+                    pulledChangeCount = 5,
+                    pendingMutationCount = 6,
+                ),
+            ),
+            executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            destinations = listOf(destination),
+        )
+        val request = SyncRequest(reason = SyncTriggerReason.CONNECTIVITY)
+
+        assertEquals(
+            SyncResult.Completed(
+                pushedMutationCount = 3,
+                pulledChangeCount = 8,
+                pendingMutationCount = 10,
+            ),
+            repository.requestSync(request),
+        )
+        assertEquals(listOf(request), destination.requests)
+    }
+
+    @Test
+    fun destinationFailureIsNotHiddenByACompletedCloudPass() = runTest {
+        val repository = SyncDataRepository(
+            syncPass = ImmediateSyncPass(),
+            executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            destinations = listOf(
+                RecordingDestination(result = SyncResult.Failed("Storyteller unavailable")),
+            ),
+        )
+
+        assertEquals(
+            SyncResult.Failed("Storyteller unavailable"),
+            repository.sync(),
+        )
+    }
+
+    @Test
     fun preflightSelectsDispatchableEntriesWithoutDroppingPreservedMutations() = runTest {
         val outbox = RecordingOutbox().apply {
             eligibleEntries = listOf(
@@ -206,6 +257,26 @@ private class RecordingSyncPass : SyncPass {
             pulledChangeCount = 0,
             pendingMutationCount = 0,
         )
+    }
+}
+
+private class ImmediateSyncPass(
+    private val result: SyncResult = SyncResult.Completed(0, 0, 0),
+) : SyncPass {
+    override suspend fun execute(
+        request: SyncRequest,
+        context: SyncExecutionContext,
+    ): SyncResult = result
+}
+
+private class RecordingDestination(
+    private val result: SyncResult?,
+) : SyncDestination {
+    val requests = mutableListOf<SyncRequest>()
+
+    override suspend fun execute(request: SyncRequest): SyncResult? {
+        requests += request
+        return result
     }
 }
 

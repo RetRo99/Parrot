@@ -33,6 +33,7 @@ kotlin {
             implementation(projects.lib.server.implementation)
             implementation(projects.lib.network.implementation)
             implementation(projects.lib.database.api)
+            implementation(projects.lib.user.api)
             implementation(projects.feature.sync.domain)
             implementation(projects.feature.sync.data)
         }
