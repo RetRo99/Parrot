@@ -23,6 +23,7 @@ import com.retro99.sync.data.ProgressSyncEngine
 import com.retro99.sync.data.SyncBoundedPass
 import com.retro99.sync.data.SyncOutboxPreflight
 import com.retro99.sync.data.SyncPullEngine
+import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
 import com.retro99.user.api.UserProfile
 import com.retro99.user.api.UserRegistry
@@ -126,9 +127,56 @@ class StorytellerProgressSyncAdapterTest {
         )
     }
 
+    @Test
+    fun runtimeDestinationPinsProfileAndDiscoversOnlyAuthenticatedStorytellerServers() = runTest {
+        val mutation = positionMutation("runtime-position", "storyteller-1")
+        val outbox = RecordingAdapterOutbox(listOf(mutation))
+        val positions = RecordingAdapterPositions()
+        val storytellerClient = RecordingNetworkClient(
+            serverId = "storyteller-1",
+            getResult = Ok(StorytellerPositionApiModel(timestamp = 9L)),
+            postResult = Ok(Unit),
+        )
+        val nonStoryteller = serverConfig("audiobookshelf-1", ServerType.Audiobookshelf)
+        val storyteller = serverConfig("storyteller-1", ServerType.Storyteller)
+        val serverRegistry = TestServerRegistry(
+            allServers = listOf(storyteller, nonStoryteller),
+            authenticatedServers = listOf(storyteller),
+        )
+        val clientProvider = RecordingNetworkClientProvider(
+            clients = mapOf(storyteller.id to storytellerClient),
+        )
+        val profileSession = RecordingProfileDatabaseSession()
+
+        val result = createAdapter(
+            outbox = outbox,
+            positions = positions,
+            serverRegistry = serverRegistry,
+            networkClientProvider = clientProvider,
+            profileDatabaseSession = profileSession,
+            userRegistry = TestUserRegistry(activeProfileId = "profile-1"),
+        ).execute(SyncRequest())
+
+        assertEquals(
+            SyncResult.Completed(
+                pushedMutationCount = 1,
+                pulledChangeCount = 0,
+                pendingMutationCount = 0,
+            ),
+            result,
+        )
+        assertEquals(listOf("profile-1"), profileSession.profileIds)
+        assertEquals(listOf("storyteller-1"), clientProvider.createdServerIds)
+        assertEquals(listOf(mutation.mutationId), outbox.deletedIds)
+    }
+
     private fun createAdapter(
         outbox: RecordingAdapterOutbox,
         positions: RecordingAdapterPositions,
+        serverRegistry: ServerRegistry = TestServerRegistry(),
+        networkClientProvider: ServerNetworkClientProvider = RecordingNetworkClientProvider(),
+        profileDatabaseSession: ProfileDatabaseSession = RecordingProfileDatabaseSession(),
+        userRegistry: UserRegistry = TestUserRegistry(),
     ): StorytellerProgressSyncAdapter {
         return StorytellerProgressSyncAdapter(
             syncOutboxPreflight = SyncOutboxPreflight(outbox),
@@ -136,12 +184,20 @@ class StorytellerProgressSyncAdapterTest {
             syncBoundedPass = SyncBoundedPass(
                 SyncPullEngine(RecordingCheckpointDatabase()),
             ),
-            serverRegistry = EmptyServerRegistry,
-            networkClientProvider = EmptyNetworkClientProvider,
-            profileDatabaseSession = ImmediateProfileDatabaseSession,
-            userRegistry = DefaultUserRegistry,
+            serverRegistry = serverRegistry,
+            networkClientProvider = networkClientProvider,
+            profileDatabaseSession = profileDatabaseSession,
+            userRegistry = userRegistry,
         )
     }
+
+    private fun serverConfig(id: String, type: ServerType) = ServerConfig(
+        id = id,
+        name = id,
+        type = type,
+        baseUrl = "https://$id.example",
+        addedAt = 0L,
+    )
 
     private fun positionMutation(
         mutationId: String,
@@ -325,24 +381,39 @@ private class RecordingCheckpointDatabase : SyncCheckpointDatabase {
     override suspend fun clearAllData() = Unit
 }
 
-private object ImmediateProfileDatabaseSession : ProfileDatabaseSession {
+private class RecordingProfileDatabaseSession : ProfileDatabaseSession {
+    val profileIds = mutableListOf<String>()
+
     override suspend fun <T> withProfile(
         localProfileId: String,
         operation: suspend () -> T,
-    ): T = operation()
+    ): T {
+        profileIds += localProfileId
+        return operation()
+    }
 }
 
-private object EmptyNetworkClientProvider : ServerNetworkClientProvider {
-    override fun create(serverConfig: ServerConfig): ServerNetworkClient =
-        error("Network client discovery is not used by direct adapter tests")
+private class RecordingNetworkClientProvider(
+    private val clients: Map<String, ServerNetworkClient> = emptyMap(),
+) : ServerNetworkClientProvider {
+    val createdServerIds = mutableListOf<String>()
+
+    override fun create(serverConfig: ServerConfig): ServerNetworkClient {
+        createdServerIds += serverConfig.id
+        return clients[serverConfig.id]
+            ?: error("No test client for ${serverConfig.id}")
+    }
 
     override suspend fun createForServerId(serverId: String): ServerNetworkClient? = null
 }
 
-private object EmptyServerRegistry : ServerRegistry {
+private class TestServerRegistry(
+    private val allServers: List<ServerConfig> = emptyList(),
+    private val authenticatedServers: List<ServerConfig> = emptyList(),
+) : ServerRegistry {
     override fun observeAllServers(): Flow<List<ServerConfig>> = emptyFlow()
 
-    override suspend fun getAllServers(): List<ServerConfig> = emptyList()
+    override suspend fun getAllServers(): List<ServerConfig> = allServers
 
     override suspend fun addServer(
         name: String,
@@ -371,7 +442,7 @@ private object EmptyServerRegistry : ServerRegistry {
 
     override fun observeAuthenticatedServers(): Flow<List<ServerConfig>> = emptyFlow()
 
-    override suspend fun getAuthenticatedServers(): List<ServerConfig> = emptyList()
+    override suspend fun getAuthenticatedServers(): List<ServerConfig> = authenticatedServers
 
     override suspend fun saveCredentials(credentials: ServerCredentials) = Unit
 
@@ -384,7 +455,9 @@ private object EmptyServerRegistry : ServerRegistry {
     override suspend fun deactivateServer(serverId: String) = Unit
 }
 
-private object DefaultUserRegistry : UserRegistry {
+private class TestUserRegistry(
+    private val activeProfileId: String? = null,
+) : UserRegistry {
     override fun observeAllProfiles(): Flow<List<UserProfile>> = emptyFlow()
 
     override suspend fun getAllProfiles(): List<UserProfile> = emptyList()
@@ -405,7 +478,7 @@ private object DefaultUserRegistry : UserRegistry {
 
     override suspend fun getActiveProfile(): UserProfile? = null
 
-    override fun getActiveProfileId(): String? = null
+    override fun getActiveProfileId(): String? = activeProfileId
 
     override suspend fun setActiveProfile(profileId: String) = Unit
 
