@@ -80,4 +80,41 @@ class PositionBaselineTest {
         assertEquals("#chapter-4 p:nth-of-type(1)", remote.css_selector)
         assertEquals(8L, remote.remote_revision)
     }
+
+    @Test
+    fun acknowledgementCannotAdvanceAnOlderLocalGeneration() {
+        database.positionQueries.upsertPosition(
+            book_uuid = "book-1",
+            library_book_id = "library-book-1",
+            local_generation = 3L,
+            remote_revision = 7L,
+            timestamp = 100L,
+            created_at = null,
+            updated_at = "2026-09-22T10:00:00Z",
+            locator_href = "chapter-1",
+            locator_type = "epub",
+            locator_title = "Chapter 1",
+            locator_target = 10L,
+            css_selector = "#chapter-1",
+            audio_timestamp_ms = null,
+            chapter_index = 1L,
+            progression = 0.2,
+            total_chapters = 10L,
+            total_duration_ms = null,
+            total_progression = 0.2,
+            position = 10L,
+        )
+
+        database.positionQueries.updateRemoteRevisionIfGeneration(8L, "book-1", 2L)
+        assertEquals(
+            7L,
+            database.positionQueries.getPositionByBookUuid("book-1").executeAsOne().remote_revision,
+        )
+
+        database.positionQueries.updateRemoteRevisionIfGeneration(8L, "book-1", 3L)
+        assertEquals(
+            8L,
+            database.positionQueries.getPositionByBookUuid("book-1").executeAsOne().remote_revision,
+        )
+    }
 }
