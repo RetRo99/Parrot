@@ -18,7 +18,6 @@ import com.retro99.sync.data.LegacyMutationApplier
 import com.retro99.sync.data.LegacySyncEngine
 import com.retro99.sync.data.LibraryBookSyncApplier
 import com.retro99.sync.data.SyncLibraryBookSnapshot
-import com.retro99.sync.data.SyncPullPage
 import com.retro99.sync.data.SyncPass
 import com.retro99.sync.data.SyncExecutionContext
 import com.retro99.sync.data.SyncOutboxPreflight
@@ -39,11 +38,12 @@ class ParrotCloudSyncAdapter(
     @Provided private val positionDatabase: PositionDatabase,
     @Provided private val localBookUuidResolver: LocalBookUuidResolver,
     @Provided private val duplicatePositionRepair: DuplicatePositionRepair,
-    @Provided private val progressTransport: ProgressSyncTransport,
     @Provided private val legacyTransport: LegacySyncTransport,
+    @Provided private val progressTransport: ProgressSyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
     @Provided private val legacySyncEngine: LegacySyncEngine,
     @Provided private val syncBoundedPass: SyncBoundedPass,
+    @Provided private val syncPageAdapter: ParrotCloudSyncPageAdapter,
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
 ) : SyncPass {
     private val outboxCapability = SyncOutboxCapability(
@@ -83,10 +83,19 @@ class ParrotCloudSyncAdapter(
                 pushLegacyMutations(entries, cursor ?: "0")
             },
             fetchAndApply = { cursor, limit ->
-                pullAndApply(
-                    cloudUserId = cloudUserId,
+                syncPageAdapter.fetchPage(
                     cursor = cursor ?: "0",
                     limit = limit,
+                    onLegacyChange = { change ->
+                        applyRemoteChange(
+                            entityType = change.entityType,
+                            payload = json.decodeFromString<JsonElement>(change.payload),
+                            revision = change.revision,
+                        )
+                    },
+                    onProgressChange = { remote ->
+                        applyRemoteProgress(remote, cloudUserId)
+                    },
                 )
             },
             pendingMutationCount = {
@@ -165,46 +174,6 @@ class ParrotCloudSyncAdapter(
             },
         )
         return summary.acknowledgedCount + summary.conflictCount
-    }
-
-    private suspend fun pullAndApply(
-        cloudUserId: String,
-        cursor: String,
-        limit: Int,
-    ): SyncPullPage {
-        val legacyResponse = legacyTransport.pull(
-            cursor = cursor,
-            limit = limit,
-        )
-        legacyResponse.changes
-            .filter { change -> change.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION }
-            .forEach { change ->
-                applyRemoteChange(
-                    entityType = change.entityType,
-                    payload = json.decodeFromString<JsonElement>(change.payload),
-                    revision = change.revision,
-                )
-            }
-
-        val progressPage = progressTransport.fetchChanges(
-            cursor = cursor,
-            limit = limit,
-        )
-        progressPage.changes.forEach { remote ->
-            applyRemoteProgress(remote, cloudUserId)
-        }
-
-        val nextCursor = maxOf(
-            legacyResponse.nextCursor?.toLongOrNull() ?: cursor.toLongOrNull() ?: 0L,
-            progressPage.nextCursor?.toLongOrNull() ?: cursor.toLongOrNull() ?: 0L,
-        )
-        return SyncPullPage(
-            changeCount = legacyResponse.changes.count { change ->
-                change.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
-            } + progressPage.changes.size,
-            nextCursor = nextCursor.toString(),
-            hasMore = legacyResponse.hasMore || progressPage.hasMore,
-        )
     }
 
     private suspend fun applyRemoteProgress(
