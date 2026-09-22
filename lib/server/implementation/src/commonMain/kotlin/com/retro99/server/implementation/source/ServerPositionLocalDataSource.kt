@@ -45,13 +45,18 @@ class ServerPositionLocalDataSource(
                 }
             val localPosition = position.toPositionEntity(storedPosition?.remoteRevision)
             if (position.serverId == LOCAL_SERVER_ID) {
+                val localGeneration = (storedPosition?.localGeneration ?: 0L) + 1L
                 val importedBook = importedBooksDatabase.getImportedBookByUuid(position.bookUuid)
                 positionDatabase.upsertPositionWithMutation(
-                    position = localPosition,
+                    position = position.toPositionEntity(
+                        remoteRevision = storedPosition?.remoteRevision,
+                        localGeneration = localGeneration,
+                    ),
                     mutation = position.toSyncOutboxEntry(
                         contentHash = importedBook?.contentHash,
                         contentHashAlgorithm = importedBook?.contentHashAlgorithm,
                         baseRevision = storedPosition?.remoteRevision,
+                        localGeneration = localGeneration,
                     ),
                 )
             } else {
@@ -87,6 +92,7 @@ private fun ServerPosition.toSyncOutboxEntry(
     contentHash: String?,
     contentHashAlgorithm: String?,
     baseRevision: Long?,
+    localGeneration: Long,
 ): SyncOutboxEntry {
     return SyncOutboxEntry.new(
         entityType = SyncOutboxEntry.ENTITY_TYPE_READING_POSITION,
@@ -101,6 +107,7 @@ private fun ServerPosition.toSyncOutboxEntry(
             ),
         ),
         baseRevision = baseRevision,
+        localGeneration = localGeneration,
     )
 }
 
@@ -149,10 +156,14 @@ private fun PositionEntity.toServerPosition(): ServerPosition {
 /**
  * Converts a ServerPosition to a PositionEntity for database storage.
  */
-private fun ServerPosition.toPositionEntity(remoteRevision: Long?): PositionEntity {
+private fun ServerPosition.toPositionEntity(
+    remoteRevision: Long?,
+    localGeneration: Long = 0L,
+): PositionEntity {
     return ServerPositionEntity(
         bookUuid = bookUuid,
         libraryBookId = libraryBookId ?: bookUuid,
+        localGeneration = localGeneration,
         remoteRevision = remoteRevision,
         timestamp = timestamp,
         createdAt = createdAt,
@@ -177,6 +188,7 @@ private fun ServerPosition.toPositionEntity(remoteRevision: Long?): PositionEnti
 private data class ServerPositionEntity(
     override val bookUuid: String,
     override val libraryBookId: String,
+    override val localGeneration: Long = 0L,
     override val remoteRevision: Long?,
     override val timestamp: Long?,
     override val createdAt: String?,

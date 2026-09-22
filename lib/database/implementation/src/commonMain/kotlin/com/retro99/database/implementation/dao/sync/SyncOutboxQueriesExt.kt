@@ -18,6 +18,8 @@ internal fun SyncOutboxQueries.enqueue(mutation: SyncOutboxEntry) {
         operation = mutation.operation,
         payload = mutation.payload,
         base_revision = mutation.baseRevision,
+        local_generation = mutation.localGeneration,
+        state = mutation.state,
         created_at = mutation.createdAt,
         attempt_count = mutation.attemptCount.toLong(),
         next_attempt_at = mutation.nextAttemptAt,
@@ -38,5 +40,7 @@ internal fun Sync_outbox.toEntry(): SyncOutboxEntry {
         attemptCount = attempt_count.toInt(),
         nextAttemptAt = next_attempt_at,
         lastError = last_error,
+        localGeneration = local_generation,
+        state = state,
     )
 }

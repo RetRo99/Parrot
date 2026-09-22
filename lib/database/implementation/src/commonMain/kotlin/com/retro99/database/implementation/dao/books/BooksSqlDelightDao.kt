@@ -6,6 +6,7 @@ import app.cash.sqldelight.coroutines.mapToOneOrNull
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.database.implementation.DatabaseManager
 import com.retro99.database.implementation.Position
+import com.retro99.database.implementation.Remote_position
 import com.retro99.database.implementation.dao.sync.enqueue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -35,7 +36,6 @@ internal class BooksSqlDelightDao(
     private val mediaFileQueries get() = database.mediaFileQueries
     private val readaloudQueries get() = database.readaloudQueries
     private val positionQueries get() = database.positionQueries
-    private val remotePositionQueries get() = database.remotePositionQueries
     private val syncOutboxQueries get() = database.syncOutboxQueries
     private val bookmarkQueries get() = database.bookmarkQueries
 
@@ -560,6 +560,7 @@ internal class BooksSqlDelightDao(
             positionQueries.upsertPosition(
                 book_uuid = position.bookUuid,
                 library_book_id = position.libraryBookId,
+                local_generation = position.localGeneration,
                 remote_revision = position.remoteRevision,
                 timestamp = position.timestamp,
                 created_at = position.createdAt,
@@ -588,6 +589,7 @@ internal class BooksSqlDelightDao(
                 positionQueries.upsertPosition(
                     book_uuid = position.bookUuid,
                     library_book_id = position.libraryBookId,
+                    local_generation = position.localGeneration,
                     remote_revision = position.remoteRevision,
                     timestamp = position.timestamp,
                     created_at = position.createdAt,
@@ -609,15 +611,27 @@ internal class BooksSqlDelightDao(
         }
     }
 
-    suspend fun updateRemoteRevision(bookUuid: String, remoteRevision: Long) {
+    suspend fun updateRemoteRevision(
+        bookUuid: String,
+        remoteRevision: Long,
+        expectedLocalGeneration: Long?,
+    ) {
         withContext(Dispatchers.IO) {
-            positionQueries.updateRemoteRevision(remoteRevision, bookUuid)
+            if (expectedLocalGeneration == null) {
+                positionQueries.updateRemoteRevision(remoteRevision, bookUuid)
+            } else {
+                positionQueries.updateRemoteRevisionIfGeneration(
+                    remoteRevision,
+                    bookUuid,
+                    expectedLocalGeneration,
+                )
+            }
         }
     }
 
     suspend fun upsertRemotePosition(position: PositionSqlDelightEntity) {
         withContext(Dispatchers.IO) {
-            remotePositionQueries.upsertRemotePosition(
+            positionQueries.upsertRemotePosition(
                 book_uuid = position.bookUuid,
                 library_book_id = position.libraryBookId,
                 remote_revision = position.remoteRevision,
@@ -641,7 +655,7 @@ internal class BooksSqlDelightDao(
 
     suspend fun getRemotePositionByBookUuid(bookUuid: String): PositionSqlDelightEntity? {
         return withContext(Dispatchers.IO) {
-            remotePositionQueries.getRemotePositionByBookUuid(bookUuid)
+            positionQueries.getRemotePositionByBookUuid(bookUuid)
                 .executeAsOneOrNull()
                 ?.toPositionEntity()
         }
@@ -649,7 +663,7 @@ internal class BooksSqlDelightDao(
 
     suspend fun deleteRemotePosition(bookUuid: String) {
         withContext(Dispatchers.IO) {
-            remotePositionQueries.deleteRemotePosition(bookUuid)
+            positionQueries.deleteRemotePosition(bookUuid)
         }
     }
 
@@ -660,6 +674,7 @@ internal class BooksSqlDelightDao(
                     PositionSqlDelightEntity(
                         bookUuid = row.book_uuid,
                         libraryBookId = row.library_book_id ?: row.book_uuid,
+                        localGeneration = row.local_generation,
                         remoteRevision = row.remote_revision,
                         timestamp = row.timestamp,
                         createdAt = row.created_at,
@@ -700,6 +715,7 @@ internal class BooksSqlDelightDao(
                 PositionSqlDelightEntity(
                     bookUuid = row.book_uuid,
                     libraryBookId = row.library_book_id ?: row.book_uuid,
+                    localGeneration = row.local_generation,
                     remoteRevision = row.remote_revision,
                     timestamp = row.timestamp,
                     createdAt = row.created_at,
@@ -733,6 +749,7 @@ internal class BooksSqlDelightDao(
                     PositionSqlDelightEntity(
                         bookUuid = it.book_uuid,
                         libraryBookId = it.library_book_id ?: it.book_uuid,
+                        localGeneration = it.local_generation,
                         remoteRevision = it.remote_revision,
                         timestamp = it.timestamp,
                         createdAt = it.created_at,
@@ -773,6 +790,7 @@ internal class BooksSqlDelightDao(
                     PositionSqlDelightEntity(
                         bookUuid = row.book_uuid,
                         libraryBookId = row.library_book_id ?: row.book_uuid,
+                        localGeneration = row.local_generation,
                         remoteRevision = row.remote_revision,
                         timestamp = row.timestamp,
                         createdAt = row.created_at,
@@ -797,6 +815,7 @@ internal class BooksSqlDelightDao(
         return PositionSqlDelightEntity(
             bookUuid = book_uuid,
             libraryBookId = library_book_id ?: book_uuid,
+            localGeneration = local_generation,
             remoteRevision = remote_revision,
             timestamp = timestamp,
             createdAt = created_at,
@@ -815,7 +834,7 @@ internal class BooksSqlDelightDao(
         )
     }
 
-    private fun RemotePosition.toPositionEntity(): PositionSqlDelightEntity {
+    private fun Remote_position.toPositionEntity(): PositionSqlDelightEntity {
         return PositionSqlDelightEntity(
             bookUuid = book_uuid,
             libraryBookId = library_book_id ?: book_uuid,
@@ -859,7 +878,7 @@ internal class BooksSqlDelightDao(
                 mediaFileQueries.deleteAllMediaFiles()
                 readaloudQueries.deleteAllReadalouds()
                 positionQueries.deleteAllPositions()
-                remotePositionQueries.deleteAllRemotePositions()
+                positionQueries.deleteAllRemotePositions()
                 bookmarkQueries.deleteAllBookmarks()
                 personQueries.deleteAllPersons()
                 seriesQueries.deleteAllSeries()

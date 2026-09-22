@@ -19,6 +19,10 @@ interface SyncOutboxDatabase : DataClearable {
 
     suspend fun updateBaseRevision(mutationId: String, baseRevision: Long)
 
+    suspend fun markDispatched(mutationId: String)
+
+    suspend fun markConflict(mutationId: String, error: String)
+
     suspend fun delete(mutationId: String)
 
     suspend fun deleteByEntityType(entityType: String)

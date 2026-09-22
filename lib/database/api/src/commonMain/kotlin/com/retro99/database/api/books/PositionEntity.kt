@@ -9,6 +9,9 @@ interface PositionEntity {
     val bookUuid: String
     val libraryBookId: String
         get() = bookUuid
+    /** Local version used to guard acknowledgements for older uploads. */
+    val localGeneration: Long
+        get() = 0L
     val remoteRevision: Long?
         get() = null
     val timestamp: Long?

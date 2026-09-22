@@ -16,6 +16,8 @@ data class SyncOutboxEntry(
     val attemptCount: Int,
     val nextAttemptAt: String?,
     val lastError: String?,
+    val localGeneration: Long = 0L,
+    val state: String = STATE_PENDING,
 ) {
     companion object {
         const val ENTITY_TYPE_BOOKMARK = "bookmark"
@@ -26,6 +28,10 @@ data class SyncOutboxEntry(
         const val OPERATION_UPSERT = "upsert"
         const val OPERATION_DELETE = "delete"
 
+        const val STATE_PENDING = "pending"
+        const val STATE_DISPATCHED = "dispatched"
+        const val STATE_CONFLICT_PRESERVED = "conflict_preserved"
+
         @OptIn(ExperimentalUuidApi::class)
         fun new(
             entityType: String,
@@ -34,6 +40,7 @@ data class SyncOutboxEntry(
             payload: String,
             baseRevision: Long? = null,
             cloudUserId: String? = null,
+            localGeneration: Long = 0L,
         ): SyncOutboxEntry {
             return SyncOutboxEntry(
                 mutationId = Uuid.random().toString(),
@@ -47,6 +54,7 @@ data class SyncOutboxEntry(
                 attemptCount = 0,
                 nextAttemptAt = null,
                 lastError = null,
+                localGeneration = localGeneration,
             )
         }
     }

@@ -228,8 +228,16 @@ internal class BooksDatabaseImpl(
         )
     }
 
-    override suspend fun updateRemoteRevision(bookUuid: String, remoteRevision: Long) {
-        sqlDelightDao.updateRemoteRevision(bookUuid, remoteRevision)
+    override suspend fun updateRemoteRevision(
+        bookUuid: String,
+        remoteRevision: Long,
+        expectedLocalGeneration: Long?,
+    ) {
+        sqlDelightDao.updateRemoteRevision(
+            bookUuid,
+            remoteRevision,
+            expectedLocalGeneration,
+        )
     }
 
     override suspend fun upsertRemotePosition(position: PositionEntity) {

@@ -41,13 +41,17 @@ class ParrotCloudReaderRepository(
             val libraryBookId = resolveLibraryBookId(bookUuid, position.libraryBookId)
             val cloudBookId = resolveCloudBookId(libraryBookId, bookUuid)
             val stored = positionDatabase.getPositionByLibraryBookId(libraryBookId)
+            val localGeneration = (stored?.localGeneration ?: 0L) + 1L
             val normalizedPosition = position.copy(
                 bookUuid = bookUuid,
                 serverId = serverId,
                 libraryBookId = libraryBookId,
             )
             positionDatabase.upsertPositionWithMutation(
-                position = normalizedPosition.toParrotCloudPositionEntity(stored?.remoteRevision),
+                position = normalizedPosition.toParrotCloudPositionEntity(
+                    remoteRevision = stored?.remoteRevision,
+                    localGeneration = localGeneration,
+                ),
                 mutation = SyncOutboxEntry.new(
                     entityType = SyncOutboxEntry.ENTITY_TYPE_READING_POSITION,
                     entityId = bookUuid,
@@ -60,6 +64,7 @@ class ParrotCloudReaderRepository(
                         ),
                     ),
                     baseRevision = stored?.remoteRevision,
+                    localGeneration = localGeneration,
                 ),
             )
             Ok(Unit)
@@ -162,6 +167,32 @@ internal fun ServerPosition.toParrotCloudPositionEntity(remoteRevision: Long?): 
 
 internal fun ServerPosition.toParrotCloudPositionEntity(
     remoteRevision: Long?,
+    localGeneration: Long,
+): PositionEntity {
+    return ParrotCloudPositionEntity(
+        bookUuid = bookUuid,
+        libraryBookId = libraryBookId ?: bookUuid,
+        localGeneration = localGeneration,
+        remoteRevision = remoteRevision,
+        timestamp = timestamp,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        locatorHref = locatorHref,
+        locatorType = locatorType,
+        locatorTitle = locatorTitle,
+        locatorTarget = locatorTarget,
+        audioTimestampMs = audioTimestampMs,
+        chapterIndex = chapterIndex,
+        progression = progression,
+        totalChapters = totalChapters,
+        totalDurationMs = totalDurationMs,
+        totalProgression = totalProgression,
+        position = position,
+    )
+}
+
+internal fun ServerPosition.toParrotCloudPositionEntity(
+    remoteRevision: Long?,
     bookUuid: String,
     libraryBookId: String,
 ): PositionEntity {
@@ -215,6 +246,7 @@ internal fun PositionEntity.toParrotCloudPositionEntity(
 internal data class ParrotCloudPositionEntity(
     override val bookUuid: String,
     override val libraryBookId: String,
+    override val localGeneration: Long = 0L,
     override val remoteRevision: Long?,
     override val timestamp: Long?,
     override val createdAt: String?,

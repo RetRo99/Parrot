@@ -30,6 +30,14 @@ internal class SyncOutboxDatabaseImpl(
         sqlDelightDao.updateBaseRevision(mutationId, baseRevision)
     }
 
+    override suspend fun markDispatched(mutationId: String) {
+        sqlDelightDao.markDispatched(mutationId)
+    }
+
+    override suspend fun markConflict(mutationId: String, error: String) {
+        sqlDelightDao.markConflict(mutationId, error)
+    }
+
     override suspend fun delete(mutationId: String) {
         sqlDelightDao.delete(mutationId)
     }

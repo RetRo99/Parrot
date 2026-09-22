@@ -45,6 +45,18 @@ internal class SyncOutboxSqlDelightDao(
         }
     }
 
+    suspend fun markDispatched(mutationId: String) {
+        withContext(Dispatchers.IO) {
+            queries.markMutationDispatched(mutationId)
+        }
+    }
+
+    suspend fun markConflict(mutationId: String, error: String) {
+        withContext(Dispatchers.IO) {
+            queries.markMutationConflict(error, mutationId)
+        }
+    }
+
     suspend fun delete(mutationId: String) {
         withContext(Dispatchers.IO) {
             queries.deleteMutation(mutationId)

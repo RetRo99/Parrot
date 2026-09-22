@@ -16,7 +16,11 @@ interface PositionDatabase : DataClearable {
         mutation: SyncOutboxEntry,
     )
 
-    suspend fun updateRemoteRevision(bookUuid: String, remoteRevision: Long)
+    suspend fun updateRemoteRevision(
+        bookUuid: String,
+        remoteRevision: Long,
+        expectedLocalGeneration: Long? = null,
+    )
 
     suspend fun upsertRemotePosition(position: PositionEntity)
 

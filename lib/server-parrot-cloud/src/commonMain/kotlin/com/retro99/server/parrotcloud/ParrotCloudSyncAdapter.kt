@@ -135,6 +135,9 @@ class ParrotCloudSyncAdapter(
                 createdAt = entry.createdAt,
             )
         }
+        entries.forEach { entry ->
+            syncOutboxDatabase.markDispatched(entry.mutationId)
+        }
         val response = clientProvider.client.postgrest
             .rpc(
                 "push_sync_changes",
@@ -157,8 +160,13 @@ class ParrotCloudSyncAdapter(
                 }
 
                 STATUS_CONFLICT -> {
-                    mutationResponse.payload?.let { payload -> applyRemoteChange(entry, payload, mutationResponse.revision) }
-                    syncOutboxDatabase.delete(entry.mutationId)
+                    mutationResponse.payload?.let { payload ->
+                        applyRemoteConflict(entry, payload, mutationResponse.revision)
+                    }
+                    syncOutboxDatabase.markConflict(
+                        mutationId = entry.mutationId,
+                        error = mutationResponse.reason ?: "Remote progress conflict",
+                    )
                     handled++
                 }
 
@@ -254,6 +262,33 @@ class ParrotCloudSyncAdapter(
         applyRemoteChange(entry.entityType, payload, revision)
     }
 
+    private suspend fun applyRemoteConflict(
+        entry: SyncOutboxEntry,
+        payload: JsonElement,
+        revision: Long?,
+    ) {
+        if (entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION) {
+            applyRemoteChange(entry, payload, revision)
+            return
+        }
+
+        val position = json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(payload)
+        val existingBook = libraryBooksDatabase.getLibraryBookByCloudBookId(position.cloudBookId)
+        val libraryBookId = existingBook?.libraryBookId ?: position.libraryBookId
+        val localBookUuid = resolveLocalBookUuid(
+            libraryBookId = libraryBookId,
+            cloudBookId = position.cloudBookId,
+            fallback = position.position.bookUuid,
+        )
+        positionDatabase.upsertRemotePosition(
+            position.position.toParrotCloudPositionEntity(
+                remoteRevision = revision,
+                bookUuid = localBookUuid,
+                libraryBookId = libraryBookId,
+            ),
+        )
+    }
+
     private suspend fun applyAcceptedMetadata(
         entry: SyncOutboxEntry,
         response: CloudMutationResponse,
@@ -303,7 +338,11 @@ class ParrotCloudSyncAdapter(
                         cloudBookId = payload.cloudBookId,
                         fallback = entry.entityId,
                     )
-                    positionDatabase.updateRemoteRevision(localBookUuid, revision)
+                    positionDatabase.updateRemoteRevision(
+                        bookUuid = localBookUuid,
+                        remoteRevision = revision,
+                        expectedLocalGeneration = entry.localGeneration,
+                    )
                 }
             }
         }
