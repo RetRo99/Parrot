@@ -12,8 +12,8 @@ import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
-import com.retro99.sync.domain.SyncRepository
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressSyncTransport
@@ -21,11 +21,10 @@ import com.retro99.sync.data.ProgressIdentity
 import com.retro99.sync.data.ProgressIdentityResolver
 import com.retro99.sync.data.ProgressOutboxCodec
 import com.retro99.sync.data.ProgressSyncEngine
+import com.retro99.sync.data.SyncPass
 import com.retro99.user.api.UserRegistry
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -42,7 +41,7 @@ import kotlin.time.Duration.Companion.seconds
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
-@Single(binds = [SyncRepository::class])
+@Single(binds = [SyncPass::class])
 class ParrotCloudSyncAdapter(
     @Provided private val clientProvider: SupabaseClientProvider,
     @Provided private val profileLinkRepository: CloudProfileLinkRepository,
@@ -55,22 +54,21 @@ class ParrotCloudSyncAdapter(
     @Provided private val userRegistry: UserRegistry,
     @Provided private val progressTransport: ProgressSyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
-) : SyncRepository {
-    private val mutex = Mutex()
+) : SyncPass {
     private val json = Json {
         encodeDefaults = true
         ignoreUnknownKeys = true
         coerceInputValues = true
     }
 
-    override suspend fun sync(): SyncResult = mutex.withLock {
+    override suspend fun execute(request: SyncRequest): SyncResult {
         if (!clientProvider.isConfigured) return SyncResult.NotConfigured
         val localProfileId = userRegistry.getActiveProfileIdOrDefault()
         val link = profileLinkRepository.getForLocalProfile(localProfileId)
             ?: return SyncResult.ProfileNotLinked
         if (!link.syncEnabled) return SyncResult.SyncDisabled
 
-        try {
+        return try {
             clientProvider.withProfileSession(localProfileId) {
                 if (clientProvider.currentSessionState().accountId != link.cloudUserId) {
                     return@withProfileSession SyncResult.NotAuthenticated
