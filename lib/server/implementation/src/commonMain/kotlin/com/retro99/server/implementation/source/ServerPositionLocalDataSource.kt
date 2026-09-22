@@ -43,7 +43,6 @@ class ServerPositionLocalDataSource(
                 ?: position.libraryBookId?.let { libraryBookId ->
                     positionDatabase.getPositionByLibraryBookId(libraryBookId)
                 }
-            val localPosition = position.toPositionEntity(storedPosition?.remoteRevision)
             if (position.serverId == LOCAL_SERVER_ID) {
                 val localGeneration = (storedPosition?.localGeneration ?: 0L) + 1L
                 val importedBook = importedBooksDatabase.getImportedBookByUuid(position.bookUuid)
@@ -60,8 +59,37 @@ class ServerPositionLocalDataSource(
                     ),
                 )
             } else {
-                positionDatabase.upsertPosition(localPosition)
+                positionDatabase.upsertPosition(position.toPositionEntity(storedPosition?.remoteRevision))
             }
+        }
+    }
+
+    override suspend fun savePositionWithSync(
+        position: ServerPosition,
+        remoteAccountId: String,
+    ): CompletableResult {
+        return databaseExecutor.executeDatabaseOperation {
+            require(remoteAccountId.isNotBlank()) { "Remote account ID must not be blank" }
+
+            val storedPosition = positionDatabase.getPositionByBookUuid(position.bookUuid)
+                ?: position.libraryBookId?.let { libraryBookId ->
+                    positionDatabase.getPositionByLibraryBookId(libraryBookId)
+                }
+            val localGeneration = (storedPosition?.localGeneration ?: 0L) + 1L
+            val importedBook = importedBooksDatabase.getImportedBookByUuid(position.bookUuid)
+            positionDatabase.upsertPositionWithMutation(
+                position = position.toPositionEntity(
+                    remoteRevision = storedPosition?.remoteRevision,
+                    localGeneration = localGeneration,
+                ),
+                mutation = position.toSyncOutboxEntry(
+                    contentHash = importedBook?.contentHash,
+                    contentHashAlgorithm = importedBook?.contentHashAlgorithm,
+                    baseRevision = storedPosition?.remoteRevision,
+                    localGeneration = localGeneration,
+                    cloudUserId = remoteAccountId,
+                ),
+            )
         }
     }
 
@@ -93,6 +121,7 @@ private fun ServerPosition.toSyncOutboxEntry(
     contentHashAlgorithm: String?,
     baseRevision: Long?,
     localGeneration: Long,
+    cloudUserId: String? = null,
 ): SyncOutboxEntry {
     return SyncOutboxEntry.new(
         entityType = SyncOutboxEntry.ENTITY_TYPE_READING_POSITION,
@@ -107,6 +136,7 @@ private fun ServerPosition.toSyncOutboxEntry(
             ),
         ),
         baseRevision = baseRevision,
+        cloudUserId = cloudUserId,
         localGeneration = localGeneration,
     )
 }

@@ -10,9 +10,7 @@ import com.retro99.server.api.ServerPositionLocalSource
 import com.retro99.server.api.ServerReaderRepository
 import com.retro99.server.storyteller.model.StorytellerPositionApiModel
 import com.retro99.server.storyteller.model.toServerPosition
-import com.retro99.server.storyteller.model.toStorytellerApiModel
 import retro99.network.api.get
-import retro99.network.api.post
 
 /**
  * Storyteller implementation of ServerReaderRepository.
@@ -37,13 +35,12 @@ class StorytellerReaderRepository(
     }
 
     override suspend fun savePosition(bookUuid: String, position: ServerPosition): CompletableResult {
-        // Save to local cache first (errors logged by BaseRepository pattern)
-        localSource.savePosition(position)
-
-        // Then sync to remote
-        return networkClient.post(
-            path = "/api/v2/books/$bookUuid/positions",
-            body = position.toStorytellerApiModel()
+        return localSource.savePositionWithSync(
+            position = position.copy(
+                bookUuid = bookUuid,
+                serverId = serverId,
+            ),
+            remoteAccountId = serverId,
         )
     }
 
@@ -70,4 +67,3 @@ class StorytellerReaderRepository(
         }
     }
 }
-

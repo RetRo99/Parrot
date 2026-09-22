@@ -26,6 +26,18 @@ interface ServerPositionLocalSource {
     suspend fun savePosition(position: ServerPosition): CompletableResult
 
     /**
+     * Saves a position and durably queues it for one remote destination in the
+     * same database transaction.
+     *
+     * @param position The position to save
+     * @param remoteAccountId The destination/account key used by sync routing
+     */
+    suspend fun savePositionWithSync(
+        position: ServerPosition,
+        remoteAccountId: String,
+    ): CompletableResult
+
+    /**
      * Gets all locally cached positions.
      *
      * @return List of all cached positions
@@ -56,4 +68,3 @@ interface ServerPositionLocalSource {
      */
     fun observeAllPositions(): Flow<List<ServerPosition>>
 }
-
