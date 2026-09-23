@@ -39,6 +39,13 @@ interface BookFileDownloadTransport {
     )
 }
 
+/** Deletes a cloud-owned book file and completes its server-side lifecycle. */
+interface BookFileDeletionTransport {
+    val serverId: String
+
+    suspend fun delete(cloudBookFileId: String)
+}
+
 data class BookFileDownloadRequest(
     val transferId: String,
     val serverId: String,
@@ -141,6 +148,7 @@ class BookFileTransferDownloadException : Exception("Cloud file download request
 interface BookFileTransferManager {
     fun supportsUpload(serverId: String): Boolean
     fun supportsDownload(serverId: String): Boolean
+    fun supportsDeletion(serverId: String): Boolean
 
     suspend fun enqueueUpload(
         serverId: String,
@@ -156,6 +164,11 @@ interface BookFileTransferManager {
     suspend fun enqueueDownload(serverId: String, libraryBookId: String, mediaType: String): String
 
     suspend fun removeDownload(serverId: String, libraryBookId: String, mediaType: String)
+
+    suspend fun deleteRemoteBackup(serverId: String, libraryBookId: String, mediaType: String)
+
+    /** Removes only app-provisioned replicas associated with a deleted cloud file. */
+    suspend fun invalidateCloudFile(cloudBookFileId: String)
 
     suspend fun cancel(serverId: String, libraryBookId: String)
 

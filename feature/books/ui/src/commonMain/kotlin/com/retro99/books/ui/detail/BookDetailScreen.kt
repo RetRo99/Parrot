@@ -157,6 +157,10 @@ import resources.translations.cloud_download_finishing
 import resources.translations.cloud_download_progress
 import resources.translations.cloud_download_queued
 import resources.translations.cloud_download_retry
+import resources.translations.cloud_backup_delete_button
+import resources.translations.cloud_backup_delete_title
+import resources.translations.cloud_backup_delete_message
+import resources.translations.cloud_backup_delete_confirm
 import resources.translations.books_reading_progress
 import resources.translations.general_back
 import resources.translations.general_cancel
@@ -199,6 +203,8 @@ fun BookDetailScreen(
                 conflictResolutionError = viewState.conflictResolutionError,
                 pendingOpenBookType = viewState.pendingOpenBookType,
                 supportsBookBackup = viewState.supportsBookBackup,
+                supportsBookDeletion = viewState.supportsBookDeletion,
+                cloudBackupDeleteConfirmationType = viewState.cloudBackupDeleteConfirmationType,
                 showBackupConfirmation = viewState.showBackupConfirmation,
                 backupRightsAttested = viewState.backupRightsAttested,
                 bookFileTransfers = viewState.bookFileTransfers,
@@ -224,6 +230,8 @@ private fun BookDetailScreenContent(
     conflictResolutionError: AppError?,
     pendingOpenBookType: BookType?,
     supportsBookBackup: Boolean,
+    supportsBookDeletion: Boolean,
+    cloudBackupDeleteConfirmationType: BookType?,
     showBackupConfirmation: Boolean,
     backupRightsAttested: Boolean,
     bookFileTransfers: List<BookFileTransfer>,
@@ -281,6 +289,15 @@ private fun BookDetailScreenContent(
             onAttestedChanged = { intentDispatcher(BookDetailIntent.OnBackupAttestationChanged(it)) },
             onConfirm = { intentDispatcher(BookDetailIntent.OnBackupConfirmed) },
             onDismiss = { intentDispatcher(BookDetailIntent.OnBackupDismissed) },
+        )
+    }
+
+    cloudBackupDeleteConfirmationType?.let { bookType ->
+        DeleteCloudBackupConfirmationDialog(
+            bookTitle = book.title,
+            bookType = bookType,
+            onConfirm = { intentDispatcher(BookDetailIntent.OnDeleteCloudBackupConfirmed) },
+            onDismiss = { intentDispatcher(BookDetailIntent.OnDeleteCloudBackupDismissed) },
         )
     }
 
@@ -399,6 +416,38 @@ private fun BookDetailScreenContent(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(text = stringResource(StringRes.cloud_backup_button))
                         }
+                    }
+
+                    if (supportsBookDeletion && book is BookUiModel.StorytellerBook) {
+                        book.mediaResources
+                            .filter { resource ->
+                                resource.cloudBookFileId != null &&
+                                    resource.remoteAvailability in setOf("Available", "Deleting")
+                            }
+                            .forEach { resource ->
+                                val bookType = BookType.fromValue(resource.mediaType)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                OutlinedButton(
+                                    onClick = {
+                                        intentDispatcher(BookDetailIntent.OnDeleteCloudBackupClicked(bookType))
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                ) {
+                                    Icon(imageVector = Icons.Outlined.Delete, contentDescription = null)
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = stringResource(
+                                            StringRes.cloud_backup_delete_button,
+                                            when (bookType) {
+                                                BookType.EBOOK -> stringResource(StringRes.books_media_ebook)
+                                                BookType.READALOUD -> stringResource(StringRes.books_media_readaloud)
+                                                BookType.AUDIOBOOK -> stringResource(StringRes.books_media_audio)
+                                            },
+                                        ),
+                                    )
+                                }
+                            }
                     }
 
                     if (bookFileTransfers.isNotEmpty()) {
@@ -1270,6 +1319,45 @@ private fun DeleteLocalBookConfirmationDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(text = stringResource(StringRes.general_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun DeleteCloudBackupConfirmationDialog(
+    bookTitle: String,
+    bookType: BookType,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val mediaTypeName = when (bookType) {
+        BookType.EBOOK -> stringResource(StringRes.books_media_ebook)
+        BookType.AUDIOBOOK -> stringResource(StringRes.books_media_audio)
+        BookType.READALOUD -> stringResource(StringRes.books_media_readaloud)
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        title = { Text(stringResource(StringRes.cloud_backup_delete_title)) },
+        text = {
+            Text(
+                stringResource(StringRes.cloud_backup_delete_message, mediaTypeName, bookTitle),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    stringResource(StringRes.cloud_backup_delete_confirm),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(StringRes.general_cancel))
             }
         },
     )

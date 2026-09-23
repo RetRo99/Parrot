@@ -3,6 +3,7 @@ package com.retro99.server.parrotcloud
 import com.retro99.database.api.cloudfiles.CloudBookFileEntity
 import com.retro99.database.api.cloudfiles.CloudFilesDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.books.domain.BookFileTransferManager
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -17,16 +18,26 @@ import kotlin.time.Clock
 class ParrotCloudBookFileChangeApplier(
     @Provided private val cloudFilesDatabase: CloudFilesDatabase,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
+    @Provided private val bookFileTransferManager: BookFileTransferManager,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
     suspend fun apply(payload: JsonElement) {
         val file = json.decodeFromJsonElement<ParrotCloudBookFilePayload>(payload)
-        val cloudBookId = file.cloudBookId ?: return
-        val libraryBook = libraryBooksDatabase.getLibraryBookByCloudBookId(cloudBookId) ?: return
-        val mediaType = file.mediaType ?: return
+        val cloudBookId = file.cloudBookId
+        val mediaType = file.mediaType
         val relativePath = file.relativePath.orEmpty()
-        if (file.status == "none" || file.status == "removed") {
+        val removed = file.status == "none" || file.status == "removed"
+        val invalidated = removed || file.status == "deleting"
+        if (invalidated) {
+            file.cloudBookFileId?.let { fileId ->
+                bookFileTransferManager.invalidateCloudFile(fileId)
+            }
+        }
+        val requiredCloudBookId = cloudBookId ?: return
+        val libraryBook = libraryBooksDatabase.getLibraryBookByCloudBookId(requiredCloudBookId) ?: return
+        mediaType ?: return
+        if (removed) {
             cloudFilesDatabase.deleteFileState(libraryBook.libraryBookId, mediaType, relativePath)
             return
         }
@@ -34,7 +45,7 @@ class ParrotCloudBookFileChangeApplier(
         cloudFilesDatabase.upsertFileState(
             CloudBookFileEntity(
                 libraryBookId = libraryBook.libraryBookId,
-                cloudBookId = cloudBookId,
+                cloudBookId = requiredCloudBookId,
                 cloudBookFileId = fileId,
                 mediaType = mediaType,
                 relativePath = relativePath,

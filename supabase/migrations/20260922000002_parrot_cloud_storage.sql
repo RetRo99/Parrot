@@ -64,6 +64,19 @@ using (
     )
 );
 
--- Authenticated users intentionally have no DELETE policy. Cleanup runs as the
--- service role after reservation expiry or through audited operations.
+create policy book_files_deleting_owner_delete
+on storage.objects for delete to authenticated
+using (
+    bucket_id = 'book-files'
+    and exists (
+        select 1
+        from public.cloud_book_files f
+        where f.storage_path = name
+          and f.cloud_user_id = auth.uid()
+          and f.status = 'deleting'
+    )
+);
+
+-- Service-role cleanup is reserved for expired reservations and audited
+-- takedowns; account owners can delete only files first marked as deleting.
 grant select, insert, update, delete on storage.objects to service_role;

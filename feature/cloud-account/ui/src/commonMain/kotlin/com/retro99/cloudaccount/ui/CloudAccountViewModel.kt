@@ -5,6 +5,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewModelScope
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.cloudaccount.domain.CloudAccountException
+import com.retro99.cloudaccount.domain.usecase.GetCloudStorageUsageUseCase
 import com.retro99.cloudaccount.domain.model.CloudAccount
 import com.retro99.cloudaccount.domain.model.CloudAuthState
 import com.retro99.cloudaccount.domain.model.CloudProfileLinkResult
@@ -42,6 +43,7 @@ class CloudAccountViewModel(
     @Provided private val enableCloudSyncUseCase: EnableCloudSyncUseCase,
     @Provided private val observeSyncStatusUseCase: ObserveSyncStatusUseCase,
     @Provided private val syncNowUseCase: SyncNowUseCase,
+    @Provided private val getCloudStorageUsageUseCase: GetCloudStorageUsageUseCase,
     @InjectedParam private val onBack: () -> Unit,
 ) : BaseViewModel<CloudAccountViewState, CloudAccountIntent>(CloudAccountViewState()) {
     val emailState = TextFieldState()
@@ -114,6 +116,9 @@ class CloudAccountViewModel(
                 currentState.copy(
                     authState = authState,
                     profileLink = null,
+                    storageUsage = null,
+                    isLoadingStorageUsage = false,
+                    storageUsageError = null,
                     isLoading = if (authState is CloudAuthState.RestoringSession) {
                         currentState.isLoading
                     } else {
@@ -250,6 +255,29 @@ class CloudAccountViewModel(
             )
         }
         updateFormState(emailState.text.toString(), passwordState.text.toString())
+        refreshStorageUsage()
+    }
+
+    private fun refreshStorageUsage() {
+        if (viewState.value.authState !is CloudAuthState.SignedIn) return
+        updateState { it.copy(isLoadingStorageUsage = true, storageUsageError = null) }
+        viewModelScope.launch {
+            try {
+                val usage = getCloudStorageUsageUseCase()
+                updateState {
+                    it.copy(storageUsage = usage, isLoadingStorageUsage = false, storageUsageError = null)
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                updateState {
+                    it.copy(
+                        isLoadingStorageUsage = false,
+                        storageUsageError = exception.message ?: "Storage usage unavailable",
+                    )
+                }
+            }
+        }
     }
 
     private fun linkAccount() {
@@ -343,6 +371,9 @@ class CloudAccountViewModel(
                     it.copy(
                         authState = CloudAuthState.SignedOut,
                         profileLink = null,
+                        storageUsage = null,
+                        isLoadingStorageUsage = false,
+                        storageUsageError = null,
                         isLoading = false,
                         error = null,
                         showVerificationMessage = false,
@@ -382,6 +413,7 @@ class CloudAccountViewModel(
                                 error = null,
                             )
                         }
+                        refreshStorageUsage()
                     }
                     is SyncResult.Offline -> updateState {
                         it.copy(isLoading = false, error = null)

@@ -711,8 +711,8 @@ enablement.
 
 | Path | Action |
 |---|---|
-| folded into the canonical RPCs migration file (decision #11) | `admin_takedown_book_file(cloud_book_file_id, reason, actor)` + `admin_block_content_hash(algorithm, hash, reason)` + `admin_unblock_content_hash(algorithm, hash, reason, actor)` (reinstatement inverse — gap found in the runbook audit; see `docs/parrot-cloud-abuse-runbook.md` §6) (**service-role only**; `revoke from authenticated`), user `delete_book_file(cloud_book_file_id)`, `get_storage_usage()` view/RPC |
-| new `scripts/supabase/ops/takedown.sh` | ops CLI wrapper (find by content hash or file id) |
+| folded into the canonical RPCs migration file (decision #11) | `admin_takedown_book_file(cloud_book_file_id, reason, actor)` + `admin_block_content_hash(algorithm, hash, reason, actor)` + `admin_unblock_content_hash(algorithm, hash, reason, actor)` (service-role only), user `delete_book_file(cloud_book_file_id)`, `complete_book_file_deletion(cloud_book_file_id)`, and `get_storage_usage()` RPC |
+| `scripts/supabase/ops/takedown.sh` | service-role ops wrapper (find by content hash or file id, remove via Storage API, and finalize deletion) |
 | `docs/parrot-cloud-abuse-runbook.md` (draft exists) + `docs/parrot-cloud-legal-text-draft.md` (working draft for counsel) | finalize documented abuse & takedown process (required before public availability — PC-plan §12), incl. log retention; close the §6 reinstatement gap; legal copy goes through counsel review (draft §F open items) before enablement |
 | `lib/server-parrot-cloud/.../ParrotCloudBookFileChangeApplier.kt` + `feature/books/data/.../transfer/` | takedown invalidation: `deleting`/`removed` events → `RemoteFileAvailability.Deleting` → **delete app-provisioned replica bytes + reader cache**, flip to `None` |
 | `feature/books/ui/.../detail/BookDetailScreen.kt`, `BookDetailViewModel.kt` | "Delete Cloud backup" action + confirm (keeps metadata/progress) — distinct from "Remove download" (S4) |

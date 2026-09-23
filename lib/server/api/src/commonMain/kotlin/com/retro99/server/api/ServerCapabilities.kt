@@ -64,6 +64,7 @@ fun ServerType.getCapabilities(): ServerCapabilities = when (this) {
         supportsAutomaticSync = true,
         supportsOfflineMutationQueue = true,
         supportsCloudFileStatus = true,
+        supportsBookDeletion = true,
     )
 }
 

@@ -175,6 +175,16 @@ class BookDetailViewModel(
                 updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
             }
 
+            is BookDetailIntent.OnDeleteCloudBackupClicked -> {
+                updateState { it.copy(cloudBackupDeleteConfirmationType = intent.bookType) }
+            }
+
+            BookDetailIntent.OnDeleteCloudBackupConfirmed -> deleteCloudBackup()
+
+            BookDetailIntent.OnDeleteCloudBackupDismissed -> {
+                updateState { it.copy(cloudBackupDeleteConfirmationType = null) }
+            }
+
             is BookDetailIntent.OnCancelBookFileTransferClicked -> cancelBookTransfer(intent.transferId)
 
             is BookDetailIntent.OnRetryBookBackupClicked -> retryBookBackup(intent.transferId)
@@ -321,6 +331,7 @@ class BookDetailViewModel(
                             it.copy(
                                 book = uiModel,
                                 supportsBookBackup = canBackUp(uiModel),
+                                supportsBookDeletion = canDeleteCloudBackup(uiModel),
                                 progressInfo = bookWithProgress.progressInfo?.toUiModel(),
                                 isLoading = false,
                                 error = null,
@@ -347,6 +358,28 @@ class BookDetailViewModel(
             book.localSourceUuid != null &&
             book.mediaResources.any { resource -> resource.localPath != null } &&
             bookFileTransferManager.supportsUpload(serverId)
+
+    private fun canDeleteCloudBackup(book: BookUiModel): Boolean =
+        book is BookUiModel.StorytellerBook &&
+            book.serverType == ServerType.ParrotCloud &&
+            book.libraryBookId != null &&
+            bookFileTransferManager.supportsDeletion(serverId)
+
+    private fun deleteCloudBackup() {
+        val bookType = viewState.value.cloudBackupDeleteConfirmationType ?: return
+        val book = viewState.value.book as? BookUiModel.StorytellerBook ?: return
+        val libraryBookId = book.libraryBookId ?: return
+        updateState { it.copy(cloudBackupDeleteConfirmationType = null) }
+        viewModelScope.launch {
+            try {
+                bookFileTransferManager.deleteRemoteBackup(serverId, libraryBookId, bookType.value)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (error: Exception) {
+                updateState { it.copy(bookFileTransferError = error.message ?: "Could not delete cloud backup") }
+            }
+        }
+    }
 
     private fun observeBookFileTransfers(book: BookUiModel) {
         val cloudBook = book as? BookUiModel.StorytellerBook
@@ -462,7 +495,7 @@ class BookDetailViewModel(
                 analytics.logEvent(
                     BookAnalyticsEvent.BookDownloadFailed(
                         bookUuid = bookUuid,
-                        errorType = newState.error.message ?: "unknown",
+                        errorType = "download_failed",
                     )
                 )
             }

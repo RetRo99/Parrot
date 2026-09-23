@@ -524,5 +524,13 @@
     <string name="cloud_backup_all_message" tools:ignore="MissingTranslation">Books linked to your Parrot Cloud library will be queued for backup.</string>
     <string name="cloud_backup_all_queued" tools:ignore="MissingTranslation">Queued %1$d book backups.</string>
     <string name="cloud_backup_all_result_title" tools:ignore="MissingTranslation">Book backup</string>
+    <string name="cloud_backup_delete_button" tools:ignore="MissingTranslation">Delete %1$s cloud backup</string>
+    <string name="cloud_backup_delete_title" tools:ignore="MissingTranslation">Delete cloud backup?</string>
+    <string name="cloud_backup_delete_message" tools:ignore="MissingTranslation">Delete the %1$s cloud backup of “%2$s” from Parrot Cloud? Restored copies will also be removed, but imported original files will stay on this device.</string>
+    <string name="cloud_backup_delete_confirm" tools:ignore="MissingTranslation">Delete backup</string>
+    <string name="cloud_storage_usage_title" tools:ignore="MissingTranslation">Parrot Cloud storage</string>
+    <string name="cloud_storage_usage_used" tools:ignore="MissingTranslation">%1$s of %2$s used</string>
+    <string name="cloud_storage_usage_reserved" tools:ignore="MissingTranslation">%1$s reserved for active transfers</string>
+    <string name="cloud_storage_usage_error" tools:ignore="MissingTranslation">Storage usage unavailable: %1$s</string>
     <string name="cloud_account_sign_in_with_google" tools:ignore="MissingTranslation">Continue with Google</string>
 </resources>

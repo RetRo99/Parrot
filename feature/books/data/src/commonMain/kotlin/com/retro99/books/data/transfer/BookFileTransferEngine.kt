@@ -8,6 +8,7 @@ import com.retro99.books.data.toHexString
 import com.retro99.books.domain.BookFileTransfer
 import com.retro99.books.domain.BookFileDownloadRequest
 import com.retro99.books.domain.BookFileDownloadTransport
+import com.retro99.books.domain.BookFileDeletionTransport
 import com.retro99.books.domain.BookFileTransferManager
 import com.retro99.books.domain.BookFileTransferTransport
 import com.retro99.books.domain.BookFileUploadRequest
@@ -59,6 +60,7 @@ class BookFileTransferEngine(
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val transports: List<BookFileTransferTransport>,
     @Provided private val downloadTransports: List<BookFileDownloadTransport> = emptyList(),
+    @Provided private val deletionTransports: List<BookFileDeletionTransport> = emptyList(),
     @Provided private val downloadFinalizer: DownloadTransferFinalizer? = null,
     @Provided private val fileStore: BookFileTransferFileStore? = null,
 ) : BookFileTransferManager, FileTransferStatusSource {
@@ -67,6 +69,7 @@ class BookFileTransferEngine(
     private val jobs = mutableMapOf<String, Job>()
     private val transportByServer = transports.associateBy(BookFileTransferTransport::serverId)
     private val downloadTransportByServer = downloadTransports.associateBy(BookFileDownloadTransport::serverId)
+    private val deletionTransportByServer = deletionTransports.associateBy(BookFileDeletionTransport::serverId)
     private val json = Json { ignoreUnknownKeys = true }
 
     override fun supportsUpload(serverId: String): Boolean =
@@ -74,6 +77,9 @@ class BookFileTransferEngine(
 
     override fun supportsDownload(serverId: String): Boolean =
         downloadTransportByServer[serverId]?.supportsDownload == true
+
+    override fun supportsDeletion(serverId: String): Boolean =
+        deletionTransportByServer.containsKey(serverId)
 
     override suspend fun enqueueDownload(
         serverId: String,
@@ -183,6 +189,44 @@ class BookFileTransferEngine(
         }
         latest.stagingPath?.let { path -> fileStore.delete(path) }
         cloudFilesDatabase.deleteTransfer(transfer.transferId)
+    }
+
+    override suspend fun deleteRemoteBackup(serverId: String, libraryBookId: String, mediaType: String) {
+        check(supportsDeletion(serverId)) { "Cloud backup deletion is not enabled for this server" }
+        val cloudFile = cloudFilesDatabase.getFileStates(libraryBookId).firstOrNull { candidate ->
+            candidate.mediaType.equals(mediaType, ignoreCase = true) &&
+                candidate.relativePath.isEmpty() &&
+                candidate.status in setOf(FILE_STATUS_AVAILABLE, FILE_STATUS_DELETING)
+        } ?: error("No cloud backup was found for this book")
+        deletionTransportByServer.getValue(serverId).delete(cloudFile.cloudBookFileId)
+        invalidateCloudFile(cloudFile.cloudBookFileId)
+        cloudFilesDatabase.deleteFileState(libraryBookId, cloudFile.mediaType, cloudFile.relativePath)
+    }
+
+    override suspend fun invalidateCloudFile(cloudBookFileId: String) {
+        val store = requireNotNull(fileStore) { "Cloud download storage is unavailable" }
+        val transfers = cloudFilesDatabase.observeAllTransfers().first().filter { transfer ->
+            transfer.direction == DIRECTION_DOWNLOAD && transfer.cloudBookFileId == cloudBookFileId
+        }
+        transfers.forEach { transfer ->
+            if (transfer.state in NON_TERMINAL_STATES) cancelTransfer(transfer.transferId)
+            val latest = cloudFilesDatabase.getTransfer(transfer.transferId) ?: return@forEach
+            val localBook = latest.localSourceUuid?.let { localUuid ->
+                importedBooksDatabase.getImportedBookByUuid(localUuid)
+            }
+            if (localBook?.origin == ORIGIN_CLOUD_DOWNLOAD && localBook.cloudBookFileId == cloudBookFileId) {
+                store.delete(localBook.filePath)
+                localBook.coverPath?.let { coverPath -> store.delete(coverPath) }
+                importedBooksDatabase.deleteImportedBook(localBook.uuid)
+            }
+            latest.stagingPath?.let { path -> store.delete(path) }
+            if (localBook == null) {
+                latest.localSourceUuid?.let { localUuid ->
+                    store.delete(store.importedFilePath(localUuid, latest.mediaType))
+                }
+            }
+            cloudFilesDatabase.deleteTransfer(latest.transferId)
+        }
     }
 
     override suspend fun enqueueUpload(
@@ -850,6 +894,7 @@ class BookFileTransferEngine(
         const val STATE_FAILED = "failed"
         const val STATE_CANCELLED = "cancelled"
         const val FILE_STATUS_AVAILABLE = "available"
+        const val FILE_STATUS_DELETING = "deleting"
         const val ORIGIN_CLOUD_DOWNLOAD = "cloud_download"
         const val ERROR_VERIFY_FAILED = "verify_failed"
         const val ERROR_RESTORE_UNAVAILABLE = "restore_unavailable"

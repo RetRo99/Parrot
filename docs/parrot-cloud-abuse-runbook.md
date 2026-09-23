@@ -45,10 +45,25 @@ identify the content precisely enough to act. Required fields:
 Response targets (acknowledge / act): **[LEGAL REVIEW]** — mechanics support
 same-day action.
 
-## 4. Takedown procedure (mechanics — planned in Slice 5)
+## 4. Takedown procedure (mechanics implemented; legal handling remains draft)
 
-Identify → act → block → verify → record. All ops actions run with service-role
-credentials via `scripts/supabase/ops/takedown.sh` or direct RPC:
+Identify → mark → remove object → finalize → verify. All ops actions run with
+service-role credentials via `scripts/supabase/ops/takedown.sh`:
+
+```sh
+scripts/supabase/ops/takedown.sh \
+  --file-id CLOUD_BOOK_FILE_UUID --reason CASE_REFERENCE --actor OPERATOR
+
+scripts/supabase/ops/takedown.sh \
+  --content-hash SHA256 --algorithm sha-256-v1 \
+  --reason CASE_REFERENCE --actor OPERATOR
+```
+
+Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the operator's environment.
+The script blocks a supplied content hash and processes every matching file in
+`available` or `deleting` state; file-ID mode also adds the file's hash to the
+block-list. It uses the Storage API for object removal, then calls the
+completion RPC. The database never deletes `storage.objects` rows directly.
 
 1. **Identify**: find the file row and its provenance.
 
@@ -67,17 +82,19 @@ credentials via `scripts/supabase/ops/takedown.sh` or direct RPC:
    where content_hash = :hash;
    ```
 
-2. **Takedown**: `admin_takedown_book_file(cloud_book_file_id, reason, actor)` —
-   in one transaction: deletes the Storage object, sets
-   `cloud_book_files.status = 'deleting'` (then removes/tombstones the row),
-   emits the `book_file` change event clients pull on next sync, writes
-   `cloud_file_audit_events` (`action='takedown'`, reason code, actor).
-3. **Block re-upload**: `admin_block_content_hash(content_hash_algorithm,
+2. **Mark and audit**: `admin_takedown_book_file(cloud_book_file_id, reason,
+   actor)` adds the file hash to the block-list, changes the file state to
+   `deleting`, emits the change event, and records the takedown.
+3. **Remove and finalize**: the script deletes the Storage object through the
+   Storage API, then calls `complete_book_file_deletion`. The completion RPC
+   verifies the object is absent before removing the metadata row, releasing
+   quota, and publishing the `removed` event. Retries are idempotent.
+4. **Block re-upload**: `admin_block_content_hash(content_hash_algorithm,
    content_hash, reason, actor)` — enforced at all three gates
    (`reserve_book_upload`, `finalize_book_upload`, `create_book_download`).
-   Optional hardening (recommended default): takedown auto-inserts the
-   block-list row.
-4. **Verify**:
+   Hash mode in the script then takes down every currently available matching
+   file. `admin_unblock_content_hash` records the inverse decision.
+5. **Verify**:
 
    ```sql
    select action, reason, actor, created_at
@@ -100,23 +117,24 @@ Per decision #9 (takedown scope):
   via the "Remove download" machinery) and any reader-cache entries.
 - **User-imported originals are kept** (the user's own device files, outside
   service custody). Metadata and reading progress are kept in all cases.
-- Eviction is crash-safe and retried on subsequent syncs until confirmed gone.
+- The applier performs eviction before completing the pulled change, so failed
+  local cleanup leaves the sync checkpoint available for retry.
 
 ## 6. Reinstatement / counter-notice **[LEGAL REVIEW]**
 
-Process (grounds, timelines, notice-forwarding) is legal's call. **Mechanics gap
-to close in Slice 5**: we planned `admin_block_content_hash` but no inverse.
-Add `admin_unblock_content_hash(algorithm, hash, reason, actor)` and a
-`cloud_book_files` restore path (or accept clean re-upload after unblock —
-recommended: clean re-upload; the local file on the user's device is intact per
-§5). Record unblock actions in `cloud_file_audit_events` like takedowns.
+Process (grounds, timelines, notice-forwarding) is legal's call. The inverse RPC
+`admin_unblock_content_hash(algorithm, hash, reason, actor)` is implemented and
+records the operator decision. Reinstatement uses a clean re-upload after
+unblocking; local original files are preserved per §5.
 
 ## 7. Evidence & logging
 
-`cloud_file_audit_events` (created in Slice 1) records, per event: actor cloud
+`cloud_file_audit_events` records, per event: actor cloud
 user id, `cloud_book_id` / `cloud_book_file_id` / `upload_id`, content hash
 (+algorithm), action (`reserve`, `finalize`, `download_grant`, `cancel`,
-`takedown`, `block`, `unblock`), reason, timestamp.
+  `delete_requested`, `delete`, `takedown`, `block`, `unblock`), reason,
+timestamp. Administrative hash-only block/unblock events may have null book and
+user identifiers; the algorithm, hash, reason, and actor remain recorded.
 
 **Never logged** (PC-plan §12): titles, file contents, tokens, signed URLs.
 Client analytics for transfers follow the same rule.
@@ -128,8 +146,9 @@ their own retention. Add the purge job to Slice 5 scope once retention is set.
 ## 8. Account-level action
 
 - Repeat-infringer policy (warnings → suspension → termination): **[LEGAL
-  REVIEW]** — product mechanics exist: PC-plan §11 account deletion removes all
-  account data + storage per retention policy.
+  REVIEW]**. Account deletion and storage-object cleanup still need an explicit
+  server-side lifecycle; auth-user deletion alone must not be treated as cloud
+  file cleanup.
 - Quota abuse: per-account quota is 5 GB (decision #6), enforced by
   `reserve_book_upload`; inspect usage with `get_storage_usage()`. There is
   intentionally **no per-file size cap** (decision #6) — if upload abuse shows
@@ -143,11 +162,13 @@ their own retention. Add the purge job to Slice 5 scope once retention is set.
 - [ ] Privacy policy covers user-uploaded files & retention **[LEGAL REVIEW]**
 - [ ] This runbook approved; abuse channel live and staffed
 - [ ] Audit retention configured (§7)
-- [ ] Reinstatement mechanics shipped (§6 gap)
+- [ ] Reinstatement mechanics validated against the local Supabase stack (§6;
+      implementation exists, but database tests have not run here)
 - [ ] Platform store-policy review for user-uploaded copyrighted content
       (Play / App Store) **[LEGAL REVIEW]**
-- [ ] Server-controlled feature flag + `supportsBookUpload/BookDownload/
-      BookDeletion` ready to flip (`lib/server/api/.../ServerCapabilities.kt`)
+- [x] Upload transport remains hard-disabled until approval; restore and
+      deletion transports are separate
+      (`lib/server-parrot-cloud/.../ParrotCloudBookFileTransferTransport.kt`)
 
 ## 10. Legal text — working draft exists
 

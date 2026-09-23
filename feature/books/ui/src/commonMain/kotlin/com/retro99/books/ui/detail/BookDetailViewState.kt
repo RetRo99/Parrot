@@ -23,6 +23,8 @@ data class BookDetailViewState(
     /** The book type the user wants to open, shown when there's a conflict to resolve first */
     val pendingOpenBookType: BookType? = null,
     val supportsBookBackup: Boolean = false,
+    val supportsBookDeletion: Boolean = false,
+    val cloudBackupDeleteConfirmationType: BookType? = null,
     val showBackupConfirmation: Boolean = false,
     val backupRightsAttested: Boolean = false,
     val bookFileTransfers: List<BookFileTransfer> = emptyList(),

@@ -2,6 +2,7 @@ package com.retro99.cloudaccount.ui
 
 import com.retro99.cloudaccount.domain.model.CloudAuthState
 import com.retro99.cloudaccount.domain.model.CloudProfileLink
+import com.retro99.cloudaccount.domain.CloudStorageUsage
 import com.retro99.sync.domain.SyncStatus
 
 data class CloudAccountViewState(
@@ -14,6 +15,9 @@ data class CloudAccountViewState(
     val showLinkConfirmation: Boolean = false,
     val error: CloudAccountError? = null,
     val syncStatus: SyncStatus = SyncStatus.Idle(),
+    val storageUsage: CloudStorageUsage? = null,
+    val isLoadingStorageUsage: Boolean = false,
+    val storageUsageError: String? = null,
 )
 
 enum class CloudAccountMode {

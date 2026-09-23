@@ -3,6 +3,7 @@ package com.retro99.books.data.transfer
 import com.retro99.books.domain.BookFileTransferTransport
 import com.retro99.books.domain.BookFileDownloadRequest
 import com.retro99.books.domain.BookFileDownloadTransport
+import com.retro99.books.domain.BookFileDeletionTransport
 import com.retro99.books.domain.BookFileUploadRequest
 import com.retro99.books.domain.CloudBookFileRecord
 import com.retro99.books.domain.TransferResumeMode
@@ -131,6 +132,118 @@ class BookFileTransferEngineTest {
         assertEquals("reservation-1", transport.cancelledReservationId)
     }
 
+    @Test
+    fun deleteRemoteBackupRemovesItsRestoredReplicaAndLocalTransferState() = runTest {
+        val transfer = activeTransfer().copy(
+            direction = "download",
+            state = "completed",
+            localSourceUuid = "restored-book",
+            stagingPath = null,
+            uploadId = null,
+            storagePath = null,
+            tusUploadUrl = null,
+        )
+        val fileState = CloudBookFileEntity(
+            libraryBookId = LIBRARY_BOOK_ID,
+            cloudBookId = "cloud-book",
+            cloudBookFileId = "cloud-file",
+            mediaType = "EBOOK",
+            relativePath = "",
+            fileName = "book.epub",
+            status = "available",
+            sizeBytes = 512,
+            contentHash = "hash",
+            contentHashAlgorithm = "sha-256-v1",
+            remoteRevision = 1,
+            updatedAt = "before",
+        )
+        val database = FakeCloudFilesDatabase(transfer, fileState)
+        val fileStore = FakeTransferFileStore().apply {
+            files["/imports/restored-book.epub"] = "restored".encodeToByteArray()
+        }
+        val importedBooksDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
+            override suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity? = null
+        }
+        val deletionTransport = RecordingDeletionTransport()
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            importedBooksDatabase = importedBooksDatabase,
+            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            transports = emptyList(),
+            deletionTransports = listOf(deletionTransport),
+            fileStore = fileStore,
+        )
+
+        assertTrue(engine.supportsDeletion(SERVER_ID))
+        engine.deleteRemoteBackup(SERVER_ID, LIBRARY_BOOK_ID, "ebook")
+
+        assertEquals("cloud-file", deletionTransport.deletedFileId)
+        assertNull(database.getTransfer(TRANSFER_ID))
+        assertTrue(database.fileStates.isEmpty())
+        assertTrue("/imports/restored-book.epub" !in fileStore.files)
+    }
+
+    @Test
+    fun invalidatingCloudFileDoesNotDeleteAnImportedOriginal() = runTest {
+        val transfer = activeTransfer().copy(
+            direction = "download",
+            state = "completed",
+            localSourceUuid = "original-book",
+            stagingPath = null,
+            uploadId = null,
+            storagePath = null,
+            tusUploadUrl = null,
+        )
+        val database = FakeCloudFilesDatabase(transfer, CloudBookFileEntity(
+            libraryBookId = LIBRARY_BOOK_ID,
+            cloudBookId = "cloud-book",
+            cloudBookFileId = "cloud-file",
+            mediaType = "EBOOK",
+            relativePath = "",
+            fileName = "book.epub",
+            status = "deleting",
+            sizeBytes = 512,
+            contentHash = "hash",
+            contentHashAlgorithm = "sha-256-v1",
+            remoteRevision = 2,
+            updatedAt = "before",
+        ))
+        val original = object : ImportedBookEntity {
+            override val uuid = "original-book"
+            override val title = "Original"
+            override val author: String? = null
+            override val description: String? = null
+            override val coverPath: String? = null
+            override val filePath = "/imports/original-book.epub"
+            override val fileSize = 512L
+            override val contentHash: String? = "hash"
+            override val contentHashAlgorithm: String? = "sha-256-v1"
+            override val importedAt = "before"
+            override val lastOpenedAt: String? = null
+            override val bookType = "ebook"
+            override val publicationDate: String? = null
+            override val origin = "import"
+        }
+        val importedDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
+            override suspend fun getImportedBookByUuid(uuid: String) = original.takeIf { it.uuid == uuid }
+        }
+        val fileStore = FakeTransferFileStore().apply {
+            files[original.filePath] = "original".encodeToByteArray()
+        }
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            importedBooksDatabase = importedDatabase,
+            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            transports = emptyList(),
+            fileStore = fileStore,
+        )
+
+        engine.invalidateCloudFile("cloud-file")
+
+        assertTrue(original.filePath in fileStore.files)
+        assertNull(database.getTransfer(TRANSFER_ID))
+    }
+
     private class FakeCloudFilesDatabase(
         initialTransfer: CloudFileTransferEntity,
         initialFileState: CloudBookFileEntity,
@@ -240,6 +353,15 @@ class BookFileTransferEngineTest {
             requestedOffset = resumeOffset
             onResponseOffset(resumeOffset)
             onChunk("cdef".encodeToByteArray())
+        }
+    }
+
+    private class RecordingDeletionTransport : BookFileDeletionTransport {
+        override val serverId: String = SERVER_ID
+        var deletedFileId: String? = null
+
+        override suspend fun delete(cloudBookFileId: String) {
+            deletedFileId = cloudBookFileId
         }
     }
 

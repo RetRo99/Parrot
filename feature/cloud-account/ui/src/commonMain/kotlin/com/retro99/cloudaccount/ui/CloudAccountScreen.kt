@@ -56,6 +56,7 @@ import com.retro99.base.ui.IntentDispatcher
 import com.retro99.cloudaccount.domain.model.CloudAccount
 import com.retro99.cloudaccount.domain.model.CloudAuthState
 import com.retro99.cloudaccount.domain.model.CloudProfileLink
+import com.retro99.cloudaccount.domain.CloudStorageUsage
 import com.retro99.sync.domain.SyncPhase
 import com.retro99.sync.domain.SyncStatus
 import com.retro99.translations.StringRes
@@ -107,6 +108,10 @@ import resources.translations.cloud_account_sync_status_uploading_changes
 import resources.translations.cloud_account_sync_status_uploading_files
 import resources.translations.cloud_account_title
 import resources.translations.cloud_account_verification_message
+import resources.translations.cloud_storage_usage_title
+import resources.translations.cloud_storage_usage_used
+import resources.translations.cloud_storage_usage_reserved
+import resources.translations.cloud_storage_usage_error
 import resources.translations.general_back
 import resources.translations.general_cancel
 import resources.translations.login_hide_password
@@ -204,6 +209,9 @@ private fun CloudAccountScreenContent(
                         syncStatus = viewState.syncStatus,
                         isLoading = viewState.isLoading,
                         error = viewState.error,
+                        storageUsage = viewState.storageUsage,
+                        isLoadingStorageUsage = viewState.isLoadingStorageUsage,
+                        storageUsageError = viewState.storageUsageError,
                         onSignOut = {
                             intentDispatcher(CloudAccountIntent.OnSignOutClicked)
                         },
@@ -413,6 +421,9 @@ private fun ConnectedAccountContent(
     syncStatus: SyncStatus,
     isLoading: Boolean,
     error: CloudAccountError?,
+    storageUsage: CloudStorageUsage?,
+    isLoadingStorageUsage: Boolean,
+    storageUsageError: String?,
     onSignOut: () -> Unit,
     onSync: () -> Unit,
     modifier: Modifier = Modifier,
@@ -482,6 +493,12 @@ private fun ConnectedAccountContent(
             }
         }
 
+        StorageUsageCard(
+            usage = storageUsage,
+            isLoading = isLoadingStorageUsage,
+            error = storageUsageError,
+        )
+
         Button(
             onClick = onSignOut,
             enabled = !isLoading,
@@ -498,6 +515,79 @@ private fun ConnectedAccountContent(
             }
         }
     }
+}
+
+@Composable
+private fun StorageUsageCard(
+    usage: CloudStorageUsage?,
+    isLoading: Boolean,
+    error: String?,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = stringResource(StringRes.cloud_storage_usage_title),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            when {
+                isLoading -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                usage != null -> {
+                    val progress = if (usage.quotaBytes > 0) {
+                        (usage.usedBytes.toFloat() / usage.quotaBytes.toFloat()).coerceIn(0f, 1f)
+                    } else {
+                        0f
+                    }
+                    Text(
+                        text = stringResource(
+                            StringRes.cloud_storage_usage_used,
+                            usage.usedBytes.toStorageLabel(),
+                            usage.quotaBytes.toStorageLabel(),
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    if (usage.reservedBytes > 0L) {
+                        Text(
+                            stringResource(
+                                StringRes.cloud_storage_usage_reserved,
+                                usage.reservedBytes.toStorageLabel(),
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                error != null -> Text(
+                    stringResource(StringRes.cloud_storage_usage_error, error),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+
+private fun Long.toStorageLabel(): String {
+    val units = listOf("B", "KiB", "MiB", "GiB", "TiB")
+    var value = this.toDouble()
+    var unitIndex = 0
+    while (value >= 1024.0 && unitIndex < units.lastIndex) {
+        value /= 1024.0
+        unitIndex++
+    }
+    val whole = value.toLong()
+    val tenth = ((value - whole) * 10).toInt()
+    return if (unitIndex == 0) "$whole ${units[unitIndex]}" else "$whole.$tenth ${units[unitIndex]}"
 }
 
 @Composable

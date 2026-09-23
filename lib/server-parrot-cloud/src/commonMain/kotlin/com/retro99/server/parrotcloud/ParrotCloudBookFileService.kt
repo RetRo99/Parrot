@@ -10,6 +10,7 @@ import com.retro99.books.domain.UploadReservationResult
 import com.retro99.books.domain.UploadRightsAttestation
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.storage
+import kotlinx.coroutines.CancellationException
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -142,12 +143,64 @@ class ParrotCloudBookFileService(
             .createSignedUrl(storagePath, SIGNED_URL_TTL)
     }
 
+    suspend fun deleteBookFile(cloudBookFileId: String) {
+        val deleteResponse = clientProvider.client.postgrest
+            .rpc(
+                "delete_book_file",
+                buildJsonObject { put("cloud_book_file_id", cloudBookFileId) },
+            )
+            .decodeAs<ParrotCloudBookFileRpcResponse>()
+        when (deleteResponse.status) {
+            STATUS_REMOVED -> return
+            STATUS_DELETING -> Unit
+            STATUS_REJECTED -> throw BookFileTransferRejectedException(
+                deleteResponse.reason ?: "cloud_file_delete_rejected",
+            )
+            else -> error("Unknown Parrot Cloud file-deletion status: ${deleteResponse.status}")
+        }
+
+        val storagePath = requireNotNull(deleteResponse.storagePath) {
+            "Cloud file deletion did not return a storage path"
+        }
+        try {
+            clientProvider.client.storage.from(BOOK_FILES_BUCKET).delete(storagePath)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (deleteError: Exception) {
+            val completed = try {
+                completeDeletion(cloudBookFileId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null
+            }
+            if (completed?.status == STATUS_REMOVED) return
+            throw deleteError
+        }
+        val completed = completeDeletion(cloudBookFileId)
+        if (completed.status != STATUS_REMOVED) {
+            throw BookFileTransferRejectedException(
+                completed.reason ?: "cloud_file_deletion_incomplete",
+            )
+        }
+    }
+
+    private suspend fun completeDeletion(cloudBookFileId: String): ParrotCloudBookFileRpcResponse =
+        clientProvider.client.postgrest
+            .rpc(
+                "complete_book_file_deletion",
+                buildJsonObject { put("cloud_book_file_id", cloudBookFileId) },
+            )
+            .decodeAs<ParrotCloudBookFileRpcResponse>()
+
     private companion object {
         const val STATUS_RESERVED = "reserved"
         const val STATUS_ALREADY_AVAILABLE = "already_available"
         const val STATUS_REJECTED = "rejected"
         const val STATUS_AVAILABLE = "available"
         const val STATUS_CANCELLED = "cancelled"
+        const val STATUS_DELETING = "deleting"
+        const val STATUS_REMOVED = "removed"
         const val BOOK_FILES_BUCKET = "book-files"
         val SIGNED_URL_TTL = 10.minutes
     }
