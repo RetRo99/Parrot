@@ -33,7 +33,7 @@ class ParrotCloudReaderRepository(
         return getLocalPosition(bookUuid)
     }
 
-    override suspend fun savePosition(
+    override suspend fun saveLocalPositionWithSync(
         bookUuid: String,
         position: ServerPosition,
     ): CompletableResult {

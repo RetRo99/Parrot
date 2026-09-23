@@ -25,7 +25,10 @@ class LocalReaderRepository(
         return getLocalPosition(bookUuid)
     }
 
-    override suspend fun savePosition(bookUuid: String, position: ServerPosition): CompletableResult {
+    override suspend fun saveLocalPositionWithSync(
+        bookUuid: String,
+        position: ServerPosition,
+    ): CompletableResult {
         // Local books only save to local storage - no remote sync
         return localSource.savePosition(position)
     }
@@ -50,4 +53,3 @@ class LocalReaderRepository(
         return Ok(null)
     }
 }
-

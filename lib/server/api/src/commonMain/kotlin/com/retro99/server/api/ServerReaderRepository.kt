@@ -19,7 +19,7 @@ interface ServerReaderRepository {
      */
     val serverId: String
 
-    // ==================== Combined Operations ====================
+    // ==================== Read Operations ====================
 
     /**
      * Gets the reading position for a book.
@@ -29,18 +29,6 @@ interface ServerReaderRepository {
      * @return The position (preferring remote, falling back to local cache)
      */
     suspend fun getPosition(bookUuid: String): AppResult<ServerPosition?>
-
-    /**
-     * Saves the reading position for a book.
-     * Commits the local position and durable delivery intent. Remote delivery
-     * is performed later by the shared sync destination.
-     *
-     * @param bookUuid The UUID of the book
-     * @param position The position to save
-     */
-    suspend fun savePosition(bookUuid: String, position: ServerPosition): CompletableResult
-
-    // ==================== Local-only Operations ====================
 
     /**
      * Gets the locally cached reading position for a book.
@@ -57,6 +45,15 @@ interface ServerReaderRepository {
      * @param position The position to save locally
      */
     suspend fun saveLocalPosition(position: ServerPosition): CompletableResult
+
+    /**
+     * Commits the local position and durable delivery intent together.
+     * Remote delivery is performed later by the shared sync destination.
+     */
+    suspend fun saveLocalPositionWithSync(
+        bookUuid: String,
+        position: ServerPosition,
+    ): CompletableResult
 
     // ==================== Remote-only Operations ====================
 

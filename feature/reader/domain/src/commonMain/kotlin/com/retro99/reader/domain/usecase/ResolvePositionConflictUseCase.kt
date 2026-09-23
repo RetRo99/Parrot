@@ -41,7 +41,7 @@ class ResolvePositionConflictUseCase(
             timestamp = nowMillis()
         )
 
-        return serverRepository.savePosition(bookUuid, positionWithCurrentTimestamp)
+        return serverRepository.saveLocalPositionWithSync(bookUuid, positionWithCurrentTimestamp)
     }
 
     /**
@@ -65,4 +65,3 @@ class ResolvePositionConflictUseCase(
         return serverRepository.saveLocalPosition(remotePosition)
     }
 }
-

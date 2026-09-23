@@ -26,7 +26,7 @@ class SaveReadingProgressUseCase(
         val serverRepository = repositoryProvider.getReaderRepository(progress.serverId)
             ?: return Err(AppError.NotFoundError("Server not found: ${progress.serverId}"))
 
-        return serverRepository.savePosition(
+        return serverRepository.saveLocalPositionWithSync(
             bookUuid = progress.bookUuid,
             position = progress.toServerPosition(),
         )

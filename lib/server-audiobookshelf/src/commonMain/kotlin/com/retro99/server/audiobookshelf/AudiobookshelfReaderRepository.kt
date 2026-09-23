@@ -27,7 +27,10 @@ class AudiobookshelfReaderRepository(
         )
     }
 
-    override suspend fun savePosition(bookUuid: String, position: ServerPosition): CompletableResult {
+    override suspend fun saveLocalPositionWithSync(
+        bookUuid: String,
+        position: ServerPosition,
+    ): CompletableResult {
         return localSource.savePositionWithSync(
             position = position.copy(
                 bookUuid = bookUuid,
