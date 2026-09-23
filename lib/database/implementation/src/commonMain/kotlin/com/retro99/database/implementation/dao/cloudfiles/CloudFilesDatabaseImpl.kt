@@ -26,6 +26,8 @@ internal class CloudFilesDatabaseImpl(
 
     override suspend fun updateTransfer(transfer: CloudFileTransferEntity) = dao.saveTransfer(transfer)
 
+    override suspend fun deleteTransfer(transferId: String) = dao.deleteTransfer(transferId)
+
     override suspend fun getTransfers(serverId: String, states: List<String>) =
         dao.getTransfers(serverId, states)
 

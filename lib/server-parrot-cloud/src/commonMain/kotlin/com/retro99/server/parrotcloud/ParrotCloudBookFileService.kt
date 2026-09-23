@@ -1,6 +1,7 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.books.domain.BookFileTransferRejectedException
+import com.retro99.books.domain.BookFileDownloadRequest
 import com.retro99.cloud.implementation.SupabaseClientProvider
 import com.retro99.books.domain.BookFileUploadRequest
 import com.retro99.books.domain.CloudBookFileRecord
@@ -8,6 +9,8 @@ import com.retro99.books.domain.UploadReservation
 import com.retro99.books.domain.UploadReservationResult
 import com.retro99.books.domain.UploadRightsAttestation
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.storage.storage
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.koin.core.annotation.Provided
@@ -113,12 +116,40 @@ class ParrotCloudBookFileService(
         }
     }
 
+    suspend fun createDownloadUrl(request: BookFileDownloadRequest): String {
+        val response = clientProvider.client.postgrest
+            .rpc(
+                "create_book_download",
+                buildJsonObject { put("cloud_book_file_id", request.cloudBookFileId) },
+            )
+            .decodeAs<ParrotCloudBookFileRpcResponse>()
+        if (response.status != STATUS_AVAILABLE) {
+            throw BookFileTransferRejectedException(response.reason ?: "download_rejected")
+        }
+        val storagePath = requireNotNull(response.storagePath)
+        val sizeBytes = requireNotNull(response.sizeBytes)
+        val contentHash = requireNotNull(response.contentHash)
+        val contentHashAlgorithm = requireNotNull(response.contentHashAlgorithm)
+        if (sizeBytes != request.sizeBytes ||
+            contentHash != request.contentHash ||
+            contentHashAlgorithm != request.contentHashAlgorithm ||
+            response.mediaType != request.mediaType
+        ) {
+            throw BookFileTransferRejectedException("cloud_file_changed")
+        }
+        return clientProvider.client.storage
+            .from(BOOK_FILES_BUCKET)
+            .createSignedUrl(storagePath, SIGNED_URL_TTL)
+    }
+
     private companion object {
         const val STATUS_RESERVED = "reserved"
         const val STATUS_ALREADY_AVAILABLE = "already_available"
         const val STATUS_REJECTED = "rejected"
         const val STATUS_AVAILABLE = "available"
         const val STATUS_CANCELLED = "cancelled"
+        const val BOOK_FILES_BUCKET = "book-files"
+        val SIGNED_URL_TTL = 10.minutes
     }
 }
 

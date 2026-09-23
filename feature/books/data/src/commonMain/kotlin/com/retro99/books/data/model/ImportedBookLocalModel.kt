@@ -23,6 +23,8 @@ data class ImportedBookLocalModel(
     override val lastOpenedAt: String?,
     override val bookType: String,
     override val publicationDate: String?,
+    override val origin: String = "import",
+    override val cloudBookFileId: String? = null,
 ) : ImportedBookEntity
 
 fun ImportedBookEntity.toDomainModel() = BookDomainModel.LocalBook(
@@ -41,6 +43,8 @@ fun ImportedBookEntity.toDomainModel() = BookDomainModel.LocalBook(
     lastOpenedAt = lastOpenedAt,
     bookType = BookType.fromValue(bookType),
     publicationDate = publicationDate,
+    origin = origin,
+    cloudBookFileId = cloudBookFileId,
 )
 
 fun BookDomainModel.LocalBook.toLocalModel() = ImportedBookLocalModel(
@@ -57,4 +61,6 @@ fun BookDomainModel.LocalBook.toLocalModel() = ImportedBookLocalModel(
     lastOpenedAt = lastOpenedAt,
     bookType = bookType.value,
     publicationDate = publicationDate,
+    origin = origin,
+    cloudBookFileId = cloudBookFileId,
 )

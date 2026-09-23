@@ -6,11 +6,14 @@ import com.retro99.books.data.Sha256Digest
 import com.retro99.books.data.calculateFileContentHash
 import com.retro99.books.data.toHexString
 import com.retro99.books.domain.BookFileTransfer
+import com.retro99.books.domain.BookFileDownloadRequest
+import com.retro99.books.domain.BookFileDownloadTransport
 import com.retro99.books.domain.BookFileTransferManager
 import com.retro99.books.domain.BookFileTransferTransport
 import com.retro99.books.domain.BookFileUploadRequest
 import com.retro99.books.domain.BookFileTransferRejectedException
 import com.retro99.books.domain.BookFileTransferSessionExpiredException
+import com.retro99.books.domain.BookFileTransferDownloadIncompleteException
 import com.retro99.books.domain.CloudBookFileRecord
 import com.retro99.books.domain.UploadReservation
 import com.retro99.books.domain.UploadReservationResult
@@ -20,6 +23,7 @@ import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
 import com.retro99.database.api.cloudfiles.CloudFilesDatabase
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.books.domain.model.BookType
 import com.retro99.sync.domain.FileTransferStatus
 import com.retro99.sync.domain.FileTransferStatusSource
 import com.retro99.sync.domain.SyncPhase
@@ -54,15 +58,132 @@ class BookFileTransferEngine(
     @Provided private val importedBooksDatabase: ImportedBooksDatabase,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val transports: List<BookFileTransferTransport>,
+    @Provided private val downloadTransports: List<BookFileDownloadTransport> = emptyList(),
+    @Provided private val downloadFinalizer: DownloadTransferFinalizer? = null,
+    @Provided private val fileStore: BookFileTransferFileStore? = null,
 ) : BookFileTransferManager, FileTransferStatusSource {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val jobsMutex = Mutex()
     private val jobs = mutableMapOf<String, Job>()
     private val transportByServer = transports.associateBy(BookFileTransferTransport::serverId)
+    private val downloadTransportByServer = downloadTransports.associateBy(BookFileDownloadTransport::serverId)
     private val json = Json { ignoreUnknownKeys = true }
 
     override fun supportsUpload(serverId: String): Boolean =
         transportByServer[serverId]?.capabilities?.supportsUpload == true
+
+    override fun supportsDownload(serverId: String): Boolean =
+        downloadTransportByServer[serverId]?.supportsDownload == true
+
+    override suspend fun enqueueDownload(
+        serverId: String,
+        libraryBookId: String,
+        mediaType: String,
+    ): String {
+        check(supportsDownload(serverId)) { "Book restore is not enabled for this server" }
+        require(mediaType.equals(BookType.EBOOK.value, ignoreCase = true) ||
+            mediaType.equals(BookType.READALOUD.value, ignoreCase = true)
+        ) { "Only EPUB cloud files can be restored" }
+        val file = cloudFilesDatabase.getFileStates(libraryBookId).firstOrNull { candidate ->
+            candidate.mediaType.equals(mediaType, ignoreCase = true) &&
+                candidate.relativePath.isEmpty() && candidate.status == FILE_STATUS_AVAILABLE
+        } ?: error("No available cloud file was found for this book")
+        require(file.sizeBytes > 0L) { "Cannot restore an empty cloud file" }
+        val prior = cloudFilesDatabase.observeTransfers(serverId, libraryBookId)
+            .first()
+            .firstOrNull { candidate ->
+                candidate.direction == DIRECTION_DOWNLOAD &&
+                    candidate.mediaType.equals(mediaType, ignoreCase = true) &&
+                    candidate.cloudBookFileId == file.cloudBookFileId
+            }
+        prior?.let { transfer ->
+            if (transfer.state in ACTIVE_STATES) {
+                schedule(transfer.transferId)
+                return transfer.transferId
+            }
+            if (transfer.state == STATE_COMPLETED) {
+                val localBook = transfer.localSourceUuid?.let { localUuid ->
+                    importedBooksDatabase.getImportedBookByUuid(localUuid)
+                }
+                if (localBook != null &&
+                    localBook.bookType.equals(file.mediaType, ignoreCase = true) &&
+                    localBook.contentHash == file.contentHash &&
+                    localBook.contentHashAlgorithm == file.contentHashAlgorithm &&
+                    fileStore?.exists(localBook.filePath) == true &&
+                    fileStore.size(localBook.filePath) == file.sizeBytes &&
+                    withContext(Dispatchers.Default) {
+                        calculateFileContentHash(localBook.filePath) == file.contentHash
+                    }
+                ) return transfer.transferId
+            }
+        }
+
+        val fileStore = requireNotNull(fileStore) { "Cloud download storage is unavailable" }
+        val now = now()
+        val transferId = prior?.transferId ?: Uuid.random().toString()
+        val localUuid = prior?.localSourceUuid ?: Uuid.random().toString()
+        val stagingPath = prior?.stagingPath ?: fileStore.stagingPath(transferId)
+        val stagedBytes = if (fileStore.exists(stagingPath)) fileStore.size(stagingPath) else 0L
+        val existingBytes = if (stagedBytes > file.sizeBytes) 0L else stagedBytes
+        if (stagedBytes > file.sizeBytes) {
+            fileStore.truncate(stagingPath)
+        }
+        val transfer = CloudFileTransferEntity(
+            transferId = transferId,
+            serverId = serverId,
+            direction = DIRECTION_DOWNLOAD,
+            libraryBookId = libraryBookId,
+            cloudBookId = file.cloudBookId,
+            cloudBookFileId = file.cloudBookFileId,
+            mediaType = file.mediaType,
+            localSourceUuid = localUuid,
+            stagingPath = stagingPath,
+            sizeBytes = file.sizeBytes,
+            bytesTransferred = existingBytes,
+            contentHash = file.contentHash,
+            contentHashAlgorithm = file.contentHashAlgorithm,
+            uploadId = null,
+            storagePath = null,
+            tusUploadUrl = null,
+            tusExpiresAt = null,
+            rightsAttestation = null,
+            state = STATE_PENDING,
+            attemptCount = 0,
+            nextAttemptAt = null,
+            lastError = null,
+            createdAt = prior?.createdAt ?: now,
+            updatedAt = now,
+        )
+        cloudFilesDatabase.insertTransfer(transfer)
+        schedule(transferId)
+        return transferId
+    }
+
+    override suspend fun removeDownload(serverId: String, libraryBookId: String, mediaType: String) {
+        val transfer = cloudFilesDatabase.observeTransfers(serverId, libraryBookId)
+            .first()
+            .firstOrNull { candidate ->
+                candidate.direction == DIRECTION_DOWNLOAD &&
+                    candidate.mediaType.equals(mediaType, ignoreCase = true)
+            } ?: return
+        if (transfer.state in NON_TERMINAL_STATES) cancelTransfer(transfer.transferId)
+        val latest = cloudFilesDatabase.getTransfer(transfer.transferId) ?: transfer
+        val fileStore = requireNotNull(fileStore) { "Cloud download storage is unavailable" }
+        latest.localSourceUuid?.let { localUuid ->
+            val localBook = importedBooksDatabase.getImportedBookByUuid(localUuid)
+            if (localBook != null) {
+                if (localBook.origin == ORIGIN_CLOUD_DOWNLOAD) {
+                    fileStore.delete(localBook.filePath)
+                    localBook.coverPath?.let { coverPath -> fileStore.delete(coverPath) }
+                    importedBooksDatabase.deleteImportedBook(localUuid)
+                }
+            } else {
+                fileStore.delete(fileStore.importedFilePath(localUuid, latest.mediaType))
+            }
+        }
+        latest.stagingPath?.let { path -> fileStore.delete(path) }
+        cloudFilesDatabase.deleteTransfer(transfer.transferId)
+    }
 
     override suspend fun enqueueUpload(
         serverId: String,
@@ -166,47 +287,65 @@ class BookFileTransferEngine(
     override suspend fun cancel(serverId: String, libraryBookId: String) {
         val transfer = cloudFilesDatabase.observeTransfers(serverId, libraryBookId)
             .first()
-            .firstOrNull { candidate -> candidate.state in NON_TERMINAL_STATES }
+            .firstOrNull { candidate ->
+                candidate.direction == DIRECTION_UPLOAD && candidate.state in NON_TERMINAL_STATES
+            }
             ?: return
-        val transport = transport(serverId)
+        cancelTransfer(transfer.transferId)
+    }
+
+    override suspend fun cancelTransfer(transferId: String) {
+        val transfer = cloudFilesDatabase.getTransfer(transferId) ?: return
+        if (transfer.state !in NON_TERMINAL_STATES) return
         val job = jobsMutex.withLock { jobs[transfer.transferId] }
         job?.cancelAndJoin()
         val latestTransfer = cloudFilesDatabase.getTransfer(transfer.transferId) ?: return
         if (latestTransfer.state !in NON_TERMINAL_STATES) return
         val cancelled = latestTransfer.copy(
             state = STATE_CANCELLED,
-            bytesTransferred = 0,
+            bytesTransferred = 0L,
             nextAttemptAt = null,
             updatedAt = now(),
         )
         cloudFilesDatabase.updateTransfer(cancelled)
-        cloudFilesDatabase.deleteFileState(
-            libraryBookId = latestTransfer.libraryBookId,
-            mediaType = latestTransfer.mediaType,
-            relativePath = "",
-        )
-        withContext(kotlinx.coroutines.NonCancellable) {
-            runCatching {
-                transport.cancel(latestTransfer.toReservationOrNull(), latestTransfer.tusUploadUrl)
+        if (latestTransfer.direction == DIRECTION_DOWNLOAD) {
+            latestTransfer.stagingPath?.let { path -> fileStore?.delete(path) }
+        } else {
+            cloudFilesDatabase.deleteFileState(
+                libraryBookId = latestTransfer.libraryBookId,
+                mediaType = latestTransfer.mediaType,
+                relativePath = "",
+            )
+            withContext(kotlinx.coroutines.NonCancellable) {
+                runCatching {
+                    transport(latestTransfer.serverId).cancel(
+                        latestTransfer.toReservationOrNull(),
+                        latestTransfer.tusUploadUrl,
+                    )
+                }
             }
         }
     }
 
     override suspend fun retry(transferId: String) {
         val transfer = cloudFilesDatabase.getTransfer(transferId) ?: return
-        check(transport(transfer.serverId).capabilities.supportsUpload) {
-            "Book backup is not enabled for this server"
+        if (transfer.direction == DIRECTION_UPLOAD) {
+            check(transport(transfer.serverId).capabilities.supportsUpload) {
+                "Book backup is not enabled for this server"
+            }
+        } else {
+            check(supportsDownload(transfer.serverId)) { "Book restore is not enabled for this server" }
         }
         if (transfer.state != STATE_FAILED) return
         cloudFilesDatabase.updateTransfer(
             transfer.copy(
                 state = STATE_PENDING,
-                cloudBookFileId = null,
+                cloudBookFileId = if (transfer.direction == DIRECTION_UPLOAD) null else transfer.cloudBookFileId,
                 uploadId = null,
                 storagePath = null,
                 tusUploadUrl = null,
                 tusExpiresAt = null,
-                bytesTransferred = 0,
+                bytesTransferred = if (transfer.direction == DIRECTION_UPLOAD) 0L else transfer.bytesTransferred,
                 attemptCount = 0,
                 nextAttemptAt = null,
                 lastError = null,
@@ -228,11 +367,13 @@ class BookFileTransferEngine(
         .map { transfers -> transfers.toAggregateStatus() }
 
     suspend fun recoverPendingTransfers() {
-        transportByServer.values
-            .filter { transport -> transport.capabilities.supportsUpload }
-            .forEach { transport ->
+        (transportByServer.values.filter { transport -> transport.capabilities.supportsUpload }
+            .map(BookFileTransferTransport::serverId) +
+            downloadTransportByServer.values.filter(BookFileDownloadTransport::supportsDownload)
+                .map(BookFileDownloadTransport::serverId))
+            .forEach { serverId ->
                 val pending = cloudFilesDatabase.getTransfers(
-                    serverId = transport.serverId,
+                    serverId = serverId,
                     states = RECOVERABLE_STATES,
                 )
                 pending.forEach { transfer ->
@@ -264,6 +405,10 @@ class BookFileTransferEngine(
     private suspend fun processTransfer(transferId: String) {
         var transfer = cloudFilesDatabase.getTransfer(transferId) ?: return
         if (transfer.state !in RECOVERABLE_STATES) return
+        if (transfer.direction == DIRECTION_DOWNLOAD) {
+            processDownloadTransfer(transfer)
+            return
+        }
         val transport = transport(transfer.serverId)
         if (!transport.capabilities.supportsUpload) return
 
@@ -387,6 +532,116 @@ class BookFileTransferEngine(
         }
     }
 
+    private suspend fun processDownloadTransfer(initialTransfer: CloudFileTransferEntity) {
+        var transfer = cloudFilesDatabase.getTransfer(initialTransfer.transferId) ?: return
+        if (transfer.state !in RECOVERABLE_STATES) return
+        val transport = downloadTransportByServer[transfer.serverId]
+            ?.takeIf(BookFileDownloadTransport::supportsDownload) ?: return
+        val fileStore = fileStore
+        if (fileStore == null || downloadFinalizer == null) {
+            failPermanently(transfer, ERROR_RESTORE_UNAVAILABLE)
+            return
+        }
+
+        try {
+            val request = createDownloadRequest(transfer)
+            val stagingPath = requireNotNull(transfer.stagingPath) { "Download staging path was lost" }
+            var offset = if (fileStore.exists(stagingPath)) fileStore.size(stagingPath) else 0L
+            if (offset > request.sizeBytes) {
+                fileStore.truncate(stagingPath)
+                offset = 0L
+            }
+            transfer = transfer.copy(
+                state = STATE_TRANSFERRING,
+                bytesTransferred = offset,
+                updatedAt = now(),
+            )
+            cloudFilesDatabase.updateTransfer(transfer)
+
+            if (offset < request.sizeBytes) {
+                transport.download(
+                    request = request,
+                    resumeOffset = offset,
+                    onResponseOffset = { responseOffset ->
+                        if (responseOffset != offset) fileStore.truncate(stagingPath)
+                        offset = responseOffset
+                        transfer = transfer.copy(
+                            state = STATE_TRANSFERRING,
+                            bytesTransferred = offset,
+                            updatedAt = now(),
+                        )
+                        cloudFilesDatabase.updateTransfer(transfer)
+                    },
+                    onChunk = { bytes ->
+                        fileStore.write(stagingPath, offset, bytes)
+                        offset += bytes.size
+                        transfer = transfer.copy(
+                            state = STATE_TRANSFERRING,
+                            bytesTransferred = offset,
+                            updatedAt = now(),
+                        )
+                        cloudFilesDatabase.updateTransfer(transfer)
+                    },
+                )
+            }
+            if (!fileStore.exists(stagingPath) || fileStore.size(stagingPath) != request.sizeBytes) {
+                throw BookFileTransferDownloadIncompleteException()
+            }
+            transfer = transfer.copy(
+                state = STATE_VERIFYING,
+                bytesTransferred = request.sizeBytes,
+                updatedAt = now(),
+            )
+            cloudFilesDatabase.updateTransfer(transfer)
+            transfer = downloadFinalizer.finalize(transfer, request)
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: BookFileTransferRejectedException) {
+            failPermanently(transfer, exception.reason)
+        } catch (_: DownloadHashMismatchException) {
+            transfer.stagingPath?.let { path -> fileStore.delete(path) }
+            failPermanently(transfer, ERROR_VERIFY_FAILED)
+        } catch (exception: Exception) {
+            scheduleRetry(transfer, exception.message ?: "Download failed")
+        }
+    }
+
+    private suspend fun createDownloadRequest(transfer: CloudFileTransferEntity): BookFileDownloadRequest {
+        val file = cloudFilesDatabase.getFileStates(transfer.libraryBookId).firstOrNull { candidate ->
+            candidate.cloudBookFileId == transfer.cloudBookFileId &&
+                candidate.mediaType.equals(transfer.mediaType, ignoreCase = true)
+        } ?: throw BookFileTransferRejectedException("cloud_file_unavailable")
+        if (file.status != FILE_STATUS_AVAILABLE) {
+            throw BookFileTransferRejectedException("cloud_file_unavailable")
+        }
+        if (file.libraryBookId != transfer.libraryBookId ||
+            file.cloudBookId != transfer.cloudBookId ||
+            file.sizeBytes != transfer.sizeBytes ||
+            file.contentHash != transfer.contentHash ||
+            file.contentHashAlgorithm != transfer.contentHashAlgorithm
+        ) {
+            throw BookFileTransferRejectedException("cloud_file_changed")
+        }
+        if (file.contentHashAlgorithm != CONTENT_HASH_ALGORITHM) {
+            throw BookFileTransferRejectedException("unsupported_hash_algorithm")
+        }
+        if (file.libraryBookId != "${file.contentHashAlgorithm}:${file.contentHash}") {
+            throw BookFileTransferRejectedException("cloud_file_identity_mismatch")
+        }
+        return BookFileDownloadRequest(
+            transferId = transfer.transferId,
+            serverId = transfer.serverId,
+            libraryBookId = transfer.libraryBookId,
+            cloudBookId = transfer.cloudBookId ?: file.cloudBookId,
+            cloudBookFileId = file.cloudBookFileId,
+            mediaType = file.mediaType,
+            fileName = file.fileName,
+            sizeBytes = file.sizeBytes,
+            contentHash = file.contentHash,
+            contentHashAlgorithm = file.contentHashAlgorithm,
+        )
+    }
+
     private suspend fun createRequest(transfer: CloudFileTransferEntity): BookFileUploadRequest {
         val bookUuid = requireNotNull(transfer.localSourceUuid) { "Upload source was lost" }
         val importedBook = importedBooksDatabase.getImportedBookByUuid(bookUuid)
@@ -473,6 +728,7 @@ class BookFileTransferEngine(
             updatedAt = now(),
         )
         cloudFilesDatabase.updateTransfer(failed)
+        if (transfer.direction == DIRECTION_DOWNLOAD) return
         val transport = transportByServer[transfer.serverId]
         if (transport != null) {
             try {
@@ -547,6 +803,7 @@ class BookFileTransferEngine(
         serverId = serverId,
         libraryBookId = libraryBookId,
         direction = direction,
+        mediaType = mediaType,
         state = state,
         bytesTransferred = bytesTransferred,
         totalBytes = sizeBytes,
@@ -555,12 +812,17 @@ class BookFileTransferEngine(
     )
 
     private fun List<CloudFileTransferEntity>.toAggregateStatus(): FileTransferStatus? {
-        val relevant = filter { transfer -> transfer.serverId in transportByServer }
+        val supportedServerIds = transportByServer.keys + downloadTransportByServer.keys
+        val relevant = filter { transfer -> transfer.serverId in supportedServerIds }
         val active = relevant.filter { transfer -> transfer.state in ACTIVE_STATES }
         val failed = relevant.filter { transfer -> transfer.state == STATE_FAILED }
         if (active.isEmpty() && failed.isEmpty()) return null
         return FileTransferStatus(
-            phase = SyncPhase.UPLOADING_FILES,
+            phase = if (active.any { transfer -> transfer.direction == DIRECTION_DOWNLOAD }) {
+                SyncPhase.DOWNLOADING_FILES
+            } else {
+                SyncPhase.UPLOADING_FILES
+            },
             activeItems = active.size,
             totalItems = active.size + failed.size,
             bytesTransferred = active.sumOf(CloudFileTransferEntity::bytesTransferred),
@@ -579,12 +841,18 @@ class BookFileTransferEngine(
 
     private companion object {
         const val DIRECTION_UPLOAD = "upload"
+        const val DIRECTION_DOWNLOAD = "download"
         const val STATE_PENDING = "pending"
         const val STATE_TRANSFERRING = "transferring"
         const val STATE_FINALIZING = "finalizing"
+        const val STATE_VERIFYING = "verifying"
         const val STATE_COMPLETED = "completed"
         const val STATE_FAILED = "failed"
         const val STATE_CANCELLED = "cancelled"
+        const val FILE_STATUS_AVAILABLE = "available"
+        const val ORIGIN_CLOUD_DOWNLOAD = "cloud_download"
+        const val ERROR_VERIFY_FAILED = "verify_failed"
+        const val ERROR_RESTORE_UNAVAILABLE = "restore_unavailable"
         val RECOVERABLE_FINALIZE_REJECTIONS = setOf("upload_incomplete", "upload_expired")
         const val MAX_BACKOFF_EXPONENT = 6
         val ACTIVE_STATES = setOf(STATE_PENDING, STATE_TRANSFERRING, "verifying", STATE_FINALIZING)

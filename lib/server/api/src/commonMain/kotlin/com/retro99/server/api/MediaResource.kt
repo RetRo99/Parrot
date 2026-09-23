@@ -8,4 +8,6 @@ data class MediaResource(
     val size: Long? = null,
     val contentHash: String? = null,
     val contentHashAlgorithm: String? = null,
+    val localOrigin: String? = null,
+    val cloudBookFileId: String? = null,
 )

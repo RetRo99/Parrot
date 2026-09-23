@@ -27,6 +27,7 @@ kotlin {
             implementation(libs.coroutines)
             implementation(libs.datetime)
             implementation(libs.supabase.postgrest)
+            implementation(libs.supabase.storage)
             implementation(projects.base)
             implementation(projects.lib.cloud.implementation)
             implementation(projects.lib.database.api)

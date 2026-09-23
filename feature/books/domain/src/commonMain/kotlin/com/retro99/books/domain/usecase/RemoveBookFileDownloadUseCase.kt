@@ -5,8 +5,9 @@ import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 @Single
-class CancelBookFileTransferUseCase(
+class RemoveBookFileDownloadUseCase(
     @Provided private val transferManager: BookFileTransferManager,
 ) {
-    suspend operator fun invoke(transferId: String) = transferManager.cancelTransfer(transferId)
+    suspend operator fun invoke(serverId: String, libraryBookId: String, mediaType: String) =
+        transferManager.removeDownload(serverId, libraryBookId, mediaType)
 }

@@ -2,7 +2,11 @@ package com.retro99.database.implementation.dao.importedbooks
 
 import com.retro99.database.api.importedbooks.ImportedBookEntity
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.books.PositionEntity
+import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
 import com.retro99.database.api.library.LibraryBookMutation
+import com.retro99.database.api.library.LibraryBookEntity
+import com.retro99.database.api.library.LocalBookFileEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -21,6 +25,16 @@ internal class ImportedBooksDatabaseImpl(
         mutation: LibraryBookMutation,
     ) {
         sqlDelightDao.upsertImportedBookWithLibraryMapping(book, mutation)
+    }
+
+    override suspend fun saveRestoredBookWithLibraryMapping(
+        book: ImportedBookEntity,
+        libraryBook: LibraryBookEntity,
+        localBookFile: LocalBookFileEntity,
+        transfer: CloudFileTransferEntity,
+        position: PositionEntity?,
+    ) {
+        sqlDelightDao.saveRestoredBookWithLibraryMapping(book, libraryBook, localBookFile, transfer, position)
     }
 
     override fun getAllImportedBooks(): Flow<List<ImportedBookEntity>> {

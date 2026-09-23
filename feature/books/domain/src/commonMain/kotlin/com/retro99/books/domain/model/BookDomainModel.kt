@@ -94,6 +94,8 @@ sealed class BookDomainModel {
         val lastOpenedAt: String?,
         val bookType: BookType,
         val publicationDate: String?,
+        val origin: String = "import",
+        val cloudBookFileId: String? = null,
     ) : BookDomainModel() {
         override val series: List<SeriesDomainModel> = emptyList()
 
@@ -105,6 +107,8 @@ sealed class BookDomainModel {
                 size = fileSize,
                 contentHash = contentHash,
                 contentHashAlgorithm = contentHashAlgorithm,
+                localOrigin = origin,
+                cloudBookFileId = cloudBookFileId,
             ),
         )
 

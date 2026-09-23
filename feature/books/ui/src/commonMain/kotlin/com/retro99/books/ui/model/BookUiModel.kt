@@ -101,6 +101,9 @@ sealed class BookUiModel {
         val lastOpenedAt: String?,
         val bookType: BookType,
         override val publicationDate: String?,
+        val libraryBookId: String? = null,
+        val origin: String = "import",
+        val cloudBookFileId: String? = null,
     ) : BookUiModel() {
         override val hasEbook: Boolean = bookType == BookType.EBOOK
         override val hasAudiobook: Boolean = false
@@ -129,6 +132,8 @@ data class MediaResourceUiModel(
     val size: Long?,
     val contentHash: String?,
     val contentHashAlgorithm: String?,
+    val localOrigin: String? = null,
+    val cloudBookFileId: String? = null,
 )
 
 @Serializable

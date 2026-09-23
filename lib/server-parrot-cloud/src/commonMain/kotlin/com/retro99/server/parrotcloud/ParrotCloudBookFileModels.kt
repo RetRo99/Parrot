@@ -26,4 +26,10 @@ internal data class ParrotCloudBookFileRpcResponse(
     val usedBytes: Long? = null,
     @SerialName("quota_bytes")
     val quotaBytes: Long? = null,
+    @SerialName("media_type")
+    val mediaType: String? = null,
+    @SerialName("relative_path")
+    val relativePath: String? = null,
+    @SerialName("file_name")
+    val fileName: String? = null,
 )

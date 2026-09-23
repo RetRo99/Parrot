@@ -12,6 +12,7 @@ interface CloudFilesDatabase : DataClearable {
     suspend fun insertTransfer(transfer: CloudFileTransferEntity)
     suspend fun getTransfer(transferId: String): CloudFileTransferEntity?
     suspend fun updateTransfer(transfer: CloudFileTransferEntity)
+    suspend fun deleteTransfer(transferId: String)
     suspend fun getTransfers(serverId: String, states: List<String>): List<CloudFileTransferEntity>
     fun observeTransfers(serverId: String, libraryBookId: String): Flow<List<CloudFileTransferEntity>>
     fun observeActiveTransfers(): Flow<List<CloudFileTransferEntity>>

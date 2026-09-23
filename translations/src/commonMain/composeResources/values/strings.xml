@@ -512,6 +512,13 @@
     <string name="cloud_backup_failed" tools:ignore="MissingTranslation">Backup failed: %1$s</string>
     <string name="cloud_backup_cancel" tools:ignore="MissingTranslation">Cancel backup</string>
     <string name="cloud_backup_retry" tools:ignore="MissingTranslation">Retry backup</string>
+    <string name="cloud_download_queued" tools:ignore="MissingTranslation">Restore queued</string>
+    <string name="cloud_download_progress" tools:ignore="MissingTranslation">Restoring · %1$d%%</string>
+    <string name="cloud_download_finishing" tools:ignore="MissingTranslation">Verifying restored file…</string>
+    <string name="cloud_download_complete" tools:ignore="MissingTranslation">Restore complete</string>
+    <string name="cloud_download_failed" tools:ignore="MissingTranslation">Restore failed: %1$s</string>
+    <string name="cloud_download_cancel" tools:ignore="MissingTranslation">Cancel restore</string>
+    <string name="cloud_download_retry" tools:ignore="MissingTranslation">Retry restore</string>
     <string name="cloud_backup_all_button" tools:ignore="MissingTranslation">Back up all</string>
     <string name="cloud_backup_all_title" tools:ignore="MissingTranslation">Back up all imported books?</string>
     <string name="cloud_backup_all_message" tools:ignore="MissingTranslation">Books linked to your Parrot Cloud library will be queued for backup.</string>

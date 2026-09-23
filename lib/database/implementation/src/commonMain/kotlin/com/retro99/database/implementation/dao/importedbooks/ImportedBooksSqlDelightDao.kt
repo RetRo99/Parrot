@@ -2,8 +2,12 @@ package com.retro99.database.implementation.dao.importedbooks
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import com.retro99.database.api.books.PositionEntity
+import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
 import com.retro99.database.api.importedbooks.ImportedBookEntity
+import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBookMutation
+import com.retro99.database.api.library.LocalBookFileEntity
 import com.retro99.database.implementation.AppDatabase
 import com.retro99.database.implementation.DatabaseManager
 import com.retro99.database.implementation.Imported_books
@@ -41,6 +45,75 @@ internal class ImportedBooksSqlDelightDao(
                 database.upsertLocalLibraryBookRow(mutation.libraryBook)
                 database.upsertLocalBookFileRow(mutation.localBookFile)
                 database.syncOutboxQueries.enqueue(mutation.outboxEntry)
+            }
+        }
+    }
+
+    suspend fun saveRestoredBookWithLibraryMapping(
+        book: ImportedBookEntity,
+        libraryBook: LibraryBookEntity,
+        localBookFile: LocalBookFileEntity,
+        transfer: CloudFileTransferEntity,
+        position: PositionEntity?,
+    ) {
+        withContext(Dispatchers.IO) {
+            val database = databaseManager.getDatabase()
+            database.transaction {
+                database.upsertImportedBookRow(book)
+                database.upsertLocalLibraryBookRow(libraryBook)
+                libraryBook.cloudBookId?.let { cloudBookId ->
+                    database.libraryBookQueries.attachCloudBookId(cloudBookId, libraryBook.libraryBookId)
+                }
+                database.upsertLocalBookFileRow(localBookFile)
+                database.cloudFileTransferQueries.insertCloudFileTransfer(
+                    transfer_id = transfer.transferId,
+                    server_id = transfer.serverId,
+                    direction = transfer.direction,
+                    library_book_id = transfer.libraryBookId,
+                    cloud_book_id = transfer.cloudBookId,
+                    cloud_book_file_id = transfer.cloudBookFileId,
+                    media_type = transfer.mediaType,
+                    local_source_uuid = transfer.localSourceUuid,
+                    staging_path = transfer.stagingPath,
+                    size_bytes = transfer.sizeBytes,
+                    bytes_transferred = transfer.bytesTransferred,
+                    content_hash = transfer.contentHash,
+                    content_hash_algorithm = transfer.contentHashAlgorithm,
+                    upload_id = transfer.uploadId,
+                    storage_path = transfer.storagePath,
+                    tus_upload_url = transfer.tusUploadUrl,
+                    tus_expires_at = transfer.tusExpiresAt,
+                    rights_attestation = transfer.rightsAttestation,
+                    state = transfer.state,
+                    attempt_count = transfer.attemptCount.toLong(),
+                    next_attempt_at = transfer.nextAttemptAt,
+                    last_error = transfer.lastError,
+                    created_at = transfer.createdAt,
+                    updated_at = transfer.updatedAt,
+                )
+                position?.let { restoredPosition ->
+                    database.positionQueries.upsertPosition(
+                        book_uuid = restoredPosition.bookUuid,
+                        library_book_id = restoredPosition.libraryBookId,
+                        local_generation = restoredPosition.localGeneration,
+                        remote_revision = restoredPosition.remoteRevision,
+                        timestamp = restoredPosition.timestamp,
+                        created_at = restoredPosition.createdAt,
+                        updated_at = restoredPosition.updatedAt,
+                        locator_href = restoredPosition.locatorHref,
+                        locator_type = restoredPosition.locatorType,
+                        locator_title = restoredPosition.locatorTitle,
+                        locator_target = restoredPosition.locatorTarget?.toLong(),
+                        css_selector = restoredPosition.cssSelector,
+                        audio_timestamp_ms = restoredPosition.audioTimestampMs,
+                        chapter_index = restoredPosition.chapterIndex?.toLong(),
+                        progression = restoredPosition.progression,
+                        total_chapters = restoredPosition.totalChapters?.toLong(),
+                        total_duration_ms = restoredPosition.totalDurationMs,
+                        total_progression = restoredPosition.totalProgression,
+                        position = restoredPosition.position?.toLong(),
+                    )
+                }
             }
         }
     }
@@ -130,6 +203,8 @@ internal class ImportedBooksSqlDelightDao(
         lastOpenedAt = last_opened_at,
         bookType = book_type,
         publicationDate = publication_date,
+        origin = origin,
+        cloudBookFileId = cloud_book_file_id,
     )
 }
 
@@ -148,6 +223,8 @@ private fun AppDatabase.upsertImportedBookRow(book: ImportedBookEntity) {
         last_opened_at = book.lastOpenedAt,
         book_type = book.bookType,
         publication_date = book.publicationDate,
+        origin = book.origin,
+        cloud_book_file_id = book.cloudBookFileId,
     )
 }
 
@@ -168,4 +245,6 @@ private data class ImportedBookEntityImpl(
     override val lastOpenedAt: String?,
     override val bookType: String,
     override val publicationDate: String?,
+    override val origin: String,
+    override val cloudBookFileId: String?,
 ) : ImportedBookEntity

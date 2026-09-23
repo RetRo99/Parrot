@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS imported_books (
     imported_at TEXT NOT NULL,
     last_opened_at TEXT,
     book_type TEXT NOT NULL DEFAULT 'ebook',
-    publication_date TEXT
+    publication_date TEXT,
+    origin TEXT NOT NULL DEFAULT 'import',
+    cloud_book_file_id TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_imported_books_title ON imported_books(title);
@@ -37,9 +39,11 @@ INSERT OR REPLACE INTO imported_books(
     imported_at,
     last_opened_at,
     book_type,
-    publication_date
+    publication_date,
+    origin,
+    cloud_book_file_id
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getAllImportedBooks:
 SELECT * FROM imported_books ORDER BY imported_at DESC;
@@ -48,7 +52,7 @@ getImportedBookByUuid:
 SELECT * FROM imported_books WHERE uuid = ?;
 
 getImportedBookByContentHash:
-SELECT * FROM imported_books WHERE content_hash = ?;
+SELECT * FROM imported_books WHERE content_hash = ? ORDER BY imported_at DESC LIMIT 1;
 
 deleteImportedBook:
 DELETE FROM imported_books WHERE uuid = ?;

@@ -8,6 +8,7 @@ import com.retro99.base.result.CompletableResult
 import com.retro99.books.data.source.ImportedBooksLocalSource
 import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.server.api.ServerBook
+import com.retro99.server.api.MediaResource
 import com.retro99.server.api.ServerBooksRepository
 import com.retro99.server.api.ServerType
 import kotlinx.coroutines.flow.Flow
@@ -88,5 +89,16 @@ private fun BookDomainModel.LocalBook.toServerBook(serverId: String): ServerBook
         libraryBookId = contentHash?.let { hash -> "$normalizedHashAlgorithm:$hash" },
         contentHash = contentHash,
         contentHashAlgorithm = normalizedHashAlgorithm,
+        mediaResources = listOf(
+            MediaResource(
+                mediaType = bookType.value,
+                localPath = filePath,
+                size = fileSize,
+                contentHash = contentHash,
+                contentHashAlgorithm = normalizedHashAlgorithm,
+                localOrigin = origin,
+                cloudBookFileId = cloudBookFileId,
+            ),
+        ),
     )
 }

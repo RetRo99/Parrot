@@ -36,6 +36,8 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
                 size = resource.size,
                 contentHash = resource.contentHash,
                 contentHashAlgorithm = resource.contentHashAlgorithm,
+                localOrigin = resource.localOrigin,
+                cloudBookFileId = resource.cloudBookFileId,
             )
         },
     )
@@ -53,6 +55,9 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
         lastOpenedAt = lastOpenedAt,
         bookType = bookType,
         publicationDate = publicationDate,
+        libraryBookId = libraryBookId,
+        origin = origin,
+        cloudBookFileId = cloudBookFileId,
     )
 }
 

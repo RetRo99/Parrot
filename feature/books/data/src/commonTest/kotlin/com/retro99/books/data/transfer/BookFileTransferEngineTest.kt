@@ -1,6 +1,8 @@
 package com.retro99.books.data.transfer
 
 import com.retro99.books.domain.BookFileTransferTransport
+import com.retro99.books.domain.BookFileDownloadRequest
+import com.retro99.books.domain.BookFileDownloadTransport
 import com.retro99.books.domain.BookFileUploadRequest
 import com.retro99.books.domain.CloudBookFileRecord
 import com.retro99.books.domain.TransferResumeMode
@@ -17,15 +19,83 @@ import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBookMutation
 import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.library.LocalBookFileEntity
+import com.retro99.database.api.books.PositionEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class BookFileTransferEngineTest {
+    @Test
+    fun downloadResumesFromDurablePartAndFinalizesReplica() = runTest {
+        val state = CloudBookFileEntity(
+            libraryBookId = LIBRARY_BOOK_ID,
+            cloudBookId = "cloud-book",
+            cloudBookFileId = "cloud-file",
+            mediaType = "ebook",
+            relativePath = "",
+            fileName = "book.epub",
+            status = "available",
+            sizeBytes = 6,
+            contentHash = "expected-hash",
+            contentHashAlgorithm = "sha-256-v1",
+            remoteRevision = 1,
+            updatedAt = "now",
+        )
+        val database = FakeCloudFilesDatabase(activeTransfer().copy(
+            direction = "download",
+            state = "failed",
+            localSourceUuid = "restored-book",
+            stagingPath = "/staging/transfer.part",
+            sizeBytes = 6,
+            bytesTransferred = 2,
+            contentHash = "expected-hash",
+            contentHashAlgorithm = "sha-256-v1",
+            uploadId = null,
+            storagePath = null,
+            tusUploadUrl = null,
+        ), state)
+        val fileStore = FakeTransferFileStore().apply { files["/staging/transfer.part"] = "ab".encodeToByteArray() }
+        val transport = ResumingDownloadTransport()
+        val finalized = CompletableDeferred<Unit>()
+        val finalizer = object : DownloadTransferFinalizer {
+            override suspend fun finalize(
+                transfer: CloudFileTransferEntity,
+                request: BookFileDownloadRequest,
+            ): CloudFileTransferEntity {
+                assertEquals("restored-book", transfer.localSourceUuid)
+                assertEquals("abcdef", fileStore.files.getValue("/staging/transfer.part").decodeToString())
+                val completed = transfer.copy(state = "completed", stagingPath = null, bytesTransferred = 6)
+                database.updateTransfer(completed)
+                finalized.complete(Unit)
+                return completed
+            }
+        }
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            importedBooksDatabase = UnusedImportedBooksDatabase,
+            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            transports = emptyList(),
+            downloadTransports = listOf(transport),
+            downloadFinalizer = finalizer,
+            fileStore = fileStore,
+        )
+
+        val transferId = engine.enqueueDownload(SERVER_ID, LIBRARY_BOOK_ID, "ebook")
+        finalized.await()
+
+        val result = database.getTransfer(transferId)
+        assertEquals("completed", result?.state)
+        assertEquals(2L, transport.requestedOffset)
+        assertEquals("abcdef", fileStore.files.getValue("/staging/transfer.part").decodeToString())
+        assertTrue(database.fileStates.any { it.status == "available" })
+    }
+
     @Test
     fun cancelPersistsLocalTerminalStateBeforeBestEffortRemoteCleanup() = runTest {
         val transfer = activeTransfer()
@@ -98,6 +168,10 @@ class BookFileTransferEngineTest {
             transfers[transfer.transferId] = transfer
         }
 
+        override suspend fun deleteTransfer(transferId: String) {
+            transfers.remove(transferId)
+        }
+
         override suspend fun getTransfers(serverId: String, states: List<String>): List<CloudFileTransferEntity> =
             transfers.values.filter { it.serverId == serverId && it.state in states }
 
@@ -152,11 +226,56 @@ class BookFileTransferEngineTest {
         }
     }
 
+    private class ResumingDownloadTransport : BookFileDownloadTransport {
+        override val serverId: String = SERVER_ID
+        override val supportsDownload: Boolean = true
+        var requestedOffset: Long? = null
+
+        override suspend fun download(
+            request: BookFileDownloadRequest,
+            resumeOffset: Long,
+            onResponseOffset: suspend (offset: Long) -> Unit,
+            onChunk: suspend (bytes: ByteArray) -> Unit,
+        ) {
+            requestedOffset = resumeOffset
+            onResponseOffset(resumeOffset)
+            onChunk("cdef".encodeToByteArray())
+        }
+    }
+
+    private class FakeTransferFileStore : BookFileTransferFileStore {
+        val files = mutableMapOf<String, ByteArray>()
+        override fun stagingPath(transferId: String) = "/staging/$transferId.part"
+        override fun importedFilePath(localUuid: String, mediaType: String) = "/imports/$localUuid.epub"
+        override suspend fun exists(path: String) = path in files
+        override suspend fun size(path: String) = files[path]?.size?.toLong() ?: 0L
+        override suspend fun truncate(path: String) { files[path] = byteArrayOf() }
+        override suspend fun write(path: String, offset: Long, bytes: ByteArray) {
+            val current = files[path] ?: byteArrayOf()
+            val result = ByteArray(maxOf(current.size.toLong(), offset + bytes.size).toInt())
+            current.copyInto(result)
+            bytes.copyInto(result, offset.toInt())
+            files[path] = result
+        }
+        override suspend fun moveToImportedStore(stagingPath: String, destinationPath: String) {
+            files[destinationPath] = files.remove(stagingPath) ?: error("No staging file")
+        }
+        override suspend fun writeCover(localUuid: String, bytes: ByteArray) = "/covers/$localUuid.png"
+        override suspend fun delete(path: String): Boolean = files.remove(path) != null
+    }
+
     private object UnusedImportedBooksDatabase : ImportedBooksDatabase {
         override suspend fun upsertImportedBook(book: ImportedBookEntity) = error("Unused")
         override suspend fun upsertImportedBookWithLibraryMapping(
             book: ImportedBookEntity,
             mutation: LibraryBookMutation,
+        ) = error("Unused")
+        override suspend fun saveRestoredBookWithLibraryMapping(
+            book: ImportedBookEntity,
+            libraryBook: LibraryBookEntity,
+            localBookFile: LocalBookFileEntity,
+            transfer: CloudFileTransferEntity,
+            position: PositionEntity?,
         ) = error("Unused")
         override fun getAllImportedBooks(): Flow<List<ImportedBookEntity>> = emptyFlow()
         override suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity? = error("Unused")
@@ -185,7 +304,7 @@ class BookFileTransferEngineTest {
 
     private companion object {
         const val SERVER_ID = "test-cloud"
-        const val LIBRARY_BOOK_ID = "library-book"
+        const val LIBRARY_BOOK_ID = "sha-256-v1:expected-hash"
         const val TRANSFER_ID = "transfer-1"
 
         fun activeTransfer() = CloudFileTransferEntity(

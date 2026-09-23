@@ -6,6 +6,7 @@ import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.base.result.log
+import com.retro99.base.server.LOCAL_SERVER_ID
 import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.ui.CLOUD_BACKUP_ATTESTATION_VERSION
@@ -17,6 +18,8 @@ import com.retro99.books.domain.usecase.CancelBookFileTransferUseCase
 import com.retro99.books.domain.usecase.ObserveBookFileTransferUseCase
 import com.retro99.books.domain.usecase.RetryBookFileTransferUseCase
 import com.retro99.books.domain.usecase.StartBookFileUploadUseCase
+import com.retro99.books.domain.usecase.StartBookFileDownloadUseCase
+import com.retro99.books.domain.usecase.RemoveBookFileDownloadUseCase
 import com.retro99.books.domain.usecase.ObserveFavoriteUseCase
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
 import com.retro99.books.ui.model.toUiModel
@@ -62,6 +65,8 @@ class BookDetailViewModel(
     @Provided private val startBookFileUploadUseCase: StartBookFileUploadUseCase,
     @Provided private val cancelBookFileTransferUseCase: CancelBookFileTransferUseCase,
     @Provided private val retryBookFileTransferUseCase: RetryBookFileTransferUseCase,
+    @Provided private val startBookFileDownloadUseCase: StartBookFileDownloadUseCase,
+    @Provided private val removeBookFileDownloadUseCase: RemoveBookFileDownloadUseCase,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
     BookDetailViewState(),
@@ -170,7 +175,7 @@ class BookDetailViewModel(
                 updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
             }
 
-            BookDetailIntent.OnCancelBookBackupClicked -> cancelBookBackup()
+            is BookDetailIntent.OnCancelBookFileTransferClicked -> cancelBookTransfer(intent.transferId)
 
             is BookDetailIntent.OnRetryBookBackupClicked -> retryBookBackup(intent.transferId)
 
@@ -215,7 +220,7 @@ class BookDetailViewModel(
                     // Navigate to reader if user was trying to open a book
                     pendingBookType?.let { bookType ->
                         updateState { it.copy(pendingOpenBookType = null) }
-                        onNavigateToReader(serverId, bookUuid, bookType, bookTitle)
+                        navigateToReader(bookType, bookTitle)
                     }
                 }
                 .onFailure { error ->
@@ -236,7 +241,7 @@ class BookDetailViewModel(
                     // Navigate to reader if user was trying to open a book
                     pendingBookType?.let { bookType ->
                         updateState { it.copy(pendingOpenBookType = null) }
-                        onNavigateToReader(serverId, bookUuid, bookType, bookTitle)
+                        navigateToReader(bookType, bookTitle)
                     }
                 }
                 .onFailure { error ->
@@ -291,7 +296,7 @@ class BookDetailViewModel(
                 updateState { it.copy(pendingOpenBookType = bookType) }
             } else {
                 val bookTitle = currentState.book?.title ?: ""
-                onNavigateToReader(serverId, bookUuid, bookType, bookTitle)
+                navigateToReader(bookType, bookTitle)
             }
         }
         // If not cached, user should click download first
@@ -319,7 +324,7 @@ class BookDetailViewModel(
                                 progressInfo = bookWithProgress.progressInfo?.toUiModel(),
                                 isLoading = false,
                                 error = null,
-                            )
+                            ).withCloudTransferStates()
                         }
                     }
                     .onFailure { error ->
@@ -355,7 +360,7 @@ class BookDetailViewModel(
             return
         }
         transferObservationJob = observeBookFileTransferUseCase(serverId, libraryBookId)
-            .onEach { transfers -> updateState { it.copy(bookFileTransfers = transfers) } }
+            .onEach { transfers -> updateState { it.copy(bookFileTransfers = transfers).withCloudTransferStates() } }
             .launchIn(viewModelScope)
     }
 
@@ -385,11 +390,9 @@ class BookDetailViewModel(
         }
     }
 
-    private fun cancelBookBackup() {
-        val libraryBookId = (viewState.value.book as? BookUiModel.StorytellerBook)?.libraryBookId
-            ?: return
+    private fun cancelBookTransfer(transferId: String) {
         viewModelScope.launch {
-            runCatching { cancelBookFileTransferUseCase(serverId, libraryBookId) }
+            runCatching { cancelBookFileTransferUseCase(transferId) }
                 .onFailure { error -> updateState { it.copy(bookFileTransferError = error.message) } }
         }
     }
@@ -431,7 +434,7 @@ class BookDetailViewModel(
                         ebookDownloadState = ebookState,
                         audiobookDownloadState = audiobookState,
                         readaloudDownloadState = readaloudState,
-                    )
+                    ).withCloudTransferStates()
                 }
             }
             .launchIn(viewModelScope)
@@ -482,8 +485,35 @@ class BookDetailViewModel(
             analytics.logEvent(
                 BookAnalyticsEvent.BookDownloadCancelled(bookUuid = bookUuid)
             )
+            val cloudTransfer = cloudDownloadTransfer(bookType)
             viewModelScope.launch {
-                cancelDownloadUseCase(bookUuid, bookType)
+                if (cloudTransfer != null) {
+                    cancelBookFileTransferUseCase(cloudTransfer.transferId)
+                } else {
+                    cancelDownloadUseCase(bookUuid, bookType)
+                }
+            }
+            return
+        }
+
+        val cloudBook = book as? BookUiModel.StorytellerBook
+        val cloudResource = cloudBook?.mediaResources?.firstOrNull { resource ->
+            resource.mediaType.equals(bookType.value, ignoreCase = true)
+        }
+        if (cloudBook?.serverType == ServerType.ParrotCloud &&
+            bookType != BookType.AUDIOBOOK &&
+            cloudBook.libraryBookId != null &&
+            cloudResource?.cloudBookFileId != null &&
+            cloudResource.remoteAvailability == "Available" &&
+            cloudResource.localPath == null &&
+            bookFileTransferManager.supportsDownload(serverId)
+        ) {
+            viewModelScope.launch {
+                runCatching {
+                    startBookFileDownloadUseCase(serverId, cloudBook.libraryBookId, bookType.value)
+                }.onFailure { error ->
+                    updateState { it.copy(bookFileTransferError = error.message ?: "Could not restore book") }
+                }
             }
             return
         }
@@ -510,9 +540,74 @@ class BookDetailViewModel(
             )
         )
         viewModelScope.launch {
-            deleteMediaCacheUseCase(bookUuid, bookType)
+            val cloudBook = viewState.value.book as? BookUiModel.StorytellerBook
+            val restoredResource = cloudBook?.mediaResources?.firstOrNull { resource ->
+                resource.mediaType.equals(bookType.value, ignoreCase = true) &&
+                    resource.localOrigin == "cloud_download"
+            }
+            val hasCompletedRestore = viewState.value.bookFileTransfers.any { transfer ->
+                transfer.direction == "download" &&
+                    transfer.mediaType.equals(bookType.value, ignoreCase = true) &&
+                    transfer.state == "completed"
+            }
+            if (cloudBook?.serverType == ServerType.ParrotCloud &&
+                cloudBook.libraryBookId != null && (restoredResource != null || hasCompletedRestore)
+            ) {
+                removeBookFileDownloadUseCase(serverId, cloudBook.libraryBookId, bookType.value)
+            } else {
+                deleteMediaCacheUseCase(bookUuid, bookType)
+            }
             // Download state will be updated via the observer
         }
+    }
+
+    private fun cloudDownloadTransfer(bookType: BookType) = viewState.value.bookFileTransfers
+        .firstOrNull { transfer ->
+            transfer.direction == "download" &&
+                transfer.mediaType.equals(bookType.value, ignoreCase = true) &&
+                transfer.state in setOf("pending", "transferring", "verifying", "finalizing")
+        }
+
+    private fun navigateToReader(bookType: BookType, bookTitle: String) {
+        val cloudBook = viewState.value.book as? BookUiModel.StorytellerBook
+        val localUuid = cloudBook?.takeIf { it.serverType == ServerType.ParrotCloud }?.localSourceUuid
+        if (localUuid != null) {
+            onNavigateToReader(LOCAL_SERVER_ID, localUuid, bookType, bookTitle)
+        } else {
+            onNavigateToReader(serverId, bookUuid, bookType, bookTitle)
+        }
+    }
+
+    private fun BookDetailViewState.withCloudTransferStates(): BookDetailViewState {
+        val cloudBook = book as? BookUiModel.StorytellerBook ?: return this
+        if (cloudBook.serverType != ServerType.ParrotCloud) return this
+
+        fun stateFor(bookType: BookType, fallback: DownloadState): DownloadState {
+            val resource = cloudBook.mediaResources.firstOrNull {
+                it.mediaType.equals(bookType.value, ignoreCase = true)
+            }
+            if (resource?.localPath != null) return DownloadState.Cached
+            val transfer = bookFileTransfers.firstOrNull { item ->
+                item.direction == "download" && item.mediaType.equals(bookType.value, ignoreCase = true)
+            } ?: return fallback
+            return when (transfer.state) {
+                "pending" -> DownloadState.Downloading(0f)
+                "transferring" -> DownloadState.Downloading(
+                    if (transfer.totalBytes > 0) {
+                        (transfer.bytesTransferred.toFloat() / transfer.totalBytes).coerceIn(0f, 1f)
+                    } else null,
+                )
+                "verifying", "finalizing" -> DownloadState.Downloading(1f)
+                "completed" -> DownloadState.Cached
+                else -> fallback
+            }
+        }
+
+        return copy(
+            ebookDownloadState = stateFor(BookType.EBOOK, ebookDownloadState),
+            audiobookDownloadState = stateFor(BookType.AUDIOBOOK, audiobookDownloadState),
+            readaloudDownloadState = stateFor(BookType.READALOUD, readaloudDownloadState),
+        )
     }
 
 }

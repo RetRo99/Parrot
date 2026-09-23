@@ -57,6 +57,8 @@ internal fun LibraryBookEntity.toServerBook(
                 size = file.sizeBytes,
                 contentHash = file.contentHash,
                 contentHashAlgorithm = file.contentHashAlgorithm,
+                localOrigin = localBook?.origin.takeIf { file.mediaType == localBook?.bookType },
+                cloudBookFileId = file.cloudBookFileId,
             )
         }
     } else {
@@ -68,6 +70,8 @@ internal fun LibraryBookEntity.toServerBook(
                 size = localBook?.fileSize,
                 contentHash = contentHash,
                 contentHashAlgorithm = contentHashAlgorithm,
+                localOrigin = localBook?.origin,
+                cloudBookFileId = localBook?.cloudBookFileId,
             ),
         )
     }

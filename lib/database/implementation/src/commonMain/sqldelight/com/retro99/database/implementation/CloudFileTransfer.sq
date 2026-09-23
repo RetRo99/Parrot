@@ -42,6 +42,9 @@ INSERT OR REPLACE INTO cloud_file_transfers(
 getCloudFileTransfer:
 SELECT * FROM cloud_file_transfers WHERE transfer_id = ?;
 
+deleteCloudFileTransfer:
+DELETE FROM cloud_file_transfers WHERE transfer_id = ?;
+
 getCloudFileTransfersByStates:
 SELECT * FROM cloud_file_transfers
 WHERE server_id = ? AND state IN ?

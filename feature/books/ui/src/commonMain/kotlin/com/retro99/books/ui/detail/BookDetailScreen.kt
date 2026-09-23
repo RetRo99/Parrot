@@ -150,6 +150,13 @@ import resources.translations.cloud_backup_title
 import resources.translations.cloud_backup_queued
 import resources.translations.cloud_backup_complete
 import resources.translations.cloud_backup_finishing
+import resources.translations.cloud_download_cancel
+import resources.translations.cloud_download_complete
+import resources.translations.cloud_download_failed
+import resources.translations.cloud_download_finishing
+import resources.translations.cloud_download_progress
+import resources.translations.cloud_download_queued
+import resources.translations.cloud_download_retry
 import resources.translations.books_reading_progress
 import resources.translations.general_back
 import resources.translations.general_cancel
@@ -398,7 +405,9 @@ private fun BookDetailScreenContent(
                         Spacer(modifier = Modifier.height(12.dp))
                         BookBackupProgressSection(
                             transfers = bookFileTransfers,
-                            onCancel = { intentDispatcher(BookDetailIntent.OnCancelBookBackupClicked) },
+                            onCancel = { transferId ->
+                                intentDispatcher(BookDetailIntent.OnCancelBookFileTransferClicked(transferId))
+                            },
                             onRetry = { transferId ->
                                 intentDispatcher(BookDetailIntent.OnRetryBookBackupClicked(transferId))
                             },
@@ -779,6 +788,7 @@ private fun MediaActionButtons(
                 label = stringResource(StringRes.books_media_ebook),
                 downloadState = ebookDownloadState,
                 isLocalBook = isLocalBook,
+                canDeleteCache = book.localOrigin(BookType.EBOOK) != "import",
                 onReadClick = { intentDispatcher(BookDetailIntent.OnReadEbookClicked) },
                 onDownloadClick = { intentDispatcher(BookDetailIntent.OnDownloadClicked(BookType.EBOOK)) },
                 onDeleteClick = {
@@ -793,6 +803,7 @@ private fun MediaActionButtons(
                 label = stringResource(StringRes.books_media_audio),
                 downloadState = audiobookDownloadState,
                 isLocalBook = isLocalBook,
+                canDeleteCache = book.localOrigin(BookType.AUDIOBOOK) != "import",
                 onReadClick = { intentDispatcher(BookDetailIntent.OnPlayAudiobookClicked) },
                 onDownloadClick = { intentDispatcher(BookDetailIntent.OnDownloadClicked(BookType.AUDIOBOOK)) },
                 onDeleteClick = {
@@ -807,6 +818,7 @@ private fun MediaActionButtons(
                 label = stringResource(StringRes.books_media_readaloud),
                 downloadState = readaloudDownloadState,
                 isLocalBook = isLocalBook,
+                canDeleteCache = book.localOrigin(BookType.READALOUD) != "import",
                 onReadClick = { intentDispatcher(BookDetailIntent.OnReadReadaloudClicked) },
                 onDownloadClick = { intentDispatcher(BookDetailIntent.OnDownloadClicked(BookType.READALOUD)) },
                 onDeleteClick = {
@@ -818,12 +830,19 @@ private fun MediaActionButtons(
     }
 }
 
+private fun BookUiModel.localOrigin(bookType: BookType): String? =
+    (this as? BookUiModel.StorytellerBook)
+        ?.mediaResources
+        ?.firstOrNull { resource -> resource.mediaType.equals(bookType.value, ignoreCase = true) }
+        ?.localOrigin
+
 @Composable
 private fun MediaButton(
     icon: ImageVector,
     label: String,
     downloadState: DownloadState,
     isLocalBook: Boolean,
+    canDeleteCache: Boolean,
     onReadClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onDeleteClick: () -> Unit,
@@ -978,7 +997,7 @@ private fun MediaButton(
                         )
                     }
 
-                    if (!isLocalBook) {
+                    if (!isLocalBook && canDeleteCache) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = stringResource(StringRes.books_media_delete),
@@ -1297,12 +1316,12 @@ private fun BackupRightsConfirmationDialog(
 @Composable
 private fun BookBackupProgressSection(
     transfers: List<BookFileTransfer>,
-    onCancel: () -> Unit,
+    onCancel: (String) -> Unit,
     onRetry: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val transfer = transfers.lastOrNull { it.state in setOf("pending", "transferring", "verifying", "finalizing") }
-        ?: transfers.lastOrNull()
+    val transfer = transfers.firstOrNull { it.state in setOf("pending", "transferring", "verifying", "finalizing") }
+        ?: transfers.firstOrNull()
         ?: return
     val fraction = if (transfer.totalBytes > 0) {
         (transfer.bytesTransferred.toFloat() / transfer.totalBytes).coerceIn(0f, 1f)
@@ -1310,13 +1329,23 @@ private fun BookBackupProgressSection(
         null
     }
     val progressPercent = ((fraction ?: 0f) * 100).toInt()
+    val isDownload = transfer.direction == "download"
     val statusText = when (transfer.state) {
-        "pending" -> stringResource(StringRes.cloud_backup_queued)
-        "transferring" -> stringResource(StringRes.cloud_backup_progress, progressPercent)
-        "verifying", "finalizing" -> stringResource(StringRes.cloud_backup_finishing)
-        "completed" -> stringResource(StringRes.cloud_backup_complete)
+        "pending" -> stringResource(
+            if (isDownload) StringRes.cloud_download_queued else StringRes.cloud_backup_queued,
+        )
+        "transferring" -> stringResource(
+            if (isDownload) StringRes.cloud_download_progress else StringRes.cloud_backup_progress,
+            progressPercent,
+        )
+        "verifying", "finalizing" -> stringResource(
+            if (isDownload) StringRes.cloud_download_finishing else StringRes.cloud_backup_finishing,
+        )
+        "completed" -> stringResource(
+            if (isDownload) StringRes.cloud_download_complete else StringRes.cloud_backup_complete,
+        )
         "failed" -> stringResource(
-            StringRes.cloud_backup_failed,
+            if (isDownload) StringRes.cloud_download_failed else StringRes.cloud_backup_failed,
             transfer.lastError ?: "Unknown error",
         )
         else -> transfer.state
@@ -1344,12 +1373,20 @@ private fun BookBackupProgressSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            TextButton(onClick = onCancel) {
-                Text(stringResource(StringRes.cloud_backup_cancel))
+            TextButton(onClick = { onCancel(transfer.transferId) }) {
+                Text(
+                    stringResource(
+                        if (isDownload) StringRes.cloud_download_cancel else StringRes.cloud_backup_cancel,
+                    ),
+                )
             }
         } else if (transfer.state == "failed") {
             TextButton(onClick = { onRetry(transfer.transferId) }) {
-                Text(stringResource(StringRes.cloud_backup_retry))
+                Text(
+                    stringResource(
+                        if (isDownload) StringRes.cloud_download_retry else StringRes.cloud_backup_retry,
+                    ),
+                )
             }
         }
     }

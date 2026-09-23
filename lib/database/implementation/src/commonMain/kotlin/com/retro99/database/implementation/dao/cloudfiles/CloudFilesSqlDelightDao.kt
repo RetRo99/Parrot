@@ -99,6 +99,10 @@ internal class CloudFilesSqlDelightDao(
                 ?.toEntity()
         }
 
+    suspend fun deleteTransfer(transferId: String) = withContext(Dispatchers.IO) {
+        databaseManager.getDatabase().cloudFileTransferQueries.deleteCloudFileTransfer(transferId)
+    }
+
     suspend fun getTransfers(serverId: String, states: List<String>): List<CloudFileTransferEntity> =
         withContext(Dispatchers.IO) {
             if (states.isEmpty()) return@withContext emptyList()

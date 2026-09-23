@@ -17,4 +17,8 @@ interface ImportedBookEntity {
     val lastOpenedAt: String?
     val bookType: String
     val publicationDate: String?
+    val origin: String
+        get() = "import"
+    val cloudBookFileId: String?
+        get() = null
 }

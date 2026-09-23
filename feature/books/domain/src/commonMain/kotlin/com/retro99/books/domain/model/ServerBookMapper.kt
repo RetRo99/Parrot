@@ -36,6 +36,8 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             publicationDate = publicationDate,
             contentHash = contentHash,
             contentHashAlgorithm = contentHashAlgorithm,
+            origin = mediaResources.firstOrNull()?.localOrigin ?: "import",
+            cloudBookFileId = mediaResources.firstOrNull()?.cloudBookFileId,
         )
     } else {
         BookDomainModel.StorytellerBook(

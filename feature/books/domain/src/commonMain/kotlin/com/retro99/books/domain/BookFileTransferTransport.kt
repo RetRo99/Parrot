@@ -26,6 +26,32 @@ interface BookFileTransferTransport {
     suspend fun cancel(reservation: UploadReservation?, resumeUrl: String?)
 }
 
+/** The transport owns short-lived grants; signed URLs are never exposed to persistent state. */
+interface BookFileDownloadTransport {
+    val serverId: String
+    val supportsDownload: Boolean
+
+    suspend fun download(
+        request: BookFileDownloadRequest,
+        resumeOffset: Long,
+        onResponseOffset: suspend (offset: Long) -> Unit,
+        onChunk: suspend (bytes: ByteArray) -> Unit,
+    )
+}
+
+data class BookFileDownloadRequest(
+    val transferId: String,
+    val serverId: String,
+    val libraryBookId: String,
+    val cloudBookId: String,
+    val cloudBookFileId: String,
+    val mediaType: String,
+    val fileName: String,
+    val sizeBytes: Long,
+    val contentHash: String,
+    val contentHashAlgorithm: String,
+)
+
 data class TransferTransportCapabilities(
     val resumeMode: TransferResumeMode,
     val supportsClientSuppliedId: Boolean,
@@ -107,9 +133,14 @@ class BookFileTransferRejectedException(val reason: String) : Exception(reason)
 
 class BookFileTransferSessionExpiredException : Exception("TUS upload session expired")
 
+class BookFileTransferDownloadIncompleteException : Exception("Cloud file download was incomplete")
+
+class BookFileTransferDownloadException : Exception("Cloud file download request failed")
+
 /** Domain facade used by UI and import flows; implementations persist before scheduling work. */
 interface BookFileTransferManager {
     fun supportsUpload(serverId: String): Boolean
+    fun supportsDownload(serverId: String): Boolean
 
     suspend fun enqueueUpload(
         serverId: String,
@@ -122,7 +153,13 @@ interface BookFileTransferManager {
         rightsAttestation: UploadRightsAttestation,
     ): Int
 
+    suspend fun enqueueDownload(serverId: String, libraryBookId: String, mediaType: String): String
+
+    suspend fun removeDownload(serverId: String, libraryBookId: String, mediaType: String)
+
     suspend fun cancel(serverId: String, libraryBookId: String)
+
+    suspend fun cancelTransfer(transferId: String)
 
     suspend fun retry(transferId: String)
 
@@ -134,6 +171,7 @@ data class BookFileTransfer(
     val serverId: String,
     val libraryBookId: String,
     val direction: String,
+    val mediaType: String,
     val state: String,
     val bytesTransferred: Long,
     val totalBytes: Long,
