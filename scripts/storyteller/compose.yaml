@@ -1,0 +1,17 @@
+services:
+  storyteller:
+    image: registry.gitlab.com/storyteller-platform/storyteller:latest
+    restart: unless-stopped
+    environment:
+      STORYTELLER_SECRET_KEY_FILE: /run/secrets/secret_key
+      STORYTELLER_LOG_LEVEL: info
+    ports:
+      - "127.0.0.1:8001:8001"
+    volumes:
+      - "${STORYTELLER_DATA_DIR:?Run scripts/storyteller/up.sh}:/data:rw"
+    secrets:
+      - secret_key
+
+secrets:
+  secret_key:
+    file: "${STORYTELLER_SECRET_FILE:?Run scripts/storyteller/up.sh}"

@@ -1,0 +1,2 @@
+-- The local project starts with an empty account dataset. Contract tests create
+-- and roll back their own auth users and book fixtures.
