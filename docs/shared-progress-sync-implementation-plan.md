@@ -526,9 +526,9 @@ No platform timer is the source of truth. The outbox remains the recovery record
 ### Data migration rules
 
 1. Add new schema/state before switching writers.
-2. Preserve current position rows and unresolved legacy mutations.
+2. Preserve current position rows and unresolved compatibility mutations.
 3. Resolve destination ownership from profile/account/server bindings; do not
-   bulk-assign ambiguous legacy data to whichever account is active.
+   bulk-assign ambiguous compatibility data to whichever account is active.
 4. Do not assume every old outbox entry is unsent: previous requests may have
    reached the server without an acknowledgement. Retain their IDs and resolve
    uncertain delivery before destructive coalescing.
@@ -537,7 +537,7 @@ No platform timer is the source of truth. The outbox remains the recovery record
 6. Seed baselines by reconciling local and remote state. Existing local progress
    is not automatically newer than a server's progress.
 7. Preserve unresolved candidates when destination or edition mapping is unclear.
-8. Stop the legacy direct-write/manual-only engine paths when enabling the shared
+8. Stop obsolete direct-write/manual-only engine paths when enabling the shared
    writer. Never run two owners of the same progress destination concurrently.
 9. Keep existing non-progress outbox entities functional during the transition.
 10. Make each migration restart-safe and verify database upgrade paths.
@@ -643,7 +643,7 @@ Tasks:
 - Present common sync state and actionable errors in existing surfaces.
 - Keep Sync now as immediate retry/refresh using the same engine.
 - Add metrics, run device/backend matrix, and tune default intervals.
-- Remove legacy policy paths and obsolete DI bindings after cutover.
+- Remove obsolete policy paths and DI bindings after cutover.
 - Update architectural docs to reference this shared-engine direction.
 
 Exit: common behavior is enabled for all adapters, migration/rollback recovery is
@@ -775,8 +775,9 @@ As of 2026-09-23, the shared synchronization cutover includes:
 
 The following compatibility paths are deliberate and remain in place:
 
-- `LegacySyncEngine` and `LegacySyncTransport` still handle Parrot library
-  mutations; they are transport/entity compatibility, not a second coordinator.
+- `LibraryMutationSyncEngine` and `LibraryMutationSyncTransport` still handle
+  Parrot library mutations; they are transport/entity compatibility, not a
+  second coordinator.
 - `SyncRepository.sync()` remains as the existing API compatibility entry point;
   its implementation delegates to `requestSync`.
 

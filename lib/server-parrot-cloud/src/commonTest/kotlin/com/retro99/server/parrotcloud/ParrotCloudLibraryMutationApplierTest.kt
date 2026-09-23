@@ -14,13 +14,13 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ParrotCloudLegacyMutationApplierTest {
+class ParrotCloudLibraryMutationApplierTest {
     private val json = Json { encodeDefaults = true }
 
     @Test
     fun acceptedMutationDecodesPayloadAndAppliesRemoteIdentity() = runTest {
         val database = RecordingLibraryBooksDatabase()
-        val applier = ParrotCloudLegacyMutationApplier(LibraryBookSyncApplier(database))
+        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
 
         applier.onAccepted(
             entry = entry(json.encodeToString(bookPayload())),
@@ -42,7 +42,7 @@ class ParrotCloudLegacyMutationApplierTest {
     @Test
     fun conflictPayloadIsAppliedAsRemoteLibraryState() = runTest {
         val database = RecordingLibraryBooksDatabase()
-        val applier = ParrotCloudLegacyMutationApplier(LibraryBookSyncApplier(database))
+        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
 
         applier.onConflict(
             entry = entry("{}"),

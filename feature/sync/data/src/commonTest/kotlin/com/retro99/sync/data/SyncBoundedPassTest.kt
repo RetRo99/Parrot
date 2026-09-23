@@ -14,7 +14,7 @@ class SyncBoundedPassTest {
         val checkpoints = BoundedRecordingCheckpointDatabase()
         val events = mutableListOf<String>()
         val progressEntityTypes = mutableListOf<String>()
-        val legacyEntityTypes = mutableListOf<String>()
+        val libraryMutationEntityTypes = mutableListOf<String>()
         var fetchCount = 0
         val coordinator = SyncBoundedPass(SyncPullEngine(checkpoints))
 
@@ -30,7 +30,7 @@ class SyncBoundedPassTest {
                         entityType = SyncOutboxEntry.ENTITY_TYPE_READING_POSITION,
                     ),
                     testEntry(
-                        mutationId = "legacy",
+                        mutationId = "library-mutation",
                         entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
                     ),
                 )
@@ -43,9 +43,9 @@ class SyncBoundedPassTest {
                 events += "progress:${entries.size}"
                 1
             },
-            pushLegacyEntries = { entries, cursor ->
-                legacyEntityTypes += entries.map { entry -> entry.entityType }
-                events += "legacy:${entries.size}:$cursor"
+            pushLibraryMutationEntries = { entries, cursor ->
+                libraryMutationEntityTypes += entries.map { entry -> entry.entityType }
+                events += "library-mutation:${entries.size}:$cursor"
                 2
             },
             fetchAndApply = { cursor, _ ->
@@ -68,11 +68,11 @@ class SyncBoundedPassTest {
         )
         assertEquals(
             listOf(SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK),
-            legacyEntityTypes,
+            libraryMutationEntityTypes,
         )
 
         assertEquals(
-            listOf("pull:null", "select", "refresh:2", "progress:1", "legacy:1:1", "pull:1", "pending"),
+            listOf("pull:null", "select", "refresh:2", "progress:1", "library-mutation:1:1", "pull:1", "pending"),
             events,
         )
         assertEquals(
@@ -103,8 +103,8 @@ class SyncBoundedPassTest {
                 events += "push"
                 0
             },
-            pushLegacyEntries = { _, _ ->
-                events += "legacy"
+            pushLibraryMutationEntries = { _, _ ->
+                events += "library-mutation"
                 0
             },
             fetchAndApply = { cursor, _ ->
@@ -148,7 +148,7 @@ class SyncBoundedPassTest {
                 events += "progress:${entries.size}"
                 1
             },
-            pushLegacyEntries = { _, _ -> error("Storyteller has no legacy mutations") },
+            pushLibraryMutationEntries = { _, _ -> error("Storyteller has no library mutations") },
             fetchAndApply = { _, _ -> error("Storyteller has no change feed") },
             pendingMutationCount = {
                 events += "pending"

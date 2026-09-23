@@ -7,12 +7,12 @@ import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressSyncTransport
-import com.retro99.sync.domain.LegacySyncTransport
+import com.retro99.sync.domain.LibraryMutationSyncTransport
 import com.retro99.sync.data.ProgressIdentity
 import com.retro99.sync.data.ProgressIdentityResolver
 import com.retro99.sync.data.ProgressOutboxCodec
 import com.retro99.sync.data.ProgressSyncEngine
-import com.retro99.sync.data.LegacySyncEngine
+import com.retro99.sync.data.LibraryMutationSyncEngine
 import com.retro99.sync.data.LibraryBookSyncApplier
 import com.retro99.sync.data.SyncPass
 import com.retro99.sync.data.SyncExecutionContext
@@ -33,13 +33,13 @@ class ParrotCloudSyncAdapter(
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
     @Provided private val localBookUuidResolver: LocalBookUuidResolver,
     @Provided private val duplicatePositionRepair: DuplicatePositionRepair,
-    @Provided private val legacyTransport: LegacySyncTransport,
+    @Provided private val libraryMutationTransport: LibraryMutationSyncTransport,
     @Provided private val progressTransport: ProgressSyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
-    @Provided private val legacySyncEngine: LegacySyncEngine,
+    @Provided private val libraryMutationSyncEngine: LibraryMutationSyncEngine,
     @Provided private val syncBoundedPass: SyncBoundedPass,
     @Provided private val syncPageAdapter: ParrotCloudSyncPageAdapter,
-    @Provided private val legacyMutationApplier: ParrotCloudLegacyMutationApplier,
+    @Provided private val libraryMutationApplier: ParrotCloudLibraryMutationApplier,
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
 ) : SyncPass {
     private val outboxCapability = SyncOutboxCapability(
@@ -75,14 +75,14 @@ class ParrotCloudSyncAdapter(
                 )
             },
             pushProgressEntries = ::pushProgressMutations,
-            pushLegacyEntries = { entries, cursor ->
-                pushLegacyMutations(entries, cursor ?: "0")
+            pushLibraryMutationEntries = { entries, cursor ->
+                pushLibraryMutations(entries, cursor ?: "0")
             },
             fetchAndApply = { cursor, limit ->
                 syncPageAdapter.fetchPage(
                     cursor = cursor ?: "0",
                     limit = limit,
-                    onLegacyChange = { change ->
+                    onLibraryMutationChange = { change ->
                         applyRemoteChange(
                             entityType = change.entityType,
                             payload = json.decodeFromString<JsonElement>(change.payload),
@@ -138,16 +138,16 @@ class ParrotCloudSyncAdapter(
         )
     }
 
-    private suspend fun pushLegacyMutations(
+    private suspend fun pushLibraryMutations(
         entries: List<SyncOutboxEntry>,
         cursor: String,
     ): Int {
         if (entries.isEmpty()) return 0
-        val summary = legacySyncEngine.push(
+        val summary = libraryMutationSyncEngine.push(
             entries = entries,
-            transport = legacyTransport,
+            transport = libraryMutationTransport,
             cursor = cursor,
-            applier = legacyMutationApplier,
+            applier = libraryMutationApplier,
         )
         return summary.acknowledgedCount + summary.conflictCount
     }

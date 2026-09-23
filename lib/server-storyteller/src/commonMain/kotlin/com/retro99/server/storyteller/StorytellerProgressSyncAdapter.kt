@@ -144,7 +144,7 @@ class StorytellerProgressSyncAdapter(
                 )
                 summary.acknowledgedCount + summary.conflictCount
             },
-            pushLegacyEntries = { _, _ -> 0 },
+            pushLibraryMutationEntries = { _, _ -> 0 },
             fetchAndApply = { cursor, _ ->
                 com.retro99.sync.data.SyncPullPage(
                     changeCount = 0,

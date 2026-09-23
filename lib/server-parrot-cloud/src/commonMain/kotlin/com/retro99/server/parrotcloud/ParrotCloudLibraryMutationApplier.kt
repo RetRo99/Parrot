@@ -1,7 +1,7 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.database.api.sync.SyncOutboxEntry
-import com.retro99.sync.data.LegacyMutationApplier
+import com.retro99.sync.data.LibraryMutationApplier
 import com.retro99.sync.data.LibraryBookSyncApplier
 import com.retro99.sync.data.SyncLibraryBookSnapshot
 import com.retro99.sync.domain.SyncMutationResponse
@@ -10,13 +10,13 @@ import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 /**
- * Applies Parrot's legacy library-mutation responses to shared local state.
- * The legacy engine still owns outbox state transitions and retry decisions.
+ * Applies Parrot library-mutation responses to shared local state.
+ * The shared library-mutation engine owns outbox state transitions and retry decisions.
  */
 @Single
-class ParrotCloudLegacyMutationApplier(
+class ParrotCloudLibraryMutationApplier(
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
-) : LegacyMutationApplier {
+) : LibraryMutationApplier {
     private val json = Json {
         encodeDefaults = true
         ignoreUnknownKeys = true

@@ -1,10 +1,9 @@
 package com.retro99.sync.domain
 
 /**
- * Backend-neutral contract for non-progress sync mutations that still use the
- * legacy library-registration path during the migration.
+ * Backend-neutral contract for non-progress library-mutation synchronization.
  */
-interface LegacySyncTransport {
+interface LibraryMutationSyncTransport {
     suspend fun push(
         mutations: List<SyncMutationRequest>,
         cursor: String?,

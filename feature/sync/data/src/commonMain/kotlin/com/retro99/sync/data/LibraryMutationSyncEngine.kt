@@ -2,7 +2,7 @@ package com.retro99.sync.data
 
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
-import com.retro99.sync.domain.LegacySyncTransport
+import com.retro99.sync.domain.LibraryMutationSyncTransport
 import com.retro99.sync.domain.SyncMutationRequest
 import com.retro99.sync.domain.SyncMutationResponse
 import kotlinx.coroutines.CancellationException
@@ -13,23 +13,23 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Shared state machine for legacy, non-progress outbox mutations.
+ * Shared state machine for non-progress library-mutation outbox entries.
  *
  * The transport only performs RPC mapping. Backend-specific metadata updates
- * are supplied through [LegacyMutationApplier], while dispatch state, retry
+ * are supplied through [LibraryMutationApplier], while dispatch state, retry
  * scheduling, and unresolved-result handling remain centralized here.
  */
 @Single
-class LegacySyncEngine(
+class LibraryMutationSyncEngine(
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
 ) {
     suspend fun push(
         entries: List<SyncOutboxEntry>,
-        transport: LegacySyncTransport,
-        applier: LegacyMutationApplier,
+        transport: LibraryMutationSyncTransport,
+        applier: LibraryMutationApplier,
         cursor: String?,
-    ): LegacyPushSummary {
-        if (entries.isEmpty()) return LegacyPushSummary()
+    ): LibraryMutationPushSummary {
+        if (entries.isEmpty()) return LibraryMutationPushSummary()
 
         entries.forEach { entry ->
             syncOutboxDatabase.markDispatched(entry.mutationId)
@@ -85,7 +85,7 @@ class LegacySyncEngine(
             }
         }
 
-        return LegacyPushSummary(
+        return LibraryMutationPushSummary(
             acknowledgedCount = acknowledgedCount,
             conflictCount = conflictCount,
             retryCount = retryCount,
@@ -115,7 +115,7 @@ class LegacySyncEngine(
     }
 }
 
-interface LegacyMutationApplier {
+interface LibraryMutationApplier {
     suspend fun onAccepted(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
@@ -127,7 +127,7 @@ interface LegacyMutationApplier {
     )
 }
 
-data class LegacyPushSummary(
+data class LibraryMutationPushSummary(
     val acknowledgedCount: Int = 0,
     val conflictCount: Int = 0,
     val retryCount: Int = 0,

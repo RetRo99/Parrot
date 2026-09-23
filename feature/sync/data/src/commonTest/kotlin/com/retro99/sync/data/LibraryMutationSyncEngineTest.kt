@@ -2,22 +2,22 @@ package com.retro99.sync.data
 
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
-import com.retro99.sync.domain.LegacySyncTransport
+import com.retro99.sync.domain.LibraryMutationSyncTransport
 import com.retro99.sync.domain.SyncChangePage
 import com.retro99.sync.domain.SyncMutationResponse
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class LegacySyncEngineTest {
+class LibraryMutationSyncEngineTest {
 
     @Test
     fun acceptedRejectedAndOmittedResultsKeepDistinctDurableStates() = runTest {
         val accepted = entry("accepted")
         val rejected = entry("rejected")
         val omitted = entry("omitted")
-        val outbox = RecordingLegacyOutbox()
-        val transport = RecordingLegacyTransport(
+        val outbox = RecordingLibraryMutationOutbox()
+        val transport = RecordingLibraryMutationTransport(
             responses = listOf(
                 SyncMutationResponse(
                     mutationId = accepted.mutationId,
@@ -38,8 +38,8 @@ class LegacySyncEngineTest {
                 ),
             ),
         )
-        val applier = RecordingLegacyApplier()
-        val engine = LegacySyncEngine(outbox)
+        val applier = RecordingLibraryMutationApplier()
+        val engine = LibraryMutationSyncEngine(outbox)
 
         val summary = engine.push(
             entries = listOf(accepted, rejected, omitted),
@@ -80,9 +80,9 @@ class LegacySyncEngineTest {
     )
 }
 
-private class RecordingLegacyTransport(
+private class RecordingLibraryMutationTransport(
     private val responses: List<SyncMutationResponse>,
-) : LegacySyncTransport {
+) : LibraryMutationSyncTransport {
     var receivedCursor: String? = null
     var receivedMutationIds: List<String> = emptyList()
 
@@ -100,7 +100,7 @@ private class RecordingLegacyTransport(
     }
 }
 
-private class RecordingLegacyApplier : LegacyMutationApplier {
+private class RecordingLibraryMutationApplier : LibraryMutationApplier {
     val acceptedIds = mutableListOf<String>()
 
     override suspend fun onAccepted(
@@ -116,7 +116,7 @@ private class RecordingLegacyApplier : LegacyMutationApplier {
     ) = Unit
 }
 
-private class RecordingLegacyOutbox : SyncOutboxDatabase {
+private class RecordingLibraryMutationOutbox : SyncOutboxDatabase {
     val dispatchedIds = mutableListOf<String>()
     val deletedIds = mutableListOf<String>()
     val failureIds = mutableListOf<String>()

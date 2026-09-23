@@ -21,7 +21,7 @@ class SyncBoundedPass(
         selectEntries: suspend () -> List<SyncOutboxEntry>,
         refreshProgressEntries: suspend (entries: List<SyncOutboxEntry>) -> Unit = {},
         pushProgressEntries: suspend (entries: List<SyncOutboxEntry>) -> Int,
-        pushLegacyEntries: suspend (
+        pushLibraryMutationEntries: suspend (
             entries: List<SyncOutboxEntry>,
             cursor: String?,
         ) -> Int,
@@ -53,7 +53,7 @@ class SyncBoundedPass(
             val progressEntries = entries.filter { entry ->
                 entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
             }
-            val legacyEntries = entries.filter { entry ->
+            val libraryMutationEntries = entries.filter { entry ->
                 entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
             }
             val progressCount = if (progressEntries.isEmpty()) {
@@ -61,12 +61,12 @@ class SyncBoundedPass(
             } else {
                 pushProgressEntries(progressEntries)
             }
-            val legacyCount = if (legacyEntries.isEmpty()) {
+            val libraryMutationCount = if (libraryMutationEntries.isEmpty()) {
                 0
             } else {
-                pushLegacyEntries(legacyEntries, initialPull.cursor)
+                pushLibraryMutationEntries(libraryMutationEntries, initialPull.cursor)
             }
-            progressCount + legacyCount
+            progressCount + libraryMutationCount
         }
         val afterPushPull = if (entries.isNotEmpty() && pullEnabled) {
             syncPullEngine.pullUntilCaughtUp(

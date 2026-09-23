@@ -6,7 +6,7 @@ import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 /**
- * Repairs legacy duplicate position rows before a sync pass reads or writes
+ * Repairs duplicate position rows before a sync pass reads or writes
  * progress. The newest remote revision and then updated timestamp wins.
  */
 @Single

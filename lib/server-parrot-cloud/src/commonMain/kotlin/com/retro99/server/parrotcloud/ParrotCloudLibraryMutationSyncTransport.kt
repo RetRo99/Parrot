@@ -1,7 +1,7 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.cloud.implementation.SupabaseClientProvider
-import com.retro99.sync.domain.LegacySyncTransport
+import com.retro99.sync.domain.LibraryMutationSyncTransport
 import com.retro99.sync.domain.SyncChange
 import com.retro99.sync.domain.SyncChangePage
 import com.retro99.sync.domain.SyncMutationRequest
@@ -19,15 +19,15 @@ import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 /**
- * Supabase RPC mapping for legacy library mutations.
+ * Supabase RPC mapping for Parrot library mutations.
  *
  * This adapter performs no outbox or local-database work. It only translates
  * the shared request/page models to and from the RPC wire format.
  */
-@Single(binds = [LegacySyncTransport::class])
-class ParrotCloudLegacySyncTransport(
+@Single(binds = [LibraryMutationSyncTransport::class])
+class ParrotCloudLibraryMutationSyncTransport(
     @Provided private val clientProvider: SupabaseClientProvider,
-) : LegacySyncTransport {
+) : LibraryMutationSyncTransport {
     private val json = Json {
         encodeDefaults = true
         ignoreUnknownKeys = true
@@ -51,7 +51,7 @@ class ParrotCloudLegacySyncTransport(
                     put("client_cursor", cursor?.toLongOrNull() ?: 0L)
                 },
             )
-            .decodeAs<List<ParrotCloudLegacyMutationResponse>>()
+            .decodeAs<List<ParrotCloudLibraryMutationResponse>>()
 
         return response.map { result ->
             SyncMutationResponse(
@@ -78,7 +78,7 @@ class ParrotCloudLegacySyncTransport(
                     put("limit", limit.coerceIn(1, MAX_BATCH_SIZE))
                 },
             )
-            .decodeAs<ParrotCloudLegacyPullResponse>()
+            .decodeAs<ParrotCloudLibraryMutationPullResponse>()
 
         return SyncChangePage(
             changes = response.changes.map { change ->
@@ -93,7 +93,7 @@ class ParrotCloudLegacySyncTransport(
         )
     }
 
-    private fun SyncMutationRequest.toRpcRequest() = ParrotCloudLegacyMutationRequest(
+    private fun SyncMutationRequest.toRpcRequest() = ParrotCloudLibraryMutationRequest(
         mutationId = mutationId,
         entityType = entityType,
         entityId = entityId,
@@ -109,7 +109,7 @@ class ParrotCloudLegacySyncTransport(
 }
 
 @Serializable
-private data class ParrotCloudLegacyMutationRequest(
+private data class ParrotCloudLibraryMutationRequest(
     @SerialName("mutation_id")
     val mutationId: String,
     @SerialName("entity_type")
@@ -125,7 +125,7 @@ private data class ParrotCloudLegacyMutationRequest(
 )
 
 @Serializable
-private data class ParrotCloudLegacyMutationResponse(
+private data class ParrotCloudLibraryMutationResponse(
     @SerialName("mutation_id")
     val mutationId: String,
     val status: String,
@@ -139,8 +139,8 @@ private data class ParrotCloudLegacyMutationResponse(
 )
 
 @Serializable
-private data class ParrotCloudLegacyPullResponse(
-    val changes: List<ParrotCloudLegacyRemoteChange>,
+private data class ParrotCloudLibraryMutationPullResponse(
+    val changes: List<ParrotCloudLibraryMutationRemoteChange>,
     @SerialName("next_cursor")
     val nextCursor: Long,
     @SerialName("has_more")
@@ -148,7 +148,7 @@ private data class ParrotCloudLegacyPullResponse(
 )
 
 @Serializable
-private data class ParrotCloudLegacyRemoteChange(
+private data class ParrotCloudLibraryMutationRemoteChange(
     @SerialName("entity_type")
     val entityType: String,
     val payload: JsonElement,

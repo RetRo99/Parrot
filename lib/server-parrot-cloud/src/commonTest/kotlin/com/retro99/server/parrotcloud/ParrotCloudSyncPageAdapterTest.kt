@@ -1,6 +1,6 @@
 package com.retro99.server.parrotcloud
 
-import com.retro99.sync.domain.LegacySyncTransport
+import com.retro99.sync.domain.LibraryMutationSyncTransport
 import com.retro99.sync.domain.ProgressChangePage
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
@@ -19,9 +19,9 @@ import kotlin.test.assertEquals
 
 class ParrotCloudSyncPageAdapterTest {
     @Test
-    fun combinesFeedsFiltersProgressFromLegacyAndMergesCursor() = runTest {
+    fun combinesFeedsFiltersProgressFromLibraryMutationsAndMergesCursor() = runTest {
         val events = mutableListOf<String>()
-        val legacyTransport = RecordingLegacyTransport(events).apply {
+        val libraryMutationTransport = RecordingLibraryMutationTransport(events).apply {
             response = SyncChangePage(
                 changes = listOf(
                     SyncChange(
@@ -31,7 +31,7 @@ class ParrotCloudSyncPageAdapterTest {
                     ),
                     SyncChange(
                         entityType = "reading_position",
-                        payload = "legacy-progress",
+                        payload = "library-progress",
                         revision = 2L,
                     ),
                 ),
@@ -46,16 +46,16 @@ class ParrotCloudSyncPageAdapterTest {
                 hasMore = false,
             )
         }
-        val adapter = ParrotCloudSyncPageAdapter(legacyTransport, progressTransport)
-        val legacyChanges = mutableListOf<String>()
+        val adapter = ParrotCloudSyncPageAdapter(libraryMutationTransport, progressTransport)
+        val libraryMutationChanges = mutableListOf<String>()
         val progressChanges = mutableListOf<String>()
 
         val page = adapter.fetchPage(
             cursor = "7",
             limit = 50,
-            onLegacyChange = { change ->
-                events += "legacy-change"
-                legacyChanges += change.payload
+                onLibraryMutationChange = { change ->
+                    events += "library-change"
+                libraryMutationChanges += change.payload
             },
             onProgressChange = { remote ->
                 events += "progress-change"
@@ -64,22 +64,22 @@ class ParrotCloudSyncPageAdapterTest {
         )
 
         assertEquals(
-            listOf("legacy-pull", "legacy-change", "progress-pull", "progress-change"),
+            listOf("library-pull", "library-change", "progress-pull", "progress-change"),
             events,
         )
-        assertEquals(listOf("book"), legacyChanges)
+        assertEquals(listOf("book"), libraryMutationChanges)
         assertEquals(listOf("remote-book"), progressChanges)
         assertEquals(2, page.changeCount)
         assertEquals("10", page.nextCursor)
         assertEquals(true, page.hasMore)
-        assertEquals("7", legacyTransport.requestedCursor)
+        assertEquals("7", libraryMutationTransport.requestedCursor)
         assertEquals("7", progressTransport.requestedCursor)
     }
 
     @Test
     fun missingFeedCursorKeepsCurrentCursor() = runTest {
         val adapter = ParrotCloudSyncPageAdapter(
-            RecordingLegacyTransport(mutableListOf()).apply {
+            RecordingLibraryMutationTransport(mutableListOf()).apply {
                 response = SyncChangePage(emptyList(), nextCursor = null, hasMore = false)
             },
             RecordingProgressTransport(mutableListOf()).apply {
@@ -90,7 +90,7 @@ class ParrotCloudSyncPageAdapterTest {
         val page = adapter.fetchPage(
             cursor = "7",
             limit = 50,
-            onLegacyChange = {},
+            onLibraryMutationChange = {},
             onProgressChange = {},
         )
 
@@ -98,9 +98,9 @@ class ParrotCloudSyncPageAdapterTest {
     }
 }
 
-private class RecordingLegacyTransport(
+private class RecordingLibraryMutationTransport(
     private val events: MutableList<String>,
-) : LegacySyncTransport {
+) : LibraryMutationSyncTransport {
     var requestedCursor: String? = null
     var response = SyncChangePage(emptyList(), nextCursor = null, hasMore = false)
 
@@ -111,7 +111,7 @@ private class RecordingLegacyTransport(
 
     override suspend fun pull(cursor: String?, limit: Int): SyncChangePage {
         requestedCursor = cursor
-        events += "legacy-pull"
+        events += "library-pull"
         return response
     }
 }
