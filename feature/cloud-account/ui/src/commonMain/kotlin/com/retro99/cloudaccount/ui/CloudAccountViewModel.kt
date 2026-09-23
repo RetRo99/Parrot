@@ -383,6 +383,9 @@ class CloudAccountViewModel(
                             )
                         }
                     }
+                    is SyncResult.Offline -> updateState {
+                        it.copy(isLoading = false, error = null)
+                    }
                     SyncResult.NotConfigured -> showError(CloudAccountError.NotConfigured)
                     else -> showError(CloudAccountError.Generic)
                 }

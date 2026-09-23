@@ -25,7 +25,7 @@ class SyncPullEngineTest {
             destinationId = "parrot-cloud",
             remoteAccountId = "account",
             limit = 50,
-        ) { cursor, _ ->
+        ) { cursor, _, _ ->
             requestedCursors += cursor
             when (cursor) {
                 "7" -> SyncPullPage(changeCount = 2, nextCursor = "8", hasMore = true)

@@ -30,6 +30,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedSecureTextField
@@ -55,6 +56,7 @@ import com.retro99.base.ui.IntentDispatcher
 import com.retro99.cloudaccount.domain.model.CloudAccount
 import com.retro99.cloudaccount.domain.model.CloudAuthState
 import com.retro99.cloudaccount.domain.model.CloudProfileLink
+import com.retro99.sync.domain.SyncPhase
 import com.retro99.sync.domain.SyncStatus
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.StringResource
@@ -86,12 +88,23 @@ import resources.translations.cloud_account_switch_to_sign_in
 import resources.translations.cloud_account_sync_enabled
 import resources.translations.cloud_account_sync_not_enabled
 import resources.translations.cloud_account_sync_now
-import resources.translations.cloud_account_sync_status_action_required
+import resources.translations.cloud_account_sync_status_applying
+import resources.translations.cloud_account_sync_status_bytes_progress
+import resources.translations.cloud_account_sync_status_can_retry
+import resources.translations.cloud_account_sync_status_cannot_retry
+import resources.translations.cloud_account_sync_status_completed
+import resources.translations.cloud_account_sync_status_disabled
 import resources.translations.cloud_account_sync_status_failed
-import resources.translations.cloud_account_sync_status_pending
-import resources.translations.cloud_account_sync_status_synchronizing
-import resources.translations.cloud_account_sync_status_up_to_date
+import resources.translations.cloud_account_sync_status_downloading_files
+import resources.translations.cloud_account_sync_status_finalizing
+import resources.translations.cloud_account_sync_status_idle
+import resources.translations.cloud_account_sync_status_items_progress
 import resources.translations.cloud_account_sync_status_last_successful
+import resources.translations.cloud_account_sync_status_offline
+import resources.translations.cloud_account_sync_status_pulling
+import resources.translations.cloud_account_sync_status_preparing
+import resources.translations.cloud_account_sync_status_uploading_changes
+import resources.translations.cloud_account_sync_status_uploading_files
 import resources.translations.cloud_account_title
 import resources.translations.cloud_account_verification_message
 import resources.translations.general_back
@@ -492,32 +505,101 @@ private fun SyncStatusMessage(
     status: SyncStatus,
     modifier: Modifier = Modifier,
 ) {
-    val baseMessage = when (status) {
-        SyncStatus.Idle -> return
-        is SyncStatus.Synchronizing -> stringResource(
-            StringRes.cloud_account_sync_status_synchronizing,
+    val message = when (status) {
+        SyncStatus.Disabled -> stringResource(StringRes.cloud_account_sync_status_disabled)
+        is SyncStatus.Idle -> {
+            val ready = stringResource(StringRes.cloud_account_sync_status_idle)
+            status.lastSuccessfulAt?.let { lastSuccessfulAt ->
+                "$ready\n${stringResource(StringRes.cloud_account_sync_status_last_successful, lastSuccessfulAt)}"
+            } ?: ready
+        }
+        is SyncStatus.Running -> stringResource(
+            when (status.phase) {
+                SyncPhase.PREPARING -> StringRes.cloud_account_sync_status_preparing
+                SyncPhase.PULLING -> StringRes.cloud_account_sync_status_pulling
+                SyncPhase.APPLYING -> StringRes.cloud_account_sync_status_applying
+                SyncPhase.UPLOADING_CHANGES -> StringRes.cloud_account_sync_status_uploading_changes
+                SyncPhase.UPLOADING_FILES -> StringRes.cloud_account_sync_status_uploading_files
+                SyncPhase.DOWNLOADING_FILES -> StringRes.cloud_account_sync_status_downloading_files
+                SyncPhase.FINALIZING -> StringRes.cloud_account_sync_status_finalizing
+            },
         )
-        is SyncStatus.UpToDate -> stringResource(StringRes.cloud_account_sync_status_up_to_date)
-        is SyncStatus.Pending -> stringResource(StringRes.cloud_account_sync_status_pending)
-        is SyncStatus.ActionRequired -> stringResource(
-            StringRes.cloud_account_sync_status_action_required,
+        is SyncStatus.Offline -> stringResource(
+            StringRes.cloud_account_sync_status_offline,
+            status.pendingCount,
         )
-        is SyncStatus.Failed -> stringResource(StringRes.cloud_account_sync_status_failed)
+        is SyncStatus.Failed -> {
+            val failure = stringResource(
+                StringRes.cloud_account_sync_status_failed,
+                status.error,
+                status.pendingCount,
+            )
+            val retryMessage = stringResource(
+                if (status.canRetry) {
+                    StringRes.cloud_account_sync_status_can_retry
+                } else {
+                    StringRes.cloud_account_sync_status_cannot_retry
+                },
+            )
+            "$failure\n$retryMessage"
+        }
+        is SyncStatus.Completed -> {
+            val completed = stringResource(
+                StringRes.cloud_account_sync_status_completed,
+                status.pushedCount,
+                status.pulledCount,
+                status.pendingCount,
+            )
+            "$completed\n${stringResource(StringRes.cloud_account_sync_status_last_successful, status.completedAt)}"
+        }
     }
-    val lastSuccessfulAt = when (status) {
-        is SyncStatus.Synchronizing -> status.lastSuccessfulAt
-        is SyncStatus.UpToDate -> status.lastSuccessfulAt
-        is SyncStatus.Pending -> status.lastSuccessfulAt
-        is SyncStatus.ActionRequired -> status.lastSuccessfulAt
-        is SyncStatus.Failed -> status.lastSuccessfulAt
-        SyncStatus.Idle -> null
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        StatusMessage(message = message)
+        if (status is SyncStatus.Running) {
+            val totalItems = status.totalItems
+            val totalBytes = status.totalBytes
+            val itemFraction = totalItems?.takeIf { total -> total > 0 }?.let { total ->
+                (status.completedItems.toFloat() / total).coerceIn(0f, 1f)
+            }
+            val byteFraction = totalBytes?.takeIf { total -> total > 0L }?.let { total ->
+                (status.bytesTransferred.toFloat() / total).coerceIn(0f, 1f)
+            }
+            if (totalItems != null) {
+                Text(
+                    text = stringResource(
+                        StringRes.cloud_account_sync_status_items_progress,
+                        status.completedItems,
+                        totalItems,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            if (totalBytes != null) {
+                Text(
+                    text = stringResource(
+                        StringRes.cloud_account_sync_status_bytes_progress,
+                        status.bytesTransferred,
+                        totalBytes,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            when {
+                byteFraction != null -> LinearProgressIndicator(
+                    progress = { byteFraction },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                itemFraction != null -> LinearProgressIndicator(
+                    progress = { itemFraction },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                else -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+        }
     }
-    val message = if (lastSuccessfulAt == null) {
-        baseMessage
-    } else {
-        "$baseMessage\n${stringResource(StringRes.cloud_account_sync_status_last_successful, lastSuccessfulAt)}"
-    }
-    StatusMessage(message = message, modifier = modifier)
 }
 
 @Composable

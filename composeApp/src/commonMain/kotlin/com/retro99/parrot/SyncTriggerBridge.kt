@@ -46,12 +46,13 @@ object SyncTriggerBridge {
         recoveryJob?.cancel()
         recoveryJob = scope.launch {
             val succeeded = try {
-                useCase(
+                val result = useCase(
                     SyncRequest(
                         reason = SyncTriggerReason.RECOVERY,
                         urgency = SyncUrgency.ROUTINE,
                     ),
-                ) !is SyncResult.Failed
+                )
+                result !is SyncResult.Failed && result !is SyncResult.Offline
             } catch (_: Exception) {
                 false
             }

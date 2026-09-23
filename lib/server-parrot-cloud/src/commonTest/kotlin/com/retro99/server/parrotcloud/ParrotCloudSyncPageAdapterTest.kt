@@ -53,8 +53,9 @@ class ParrotCloudSyncPageAdapterTest {
         val page = adapter.fetchPage(
             cursor = "7",
             limit = 50,
-                onLibraryMutationChange = { change ->
-                    events += "library-change"
+            reportApplying = { events += "apply" },
+            onLibraryMutationChange = { change ->
+                events += "library-change"
                 libraryMutationChanges += change.payload
             },
             onProgressChange = { remote ->
@@ -64,7 +65,9 @@ class ParrotCloudSyncPageAdapterTest {
         )
 
         assertEquals(
-            listOf("library-pull", "library-change", "progress-pull", "progress-change"),
+            listOf(
+                "library-pull", "apply", "library-change", "progress-pull", "apply", "progress-change",
+            ),
             events,
         )
         assertEquals(listOf("book"), libraryMutationChanges)
@@ -90,6 +93,7 @@ class ParrotCloudSyncPageAdapterTest {
         val page = adapter.fetchPage(
             cursor = "7",
             limit = 50,
+            reportApplying = {},
             onLibraryMutationChange = {},
             onProgressChange = {},
         )

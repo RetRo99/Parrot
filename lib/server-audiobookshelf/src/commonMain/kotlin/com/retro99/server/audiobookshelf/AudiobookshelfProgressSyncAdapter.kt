@@ -14,6 +14,8 @@ import com.retro99.sync.data.SyncOutboxCapability
 import com.retro99.sync.data.SyncOutboxPreflight
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
+import com.retro99.sync.domain.SyncPhase
+import com.retro99.sync.domain.SyncPhaseReporter
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncScope
@@ -41,7 +43,12 @@ class AudiobookshelfProgressSyncAdapter(
         coerceInputValues = true
     }
 
-    override suspend fun execute(request: SyncRequest): SyncResult? {
+    suspend fun execute(request: SyncRequest): SyncResult? = execute(request) { _, _, _ -> }
+
+    override suspend fun execute(
+        request: SyncRequest,
+        reportPhase: SyncPhaseReporter,
+    ): SyncResult? {
         val profileId = userRegistry.getActiveProfileIdOrDefault()
         return profileDatabaseSession.withProfile(profileId) {
             val servers = serverRegistry.getAuthenticatedServers()
@@ -51,7 +58,7 @@ class AudiobookshelfProgressSyncAdapter(
             } else {
                 servers.map { server ->
                     try {
-                        execute(request, networkClientProvider.create(server))
+                        execute(request, networkClientProvider.create(server), reportPhase)
                     } catch (exception: CancellationException) {
                         throw exception
                     } catch (exception: Exception) {
@@ -68,6 +75,7 @@ class AudiobookshelfProgressSyncAdapter(
     suspend fun execute(
         request: SyncRequest,
         networkClient: com.retro99.server.api.ServerNetworkClient,
+        reportPhase: SyncPhaseReporter = { _, _, _ -> },
     ): SyncResult.Completed {
         val transport = AudiobookshelfProgressTransport(networkClient)
         val capability = SyncOutboxCapability(
@@ -93,6 +101,7 @@ class AudiobookshelfProgressSyncAdapter(
         }
 
         if (request.reason == SyncTriggerReason.BOOK_OPEN) {
+            reportPhase(SyncPhase.PULLING, 0, null)
             val bookIds = (request.scope as? SyncScope.Books)?.bookIds.orEmpty()
             progressSyncEngine.refreshRemoteBookIds(
                 remoteBookIds = bookIds,
@@ -132,7 +141,7 @@ class AudiobookshelfProgressSyncAdapter(
                 summary.acknowledgedCount + summary.conflictCount
             },
             pushLibraryMutationEntries = { _, _ -> 0 },
-            fetchAndApply = { cursor, _ ->
+            fetchAndApply = { cursor, _, _ ->
                 com.retro99.sync.data.SyncPullPage(
                     changeCount = 0,
                     nextCursor = cursor,
@@ -146,6 +155,7 @@ class AudiobookshelfProgressSyncAdapter(
                 )
             },
             pullEnabled = false,
+            reportPhase = reportPhase,
         )
     }
 
@@ -155,6 +165,17 @@ class AudiobookshelfProgressSyncAdapter(
         fun combineResults(first: SyncResult, second: SyncResult): SyncResult {
             if (first is SyncResult.Failed) return first
             if (second is SyncResult.Failed) return second
+            if (first is SyncResult.Offline || second is SyncResult.Offline) {
+                val pendingCount = listOf(first, second)
+                    .sumOf { result ->
+                        when (result) {
+                            is SyncResult.Offline -> result.pendingMutationCount
+                            is SyncResult.Completed -> result.pendingMutationCount
+                            else -> 0
+                        }
+                    }
+                return SyncResult.Offline(pendingCount)
+            }
             if (first is SyncResult.Completed && second is SyncResult.Completed) {
                 return SyncResult.Completed(
                     pushedMutationCount = first.pushedMutationCount + second.pushedMutationCount,

@@ -13,7 +13,7 @@ data class CloudAccountViewState(
     val showVerificationMessage: Boolean = false,
     val showLinkConfirmation: Boolean = false,
     val error: CloudAccountError? = null,
-    val syncStatus: SyncStatus = SyncStatus.Idle,
+    val syncStatus: SyncStatus = SyncStatus.Idle(),
 )
 
 enum class CloudAccountMode {

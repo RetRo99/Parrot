@@ -10,13 +10,19 @@ import com.retro99.analytics.api.SyncAnalyticsEvent
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncScope
-import com.retro99.sync.domain.SyncActionRequired
 import com.retro99.sync.domain.SyncStatus
+import com.retro99.sync.domain.SyncPhase
+import com.retro99.sync.domain.FileTransferStatus
+import com.retro99.sync.domain.FileTransferStatusSource
 import com.retro99.sync.domain.SyncTriggerReason
 import com.retro99.sync.domain.SyncUrgency
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -45,7 +51,7 @@ class SyncDataRepositoryTest {
             )
         }
         pass.firstStarted.await()
-        assertTrue(repository.observeStatus().value is SyncStatus.Synchronizing)
+        assertTrue(repository.observeStatus().value is SyncStatus.Running)
 
         val secondReady = CompletableDeferred<Unit>()
         val second = async(start = CoroutineStart.UNDISPATCHED) {
@@ -133,7 +139,7 @@ class SyncDataRepositoryTest {
         assertEquals(SyncResult.NotAuthenticated, repository.sync())
         assertTrue(pass.requests.isEmpty())
         assertEquals(
-            SyncStatus.ActionRequired(SyncActionRequired.NOT_AUTHENTICATED),
+            SyncStatus.Disabled,
             repository.observeStatus().value,
         )
     }
@@ -163,15 +169,20 @@ class SyncDataRepositoryTest {
         pass.firstStarted.await()
 
         assertEquals(
-            SyncStatus.Synchronizing(
-                request = request,
-                lastSuccessfulAt = "2026-09-22T11:59:00Z",
+            SyncStatus.Running(
+                phase = SyncPhase.PULLING,
+                completedItems = 1,
+                totalItems = 2,
             ),
             repository.observeStatus().value,
         )
 
         pass.releaseFirst.complete(Unit)
         assertEquals(SyncResult.Completed(0, 0, 0), run.await())
+        val completed = repository.observeStatus().value as SyncStatus.Completed
+        assertEquals(0, completed.pushedCount)
+        assertEquals(0, completed.pulledCount)
+        assertEquals(0, completed.pendingCount)
         assertEquals("up_to_date", checkpointDatabase.checkpoint?.status)
         assertTrue(checkpointDatabase.checkpoint?.lastSuccessfulAt != null)
     }
@@ -209,7 +220,7 @@ class SyncDataRepositoryTest {
         )
         assertEquals(listOf(request), destination.requests)
         val status = repository.observeStatus().value
-        assertTrue(status is SyncStatus.Pending && status.pendingMutationCount == 10)
+        assertTrue(status is SyncStatus.Completed && status.pendingCount == 10)
     }
 
     @Test
@@ -277,9 +288,103 @@ class SyncDataRepositoryTest {
             repository.sync(),
         )
         assertEquals(
-            SyncStatus.Failed("Storyteller unavailable"),
+            SyncStatus.Failed(
+                error = "Storyteller unavailable",
+                pendingCount = 0,
+                canRetry = true,
+            ),
             repository.observeStatus().value,
         )
+    }
+
+    @Test
+    fun mergesActiveFileTransfersOverIdleSyncAndAggregatesProgress() = runTest {
+        val upload = RecordingFileTransferStatusSource(
+            FileTransferStatus(
+                phase = SyncPhase.UPLOADING_FILES,
+                activeItems = 1,
+                totalItems = 3,
+                bytesTransferred = 80,
+                totalBytes = 200,
+            ),
+        )
+        val download = RecordingFileTransferStatusSource(
+            FileTransferStatus(
+                phase = SyncPhase.DOWNLOADING_FILES,
+                activeItems = 1,
+                totalItems = 2,
+                bytesTransferred = 50,
+                totalBytes = 100,
+            ),
+        )
+        val repository = SyncDataRepository(
+            syncPass = ImmediateSyncPass(),
+            executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            fileTransferStatusSources = listOf(upload, download),
+        )
+
+        upload.awaitFirstEmission()
+        download.awaitFirstEmission()
+
+        assertEquals(
+            SyncStatus.Running(
+                phase = SyncPhase.UPLOADING_FILES,
+                completedItems = 3,
+                totalItems = 5,
+                bytesTransferred = 130,
+                totalBytes = 300,
+            ),
+            repository.observeStatus().value,
+        )
+    }
+
+    @Test
+    fun failedFileTransferPublishesRetryability() = runTest {
+        val source = RecordingFileTransferStatusSource(
+            FileTransferStatus(
+                phase = SyncPhase.UPLOADING_FILES,
+                activeItems = 2,
+                totalItems = 2,
+                bytesTransferred = 10,
+                totalBytes = 100,
+                error = "Transfer interrupted",
+                canRetry = false,
+            ),
+        )
+        val repository = SyncDataRepository(
+            syncPass = ImmediateSyncPass(),
+            executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            fileTransferStatusSources = listOf(source),
+        )
+
+        source.awaitFirstEmission()
+
+        assertEquals(
+            SyncStatus.Failed(
+                error = "Transfer interrupted",
+                pendingCount = 2,
+                canRetry = false,
+            ),
+            repository.observeStatus().value,
+        )
+    }
+
+    @Test
+    fun offlineResultRetainsQueuedCountInObservableStatusAndCheckpoint() = runTest {
+        val checkpointDatabase = StatusRecordingCheckpointDatabase()
+        val repository = SyncDataRepository(
+            syncPass = ImmediateSyncPass(SyncResult.Offline(pendingMutationCount = 4)),
+            executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            syncCheckpointDatabase = checkpointDatabase,
+        )
+
+        assertEquals(SyncResult.Offline(4), repository.sync())
+        assertEquals(SyncStatus.Offline(pendingCount = 4), repository.observeStatus().value)
+        assertEquals("offline", checkpointDatabase.checkpoint?.status)
+        assertEquals(4, checkpointDatabase.checkpoint?.pendingMutationCount)
     }
 
     @Test
@@ -422,9 +527,11 @@ private class RecordingSyncPass : SyncPass {
     override suspend fun execute(
         request: SyncRequest,
         context: SyncExecutionContext,
+        reportPhase: com.retro99.sync.domain.SyncPhaseReporter,
     ): SyncResult {
         requests += request
         contexts += context
+        reportPhase(SyncPhase.PULLING, 1, 2)
         if (requests.size == 1) {
             firstStarted.complete(Unit)
             releaseFirst.await()
@@ -445,6 +552,7 @@ private class ImmediateSyncPass(
     override suspend fun execute(
         request: SyncRequest,
         context: SyncExecutionContext,
+        reportPhase: com.retro99.sync.domain.SyncPhaseReporter,
     ): SyncResult {
         requests += request
         return result
@@ -456,9 +564,29 @@ private class RecordingDestination(
 ) : SyncDestination {
     val requests = mutableListOf<SyncRequest>()
 
-    override suspend fun execute(request: SyncRequest): SyncResult? {
+    override suspend fun execute(
+        request: SyncRequest,
+        reportPhase: com.retro99.sync.domain.SyncPhaseReporter,
+    ): SyncResult? {
         requests += request
         return result
+    }
+}
+
+private class RecordingFileTransferStatusSource(
+    initialStatus: FileTransferStatus?,
+) : FileTransferStatusSource {
+    private val status = MutableStateFlow(initialStatus)
+    private val firstEmission = CompletableDeferred<Unit>()
+
+    override fun observe(): Flow<FileTransferStatus?> = flow {
+        emit(status.value)
+        firstEmission.complete(Unit)
+        emitAll(status)
+    }
+
+    suspend fun awaitFirstEmission() {
+        firstEmission.await()
     }
 }
 

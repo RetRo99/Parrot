@@ -37,7 +37,7 @@ class SyncRecoveryWorker(
                     ),
                 )
             ) {
-                is SyncResult.Failed -> Result.retry()
+                is SyncResult.Failed, is SyncResult.Offline -> Result.retry()
                 else -> Result.success()
             }
         } catch (exception: CancellationException) {

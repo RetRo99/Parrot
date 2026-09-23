@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.flowOf
 interface SyncRepository {
     suspend fun sync(): SyncResult
 
-    fun observeStatus(): Flow<SyncStatus> = flowOf(SyncStatus.Idle)
+    fun observeStatus(): Flow<SyncStatus> = flowOf(SyncStatus.Idle())
 
     /**
      * Requests work through the shared synchronization boundary.

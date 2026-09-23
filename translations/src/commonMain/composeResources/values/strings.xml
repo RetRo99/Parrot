@@ -484,11 +484,22 @@
     <string name="cloud_account_link_profile" tools:ignore="MissingTranslation">Connect profile</string>
     <string name="cloud_account_enable_sync" tools:ignore="MissingTranslation">Enable sync</string>
     <string name="cloud_account_sync_now" tools:ignore="MissingTranslation">Sync now</string>
-    <string name="cloud_account_sync_status_synchronizing" tools:ignore="MissingTranslation">Synchronizing…</string>
-    <string name="cloud_account_sync_status_up_to_date" tools:ignore="MissingTranslation">Sync is up to date.</string>
-    <string name="cloud_account_sync_status_pending" tools:ignore="MissingTranslation">Changes are saved and waiting for delivery.</string>
-    <string name="cloud_account_sync_status_action_required" tools:ignore="MissingTranslation">Sync requires attention.</string>
-    <string name="cloud_account_sync_status_failed" tools:ignore="MissingTranslation">The last sync attempt failed. It will retry.</string>
+    <string name="cloud_account_sync_status_disabled" tools:ignore="MissingTranslation">Sync is disabled or needs setup.</string>
+    <string name="cloud_account_sync_status_idle" tools:ignore="MissingTranslation">Ready to sync.</string>
+    <string name="cloud_account_sync_status_preparing" tools:ignore="MissingTranslation">Preparing sync…</string>
+    <string name="cloud_account_sync_status_pulling" tools:ignore="MissingTranslation">Checking for changes…</string>
+    <string name="cloud_account_sync_status_applying" tools:ignore="MissingTranslation">Applying changes…</string>
+    <string name="cloud_account_sync_status_uploading_changes" tools:ignore="MissingTranslation">Sending changes…</string>
+    <string name="cloud_account_sync_status_uploading_files" tools:ignore="MissingTranslation">Backing up files…</string>
+    <string name="cloud_account_sync_status_downloading_files" tools:ignore="MissingTranslation">Restoring files…</string>
+    <string name="cloud_account_sync_status_finalizing" tools:ignore="MissingTranslation">Finishing sync…</string>
+    <string name="cloud_account_sync_status_offline" tools:ignore="MissingTranslation">Offline. %1$d changes are waiting to sync.</string>
+    <string name="cloud_account_sync_status_failed" tools:ignore="MissingTranslation">Sync failed: %1$s (%2$d pending).</string>
+    <string name="cloud_account_sync_status_can_retry" tools:ignore="MissingTranslation">You can retry now.</string>
+    <string name="cloud_account_sync_status_cannot_retry" tools:ignore="MissingTranslation">This issue needs attention before retrying.</string>
+    <string name="cloud_account_sync_status_completed" tools:ignore="MissingTranslation">Sync complete: %1$d sent, %2$d received, %3$d pending.</string>
+    <string name="cloud_account_sync_status_items_progress" tools:ignore="MissingTranslation">Completed %1$d of %2$d items.</string>
+    <string name="cloud_account_sync_status_bytes_progress" tools:ignore="MissingTranslation">Transferred %1$d of %2$d bytes.</string>
     <string name="cloud_account_sync_status_last_successful" tools:ignore="MissingTranslation">Last successful delivery: %s</string>
     <string name="cloud_account_sign_in_with_google" tools:ignore="MissingTranslation">Continue with Google</string>
 </resources>

@@ -15,5 +15,7 @@ sealed interface SyncResult {
 
     data object SyncDisabled : SyncResult
 
+    data class Offline(val pendingMutationCount: Int) : SyncResult
+
     data class Failed(val message: String) : SyncResult
 }

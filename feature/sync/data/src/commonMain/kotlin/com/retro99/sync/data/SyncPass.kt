@@ -2,6 +2,7 @@ package com.retro99.sync.data
 
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.SyncPhaseReporter
 
 /**
  * Backend-specific bounded synchronization pass.
@@ -14,5 +15,6 @@ interface SyncPass {
     suspend fun execute(
         request: SyncRequest,
         context: SyncExecutionContext,
+        reportPhase: SyncPhaseReporter,
     ): SyncResult
 }

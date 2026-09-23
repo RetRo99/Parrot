@@ -4,6 +4,7 @@ import com.retro99.database.api.sync.SyncCheckpoint
 import com.retro99.database.api.sync.SyncCheckpointDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.SyncPhase
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -15,6 +16,7 @@ class SyncBoundedPassTest {
         val events = mutableListOf<String>()
         val progressEntityTypes = mutableListOf<String>()
         val libraryMutationEntityTypes = mutableListOf<String>()
+        val phases = mutableListOf<SyncPhase>()
         var fetchCount = 0
         val coordinator = SyncBoundedPass(SyncPullEngine(checkpoints))
 
@@ -48,8 +50,9 @@ class SyncBoundedPassTest {
                 events += "library-mutation:${entries.size}:$cursor"
                 2
             },
-            fetchAndApply = { cursor, _ ->
+            fetchAndApply = { cursor, _, reportApplying ->
                 events += "pull:$cursor"
+                reportApplying()
                 fetchCount++
                 if (fetchCount == 1) {
                     SyncPullPage(changeCount = 2, nextCursor = "1", hasMore = false)
@@ -61,6 +64,7 @@ class SyncBoundedPassTest {
                 events += "pending"
                 4
             },
+            reportPhase = { phase, _, _ -> phases += phase },
         )
         assertEquals(
             listOf(SyncOutboxEntry.ENTITY_TYPE_READING_POSITION),
@@ -74,6 +78,22 @@ class SyncBoundedPassTest {
         assertEquals(
             listOf("pull:null", "select", "refresh:2", "progress:1", "library-mutation:1:1", "pull:1", "pending"),
             events,
+        )
+        assertEquals(
+            listOf(
+                SyncPhase.PULLING,
+                SyncPhase.APPLYING,
+                SyncPhase.APPLYING,
+                SyncPhase.PREPARING,
+                SyncPhase.PULLING,
+                SyncPhase.UPLOADING_CHANGES,
+                SyncPhase.UPLOADING_CHANGES,
+                SyncPhase.PULLING,
+                SyncPhase.APPLYING,
+                SyncPhase.APPLYING,
+                SyncPhase.FINALIZING,
+            ),
+            phases,
         )
         assertEquals(
             SyncResult.Completed(
@@ -107,7 +127,7 @@ class SyncBoundedPassTest {
                 events += "library-mutation"
                 0
             },
-            fetchAndApply = { cursor, _ ->
+            fetchAndApply = { cursor, _, _ ->
                 events += "pull:$cursor"
                 SyncPullPage(changeCount = 0, nextCursor = "0", hasMore = false)
             },
@@ -149,7 +169,7 @@ class SyncBoundedPassTest {
                 1
             },
             pushLibraryMutationEntries = { _, _ -> error("Storyteller has no library mutations") },
-            fetchAndApply = { _, _ -> error("Storyteller has no change feed") },
+            fetchAndApply = { _, _, _ -> error("Storyteller has no change feed") },
             pendingMutationCount = {
                 events += "pending"
                 0

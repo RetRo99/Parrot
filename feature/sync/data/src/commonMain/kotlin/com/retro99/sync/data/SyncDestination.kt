@@ -2,6 +2,7 @@ package com.retro99.sync.data
 
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.SyncPhaseReporter
 
 /**
  * A destination that can participate in the application-wide sync request.
@@ -11,5 +12,8 @@ import com.retro99.sync.domain.SyncResult
  * the existing cloud pass when optional server destinations are unavailable.
  */
 interface SyncDestination {
-    suspend fun execute(request: SyncRequest): SyncResult?
+    suspend fun execute(
+        request: SyncRequest,
+        reportPhase: SyncPhaseReporter,
+    ): SyncResult?
 }

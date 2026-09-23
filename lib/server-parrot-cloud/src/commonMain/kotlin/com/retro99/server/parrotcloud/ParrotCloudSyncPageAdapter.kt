@@ -21,6 +21,7 @@ class ParrotCloudSyncPageAdapter(
     suspend fun fetchPage(
         cursor: String,
         limit: Int,
+        reportApplying: () -> Unit,
         onLibraryMutationChange: suspend (SyncChange) -> Unit,
         onProgressChange: suspend (RemoteProgressSnapshot) -> Unit,
     ): SyncPullPage {
@@ -31,6 +32,7 @@ class ParrotCloudSyncPageAdapter(
         val libraryMutationChanges = libraryMutationResponse.changes.filter { change ->
             change.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
         }
+        if (libraryMutationChanges.isNotEmpty()) reportApplying()
         for (change in libraryMutationChanges) {
             onLibraryMutationChange(change)
         }
@@ -39,6 +41,7 @@ class ParrotCloudSyncPageAdapter(
             cursor = cursor,
             limit = limit,
         )
+        if (progressPage.changes.isNotEmpty()) reportApplying()
         for (change in progressPage.changes) {
             onProgressChange(change)
         }

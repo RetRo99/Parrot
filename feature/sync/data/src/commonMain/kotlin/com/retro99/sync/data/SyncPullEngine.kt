@@ -5,6 +5,8 @@ import com.retro99.database.api.sync.SyncCheckpointDatabase
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 import kotlin.time.Clock
+import com.retro99.sync.domain.SyncPhase
+import com.retro99.sync.domain.SyncPhaseReporter
 
 /**
  * Shared durable cursor loop for change-feed based synchronization.
@@ -21,7 +23,12 @@ class SyncPullEngine(
         destinationId: String,
         remoteAccountId: String,
         limit: Int,
-        fetchAndApply: suspend (cursor: String?, limit: Int) -> SyncPullPage,
+        reportPhase: SyncPhaseReporter = { _, _, _ -> },
+        fetchAndApply: suspend (
+            cursor: String?,
+            limit: Int,
+            reportApplying: () -> Unit,
+        ) -> SyncPullPage,
     ): SyncPullSummary {
         var cursor = syncCheckpointDatabase
             .getCheckpoint(destinationId, remoteAccountId)
@@ -30,7 +37,12 @@ class SyncPullEngine(
         var pageCount = 0
 
         do {
-            val page = fetchAndApply(cursor, limit)
+            reportPhase(SyncPhase.PULLING, pulledChangeCount, null)
+            val page = fetchAndApply(
+                cursor,
+                limit,
+                { reportPhase(SyncPhase.APPLYING, pulledChangeCount, null) },
+            )
             pulledChangeCount += page.changeCount
             pageCount++
             cursor = page.nextCursor ?: cursor
@@ -42,6 +54,9 @@ class SyncPullEngine(
                     updatedAt = Clock.System.now().toString(),
                 ),
             )
+            if (page.changeCount > 0) {
+                reportPhase(SyncPhase.APPLYING, pulledChangeCount, null)
+            }
         } while (page.hasMore)
 
         return SyncPullSummary(

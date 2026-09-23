@@ -1,7 +1,10 @@
 package com.retro99.sync.data
 
 import com.retro99.sync.domain.SyncRepository
-import com.retro99.sync.domain.SyncActionRequired
+import com.retro99.sync.domain.FileTransferStatus
+import com.retro99.sync.domain.FileTransferStatusSource
+import com.retro99.sync.domain.SyncPhase
+import com.retro99.sync.domain.SyncPhaseReporter
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncStatus
@@ -14,6 +17,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,12 +43,17 @@ class SyncDataRepository(
     @Provided private val executionContextProvider: SyncExecutionContextProvider,
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
     @Provided private val destinations: List<SyncDestination> = emptyList(),
+    @Provided private val fileTransferStatusSources: List<FileTransferStatusSource> = emptyList(),
     @Provided internal val syncCheckpointDatabase: SyncCheckpointDatabase? = null,
     @Provided private val analytics: Analytics? = null,
 ) : SyncRepository {
     private val mutex = Mutex()
     private var activeRun: ActiveRun? = null
-    private val status = MutableStateFlow<SyncStatus>(SyncStatus.Idle)
+    private val syncStatus = MutableStateFlow<SyncStatus>(SyncStatus.Idle())
+    private val transferStatuses = MutableStateFlow(
+        List<FileTransferStatus?>(fileTransferStatusSources.size) { null },
+    )
+    private val status = MutableStateFlow<SyncStatus>(SyncStatus.Idle())
     private val diagnosticsScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val diagnosticsLoadJob: Job = diagnosticsScope.launch {
         val checkpoint = syncCheckpointDatabase?.getCheckpoint(
@@ -52,7 +61,21 @@ class SyncDataRepository(
             remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
         )
         checkpoint?.toStatus()?.let { persistedStatus ->
-            status.value = persistedStatus
+            syncStatus.value = persistedStatus
+            publishStatus()
+        }
+    }
+
+    init {
+        fileTransferStatusSources.forEachIndexed { index, source ->
+            diagnosticsScope.launch {
+                source.observe().collect { transferStatus ->
+                    transferStatuses.value = transferStatuses.value.toMutableList().also { statuses ->
+                        statuses[index] = transferStatus
+                    }
+                    publishStatus()
+                }
+            }
         }
     }
 
@@ -77,8 +100,9 @@ class SyncDataRepository(
         if (!owner) return run.result.await()
 
         diagnosticsLoadJob.join()
-        val previousStatus = status.value
-        status.value = SyncStatus.Synchronizing(request, previousStatus.lastSuccessfulAt())
+        val lastSuccessfulAt = syncStatus.value.lastSuccessfulAt()
+        val previousPendingCount = syncStatus.value.pendingCountOrNull() ?: 0
+        reportPhase(SyncPhase.PREPARING)
         val startedAt = TimeSource.Monotonic.markNow()
 
         var lastResult: SyncResult = SyncResult.Failed("Synchronization did not execute")
@@ -98,7 +122,7 @@ class SyncDataRepository(
                 run.activeRequest = nextRequest
                 val execution = executionContextProvider.withPinnedContext { context ->
                     syncOutboxPreflight.bindUnassignedMutations(context.remoteAccountId)
-                    syncPass.execute(nextRequest, context)
+                    syncPass.execute(nextRequest, context, ::reportPhase)
                 }
                 val cloudResult = when (execution) {
                     is SyncExecutionResult.Ready -> execution.value
@@ -110,7 +134,7 @@ class SyncDataRepository(
                 }
                 val destinationResults = destinations.mapNotNull { destination ->
                     try {
-                        destination.execute(nextRequest)
+                        destination.execute(nextRequest, ::reportPhase)
                     } catch (exception: CancellationException) {
                         throw exception
                     } catch (exception: Exception) {
@@ -122,8 +146,9 @@ class SyncDataRepository(
                 lastResult = combineResults(cloudResult, destinationResults)
             }
             run.result.complete(lastResult)
-            val terminalStatus = lastResult.toStatus(status.value.lastSuccessfulAt())
-            status.value = terminalStatus
+            val terminalStatus = lastResult.toStatus(previousPendingCount)
+            syncStatus.value = terminalStatus
+            publishStatus()
             persistStatus(terminalStatus)
             logCompletedRun(
                 request = request,
@@ -135,7 +160,8 @@ class SyncDataRepository(
             mutex.withLock {
                 if (activeRun === run) activeRun = null
             }
-            status.value = SyncStatus.Idle
+            syncStatus.value = SyncStatus.Idle(lastSuccessfulAt)
+            publishStatus()
             run.result.cancel(exception)
             throw exception
         } catch (exception: Exception) {
@@ -145,8 +171,9 @@ class SyncDataRepository(
             val failed = SyncResult.Failed(
                 exception.message ?: "Synchronization failed",
             )
-            val terminalStatus = failed.toStatus(status.value.lastSuccessfulAt())
-            status.value = terminalStatus
+            val terminalStatus = failed.toStatus(previousPendingCount)
+            syncStatus.value = terminalStatus
+            publishStatus()
             persistStatus(terminalStatus)
             logCompletedRun(
                 request = request,
@@ -183,6 +210,23 @@ class SyncDataRepository(
         }
     }
 
+    private fun reportPhase(
+        phase: SyncPhase,
+        completedItems: Int = 0,
+        totalItems: Int? = null,
+    ) {
+        syncStatus.value = SyncStatus.Running(
+            phase = phase,
+            completedItems = completedItems,
+            totalItems = totalItems,
+        )
+        publishStatus()
+    }
+
+    private fun publishStatus() {
+        status.value = mergeTransferStatuses(syncStatus.value, transferStatuses.value)
+    }
+
     private fun combineResults(
         cloudResult: SyncResult,
         destinationResults: List<SyncResult>,
@@ -195,6 +239,19 @@ class SyncDataRepository(
         if (failures.isNotEmpty()) {
             return SyncResult.Failed(
                 failures.joinToString(separator = "; ") { failure -> failure.message },
+            )
+        }
+
+        val offlineResults = results.filterIsInstance<SyncResult.Offline>()
+        if (offlineResults.isNotEmpty()) {
+            return SyncResult.Offline(
+                pendingMutationCount = results.sumOf { result ->
+                    when (result) {
+                        is SyncResult.Offline -> result.pendingMutationCount
+                        is SyncResult.Completed -> result.pendingMutationCount
+                        else -> 0
+                    }
+                },
             )
         }
 
@@ -220,21 +277,27 @@ class SyncDataRepository(
 private const val DIAGNOSTICS_DESTINATION_ID = "__application_sync_status__"
 private const val DIAGNOSTICS_ACCOUNT_ID = "__application__"
 
-private fun SyncResult.toStatus(lastSuccessfulAt: String?): SyncStatus {
+private fun SyncResult.toStatus(
+    pendingCount: Int,
+): SyncStatus {
     return when (this) {
-        is SyncResult.Completed -> {
-            val successfulAt = Clock.System.now().toString()
-            if (pendingMutationCount > 0) {
-                SyncStatus.Pending(pendingMutationCount, successfulAt)
-            } else {
-                SyncStatus.UpToDate(successfulAt)
-            }
-        }
-        SyncResult.NotConfigured -> SyncStatus.ActionRequired(SyncActionRequired.NOT_CONFIGURED, lastSuccessfulAt)
-        SyncResult.NotAuthenticated -> SyncStatus.ActionRequired(SyncActionRequired.NOT_AUTHENTICATED, lastSuccessfulAt)
-        SyncResult.ProfileNotLinked -> SyncStatus.ActionRequired(SyncActionRequired.PROFILE_NOT_LINKED, lastSuccessfulAt)
-        SyncResult.SyncDisabled -> SyncStatus.ActionRequired(SyncActionRequired.SYNC_DISABLED, lastSuccessfulAt)
-        is SyncResult.Failed -> SyncStatus.Failed(message, lastSuccessfulAt)
+        is SyncResult.Completed -> SyncStatus.Completed(
+            pushedCount = pushedMutationCount,
+            pulledCount = pulledChangeCount,
+            pendingCount = pendingMutationCount,
+            completedAt = Clock.System.now().toString(),
+        )
+        SyncResult.NotConfigured,
+        SyncResult.NotAuthenticated,
+        SyncResult.ProfileNotLinked,
+        SyncResult.SyncDisabled,
+        -> SyncStatus.Disabled
+        is SyncResult.Offline -> SyncStatus.Offline(this.pendingMutationCount)
+        is SyncResult.Failed -> SyncStatus.Failed(
+            error = message,
+            pendingCount = pendingCount,
+            canRetry = true,
+        )
     }
 }
 
@@ -245,68 +308,117 @@ private fun SyncResult.analyticsName(): String {
         SyncResult.NotAuthenticated -> "not_authenticated"
         SyncResult.ProfileNotLinked -> "profile_not_linked"
         SyncResult.SyncDisabled -> "sync_disabled"
+        is SyncResult.Offline -> "offline"
         is SyncResult.Failed -> "failed"
     }
 }
 
 private fun SyncCheckpoint.toStatus(): SyncStatus? {
     return when (status) {
-        "up_to_date" -> SyncStatus.UpToDate(lastSuccessfulAt)
-        "pending" -> SyncStatus.Pending(pendingMutationCount, lastSuccessfulAt)
-        "failed" -> SyncStatus.Failed(lastError ?: "Synchronization failed", lastSuccessfulAt)
-        "action_required" -> SyncStatus.ActionRequired(
-            reason = lastError?.let { reason ->
-                runCatching { SyncActionRequired.valueOf(reason) }.getOrNull()
-            } ?: SyncActionRequired.NOT_AUTHENTICATED,
-            lastSuccessfulAt = lastSuccessfulAt,
+        "up_to_date", "pending" -> SyncStatus.Idle(lastSuccessfulAt)
+        "offline" -> SyncStatus.Offline(pendingMutationCount)
+        "failed" -> SyncStatus.Failed(
+            error = lastError ?: "Synchronization failed",
+            pendingCount = pendingMutationCount,
+            canRetry = true,
         )
+        "action_required" -> SyncStatus.Disabled
         else -> null
     }
 }
 
 private fun SyncStatus.lastSuccessfulAt(): String? {
     return when (this) {
-        SyncStatus.Idle -> null
-        is SyncStatus.Synchronizing -> lastSuccessfulAt
-        is SyncStatus.UpToDate -> lastSuccessfulAt
-        is SyncStatus.Pending -> lastSuccessfulAt
-        is SyncStatus.ActionRequired -> lastSuccessfulAt
-        is SyncStatus.Failed -> lastSuccessfulAt
+        SyncStatus.Disabled -> null
+        is SyncStatus.Idle -> lastSuccessfulAt
+        is SyncStatus.Running,
+        is SyncStatus.Offline,
+        is SyncStatus.Failed,
+        is SyncStatus.Completed,
+        -> null
     }
+}
+
+private fun SyncStatus.pendingCountOrNull(): Int? {
+    return when (this) {
+        is SyncStatus.Offline -> pendingCount
+        is SyncStatus.Failed -> pendingCount
+        is SyncStatus.Completed -> pendingCount
+        else -> null
+    }
+}
+
+private fun mergeTransferStatuses(
+    syncStatus: SyncStatus,
+    transferStatuses: List<FileTransferStatus?>,
+): SyncStatus {
+    val activeTransfers = transferStatuses.filterNotNull().filter { transfer ->
+        transfer.activeItems > 0 || transfer.bytesTransferred > 0 || transfer.error != null
+    }
+    if (activeTransfers.isEmpty()) return syncStatus
+
+    val failures = activeTransfers.filter { transfer -> transfer.error != null }
+    if (failures.isNotEmpty()) {
+        return SyncStatus.Failed(
+            error = failures.mapNotNull { transfer -> transfer.error }.distinct().joinToString("; "),
+            pendingCount = activeTransfers.sumOf { transfer -> transfer.activeItems },
+            canRetry = failures.all { transfer -> transfer.canRetry },
+        )
+    }
+    if (syncStatus is SyncStatus.Failed) return syncStatus
+
+    val totalItems = activeTransfers.takeIf { transfers ->
+        transfers.all { transfer -> transfer.totalItems != null }
+    }?.sumOf { transfer -> transfer.totalItems ?: 0 }
+    val totalBytes = activeTransfers.takeIf { transfers ->
+        transfers.all { transfer -> transfer.totalBytes != null }
+    }?.sumOf { transfer -> transfer.totalBytes ?: 0L }
+    val activeItems = activeTransfers.sumOf { transfer -> transfer.activeItems }
+    val phase = when {
+        activeTransfers.any { it.phase == SyncPhase.UPLOADING_FILES } -> SyncPhase.UPLOADING_FILES
+        activeTransfers.any { it.phase == SyncPhase.DOWNLOADING_FILES } -> SyncPhase.DOWNLOADING_FILES
+        else -> activeTransfers.first().phase
+    }
+
+    return SyncStatus.Running(
+        phase = phase,
+        completedItems = totalItems?.minus(activeItems)?.coerceAtLeast(0) ?: 0,
+        totalItems = totalItems,
+        bytesTransferred = activeTransfers.sumOf { transfer -> transfer.bytesTransferred },
+        totalBytes = totalBytes,
+    )
 }
 
 private suspend fun SyncDataRepository.persistStatus(status: SyncStatus) {
     val database = syncCheckpointDatabase ?: return
     val now = Clock.System.now().toString()
     val checkpoint = when (status) {
-        SyncStatus.Idle,
-        is SyncStatus.Synchronizing,
-        -> return
-        is SyncStatus.UpToDate -> SyncCheckpoint(
-            destinationId = DIAGNOSTICS_DESTINATION_ID,
-            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
-            cursor = null,
-            updatedAt = now,
-            status = "up_to_date",
-            lastSuccessfulAt = status.lastSuccessfulAt,
-        )
-        is SyncStatus.Pending -> SyncCheckpoint(
-            destinationId = DIAGNOSTICS_DESTINATION_ID,
-            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
-            cursor = null,
-            updatedAt = now,
-            status = "pending",
-            pendingMutationCount = status.pendingMutationCount,
-            lastSuccessfulAt = status.lastSuccessfulAt,
-        )
-        is SyncStatus.ActionRequired -> SyncCheckpoint(
+        SyncStatus.Disabled -> SyncCheckpoint(
             destinationId = DIAGNOSTICS_DESTINATION_ID,
             remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
             cursor = null,
             updatedAt = now,
             status = "action_required",
-            lastSuccessfulAt = status.lastSuccessfulAt,
-            lastError = status.reason.name,
+        )
+        is SyncStatus.Idle,
+        is SyncStatus.Running,
+        -> return
+        is SyncStatus.Completed -> SyncCheckpoint(
+            destinationId = DIAGNOSTICS_DESTINATION_ID,
+            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
+            cursor = null,
+            updatedAt = now,
+            status = if (status.pendingCount > 0) "pending" else "up_to_date",
+            pendingMutationCount = status.pendingCount,
+            lastSuccessfulAt = status.completedAt,
+        )
+        is SyncStatus.Offline -> SyncCheckpoint(
+            destinationId = DIAGNOSTICS_DESTINATION_ID,
+            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
+            cursor = null,
+            updatedAt = now,
+            status = "offline",
+            pendingMutationCount = status.pendingCount,
         )
         is SyncStatus.Failed -> SyncCheckpoint(
             destinationId = DIAGNOSTICS_DESTINATION_ID,
@@ -314,8 +426,8 @@ private suspend fun SyncDataRepository.persistStatus(status: SyncStatus) {
             cursor = null,
             updatedAt = now,
             status = "failed",
-            lastSuccessfulAt = status.lastSuccessfulAt,
-            lastError = status.message,
+            pendingMutationCount = status.pendingCount,
+            lastError = status.error,
         )
     }
     try {

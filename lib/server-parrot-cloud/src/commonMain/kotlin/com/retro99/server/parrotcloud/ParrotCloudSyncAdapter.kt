@@ -4,6 +4,7 @@ import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncRequest
+import com.retro99.sync.domain.SyncPhaseReporter
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressSyncTransport
@@ -55,12 +56,14 @@ class ParrotCloudSyncAdapter(
     override suspend fun execute(
         request: SyncRequest,
         context: SyncExecutionContext,
+        reportPhase: SyncPhaseReporter,
     ): SyncResult {
-        return synchronizeProfile(context.remoteAccountId)
+        return synchronizeProfile(context.remoteAccountId, reportPhase)
     }
 
     private suspend fun synchronizeProfile(
         cloudUserId: String,
+        reportPhase: SyncPhaseReporter,
     ): SyncResult {
         duplicatePositionRepair.repair()
         return syncBoundedPass.execute(
@@ -78,10 +81,11 @@ class ParrotCloudSyncAdapter(
             pushLibraryMutationEntries = { entries, cursor ->
                 pushLibraryMutations(entries, cursor ?: "0")
             },
-            fetchAndApply = { cursor, limit ->
+            fetchAndApply = { cursor, limit, reportApplying ->
                 syncPageAdapter.fetchPage(
                     cursor = cursor ?: "0",
                     limit = limit,
+                    reportApplying = reportApplying,
                     onLibraryMutationChange = { change ->
                         applyRemoteChange(
                             entityType = change.entityType,
@@ -97,6 +101,7 @@ class ParrotCloudSyncAdapter(
             pendingMutationCount = {
                 syncOutboxPreflight.pendingCount(cloudUserId, outboxCapability)
             },
+            reportPhase = reportPhase,
         )
     }
 
