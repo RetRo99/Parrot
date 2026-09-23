@@ -14,5 +14,6 @@ class ParrotApplication : Application() {
             androidContext(this@ParrotApplication)
         }
         SyncWorkScheduler.enqueue(this)
+        SyncWorkScheduler.ensurePeriodic(this)
     }
 }

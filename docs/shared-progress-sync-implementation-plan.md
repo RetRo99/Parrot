@@ -631,8 +631,9 @@ progress and recover when execution is allowed. No test assumes guaranteed
 background deadlines or callbacks on forced termination.
 
 Implementation status: Android WorkManager recovery and iOS `BGProcessingTask`
-recovery now submit the same shared request boundary. Both paths use network
-constraints, durable retry/recovery ownership, and cancellation/expiration
+recovery now submit the same shared request boundary. Android has both immediate
+unique one-time recovery work and a unique 30-minute network-constrained safety
+net. Both paths use durable retry/recovery ownership and cancellation/expiration
 handling. Lifecycle callbacks remain best-effort hints; platform schedulers
 provide deferred continuation after process death.
 

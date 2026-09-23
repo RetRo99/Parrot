@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.retro99.sync.domain.SyncRequest
@@ -49,6 +50,8 @@ class SyncRecoveryWorker(
 
 object SyncWorkScheduler {
     private const val UNIQUE_WORK_NAME = "parrot-sync-recovery"
+    private const val UNIQUE_PERIODIC_WORK_NAME = "parrot-sync-recovery-periodic"
+    private const val PERIODIC_INTERVAL_MINUTES = 30L
 
     fun enqueue(context: Context) {
         val constraints = Constraints.Builder()
@@ -66,6 +69,29 @@ object SyncWorkScheduler {
         WorkManager.getInstance(context.applicationContext).enqueueUniqueWork(
             UNIQUE_WORK_NAME,
             ExistingWorkPolicy.KEEP,
+            request,
+        )
+    }
+
+    fun ensurePeriodic(context: Context) {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+        val request = PeriodicWorkRequestBuilder<SyncRecoveryWorker>(
+            PERIODIC_INTERVAL_MINUTES,
+            TimeUnit.MINUTES,
+        )
+            .setConstraints(constraints)
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                10,
+                TimeUnit.SECONDS,
+            )
+            .build()
+
+        WorkManager.getInstance(context.applicationContext).enqueueUniquePeriodicWork(
+            UNIQUE_PERIODIC_WORK_NAME,
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
             request,
         )
     }
