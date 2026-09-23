@@ -22,3 +22,6 @@ port = 54323
 [storage]
 enabled = true
 file_size_limit = "500MiB"
+
+[functions.delete-cloud-account]
+verify_jwt = true

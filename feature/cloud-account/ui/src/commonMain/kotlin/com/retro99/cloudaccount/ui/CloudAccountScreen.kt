@@ -69,6 +69,10 @@ import resources.translations.cloud_account_check_email
 import resources.translations.cloud_account_connected
 import resources.translations.cloud_account_create_account
 import resources.translations.cloud_account_description
+import resources.translations.cloud_account_delete
+import resources.translations.cloud_account_delete_confirm
+import resources.translations.cloud_account_delete_message
+import resources.translations.cloud_account_delete_title
 import resources.translations.cloud_account_email_label
 import resources.translations.cloud_account_enable_sync
 import resources.translations.cloud_account_generic_error
@@ -151,6 +155,12 @@ private fun CloudAccountScreenContent(
             onDismiss = { intentDispatcher(CloudAccountIntent.OnLinkDismissed) },
         )
     }
+    if (viewState.showDeleteAccountConfirmation) {
+        DeleteCloudAccountConfirmationDialog(
+            onConfirm = { intentDispatcher(CloudAccountIntent.OnDeleteAccountConfirmed) },
+            onDismiss = { intentDispatcher(CloudAccountIntent.OnDeleteAccountDismissed) },
+        )
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -215,6 +225,9 @@ private fun CloudAccountScreenContent(
                         onSignOut = {
                             intentDispatcher(CloudAccountIntent.OnSignOutClicked)
                         },
+                        onDeleteAccount = {
+                            intentDispatcher(CloudAccountIntent.OnDeleteAccountClicked)
+                        },
                         onSync = {
                             intentDispatcher(CloudAccountIntent.OnSyncClicked)
                         },
@@ -250,6 +263,31 @@ private fun LinkProfileConfirmationDialog(
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(stringResource(StringRes.cloud_account_link_profile))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(StringRes.general_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun DeleteCloudAccountConfirmationDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(StringRes.cloud_account_delete_title)) },
+        text = { Text(stringResource(StringRes.cloud_account_delete_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    text = stringResource(StringRes.cloud_account_delete_confirm),
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         },
         dismissButton = {
@@ -425,6 +463,7 @@ private fun ConnectedAccountContent(
     isLoadingStorageUsage: Boolean,
     storageUsageError: String?,
     onSignOut: () -> Unit,
+    onDeleteAccount: () -> Unit,
     onSync: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -513,6 +552,17 @@ private fun ConnectedAccountContent(
             } else {
                 Text(stringResource(StringRes.cloud_account_sign_out))
             }
+        }
+
+        OutlinedButton(
+            onClick = onDeleteAccount,
+            enabled = !isLoading,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                text = stringResource(StringRes.cloud_account_delete),
+                color = MaterialTheme.colorScheme.error,
+            )
         }
     }
 }

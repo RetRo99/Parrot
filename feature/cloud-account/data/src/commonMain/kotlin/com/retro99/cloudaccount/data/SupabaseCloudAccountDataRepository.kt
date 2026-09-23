@@ -14,6 +14,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.user.UserSession
+import io.github.jan.supabase.functions.functions
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -116,6 +117,24 @@ class SupabaseCloudAccountDataRepository(
             auth.signOut(SignOutScope.LOCAL)
         } finally {
             withContext(NonCancellable) {
+                clientProvider.replaceCurrentProfileSession(localProfileId, null)
+            }
+        }
+    }
+
+    override suspend fun deleteAccount(localProfileId: String) {
+        requireConfigured()
+        val client = clientProvider.client
+        check(client.auth.currentSessionOrNull() != null) {
+            "A signed-in cloud account is required for deletion"
+        }
+
+        client.functions("delete-cloud-account")
+
+        withContext(NonCancellable) {
+            try {
+                clientProvider.invalidateCurrentProfileCredentials(localProfileId)
+            } finally {
                 clientProvider.replaceCurrentProfileSession(localProfileId, null)
             }
         }

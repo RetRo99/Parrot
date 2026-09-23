@@ -13,6 +13,7 @@ data class CloudAccountViewState(
     val isSubmitEnabled: Boolean = false,
     val showVerificationMessage: Boolean = false,
     val showLinkConfirmation: Boolean = false,
+    val showDeleteAccountConfirmation: Boolean = false,
     val error: CloudAccountError? = null,
     val syncStatus: SyncStatus = SyncStatus.Idle(),
     val storageUsage: CloudStorageUsage? = null,

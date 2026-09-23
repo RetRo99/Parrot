@@ -12,6 +12,7 @@ import com.retro99.cloudaccount.domain.model.CloudProfileLinkResult
 import com.retro99.cloudaccount.domain.model.CloudRegistrationResult
 import com.retro99.cloudaccount.domain.usecase.ActivateCloudProfileUseCase
 import com.retro99.cloudaccount.domain.usecase.EnableCloudSyncUseCase
+import com.retro99.cloudaccount.domain.usecase.DeleteCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.GetCloudProfileLinkUseCase
 import com.retro99.cloudaccount.domain.usecase.LinkCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.ObserveCloudAuthStateUseCase
@@ -44,6 +45,7 @@ class CloudAccountViewModel(
     @Provided private val observeSyncStatusUseCase: ObserveSyncStatusUseCase,
     @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val getCloudStorageUsageUseCase: GetCloudStorageUsageUseCase,
+    @Provided private val deleteCloudAccountUseCase: DeleteCloudAccountUseCase,
     @InjectedParam private val onBack: () -> Unit,
 ) : BaseViewModel<CloudAccountViewState, CloudAccountIntent>(CloudAccountViewState()) {
     val emailState = TextFieldState()
@@ -66,6 +68,9 @@ class CloudAccountViewModel(
                 switchMode(CloudAccountMode.CreateAccount)
             }
             CloudAccountIntent.OnSignOutClicked -> signOut()
+            CloudAccountIntent.OnDeleteAccountClicked -> showDeleteAccountConfirmation()
+            CloudAccountIntent.OnDeleteAccountConfirmed -> deleteAccount()
+            CloudAccountIntent.OnDeleteAccountDismissed -> dismissDeleteAccountConfirmation()
             CloudAccountIntent.OnSyncClicked -> sync()
             CloudAccountIntent.OnLinkConfirmed -> linkAccount()
             CloudAccountIntent.OnLinkDismissed -> signOut()
@@ -130,6 +135,7 @@ class CloudAccountViewModel(
                         else -> currentState.showVerificationMessage
                     },
                     showLinkConfirmation = false,
+                    showDeleteAccountConfirmation = false,
                 )
             }
         }
@@ -378,6 +384,51 @@ class CloudAccountViewModel(
                         error = null,
                         showVerificationMessage = false,
                         showLinkConfirmation = false,
+                    )
+                }
+                updateFormState(emailState.text.toString(), passwordState.text.toString())
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                showError(exception)
+            }
+        }
+    }
+
+    private fun showDeleteAccountConfirmation() {
+        if (viewState.value.isLoading) return
+        updateState { it.copy(showDeleteAccountConfirmation = true, error = null) }
+    }
+
+    private fun dismissDeleteAccountConfirmation() {
+        if (viewState.value.isLoading) return
+        updateState { it.copy(showDeleteAccountConfirmation = false) }
+    }
+
+    private fun deleteAccount() {
+        if (viewState.value.isLoading || !viewState.value.showDeleteAccountConfirmation) return
+        updateState {
+            it.copy(
+                isLoading = true,
+                showDeleteAccountConfirmation = false,
+                error = null,
+            )
+        }
+        viewModelScope.launch {
+            try {
+                deleteCloudAccountUseCase()
+                updateState {
+                    it.copy(
+                        authState = CloudAuthState.SignedOut,
+                        profileLink = null,
+                        storageUsage = null,
+                        isLoadingStorageUsage = false,
+                        storageUsageError = null,
+                        isLoading = false,
+                        showLinkConfirmation = false,
+                        showDeleteAccountConfirmation = false,
+                        showVerificationMessage = false,
+                        error = null,
                     )
                 }
                 updateFormState(emailState.text.toString(), passwordState.text.toString())

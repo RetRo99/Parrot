@@ -125,6 +125,31 @@ class CloudAuthenticationUseCasesTest {
     }
 
     @Test
+    fun `deleting cloud account removes the remote account before unlinking the profile`() = runTest {
+        profileLinkRepository.addLink(
+            CloudProfileLink(
+                localProfileId = "profile-a",
+                cloudUserId = account.id,
+                syncEnabled = true,
+            ),
+        )
+        val events = mutableListOf<String>()
+        accountRepository.onDeleteAccount = { events += "delete-account" }
+        profileLinkRepository.onUnlink = { events += "unlink-profile" }
+        val classUnderTest = DeleteCloudAccountUseCase(
+            accountRepository = accountRepository,
+            profileLinkRepository = profileLinkRepository,
+            pendingAuthenticationRepository = pendingAuthenticationRepository,
+            userRegistry = userRegistry,
+        )
+
+        classUnderTest()
+
+        assertEquals(listOf("delete-account", "unlink-profile"), events)
+        assertNull(profileLinkRepository.getForLocalProfile("profile-a"))
+    }
+
+    @Test
     fun `registration awaiting verification preserves the originating profile`() = runTest {
         val classUnderTest = RegisterCloudAccountUseCase(
             accountRepository = accountRepository,
@@ -252,6 +277,7 @@ private class FakeCloudAccountRepository : CloudAccountRepository {
     }
     var onGoogleSignIn: suspend () -> CloudAccount = { error("Not used") }
     var onRestore: suspend () -> Unit = {}
+    var onDeleteAccount: suspend () -> Unit = {}
 
     override fun observeAuthState(): Flow<CloudAuthState> = flowOf(authState)
 
@@ -282,10 +308,13 @@ private class FakeCloudAccountRepository : CloudAccountRepository {
     }
 
     override suspend fun signOut(localProfileId: String) = Unit
+
+    override suspend fun deleteAccount(localProfileId: String) = onDeleteAccount()
 }
 
 private class FakeCloudProfileLinkRepository : CloudProfileLinkRepository {
     private val links = mutableListOf<CloudProfileLink>()
+    var onUnlink: suspend () -> Unit = {}
 
     fun addLink(link: CloudProfileLink) {
         links += link
@@ -323,11 +352,10 @@ private class FakeCloudProfileLinkRepository : CloudProfileLinkRepository {
         return flowOf(links.firstOrNull { link -> link.localProfileId == localProfileId })
     }
 
-    override suspend fun deactivate(localProfileId: String) {
-        setSyncEnabled(localProfileId, enabled = false)
-    }
+    override suspend fun deactivate(localProfileId: String) = Unit
 
     override suspend fun unlink(localProfileId: String) {
+        onUnlink()
         links.removeAll { link -> link.localProfileId == localProfileId }
     }
 }

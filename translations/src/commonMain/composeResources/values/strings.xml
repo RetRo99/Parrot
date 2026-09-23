@@ -474,6 +474,10 @@
     <string name="cloud_account_sync_enabled" tools:ignore="MissingTranslation">Sync is enabled.</string>
     <string name="cloud_account_link_pending" tools:ignore="MissingTranslation">This account is authenticated but is not linked to this local profile.</string>
     <string name="cloud_account_sign_out" tools:ignore="MissingTranslation">Sign out of cloud account</string>
+    <string name="cloud_account_delete" tools:ignore="MissingTranslation">Delete cloud account</string>
+    <string name="cloud_account_delete_title" tools:ignore="MissingTranslation">Delete your Parrot Cloud account?</string>
+    <string name="cloud_account_delete_message" tools:ignore="MissingTranslation">This permanently deletes your cloud account, backups, and cloud sync data. Imported files already on this device are kept. A redacted abuse-history record may be retained for up to 180 days.</string>
+    <string name="cloud_account_delete_confirm" tools:ignore="MissingTranslation">Delete account</string>
     <string name="cloud_account_reauthentication_required" tools:ignore="MissingTranslation">Please sign in again to resume cloud access.</string>
     <string name="cloud_account_refresh_unavailable" tools:ignore="MissingTranslation">Cloud access is temporarily unavailable. Your local reading remains available.</string>
     <string name="cloud_account_profile_already_linked" tools:ignore="MissingTranslation">This local profile is already linked to another cloud account.</string>

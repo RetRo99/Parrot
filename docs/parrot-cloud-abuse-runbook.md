@@ -139,22 +139,23 @@ user identifiers; the algorithm, hash, reason, and actor remain recorded.
 **Never logged** (PC-plan §12): titles, file contents, tokens, signed URLs.
 Client analytics for transfers follow the same rule.
 
-Account deletion retention remains unresolved: deleting an auth user sets the
-audit row's `cloud_user_id` to null, but user-originated events may still retain
-the UUID in the free-form `actor` field, alongside hashes and event details.
-Before shipping account deletion, legal must decide whether those identifiers
-and evidence are retained, anonymized, or removed, and for how long.
-
-Retention: **[LEGAL REVIEW]** — proposed: audit events retained 180 days minimum
-(configurable), then a scheduled purge; `sync_mutations` idempotency rows follow
-their own retention. Add the purge job to Slice 5 scope once retention is set.
+Account deletion keeps abuse-history events for up to 180 days with the account
+UUID removed from both `cloud_user_id` and the free-form `actor` field. The event
+details and content hashes remain during that window, then are purged. The
+server-side deletion function also purges expired events while processing a
+request; configure `scripts/supabase/ops/purge-audit.sh` as an hourly scheduled
+job so retention does not depend on account deletions. `sync_mutations`
+idempotency rows follow their own retention.
 
 ## 8. Account-level action
 
 - Repeat-infringer policy (warnings → suspension → termination): **[LEGAL
-  REVIEW]**. Account deletion and storage-object cleanup still need an explicit
-  server-side lifecycle; auth-user deletion alone must not be treated as cloud
-  file cleanup.
+  REVIEW]**. Account deletion is handled by the authenticated
+  `delete-cloud-account` Edge Function. It freezes account writes, removes all
+  objects under `users/{cloudUserId}` through the Storage API, redacts retained
+  audit events, purges expired events, then deletes the Auth user. Failures
+  leave the account in a retryable deletion state; do not delete the Auth user
+  manually before its Storage cleanup completes.
 - Quota abuse: per-account quota is 5 GB (decision #6), enforced by
   `reserve_book_upload`; inspect usage with `get_storage_usage()`. There is
   intentionally **no per-file size cap** (decision #6) — if upload abuse shows
@@ -167,7 +168,9 @@ their own retention. Add the purge job to Slice 5 scope once retention is set.
       §10)
 - [ ] Privacy policy covers user-uploaded files & retention **[LEGAL REVIEW]**
 - [ ] This runbook approved; abuse channel live and staffed
-- [ ] Audit retention configured (§7)
+- [ ] Hourly audit-purge schedule configured with service-role credentials (§7)
+- [ ] Account deletion and retry behavior validated on the local Supabase stack
+      (§8; database tests have not run here)
 - [ ] Reinstatement mechanics validated against the local Supabase stack (§6;
       implementation exists, but database tests have not run here)
 - [ ] Platform store-policy review for user-uploaded copyrighted content

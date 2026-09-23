@@ -25,4 +25,6 @@ interface CloudAccountRepository {
     suspend fun restoreSession(localProfileId: String): CloudAuthState
 
     suspend fun signOut(localProfileId: String)
+
+    suspend fun deleteAccount(localProfileId: String)
 }
