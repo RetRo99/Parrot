@@ -630,6 +630,12 @@ Exit: process death, lock, reconnect, and interrupted requests preserve committe
 progress and recover when execution is allowed. No test assumes guaranteed
 background deadlines or callbacks on forced termination.
 
+Implementation status: Android WorkManager recovery and iOS `BGProcessingTask`
+recovery now submit the same shared request boundary. Both paths use network
+constraints, durable retry/recovery ownership, and cancellation/expiration
+handling. Lifecycle callbacks remain best-effort hints; platform schedulers
+provide deferred continuation after process death.
+
 ### Phase 5 — UX, diagnostics, rollout, and cleanup
 
 Tasks:
@@ -642,6 +648,15 @@ Tasks:
 
 Exit: common behavior is enabled for all adapters, migration/rollback recovery is
 tested, and reliability/freshness targets are supported by measured results.
+
+Implementation status: shared status and durable diagnostics are enabled. The
+profile-scoped checkpoint record stores terminal state, pending count, last
+successful delivery, and the last actionable error. The cloud-account surface
+observes that state while manual Sync now continues through the shared
+coordinator.
+
+The remaining rollout work is device/backend measurement and removal of paths
+that are proven obsolete; no active policy path is removed speculatively.
 
 ## 13. Verification plan
 
@@ -743,3 +758,30 @@ Then build the shared engine and adapt all transports before enabling automatic
 triggers. This ordering prevents automation from amplifying the existing
 conflict and queue bugs while preserving the parts of the implementation that
 already work.
+
+## 16. Migration completion record
+
+As of 2026-09-23, the shared synchronization cutover includes:
+
+- Durable generation-aware local progress and outbox delivery for Parrot and
+  Storyteller.
+- Shared single-flight coordination, destination aggregation, retries,
+  capability filtering, profile/account pinning, book-open refresh, and
+  routine progress scheduling.
+- Startup, foreground, reconnect, reader-close, playback-close, Android
+  WorkManager, and iOS background-processing triggers through the same request
+  boundary.
+- Shared status diagnostics with profile-scoped persistence and restoration.
+
+The following compatibility paths are deliberate and remain in place:
+
+- `LegacySyncEngine` and `LegacySyncTransport` still handle Parrot library
+  mutations; they are transport/entity compatibility, not a second coordinator.
+- `SyncRepository.sync()` remains as the existing API compatibility entry point;
+  its implementation delegates to `requestSync`.
+
+Automated validation includes sync engine/data/domain tests, database migration
+tests, Storyteller adapter tests, reader tests, Android compilation, Android
+debug APK assembly, and Kotlin iOS simulator framework compilation. Physical
+iOS app validation remains environment-dependent when the matching Xcode
+platform destination is unavailable.
