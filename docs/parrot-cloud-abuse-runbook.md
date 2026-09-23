@@ -139,6 +139,12 @@ user identifiers; the algorithm, hash, reason, and actor remain recorded.
 **Never logged** (PC-plan §12): titles, file contents, tokens, signed URLs.
 Client analytics for transfers follow the same rule.
 
+Account deletion retention remains unresolved: deleting an auth user sets the
+audit row's `cloud_user_id` to null, but user-originated events may still retain
+the UUID in the free-form `actor` field, alongside hashes and event details.
+Before shipping account deletion, legal must decide whether those identifiers
+and evidence are retained, anonymized, or removed, and for how long.
+
 Retention: **[LEGAL REVIEW]** — proposed: audit events retained 180 days minimum
 (configurable), then a scheduled purge; `sync_mutations` idempotency rows follow
 their own retention. Add the purge job to Slice 5 scope once retention is set.
