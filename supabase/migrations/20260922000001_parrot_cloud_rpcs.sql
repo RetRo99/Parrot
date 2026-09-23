@@ -1419,7 +1419,7 @@ begin
         content_hash_algorithm, content_hash, reason, created_by
     ) values (
         btrim(content_hash_algorithm), btrim(content_hash), btrim(reason), btrim(actor)
-    ) on conflict (content_hash_algorithm, content_hash) do nothing;
+    ) on conflict on constraint cloud_content_blocklist_pkey do nothing;
     was_inserted := found;
     if was_inserted then
         insert into public.cloud_file_audit_events(
@@ -1484,7 +1484,8 @@ begin
         select distinct on (e.cloud_user_id, e.cloud_book_id, e.cloud_book_file_id)
             e.cloud_user_id, e.cloud_book_id, e.cloud_book_file_id,
             btrim(admin_unblock_content_hash.content_hash_algorithm),
-            btrim(admin_unblock_content_hash.content_hash), 'unblock', btrim(reason), btrim(actor)
+            btrim(admin_unblock_content_hash.content_hash), 'unblock',
+            btrim(admin_unblock_content_hash.reason), btrim(admin_unblock_content_hash.actor)
         from public.cloud_file_audit_events e
         where e.content_hash_algorithm = btrim(admin_unblock_content_hash.content_hash_algorithm)
           and e.content_hash = btrim(admin_unblock_content_hash.content_hash)
