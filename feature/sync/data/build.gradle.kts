@@ -26,6 +26,7 @@ kotlin {
             implementation(libs.datetime)
             implementation(projects.feature.sync.domain)
             implementation(projects.lib.database.api)
+            implementation(projects.lib.analytics.api)
         }
 
         commonTest.dependencies {

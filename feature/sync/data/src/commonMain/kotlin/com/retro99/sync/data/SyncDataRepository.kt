@@ -5,6 +5,8 @@ import com.retro99.sync.domain.SyncActionRequired
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncStatus
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.SyncAnalyticsEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.sync.Mutex
@@ -20,6 +22,7 @@ import kotlinx.coroutines.launch
 import com.retro99.database.api.sync.SyncCheckpoint
 import com.retro99.database.api.sync.SyncCheckpointDatabase
 import kotlin.time.Clock
+import kotlin.time.TimeSource
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -37,6 +40,7 @@ class SyncDataRepository(
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
     @Provided private val destinations: List<SyncDestination> = emptyList(),
     @Provided internal val syncCheckpointDatabase: SyncCheckpointDatabase? = null,
+    @Provided private val analytics: Analytics? = null,
 ) : SyncRepository {
     private val mutex = Mutex()
     private var activeRun: ActiveRun? = null
@@ -75,6 +79,7 @@ class SyncDataRepository(
         diagnosticsLoadJob.join()
         val previousStatus = status.value
         status.value = SyncStatus.Synchronizing(request, previousStatus.lastSuccessfulAt())
+        val startedAt = TimeSource.Monotonic.markNow()
 
         var lastResult: SyncResult = SyncResult.Failed("Synchronization did not execute")
         try {
@@ -120,6 +125,11 @@ class SyncDataRepository(
             val terminalStatus = lastResult.toStatus(status.value.lastSuccessfulAt())
             status.value = terminalStatus
             persistStatus(terminalStatus)
+            logCompletedRun(
+                request = request,
+                result = lastResult,
+                durationMs = startedAt.elapsedNow().inWholeMilliseconds,
+            )
             return lastResult
         } catch (exception: CancellationException) {
             mutex.withLock {
@@ -138,8 +148,35 @@ class SyncDataRepository(
             val terminalStatus = failed.toStatus(status.value.lastSuccessfulAt())
             status.value = terminalStatus
             persistStatus(terminalStatus)
+            logCompletedRun(
+                request = request,
+                result = failed,
+                durationMs = startedAt.elapsedNow().inWholeMilliseconds,
+            )
             run.result.complete(failed)
             return failed
+        }
+    }
+
+    private fun logCompletedRun(
+        request: SyncRequest,
+        result: SyncResult,
+        durationMs: Long,
+    ) {
+        val completed = result as? SyncResult.Completed
+        runCatching {
+            analytics?.logEvent(
+                SyncAnalyticsEvent.RunCompleted(
+                    trigger = request.reason.name,
+                    urgency = request.urgency.name,
+                    result = result.analyticsName(),
+                    durationMs = durationMs,
+                    pushedMutationCount = completed?.pushedMutationCount ?: 0,
+                    pulledChangeCount = completed?.pulledChangeCount ?: 0,
+                    pendingMutationCount = completed?.pendingMutationCount ?: 0,
+                    destinationCount = destinations.size,
+                ),
+            )
         }
     }
 
@@ -195,6 +232,17 @@ private fun SyncResult.toStatus(lastSuccessfulAt: String?): SyncStatus {
         SyncResult.ProfileNotLinked -> SyncStatus.ActionRequired(SyncActionRequired.PROFILE_NOT_LINKED, lastSuccessfulAt)
         SyncResult.SyncDisabled -> SyncStatus.ActionRequired(SyncActionRequired.SYNC_DISABLED, lastSuccessfulAt)
         is SyncResult.Failed -> SyncStatus.Failed(message, lastSuccessfulAt)
+    }
+}
+
+private fun SyncResult.analyticsName(): String {
+    return when (this) {
+        is SyncResult.Completed -> "completed"
+        SyncResult.NotConfigured -> "not_configured"
+        SyncResult.NotAuthenticated -> "not_authenticated"
+        SyncResult.ProfileNotLinked -> "profile_not_linked"
+        SyncResult.SyncDisabled -> "sync_disabled"
+        is SyncResult.Failed -> "failed"
     }
 }
 

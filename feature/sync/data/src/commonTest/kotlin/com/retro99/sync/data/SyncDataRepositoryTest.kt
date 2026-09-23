@@ -4,6 +4,9 @@ import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.database.api.sync.SyncCheckpoint
 import com.retro99.database.api.sync.SyncCheckpointDatabase
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.AnalyticsEvent
+import com.retro99.analytics.api.SyncAnalyticsEvent
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncScope
@@ -280,6 +283,38 @@ class SyncDataRepositoryTest {
     }
 
     @Test
+    fun logsPrivacySafeRunMetricsWithoutPayloadOrAccountIdentifiers() = runTest {
+        val analytics = RecordingAnalytics()
+        val repository = SyncDataRepository(
+            syncPass = ImmediateSyncPass(
+                result = SyncResult.Completed(2, 3, 1),
+            ),
+            executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            analytics = analytics,
+        )
+
+        repository.requestSync(
+            SyncRequest(
+                reason = SyncTriggerReason.RECOVERY,
+                urgency = SyncUrgency.ROUTINE,
+            ),
+        )
+
+        val event = analytics.events.single() as SyncAnalyticsEvent.RunCompleted
+        assertEquals("RECOVERY", event.trigger)
+        assertEquals("ROUTINE", event.urgency)
+        assertEquals("completed", event.result)
+        assertEquals(2, event.pushedMutationCount)
+        assertEquals(3, event.pulledChangeCount)
+        assertEquals(1, event.pendingMutationCount)
+        assertTrue(event.parameters.keys.none { key ->
+            key.contains("payload", ignoreCase = true) ||
+                key.contains("account", ignoreCase = true)
+        })
+    }
+
+    @Test
     fun preflightSelectsDispatchableEntriesWithoutDroppingPreservedMutations() = runTest {
         val outbox = RecordingOutbox().apply {
             eligibleEntries = listOf(
@@ -522,6 +557,18 @@ private class StatusRecordingCheckpointDatabase(
     override suspend fun clearAllData() {
         checkpoint = null
     }
+}
+
+private class RecordingAnalytics : Analytics {
+    val events = mutableListOf<AnalyticsEvent>()
+
+    override fun logException(throwable: Throwable, message: String?) = Unit
+
+    override fun logEvent(event: AnalyticsEvent) {
+        events += event
+    }
+
+    override fun setUserId(userId: String?) = Unit
 }
 
 private fun testEntry(
