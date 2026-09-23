@@ -9,10 +9,8 @@ import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerPositionLocalSource
 import com.retro99.server.api.ServerReaderRepository
 import com.retro99.server.audiobookshelf.model.AudiobookshelfMediaProgressApiModel
-import com.retro99.server.audiobookshelf.model.toAudiobookshelfMediaProgress
 import com.retro99.server.audiobookshelf.model.toServerPosition
 import retro99.network.api.get
-import retro99.network.api.patch
 
 class AudiobookshelfReaderRepository(
     private val networkClient: ServerNetworkClient,
@@ -30,11 +28,12 @@ class AudiobookshelfReaderRepository(
     }
 
     override suspend fun savePosition(bookUuid: String, position: ServerPosition): CompletableResult {
-        localSource.savePosition(position)
-
-        return networkClient.patch(
-            path = "/api/me/progress/$bookUuid",
-            body = position.toAudiobookshelfMediaProgress(libraryItemId = bookUuid),
+        return localSource.savePositionWithSync(
+            position = position.copy(
+                bookUuid = bookUuid,
+                serverId = serverId,
+            ),
+            remoteAccountId = serverId,
         )
     }
 

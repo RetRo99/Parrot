@@ -12,7 +12,8 @@ import org.koin.core.annotation.Provided
 
 /**
  * Use case for saving reading progress.
- * Saves to local cache first, then syncs to remote server.
+ * Saves the local position and durable remote-delivery intent. Network delivery
+ * is handled by the shared synchronization coordinator.
  *
  * Follows the Books pattern: uses AuthenticatedRepositoryProvider directly
  * to get ServerReaderRepository, which owns both local and remote position data.
@@ -57,4 +58,3 @@ private fun PositionDomainModel.toServerPosition(): ServerPosition {
         cssSelector = cssSelector,
     )
 }
-

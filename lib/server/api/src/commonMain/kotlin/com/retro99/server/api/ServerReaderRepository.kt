@@ -32,7 +32,8 @@ interface ServerReaderRepository {
 
     /**
      * Saves the reading position for a book.
-     * Saves to local cache first, then syncs to remote server.
+     * Commits the local position and durable delivery intent. Remote delivery
+     * is performed later by the shared sync destination.
      *
      * @param bookUuid The UUID of the book
      * @param position The position to save

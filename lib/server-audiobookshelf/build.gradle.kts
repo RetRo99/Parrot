@@ -34,6 +34,9 @@ kotlin {
             implementation(projects.lib.network.implementation)
             implementation(projects.lib.database.api)
             implementation(projects.lib.serverStoryteller)
+            implementation(projects.feature.sync.domain)
+            implementation(projects.feature.sync.data)
+            implementation(projects.lib.user.api)
         }
 
         commonTest.dependencies {
