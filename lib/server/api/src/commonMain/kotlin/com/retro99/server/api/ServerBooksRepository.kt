@@ -72,6 +72,8 @@ data class ServerBook(
     val contentHashAlgorithm: String? = null,
     val remoteFileAvailability: RemoteFileAvailability = RemoteFileAvailability.None,
     val remoteRevision: Long? = null,
+    val mediaResources: List<MediaResource> = emptyList(),
+    val localSourceUuid: String? = null,
 )
 
 enum class RemoteFileAvailability {

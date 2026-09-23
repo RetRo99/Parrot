@@ -23,6 +23,12 @@ data class BooksListViewState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val isImporting: Boolean = false,
+    val supportsCloudBackup: Boolean = false,
+    val showBackupAllConfirmation: Boolean = false,
+    val backupAllRightsAttested: Boolean = false,
+    val isBackingUpAll: Boolean = false,
+    val backupAllQueuedCount: Int? = null,
+    val backupAllError: String? = null,
     val error: AppError? = null,
 ) {
     val filteredBooks: List<BookUiModel>

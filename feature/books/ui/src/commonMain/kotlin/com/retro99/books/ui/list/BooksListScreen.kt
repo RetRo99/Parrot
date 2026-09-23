@@ -39,6 +39,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -52,6 +53,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -101,6 +103,15 @@ import resources.translations.books_sort_title
 import resources.translations.books_sort_z_to_a
 import resources.translations.books_view_grid
 import resources.translations.books_view_list
+import resources.translations.cloud_backup_all_button
+import resources.translations.cloud_backup_all_message
+import resources.translations.cloud_backup_all_queued
+import resources.translations.cloud_backup_all_result_title
+import resources.translations.cloud_backup_all_title
+import resources.translations.cloud_backup_attestation
+import resources.translations.cloud_backup_confirm
+import resources.translations.general_cancel
+import resources.translations.general_close
 
 @Composable
 fun BooksListScreen(
@@ -150,6 +161,73 @@ private fun BooksListScreenContent(
 
     if (viewState.isImporting) {
         ImportingDialog()
+    }
+
+    if (viewState.showBackupAllConfirmation) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!viewState.isBackingUpAll) intentDispatcher(BooksListIntent.OnBackupAllDismissed)
+            },
+            title = { Text(stringResource(StringRes.cloud_backup_all_title)) },
+            text = {
+                Column {
+                    Text(stringResource(StringRes.cloud_backup_all_message))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 12.dp),
+                    ) {
+                        Checkbox(
+                            checked = viewState.backupAllRightsAttested,
+                            onCheckedChange = {
+                                intentDispatcher(BooksListIntent.OnBackupAllAttestationChanged(it))
+                            },
+                        )
+                        Text(stringResource(StringRes.cloud_backup_attestation))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = viewState.backupAllRightsAttested && !viewState.isBackingUpAll,
+                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllConfirmed) },
+                ) {
+                    if (viewState.isBackingUpAll) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(stringResource(StringRes.cloud_backup_confirm))
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !viewState.isBackingUpAll,
+                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllDismissed) },
+                ) {
+                    Text(stringResource(StringRes.general_cancel))
+                }
+            },
+        )
+    }
+
+    if (viewState.backupAllQueuedCount != null || viewState.backupAllError != null) {
+        AlertDialog(
+            onDismissRequest = { intentDispatcher(BooksListIntent.OnBackupAllResultDismissed) },
+            title = { Text(stringResource(StringRes.cloud_backup_all_result_title)) },
+            text = {
+                Text(
+                    viewState.backupAllError
+                        ?: stringResource(
+                            StringRes.cloud_backup_all_queued,
+                            viewState.backupAllQueuedCount ?: 0,
+                        ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { intentDispatcher(BooksListIntent.OnBackupAllResultDismissed) }) {
+                    Text(stringResource(StringRes.general_close))
+                }
+            },
+        )
     }
 
     if (showFilterSheet) {
@@ -207,6 +285,19 @@ private fun BooksListScreenContent(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 )
+
+                if (viewState.supportsCloudBackup) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(onClick = { intentDispatcher(BooksListIntent.OnBackupAllClicked) }) {
+                            Text(stringResource(StringRes.cloud_backup_all_button))
+                        }
+                    }
+                }
 
                 AnimatedVisibility(
                     visible = viewState.isSearchVisible,

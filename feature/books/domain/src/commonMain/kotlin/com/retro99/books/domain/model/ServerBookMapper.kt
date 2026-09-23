@@ -1,6 +1,7 @@
 package com.retro99.books.domain.model
 
 import com.retro99.server.api.ServerBook
+import com.retro99.server.api.MediaResource
 
 /**
  * Maps a ServerBook to BookDomainModel.
@@ -97,21 +98,21 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             status = null,
             ebook = if (hasEbook) MediaFileDomainModel(
                 uuid = "$uuid-ebook",
-                filepath = ebookFilepath,
+                filepath = mediaResources.firstOrNull { it.mediaType == "ebook" }?.localPath ?: ebookFilepath,
                 missing = null,
                 createdAt = null,
                 updatedAt = null,
             ) else null,
             audiobook = if (hasAudiobook) MediaFileDomainModel(
                 uuid = "$uuid-audiobook",
-                filepath = audiobookFilepath,
+                filepath = mediaResources.firstOrNull { it.mediaType == "audiobook" }?.localPath ?: audiobookFilepath,
                 missing = null,
                 createdAt = null,
                 updatedAt = null,
             ) else null,
             readaloud = if (hasReadaloud) ReadaloudDomainModel(
                 uuid = "$uuid-readaloud",
-                filepath = readaloudFilepath,
+                filepath = mediaResources.firstOrNull { it.mediaType == "readaloud" }?.localPath ?: readaloudFilepath,
                 missing = null,
                 status = null,
                 currentStage = null,
@@ -126,6 +127,8 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             contentHashAlgorithm = contentHashAlgorithm,
             remoteFileAvailability = remoteFileAvailability,
             remoteRevision = remoteRevision,
+            mediaResources = mediaResources,
+            localSourceUuid = localSourceUuid,
         )
     }
 }

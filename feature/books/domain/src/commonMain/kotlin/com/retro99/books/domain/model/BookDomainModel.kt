@@ -2,6 +2,7 @@ package com.retro99.books.domain.model
 
 import com.retro99.server.api.ServerType
 import com.retro99.server.api.RemoteFileAvailability
+import com.retro99.server.api.MediaResource
 
 /**
  * Sealed class representing a book in the domain layer.
@@ -29,6 +30,9 @@ sealed class BookDomainModel {
 
     open val remoteRevision: Long?
         get() = null
+
+    open val mediaResources: List<MediaResource>
+        get() = emptyList()
 
     abstract val series: List<SeriesDomainModel>
 
@@ -67,6 +71,8 @@ sealed class BookDomainModel {
         override val contentHashAlgorithm: String? = null,
         override val remoteFileAvailability: RemoteFileAvailability = RemoteFileAvailability.None,
         override val remoteRevision: Long? = null,
+        override val mediaResources: List<MediaResource> = emptyList(),
+        val localSourceUuid: String? = null,
     ) : BookDomainModel()
 
     /**
@@ -90,6 +96,17 @@ sealed class BookDomainModel {
         val publicationDate: String?,
     ) : BookDomainModel() {
         override val series: List<SeriesDomainModel> = emptyList()
+
+        override val mediaResources: List<MediaResource> = listOf(
+            MediaResource(
+                mediaType = bookType.value,
+                localPath = filePath,
+                remoteAvailability = RemoteFileAvailability.None,
+                size = fileSize,
+                contentHash = contentHash,
+                contentHashAlgorithm = contentHashAlgorithm,
+            ),
+        )
 
         override val libraryBookId: String?
             get() = contentHash?.let { hash -> "${contentHashAlgorithm ?: "sha-256-v1"}:$hash" }

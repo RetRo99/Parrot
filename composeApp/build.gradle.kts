@@ -36,14 +36,12 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
-            implementation(libs.kotzilla.sdk.compose)
             implementation(libs.firebase.crashlytics.android)
             implementation(libs.firebase.analytics.android)
             implementation(libs.firebase.common)
             implementation(libs.datetime)
         }
         iosMain.dependencies {
-            implementation(libs.kotzilla.sdk.compose)
             // Use api() to allow export in framework block
             api(projects.feature.reader.ui)
             api(projects.feature.login.data)
@@ -60,6 +58,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.koin.core)
             api(libs.koin.annotations)
+            implementation(libs.kotzilla.sdk.compose)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.navigation3.ui)

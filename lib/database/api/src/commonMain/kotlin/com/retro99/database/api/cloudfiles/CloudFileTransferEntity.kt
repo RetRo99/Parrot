@@ -1,0 +1,28 @@
+package com.retro99.database.api.cloudfiles
+
+data class CloudFileTransferEntity(
+    val transferId: String,
+    val serverId: String,
+    val direction: String,
+    val libraryBookId: String,
+    val cloudBookId: String?,
+    val cloudBookFileId: String?,
+    val mediaType: String,
+    val localSourceUuid: String?,
+    val stagingPath: String?,
+    val sizeBytes: Long,
+    val bytesTransferred: Long,
+    val contentHash: String?,
+    val contentHashAlgorithm: String?,
+    val uploadId: String?,
+    val storagePath: String?,
+    val tusUploadUrl: String?,
+    val tusExpiresAt: String?,
+    val rightsAttestation: String?,
+    val state: String,
+    val attemptCount: Int,
+    val nextAttemptAt: String?,
+    val lastError: String?,
+    val createdAt: String,
+    val updatedAt: String,
+)

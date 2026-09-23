@@ -42,6 +42,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val syncPageAdapter: ParrotCloudSyncPageAdapter,
     @Provided private val libraryMutationApplier: ParrotCloudLibraryMutationApplier,
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
+    @Provided private val bookFileChangeApplier: ParrotCloudBookFileChangeApplier,
 ) : SyncPass {
     private val outboxCapability = SyncOutboxCapability(
         unsupportedEntityTypes = setOf(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS),
@@ -180,10 +181,13 @@ class ParrotCloudSyncAdapter(
                     book.toSyncLibraryBookSnapshot(revision),
                 )
             }
+
+            ENTITY_TYPE_BOOK_FILE -> bookFileChangeApplier.apply(payload)
         }
     }
 
     private companion object {
         const val SYNC_BATCH_SIZE = 50
+        const val ENTITY_TYPE_BOOK_FILE = "book_file"
     }
 }

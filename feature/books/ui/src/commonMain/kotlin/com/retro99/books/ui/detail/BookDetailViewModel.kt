@@ -6,11 +6,21 @@ import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.base.result.log
+import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
+import com.retro99.books.ui.CLOUD_BACKUP_ATTESTATION_VERSION
+import com.retro99.books.ui.CLOUD_BACKUP_TOS_VERSION
+import com.retro99.books.domain.BookFileTransferManager
 import com.retro99.books.domain.FileImportManager
+import com.retro99.books.domain.UploadRightsAttestation
+import com.retro99.books.domain.usecase.CancelBookFileTransferUseCase
+import com.retro99.books.domain.usecase.ObserveBookFileTransferUseCase
+import com.retro99.books.domain.usecase.RetryBookFileTransferUseCase
+import com.retro99.books.domain.usecase.StartBookFileUploadUseCase
 import com.retro99.books.domain.usecase.ObserveFavoriteUseCase
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
 import com.retro99.books.ui.model.toUiModel
+import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.DownloadState
 import com.retro99.reader.domain.usecase.CancelDownloadUseCase
@@ -20,10 +30,13 @@ import com.retro99.reader.domain.usecase.ObserveBookWithProgressUseCase
 import com.retro99.reader.domain.usecase.ObserveDownloadStateUseCase
 import com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
+import kotlin.time.Clock
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
@@ -44,10 +57,17 @@ class BookDetailViewModel(
     @Provided private val observeFavoriteUseCase: ObserveFavoriteUseCase,
     @Provided private val resolvePositionConflictUseCase: ResolvePositionConflictUseCase,
     @Provided private val fileImportManager: FileImportManager,
+    @Provided private val bookFileTransferManager: BookFileTransferManager,
+    @Provided private val observeBookFileTransferUseCase: ObserveBookFileTransferUseCase,
+    @Provided private val startBookFileUploadUseCase: StartBookFileUploadUseCase,
+    @Provided private val cancelBookFileTransferUseCase: CancelBookFileTransferUseCase,
+    @Provided private val retryBookFileTransferUseCase: RetryBookFileTransferUseCase,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
     BookDetailViewState(),
 ) {
+    private var transferObservationJob: Job? = null
+    private var observedTransferKey: String? = null
 
     init {
         analytics.logEvent(
@@ -129,6 +149,30 @@ class BookDetailViewModel(
             BookDetailIntent.OnDeleteLocalBookDismissed -> {
                 updateState { it.copy(showDeleteLocalBookConfirmation = false) }
             }
+
+            BookDetailIntent.OnBackupClicked -> {
+                updateState {
+                    it.copy(
+                        showBackupConfirmation = true,
+                        backupRightsAttested = false,
+                        bookFileTransferError = null,
+                    )
+                }
+            }
+
+            is BookDetailIntent.OnBackupAttestationChanged -> {
+                updateState { it.copy(backupRightsAttested = intent.attested) }
+            }
+
+            BookDetailIntent.OnBackupConfirmed -> startBookBackup()
+
+            BookDetailIntent.OnBackupDismissed -> {
+                updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
+            }
+
+            BookDetailIntent.OnCancelBookBackupClicked -> cancelBookBackup()
+
+            is BookDetailIntent.OnRetryBookBackupClicked -> retryBookBackup(intent.transferId)
 
             BookDetailIntent.OnUseLocalPositionClicked -> {
                 resolveConflictWithLocal()
@@ -267,9 +311,11 @@ class BookDetailViewModel(
                 result
                     .onSuccess { bookWithProgress ->
                         val uiModel = bookWithProgress.book.toUiModel()
+                        observeBookFileTransfers(uiModel)
                         updateState {
                             it.copy(
                                 book = uiModel,
+                                supportsBookBackup = canBackUp(uiModel),
                                 progressInfo = bookWithProgress.progressInfo?.toUiModel(),
                                 isLoading = false,
                                 error = null,
@@ -287,6 +333,72 @@ class BookDetailViewModel(
                     }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun canBackUp(book: BookUiModel): Boolean =
+        book is BookUiModel.StorytellerBook &&
+            book.serverType == ServerType.ParrotCloud &&
+            book.libraryBookId != null &&
+            book.localSourceUuid != null &&
+            book.mediaResources.any { resource -> resource.localPath != null } &&
+            bookFileTransferManager.supportsUpload(serverId)
+
+    private fun observeBookFileTransfers(book: BookUiModel) {
+        val cloudBook = book as? BookUiModel.StorytellerBook
+        val libraryBookId = cloudBook?.libraryBookId
+        val key = libraryBookId?.let { "$serverId:$it" }
+        if (key == observedTransferKey) return
+        observedTransferKey = key
+        transferObservationJob?.cancel()
+        if (libraryBookId == null) {
+            updateState { it.copy(bookFileTransfers = emptyList()) }
+            return
+        }
+        transferObservationJob = observeBookFileTransferUseCase(serverId, libraryBookId)
+            .onEach { transfers -> updateState { it.copy(bookFileTransfers = transfers) } }
+            .launchIn(viewModelScope)
+    }
+
+    private fun startBookBackup() {
+        val book = viewState.value.book as? BookUiModel.StorytellerBook ?: return
+        val sourceUuid = book.localSourceUuid ?: return
+        if (!viewState.value.backupRightsAttested || !viewState.value.supportsBookBackup) return
+        viewModelScope.launch {
+            try {
+                startBookFileUploadUseCase(
+                    serverId = serverId,
+                    localBookUuid = sourceUuid,
+                    rightsAttestation = UploadRightsAttestation(
+                        attestedAt = Clock.System.now().toString(),
+                        tosVersion = CLOUD_BACKUP_TOS_VERSION,
+                        attestationVersion = CLOUD_BACKUP_ATTESTATION_VERSION,
+                    ),
+                )
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                updateState {
+                    it.copy(bookFileTransferError = exception.message ?: "Could not start backup")
+                }
+            }
+            updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
+        }
+    }
+
+    private fun cancelBookBackup() {
+        val libraryBookId = (viewState.value.book as? BookUiModel.StorytellerBook)?.libraryBookId
+            ?: return
+        viewModelScope.launch {
+            runCatching { cancelBookFileTransferUseCase(serverId, libraryBookId) }
+                .onFailure { error -> updateState { it.copy(bookFileTransferError = error.message) } }
+        }
+    }
+
+    private fun retryBookBackup(transferId: String) {
+        viewModelScope.launch {
+            runCatching { retryBookFileTransferUseCase(transferId) }
+                .onFailure { error -> updateState { it.copy(bookFileTransferError = error.message) } }
+        }
     }
 
     private fun observeDownloadStates() {
@@ -402,5 +514,5 @@ class BookDetailViewModel(
             // Download state will be updated via the observer
         }
     }
-}
 
+}

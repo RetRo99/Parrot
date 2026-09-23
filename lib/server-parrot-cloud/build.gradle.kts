@@ -35,6 +35,7 @@ kotlin {
             implementation(projects.feature.cloudAccount.domain)
             implementation(projects.feature.sync.domain)
             implementation(projects.feature.sync.data)
+            implementation(projects.feature.books.domain)
         }
 
         commonTest.dependencies {

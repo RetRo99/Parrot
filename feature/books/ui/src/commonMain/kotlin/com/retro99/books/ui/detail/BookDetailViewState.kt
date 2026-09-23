@@ -5,6 +5,7 @@ import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.DownloadState
+import com.retro99.books.domain.BookFileTransfer
 
 data class BookDetailViewState(
     val book: BookUiModel? = null,
@@ -21,5 +22,9 @@ data class BookDetailViewState(
     val conflictResolutionError: AppError? = null,
     /** The book type the user wants to open, shown when there's a conflict to resolve first */
     val pendingOpenBookType: BookType? = null,
+    val supportsBookBackup: Boolean = false,
+    val showBackupConfirmation: Boolean = false,
+    val backupRightsAttested: Boolean = false,
+    val bookFileTransfers: List<BookFileTransfer> = emptyList(),
+    val bookFileTransferError: String? = null,
 )
-

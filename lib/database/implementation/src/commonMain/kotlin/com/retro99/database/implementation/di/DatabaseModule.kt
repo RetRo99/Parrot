@@ -6,6 +6,7 @@ import com.retro99.database.api.books.AuthorsDatabase
 import com.retro99.database.api.books.BookmarksDatabase
 import com.retro99.database.api.books.BooksDatabase
 import com.retro99.database.api.books.PositionDatabase
+import com.retro99.database.api.cloudfiles.CloudFilesDatabase
 import com.retro99.database.api.favorites.FavoritesDatabase
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
@@ -18,6 +19,8 @@ import com.retro99.database.implementation.dao.books.AuthorsDatabaseImpl
 import com.retro99.database.implementation.dao.books.AuthorsSqlDelightDao
 import com.retro99.database.implementation.dao.books.BookmarksDatabaseImpl
 import com.retro99.database.implementation.dao.books.BookmarksSqlDelightDao
+import com.retro99.database.implementation.dao.cloudfiles.CloudFilesDatabaseImpl
+import com.retro99.database.implementation.dao.cloudfiles.CloudFilesSqlDelightDao
 import com.retro99.database.implementation.dao.books.BooksDatabaseImpl
 import com.retro99.database.implementation.dao.books.BooksSqlDelightDao
 import com.retro99.database.implementation.dao.favorites.FavoritesDatabaseImpl
@@ -180,6 +183,20 @@ class DatabaseModule {
     }
 
     @Single
+    internal fun provideCloudFilesSqlDelightDao(
+        databaseManager: DatabaseManager,
+    ): CloudFilesSqlDelightDao {
+        return CloudFilesSqlDelightDao(databaseManager)
+    }
+
+    @Single
+    internal fun provideCloudFilesDatabase(
+        cloudFilesSqlDelightDao: CloudFilesSqlDelightDao,
+    ): CloudFilesDatabase {
+        return CloudFilesDatabaseImpl(cloudFilesSqlDelightDao)
+    }
+
+    @Single
     internal fun provideReaderSettingsSqlDelightDao(
         databaseManager: DatabaseManager,
     ): ReaderSettingsSqlDelightDao {
@@ -202,6 +219,7 @@ class DatabaseModule {
         readingSessionDatabase: ReadingSessionDatabase,
         syncOutboxDatabase: SyncOutboxDatabase,
         syncCheckpointDatabase: SyncCheckpointDatabase,
+        cloudFilesDatabase: CloudFilesDatabase,
     ): List<DataClearable> {
         return listOf(
             booksDatabase,
@@ -211,6 +229,7 @@ class DatabaseModule {
             readingSessionDatabase,
             syncOutboxDatabase,
             syncCheckpointDatabase,
+            cloudFilesDatabase,
         )
     }
 }

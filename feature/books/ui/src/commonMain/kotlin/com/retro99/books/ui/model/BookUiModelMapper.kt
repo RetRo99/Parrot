@@ -25,6 +25,19 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
         ebookFilepath = ebook?.filepath,
         audiobookFilepath = audiobook?.filepath,
         readaloudFilepath = readaloud?.filepath,
+        libraryBookId = libraryBookId,
+        localSourceUuid = localSourceUuid,
+        remoteFileAvailability = remoteFileAvailability.name,
+        mediaResources = mediaResources.map { resource ->
+            MediaResourceUiModel(
+                mediaType = resource.mediaType,
+                localPath = resource.localPath,
+                remoteAvailability = resource.remoteAvailability.name,
+                size = resource.size,
+                contentHash = resource.contentHash,
+                contentHashAlgorithm = resource.contentHashAlgorithm,
+            )
+        },
     )
     is BookDomainModel.LocalBook -> BookUiModel.LocalBook(
         uuid = uuid,

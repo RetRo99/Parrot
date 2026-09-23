@@ -501,5 +501,21 @@
     <string name="cloud_account_sync_status_items_progress" tools:ignore="MissingTranslation">Completed %1$d of %2$d items.</string>
     <string name="cloud_account_sync_status_bytes_progress" tools:ignore="MissingTranslation">Transferred %1$d of %2$d bytes.</string>
     <string name="cloud_account_sync_status_last_successful" tools:ignore="MissingTranslation">Last successful delivery: %s</string>
+    <string name="cloud_backup_button" tools:ignore="MissingTranslation">Back up to Parrot Cloud</string>
+    <string name="cloud_backup_title" tools:ignore="MissingTranslation">Back up this book?</string>
+    <string name="cloud_backup_attestation" tools:ignore="MissingTranslation">I confirm I have the right to store this file in my Parrot Cloud account.</string>
+    <string name="cloud_backup_confirm" tools:ignore="MissingTranslation">Back up</string>
+    <string name="cloud_backup_queued" tools:ignore="MissingTranslation">Backup queued</string>
+    <string name="cloud_backup_progress" tools:ignore="MissingTranslation">Backing up · %1$d%%</string>
+    <string name="cloud_backup_finishing" tools:ignore="MissingTranslation">Finishing backup…</string>
+    <string name="cloud_backup_complete" tools:ignore="MissingTranslation">Backup complete</string>
+    <string name="cloud_backup_failed" tools:ignore="MissingTranslation">Backup failed: %1$s</string>
+    <string name="cloud_backup_cancel" tools:ignore="MissingTranslation">Cancel backup</string>
+    <string name="cloud_backup_retry" tools:ignore="MissingTranslation">Retry backup</string>
+    <string name="cloud_backup_all_button" tools:ignore="MissingTranslation">Back up all</string>
+    <string name="cloud_backup_all_title" tools:ignore="MissingTranslation">Back up all imported books?</string>
+    <string name="cloud_backup_all_message" tools:ignore="MissingTranslation">Books linked to your Parrot Cloud library will be queued for backup.</string>
+    <string name="cloud_backup_all_queued" tools:ignore="MissingTranslation">Queued %1$d book backups.</string>
+    <string name="cloud_backup_all_result_title" tools:ignore="MissingTranslation">Book backup</string>
     <string name="cloud_account_sign_in_with_google" tools:ignore="MissingTranslation">Continue with Google</string>
 </resources>

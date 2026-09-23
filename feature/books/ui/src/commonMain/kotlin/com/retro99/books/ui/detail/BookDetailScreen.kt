@@ -56,6 +56,7 @@ import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -107,6 +108,7 @@ import com.retro99.base.ui.compose.backdropColorScheme
 import com.retro99.base.ui.compose.rememberDominantColorState
 import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.books.domain.BookFileTransfer
 import com.retro99.books.ui.model.SeriesUiModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.DownloadState
@@ -137,6 +139,17 @@ import resources.translations.books_media_readaloud
 import resources.translations.books_media_ready
 import resources.translations.books_progress_local
 import resources.translations.books_progress_remote
+import resources.translations.cloud_backup_attestation
+import resources.translations.cloud_backup_button
+import resources.translations.cloud_backup_cancel
+import resources.translations.cloud_backup_confirm
+import resources.translations.cloud_backup_failed
+import resources.translations.cloud_backup_progress
+import resources.translations.cloud_backup_retry
+import resources.translations.cloud_backup_title
+import resources.translations.cloud_backup_queued
+import resources.translations.cloud_backup_complete
+import resources.translations.cloud_backup_finishing
 import resources.translations.books_reading_progress
 import resources.translations.general_back
 import resources.translations.general_cancel
@@ -178,6 +191,11 @@ fun BookDetailScreen(
                 isResolvingConflict = viewState.isResolvingConflict,
                 conflictResolutionError = viewState.conflictResolutionError,
                 pendingOpenBookType = viewState.pendingOpenBookType,
+                supportsBookBackup = viewState.supportsBookBackup,
+                showBackupConfirmation = viewState.showBackupConfirmation,
+                backupRightsAttested = viewState.backupRightsAttested,
+                bookFileTransfers = viewState.bookFileTransfers,
+                bookFileTransferError = viewState.bookFileTransferError,
                 intentDispatcher = intentDispatcher,
             )
         }
@@ -198,6 +216,11 @@ private fun BookDetailScreenContent(
     isResolvingConflict: Boolean,
     conflictResolutionError: AppError?,
     pendingOpenBookType: BookType?,
+    supportsBookBackup: Boolean,
+    showBackupConfirmation: Boolean,
+    backupRightsAttested: Boolean,
+    bookFileTransfers: List<BookFileTransfer>,
+    bookFileTransferError: String?,
     intentDispatcher: IntentDispatcher<BookDetailIntent>,
     modifier: Modifier = Modifier,
 ) {
@@ -242,6 +265,22 @@ private fun BookDetailScreenContent(
             onConfirm = { intentDispatcher(BookDetailIntent.OnDeleteLocalBookConfirmed) },
             onDismiss = { intentDispatcher(BookDetailIntent.OnDeleteLocalBookDismissed) },
         )
+    }
+
+    if (showBackupConfirmation) {
+        BackupRightsConfirmationDialog(
+            bookTitle = book.title,
+            attested = backupRightsAttested,
+            onAttestedChanged = { intentDispatcher(BookDetailIntent.OnBackupAttestationChanged(it)) },
+            onConfirm = { intentDispatcher(BookDetailIntent.OnBackupConfirmed) },
+            onDismiss = { intentDispatcher(BookDetailIntent.OnBackupDismissed) },
+        )
+    }
+
+    LaunchedEffect(bookFileTransferError) {
+        bookFileTransferError?.let { message ->
+            snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
+        }
     }
 
     if (pendingOpenBookType != null && progressInfo?.hasConflict == true) {
@@ -341,6 +380,30 @@ private fun BookDetailScreenContent(
                         readaloudDownloadState = readaloudDownloadState,
                         intentDispatcher = intentDispatcher,
                     )
+
+                    if (supportsBookBackup) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = { intentDispatcher(BookDetailIntent.OnBackupClicked) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Icon(imageVector = Icons.Outlined.Download, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(StringRes.cloud_backup_button))
+                        }
+                    }
+
+                    if (bookFileTransfers.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        BookBackupProgressSection(
+                            transfers = bookFileTransfers,
+                            onCancel = { intentDispatcher(BookDetailIntent.OnCancelBookBackupClicked) },
+                            onRetry = { transferId ->
+                                intentDispatcher(BookDetailIntent.OnRetryBookBackupClicked(transferId))
+                            },
+                        )
+                    }
 
                     progressInfo?.displayProgression?.let { progress ->
                         if (progress > 0.0) {
@@ -1191,6 +1254,111 @@ private fun DeleteLocalBookConfirmationDialog(
             }
         },
     )
+}
+
+@Composable
+private fun BackupRightsConfirmationDialog(
+    bookTitle: String,
+    attested: Boolean,
+    onAttestedChanged: (Boolean) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        title = { Text(stringResource(StringRes.cloud_backup_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(bookTitle, style = MaterialTheme.typography.titleSmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = attested, onCheckedChange = onAttestedChanged)
+                    Text(
+                        text = stringResource(StringRes.cloud_backup_attestation),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = attested) {
+                Text(stringResource(StringRes.cloud_backup_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(StringRes.general_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun BookBackupProgressSection(
+    transfers: List<BookFileTransfer>,
+    onCancel: () -> Unit,
+    onRetry: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val transfer = transfers.lastOrNull { it.state in setOf("pending", "transferring", "verifying", "finalizing") }
+        ?: transfers.lastOrNull()
+        ?: return
+    val fraction = if (transfer.totalBytes > 0) {
+        (transfer.bytesTransferred.toFloat() / transfer.totalBytes).coerceIn(0f, 1f)
+    } else {
+        null
+    }
+    val progressPercent = ((fraction ?: 0f) * 100).toInt()
+    val statusText = when (transfer.state) {
+        "pending" -> stringResource(StringRes.cloud_backup_queued)
+        "transferring" -> stringResource(StringRes.cloud_backup_progress, progressPercent)
+        "verifying", "finalizing" -> stringResource(StringRes.cloud_backup_finishing)
+        "completed" -> stringResource(StringRes.cloud_backup_complete)
+        "failed" -> stringResource(
+            StringRes.cloud_backup_failed,
+            transfer.lastError ?: "Unknown error",
+        )
+        else -> transfer.state
+    }
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(statusText, style = MaterialTheme.typography.bodyMedium)
+        if (transfer.state in setOf("pending", "transferring", "verifying", "finalizing")) {
+            if (fraction == null) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            } else {
+                LinearProgressIndicator(
+                    progress = { fraction },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Text(
+                text = "${formatByteCount(transfer.bytesTransferred)} / ${formatByteCount(transfer.totalBytes)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(onClick = onCancel) {
+                Text(stringResource(StringRes.cloud_backup_cancel))
+            }
+        } else if (transfer.state == "failed") {
+            TextButton(onClick = { onRetry(transfer.transferId) }) {
+                Text(stringResource(StringRes.cloud_backup_retry))
+            }
+        }
+    }
+}
+
+private fun formatByteCount(bytes: Long): String = when {
+    bytes >= 1024L * 1024L -> "${bytes / (1024L * 1024L)} MB"
+    bytes >= 1024L -> "${bytes / 1024L} KB"
+    else -> "$bytes B"
 }
 
 @Composable

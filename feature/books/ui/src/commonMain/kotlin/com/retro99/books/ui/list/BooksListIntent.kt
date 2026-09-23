@@ -14,6 +14,11 @@ sealed interface BooksListIntent : BaseIntent {
     data class OnBookClicked(val book: BookUiModel) : BooksListIntent
     data class OnFavoriteClicked(val bookUuid: String) : BooksListIntent
     data class OnImportBook(val file: PlatformFile) : BooksListIntent
+    data object OnBackupAllClicked : BooksListIntent
+    data class OnBackupAllAttestationChanged(val attested: Boolean) : BooksListIntent
+    data object OnBackupAllConfirmed : BooksListIntent
+    data object OnBackupAllDismissed : BooksListIntent
+    data object OnBackupAllResultDismissed : BooksListIntent
 
     data class OnQuickFilterToggled(val filter: BookQuickFilter) : BooksListIntent
     data class OnServerTypeFilterChanged(val serverType: ServerType?) : BooksListIntent

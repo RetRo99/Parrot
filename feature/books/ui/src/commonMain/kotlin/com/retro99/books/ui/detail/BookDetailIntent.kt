@@ -19,9 +19,14 @@ sealed interface BookDetailIntent : BaseIntent {
     data object OnDeleteLocalBookClicked : BookDetailIntent
     data object OnDeleteLocalBookConfirmed : BookDetailIntent
     data object OnDeleteLocalBookDismissed : BookDetailIntent
+    data object OnBackupClicked : BookDetailIntent
+    data class OnBackupAttestationChanged(val attested: Boolean) : BookDetailIntent
+    data object OnBackupConfirmed : BookDetailIntent
+    data object OnBackupDismissed : BookDetailIntent
+    data object OnCancelBookBackupClicked : BookDetailIntent
+    data class OnRetryBookBackupClicked(val transferId: String) : BookDetailIntent
     data object OnUseLocalPositionClicked : BookDetailIntent
     data object OnUseRemotePositionClicked : BookDetailIntent
     data object OnConflictResolutionErrorDismissed : BookDetailIntent
     data object OnConflictDialogDismissed : BookDetailIntent
 }
-

@@ -2,6 +2,7 @@ package com.retro99.server.parrotcloud
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.map
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
@@ -9,12 +10,15 @@ import com.retro99.base.result.CompletableResult
 import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
+import com.retro99.database.api.cloudfiles.CloudFilesDatabase
+import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.server.api.ServerBook
 import com.retro99.server.api.ServerBooksRepository
 import com.retro99.server.api.ServerConfig
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -24,6 +28,8 @@ class ParrotCloudBooksRepository(
     private val serverConfig: ServerConfig,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
+    @Provided private val cloudFilesDatabase: CloudFilesDatabase,
+    @Provided private val importedBooksDatabase: ImportedBooksDatabase,
 ) : ServerBooksRepository {
     private val json = Json {
         encodeDefaults = true
@@ -32,24 +38,43 @@ class ParrotCloudBooksRepository(
     override val serverId: String = serverConfig.id
 
     override fun getBooks(): Flow<AppResult<List<ServerBook>>> {
-        return libraryBooksDatabase.getAllLibraryBooks().map { books ->
+        return combine(
+            libraryBooksDatabase.getAllLibraryBooks(),
+            cloudFilesDatabase.observeFileStates(),
+            importedBooksDatabase.getAllImportedBooks(),
+        ) { books, fileStates, importedBooks ->
             Ok(
                 books.filter { book -> book.cloudBookId != null }
-                    .map { book -> book.toServerBook(serverId) }
+                    .map { book ->
+                        val localBook = importedBooks.firstOrNull { imported ->
+                            imported.contentHash != null &&
+                                "${imported.contentHashAlgorithm ?: "sha-256-v1"}:${imported.contentHash}" ==
+                                book.libraryBookId
+                        }
+                        book.toServerBook(
+                            serverId = serverId,
+                            localBook = localBook,
+                            fileStates = fileStates.filter { state ->
+                                state.libraryBookId == book.libraryBookId
+                            },
+                        )
+                    }
                     .sortedBy { book -> book.title.lowercase() },
             )
         }
     }
 
     override fun getBook(uuid: String): Flow<AppResult<ServerBook>> {
-        return libraryBooksDatabase.getAllLibraryBooks().map { books ->
-            val book = books.firstOrNull { candidate ->
-                candidate.cloudBookId == uuid || candidate.libraryBookId == uuid
-            }
-            if (book == null) {
-                Err(AppError.NotFoundError("Cloud book not found: $uuid"))
-            } else {
-                Ok(book.toServerBook(serverId))
+        return getBooks().map { result ->
+            result.andThen { books ->
+                val book = books.firstOrNull { candidate ->
+                    candidate.uuid == uuid || candidate.libraryBookId == uuid
+                }
+                if (book == null) {
+                    Err(AppError.NotFoundError("Cloud book not found: $uuid"))
+                } else {
+                    Ok(book)
+                }
             }
         }
     }

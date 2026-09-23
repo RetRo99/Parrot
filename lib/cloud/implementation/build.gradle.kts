@@ -27,6 +27,8 @@ kotlin {
             implementation(libs.serialization)
             implementation(libs.supabase.auth)
             implementation(libs.supabase.postgrest)
+            implementation(libs.supabase.storage)
+            implementation(libs.ktor.client.core)
             implementation(projects.lib.preferences.api)
             implementation(projects.lib.user.api)
         }

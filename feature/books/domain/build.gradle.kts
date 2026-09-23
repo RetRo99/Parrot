@@ -24,7 +24,7 @@ kotlin {
             api(libs.koin.annotations)
             implementation(libs.coroutines)
             implementation(projects.base)
-            implementation(projects.lib.server.api)
+            api(projects.lib.server.api)
             implementation(libs.filekit.core)
         }
 

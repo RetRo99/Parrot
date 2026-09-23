@@ -27,6 +27,8 @@ class ParrotCloudBooksRepositoryFactory(
             serverConfig = serverConfig,
             libraryBooksDatabase = booksRepository.libraryBooksDatabase,
             syncOutboxDatabase = booksRepository.syncOutboxDatabase,
+            cloudFilesDatabase = booksRepository.cloudFilesDatabase,
+            importedBooksDatabase = booksRepository.importedBooksDatabase,
         )
     }
 }
@@ -35,6 +37,8 @@ class ParrotCloudBooksRepositoryFactory(
 class ParrotCloudBooksRepositoryDependencies(
     @Provided val libraryBooksDatabase: com.retro99.database.api.library.LibraryBooksDatabase,
     @Provided val syncOutboxDatabase: com.retro99.database.api.sync.SyncOutboxDatabase,
+    @Provided val cloudFilesDatabase: com.retro99.database.api.cloudfiles.CloudFilesDatabase,
+    @Provided val importedBooksDatabase: com.retro99.database.api.importedbooks.ImportedBooksDatabase,
 )
 
 @Single(binds = [ServerReaderRepositoryFactory::class])

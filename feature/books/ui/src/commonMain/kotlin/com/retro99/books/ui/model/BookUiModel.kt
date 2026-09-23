@@ -71,6 +71,10 @@ sealed class BookUiModel {
         val ebookFilepath: String?,
         val audiobookFilepath: String?,
         val readaloudFilepath: String?,
+        val libraryBookId: String? = null,
+        val localSourceUuid: String? = null,
+        val remoteFileAvailability: String = "None",
+        val mediaResources: List<MediaResourceUiModel> = emptyList(),
     ) : BookUiModel() {
         override fun filePath(bookType: BookType): String? = when (bookType) {
             BookType.EBOOK -> ebookFilepath
@@ -116,6 +120,16 @@ sealed class BookUiModel {
         }
     }
 }
+
+@Serializable
+data class MediaResourceUiModel(
+    val mediaType: String,
+    val localPath: String?,
+    val remoteAvailability: String,
+    val size: Long?,
+    val contentHash: String?,
+    val contentHashAlgorithm: String?,
+)
 
 @Serializable
 data class SeriesUiModel(
