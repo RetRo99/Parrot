@@ -11,6 +11,13 @@ data class SyncRequest(
     val reason: SyncTriggerReason = SyncTriggerReason.MANUAL,
     val scope: SyncScope = SyncScope.All,
     val urgency: SyncUrgency = SyncUrgency.ROUTINE,
+    val routineSchedule: RoutineSyncSchedule? = null,
+)
+
+data class RoutineSyncSchedule(
+    val dirtyWaitMs: Long,
+    val intervalSincePreviousMs: Long?,
+    val forcedByMaximumWait: Boolean,
 )
 
 sealed interface SyncScope {

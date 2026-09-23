@@ -175,6 +175,9 @@ class SyncDataRepository(
                     pulledChangeCount = completed?.pulledChangeCount ?: 0,
                     pendingMutationCount = completed?.pendingMutationCount ?: 0,
                     destinationCount = destinations.size,
+                    routineDirtyWaitMs = request.routineSchedule?.dirtyWaitMs,
+                    routineIntervalMs = request.routineSchedule?.intervalSincePreviousMs,
+                    routineForcedByMaximumWait = request.routineSchedule?.forcedByMaximumWait,
                 ),
             )
         }
@@ -336,6 +339,7 @@ private fun SyncRequest?.merge(next: SyncRequest): SyncRequest {
         } else {
             com.retro99.sync.domain.SyncUrgency.ROUTINE
         },
+        routineSchedule = next.routineSchedule,
     )
 }
 

@@ -184,12 +184,13 @@ class ReaderViewModel(
     private val routineSyncScheduler = RoutineSyncScheduler(
         scope = viewModelScope,
         nowMillis = ::nowMillis,
-        requestSync = {
+        requestSync = { routineSchedule ->
             syncNowUseCase(
                 SyncRequest(
                     reason = SyncTriggerReason.ROUTINE_PROGRESS,
                     scope = SyncScope.Books(setOf(bookUuid)),
                     urgency = SyncUrgency.ROUTINE,
+                    routineSchedule = routineSchedule,
                 ),
             )
         },

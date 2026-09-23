@@ -11,17 +11,23 @@ sealed interface SyncAnalyticsEvent : AnalyticsEvent {
         val pulledChangeCount: Int,
         val pendingMutationCount: Int,
         val destinationCount: Int,
+        val routineDirtyWaitMs: Long? = null,
+        val routineIntervalMs: Long? = null,
+        val routineForcedByMaximumWait: Boolean? = null,
     ) : SyncAnalyticsEvent {
         override val name: String = "sync_run_completed"
-        override val parameters: Map<String, Any> = mapOf(
-            "trigger" to trigger,
-            "urgency" to urgency,
-            "result" to result,
-            "duration_ms" to durationMs,
-            "pushed_mutation_count" to pushedMutationCount,
-            "pulled_change_count" to pulledChangeCount,
-            "pending_mutation_count" to pendingMutationCount,
-            "destination_count" to destinationCount,
-        )
+        override val parameters: Map<String, Any> = buildMap {
+            put("trigger", trigger)
+            put("urgency", urgency)
+            put("result", result)
+            put("duration_ms", durationMs)
+            put("pushed_mutation_count", pushedMutationCount)
+            put("pulled_change_count", pulledChangeCount)
+            put("pending_mutation_count", pendingMutationCount)
+            put("destination_count", destinationCount)
+            routineDirtyWaitMs?.let { put("routine_dirty_wait_ms", it) }
+            routineIntervalMs?.let { put("routine_interval_ms", it) }
+            routineForcedByMaximumWait?.let { put("routine_forced_by_max_wait", it) }
+        }
     }
 }

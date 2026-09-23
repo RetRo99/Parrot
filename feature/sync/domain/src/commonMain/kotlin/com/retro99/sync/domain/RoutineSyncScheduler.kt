@@ -20,7 +20,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 class RoutineSyncScheduler(
     private val scope: CoroutineScope,
     private val nowMillis: () -> Long,
-    private val requestSync: suspend () -> Unit,
+    private val requestSync: suspend (RoutineSyncSchedule) -> Unit,
 ) : AutoCloseable {
     private val dirtySignals = Channel<Long>(Channel.CONFLATED)
     private val worker: Job = scope.launch {
@@ -70,8 +70,19 @@ class RoutineSyncScheduler(
             }
 
             dirtySince = null
-            lastSyncAt = nowMillis()
-            requestSync()
+            val syncNow = nowMillis()
+            val intervalSincePreviousMs = lastSyncAt?.let { syncNow - it }
+            val idleOrRateDeadline = maxOf(idleDeadline, rateLimitDeadline)
+            val forcedByMaximumWait = syncNow >= maximumWaitDeadline &&
+                maximumWaitDeadline <= idleOrRateDeadline
+            lastSyncAt = syncNow
+            requestSync(
+                RoutineSyncSchedule(
+                    dirtyWaitMs = syncNow - dirtyStart,
+                    intervalSincePreviousMs = intervalSincePreviousMs,
+                    forcedByMaximumWait = forcedByMaximumWait,
+                ),
+            )
         }
     }
 
