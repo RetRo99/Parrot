@@ -71,7 +71,7 @@ where the filename is unique within the module.
 | `lib/database/implementation/.../BooksSqlDelightDao.kt` | `upsertPositionWithMutation` uses one transaction but appends every mutation | Preserve atomicity; add generation-safe unsent coalescing |
 | `lib/database/implementation/.../SyncOutboxSqlDelightDao.kt` | A coalesce method exists but is not used by transactional progress saves | Replace with state-aware coalescing inside the position transaction |
 | `lib/server-parrot-cloud/.../ParrotCloudSyncAdapter.kt` | Owns mutex, retries, cursor, database application, and conflict policy | Extract shared orchestration; retain RPC serialization and transport |
-| `feature/reader/domain/.../GetReadingProgressWithConflictUseCase.kt` | Conflicts are based on a 1% difference; otherwise remote wins | Delegate to baseline-aware shared reconciliation |
+| `feature/reader/domain/.../GetReadingProgressWithConflictUseCase.kt` | Reader conflict policy was based on a percentage threshold | Read the shared remote baseline and compare the complete semantic position |
 | `feature/reader/ui/.../ReaderViewModel.kt` | Independent ViewModel-scoped saves; close explicitly checkpoints ReadAloud audio | Ordered local writes and common checkpoint/flush boundary |
 | `feature/reader/ui/.../ReaderSyncCoordinator.kt` | Coordinates book/audio navigation rather than remote sync | Keep separate from the new engine |
 | `feature/cloud-account/ui/.../CloudAccountViewModel.kt` | Hosts the discovered manual synchronization entry point | Route manual action into shared engine |

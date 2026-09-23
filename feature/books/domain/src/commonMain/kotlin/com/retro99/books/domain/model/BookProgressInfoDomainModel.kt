@@ -1,7 +1,5 @@
 package com.retro99.books.domain.model
 
-import kotlin.math.abs
-
 /**
  * Represents progress and cache information for a book.
  */
@@ -37,14 +35,16 @@ data class BookProgressInfoDomainModel(
         get() = isEbookCached || isAudiobookCached || isReadaloudCached
 
     /**
-     * Returns true if there's a conflict between local and remote progress.
-     * A conflict exists when both have progress and they differ by more than 1%.
+     * Returns true if both reconciled candidates exist and their exact progress
+     * values differ. The shared sync engine decides which candidate is a clean
+     * remote apply or a preserved dirty baseline; this model does not choose a
+     * winner using a percentage threshold.
      */
     val hasConflict: Boolean
         get() {
             val local = localProgression ?: return false
             val remote = remoteProgression ?: return false
-            return abs(local - remote) > PROGRESSION_CONFLICT_THRESHOLD
+            return local != remote
         }
 
     /**
@@ -53,12 +53,4 @@ data class BookProgressInfoDomainModel(
     val displayProgression: Double?
         get() = localProgression ?: remoteProgression
 
-    companion object {
-        /**
-         * Minimum difference in progression (0.0 to 1.0) to consider as a conflict.
-         * 1% difference threshold to avoid false positives from floating point issues.
-         */
-        private const val PROGRESSION_CONFLICT_THRESHOLD = 0.01
-    }
 }
-

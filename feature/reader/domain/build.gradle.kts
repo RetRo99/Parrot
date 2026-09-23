@@ -26,8 +26,8 @@ kotlin {
             implementation(libs.filekit.core)
             implementation(projects.base)
             implementation(projects.feature.books.domain)
+            implementation(projects.lib.database.api)
             implementation(projects.lib.server.api)
         }
     }
 }
-

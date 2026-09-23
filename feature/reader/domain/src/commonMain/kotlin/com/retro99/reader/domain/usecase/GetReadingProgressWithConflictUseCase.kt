@@ -4,6 +4,8 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map
 import com.retro99.base.result.AppResult
+import com.retro99.database.api.books.PositionDatabase
+import com.retro99.database.api.books.PositionEntity
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.server.api.AuthenticatedRepositoryProvider
@@ -13,7 +15,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
-import kotlin.math.abs
 
 /**
  * Use case for getting reading progress with conflict detection.
@@ -27,6 +28,7 @@ import kotlin.math.abs
 @Factory
 class GetReadingProgressWithConflictUseCase(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
+    @Provided private val positionDatabase: PositionDatabase,
 ) {
     /**
      * Gets the reading progress for a book with conflict detection.
@@ -45,7 +47,14 @@ class GetReadingProgressWithConflictUseCase(
                 serverRepository.getLocalPosition(bookUuid)
             }
             val remoteDeferred = async {
-                serverRepository.getRemotePosition(bookUuid)
+                val reconciledBaseline = positionDatabase.getRemotePositionByBookUuid(bookUuid)
+                if (reconciledBaseline != null) {
+                    Ok(reconciledBaseline.toServerPosition(serverId))
+                } else {
+                    // Compatibility fallback for books opened before the shared
+                    // refresh has populated a durable remote baseline.
+                    serverRepository.getRemotePosition(bookUuid)
+                }
             }
 
             val localPosition = localDeferred.await().getOrElse { null }?.toDomain()
@@ -56,10 +65,8 @@ class GetReadingProgressWithConflictUseCase(
     }
 
     /**
-     * Resolves potential conflicts between local and remote positions.
-     *
-     * Conflict is detected when both positions exist and have different progression values.
-     * If no conflict, returns the most appropriate position (preferring remote if available).
+     * Resolves positions after shared reconciliation has applied clean remote
+     * state or preserved a dirty remote baseline.
      */
     private fun resolvePositionConflict(
         localPosition: PositionDomainModel?,
@@ -78,39 +85,21 @@ class GetReadingProgressWithConflictUseCase(
             remotePosition == null -> {
                 ReadingProgressResult.Resolved(localPosition)
             }
-            // Both exist - check for conflict
-            hasProgressionConflict(localPosition, remotePosition) -> {
+            // Both exist - preserve both candidates when their semantic
+            // positions differ. The shared engine, not a percentage threshold,
+            // determines whether the remote candidate is a baseline or a local
+            // replacement before this use case runs.
+            !localPosition.isSemanticallyEqualTo(remotePosition) -> {
                 ReadingProgressResult.Conflict(
                     localPosition = localPosition,
                     remotePosition = remotePosition,
                 )
             }
-            // No significant difference - prefer remote as source of truth
+            // Same semantic position - reconcile metadata without prompting.
             else -> {
-                ReadingProgressResult.Resolved(remotePosition)
+                ReadingProgressResult.Resolved(localPosition)
             }
         }
-    }
-
-    private fun hasProgressionConflict(
-        localPosition: PositionDomainModel,
-        remotePosition: PositionDomainModel,
-    ): Boolean {
-        val localProgression =
-            localPosition.totalProgression ?: localPosition.progression ?: 0.0
-        val remoteProgression =
-            remotePosition.totalProgression ?: remotePosition.progression ?: 0.0
-
-        val progressionDifference = abs(localProgression - remoteProgression)
-        return progressionDifference > PROGRESSION_CONFLICT_THRESHOLD
-    }
-
-    companion object {
-        /**
-         * Minimum difference in progression (0.0 to 1.0) to consider as a conflict.
-         * 1% difference threshold to avoid false positives from floating point issues.
-         */
-        private const val PROGRESSION_CONFLICT_THRESHOLD = 0.01
     }
 }
 
@@ -137,4 +126,40 @@ private fun ServerPosition.toDomain(): PositionDomainModel {
         position = position,
         cssSelector = cssSelector,
     )
+}
+
+private fun PositionEntity.toServerPosition(serverId: String): ServerPosition {
+    return ServerPosition(
+        bookUuid = bookUuid,
+        serverId = serverId,
+        timestamp = timestamp,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        locatorHref = locatorHref,
+        locatorType = locatorType,
+        locatorTitle = locatorTitle,
+        locatorTarget = locatorTarget,
+        audioTimestampMs = audioTimestampMs,
+        chapterIndex = chapterIndex,
+        progression = progression,
+        totalChapters = totalChapters,
+        totalDurationMs = totalDurationMs,
+        totalProgression = totalProgression,
+        position = position,
+        cssSelector = cssSelector,
+    )
+}
+
+private fun PositionDomainModel.isSemanticallyEqualTo(other: PositionDomainModel): Boolean {
+    return locatorHref == other.locatorHref &&
+        locatorType == other.locatorType &&
+        locatorTarget == other.locatorTarget &&
+        cssSelector == other.cssSelector &&
+        audioTimestampMs == other.audioTimestampMs &&
+        chapterIndex == other.chapterIndex &&
+        progression == other.progression &&
+        totalChapters == other.totalChapters &&
+        totalDurationMs == other.totalDurationMs &&
+        totalProgression == other.totalProgression &&
+        position == other.position
 }
