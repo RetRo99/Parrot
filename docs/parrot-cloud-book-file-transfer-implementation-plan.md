@@ -109,6 +109,12 @@ whose migration history predates the squash is reconciled with
 `supabase migration repair` or simply reset (PC-plan policy). Client SQLDelight
 stays strictly additive (local databases carry user data).
 
+*Migration note, updated 2026-09-24*: the squash window closed once account
+deletion landed — schema changes are now additive (`20260923000000`,
+`20260924000000`–`20260924000007`), consistent with how Slice 5's follow-ups
+were layered. A single pre-launch fold into the three canonical files remains
+optional housekeeping, not a requirement.
+
 ### Data model & state machine
 
 ```text
@@ -177,12 +183,15 @@ needed (mutation-ID idempotency stays where it is: metadata/position pushes).
   `storage_path`.
 - **Size is server-verified** against `storage.objects.metadata->>'size'`;
   `size_mismatch` → session `failed`, reservation released, file row
-  `upload_failed`. Hash is client-computed during streaming and recorded.
-  **TUS `Upload-Checksum` is not supported** by either backend's tusd engine
+  `upload_failed`. Hash is client-computed during streaming and checked against
+  the value fixed at **reserve**; `finalize_book_upload` verifies the match and
+  rejects `content_hash_mismatch` otherwise (the plan originally said "recorded
+  at finalize" — the implementation is deliberately stricter: the reserve hash
+  is the dedupe/block identity). **TUS `Upload-Checksum` is not supported** by
+  either backend's tusd engine
   (spike finding — silently ignored), so client-side hashing is the *only*
-  verification: the client hash rides the TUS `metadata` round-trip and is
-  recorded at finalize; it is enforced at every download (Slice 4 verifies
-  before finalize-to-local).
+  verification: it is enforced at every download (Slice 4 verifies before
+  finalize-to-local).
 - Re-check block-list (covers the reserve→finalize window).
 - One transaction: file row → `available` (revision++), session → `finalized`,
   `reserved_bytes -= size`, `used_bytes += size`, `book_file` change event
@@ -955,9 +964,9 @@ hosted gateway), Storyteller chunk-size units. ≥100 MB tests need a Supabase
 ## Verification (all slices, PC-plan §15)
 
 ```bash
-./gradlew :lib:server-parrot-cloud:allTests :feature:books:data:allTests :feature:sync:data:allTests :feature:reader:data:allTests
-./gradlew :composeApp:assembleDebug
-scripts/supabase/reset.sh && scripts/supabase/test.sh   # schema + RPC + RLS + storage
+./gradlew :lib:server-parrot-cloud:allTests :feature:books:data:allTests :feature:sync:data:allTests :feature:reader:data:allTests :feature:cloud-account:domain:allTests
+./gradlew :androidApp:assembleDebug
+scripts/supabase/reset.sh && scripts/supabase/test.sh   # schema + RPC + RLS + storage (needs the Supabase CLI)
 ```
 
 iOS via app/framework build (not `assembleXCFramework`); complete the two-device
@@ -983,4 +992,4 @@ authoritative.
 | 8 | Re-upload / replace semantics for existing `(cloud_book_id, media_type, relative_path)` | (a) `file_exists`, delete first (b) reject + chained Replace UX (c) atomic replace-in-place | (a) initially — simpler, no dual-object window | **decided: (b)** — `file_exists` contract branch + "Replace backup" button chaining delete → upload behind one confirm; atomic replace-in-place deferred to the multi-file work where same-slot-different-hash becomes reachable |
 | 9 | Takedown invalidation scope | (a) delete app-provisioned copies (`origin='cloud_download'`) only (b) also delete user-imported originals (c) remote access only, keep all bytes | (a); imports are user's own device files outside service custody | **decided: (a)** — delete `origin='cloud_download'` replicas (keyed by `cloud_book_file_id`) + reader cache via the "Remove download" machinery; user imports kept; metadata + progress kept in all cases |
 | 10 | Transfer status UX integration | (a) separate transfer status surface (b) aggregate into `SyncStatus` phases `uploading_files`/`downloading_files` (PC-plan §5.3) | (a) now, (b) later | **decided: (b)** — full PC-plan §5.3 integration now; new Slice 2 builds the status model + `FileTransferStatusSource` port; Slices 3–4 report phases/byte progress through it |
-| 11 | Supabase migration strategy | (a) squash into `20260922000000_parrot_cloud.sql` + dev reset (b) additive migrations | (a) while pre-launch (PC-plan "squash dev migrations") | **decided: (a)** — squash now into three canonical files (schema / RPCs / storage+policies; Slice 5 folds into them too), dev DB + storage reset per schema-changing slice, `supabase migration repair` or project reset for pre-squash shared-dev history. Client SQLDelight stays strictly additive |
+| 11 | Supabase migration strategy | (a) squash into `20260922000000_parrot_cloud.sql` + dev reset (b) additive migrations | (a) while pre-launch (PC-plan "squash dev migrations") | **decided: (a)** — squash now into three canonical files (schema / RPCs / storage+policies; Slice 5 folds into them too), dev DB + storage reset per schema-changing slice, `supabase migration repair` or project reset for pre-squash shared-dev history. Client SQLDelight stays strictly additive. *Update 2026-09-24: superseded in practice — migrations are additive since `20260923000000` (squash window closed); a pre-launch fold is optional housekeeping* |

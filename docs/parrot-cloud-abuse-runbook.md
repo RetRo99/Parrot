@@ -132,7 +132,8 @@ unblocking; local original files are preserved per §5.
 `cloud_file_audit_events` records, per event: actor cloud
 user id, `cloud_book_id` / `cloud_book_file_id` / `upload_id`, content hash
 (+algorithm), action (`reserve`, `finalize`, `download_grant`, `cancel`,
-  `delete_requested`, `delete`, `takedown`, `block`, `unblock`), reason,
+  `expire`, `orphan_gc`, `delete_requested`, `delete`, `takedown`, `block`,
+  `unblock`), reason,
 timestamp. Administrative hash-only block/unblock events may have null book and
 user identifiers; the algorithm, hash, reason, and actor remain recorded.
 
@@ -140,7 +141,9 @@ user identifiers; the algorithm, hash, reason, and actor remain recorded.
 Client analytics for transfers follow the same rule.
 
 Account deletion keeps abuse-history events for up to 180 days with the account
-UUID removed from both `cloud_user_id` and the free-form `actor` field. The event
+UUID removed from `cloud_user_id`. The free-form `actor` field is redacted to
+`deleted_account` only when it held the deleted account's own identifier;
+operator identities on takedown/block events are preserved. The event
 details and content hashes remain during that window, then are purged. The
 server-side deletion function also purges expired events while processing a
 request; configure `scripts/supabase/ops/purge-audit.sh` as an hourly scheduled
@@ -166,12 +169,19 @@ job (every 15 minutes is the intended cadence), with `SUPABASE_URL` and
 ```
 
 The GC RPC expires due sessions, releases their reservations, and counts any
-completed orphan object in `used_bytes`. The worker removes objects through the
-Storage API and then calls the completion RPC, which removes the file row and
-releases that counted usage. A failed worker claim becomes retryable after 15
-minutes. Lazy expiry during a new reservation performs the same quota accounting
-immediately; physical object removal still requires the scheduled Storage API
-worker because SQL cannot remove the backing Storage object.
+completed orphan object in `used_bytes`. The worker re-validates each claim via
+`confirm_orphan_book_file_gc` (which also extends the lease) immediately before
+the Storage API delete — a stalled or duplicated worker can never delete an
+object a user has re-reserved — and runs under a lockfile with curl timeouts.
+The completion RPC then removes the file row and releases the counted usage. A
+failed worker claim becomes retryable after 15 minutes. Lazy expiry during a new
+reservation performs the same quota accounting immediately; physical object
+removal still requires the scheduled Storage API worker because SQL cannot
+remove the backing Storage object (documented deviation from the transfer
+plan's "delete at expiry" wording). Counted orphan bytes stay charged across an
+upload retry — the replacement reservation covers only its declared size — and
+are released when the object is actually deleted or netted off at a successful
+finalize.
 
 ## 8. Account-level action
 
