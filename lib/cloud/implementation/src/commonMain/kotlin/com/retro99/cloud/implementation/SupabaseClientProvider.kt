@@ -198,10 +198,20 @@ class SupabaseClientProvider(
 
     suspend fun restoreSession(localProfileId: String): CloudSessionState {
         if (!isConfigured) return CloudSessionState(SessionStatus.NotAuthenticated())
-        val auth = withProfileSession(localProfileId) { client.auth }
+        check(currentProfileId() == localProfileId) {
+            "Cloud session restored for an inactive profile"
+        }
+        val restoreState = clientState.value
+        val restoreClient = restoreState.client
+            ?.takeIf { restoreState.profileId == localProfileId }
+            ?: withProfileSession(localProfileId) { client }
+        val auth = restoreClient.auth
         auth.awaitInitialization()
         check(currentProfileId() == localProfileId) {
             "Cloud session restored for an inactive profile"
+        }
+        check(clientState.value.client === restoreClient) {
+            "Cloud session restored for a replaced profile client"
         }
         return sessionState(localProfileId, auth.sessionStatus.value)
     }

@@ -95,6 +95,7 @@ select is(
     5::bigint, 'a remaining failed-upload object is charged using its actual size'
 );
 -- Simulate Storage API removal; SQL must not perform this in production.
+set local storage.allow_delete_query = 'true';
 delete from storage.objects
 where bucket_id = 'book-files'
   and name = 'users/10000000-0000-0000-0000-000000000041/books/20000000-0000-0000-0000-000000000041/30000000-0000-0000-0000-000000000042';

@@ -144,8 +144,15 @@ UUID removed from both `cloud_user_id` and the free-form `actor` field. The even
 details and content hashes remain during that window, then are purged. The
 server-side deletion function also purges expired events while processing a
 request; configure `scripts/supabase/ops/purge-audit.sh` as an hourly scheduled
-job so retention does not depend on account deletions. `sync_mutations`
-idempotency rows follow their own retention.
+job so retention does not depend on account deletions. Use the deployment
+scheduler's secret store to inject `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY`; do not put credentials in this repository or a
+world-readable crontab. Local development uses
+`scripts/supabase/ops/purge-audit-local.sh`, which takes its key from the local
+Storage container and is pinned to loopback; an hourly user LaunchAgent is
+installed for this workspace. This local job does not satisfy the production
+scheduler release gate. `sync_mutations` idempotency rows follow their own
+retention.
 
 ### Orphaned upload objects
 
@@ -182,30 +189,39 @@ worker because SQL cannot remove the backing Storage object.
 
 ## 9. Release-gate checklist (before enabling file upload)
 
-- [ ] ToS text reviewed & approved **[LEGAL REVIEW]**
+- [ ] ToS text reviewed & approved **[LEGAL REVIEW]** — complete draft exists
+      (legal text §A); awaiting sign-off only
 - [ ] Upload-rights attestation text reviewed & approved **[LEGAL REVIEW]** (see
-      §10)
+      §10) — complete draft exists (legal text §B)
 - [ ] Privacy policy covers user-uploaded files & retention **[LEGAL REVIEW]**
+      — complete draft exists (legal text §G)
+- [ ] DMCA designated agent registered with the U.S. Copyright Office and
+      listed in the main ToS imprint **[LEGAL/OPS]** (legal text §I)
 - [ ] This runbook approved; abuse channel live and staffed
 - [ ] Hourly audit-purge schedule configured with service-role credentials (§7)
 - [ ] Orphan GC scheduled every 15 minutes with service-role credentials (§7)
-- [ ] Account deletion and retry behavior validated on the local Supabase stack
-      (§8; database tests have not run here)
-- [ ] Reinstatement mechanics validated against the local Supabase stack (§6;
-      implementation exists, but database tests have not run here)
+- [x] Account deletion and retry behavior validated on the local Supabase stack
+      (§8; Edge Function bundle and isolated-user failure/retry integration)
+- [x] Reinstatement mechanics validated against the local Supabase stack (§6;
+      `abuse_operations_test.sql`)
 - [ ] Platform store-policy review for user-uploaded copyrighted content
       (Play / App Store) **[LEGAL REVIEW]**
 - [x] Upload transport remains hard-disabled until approval; restore and
       deletion transports are separate
       (`lib/server-parrot-cloud/.../ParrotCloudBookFileTransferTransport.kt`)
 
-## 10. Legal text — working draft exists
+## 10. Legal text — complete draft exists
 
-Draft ToS clauses, attestation UI copy (all four touchpoints), takedown intake
-and counter-notice text: **`docs/parrot-cloud-legal-text-draft.md`** — working
-draft for counsel review, not approved for production. Every item below is
-drafted there (section refs); counsel must resolve the draft's §F open items
-(most importantly the DMCA vs EU DSM Art. 17 regime fit) before enablement:
+ToS clauses, attestation UI copy (all four touchpoints), takedown intake and
+counter-notice text, Privacy Policy addendum, and store disclosures:
+**`docs/parrot-cloud-legal-text-draft.md`** — AI-drafted complete text, not yet
+approved for production. All former §F open items are resolved there with
+positions and rationale (including the regime fit: private locker → not a DSM
+Art. 17 content-sharing service, with a DMCA-shaped notice flow; perjury
+wording; retention schedule; repeat-infringer policy A11; restoration SLA A8).
+Counsel must **verify those positions and sign off** before enablement; only
+publish-time constants (legal text §I: operator entity, Abuse Contact, DMCA
+agent registration) remain to be filled:
 
 1. User rights representation — drafted (§A2, §B1 checkbox).
 2. Private/no-sharing acknowledgment — drafted (§A4, §B1 subtext).

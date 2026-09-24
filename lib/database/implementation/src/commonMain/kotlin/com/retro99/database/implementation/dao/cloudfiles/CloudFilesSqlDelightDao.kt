@@ -7,14 +7,22 @@ import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
 import com.retro99.database.implementation.Cloud_book_file_state
 import com.retro99.database.implementation.Cloud_file_transfers
 import com.retro99.database.implementation.DatabaseManager
+import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 internal class CloudFilesSqlDelightDao(
     private val databaseManager: DatabaseManager,
+    private val userRegistry: UserRegistry,
 ) {
     suspend fun upsertFileState(file: CloudBookFileEntity) = withContext(Dispatchers.IO) {
         databaseManager.getDatabase().cloudBookFileStateQueries.upsertCloudBookFileState(
@@ -112,6 +120,15 @@ internal class CloudFilesSqlDelightDao(
                 .map(Cloud_file_transfers::toEntity)
         }
 
+    suspend fun getTransfersForCloudFile(
+        cloudBookFileId: String,
+    ): List<CloudFileTransferEntity> = withContext(Dispatchers.IO) {
+        databaseManager.getDatabase().cloudFileTransferQueries
+            .getCloudFileTransfersForCloudFile(cloudBookFileId)
+            .executeAsList()
+            .map(Cloud_file_transfers::toEntity)
+    }
+
     fun observeTransfers(serverId: String, libraryBookId: String): Flow<List<CloudFileTransferEntity>> =
         databaseManager.getDatabase().cloudFileTransferQueries
             .observeCloudFileTransfersForBook(serverId, libraryBookId)
@@ -126,12 +143,28 @@ internal class CloudFilesSqlDelightDao(
             .mapToList(Dispatchers.IO)
             .map { rows -> rows.map(Cloud_file_transfers::toEntity) }
 
-    fun observeAllTransfers(): Flow<List<CloudFileTransferEntity>> =
-        databaseManager.getDatabase().cloudFileTransferQueries
-            .observeAllCloudFileTransfers()
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { rows -> rows.map(Cloud_file_transfers::toEntity) }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun observeAllTransfers(): Flow<List<CloudFileTransferEntity>> = userRegistry
+        .observeActiveProfile()
+        .map { profile -> profile?.id }
+        .distinctUntilChanged()
+        .flatMapLatest { profileId ->
+            if (profileId == null) {
+                flowOf(emptyList())
+            } else {
+                flow {
+                    val transferRows = databaseManager.withProfile(profileId) {
+                        databaseManager.getDatabase().cloudFileTransferQueries
+                            .observeAllCloudFileTransfers()
+                            .asFlow()
+                            .mapToList(Dispatchers.IO)
+                    }
+                    transferRows.collect { rows ->
+                        emit(rows.map(Cloud_file_transfers::toEntity))
+                    }
+                }
+            }
+        }
 }
 
 private fun Cloud_book_file_state.toEntity() = CloudBookFileEntity(

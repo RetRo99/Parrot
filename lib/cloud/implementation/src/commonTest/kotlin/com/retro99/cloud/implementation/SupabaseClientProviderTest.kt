@@ -9,7 +9,9 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
 import io.github.jan.supabase.auth.user.UserSession
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -24,6 +26,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class, SupabaseInternal::class)
 class SupabaseClientProviderTest {
@@ -132,6 +135,31 @@ class SupabaseClientProviderTest {
 
         assertIs<SessionStatus.Authenticated>(restoredState.status)
         assertEquals("account-a", restoredState.accountId)
+    }
+
+    @Test
+    fun `restoration does not wait for a pinned profile operation`() = runTest {
+        val configuredProvider = configuredProvider(CloudSessionManager(ProviderFakePreferences()))
+        val lockAcquired = CompletableDeferred<Unit>()
+        val releaseLock = CompletableDeferred<Unit>()
+        val pinnedOperation = async {
+            configuredProvider.withProfileSession("profile-a") {
+                lockAcquired.complete(Unit)
+                releaseLock.await()
+            }
+        }
+        lockAcquired.await()
+
+        try {
+            val restoration = async { configuredProvider.restoreSession("profile-a") }
+            runCurrent()
+
+            assertTrue(restoration.isCompleted)
+            assertIs<SessionStatus.NotAuthenticated>(restoration.await().status)
+        } finally {
+            releaseLock.complete(Unit)
+            pinnedOperation.await()
+        }
     }
 
     @Test

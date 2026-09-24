@@ -1,7 +1,11 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
+import com.retro99.database.api.library.LibraryBookEntity
+import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.database.api.sync.SyncOutboxDatabase
+import com.retro99.server.api.ServerPosition
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncPhaseReporter
@@ -24,7 +28,11 @@ import com.retro99.sync.data.LocalBookUuidResolver
 import com.retro99.sync.data.SyncBoundedPass
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.put
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
@@ -34,6 +42,8 @@ class ParrotCloudSyncAdapter(
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
     @Provided private val localBookUuidResolver: LocalBookUuidResolver,
     @Provided private val duplicatePositionRepair: DuplicatePositionRepair,
+    @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
+    @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
     @Provided private val libraryMutationTransport: LibraryMutationSyncTransport,
     @Provided private val progressTransport: ProgressSyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
@@ -110,8 +120,34 @@ class ParrotCloudSyncAdapter(
         entries: List<SyncOutboxEntry>,
     ): Int {
         if (entries.isEmpty()) return 0
+        val latestEntryByCloudBookId = linkedMapOf<String, Pair<Long, SyncOutboxEntry>>()
+        entries.forEachIndexed { index, entry ->
+            val cloudEntry = entry.toCloudReadingPositionEntry()
+            val payload = json.decodeFromString<ParrotCloudReadingPositionPayload>(cloudEntry.payload)
+            val generation = entry.localGeneration.takeIf { it > 0L } ?: index.toLong()
+            val current = latestEntryByCloudBookId[payload.cloudBookId]
+            if (current == null || generation >= current.first) {
+                latestEntryByCloudBookId[payload.cloudBookId] = generation to cloudEntry
+            }
+        }
+        val latestEntries = latestEntryByCloudBookId.values.map { (_, entry) -> entry }
+        val latestMutationIds = latestEntries.mapTo(mutableSetOf()) { entry -> entry.mutationId }
+        entries.filter { entry ->
+            entry.state == SyncOutboxEntry.STATE_PENDING &&
+                entry.mutationId !in latestMutationIds
+        }
+            .forEach { entry -> syncOutboxDatabase.delete(entry.mutationId) }
+
+        // A dispatched mutation may have reached the server before the client
+        // lost its response. Retry those IDs for idempotent reconciliation;
+        // only collapse pending snapshots that have never been sent.
+        val entriesToPush = entries.filter { entry ->
+            entry.mutationId in latestMutationIds ||
+                entry.state == SyncOutboxEntry.STATE_DISPATCHED
+        }
+        val cloudEntries = entriesToPush.map { entry -> entry.toCloudReadingPositionEntry() }
         val summary = progressSyncEngine.push(
-            entries = entries,
+            entries = cloudEntries,
             transport = progressTransport,
             codec = ProgressOutboxCodec { entry ->
                 val payload = json.decodeFromString<ParrotCloudReadingPositionPayload>(entry.payload)
@@ -129,6 +165,36 @@ class ParrotCloudSyncAdapter(
             identityResolver = parrotProgressIdentityResolver(),
         )
         return summary.acknowledgedCount + summary.conflictCount
+    }
+
+    private suspend fun SyncOutboxEntry.toCloudReadingPositionEntry(): SyncOutboxEntry {
+        try {
+            json.decodeFromString<ParrotCloudReadingPositionPayload>(payload)
+            return this
+        } catch (_: SerializationException) {
+            // Local-source reader positions use the shared local mutation shape.
+        }
+
+        val localPosition = json.decodeFromString<LocalReadingPositionMutation>(payload)
+        val libraryBook = localPosition.position.libraryBookId
+            ?.let { libraryBookId -> libraryBooksDatabase.getLibraryBookById(libraryBookId) }
+            ?: localPosition.contentHash?.let { contentHash ->
+                libraryBooksDatabase.getLibraryBookByContentHash(
+                    contentHashAlgorithm = localPosition.contentHashAlgorithm
+                        ?: DEFAULT_CONTENT_HASH_ALGORITHM,
+                    contentHash = contentHash,
+                )
+            }
+            ?: error("Could not resolve the library book for reading-position sync")
+
+        val cloudBookId = libraryBook.cloudBookId
+            ?: error("The library book is not linked to a Parrot Cloud book")
+        val cloudPayload = localPosition.toParrotCloudReadingPositionPayload(
+            entityId = entityId,
+            libraryBook = libraryBook,
+            cloudBookId = cloudBookId,
+        )
+        return copy(payload = json.encodeToString(cloudPayload))
     }
 
     private fun parrotProgressIdentityResolver() = ProgressIdentityResolver { remote ->
@@ -189,5 +255,30 @@ class ParrotCloudSyncAdapter(
     private companion object {
         const val SYNC_BATCH_SIZE = 50
         const val ENTITY_TYPE_BOOK_FILE = "book_file"
+        const val DEFAULT_CONTENT_HASH_ALGORITHM = "sha-256-v1"
     }
+}
+
+@Serializable
+internal data class LocalReadingPositionMutation(
+    val bookUuid: String,
+    val contentHash: String?,
+    val contentHashAlgorithm: String?,
+    val position: ServerPosition,
+)
+
+internal fun LocalReadingPositionMutation.toParrotCloudReadingPositionPayload(
+    entityId: String,
+    libraryBook: LibraryBookEntity,
+    cloudBookId: String,
+): ParrotCloudReadingPositionPayload {
+    return ParrotCloudReadingPositionPayload(
+        cloudBookId = cloudBookId,
+        libraryBookId = libraryBook.libraryBookId,
+        position = position.copy(
+            bookUuid = entityId,
+            serverId = PARROT_CLOUD_SERVER_ID,
+            libraryBookId = libraryBook.libraryBookId,
+        ),
+    )
 }

@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 set search_path = extensions, public;
-select plan(11);
+select plan(14);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at)
 values (
@@ -30,6 +30,12 @@ insert into public.cloud_book_files (
 );
 insert into public.cloud_user_storage (cloud_user_id, quota_bytes)
 values ('10000000-0000-0000-0000-000000000001', 1000);
+insert into storage.objects (bucket_id, name, metadata)
+values (
+    'book-files',
+    'users/10000000-0000-0000-0000-000000000001/books/20000000-0000-0000-0000-000000000001/30000000-0000-0000-0000-000000000001',
+    '{"size":25}'::jsonb
+);
 insert into public.cloud_content_blocklist (
     content_hash_algorithm, content_hash, reason, created_by
 ) values ('sha-256-v1', repeat('b', 64), 'test block', 'test');
@@ -130,6 +136,34 @@ select is(
      where cloud_book_id = '20000000-0000-0000-0000-000000000001'
        and relative_path = ''),
     1, 'cancel retains the non-available file row for orphan cleanup'
+);
+
+select is(
+    (public.delete_book_file('30000000-0000-0000-0000-000000000001')->>'status'),
+    'deleting', 'the owner can mark an available cloud file for deletion'
+);
+
+set local storage.allow_delete_query = 'false';
+select is(
+    (select count(*)::integer from storage.objects
+     where bucket_id = 'book-files'
+       and name = 'users/10000000-0000-0000-0000-000000000001/books/20000000-0000-0000-0000-000000000001/30000000-0000-0000-0000-000000000001'),
+    0, 'deleting files are not readable outside a Storage delete request'
+);
+
+set local storage.allow_delete_query = 'true';
+create temporary table storage_delete_result (removed_count integer);
+with removed as (
+    delete from storage.objects
+    where bucket_id = 'book-files'
+      and name = 'users/10000000-0000-0000-0000-000000000001/books/20000000-0000-0000-0000-000000000001/30000000-0000-0000-0000-000000000001'
+    returning 1
+)
+insert into storage_delete_result
+select count(*)::integer from removed;
+select is(
+    (select removed_count from storage_delete_result),
+    1, 'the Storage API delete context can remove the deleting owner file'
 );
 
 select * from finish();

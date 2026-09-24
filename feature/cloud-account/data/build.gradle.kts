@@ -26,6 +26,7 @@ kotlin {
             implementation(libs.coroutines)
             implementation(libs.serialization)
             implementation(libs.supabase.auth)
+            implementation(libs.supabase.functions)
             implementation(libs.supabase.postgrest)
             implementation(projects.feature.cloudAccount.domain)
             implementation(projects.lib.cloud.implementation)

@@ -622,6 +622,11 @@ class BookFileTransferEngineTest {
         override suspend fun getTransfers(serverId: String, states: List<String>): List<CloudFileTransferEntity> =
             transfers.values.filter { it.serverId == serverId && it.state in states }
 
+        override suspend fun getTransfersForCloudFile(
+            cloudBookFileId: String,
+        ): List<CloudFileTransferEntity> =
+            transfers.values.filter { it.cloudBookFileId == cloudBookFileId }
+
         override fun observeTransfers(serverId: String, libraryBookId: String): Flow<List<CloudFileTransferEntity>> =
             flowOf(transfers.values.filter { it.serverId == serverId && it.libraryBookId == libraryBookId })
 

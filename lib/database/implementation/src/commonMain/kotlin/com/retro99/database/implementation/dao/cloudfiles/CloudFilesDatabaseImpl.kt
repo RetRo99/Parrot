@@ -31,6 +31,9 @@ internal class CloudFilesDatabaseImpl(
     override suspend fun getTransfers(serverId: String, states: List<String>) =
         dao.getTransfers(serverId, states)
 
+    override suspend fun getTransfersForCloudFile(cloudBookFileId: String) =
+        dao.getTransfersForCloudFile(cloudBookFileId)
+
     override fun observeTransfers(
         serverId: String,
         libraryBookId: String,

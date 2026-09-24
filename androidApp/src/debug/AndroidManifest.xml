@@ -1,0 +1,21 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <meta-data
+            android:name="com.retro99.parrot.SUPABASE_URL"
+            android:value="http://127.0.0.1:54321"
+            tools:replace="android:value" />
+        <meta-data
+            android:name="com.retro99.parrot.SUPABASE_PUBLISHABLE_KEY"
+            android:value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+            tools:replace="android:value" />
+        <meta-data
+            android:name="firebase_analytics_collection_deactivated"
+            android:value="true"
+            tools:replace="android:value" />
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="false"
+            tools:replace="android:value" />
+    </application>
+</manifest>

@@ -50,6 +50,11 @@ SELECT * FROM cloud_file_transfers
 WHERE server_id = ? AND state IN ?
 ORDER BY created_at ASC;
 
+getCloudFileTransfersForCloudFile:
+SELECT * FROM cloud_file_transfers
+WHERE cloud_book_file_id = ?
+ORDER BY created_at ASC;
+
 observeCloudFileTransfersForBook:
 SELECT * FROM cloud_file_transfers
 WHERE server_id = ? AND library_book_id = ?

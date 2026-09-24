@@ -56,10 +56,17 @@ class SyncDataRepository(
     private val status = MutableStateFlow<SyncStatus>(SyncStatus.Idle())
     private val diagnosticsScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val diagnosticsLoadJob: Job = diagnosticsScope.launch {
-        val checkpoint = syncCheckpointDatabase?.getCheckpoint(
-            destinationId = DIAGNOSTICS_DESTINATION_ID,
-            remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
-        )
+        val checkpoint = try {
+            syncCheckpointDatabase?.getCheckpoint(
+                destinationId = DIAGNOSTICS_DESTINATION_ID,
+                remoteAccountId = DIAGNOSTICS_ACCOUNT_ID,
+            )
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (_: Exception) {
+            // The local profile database may not exist until onboarding completes.
+            null
+        }
         checkpoint?.toStatus()?.let { persistedStatus ->
             syncStatus.value = persistedStatus
             publishStatus()

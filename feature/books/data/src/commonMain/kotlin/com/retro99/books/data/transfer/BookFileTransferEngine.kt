@@ -206,8 +206,8 @@ class BookFileTransferEngine(
 
     override suspend fun invalidateCloudFile(cloudBookFileId: String) {
         val store = requireNotNull(fileStore) { "Cloud download storage is unavailable" }
-        val transfers = cloudFilesDatabase.observeAllTransfers().first().filter { transfer ->
-            transfer.direction == DIRECTION_DOWNLOAD && transfer.cloudBookFileId == cloudBookFileId
+        val transfers = cloudFilesDatabase.getTransfersForCloudFile(cloudBookFileId).filter { transfer ->
+            transfer.direction == DIRECTION_DOWNLOAD
         }
         transfers.forEach { transfer ->
             if (transfer.state in NON_TERMINAL_STATES) cancelTransfer(transfer.transferId)

@@ -2,6 +2,25 @@
 -- to quota rejections so clients can avoid retrying sooner than the server asks.
 alter function public.reserve_book_upload(uuid, text, text, text, bigint, text, text, jsonb)
     rename to reserve_book_upload_before_retry_after;
+
+-- The orphan-GC wrapper qualifies its input parameters with the function name.
+-- Keep its implicit PL/pgSQL block label consistent with this second rename.
+do $$
+declare
+    definition text;
+begin
+    definition := pg_get_functiondef(
+        'public.reserve_book_upload_before_retry_after(uuid,text,text,text,bigint,text,text,jsonb)'::regprocedure
+    );
+    definition := replace(
+        definition,
+        'reserve_book_upload.',
+        'reserve_book_upload_before_retry_after.'
+    );
+    execute definition;
+end;
+$$;
+
 revoke execute on function public.reserve_book_upload_before_retry_after(
     uuid, text, text, text, bigint, text, text, jsonb
 ) from public, anon, authenticated, service_role;

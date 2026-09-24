@@ -37,6 +37,7 @@ import com.retro99.database.implementation.dao.sync.SyncOutboxDatabaseImpl
 import com.retro99.database.implementation.dao.sync.SyncOutboxSqlDelightDao
 import com.retro99.database.implementation.dao.sync.SyncCheckpointDatabaseImpl
 import com.retro99.database.implementation.dao.sync.SyncCheckpointSqlDelightDao
+import com.retro99.user.api.UserRegistry
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
@@ -185,8 +186,9 @@ class DatabaseModule {
     @Single
     internal fun provideCloudFilesSqlDelightDao(
         databaseManager: DatabaseManager,
+        userRegistry: UserRegistry,
     ): CloudFilesSqlDelightDao {
-        return CloudFilesSqlDelightDao(databaseManager)
+        return CloudFilesSqlDelightDao(databaseManager, userRegistry)
     }
 
     @Single

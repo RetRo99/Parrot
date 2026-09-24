@@ -145,6 +145,32 @@ class SyncDataRepositoryTest {
     }
 
     @Test
+    fun missingProfileDatabaseDuringDiagnosticsRestoreDoesNotCrashSync() = runTest {
+        val repository = SyncDataRepository(
+            syncPass = RecordingSyncPass(),
+            executionContextProvider = RecordingContextProvider(
+                result = SyncExecutionResult.NotAuthenticated,
+            ),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            syncCheckpointDatabase = object : SyncCheckpointDatabase {
+                override suspend fun getCheckpoint(
+                    destinationId: String,
+                    remoteAccountId: String,
+                ): SyncCheckpoint? {
+                    error("No active user profile")
+                }
+
+                override suspend fun saveCheckpoint(checkpoint: SyncCheckpoint) = Unit
+
+                override suspend fun clearAllData() = Unit
+            },
+        )
+
+        assertEquals(SyncResult.NotAuthenticated, repository.sync())
+        assertEquals(SyncStatus.Disabled, repository.observeStatus().value)
+    }
+
+    @Test
     fun restoresAndPersistsTerminalDiagnostics() = runTest {
         val pass = RecordingSyncPass()
         val checkpointDatabase = StatusRecordingCheckpointDatabase(

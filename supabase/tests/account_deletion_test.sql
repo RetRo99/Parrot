@@ -76,6 +76,7 @@ select is(
 reset role;
 set local role authenticated;
 set local request.jwt.claim.sub = '11000000-0000-0000-0000-000000000001';
+set local request.jwt.claim.role = 'authenticated';
 select throws_ok(
     $$select public.reserve_book_upload(
         '21000000-0000-0000-0000-000000000001', 'application/epub+zip', '', 'book.epub',

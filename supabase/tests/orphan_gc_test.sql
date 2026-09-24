@@ -101,6 +101,7 @@ select ok(
 
 -- Stand in for the worker's Storage API remove() call. In production the GC
 -- script removes the backing object before invoking the completion RPC.
+set local storage.allow_delete_query = 'true';
 delete from storage.objects
 where bucket_id = 'book-files'
   and name = (
