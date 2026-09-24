@@ -120,7 +120,7 @@ select is(
     (select count(*)::integer from public.cloud_book_files
      where cloud_book_id = '20000000-0000-0000-0000-000000000001'
        and relative_path = ''),
-    0, 'cancel removes the pending file row and preserves other file slots'
+    1, 'cancel retains the non-available file row for orphan cleanup'
 );
 
 select * from finish();

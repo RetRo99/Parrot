@@ -147,6 +147,25 @@ request; configure `scripts/supabase/ops/purge-audit.sh` as an hourly scheduled
 job so retention does not depend on account deletions. `sync_mutations`
 idempotency rows follow their own retention.
 
+### Orphaned upload objects
+
+Expired, cancelled, and permanently failed uploads are cleaned up by
+`scripts/supabase/ops/gc-orphans.sh`. Configure it as a service-role scheduled
+job (every 15 minutes is the intended cadence), with `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` injected from the operator's secret store:
+
+```cron
+*/15 * * * * /path/to/StoryTellerKMP/scripts/supabase/ops/gc-orphans.sh
+```
+
+The GC RPC expires due sessions, releases their reservations, and counts any
+completed orphan object in `used_bytes`. The worker removes objects through the
+Storage API and then calls the completion RPC, which removes the file row and
+releases that counted usage. A failed worker claim becomes retryable after 15
+minutes. Lazy expiry during a new reservation performs the same quota accounting
+immediately; physical object removal still requires the scheduled Storage API
+worker because SQL cannot remove the backing Storage object.
+
 ## 8. Account-level action
 
 - Repeat-infringer policy (warnings → suspension → termination): **[LEGAL
@@ -169,6 +188,7 @@ idempotency rows follow their own retention.
 - [ ] Privacy policy covers user-uploaded files & retention **[LEGAL REVIEW]**
 - [ ] This runbook approved; abuse channel live and staffed
 - [ ] Hourly audit-purge schedule configured with service-role credentials (§7)
+- [ ] Orphan GC scheduled every 15 minutes with service-role credentials (§7)
 - [ ] Account deletion and retry behavior validated on the local Supabase stack
       (§8; database tests have not run here)
 - [ ] Reinstatement mechanics validated against the local Supabase stack (§6;
