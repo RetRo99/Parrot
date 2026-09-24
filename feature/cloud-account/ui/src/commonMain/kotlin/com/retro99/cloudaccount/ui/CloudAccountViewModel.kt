@@ -64,7 +64,7 @@ class CloudAccountViewModel(
         when (intent) {
             CloudAccountIntent.OnBackClicked -> onBack()
             CloudAccountIntent.OnSubmitClicked -> submit()
-            is CloudAccountIntent.OnTosAcceptedChanged -> updateTosAccepted(action.accepted)
+            is CloudAccountIntent.OnTosAcceptedChanged -> updateTosAccepted(intent.accepted)
             CloudAccountIntent.OnGoogleSignInClicked -> signInWithGoogle()
             CloudAccountIntent.OnSwitchToSignInClicked -> switchMode(CloudAccountMode.SignIn)
             CloudAccountIntent.OnSwitchToCreateAccountClicked -> {
