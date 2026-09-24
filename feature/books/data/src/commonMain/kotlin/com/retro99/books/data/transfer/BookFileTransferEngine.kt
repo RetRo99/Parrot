@@ -49,7 +49,7 @@ import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 import kotlin.time.Clock
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -529,6 +529,10 @@ class BookFileTransferEngine(
                     } catch (exception: CancellationException) {
                         throw exception
                     } catch (exception: BookFileTransferRejectedException) {
+                        if (exception.retryAfterMillis != null) {
+                            scheduleRetry(transfer, exception.reason, exception.retryAfterMillis)
+                            return
+                        }
                         if (exception.reason in RECOVERABLE_FINALIZE_REJECTIONS) null else throw exception
                     }
                     finalized?.let { record ->
@@ -545,7 +549,11 @@ class BookFileTransferEngine(
                 }
 
                 is UploadReservationResult.Rejected -> {
-                    failPermanently(transfer, reserveResult.reason)
+                    if (reserveResult.retryAfterMillis != null) {
+                        scheduleRetry(transfer, reserveResult.reason, reserveResult.retryAfterMillis)
+                    } else {
+                        failPermanently(transfer, reserveResult.reason)
+                    }
                     return
                 }
 
@@ -622,8 +630,10 @@ class BookFileTransferEngine(
                     val finalized = try {
                         transport.finalize(reservation, request)
                     } catch (exception: BookFileTransferRejectedException) {
-                        if (exception.reason in RECOVERABLE_FINALIZE_REJECTIONS) {
-                            scheduleRetry(transfer, exception.reason)
+                        if (exception.retryAfterMillis != null ||
+                            exception.reason in RECOVERABLE_FINALIZE_REJECTIONS
+                        ) {
+                            scheduleRetry(transfer, exception.reason, exception.retryAfterMillis)
                             return
                         }
                         throw exception
@@ -635,7 +645,11 @@ class BookFileTransferEngine(
             throw exception
         } catch (exception: Exception) {
             if (exception is BookFileTransferRejectedException) {
-                failPermanently(transfer, exception.reason)
+                if (exception.retryAfterMillis != null) {
+                    scheduleRetry(transfer, exception.reason, exception.retryAfterMillis)
+                } else {
+                    failPermanently(transfer, exception.reason)
+                }
             } else {
                 scheduleRetry(transfer, exception.message ?: "Transfer failed")
             }
@@ -707,7 +721,11 @@ class BookFileTransferEngine(
         } catch (exception: CancellationException) {
             throw exception
         } catch (exception: BookFileTransferRejectedException) {
-            failPermanently(transfer, exception.reason)
+            if (exception.retryAfterMillis != null) {
+                scheduleRetry(transfer, exception.reason, exception.retryAfterMillis)
+            } else {
+                failPermanently(transfer, exception.reason)
+            }
         } catch (_: DownloadHashMismatchException) {
             transfer.stagingPath?.let { path -> fileStore.delete(path) }
             failPermanently(transfer, ERROR_VERIFY_FAILED)
@@ -876,14 +894,19 @@ class BookFileTransferEngine(
         )
     }
 
-    private suspend fun scheduleRetry(transfer: CloudFileTransferEntity, error: String) {
+    private suspend fun scheduleRetry(
+        transfer: CloudFileTransferEntity,
+        error: String,
+        retryAfterMillis: Long? = null,
+    ) {
         val attempt = transfer.attemptCount + 1
         if (attempt >= MAX_TRANSFER_ATTEMPTS) {
             failPermanently(transfer.copy(attemptCount = attempt), error)
             return
         }
-        val waitSeconds = 1L shl attempt.coerceAtMost(MAX_BACKOFF_EXPONENT)
-        val nextAttempt = Clock.System.now() + waitSeconds.seconds
+        val delayMillis = retryAfterMillis?.coerceAtLeast(0L)
+            ?: ((1L shl transfer.attemptCount.coerceAtLeast(0).coerceAtMost(MAX_BACKOFF_EXPONENT)) * 1_000L)
+        val nextAttempt = Clock.System.now() + delayMillis.milliseconds
         val pending = transfer.copy(
             state = STATE_PENDING,
             attemptCount = attempt,
@@ -892,7 +915,7 @@ class BookFileTransferEngine(
             updatedAt = now(),
         )
         cloudFilesDatabase.updateTransfer(pending)
-        scheduleRetryTimer(transfer.transferId, pending.nextAttemptAt!!, waitSeconds * 1_000)
+        scheduleRetryTimer(transfer.transferId, pending.nextAttemptAt!!, delayMillis)
     }
 
     private fun transport(serverId: String): BookFileTransferTransport =

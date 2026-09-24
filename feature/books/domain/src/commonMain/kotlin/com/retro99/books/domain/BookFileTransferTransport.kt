@@ -109,6 +109,7 @@ sealed interface UploadReservationResult {
         val reason: String,
         val usedBytes: Long? = null,
         val quotaBytes: Long? = null,
+        val retryAfterMillis: Long? = null,
     ) : UploadReservationResult
 }
 
@@ -138,7 +139,10 @@ data class CloudBookFileRecord(
     val remoteRevision: Long,
 )
 
-class BookFileTransferRejectedException(val reason: String) : Exception(reason)
+class BookFileTransferRejectedException(
+    val reason: String,
+    val retryAfterMillis: Long? = null,
+) : Exception(reason)
 
 class BookFileTransferSessionExpiredException : Exception("TUS upload session expired")
 

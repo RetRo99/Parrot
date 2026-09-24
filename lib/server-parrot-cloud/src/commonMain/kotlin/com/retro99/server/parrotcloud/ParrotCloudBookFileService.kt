@@ -71,6 +71,7 @@ class ParrotCloudBookFileService(
                 reason = response.reason ?: "upload_rejected",
                 usedBytes = response.usedBytes,
                 quotaBytes = response.quotaBytes,
+                retryAfterMillis = response.retryAfterMillis,
             )
 
             else -> error("Unknown Parrot Cloud upload reservation status: ${response.status}")
@@ -89,7 +90,10 @@ class ParrotCloudBookFileService(
             )
             .decodeAs<ParrotCloudBookFileRpcResponse>()
         if (response.status != STATUS_AVAILABLE) {
-            throw BookFileTransferRejectedException(response.reason ?: "finalize_rejected")
+            throw BookFileTransferRejectedException(
+                reason = response.reason ?: "finalize_rejected",
+                retryAfterMillis = response.retryAfterMillis,
+            )
         }
         return CloudBookFileRecord(
             cloudBookId = request.cloudBookId,
@@ -125,7 +129,10 @@ class ParrotCloudBookFileService(
             )
             .decodeAs<ParrotCloudBookFileRpcResponse>()
         if (response.status != STATUS_AVAILABLE) {
-            throw BookFileTransferRejectedException(response.reason ?: "download_rejected")
+            throw BookFileTransferRejectedException(
+                reason = response.reason ?: "download_rejected",
+                retryAfterMillis = response.retryAfterMillis,
+            )
         }
         val storagePath = requireNotNull(response.storagePath)
         val sizeBytes = requireNotNull(response.sizeBytes)

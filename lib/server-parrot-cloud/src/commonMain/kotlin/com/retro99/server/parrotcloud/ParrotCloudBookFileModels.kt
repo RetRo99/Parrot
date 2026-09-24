@@ -26,6 +26,8 @@ internal data class ParrotCloudBookFileRpcResponse(
     val usedBytes: Long? = null,
     @SerialName("quota_bytes")
     val quotaBytes: Long? = null,
+    @SerialName("retry_after_ms")
+    val retryAfterMillis: Long? = null,
     @SerialName("media_type")
     val mediaType: String? = null,
     @SerialName("relative_path")

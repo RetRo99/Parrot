@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 set search_path = extensions, public;
-select plan(10);
+select plan(11);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at)
 values (
@@ -73,6 +73,15 @@ select is(
         '{"attested_at":"2026-09-23T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
     )->>'reason'),
     'quota_exceeded', 'reservations above the account quota are rejected'
+);
+
+select is(
+    (public.reserve_book_upload(
+        '20000000-0000-0000-0000-000000000001', 'application/epub+zip', 'large.epub', 'large.epub',
+        1001, 'sha-256-v1', repeat('d', 64),
+        '{"attested_at":"2026-09-23T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
+    )->>'retry_after_ms'),
+    '60000', 'quota rejection provides a server retry delay'
 );
 
 select is(
