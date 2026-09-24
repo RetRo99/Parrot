@@ -189,6 +189,24 @@ class BookDetailViewModel(
 
             is BookDetailIntent.OnRetryBookBackupClicked -> retryBookBackup(intent.transferId)
 
+            is BookDetailIntent.OnReplaceBackupClicked -> {
+                val transfer = viewState.value.bookFileTransfers.firstOrNull {
+                    it.transferId == intent.transferId
+                }
+                if (transfer?.direction == "upload" &&
+                    transfer.state == "failed" &&
+                    transfer.lastError == "file_exists"
+                ) {
+                    updateState { it.copy(replaceBackupConfirmationTransferId = intent.transferId) }
+                }
+            }
+
+            BookDetailIntent.OnReplaceBackupConfirmed -> replaceCloudBackup()
+
+            BookDetailIntent.OnReplaceBackupDismissed -> {
+                updateState { it.copy(replaceBackupConfirmationTransferId = null) }
+            }
+
             BookDetailIntent.OnUseLocalPositionClicked -> {
                 resolveConflictWithLocal()
             }
@@ -434,6 +452,52 @@ class BookDetailViewModel(
         viewModelScope.launch {
             runCatching { retryBookFileTransferUseCase(transferId) }
                 .onFailure { error -> updateState { it.copy(bookFileTransferError = error.message) } }
+        }
+    }
+
+    private fun replaceCloudBackup() {
+        val transferId = viewState.value.replaceBackupConfirmationTransferId ?: return
+        val transfer = viewState.value.bookFileTransfers.firstOrNull { item ->
+            item.transferId == transferId &&
+                item.direction == "upload" &&
+                item.state == "failed" &&
+                item.lastError == "file_exists"
+        } ?: run {
+            updateState { it.copy(replaceBackupConfirmationTransferId = null) }
+            return
+        }
+        updateState {
+            it.copy(
+                replaceBackupConfirmationTransferId = null,
+                replacingBackupTransferId = transferId,
+                bookFileTransferError = null,
+            )
+        }
+        viewModelScope.launch {
+            try {
+                bookFileTransferManager.deleteRemoteBackup(
+                    serverId = serverId,
+                    libraryBookId = transfer.libraryBookId,
+                    mediaType = transfer.mediaType,
+                )
+                // Retry the persisted upload so its original rights attestation is
+                // retained. The delete and retry steps can safely be resumed.
+                retryBookFileTransferUseCase(transferId)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (error: Exception) {
+                updateState {
+                    it.copy(bookFileTransferError = error.message ?: "Could not replace cloud backup")
+                }
+            } finally {
+                updateState {
+                    if (it.replacingBackupTransferId == transferId) {
+                        it.copy(replacingBackupTransferId = null)
+                    } else {
+                        it
+                    }
+                }
+            }
         }
     }
 

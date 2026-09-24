@@ -195,9 +195,8 @@ class BookFileTransferEngine(
         check(supportsDeletion(serverId)) { "Cloud backup deletion is not enabled for this server" }
         val cloudFile = cloudFilesDatabase.getFileStates(libraryBookId).firstOrNull { candidate ->
             candidate.mediaType.equals(mediaType, ignoreCase = true) &&
-                candidate.relativePath.isEmpty() &&
-                candidate.status in setOf(FILE_STATUS_AVAILABLE, FILE_STATUS_DELETING)
-        } ?: error("No cloud backup was found for this book")
+                candidate.relativePath.isEmpty()
+        } ?: return
         deletionTransportByServer.getValue(serverId).delete(cloudFile.cloudBookFileId)
         invalidateCloudFile(cloudFile.cloudBookFileId)
         cloudFilesDatabase.deleteFileState(libraryBookId, cloudFile.mediaType, cloudFile.relativePath)
@@ -894,7 +893,6 @@ class BookFileTransferEngine(
         const val STATE_FAILED = "failed"
         const val STATE_CANCELLED = "cancelled"
         const val FILE_STATUS_AVAILABLE = "available"
-        const val FILE_STATUS_DELETING = "deleting"
         const val ORIGIN_CLOUD_DOWNLOAD = "cloud_download"
         const val ERROR_VERIFY_FAILED = "verify_failed"
         const val ERROR_RESTORE_UNAVAILABLE = "restore_unavailable"

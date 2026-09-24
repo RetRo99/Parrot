@@ -29,4 +29,6 @@ data class BookDetailViewState(
     val backupRightsAttested: Boolean = false,
     val bookFileTransfers: List<BookFileTransfer> = emptyList(),
     val bookFileTransferError: String? = null,
+    val replaceBackupConfirmationTransferId: String? = null,
+    val replacingBackupTransferId: String? = null,
 )

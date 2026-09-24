@@ -516,6 +516,10 @@
     <string name="cloud_backup_failed" tools:ignore="MissingTranslation">Backup failed: %1$s</string>
     <string name="cloud_backup_cancel" tools:ignore="MissingTranslation">Cancel backup</string>
     <string name="cloud_backup_retry" tools:ignore="MissingTranslation">Retry backup</string>
+    <string name="cloud_backup_replace_button" tools:ignore="MissingTranslation">Replace backup</string>
+    <string name="cloud_backup_replace_title" tools:ignore="MissingTranslation">Replace cloud backup?</string>
+    <string name="cloud_backup_replace_message" tools:ignore="MissingTranslation">Delete the existing cloud backup for “%1$s” and upload the copy stored on this device?</string>
+    <string name="cloud_backup_replacing" tools:ignore="MissingTranslation">Replacing backup…</string>
     <string name="cloud_download_queued" tools:ignore="MissingTranslation">Restore queued</string>
     <string name="cloud_download_progress" tools:ignore="MissingTranslation">Restoring · %1$d%%</string>
     <string name="cloud_download_finishing" tools:ignore="MissingTranslation">Verifying restored file…</string>

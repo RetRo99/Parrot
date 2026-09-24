@@ -150,6 +150,10 @@ import resources.translations.cloud_backup_title
 import resources.translations.cloud_backup_queued
 import resources.translations.cloud_backup_complete
 import resources.translations.cloud_backup_finishing
+import resources.translations.cloud_backup_replace_button
+import resources.translations.cloud_backup_replace_message
+import resources.translations.cloud_backup_replace_title
+import resources.translations.cloud_backup_replacing
 import resources.translations.cloud_download_cancel
 import resources.translations.cloud_download_complete
 import resources.translations.cloud_download_failed
@@ -209,6 +213,8 @@ fun BookDetailScreen(
                 backupRightsAttested = viewState.backupRightsAttested,
                 bookFileTransfers = viewState.bookFileTransfers,
                 bookFileTransferError = viewState.bookFileTransferError,
+                replaceBackupConfirmationTransferId = viewState.replaceBackupConfirmationTransferId,
+                replacingBackupTransferId = viewState.replacingBackupTransferId,
                 intentDispatcher = intentDispatcher,
             )
         }
@@ -236,6 +242,8 @@ private fun BookDetailScreenContent(
     backupRightsAttested: Boolean,
     bookFileTransfers: List<BookFileTransfer>,
     bookFileTransferError: String?,
+    replaceBackupConfirmationTransferId: String?,
+    replacingBackupTransferId: String?,
     intentDispatcher: IntentDispatcher<BookDetailIntent>,
     modifier: Modifier = Modifier,
 ) {
@@ -298,6 +306,14 @@ private fun BookDetailScreenContent(
             bookType = bookType,
             onConfirm = { intentDispatcher(BookDetailIntent.OnDeleteCloudBackupConfirmed) },
             onDismiss = { intentDispatcher(BookDetailIntent.OnDeleteCloudBackupDismissed) },
+        )
+    }
+
+    if (replaceBackupConfirmationTransferId != null) {
+        ReplaceCloudBackupConfirmationDialog(
+            bookTitle = book.title,
+            onConfirm = { intentDispatcher(BookDetailIntent.OnReplaceBackupConfirmed) },
+            onDismiss = { intentDispatcher(BookDetailIntent.OnReplaceBackupDismissed) },
         )
     }
 
@@ -454,11 +470,15 @@ private fun BookDetailScreenContent(
                         Spacer(modifier = Modifier.height(12.dp))
                         BookBackupProgressSection(
                             transfers = bookFileTransfers,
+                            replacingTransferId = replacingBackupTransferId,
                             onCancel = { transferId ->
                                 intentDispatcher(BookDetailIntent.OnCancelBookFileTransferClicked(transferId))
                             },
                             onRetry = { transferId ->
                                 intentDispatcher(BookDetailIntent.OnRetryBookBackupClicked(transferId))
+                            },
+                            onReplace = { transferId ->
+                                intentDispatcher(BookDetailIntent.OnReplaceBackupClicked(transferId))
                             },
                         )
                     }
@@ -1364,6 +1384,39 @@ private fun DeleteCloudBackupConfirmationDialog(
 }
 
 @Composable
+private fun ReplaceCloudBackupConfirmationDialog(
+    bookTitle: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        title = { Text(stringResource(StringRes.cloud_backup_replace_title)) },
+        text = {
+            Text(
+                stringResource(StringRes.cloud_backup_replace_message, bookTitle),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(
+                    stringResource(StringRes.cloud_backup_replace_button),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(StringRes.general_cancel))
+            }
+        },
+    )
+}
+
+@Composable
 private fun BackupRightsConfirmationDialog(
     bookTitle: String,
     attested: Boolean,
@@ -1404,8 +1457,10 @@ private fun BackupRightsConfirmationDialog(
 @Composable
 private fun BookBackupProgressSection(
     transfers: List<BookFileTransfer>,
+    replacingTransferId: String?,
     onCancel: (String) -> Unit,
     onRetry: (String) -> Unit,
+    onReplace: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val transfer = transfers.firstOrNull { it.state in setOf("pending", "transferring", "verifying", "finalizing") }
@@ -1469,12 +1524,20 @@ private fun BookBackupProgressSection(
                 )
             }
         } else if (transfer.state == "failed") {
-            TextButton(onClick = { onRetry(transfer.transferId) }) {
-                Text(
-                    stringResource(
-                        if (isDownload) StringRes.cloud_download_retry else StringRes.cloud_backup_retry,
-                    ),
-                )
+            if (transfer.transferId == replacingTransferId) {
+                Text(stringResource(StringRes.cloud_backup_replacing))
+            } else if (!isDownload && transfer.lastError == "file_exists") {
+                TextButton(onClick = { onReplace(transfer.transferId) }) {
+                    Text(stringResource(StringRes.cloud_backup_replace_button))
+                }
+            } else {
+                TextButton(onClick = { onRetry(transfer.transferId) }) {
+                    Text(
+                        stringResource(
+                            if (isDownload) StringRes.cloud_download_retry else StringRes.cloud_backup_retry,
+                        ),
+                    )
+                }
             }
         }
     }

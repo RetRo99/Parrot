@@ -176,11 +176,51 @@ class BookFileTransferEngineTest {
 
         assertTrue(engine.supportsDeletion(SERVER_ID))
         engine.deleteRemoteBackup(SERVER_ID, LIBRARY_BOOK_ID, "ebook")
+        engine.deleteRemoteBackup(SERVER_ID, LIBRARY_BOOK_ID, "ebook")
 
         assertEquals("cloud-file", deletionTransport.deletedFileId)
         assertNull(database.getTransfer(TRANSFER_ID))
         assertTrue(database.fileStates.isEmpty())
         assertTrue("/imports/restored-book.epub" !in fileStore.files)
+    }
+
+    @Test
+    fun deleteRemoteBackupCanClearAnUploadFailedFileState() = runTest {
+        val transfer = activeTransfer().copy(
+            state = "failed",
+            lastError = "file_exists",
+        )
+        val fileState = CloudBookFileEntity(
+            libraryBookId = LIBRARY_BOOK_ID,
+            cloudBookId = "cloud-book",
+            cloudBookFileId = "cloud-file",
+            mediaType = "EBOOK",
+            relativePath = "",
+            fileName = "book.epub",
+            status = "upload_failed",
+            sizeBytes = 512,
+            contentHash = "previous-hash",
+            contentHashAlgorithm = "sha-256-v1",
+            remoteRevision = 0,
+            updatedAt = "before",
+        )
+        val database = FakeCloudFilesDatabase(transfer, fileState)
+        val deletionTransport = RecordingDeletionTransport()
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            importedBooksDatabase = UnusedImportedBooksDatabase,
+            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            transports = emptyList(),
+            deletionTransports = listOf(deletionTransport),
+            fileStore = FakeTransferFileStore(),
+        )
+
+        engine.deleteRemoteBackup(SERVER_ID, LIBRARY_BOOK_ID, "ebook")
+        engine.deleteRemoteBackup(SERVER_ID, LIBRARY_BOOK_ID, "ebook")
+
+        assertEquals("cloud-file", deletionTransport.deletedFileId)
+        assertTrue(database.fileStates.isEmpty())
+        assertEquals("failed", database.getTransfer(TRANSFER_ID)?.state)
     }
 
     @Test
