@@ -27,6 +27,7 @@ class TusUploadClient(
         resumeUrl: String?,
         resumeOffset: Long,
         onSession: suspend (url: String, expiresAt: String?) -> Unit,
+        onHashReset: suspend () -> Unit,
         onChunkHashed: suspend (bytes: ByteArray) -> Unit,
         onProgress: suspend (bytesTransferred: Long) -> Unit,
     ): String {
@@ -38,6 +39,7 @@ class TusUploadClient(
         var url = resumeUrl
         var expiresAt: String? = null
         var offset = 0L
+        var hashedOffset = 0L
         if (url == null) {
             val created = createUpload(uploadEndpoint, storagePath, sizeBytes, contentHash)
             url = created.url
@@ -54,16 +56,20 @@ class TusUploadClient(
                 onSession(url, expiresAt)
             } else {
                 require(head.length == sizeBytes) { "TUS upload length changed" }
-                require(head.offset >= resumeOffset) { "TUS server moved upload offset backwards" }
+                require(head.offset in 0L..sizeBytes) { "TUS server returned an invalid upload offset" }
+                if (head.offset < resumeOffset) onHashReset()
                 offset = head.offset
                 expiresAt = head.expiresAt
                 onSession(requireNotNull(url), expiresAt)
             }
         }
 
-        var hashedOffset = 0L
         suspend fun hashThrough(targetOffset: Long) {
-            require(targetOffset in hashedOffset..sizeBytes) { "Invalid TUS upload offset" }
+            require(targetOffset in 0L..sizeBytes) { "Invalid TUS upload offset" }
+            if (targetOffset < hashedOffset) {
+                onHashReset()
+                hashedOffset = 0L
+            }
             while (hashedOffset < targetOffset) {
                 val count = minOf(HASH_READ_CHUNK_SIZE.toLong(), targetOffset - hashedOffset).toInt()
                 val bytes = localFileSource.read(localPath, hashedOffset, count)
@@ -75,8 +81,8 @@ class TusUploadClient(
             }
         }
 
-        hashThrough(offset)
         onProgress(offset)
+        hashThrough(offset)
         while (offset < sizeBytes) {
             val chunkLength = minOf(CHUNK_SIZE_BYTES.toLong(), sizeBytes - offset).toInt()
             val chunk = localFileSource.read(localPath, offset, chunkLength)
@@ -88,16 +94,15 @@ class TusUploadClient(
                 response.status == HttpStatusCode.Conflict -> {
                     val head = head(requireNotNull(url)) ?: error("TUS upload session disappeared")
                     require(head.length == sizeBytes) { "TUS upload length changed" }
-                    require(head.offset >= offset) { "TUS server moved upload offset backwards" }
-                    require(head.offset > offset) { "TUS conflict did not advance the upload offset" }
+                    require(head.offset in 0L..sizeBytes) { "TUS server returned an invalid upload offset" }
                     offset = head.offset
                     val refreshedExpiry = head.expiresAt
                     if (refreshedExpiry != null && refreshedExpiry != expiresAt) {
                         expiresAt = refreshedExpiry
                         onSession(requireNotNull(url), expiresAt)
                     }
-                    hashThrough(offset)
                     onProgress(offset)
+                    hashThrough(offset)
                 }
 
                 response.status == HttpStatusCode.NotFound ||

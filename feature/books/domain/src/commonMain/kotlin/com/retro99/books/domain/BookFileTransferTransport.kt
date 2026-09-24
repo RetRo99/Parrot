@@ -17,6 +17,8 @@ interface BookFileTransferTransport {
         resumeUrl: String?,
         resumeOffset: Long,
         onSession: suspend (url: String, expiresAt: String?) -> Unit,
+        // Called before hashing the reconciled prefix when the server offset moves backwards.
+        onHashReset: suspend () -> Unit,
         onChunkHashed: suspend (bytes: ByteArray) -> Unit,
         onProgress: suspend (bytesTransferred: Long) -> Unit,
     ): UploadSessionResult

@@ -41,6 +41,7 @@ class ParrotCloudBookFileTransferTransport(
         resumeUrl: String?,
         resumeOffset: Long,
         onSession: suspend (url: String, expiresAt: String?) -> Unit,
+        onHashReset: suspend () -> Unit,
         onChunkHashed: suspend (bytes: ByteArray) -> Unit,
         onProgress: suspend (bytesTransferred: Long) -> Unit,
     ): UploadSessionResult {
@@ -58,6 +59,7 @@ class ParrotCloudBookFileTransferTransport(
                     expiry = expiresAt
                     onSession(url, expiresAt)
                 },
+                onHashReset = onHashReset,
                 onChunkHashed = onChunkHashed,
                 onProgress = onProgress,
             )

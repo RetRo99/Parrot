@@ -564,7 +564,7 @@ class BookFileTransferEngine(
                     cloudFilesDatabase.updateTransfer(transfer)
                     updateFileState(transfer, request, "upload_pending", reservation.cloudBookFileId)
 
-                    val digest = Sha256Digest()
+                    var digest = Sha256Digest()
                     val uploadResult = try {
                         transport.upload(
                             request = request,
@@ -585,6 +585,7 @@ class BookFileTransferEngine(
                                 )
                                 cloudFilesDatabase.updateTransfer(transfer)
                             },
+                            onHashReset = { digest = Sha256Digest() },
                             onChunkHashed = { bytes -> digest.update(bytes, 0, bytes.size) },
                             onProgress = { bytesTransferred ->
                                 transfer = transfer.copy(

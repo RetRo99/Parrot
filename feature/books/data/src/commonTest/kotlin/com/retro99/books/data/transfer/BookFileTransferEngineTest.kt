@@ -556,6 +556,7 @@ class BookFileTransferEngineTest {
             resumeUrl: String?,
             resumeOffset: Long,
             onSession: suspend (url: String, expiresAt: String?) -> Unit,
+            onHashReset: suspend () -> Unit,
             onChunkHashed: suspend (bytes: ByteArray) -> Unit,
             onProgress: suspend (bytesTransferred: Long) -> Unit,
         ): UploadSessionResult = error("upload is not used by cancellation")
@@ -628,6 +629,7 @@ class BookFileTransferEngineTest {
             resumeUrl: String?,
             resumeOffset: Long,
             onSession: suspend (url: String, expiresAt: String?) -> Unit,
+            onHashReset: suspend () -> Unit,
             onChunkHashed: suspend (bytes: ByteArray) -> Unit,
             onProgress: suspend (bytesTransferred: Long) -> Unit,
         ): UploadSessionResult {

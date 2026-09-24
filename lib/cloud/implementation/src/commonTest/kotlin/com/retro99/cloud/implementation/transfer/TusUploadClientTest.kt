@@ -29,6 +29,7 @@ class TusUploadClientTest {
                 resumeUrl = null,
                 resumeOffset = 0,
                 onSession = { _, _ -> },
+                onHashReset = {},
                 onChunkHashed = {},
                 onProgress = {},
             )
@@ -80,6 +81,7 @@ class TusUploadClientTest {
             resumeUrl = null,
             resumeOffset = 0,
             onSession = { sessionUrl, _ -> sessions += sessionUrl },
+            onHashReset = {},
             onChunkHashed = { chunk -> hashed += chunk.toList() },
             onProgress = { transferred -> progress += transferred },
         )
@@ -135,6 +137,7 @@ class TusUploadClientTest {
             resumeUrl = "https://cloud.example/session-1",
             resumeOffset = 2,
             onSession = { url, expiresAt -> sessions += url to expiresAt },
+            onHashReset = {},
             onChunkHashed = { chunk -> hashed += chunk.toList() },
             onProgress = { transferred -> progress += transferred },
         )
@@ -144,6 +147,58 @@ class TusUploadClientTest {
         assertEquals(listOf(2L, 4L), progress)
         assertEquals(bytes.toList(), hashed)
         assertEquals(listOf<Pair<String, String?>>("https://cloud.example/session-1" to "tomorrow"), sessions)
+        client.httpClient.close()
+    }
+
+    @Test
+    fun adoptsServerOffsetBehindPersistedResumeOffset() = runTest {
+        val bytes = byteArrayOf(10, 20, 30, 40)
+        val patchOffsets = mutableListOf<String?>()
+        val progress = mutableListOf<Long>()
+        val hashed = mutableListOf<Byte>()
+        var hashResetCount = 0
+        val client = newClient(bytes) { request ->
+            when (request.method) {
+                HttpMethod.Head -> respond(
+                    content = "",
+                    status = HttpStatusCode.OK,
+                    headers = headersOf(
+                        "Upload-Offset" to listOf("2"),
+                        "Upload-Length" to listOf("4"),
+                    ),
+                )
+
+                HttpMethod.Patch -> {
+                    patchOffsets += request.headers["Upload-Offset"]
+                    respond(
+                        content = "",
+                        status = HttpStatusCode.NoContent,
+                        headers = headersOf("Upload-Offset", "4"),
+                    )
+                }
+
+                else -> error("Unexpected TUS method ${request.method}")
+            }
+        }
+
+        client.tus.upload(
+            uploadEndpoint = "/storage/v1/upload/resumable",
+            storagePath = "users/u/books/b/f.epub",
+            localPath = "local.epub",
+            sizeBytes = bytes.size.toLong(),
+            contentHash = "abcd",
+            resumeUrl = "https://cloud.example/session-1",
+            resumeOffset = 4,
+            onSession = { _, _ -> },
+            onHashReset = { hashResetCount++ },
+            onChunkHashed = { chunk -> hashed += chunk.toList() },
+            onProgress = { transferred -> progress += transferred },
+        )
+
+        assertEquals(listOf<String?>("2"), patchOffsets)
+        assertEquals(listOf(2L, 4L), progress)
+        assertEquals(1, hashResetCount)
+        assertEquals(bytes.toList(), hashed)
         client.httpClient.close()
     }
 
@@ -187,6 +242,7 @@ class TusUploadClientTest {
             resumeUrl = "https://cloud.example/session-1",
             resumeOffset = 0,
             onSession = { _, _ -> },
+            onHashReset = {},
             onChunkHashed = { chunk -> hashed += chunk.toList() },
             onProgress = { transferred -> progress += transferred },
         )
@@ -195,6 +251,89 @@ class TusUploadClientTest {
         assertEquals(2, headCount)
         assertEquals(listOf(0L, 4L), progress)
         assertEquals(bytes.toList(), hashed)
+        client.httpClient.close()
+    }
+
+    @Test
+    fun conflictWithServerBehindRewindsProgressAndResetsHashBeforeReupload() = runTest {
+        val chunkSize = 6 * 1024 * 1024
+        val bytes = ByteArray(chunkSize * 2) { index -> index.toByte() }
+        var patchCount = 0
+        var headCount = 0
+        var hashResetCount = 0
+        var hashedByteCount = 0L
+        val patchOffsets = mutableListOf<String?>()
+        val progress = mutableListOf<Long>()
+        val client = newClient(bytes) { request ->
+            when (request.method) {
+                HttpMethod.Head -> {
+                    headCount++
+                    respond(
+                        content = "",
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(
+                            "Upload-Offset" to listOf("0"),
+                            "Upload-Length" to listOf(bytes.size.toString()),
+                        ),
+                    )
+                }
+
+                HttpMethod.Patch -> {
+                    patchCount++
+                    patchOffsets += request.headers["Upload-Offset"]
+                    when (patchCount) {
+                        1 -> respond(
+                            content = "",
+                            status = HttpStatusCode.NoContent,
+                            headers = headersOf("Upload-Offset", chunkSize.toString()),
+                        )
+
+                        2 -> respond(content = "", status = HttpStatusCode.Conflict)
+
+                        3 -> respond(
+                            content = "",
+                            status = HttpStatusCode.NoContent,
+                            headers = headersOf("Upload-Offset", chunkSize.toString()),
+                        )
+
+                        else -> respond(
+                            content = "",
+                            status = HttpStatusCode.NoContent,
+                            headers = headersOf("Upload-Offset", bytes.size.toString()),
+                        )
+                    }
+                }
+
+                else -> error("Unexpected TUS method ${request.method}")
+            }
+        }
+
+        client.tus.upload(
+            uploadEndpoint = "/storage/v1/upload/resumable",
+            storagePath = "users/u/books/b/f.epub",
+            localPath = "local.epub",
+            sizeBytes = bytes.size.toLong(),
+            contentHash = "abcd",
+            resumeUrl = "https://cloud.example/session-1",
+            resumeOffset = 0,
+            onSession = { _, _ -> },
+            onHashReset = {
+                hashResetCount++
+                hashedByteCount = 0
+            },
+            onChunkHashed = { chunk -> hashedByteCount += chunk.size },
+            onProgress = { transferred -> progress += transferred },
+        )
+
+        assertEquals(2, headCount)
+        assertEquals(4, patchCount)
+        assertEquals(
+            listOf<String?>("0", chunkSize.toString(), "0", chunkSize.toString()),
+            patchOffsets,
+        )
+        assertEquals(listOf(0L, chunkSize.toLong(), 0L, chunkSize.toLong(), bytes.size.toLong()), progress)
+        assertEquals(1, hashResetCount)
+        assertEquals(bytes.size.toLong(), hashedByteCount)
         client.httpClient.close()
     }
 
@@ -265,6 +404,7 @@ class TusUploadClientTest {
                 resumeUrl = "https://cloud.example/session-old",
                 resumeOffset = 0,
                 onSession = { _, _ -> },
+                onHashReset = {},
                 onChunkHashed = { chunk -> firstAttemptHashedBytes += chunk.size },
                 onProgress = {},
             )
@@ -281,6 +421,7 @@ class TusUploadClientTest {
             resumeUrl = null,
             resumeOffset = 0,
             onSession = { _, _ -> },
+            onHashReset = {},
             onChunkHashed = { chunk -> retryHashedBytes += chunk.size },
             onProgress = {},
         )
