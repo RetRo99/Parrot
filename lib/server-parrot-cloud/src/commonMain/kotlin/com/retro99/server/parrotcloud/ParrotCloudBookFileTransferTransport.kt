@@ -19,6 +19,7 @@ import com.retro99.cloud.implementation.transfer.TusUploadSessionExpiredExceptio
 import com.retro99.cloud.implementation.transfer.TusUploadMetadata
 import com.retro99.cloud.implementation.transfer.TusUploadProfile
 import com.retro99.cloud.implementation.transfer.TusUploadVerificationException
+import kotlinx.coroutines.CancellationException
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -93,7 +94,15 @@ class ParrotCloudBookFileTransferTransport(
             ) {
                 throw BookFileTransferRejectedException("tus_http_${exception.statusCode}")
             }
-            throw exception
+            // TUS exception messages can embed the Location header (a capability
+            // URL); never let them reach persisted state (PC-plan §12).
+            throw Exception("tus_http_${exception.statusCode}")
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // Ktor/IO messages can embed request URLs; normalize before the
+            // engine persists them to last_error.
+            throw Exception("upload_transport_error")
         }
         return UploadSessionResult(
             uploadUrl = finalUrl,

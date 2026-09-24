@@ -37,6 +37,7 @@ class TusUploadClient(
         var expiresAt: String? = null
         var offset = 0L
         var hashedOffset = 0L
+        var completionHeader: String? = null
         if (url == null) {
             val created = createUpload(profile, uploadEndpoint, metadata, sizeBytes)
             url = created.url
@@ -115,6 +116,9 @@ class TusUploadClient(
                         "TUS server returned an invalid upload offset"
                     }
                     offset = newOffset
+                    if (newOffset == sizeBytes) {
+                        completionHeader = response.headers[HEADER_TUS_COMPLETE]
+                    }
                     val refreshedExpiry = response.headers[HEADER_UPLOAD_EXPIRES]
                     if (refreshedExpiry != null && refreshedExpiry != expiresAt) {
                         expiresAt = refreshedExpiry
@@ -131,6 +135,12 @@ class TusUploadClient(
             }
         }
         check(offset == sizeBytes) { "TUS upload ended before all bytes were acknowledged" }
+        // Supabase signals completion via Tus-Complete: 1 (spike findings §1.2).
+        // Tolerate its absence (proxies may drop unknown headers) but never a
+        // contradictory value.
+        completionHeader?.let { value ->
+            check(value == "1") { "TUS server did not confirm upload completion" }
+        }
         return requireNotNull(url)
     }
 
@@ -243,6 +253,7 @@ class TusUploadClient(
         const val HEADER_UPLOAD_OFFSET = "Upload-Offset"
         const val HEADER_UPLOAD_EXPIRES = "Upload-Expires"
         const val HEADER_UPLOAD_METADATA = "Upload-Metadata"
+        const val HEADER_TUS_COMPLETE = "Tus-Complete"
         const val CHUNK_SIZE_BYTES = 6 * 1024 * 1024
         const val HASH_READ_CHUNK_SIZE = 64 * 1024
     }

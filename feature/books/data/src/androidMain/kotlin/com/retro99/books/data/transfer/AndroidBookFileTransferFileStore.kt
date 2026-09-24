@@ -67,7 +67,9 @@ class AndroidBookFileTransferFileStore(
     }
 
     private val stagingDirectory: File
-        get() = File(context.filesDir, "book_file_transfers").apply { mkdirs() }
+        // D4: partial transfers belong in the purgeable cache, never in the
+        // import store. A vanished staging file simply restarts the transfer.
+        get() = File(context.cacheDir, "book_file_transfers").apply { mkdirs() }
 
     private val ebooksDirectory: File
         get() = File(context.filesDir, "ebooks").apply { mkdirs() }

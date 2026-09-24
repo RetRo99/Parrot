@@ -510,6 +510,8 @@
     <string name="cloud_backup_title" tools:ignore="MissingTranslation">Back up this book?</string>
     <string name="cloud_backup_attestation" tools:ignore="MissingTranslation">I confirm I have the right to store this file in my Parrot Cloud account.</string>
     <string name="cloud_backup_attestation_checkbox" tools:ignore="MissingTranslation">I have the right to back up this file — I own it or have permission from the rights holder.</string>
+    <string name="cloud_backup_attestation_terms" tools:ignore="MissingTranslation">Your file is stored privately and only for you. There is no sharing. We may remove it if a rights holder validly objects. See the Book Backup Terms.</string>
+    <string name="cloud_account_tos_checkbox" tools:ignore="MissingTranslation">I agree to the Terms of Service (including the Book Backup Terms) and the Privacy Policy.</string>
     <string name="cloud_backup_autobackup_prompt_title" tools:ignore="MissingTranslation">Back up imported books automatically?</string>
     <string name="cloud_backup_autobackup_prompt_body" tools:ignore="MissingTranslation">New books you import will be uploaded to your private Parrot Cloud backup. You can change this anytime in Sync &amp; Backup settings.</string>
     <string name="cloud_backup_autobackup_confirm_body" tools:ignore="MissingTranslation">Books you import will be uploaded to your private Parrot Cloud storage, within your 5 GB quota. This counts against your quota and download bandwidth. By enabling, you confirm the checkbox below.</string>

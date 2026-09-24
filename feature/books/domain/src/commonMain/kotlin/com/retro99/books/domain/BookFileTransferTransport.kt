@@ -110,6 +110,8 @@ sealed interface UploadReservationResult {
         val usedBytes: Long? = null,
         val quotaBytes: Long? = null,
         val retryAfterMillis: Long? = null,
+        /** Slot occupant for `file_exists`, so the Replace chain can resolve it. */
+        val existing: CloudBookFileRecord? = null,
     ) : UploadReservationResult
 }
 

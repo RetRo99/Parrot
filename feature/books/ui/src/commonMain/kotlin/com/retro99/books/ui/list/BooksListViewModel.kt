@@ -15,6 +15,7 @@ import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.BookFileTransferManager
+import com.retro99.books.domain.BookFileTransferRejectedException
 import com.retro99.books.domain.usecase.BackupAllBooksUseCase
 import com.retro99.books.domain.model.BookWithProgressDomainModel
 import com.retro99.books.domain.usecase.ImportEpubUseCase
@@ -436,7 +437,8 @@ class BooksListViewModel(
                         showBackupAllConfirmation = false,
                         backupAllRightsAttested = false,
                         isBackingUpAll = false,
-                        backupAllError = exception.message ?: "Could not queue book backups",
+                        backupAllError = (exception as? BookFileTransferRejectedException)?.reason
+                            ?: "backup_all_failed",
                     )
                 }
             }

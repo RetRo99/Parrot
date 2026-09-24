@@ -415,6 +415,25 @@ private fun AccountFormContent(
             enabled = !viewState.isLoading,
         )
 
+        if (viewState.mode == CloudAccountMode.CreateAccount) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = viewState.tosAccepted,
+                    onCheckedChange = { accepted ->
+                        intentDispatcher(CloudAccountIntent.OnTosAcceptedChanged(accepted))
+                    },
+                    enabled = !viewState.isLoading,
+                )
+                Text(
+                    text = stringResource(StringRes.cloud_account_tos_checkbox),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
         Button(
             onClick = { intentDispatcher(CloudAccountIntent.OnSubmitClicked) },
             enabled = viewState.isSubmitEnabled,

@@ -72,6 +72,20 @@ class ParrotCloudBookFileService(
                 usedBytes = response.usedBytes,
                 quotaBytes = response.quotaBytes,
                 retryAfterMillis = response.retryAfterMillis,
+                existing = response.existing?.let { existing ->
+                    CloudBookFileRecord(
+                        cloudBookId = request.cloudBookId,
+                        cloudBookFileId = existing.cloudBookFileId,
+                        mediaType = existing.mediaType,
+                        relativePath = existing.relativePath,
+                        fileName = existing.fileName ?: request.fileName,
+                        status = existing.status,
+                        sizeBytes = existing.sizeBytes,
+                        contentHash = existing.contentHash,
+                        contentHashAlgorithm = existing.contentHashAlgorithm,
+                        remoteRevision = existing.revision,
+                    )
+                },
             )
 
             else -> error("Unknown Parrot Cloud upload reservation status: ${response.status}")
@@ -209,7 +223,8 @@ class ParrotCloudBookFileService(
         const val STATUS_DELETING = "deleting"
         const val STATUS_REMOVED = "removed"
         const val BOOK_FILES_BUCKET = "book-files"
-        val SIGNED_URL_TTL = 10.minutes
+        // Decision #6: short-lived download grants; the client re-mints on expiry.
+        val SIGNED_URL_TTL = 15.minutes
     }
 }
 

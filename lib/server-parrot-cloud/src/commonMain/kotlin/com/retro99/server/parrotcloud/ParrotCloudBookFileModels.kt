@@ -34,4 +34,25 @@ internal data class ParrotCloudBookFileRpcResponse(
     val relativePath: String? = null,
     @SerialName("file_name")
     val fileName: String? = null,
+    val existing: ParrotCloudExistingFile? = null,
+)
+
+@Serializable
+internal data class ParrotCloudExistingFile(
+    @SerialName("cloud_book_file_id")
+    val cloudBookFileId: String,
+    val status: String,
+    @SerialName("media_type")
+    val mediaType: String,
+    @SerialName("relative_path")
+    val relativePath: String = "",
+    @SerialName("file_name")
+    val fileName: String? = null,
+    @SerialName("size_bytes")
+    val sizeBytes: Long,
+    @SerialName("content_hash")
+    val contentHash: String,
+    @SerialName("content_hash_algorithm")
+    val contentHashAlgorithm: String,
+    val revision: Long = 0,
 )

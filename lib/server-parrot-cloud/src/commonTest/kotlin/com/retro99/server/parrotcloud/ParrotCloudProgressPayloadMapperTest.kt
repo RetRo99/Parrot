@@ -42,7 +42,6 @@ class ParrotCloudProgressPayloadMapperTest {
         )
 
         val payload = localMutation.toParrotCloudReadingPositionPayload(
-            entityId = "local-book-id",
             libraryBook = libraryBook,
             cloudBookId = "cloud-book-id",
         )

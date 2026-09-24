@@ -11,6 +11,7 @@ data class CloudAccountViewState(
     val mode: CloudAccountMode = CloudAccountMode.SignIn,
     val isLoading: Boolean = true,
     val isSubmitEnabled: Boolean = false,
+    val tosAccepted: Boolean = false,
     val showVerificationMessage: Boolean = false,
     val showLinkConfirmation: Boolean = false,
     val showDeleteAccountConfirmation: Boolean = false,

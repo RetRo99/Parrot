@@ -16,13 +16,17 @@ import platform.Foundation.seekToFileOffset
 import platform.Foundation.truncateFileAtOffset
 import platform.Foundation.writeData
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSTemporaryDirectory
 import org.koin.core.annotation.Single
 
 @OptIn(ExperimentalForeignApi::class)
 @Single(binds = [BookFileTransferFileStore::class])
 class IosBookFileTransferFileStore : BookFileTransferFileStore {
     override fun stagingPath(transferId: String): String =
-        "${documentsDirectory()}/book_file_transfers/${transferId.safeName()}.part"
+        // D4: partial transfers belong in the purgeable temporary directory,
+        // never in Documents. A vanished staging file simply restarts the
+        // transfer.
+        "${NSTemporaryDirectory()}book_file_transfers/${transferId.safeName()}.part"
 
     override fun importedFilePath(localUuid: String, mediaType: String): String =
         "${documentsDirectory()}/ebooks/${localUuid.safeName()}_${mediaType.safeName()}.epub"

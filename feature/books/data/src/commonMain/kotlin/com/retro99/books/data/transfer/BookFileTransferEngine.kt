@@ -3,7 +3,6 @@ package com.retro99.books.data.transfer
 import com.retro99.base.AppInitializer
 import com.retro99.books.data.CONTENT_HASH_ALGORITHM
 import com.retro99.books.data.Sha256Digest
-import com.retro99.books.data.calculateFileContentHash
 import com.retro99.books.data.toHexString
 import com.retro99.books.domain.BookFileTransfer
 import com.retro99.books.domain.BookFileDownloadRequest
@@ -132,7 +131,7 @@ class BookFileTransferEngine(
                     fileStore?.exists(localBook.filePath) == true &&
                     fileStore.size(localBook.filePath) == file.sizeBytes &&
                     withContext(Dispatchers.Default) {
-                        calculateFileContentHash(localBook.filePath) == file.contentHash
+                        fileStore.contentHash(localBook.filePath) == file.contentHash
                     }
                 ) return transfer.transferId
             }
@@ -175,6 +174,13 @@ class BookFileTransferEngine(
             updatedAt = now,
         )
         cloudFilesDatabase.insertTransfer(transfer)
+        pruneSupersededTransfers(
+            serverId = serverId,
+            libraryBookId = libraryBookId,
+            direction = DIRECTION_DOWNLOAD,
+            mediaType = file.mediaType,
+            keepTransferId = transferId,
+        )
         schedule(transferId)
         return transferId
     }
@@ -326,6 +332,13 @@ class BookFileTransferEngine(
             updatedAt = now,
         )
         cloudFilesDatabase.insertTransfer(transfer)
+        pruneSupersededTransfers(
+            serverId = serverId,
+            libraryBookId = libraryBookId,
+            direction = DIRECTION_UPLOAD,
+            mediaType = importedBook.bookType,
+            keepTransferId = transferId,
+        )
         if (alreadyAvailable == null) schedule(transfer.transferId)
         return transferId
     }
@@ -493,6 +506,26 @@ class BookFileTransferEngine(
         }
     }
 
+    /** Failed/cancelled rows for the same slot are superseded by a fresh
+     *  transfer; deleting them bounds how long failures linger in the UI. */
+    private suspend fun pruneSupersededTransfers(
+        serverId: String,
+        libraryBookId: String,
+        direction: String,
+        mediaType: String,
+        keepTransferId: String,
+    ) {
+        cloudFilesDatabase.observeTransfers(serverId, libraryBookId)
+            .first()
+            .filter { transfer ->
+                transfer.transferId != keepTransferId &&
+                    transfer.direction == direction &&
+                    transfer.mediaType.equals(mediaType, ignoreCase = true) &&
+                    transfer.state in TERMINAL_STATES
+            }
+            .forEach { transfer -> cloudFilesDatabase.deleteTransfer(transfer.transferId) }
+    }
+
     private suspend fun scheduleExistingTransfer(transfer: CloudFileTransferEntity) {
         val nextAttemptAt = transfer.nextAttemptAt
         if (transfer.state == STATE_PENDING && nextAttemptAt != null) {
@@ -591,6 +624,26 @@ class BookFileTransferEngine(
                 }
 
                 is UploadReservationResult.Rejected -> {
+                    // Persist the slot occupant so the Replace chain can resolve
+                    // it even when no earlier attempt ever knew the file id.
+                    reserveResult.existing?.let { existing ->
+                        cloudFilesDatabase.upsertFileState(
+                            CloudBookFileEntity(
+                                libraryBookId = transfer.libraryBookId,
+                                cloudBookId = existing.cloudBookId,
+                                cloudBookFileId = existing.cloudBookFileId,
+                                mediaType = existing.mediaType,
+                                relativePath = existing.relativePath,
+                                fileName = existing.fileName,
+                                status = existing.status,
+                                sizeBytes = existing.sizeBytes,
+                                contentHash = existing.contentHash,
+                                contentHashAlgorithm = existing.contentHashAlgorithm,
+                                remoteRevision = existing.remoteRevision,
+                                updatedAt = now(),
+                            ),
+                        )
+                    }
                     if (reserveResult.retryAfterMillis != null) {
                         scheduleRetry(transfer, reserveResult.reason, reserveResult.retryAfterMillis)
                     } else {
@@ -613,6 +666,18 @@ class BookFileTransferEngine(
                     )
                     cloudFilesDatabase.updateTransfer(transfer)
                     updateFileState(transfer, request, "upload_pending", reservation.cloudBookFileId)
+
+                    // Proactively drop a session whose Upload-Expires has passed
+                    // instead of probing it with a doomed resume.
+                    if (isSessionExpired(transfer.tusExpiresAt)) {
+                        transfer = transfer.copy(
+                            tusUploadUrl = null,
+                            tusExpiresAt = null,
+                            bytesTransferred = 0,
+                            updatedAt = now(),
+                        )
+                        cloudFilesDatabase.updateTransfer(transfer)
+                    }
 
                     var digest = Sha256Digest()
                     val uploadResult = try {
@@ -991,20 +1056,39 @@ class BookFileTransferEngine(
         val supportedServerIds = transportByServer.keys + downloadTransportByServer.keys
         val relevant = filter { transfer -> transfer.serverId in supportedServerIds }
         val active = relevant.filter { transfer -> transfer.state in ACTIVE_STATES }
-        if (active.isEmpty()) return null
-        val directions = active.mapTo(mutableSetOf(), CloudFileTransferEntity::direction)
-        val phase = when {
-            directions.size > 1 -> SyncPhase.TRANSFERRING_FILES
-            DIRECTION_DOWNLOAD in directions -> SyncPhase.DOWNLOADING_FILES
-            else -> SyncPhase.UPLOADING_FILES
+        if (active.isNotEmpty()) {
+            val directions = active.mapTo(mutableSetOf(), CloudFileTransferEntity::direction)
+            val phase = when {
+                directions.size > 1 -> SyncPhase.TRANSFERRING_FILES
+                DIRECTION_DOWNLOAD in directions -> SyncPhase.DOWNLOADING_FILES
+                else -> SyncPhase.UPLOADING_FILES
+            }
+            return FileTransferStatus(
+                phase = phase,
+                activeItems = active.size,
+                totalItems = active.size,
+                bytesTransferred = active.sumOf(CloudFileTransferEntity::bytesTransferred),
+                totalBytes = active.sumOf(CloudFileTransferEntity::sizeBytes),
+                canRetry = false,
+            )
         }
+        // Surface failures until the user retries, cancels, or supersedes them —
+        // lingering is bounded by those exits, never by time.
+        val failed = relevant.filter { transfer -> transfer.state == STATE_FAILED }
+        if (failed.isEmpty()) return null
+        val latest = failed.maxBy(CloudFileTransferEntity::updatedAt)
         return FileTransferStatus(
-            phase = phase,
-            activeItems = active.size,
-            totalItems = active.size,
-            bytesTransferred = active.sumOf(CloudFileTransferEntity::bytesTransferred),
-            totalBytes = active.sumOf(CloudFileTransferEntity::sizeBytes),
-            canRetry = false,
+            phase = if (latest.direction == DIRECTION_DOWNLOAD) {
+                SyncPhase.DOWNLOADING_FILES
+            } else {
+                SyncPhase.UPLOADING_FILES
+            },
+            activeItems = 0,
+            totalItems = failed.size,
+            bytesTransferred = 0L,
+            totalBytes = failed.sumOf(CloudFileTransferEntity::sizeBytes),
+            error = latest.lastError,
+            canRetry = true,
         )
     }
 
@@ -1012,6 +1096,31 @@ class BookFileTransferEngine(
         (kotlin.time.Instant.parse(value).toEpochMilliseconds() - Clock.System.now().toEpochMilliseconds())
             .coerceAtLeast(0L)
     }.getOrDefault(0L)
+
+    private fun isSessionExpired(expiresAt: String?): Boolean {
+        if (expiresAt == null) return false
+        val expiry = runCatching { kotlin.time.Instant.parse(expiresAt) }.getOrNull()
+            ?: parseHttpDate(expiresAt)
+            ?: return false
+        return expiry <= Clock.System.now()
+    }
+
+    /** Accepts ISO-8601 and RFC 1123 (HTTP-date, the TUS `Upload-Expires` format). */
+    private fun parseHttpDate(value: String): kotlin.time.Instant? {
+        // E.g. "Wed, 21 Oct 2015 07:28:00 GMT"
+        val parts = value.trim().split(' ', ',', ':')
+            .mapNotNull { part -> part.takeIf { it.isNotEmpty() } }
+        if (parts.size < 7) return null
+        val day = parts[1].toIntOrNull() ?: return null
+        val month = HTTP_DATE_MONTHS[parts[2].lowercase()] ?: return null
+        val year = parts[3].toIntOrNull() ?: return null
+        val hour = parts[4].toIntOrNull() ?: return null
+        val minute = parts[5].toIntOrNull() ?: return null
+        val second = parts[6].toIntOrNull() ?: return null
+        fun pad2(value: Int): String = if (value < 10) "0$value" else value.toString()
+        val iso = "$year-${pad2(month)}-${pad2(day)}T${pad2(hour)}:${pad2(minute)}:${pad2(second)}Z"
+        return runCatching { kotlin.time.Instant.parse(iso) }.getOrNull()
+    }
 
     private fun now(): String = Clock.System.now().toString()
 
@@ -1036,6 +1145,11 @@ class BookFileTransferEngine(
         val ACTIVE_STATES = setOf(STATE_PENDING, STATE_TRANSFERRING, "verifying", STATE_FINALIZING)
         val NON_TERMINAL_STATES = ACTIVE_STATES
         val RECOVERABLE_STATES = ACTIVE_STATES.toList()
+        val TERMINAL_STATES = setOf(STATE_COMPLETED, STATE_FAILED, STATE_CANCELLED)
+        val HTTP_DATE_MONTHS = mapOf(
+            "jan" to 1, "feb" to 2, "mar" to 3, "apr" to 4, "may" to 5, "jun" to 6,
+            "jul" to 7, "aug" to 8, "sep" to 9, "oct" to 10, "nov" to 11, "dec" to 12,
+        )
     }
 }
 

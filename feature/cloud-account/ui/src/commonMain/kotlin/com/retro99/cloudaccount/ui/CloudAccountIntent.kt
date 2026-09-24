@@ -6,6 +6,7 @@ sealed interface CloudAccountIntent : BaseIntent {
     data object OnBackClicked : CloudAccountIntent
 
     data object OnSubmitClicked : CloudAccountIntent
+    data class OnTosAcceptedChanged(val accepted: Boolean) : CloudAccountIntent
 
     data object OnGoogleSignInClicked : CloudAccountIntent
 

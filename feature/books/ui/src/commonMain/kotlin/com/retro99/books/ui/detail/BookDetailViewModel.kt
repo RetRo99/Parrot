@@ -7,9 +7,11 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.base.result.log
 import com.retro99.base.server.LOCAL_SERVER_ID
+import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.BookFileTransferManager
+import com.retro99.books.domain.BookFileTransferRejectedException
 import com.retro99.books.domain.FileImportManager
 import com.retro99.books.domain.usecase.CancelBookFileTransferUseCase
 import com.retro99.books.domain.usecase.ObserveBookFileTransferUseCase
@@ -378,13 +380,20 @@ class BookDetailViewModel(
     }
 
     private fun canBackUp(book: BookUiModel): Boolean =
-        book is BookUiModel.StorytellerBook &&
-            book.serverType == ServerType.ParrotCloud &&
-            book.libraryBookId != null &&
-            book.localSourceUuid != null &&
-            book.mediaResources.any { resource -> resource.localPath != null } &&
-            activeCloudAccount &&
-            bookFileTransferManager.supportsUpload(serverId)
+        activeCloudAccount &&
+            bookFileTransferManager.supportsUpload(backupServerId(book)) &&
+            when (book) {
+                is BookUiModel.LocalBook ->
+                    book.origin == "import" && book.libraryBookId != null && book.filePath.isNotBlank()
+                is BookUiModel.StorytellerBook ->
+                    book.serverType == ServerType.ParrotCloud &&
+                        book.libraryBookId != null &&
+                        book.localSourceUuid != null &&
+                        book.mediaResources.any { resource -> resource.localPath != null }
+            }
+
+    private fun backupServerId(book: BookUiModel): String =
+        if (book is BookUiModel.LocalBook) PARROT_CLOUD_SERVER_ID else book.serverId
 
     private fun observeActiveCloudAccount() {
         val localProfileId = userRegistry.getActiveProfileIdOrDefault()
@@ -427,9 +436,12 @@ class BookDetailViewModel(
     }
 
     private fun observeBookFileTransfers(book: BookUiModel) {
-        val cloudBook = book as? BookUiModel.StorytellerBook
-        val libraryBookId = cloudBook?.libraryBookId
-        val key = libraryBookId?.let { "$serverId:$it" }
+        val libraryBookId = when (book) {
+            is BookUiModel.LocalBook -> book.libraryBookId
+            is BookUiModel.StorytellerBook -> book.libraryBookId
+        }
+        val transferServerId = backupServerId(book)
+        val key = libraryBookId?.let { "$transferServerId:$it" }
         if (key == observedTransferKey) return
         observedTransferKey = key
         transferObservationJob?.cancel()
@@ -437,14 +449,17 @@ class BookDetailViewModel(
             updateState { it.copy(bookFileTransfers = emptyList()) }
             return
         }
-        transferObservationJob = observeBookFileTransferUseCase(serverId, libraryBookId)
+        transferObservationJob = observeBookFileTransferUseCase(transferServerId, libraryBookId)
             .onEach { transfers -> updateState { it.copy(bookFileTransfers = transfers).withCloudTransferStates() } }
             .launchIn(viewModelScope)
     }
 
     private fun startBookBackup() {
-        val book = viewState.value.book as? BookUiModel.StorytellerBook ?: return
-        val sourceUuid = book.localSourceUuid ?: return
+        val book = viewState.value.book ?: return
+        val sourceUuid = when (book) {
+            is BookUiModel.LocalBook -> book.uuid
+            is BookUiModel.StorytellerBook -> book.localSourceUuid ?: return
+        }
         if (!viewState.value.backupRightsAttested || !viewState.value.supportsBookBackup) return
         viewModelScope.launch {
             try {
@@ -455,7 +470,7 @@ class BookDetailViewModel(
                 }
                 recordUploadAttestationIfRequired(localProfileId)
                 startBookFileUploadUseCase(
-                    serverId = serverId,
+                    serverId = backupServerId(book),
                     localBookUuid = sourceUuid,
                     localProfileId = localProfileId,
                 )
@@ -516,7 +531,7 @@ class BookDetailViewModel(
         viewModelScope.launch {
             try {
                 bookFileTransferManager.deleteRemoteBackup(
-                    serverId = serverId,
+                    serverId = transfer.serverId,
                     libraryBookId = transfer.libraryBookId,
                     mediaType = transfer.mediaType,
                 )
@@ -527,7 +542,10 @@ class BookDetailViewModel(
                 throw exception
             } catch (error: Exception) {
                 updateState {
-                    it.copy(bookFileTransferError = error.message ?: "Could not replace cloud backup")
+                    it.copy(
+                        bookFileTransferError = (error as? BookFileTransferRejectedException)?.reason
+                            ?: "replace_failed",
+                    )
                 }
             } finally {
                 updateState {

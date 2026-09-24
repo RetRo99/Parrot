@@ -64,6 +64,7 @@ class CloudAccountViewModel(
         when (intent) {
             CloudAccountIntent.OnBackClicked -> onBack()
             CloudAccountIntent.OnSubmitClicked -> submit()
+            is CloudAccountIntent.OnTosAcceptedChanged -> updateTosAccepted(action.accepted)
             CloudAccountIntent.OnGoogleSignInClicked -> signInWithGoogle()
             CloudAccountIntent.OnSwitchToSignInClicked -> switchMode(CloudAccountMode.SignIn)
             CloudAccountIntent.OnSwitchToCreateAccountClicked -> {
@@ -204,7 +205,7 @@ class CloudAccountViewModel(
                         prepareAuthenticatedAccount(account)
                     }
                     CloudAccountMode.CreateAccount -> {
-                        when (val result = registerCloudAccountUseCase(email, password)) {
+                        when (val result = registerCloudAccountUseCase(email, password, currentState.tosAccepted)) {
                             is CloudRegistrationResult.SignedIn -> {
                                 prepareAuthenticatedAccount(result.account)
                             }
@@ -579,7 +580,22 @@ class CloudAccountViewModel(
     private fun updateFormState(email: String, password: String) {
         updateState {
             it.copy(
-                isSubmitEnabled = email.isValidEmail() && password.isNotBlank() && !it.isLoading,
+                isSubmitEnabled = email.isValidEmail() && password.isNotBlank() &&
+                    (it.mode != CloudAccountMode.CreateAccount || it.tosAccepted) &&
+                    !it.isLoading,
+            )
+        }
+    }
+
+    private fun updateTosAccepted(accepted: Boolean) {
+        val email = emailState.text.toString().trim()
+        val password = passwordState.text.toString()
+        updateState {
+            val state = it.copy(tosAccepted = accepted)
+            state.copy(
+                isSubmitEnabled = email.isValidEmail() && password.isNotBlank() &&
+                    (state.mode != CloudAccountMode.CreateAccount || state.tosAccepted) &&
+                    !state.isLoading,
             )
         }
     }

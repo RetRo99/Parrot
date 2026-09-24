@@ -41,8 +41,12 @@ class CloudAuthenticationUseCasesTest {
             CloudRegistrationResult.SignedIn(account)
         }
 
+        assertFailsWith<IllegalArgumentException> {
+            classUnderTest("reader@example.com", "password", tosAccepted = false)
+        }
+
         assertFailsWith<IllegalStateException> {
-            classUnderTest("reader@example.com", "password")
+            classUnderTest("reader@example.com", "password", tosAccepted = true)
         }
 
         assertNull(pendingAuthenticationRepository.get("profile-a"))
@@ -190,7 +194,7 @@ class CloudAuthenticationUseCasesTest {
             CloudRegistrationResult.AwaitingEmailVerification("reader@example.com")
         }
 
-        classUnderTest("reader@example.com", "password")
+        classUnderTest("reader@example.com", "password", tosAccepted = true)
 
         val pendingAuthentication = pendingAuthenticationRepository.get("profile-a")
         assertEquals("profile-a", pendingAuthentication?.localProfileId)

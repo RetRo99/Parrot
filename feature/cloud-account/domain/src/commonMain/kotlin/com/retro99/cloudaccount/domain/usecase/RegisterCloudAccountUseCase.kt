@@ -15,7 +15,8 @@ class RegisterCloudAccountUseCase(
     @Provided private val pendingAuthenticationRepository: PendingCloudAuthenticationRepository,
     @Provided private val userRegistry: UserRegistry,
 ) {
-    suspend operator fun invoke(email: String, password: String): CloudRegistrationResult {
+    suspend operator fun invoke(email: String, password: String, tosAccepted: Boolean): CloudRegistrationResult {
+        require(tosAccepted) { "Terms of Service acceptance is required to create an account" }
         val localProfileId = userRegistry.getActiveProfileIdOrDefault()
         return accountRepository.withProfileSession(localProfileId) {
             val result = accountRepository.register(localProfileId, email, password)
