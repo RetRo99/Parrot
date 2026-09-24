@@ -1,6 +1,7 @@
 package com.retro99.books.domain.usecase
 
 import com.retro99.books.domain.BookFileTransferManager
+import com.retro99.books.domain.BackupAllResult
 import com.retro99.books.domain.toBookFileUploadAttestation
 import com.retro99.cloudaccount.domain.usecase.GetCurrentUploadRightsAttestationUseCase
 import org.koin.core.annotation.Provided
@@ -14,7 +15,7 @@ class BackupAllBooksUseCase(
     suspend operator fun invoke(
         serverId: String,
         localProfileId: String,
-    ): Int {
+    ): BackupAllResult {
         val attestation = getCurrentUploadRightsAttestationUseCase(localProfileId)
         return transferManager.backupAll(serverId, attestation.toBookFileUploadAttestation())
     }

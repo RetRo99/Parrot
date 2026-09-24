@@ -1,6 +1,7 @@
 package com.retro99.books.data.transfer
 
 import android.content.Context
+import com.retro99.books.data.calculateFileContentHash
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
@@ -20,6 +21,8 @@ class AndroidBookFileTransferFileStore(
     override suspend fun exists(path: String): Boolean = File(path).exists()
 
     override suspend fun size(path: String): Long = File(path).length()
+
+    override fun contentHash(path: String): String = calculateFileContentHash(path)
 
     override suspend fun truncate(path: String) {
         File(path).parentFile?.mkdirs()

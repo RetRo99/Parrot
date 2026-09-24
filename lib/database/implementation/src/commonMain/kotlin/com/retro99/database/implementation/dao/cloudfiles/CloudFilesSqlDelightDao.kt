@@ -114,10 +114,13 @@ internal class CloudFilesSqlDelightDao(
     suspend fun getTransfers(serverId: String, states: List<String>): List<CloudFileTransferEntity> =
         withContext(Dispatchers.IO) {
             if (states.isEmpty()) return@withContext emptyList()
-            databaseManager.getDatabase().cloudFileTransferQueries
-                .getCloudFileTransfersByStates(serverId, states)
-                .executeAsList()
-                .map(Cloud_file_transfers::toEntity)
+            val profileId = userRegistry.getActiveProfileId() ?: return@withContext emptyList()
+            databaseManager.withProfile(profileId) {
+                databaseManager.getDatabase().cloudFileTransferQueries
+                    .getCloudFileTransfersByStates(serverId, states)
+                    .executeAsList()
+                    .map(Cloud_file_transfers::toEntity)
+            }
         }
 
     suspend fun getTransfersForCloudFile(

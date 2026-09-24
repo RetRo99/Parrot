@@ -66,7 +66,7 @@ data class TransferTransportCapabilities(
     val supportsClientSuppliedId: Boolean,
     val supportsReplaceInPlace: Boolean,
     val maxRequestSizeBytes: Long? = null,
-    /** Server-controlled rollout gate. False keeps uploads dark even if UI is enabled. */
+    /** Whether this transport permits upload operations. */
     val supportsUpload: Boolean = false,
 )
 
@@ -165,7 +165,7 @@ interface BookFileTransferManager {
     suspend fun backupAll(
         serverId: String,
         rightsAttestation: UploadRightsAttestation,
-    ): Int
+    ): BackupAllResult
 
     suspend fun enqueueDownload(serverId: String, libraryBookId: String, mediaType: String): String
 
@@ -196,4 +196,9 @@ data class BookFileTransfer(
     val totalBytes: Long,
     val attemptCount: Int,
     val lastError: String?,
+)
+
+data class BackupAllResult(
+    val queuedCount: Int,
+    val failedCount: Int,
 )

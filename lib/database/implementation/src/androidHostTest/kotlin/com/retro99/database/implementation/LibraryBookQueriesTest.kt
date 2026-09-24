@@ -118,6 +118,27 @@ class LibraryBookQueriesTest {
             migrationDriver.execute(
                 identifier = null,
                 sql = """
+                    CREATE TABLE imported_books (
+                        uuid TEXT NOT NULL PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        author TEXT,
+                        description TEXT,
+                        cover_path TEXT,
+                        file_path TEXT NOT NULL,
+                        file_size INTEGER NOT NULL,
+                        content_hash TEXT,
+                        content_hash_algorithm TEXT,
+                        imported_at TEXT NOT NULL,
+                        last_opened_at TEXT,
+                        book_type TEXT NOT NULL DEFAULT 'ebook',
+                        publication_date TEXT
+                    );
+                """.trimIndent(),
+                parameters = 0,
+            )
+            migrationDriver.execute(
+                identifier = null,
+                sql = """
                     CREATE TABLE position (
                         book_uuid TEXT NOT NULL PRIMARY KEY,
                         timestamp INTEGER,

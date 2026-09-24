@@ -113,6 +113,7 @@ import resources.translations.cloud_account_sync_status_pulling
 import resources.translations.cloud_account_sync_status_preparing
 import resources.translations.cloud_account_sync_status_uploading_changes
 import resources.translations.cloud_account_sync_status_uploading_files
+import resources.translations.cloud_account_sync_status_transferring_files
 import resources.translations.cloud_account_title
 import resources.translations.cloud_account_verification_message
 import resources.translations.cloud_backup_attestation_checkbox
@@ -745,6 +746,7 @@ private fun SyncStatusMessage(
                 SyncPhase.UPLOADING_CHANGES -> StringRes.cloud_account_sync_status_uploading_changes
                 SyncPhase.UPLOADING_FILES -> StringRes.cloud_account_sync_status_uploading_files
                 SyncPhase.DOWNLOADING_FILES -> StringRes.cloud_account_sync_status_downloading_files
+                SyncPhase.TRANSFERRING_FILES -> StringRes.cloud_account_sync_status_transferring_files
                 SyncPhase.FINALIZING -> StringRes.cloud_account_sync_status_finalizing
             },
         )

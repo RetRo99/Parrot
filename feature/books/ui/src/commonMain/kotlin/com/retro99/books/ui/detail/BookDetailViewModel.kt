@@ -19,7 +19,10 @@ import com.retro99.books.domain.usecase.StartBookFileDownloadUseCase
 import com.retro99.books.domain.usecase.RemoveBookFileDownloadUseCase
 import com.retro99.books.domain.usecase.ObserveFavoriteUseCase
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
+import com.retro99.cloudaccount.domain.CloudAccountRepository
+import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
+import com.retro99.cloudaccount.domain.model.isActiveFor
 import com.retro99.books.ui.model.toUiModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.domain.model.BookType
@@ -32,6 +35,7 @@ import com.retro99.reader.domain.usecase.ObserveDownloadStateUseCase
 import com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -66,6 +70,8 @@ class BookDetailViewModel(
     @Provided private val startBookFileDownloadUseCase: StartBookFileDownloadUseCase,
     @Provided private val removeBookFileDownloadUseCase: RemoveBookFileDownloadUseCase,
     @Provided private val uploadRightsAttestationRepository: UploadRightsAttestationRepository,
+    @Provided private val cloudAccountRepository: CloudAccountRepository,
+    @Provided private val cloudProfileLinkRepository: CloudProfileLinkRepository,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
@@ -73,6 +79,7 @@ class BookDetailViewModel(
 ) {
     private var transferObservationJob: Job? = null
     private var observedTransferKey: String? = null
+    private var activeCloudAccount = false
 
     init {
         analytics.logEvent(
@@ -84,6 +91,7 @@ class BookDetailViewModel(
         observeBookWithProgress()
         observeDownloadStates()
         observeFavoriteState()
+        observeActiveCloudAccount()
     }
 
     override fun onIntent(intent: BookDetailIntent) {
@@ -375,7 +383,26 @@ class BookDetailViewModel(
             book.libraryBookId != null &&
             book.localSourceUuid != null &&
             book.mediaResources.any { resource -> resource.localPath != null } &&
+            activeCloudAccount &&
             bookFileTransferManager.supportsUpload(serverId)
+
+    private fun observeActiveCloudAccount() {
+        val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+        combine(
+            cloudAccountRepository.observeAuthState(),
+            cloudProfileLinkRepository.observeForLocalProfile(localProfileId),
+        ) { authState, profileLink -> profileLink.isActiveFor(authState) }
+            .distinctUntilChanged()
+            .onEach { isActive ->
+                activeCloudAccount = isActive
+                updateState { current ->
+                    current.copy(
+                        supportsBookBackup = current.book?.let(::canBackUp) == true,
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
 
     private fun canDeleteCloudBackup(book: BookUiModel): Boolean =
         book is BookUiModel.StorytellerBook &&
@@ -422,6 +449,10 @@ class BookDetailViewModel(
         viewModelScope.launch {
             try {
                 val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+                if (!hasActiveCloudAccount(localProfileId)) {
+                    updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
+                    return@launch
+                }
                 recordUploadAttestationIfRequired(localProfileId)
                 startBookFileUploadUseCase(
                     serverId = serverId,
@@ -437,6 +468,11 @@ class BookDetailViewModel(
             }
             updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
         }
+    }
+
+    private suspend fun hasActiveCloudAccount(localProfileId: String): Boolean {
+        val profileLink = cloudProfileLinkRepository.getForLocalProfile(localProfileId) ?: return false
+        return profileLink.isActiveFor(cloudAccountRepository.currentAuthState())
     }
 
     private suspend fun recordUploadAttestationIfRequired(localProfileId: String) {
@@ -689,7 +725,9 @@ class BookDetailViewModel(
             }
             if (resource?.localPath != null) return DownloadState.Cached
             val transfer = bookFileTransfers.firstOrNull { item ->
-                item.direction == "download" && item.mediaType.equals(bookType.value, ignoreCase = true)
+                item.direction == "download" &&
+                    item.mediaType.equals(bookType.value, ignoreCase = true) &&
+                    item.state != "cancelled"
             } ?: return fallback
             return when (transfer.state) {
                 "pending" -> DownloadState.Downloading(0f)

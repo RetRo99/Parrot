@@ -227,11 +227,14 @@ independent of object-path naming"):
 ### Testing strategy
 
 - pgTAP in `supabase/tests/`: reserve idempotence & dedupe (`already_available`),
-  quota math (before/during), block-list rejections, finalize `size_mismatch`,
-  cancel idempotence, expiry, `create_book_download` rejections.
-- RLS isolation suite: cross-account denies at **table, function, and storage**
-  layers (PC-plan Slice 5 exit criteria), forged `cloud_user_id` ignored/rejected,
-  signed URLs scoped to owner objects.
+  quota math (before/during), block-list rejections, cancel idempotence, expiry,
+  and `create_book_download` rejections. `finalize_book_upload_test.sql` covers
+  the atomic success/idempotence path plus size/hash mismatch, expiry, incomplete
+  object, and `reserved_bytes`/`used_bytes` after every transition.
+- `storage_policy_test.sql` exercises cross-account insert/read/delete denials,
+  the owner's available-only reads, and owner deletion only after the file row is
+  `deleting`. Together with table/RPC isolation, this covers cross-account access
+  at **table, function, and storage** layers (PC-plan Slice 5 exit criteria).
 - Harness: `scripts/supabase/reset.sh && scripts/supabase/test.sh` in CI (Gradle
   alone is not backend verification — PC-plan §15).
 
@@ -542,8 +545,8 @@ service, and the transfer client with recorded calls, `CompletableDeferred` gate
 for interleavings (pattern: `SyncDataRepositoryTest.kt`), event-order lists
 (pattern: `SyncBoundedPassTest.kt`). No shared base classes.
 
-- new `feature/books/data/src/commonTest/kotlin/com/retro99/books/data/transfer/BookFileTransferEngineTest.kt` — happy path, transient retry w/ backoff, offset resume, permanent rejection mapping, cancel, process-death recovery, dedupe skip.
-- new `lib/server-parrot-cloud/src/commonTest/.../ParrotCloudBookFileChangeApplierTest.kt` (pattern: `ParrotCloudLibraryMutationApplierTest.kt`) — `book_file` events map to `RemoteFileAvailability`; remote application never enqueues mutations.
+- `feature/books/data/src/commonTest/kotlin/com/retro99/books/data/transfer/BookFileTransferEngineTest.kt` — upload success, dedupe skip, permanent rejection mapping, capped backoff, expired-session recreation, process-death recovery, cancel, and download resume/verification.
+- `lib/server-parrot-cloud/src/commonTest/.../ParrotCloudBookFileChangeApplierTest.kt` (pattern: `ParrotCloudLibraryMutationApplierTest.kt`) — file lifecycle events map to the local mirror and deletion/removal invalidates cloud replicas.
 - SQLDelight query tests in `lib/database/implementation/src/androidHostTest` with `JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)` (pattern: `LibraryBookQueriesTest.kt`, `SyncCheckpointDatabaseTest.kt`).
 - Hash plumbing reuses `feature/books/data/src/commonTest/.../ContentHashTest.kt` vectors.
 
@@ -670,10 +673,10 @@ Same conventions as Slice 3 (`feature/sync/data/src/commonTest` style). New:
   re-authorize + re-mint + resume, hash-mismatch rejection **and** assertion that
   no file exists at the final path after any failure, cancel leaves no partials.
 - `DownloadFinalizerTest` — association transaction correctness (imported row +
-  local_book_file + library link, no outbox enqueue for already-synced canonical
-  rows), local dedupe: finalizing when a local import with the same content hash
-  exists attaches instead of storing duplicate bytes; position lookup by
-  `library_book_id` is written for the fresh UUID (no implicit attachment).
+  local_book_file + library link + transfer, no outbox enqueue for already-synced
+  canonical rows), local dedupe: an import with the same content hash attaches
+  instead of storing duplicate bytes; position lookup by `library_book_id` is
+  written for the fresh UUID; missing/truncated files never become readable.
 - Replica-selection tests for `GetBookByUuidUseCase`/mapper (local replica wins
   for Open; missing replica → Download state, never `"Book has no … file"`).
 - Manual two-device matrix (PC-plan §15): Android↔Android, iOS↔iOS,

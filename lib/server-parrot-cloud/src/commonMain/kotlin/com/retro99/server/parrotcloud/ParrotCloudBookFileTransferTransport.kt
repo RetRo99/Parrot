@@ -37,7 +37,7 @@ class ParrotCloudBookFileTransferTransport(
         supportsClientSuppliedId = false,
         supportsReplaceInPlace = false,
         maxRequestSizeBytes = 6L * 1024L * 1024L,
-        supportsUpload = false,
+        supportsUpload = true,
     )
 
     override suspend fun reserve(request: BookFileUploadRequest): UploadReservationResult =

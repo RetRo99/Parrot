@@ -28,13 +28,17 @@ import com.retro99.books.ui.model.BookQuickFilter
 import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.toUiModel
-import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
+import com.retro99.cloudaccount.domain.CloudAccountRepository
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
+import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
+import com.retro99.cloudaccount.domain.model.isActiveFor
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.preferences.implementation.usecase.ObserveUserPreferenceUseCase
 import com.retro99.preferences.implementation.usecase.SaveUserPreferenceUseCase
 import com.retro99.reader.domain.usecase.ObserveAllBooksWithProgressUseCase
 import com.retro99.user.api.UserRegistry
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -58,18 +62,16 @@ class BooksListViewModel(
     @Provided private val backupAllBooksUseCase: BackupAllBooksUseCase,
     @Provided private val uploadRightsAttestationRepository: UploadRightsAttestationRepository,
     @Provided private val cloudProfileLinkRepository: CloudProfileLinkRepository,
+    @Provided private val cloudAccountRepository: CloudAccountRepository,
     @Provided private val startBookFileUploadUseCase: StartBookFileUploadUseCase,
     @Provided private val userRegistry: UserRegistry,
 ) : BaseViewModel<BooksListViewState, BooksListIntent>(BooksListViewState()) {
 
     private var currentBooks: List<BookWithProgressDomainModel> = emptyList()
-
     val searchFieldState = TextFieldState()
 
     init {
-        updateState {
-            it.copy(supportsCloudBackup = bookFileTransferManager.supportsUpload(PARROT_CLOUD_SERVER_ID))
-        }
+        observeActiveCloudAccount()
         observeFilterSortSettings()
         observeBooks()
         observeFavorites()
@@ -88,6 +90,7 @@ class BooksListViewModel(
                     showBackupAllConfirmation = true,
                     backupAllRightsAttested = false,
                     backupAllQueuedCount = null,
+                    backupAllFailedCount = null,
                     backupAllError = null,
                 )
             }
@@ -99,7 +102,11 @@ class BooksListViewModel(
                 it.copy(showBackupAllConfirmation = false, backupAllRightsAttested = false)
             }
             BooksListIntent.OnBackupAllResultDismissed -> updateState {
-                it.copy(backupAllQueuedCount = null, backupAllError = null)
+                it.copy(
+                    backupAllQueuedCount = null,
+                    backupAllFailedCount = null,
+                    backupAllError = null,
+                )
             }
             is BooksListIntent.OnImportBackupAttestationChanged -> updateState {
                 it.copy(importBackupRightsAttested = intent.attested)
@@ -323,6 +330,7 @@ class BooksListViewModel(
 
         try {
             val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+            if (!hasActiveCloudAccount(localProfileId)) return
             val profileLink = cloudProfileLinkRepository.getForLocalProfile(localProfileId)
                 ?: return
             if (!profileLink.autoBackupEnabled) return
@@ -356,7 +364,7 @@ class BooksListViewModel(
             try {
                 val localProfileId = userRegistry.getActiveProfileIdOrDefault()
                 val profileLink = cloudProfileLinkRepository.getForLocalProfile(localProfileId)
-                if (profileLink?.autoBackupEnabled == true) {
+                if (hasActiveCloudAccount(localProfileId) && profileLink?.autoBackupEnabled == true) {
                     uploadRightsAttestationRepository.record(localProfileId)
                     startBookFileUploadUseCase(
                         serverId = PARROT_CLOUD_SERVER_ID,
@@ -395,8 +403,19 @@ class BooksListViewModel(
             updateState { it.copy(isBackingUpAll = true, backupAllError = null) }
             try {
                 val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+                if (!hasActiveCloudAccount(localProfileId)) {
+                    updateState {
+                        it.copy(
+                            showBackupAllConfirmation = false,
+                            backupAllRightsAttested = false,
+                            isBackingUpAll = false,
+                            supportsCloudBackup = false,
+                        )
+                    }
+                    return@launch
+                }
                 recordUploadAttestationIfRequired(localProfileId)
-                val queuedCount = backupAllBooksUseCase(
+                val result = backupAllBooksUseCase(
                     serverId = PARROT_CLOUD_SERVER_ID,
                     localProfileId = localProfileId,
                 )
@@ -405,7 +424,8 @@ class BooksListViewModel(
                         showBackupAllConfirmation = false,
                         backupAllRightsAttested = false,
                         isBackingUpAll = false,
-                        backupAllQueuedCount = queuedCount,
+                        backupAllQueuedCount = result.queuedCount,
+                        backupAllFailedCount = result.failedCount,
                     )
                 }
             } catch (exception: CancellationException) {
@@ -427,5 +447,28 @@ class BooksListViewModel(
         if (uploadRightsAttestationRepository.requiresReattestation(localProfileId)) {
             uploadRightsAttestationRepository.record(localProfileId)
         }
+    }
+
+    private fun observeActiveCloudAccount() {
+        val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+        combine(
+            cloudAccountRepository.observeAuthState(),
+            cloudProfileLinkRepository.observeForLocalProfile(localProfileId),
+        ) { authState, profileLink -> profileLink.isActiveFor(authState) }
+            .distinctUntilChanged()
+            .onEach { isActive ->
+                updateState {
+                    it.copy(
+                        supportsCloudBackup = isActive &&
+                            bookFileTransferManager.supportsUpload(PARROT_CLOUD_SERVER_ID),
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private suspend fun hasActiveCloudAccount(localProfileId: String): Boolean {
+        val profileLink = cloudProfileLinkRepository.getForLocalProfile(localProfileId) ?: return false
+        return profileLink.isActiveFor(cloudAccountRepository.currentAuthState())
     }
 }

@@ -33,6 +33,7 @@ kotlin {
             implementation(projects.lib.database.api)
             implementation(projects.lib.analytics.api)
             implementation(projects.lib.server.api)
+            implementation(projects.lib.user.api)
             implementation(projects.feature.sync.domain)
             implementation(projects.feature.books.domain)
             implementation(libs.filekit.core)

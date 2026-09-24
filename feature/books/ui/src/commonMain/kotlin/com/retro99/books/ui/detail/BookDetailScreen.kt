@@ -149,18 +149,30 @@ import resources.translations.cloud_backup_retry
 import resources.translations.cloud_backup_title
 import resources.translations.cloud_backup_queued
 import resources.translations.cloud_backup_complete
+import resources.translations.cloud_backup_cancelled
 import resources.translations.cloud_backup_finishing
+import resources.translations.cloud_backup_reason_attestation_required
+import resources.translations.cloud_backup_reason_content_blocked
+import resources.translations.cloud_backup_reason_file_exists
+import resources.translations.cloud_backup_reason_generic
+import resources.translations.cloud_backup_reason_quota_exceeded
+import resources.translations.cloud_backup_reason_verify_failed
 import resources.translations.cloud_backup_replace_button
 import resources.translations.cloud_backup_replace_message
 import resources.translations.cloud_backup_replace_title
 import resources.translations.cloud_backup_replacing
 import resources.translations.cloud_download_cancel
+import resources.translations.cloud_download_cancelled
 import resources.translations.cloud_download_complete
 import resources.translations.cloud_download_failed
 import resources.translations.cloud_download_finishing
 import resources.translations.cloud_download_progress
 import resources.translations.cloud_download_queued
+import resources.translations.cloud_download_reason_generic
+import resources.translations.cloud_download_reason_unavailable
+import resources.translations.cloud_download_reason_verify_failed
 import resources.translations.cloud_download_retry
+import resources.translations.cloud_backup_unknown_state
 import resources.translations.cloud_backup_delete_button
 import resources.translations.cloud_backup_delete_title
 import resources.translations.cloud_backup_delete_message
@@ -1463,8 +1475,11 @@ private fun BookBackupProgressSection(
     onReplace: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val transfer = transfers.firstOrNull { it.state in setOf("pending", "transferring", "verifying", "finalizing") }
-        ?: transfers.firstOrNull()
+    val visibleTransfers = transfers.filterNot { it.state == "cancelled" }
+    val transfer = visibleTransfers.firstOrNull {
+        it.state in setOf("pending", "transferring", "verifying", "finalizing")
+    }
+        ?: visibleTransfers.firstOrNull()
         ?: return
     val fraction = if (transfer.totalBytes > 0) {
         (transfer.bytesTransferred.toFloat() / transfer.totalBytes).coerceIn(0f, 1f)
@@ -1489,9 +1504,12 @@ private fun BookBackupProgressSection(
         )
         "failed" -> stringResource(
             if (isDownload) StringRes.cloud_download_failed else StringRes.cloud_backup_failed,
-            transfer.lastError ?: "Unknown error",
+            localizedTransferFailureReason(isDownload, transfer.lastError),
         )
-        else -> transfer.state
+        "cancelled" -> stringResource(
+            if (isDownload) StringRes.cloud_download_cancelled else StringRes.cloud_backup_cancelled,
+        )
+        else -> stringResource(StringRes.cloud_backup_unknown_state)
     }
     Column(
         modifier = modifier
@@ -1550,6 +1568,20 @@ private fun BookBackupProgressSection(
             }
         }
     }
+}
+
+@Composable
+private fun localizedTransferFailureReason(isDownload: Boolean, reason: String?): String = when {
+    isDownload && reason == "verify_failed" -> stringResource(StringRes.cloud_download_reason_verify_failed)
+    isDownload && reason in setOf("cloud_file_unavailable", "cloud_file_changed") ->
+        stringResource(StringRes.cloud_download_reason_unavailable)
+    isDownload -> stringResource(StringRes.cloud_download_reason_generic)
+    reason == "file_exists" -> stringResource(StringRes.cloud_backup_reason_file_exists)
+    reason == "quota_exceeded" -> stringResource(StringRes.cloud_backup_reason_quota_exceeded)
+    reason == "content_blocked" -> stringResource(StringRes.cloud_backup_reason_content_blocked)
+    reason == "attestation_required" -> stringResource(StringRes.cloud_backup_reason_attestation_required)
+    reason == "verify_failed" -> stringResource(StringRes.cloud_backup_reason_verify_failed)
+    else -> stringResource(StringRes.cloud_backup_reason_generic)
 }
 
 private fun formatByteCount(bytes: Long): String = when {

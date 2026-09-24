@@ -1,5 +1,15 @@
 # Parrot Cloud upload enablement — implementation plan
 
+## Current product decision — 2026-09-24
+
+Book uploads are available when the current profile has a linked Parrot Cloud
+account and that account is signed in. This supersedes the client-side
+hard-off/server-rollout-gate assumptions in the historical plan below. The
+upload transport is enabled; Book Details, Back up all, and auto-backup upload
+paths require the signed-in account to match the current profile's link.
+Automatic backups still honor the user's auto-backup preference, and upload
+rights attestation remains part of each backup flow.
+
 ## Status
 
 Draft implementation plan for the remaining work between today's state —

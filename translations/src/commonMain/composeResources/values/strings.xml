@@ -496,6 +496,7 @@
     <string name="cloud_account_sync_status_uploading_changes" tools:ignore="MissingTranslation">Sending changes…</string>
     <string name="cloud_account_sync_status_uploading_files" tools:ignore="MissingTranslation">Backing up files…</string>
     <string name="cloud_account_sync_status_downloading_files" tools:ignore="MissingTranslation">Restoring files…</string>
+    <string name="cloud_account_sync_status_transferring_files" tools:ignore="MissingTranslation">Transferring book files…</string>
     <string name="cloud_account_sync_status_finalizing" tools:ignore="MissingTranslation">Finishing sync…</string>
     <string name="cloud_account_sync_status_offline" tools:ignore="MissingTranslation">Offline. %1$d changes are waiting to sync.</string>
     <string name="cloud_account_sync_status_failed" tools:ignore="MissingTranslation">Sync failed: %1$s (%2$d pending).</string>
@@ -521,7 +522,14 @@
     <string name="cloud_backup_finishing" tools:ignore="MissingTranslation">Finishing backup…</string>
     <string name="cloud_backup_complete" tools:ignore="MissingTranslation">Backup complete</string>
     <string name="cloud_backup_failed" tools:ignore="MissingTranslation">Backup failed: %1$s</string>
+    <string name="cloud_backup_reason_file_exists" tools:ignore="MissingTranslation">A cloud backup already exists for this file.</string>
+    <string name="cloud_backup_reason_quota_exceeded" tools:ignore="MissingTranslation">Your Parrot Cloud storage is full.</string>
+    <string name="cloud_backup_reason_content_blocked" tools:ignore="MissingTranslation">This file is unavailable for cloud backup.</string>
+    <string name="cloud_backup_reason_attestation_required" tools:ignore="MissingTranslation">Confirm your backup rights before retrying.</string>
+    <string name="cloud_backup_reason_verify_failed" tools:ignore="MissingTranslation">The file could not be verified.</string>
+    <string name="cloud_backup_reason_generic" tools:ignore="MissingTranslation">Please try again. If the problem continues, check your connection and account.</string>
     <string name="cloud_backup_cancel" tools:ignore="MissingTranslation">Cancel backup</string>
+    <string name="cloud_backup_cancelled" tools:ignore="MissingTranslation">Backup cancelled</string>
     <string name="cloud_backup_retry" tools:ignore="MissingTranslation">Retry backup</string>
     <string name="cloud_backup_replace_button" tools:ignore="MissingTranslation">Replace backup</string>
     <string name="cloud_backup_replace_title" tools:ignore="MissingTranslation">Replace cloud backup?</string>
@@ -532,13 +540,19 @@
     <string name="cloud_download_finishing" tools:ignore="MissingTranslation">Verifying restored file…</string>
     <string name="cloud_download_complete" tools:ignore="MissingTranslation">Restore complete</string>
     <string name="cloud_download_failed" tools:ignore="MissingTranslation">Restore failed: %1$s</string>
+    <string name="cloud_download_reason_unavailable" tools:ignore="MissingTranslation">This cloud file is no longer available.</string>
+    <string name="cloud_download_reason_verify_failed" tools:ignore="MissingTranslation">The downloaded file could not be verified.</string>
+    <string name="cloud_download_reason_generic" tools:ignore="MissingTranslation">Please try restoring again.</string>
     <string name="cloud_download_cancel" tools:ignore="MissingTranslation">Cancel restore</string>
+    <string name="cloud_download_cancelled" tools:ignore="MissingTranslation">Restore cancelled</string>
     <string name="cloud_download_retry" tools:ignore="MissingTranslation">Retry restore</string>
+    <string name="cloud_backup_unknown_state" tools:ignore="MissingTranslation">Transfer status unavailable.</string>
     <string name="cloud_backup_all_button" tools:ignore="MissingTranslation">Back up all</string>
     <string name="cloud_backup_backup_all" tools:ignore="MissingTranslation">Back up all existing books</string>
     <string name="cloud_backup_all_title" tools:ignore="MissingTranslation">Back up all imported books?</string>
     <string name="cloud_backup_all_message" tools:ignore="MissingTranslation">Books linked to your Parrot Cloud library will be queued for backup.</string>
     <string name="cloud_backup_all_queued" tools:ignore="MissingTranslation">Queued %1$d book backups.</string>
+    <string name="cloud_backup_all_summary" tools:ignore="MissingTranslation">Queued %1$d book backups; %2$d could not be queued.</string>
     <string name="cloud_backup_all_result_title" tools:ignore="MissingTranslation">Book backup</string>
     <string name="cloud_backup_delete_button" tools:ignore="MissingTranslation">Delete %1$s cloud backup</string>
     <string name="cloud_backup_delete_title" tools:ignore="MissingTranslation">Delete cloud backup?</string>

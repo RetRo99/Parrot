@@ -106,6 +106,7 @@ import resources.translations.books_view_list
 import resources.translations.cloud_backup_backup_all
 import resources.translations.cloud_backup_all_message
 import resources.translations.cloud_backup_all_queued
+import resources.translations.cloud_backup_all_summary
 import resources.translations.cloud_backup_all_result_title
 import resources.translations.cloud_backup_all_title
 import resources.translations.cloud_backup_attestation_checkbox
@@ -270,8 +271,9 @@ private fun BooksListScreenContent(
                 Text(
                     viewState.backupAllError
                         ?: stringResource(
-                            StringRes.cloud_backup_all_queued,
+                            StringRes.cloud_backup_all_summary,
                             viewState.backupAllQueuedCount ?: 0,
+                            viewState.backupAllFailedCount ?: 0,
                         ),
                 )
             },

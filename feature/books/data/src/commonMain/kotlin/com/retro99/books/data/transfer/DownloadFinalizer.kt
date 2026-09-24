@@ -3,14 +3,13 @@ package com.retro99.books.data.transfer
 import com.github.michaelbull.result.getOrElse
 import com.retro99.books.data.CONTENT_HASH_ALGORITHM
 import com.retro99.books.data.EpubMetadataExtractor
-import com.retro99.books.data.calculateFileContentHash
 import com.retro99.books.data.model.ImportedBookLocalModel
 import com.retro99.books.data.model.LibraryBookLocalModel
 import com.retro99.books.data.model.LocalBookFileLocalModel
 import com.retro99.books.domain.BookFileDownloadRequest
 import com.retro99.books.domain.BookFileTransferRejectedException
 import com.retro99.books.domain.model.BookType
-import com.retro99.database.api.books.BooksDatabase
+import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
 import com.retro99.database.api.importedbooks.ImportedBookEntity
@@ -27,7 +26,7 @@ import kotlin.time.Clock
 class DownloadFinalizer(
     @Provided private val importedBooksDatabase: ImportedBooksDatabase,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
-    @Provided private val booksDatabase: BooksDatabase,
+    @Provided private val booksDatabase: PositionDatabase,
     @Provided private val metadataExtractor: EpubMetadataExtractor,
     @Provided private val fileStore: BookFileTransferFileStore,
 ) : DownloadTransferFinalizer {
@@ -52,7 +51,7 @@ class DownloadFinalizer(
                     localBook.bookType.equals(request.mediaType, ignoreCase = true) &&
                     fileStore.exists(localBook.filePath) &&
                     fileStore.size(localBook.filePath) == request.sizeBytes &&
-                    calculateFileContentHash(localBook.filePath) == request.contentHash
+                    fileStore.contentHash(localBook.filePath) == request.contentHash
             }
 
         val localUuid = existing?.uuid ?: requireNotNull(transfer.localSourceUuid)
@@ -66,7 +65,7 @@ class DownloadFinalizer(
                     importedFilePath
                 else -> error("Downloaded staging file is missing or truncated")
             }
-            if (calculateFileContentHash(sourcePath) != request.contentHash) {
+            if (fileStore.contentHash(sourcePath) != request.contentHash) {
                 throw DownloadHashMismatchException()
             }
         }

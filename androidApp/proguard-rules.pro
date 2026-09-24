@@ -62,7 +62,10 @@
 -allowaccessmodification
 -repackageclasses
 
+# WorkManager loads Room's generated WorkDatabase_Impl by class name. Keep the
+# generated no-argument constructor used by Room's reflective factory.
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+
 # Debugging - remove for production if you want smaller APK
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
-

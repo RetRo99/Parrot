@@ -381,9 +381,16 @@ private fun mergeTransferStatuses(
         transfers.all { transfer -> transfer.totalBytes != null }
     }?.sumOf { transfer -> transfer.totalBytes ?: 0L }
     val activeItems = activeTransfers.sumOf { transfer -> transfer.activeItems }
+    val hasUploads = activeTransfers.any {
+        it.phase == SyncPhase.UPLOADING_FILES || it.phase == SyncPhase.TRANSFERRING_FILES
+    }
+    val hasDownloads = activeTransfers.any {
+        it.phase == SyncPhase.DOWNLOADING_FILES || it.phase == SyncPhase.TRANSFERRING_FILES
+    }
     val phase = when {
-        activeTransfers.any { it.phase == SyncPhase.UPLOADING_FILES } -> SyncPhase.UPLOADING_FILES
-        activeTransfers.any { it.phase == SyncPhase.DOWNLOADING_FILES } -> SyncPhase.DOWNLOADING_FILES
+        hasUploads && hasDownloads -> SyncPhase.TRANSFERRING_FILES
+        hasUploads -> SyncPhase.UPLOADING_FILES
+        hasDownloads -> SyncPhase.DOWNLOADING_FILES
         else -> activeTransfers.first().phase
     }
 

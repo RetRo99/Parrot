@@ -28,6 +28,7 @@ data class BooksListViewState(
     val backupAllRightsAttested: Boolean = false,
     val isBackingUpAll: Boolean = false,
     val backupAllQueuedCount: Int? = null,
+    val backupAllFailedCount: Int? = null,
     val backupAllError: String? = null,
     val pendingAutoBackupBookUuid: String? = null,
     val importBackupRightsAttested: Boolean = false,

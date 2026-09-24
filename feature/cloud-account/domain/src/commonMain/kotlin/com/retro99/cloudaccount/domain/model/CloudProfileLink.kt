@@ -7,3 +7,8 @@ data class CloudProfileLink(
     val autoBackupEnabled: Boolean = false,
     val uploadAttestation: UploadAttestationRecord? = null,
 )
+
+fun CloudProfileLink?.isActiveFor(authState: CloudAuthState): Boolean {
+    val signedIn = authState as? CloudAuthState.SignedIn ?: return false
+    return this?.cloudUserId == signedIn.account.id
+}

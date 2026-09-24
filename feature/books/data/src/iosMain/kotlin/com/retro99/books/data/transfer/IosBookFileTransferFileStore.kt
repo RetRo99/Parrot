@@ -1,5 +1,6 @@
 package com.retro99.books.data.transfer
 
+import com.retro99.books.data.calculateFileContentHash
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
@@ -31,6 +32,8 @@ class IosBookFileTransferFileStore : BookFileTransferFileStore {
     override suspend fun size(path: String): Long =
         (NSFileManager.defaultManager.attributesOfItemAtPath(path, error = null)?.get("NSFileSize") as? Long)
             ?: 0L
+
+    override fun contentHash(path: String): String = calculateFileContentHash(path)
 
     override suspend fun truncate(path: String) {
         ensureParent(path)

@@ -15,6 +15,7 @@ import com.retro99.books.domain.BookFileUploadRequest
 import com.retro99.books.domain.BookFileTransferRejectedException
 import com.retro99.books.domain.BookFileTransferSessionExpiredException
 import com.retro99.books.domain.BookFileTransferDownloadIncompleteException
+import com.retro99.books.domain.BackupAllResult
 import com.retro99.books.domain.CloudBookFileRecord
 import com.retro99.books.domain.UploadReservation
 import com.retro99.books.domain.UploadReservationResult
@@ -27,6 +28,7 @@ import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.books.domain.model.BookType
 import com.retro99.sync.domain.FileTransferStatus
 import com.retro99.sync.domain.FileTransferStatusSource
+import com.retro99.user.api.UserRegistry
 import com.retro99.sync.domain.SyncPhase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +40,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -66,6 +69,7 @@ class BookFileTransferEngine(
     @Provided private val fileStore: BookFileTransferFileStore? = null,
 ) : BookFileTransferManager, FileTransferStatusSource {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val enqueueMutex = Mutex()
     private val jobsMutex = Mutex()
     private val jobs = mutableMapOf<String, Job>()
     private val retryTimers = mutableMapOf<String, Job>()
@@ -84,6 +88,14 @@ class BookFileTransferEngine(
         deletionTransportByServer.containsKey(serverId)
 
     override suspend fun enqueueDownload(
+        serverId: String,
+        libraryBookId: String,
+        mediaType: String,
+    ): String = enqueueMutex.withLock {
+        enqueueDownloadLocked(serverId, libraryBookId, mediaType)
+    }
+
+    private suspend fun enqueueDownloadLocked(
         serverId: String,
         libraryBookId: String,
         mediaType: String,
@@ -106,7 +118,7 @@ class BookFileTransferEngine(
             }
         prior?.let { transfer ->
             if (transfer.state in ACTIVE_STATES) {
-                schedule(transfer.transferId)
+                scheduleExistingTransfer(transfer)
                 return transfer.transferId
             }
             if (transfer.state == STATE_COMPLETED) {
@@ -211,7 +223,8 @@ class BookFileTransferEngine(
         }
         transfers.forEach { transfer ->
             if (transfer.state in NON_TERMINAL_STATES) cancelTransfer(transfer.transferId)
-            val latest = cloudFilesDatabase.getTransfer(transfer.transferId) ?: return@forEach
+            val latest = cloudFilesDatabase.getTransfer(transfer.transferId)
+                ?: transfer.copy(state = STATE_CANCELLED)
             val localBook = latest.localSourceUuid?.let { localUuid ->
                 importedBooksDatabase.getImportedBookByUuid(localUuid)
             }
@@ -234,6 +247,14 @@ class BookFileTransferEngine(
         serverId: String,
         localBookUuid: String,
         rightsAttestation: UploadRightsAttestation,
+    ): String = enqueueMutex.withLock {
+        enqueueUploadLocked(serverId, localBookUuid, rightsAttestation)
+    }
+
+    private suspend fun enqueueUploadLocked(
+        serverId: String,
+        localBookUuid: String,
+        rightsAttestation: UploadRightsAttestation,
     ): String {
         val transport = transport(serverId)
         check(transport.capabilities.supportsUpload) { "Book backup is not enabled for this server" }
@@ -241,8 +262,9 @@ class BookFileTransferEngine(
         val importedBook = importedBooksDatabase.getImportedBookByUuid(localBookUuid)
             ?: error("Imported book was not found")
         require(importedBook.fileSize > 0) { "Cannot back up an empty file" }
+        val fileStore = requireNotNull(fileStore) { "Cloud backup storage is unavailable" }
         val actualHash = withContext(Dispatchers.Default) {
-            calculateFileContentHash(importedBook.filePath)
+            fileStore.contentHash(importedBook.filePath)
         }
         val contentHash = importedBook.contentHash ?: actualHash
         require(contentHash == actualHash) { "Imported file content no longer matches its saved hash" }
@@ -256,12 +278,16 @@ class BookFileTransferEngine(
         val priorTransfers = cloudFilesDatabase
             .observeTransfers(serverId, libraryBookId)
             .first()
-        priorTransfers.firstOrNull { transfer ->
+        val prior = priorTransfers.firstOrNull { transfer ->
             transfer.mediaType == importedBook.bookType &&
                 transfer.contentHash == contentHash &&
                 transfer.contentHashAlgorithm == algorithm &&
                 transfer.state in (ACTIVE_STATES + STATE_COMPLETED)
-        }?.let { return it.transferId }
+        }
+        prior?.let { transfer ->
+            if (transfer.state in ACTIVE_STATES) scheduleExistingTransfer(transfer)
+            return transfer.transferId
+        }
 
         val now = Clock.System.now().toString()
         val transferId = Uuid.random().toString()
@@ -307,14 +333,16 @@ class BookFileTransferEngine(
     override suspend fun backupAll(
         serverId: String,
         rightsAttestation: UploadRightsAttestation,
-    ): Int {
-        if (!supportsUpload(serverId)) return 0
+    ): BackupAllResult {
+        if (!supportsUpload(serverId)) return BackupAllResult(queuedCount = 0, failedCount = 0)
         val books = importedBooksDatabase.getAllImportedBooks().first()
         val knownTransferIds = cloudFilesDatabase.observeAllTransfers()
             .first()
             .mapTo(mutableSetOf(), CloudFileTransferEntity::transferId)
         var queued = 0
+        var failed = 0
         for (book in books) {
+            if (book.origin != ORIGIN_IMPORTED) continue
             try {
                 val transferId = enqueueUpload(serverId, book.uuid, rightsAttestation)
                 val isNewTransfer = knownTransferIds.add(transferId)
@@ -323,10 +351,10 @@ class BookFileTransferEngine(
             } catch (exception: CancellationException) {
                 throw exception
             } catch (_: Exception) {
-                // Books without a synced cloud identity remain local and can be queued later.
+                failed++
             }
         }
-        return queued
+        return BackupAllResult(queuedCount = queued, failedCount = failed)
     }
 
     override suspend fun cancel(serverId: String, libraryBookId: String) {
@@ -373,6 +401,7 @@ class BookFileTransferEngine(
                 }
             }
         }
+        cloudFilesDatabase.deleteTransfer(latestTransfer.transferId)
     }
 
     override suspend fun retry(transferId: String) {
@@ -461,6 +490,19 @@ class BookFileTransferEngine(
         jobsMutex.withLock {
             retryTimers.remove(transferId)?.cancel()
             scheduleLocked(transferId)
+        }
+    }
+
+    private suspend fun scheduleExistingTransfer(transfer: CloudFileTransferEntity) {
+        val nextAttemptAt = transfer.nextAttemptAt
+        if (transfer.state == STATE_PENDING && nextAttemptAt != null) {
+            scheduleRetryTimer(
+                transferId = transfer.transferId,
+                nextAttemptAt = nextAttemptAt,
+                delayMillis = remainingDelayMillis(nextAttemptAt),
+            )
+        } else {
+            schedule(transfer.transferId)
         }
     }
 
@@ -949,20 +991,20 @@ class BookFileTransferEngine(
         val supportedServerIds = transportByServer.keys + downloadTransportByServer.keys
         val relevant = filter { transfer -> transfer.serverId in supportedServerIds }
         val active = relevant.filter { transfer -> transfer.state in ACTIVE_STATES }
-        val failed = relevant.filter { transfer -> transfer.state == STATE_FAILED }
-        if (active.isEmpty() && failed.isEmpty()) return null
+        if (active.isEmpty()) return null
+        val directions = active.mapTo(mutableSetOf(), CloudFileTransferEntity::direction)
+        val phase = when {
+            directions.size > 1 -> SyncPhase.TRANSFERRING_FILES
+            DIRECTION_DOWNLOAD in directions -> SyncPhase.DOWNLOADING_FILES
+            else -> SyncPhase.UPLOADING_FILES
+        }
         return FileTransferStatus(
-            phase = if (active.any { transfer -> transfer.direction == DIRECTION_DOWNLOAD }) {
-                SyncPhase.DOWNLOADING_FILES
-            } else {
-                SyncPhase.UPLOADING_FILES
-            },
+            phase = phase,
             activeItems = active.size,
-            totalItems = active.size + failed.size,
+            totalItems = active.size,
             bytesTransferred = active.sumOf(CloudFileTransferEntity::bytesTransferred),
-            totalBytes = (active + failed).sumOf(CloudFileTransferEntity::sizeBytes),
-            error = failed.firstOrNull()?.lastError,
-            canRetry = failed.isNotEmpty(),
+            totalBytes = active.sumOf(CloudFileTransferEntity::sizeBytes),
+            canRetry = false,
         )
     }
 
@@ -985,6 +1027,7 @@ class BookFileTransferEngine(
         const val STATE_CANCELLED = "cancelled"
         const val FILE_STATUS_AVAILABLE = "available"
         const val ORIGIN_CLOUD_DOWNLOAD = "cloud_download"
+        const val ORIGIN_IMPORTED = "import"
         const val ERROR_VERIFY_FAILED = "verify_failed"
         const val ERROR_RESTORE_UNAVAILABLE = "restore_unavailable"
         const val MAX_TRANSFER_ATTEMPTS = 10
@@ -999,9 +1042,13 @@ class BookFileTransferEngine(
 @Single(binds = [AppInitializer::class])
 class BookFileTransferRecoveryInitializer(
     private val transferEngine: BookFileTransferEngine,
+    @Provided private val userRegistry: UserRegistry,
 ) : AppInitializer {
     override fun initialize() {
-        scope.launch { transferEngine.recoverPendingTransfers() }
+        scope.launch {
+            userRegistry.observeActiveProfile().filterNotNull().first()
+            transferEngine.recoverPendingTransfers()
+        }
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

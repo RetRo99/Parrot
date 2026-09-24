@@ -355,7 +355,7 @@ class SyncDataRepositoryTest {
 
         assertEquals(
             SyncStatus.Running(
-                phase = SyncPhase.UPLOADING_FILES,
+                phase = SyncPhase.TRANSFERRING_FILES,
                 completedItems = 3,
                 totalItems = 5,
                 bytesTransferred = 130,
