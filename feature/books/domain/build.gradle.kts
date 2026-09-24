@@ -24,6 +24,7 @@ kotlin {
             api(libs.koin.annotations)
             implementation(libs.coroutines)
             implementation(projects.base)
+            implementation(projects.feature.cloudAccount.domain)
             api(projects.lib.server.api)
             implementation(libs.filekit.core)
         }

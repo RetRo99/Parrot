@@ -2,6 +2,7 @@ package com.retro99.cloudaccount.domain
 
 import com.retro99.cloudaccount.domain.model.CloudProfileLink
 import com.retro99.cloudaccount.domain.model.CloudProfileLinkResult
+import com.retro99.cloudaccount.domain.model.UploadAttestationRecord
 import kotlinx.coroutines.flow.Flow
 
 interface CloudProfileLinkRepository {
@@ -14,6 +15,12 @@ interface CloudProfileLinkRepository {
     suspend fun link(localProfileId: String, cloudUserId: String): CloudProfileLinkResult
 
     suspend fun setSyncEnabled(localProfileId: String, enabled: Boolean)
+
+    suspend fun setUploadAttestation(
+        localProfileId: String,
+        cloudUserId: String,
+        attestation: UploadAttestationRecord,
+    )
 
     suspend fun deactivate(localProfileId: String)
 

@@ -9,11 +9,8 @@ import com.retro99.base.result.log
 import com.retro99.base.server.LOCAL_SERVER_ID
 import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
-import com.retro99.books.ui.CLOUD_BACKUP_ATTESTATION_VERSION
-import com.retro99.books.ui.CLOUD_BACKUP_TOS_VERSION
 import com.retro99.books.domain.BookFileTransferManager
 import com.retro99.books.domain.FileImportManager
-import com.retro99.books.domain.UploadRightsAttestation
 import com.retro99.books.domain.usecase.CancelBookFileTransferUseCase
 import com.retro99.books.domain.usecase.ObserveBookFileTransferUseCase
 import com.retro99.books.domain.usecase.RetryBookFileTransferUseCase
@@ -22,6 +19,7 @@ import com.retro99.books.domain.usecase.StartBookFileDownloadUseCase
 import com.retro99.books.domain.usecase.RemoveBookFileDownloadUseCase
 import com.retro99.books.domain.usecase.ObserveFavoriteUseCase
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
+import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
 import com.retro99.books.ui.model.toUiModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.domain.model.BookType
@@ -32,6 +30,7 @@ import com.retro99.reader.domain.usecase.DownloadMediaUseCase
 import com.retro99.reader.domain.usecase.ObserveBookWithProgressUseCase
 import com.retro99.reader.domain.usecase.ObserveDownloadStateUseCase
 import com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase
+import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
@@ -39,7 +38,6 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
-import kotlin.time.Clock
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
@@ -67,6 +65,8 @@ class BookDetailViewModel(
     @Provided private val retryBookFileTransferUseCase: RetryBookFileTransferUseCase,
     @Provided private val startBookFileDownloadUseCase: StartBookFileDownloadUseCase,
     @Provided private val removeBookFileDownloadUseCase: RemoveBookFileDownloadUseCase,
+    @Provided private val uploadRightsAttestationRepository: UploadRightsAttestationRepository,
+    @Provided private val userRegistry: UserRegistry,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
     BookDetailViewState(),
@@ -421,14 +421,12 @@ class BookDetailViewModel(
         if (!viewState.value.backupRightsAttested || !viewState.value.supportsBookBackup) return
         viewModelScope.launch {
             try {
+                val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+                recordUploadAttestationIfRequired(localProfileId)
                 startBookFileUploadUseCase(
                     serverId = serverId,
                     localBookUuid = sourceUuid,
-                    rightsAttestation = UploadRightsAttestation(
-                        attestedAt = Clock.System.now().toString(),
-                        tosVersion = CLOUD_BACKUP_TOS_VERSION,
-                        attestationVersion = CLOUD_BACKUP_ATTESTATION_VERSION,
-                    ),
+                    localProfileId = localProfileId,
                 )
             } catch (exception: CancellationException) {
                 throw exception
@@ -438,6 +436,12 @@ class BookDetailViewModel(
                 }
             }
             updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
+        }
+    }
+
+    private suspend fun recordUploadAttestationIfRequired(localProfileId: String) {
+        if (uploadRightsAttestationRepository.requiresReattestation(localProfileId)) {
+            uploadRightsAttestationRepository.record(localProfileId)
         }
     }
 

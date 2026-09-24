@@ -9,6 +9,7 @@ import com.retro99.cloudaccount.domain.model.CloudProfileLink
 import com.retro99.cloudaccount.domain.model.CloudProfileLinkResult
 import com.retro99.cloudaccount.domain.model.CloudRegistrationResult
 import com.retro99.cloudaccount.domain.model.PendingCloudAuthentication
+import com.retro99.cloudaccount.domain.model.UploadAttestationRecord
 import com.retro99.user.api.UserProfile
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.Flow
@@ -346,6 +347,17 @@ private class FakeCloudProfileLinkRepository : CloudProfileLinkRepository {
         if (index >= 0) {
             links[index] = links[index].copy(syncEnabled = enabled)
         }
+    }
+
+    override suspend fun setUploadAttestation(
+        localProfileId: String,
+        cloudUserId: String,
+        attestation: UploadAttestationRecord,
+    ) {
+        val index = links.indexOfFirst { link ->
+            link.localProfileId == localProfileId && link.cloudUserId == cloudUserId
+        }
+        if (index >= 0) links[index] = links[index].copy(uploadAttestation = attestation)
     }
 
     override fun observeForLocalProfile(localProfileId: String): Flow<CloudProfileLink?> {

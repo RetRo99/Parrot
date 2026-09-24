@@ -4,4 +4,5 @@ data class CloudProfileLink(
     val localProfileId: String,
     val cloudUserId: String,
     val syncEnabled: Boolean,
+    val uploadAttestation: UploadAttestationRecord? = null,
 )

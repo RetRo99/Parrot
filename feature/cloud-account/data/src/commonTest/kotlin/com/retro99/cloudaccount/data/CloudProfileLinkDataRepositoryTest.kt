@@ -1,6 +1,7 @@
 package com.retro99.cloudaccount.data
 
 import com.retro99.cloudaccount.domain.model.CloudProfileLinkResult
+import com.retro99.cloudaccount.domain.model.UploadAttestationRecord
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -8,7 +9,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class CloudProfileLinkDataRepositoryTest {
     private val preferences = FakePreferences()
@@ -55,6 +58,79 @@ class CloudProfileLinkDataRepositoryTest {
         val link = repository.getForLocalProfile("profile-a")
         assertEquals("account-a", link?.cloudUserId)
         assertEquals(true, link?.syncEnabled)
+    }
+
+    @Test
+    fun `upload attestation persists with its linked account and is reused while policy matches`() = runTest {
+        repository.link("profile-a", "account-a")
+        val attestationRepository = UploadRightsAttestationDataRepository(repository)
+
+        val recorded = attestationRepository.record("profile-a")
+        val restoredRepository = UploadRightsAttestationDataRepository(
+            CloudProfileLinkDataRepository(preferences),
+        )
+
+        assertEquals(recorded, restoredRepository.current("profile-a"))
+        assertFalse(restoredRepository.requiresReattestation("profile-a"))
+        assertEquals("account-a", CloudProfileLinkDataRepository(preferences)
+            .getForLocalProfile("profile-a")?.cloudUserId)
+    }
+
+    @Test
+    fun `upload attestation requires acceptance when shipped policy versions advance`() = runTest {
+        repository.link("profile-a", "account-a")
+        repository.setUploadAttestation(
+            localProfileId = "profile-a",
+            cloudUserId = "account-a",
+            attestation = UploadAttestationRecord(
+                attestedAt = "2026-09-01T00:00:00Z",
+                tosVersion = "parrot-cloud-backup-tos-2026-09-01.1",
+                attestationVersion = "attest-rights-v1",
+            ),
+        )
+
+        assertTrue(UploadRightsAttestationDataRepository(repository).requiresReattestation("profile-a"))
+    }
+
+    @Test
+    fun `a previously accepted newer version remains valid after app downgrade`() = runTest {
+        repository.link("profile-a", "account-a")
+        repository.setUploadAttestation(
+            localProfileId = "profile-a",
+            cloudUserId = "account-a",
+            attestation = UploadAttestationRecord(
+                attestedAt = "2026-10-01T00:00:00Z",
+                tosVersion = "parrot-cloud-backup-tos-2026-10-01.1",
+                attestationVersion = "attest-rights-v2",
+            ),
+        )
+
+        assertFalse(UploadRightsAttestationDataRepository(repository).requiresReattestation("profile-a"))
+    }
+
+    @Test
+    fun `unlink removes the persisted upload attestation`() = runTest {
+        repository.link("profile-a", "account-a")
+        val attestationRepository = UploadRightsAttestationDataRepository(repository)
+        attestationRepository.record("profile-a")
+
+        repository.unlink("profile-a")
+
+        assertEquals(null, attestationRepository.current("profile-a"))
+        assertTrue(attestationRepository.requiresReattestation("profile-a"))
+    }
+
+    @Test
+    fun `legacy cloud profile links without an attestation still load`() = runTest {
+        preferences.putString(
+            PreferencesKey.CloudProfileLinks,
+            """[{"localProfileId":"profile-a","cloudUserId":"account-a","syncEnabled":false}]""",
+        )
+
+        val migratedRepository = CloudProfileLinkDataRepository(preferences)
+
+        assertEquals(null, migratedRepository.getForLocalProfile("profile-a")?.uploadAttestation)
+        assertTrue(UploadRightsAttestationDataRepository(migratedRepository).requiresReattestation("profile-a"))
     }
 }
 

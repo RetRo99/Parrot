@@ -15,7 +15,6 @@ import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.BookFileTransferManager
-import com.retro99.books.domain.UploadRightsAttestation
 import com.retro99.books.domain.usecase.BackupAllBooksUseCase
 import com.retro99.books.domain.model.BookWithProgressDomainModel
 import com.retro99.books.domain.usecase.ImportEpubUseCase
@@ -28,18 +27,17 @@ import com.retro99.books.ui.model.BookQuickFilter
 import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.toUiModel
-import com.retro99.books.ui.CLOUD_BACKUP_ATTESTATION_VERSION
-import com.retro99.books.ui.CLOUD_BACKUP_TOS_VERSION
+import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.preferences.implementation.usecase.ObserveUserPreferenceUseCase
 import com.retro99.preferences.implementation.usecase.SaveUserPreferenceUseCase
 import com.retro99.reader.domain.usecase.ObserveAllBooksWithProgressUseCase
+import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
-import kotlin.time.Clock
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
@@ -56,6 +54,8 @@ class BooksListViewModel(
     @Provided private val saveUserPreferenceUseCase: SaveUserPreferenceUseCase,
     @Provided private val bookFileTransferManager: BookFileTransferManager,
     @Provided private val backupAllBooksUseCase: BackupAllBooksUseCase,
+    @Provided private val uploadRightsAttestationRepository: UploadRightsAttestationRepository,
+    @Provided private val userRegistry: UserRegistry,
 ) : BaseViewModel<BooksListViewState, BooksListIntent>(BooksListViewState()) {
 
     private var currentBooks: List<BookWithProgressDomainModel> = emptyList()
@@ -311,13 +311,11 @@ class BooksListViewModel(
         viewModelScope.launch {
             updateState { it.copy(isBackingUpAll = true, backupAllError = null) }
             try {
+                val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+                recordUploadAttestationIfRequired(localProfileId)
                 val queuedCount = backupAllBooksUseCase(
                     serverId = PARROT_CLOUD_SERVER_ID,
-                    rightsAttestation = UploadRightsAttestation(
-                        attestedAt = Clock.System.now().toString(),
-                        tosVersion = CLOUD_BACKUP_TOS_VERSION,
-                        attestationVersion = CLOUD_BACKUP_ATTESTATION_VERSION,
-                    ),
+                    localProfileId = localProfileId,
                 )
                 updateState {
                     it.copy(
@@ -339,6 +337,12 @@ class BooksListViewModel(
                     )
                 }
             }
+        }
+    }
+
+    private suspend fun recordUploadAttestationIfRequired(localProfileId: String) {
+        if (uploadRightsAttestationRepository.requiresReattestation(localProfileId)) {
+            uploadRightsAttestationRepository.record(localProfileId)
         }
     }
 }

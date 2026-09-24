@@ -3,6 +3,7 @@ package com.retro99.cloudaccount.data
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.cloudaccount.domain.model.CloudProfileLink
 import com.retro99.cloudaccount.domain.model.CloudProfileLinkResult
+import com.retro99.cloudaccount.domain.model.UploadAttestationRecord
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.preferences.api.getObject
@@ -75,6 +76,19 @@ class CloudProfileLinkDataRepository(
         updateLink(localProfileId) { link -> link.copy(syncEnabled = enabled) }
     }
 
+    override suspend fun setUploadAttestation(
+        localProfileId: String,
+        cloudUserId: String,
+        attestation: UploadAttestationRecord,
+    ) = mutex.withLock {
+        check(links.value.any { link ->
+            link.localProfileId == localProfileId && link.cloudUserId == cloudUserId
+        }) {
+            "Cloud profile link changed before upload rights attestation was saved"
+        }
+        updateLink(localProfileId) { link -> link.copy(uploadAttestation = attestation) }
+    }
+
     override suspend fun deactivate(localProfileId: String) = mutex.withLock {
         updateLink(localProfileId) { link -> link.copy(syncEnabled = false) }
     }
@@ -131,6 +145,7 @@ private data class CloudProfileLinkRecord(
     val localProfileId: String,
     val cloudUserId: String,
     val syncEnabled: Boolean,
+    val uploadAttestation: UploadAttestationRecord? = null,
 )
 
 private fun CloudProfileLinkRecord.toDomain(): CloudProfileLink {
@@ -138,5 +153,6 @@ private fun CloudProfileLinkRecord.toDomain(): CloudProfileLink {
         localProfileId = localProfileId,
         cloudUserId = cloudUserId,
         syncEnabled = syncEnabled,
+        uploadAttestation = uploadAttestation,
     )
 }
