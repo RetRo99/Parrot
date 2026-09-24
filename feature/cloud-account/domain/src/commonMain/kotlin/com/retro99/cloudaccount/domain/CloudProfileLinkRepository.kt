@@ -16,6 +16,8 @@ interface CloudProfileLinkRepository {
 
     suspend fun setSyncEnabled(localProfileId: String, enabled: Boolean)
 
+    suspend fun setAutoBackupEnabled(localProfileId: String, enabled: Boolean)
+
     suspend fun setUploadAttestation(
         localProfileId: String,
         cloudUserId: String,

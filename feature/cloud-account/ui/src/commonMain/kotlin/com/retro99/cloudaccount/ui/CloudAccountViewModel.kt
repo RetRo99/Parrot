@@ -18,6 +18,7 @@ import com.retro99.cloudaccount.domain.usecase.LinkCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.ObserveCloudAuthStateUseCase
 import com.retro99.cloudaccount.domain.usecase.RegisterCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.RestoreCloudSessionUseCase
+import com.retro99.cloudaccount.domain.usecase.SetAutoBackupEnabledUseCase
 import com.retro99.cloudaccount.domain.usecase.SignInCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.SignOutCloudAccountUseCase
 import com.retro99.sync.domain.SyncResult
@@ -46,6 +47,7 @@ class CloudAccountViewModel(
     @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val getCloudStorageUsageUseCase: GetCloudStorageUsageUseCase,
     @Provided private val deleteCloudAccountUseCase: DeleteCloudAccountUseCase,
+    @Provided private val setAutoBackupEnabledUseCase: SetAutoBackupEnabledUseCase,
     @InjectedParam private val onBack: () -> Unit,
 ) : BaseViewModel<CloudAccountViewState, CloudAccountIntent>(CloudAccountViewState()) {
     val emailState = TextFieldState()
@@ -72,6 +74,12 @@ class CloudAccountViewModel(
             CloudAccountIntent.OnDeleteAccountConfirmed -> deleteAccount()
             CloudAccountIntent.OnDeleteAccountDismissed -> dismissDeleteAccountConfirmation()
             CloudAccountIntent.OnSyncClicked -> sync()
+            is CloudAccountIntent.OnAutoBackupToggled -> toggleAutoBackup(intent.enabled)
+            is CloudAccountIntent.OnAutoBackupAttestationChanged -> updateState {
+                it.copy(autoBackupRightsAttested = intent.attested)
+            }
+            CloudAccountIntent.OnAutoBackupConfirmed -> confirmAutoBackup()
+            CloudAccountIntent.OnAutoBackupDismissed -> dismissAutoBackupConfirmation()
             CloudAccountIntent.OnLinkConfirmed -> linkAccount()
             CloudAccountIntent.OnLinkDismissed -> signOut()
         }
@@ -136,6 +144,9 @@ class CloudAccountViewModel(
                     },
                     showLinkConfirmation = false,
                     showDeleteAccountConfirmation = false,
+                    showAutoBackupConfirmation = false,
+                    autoBackupRightsAttested = false,
+                    isUpdatingAutoBackup = false,
                 )
             }
         }
@@ -477,6 +488,81 @@ class CloudAccountViewModel(
             } catch (exception: Exception) {
                 showError(exception)
             }
+        }
+    }
+
+    private fun toggleAutoBackup(enabled: Boolean) {
+        val current = viewState.value
+        if (current.isLoading || current.isUpdatingAutoBackup || current.profileLink == null) return
+        if (current.profileLink.autoBackupEnabled == enabled) return
+
+        if (!enabled) {
+            setAutoBackupEnabled(enabled = false)
+            return
+        }
+
+        updateState {
+            it.copy(
+                showAutoBackupConfirmation = true,
+                autoBackupRightsAttested = false,
+                error = null,
+            )
+        }
+    }
+
+    private fun confirmAutoBackup() {
+        val current = viewState.value
+        if (!current.showAutoBackupConfirmation || !current.autoBackupRightsAttested ||
+            current.isUpdatingAutoBackup
+        ) return
+        setAutoBackupEnabled(enabled = true, rightsAttested = true)
+    }
+
+    private fun dismissAutoBackupConfirmation() {
+        if (viewState.value.isUpdatingAutoBackup) return
+        updateState {
+            it.copy(
+                showAutoBackupConfirmation = false,
+                autoBackupRightsAttested = false,
+            )
+        }
+    }
+
+    private fun setAutoBackupEnabled(
+        enabled: Boolean,
+        rightsAttested: Boolean = false,
+    ) {
+        updateState {
+            it.copy(
+                isUpdatingAutoBackup = true,
+                error = null,
+            )
+        }
+        viewModelScope.launch {
+            try {
+                persistAutoBackupEnabled(enabled, rightsAttested)
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                updateState { it.copy(isUpdatingAutoBackup = false) }
+                showError(exception)
+            }
+        }
+    }
+
+    private suspend fun persistAutoBackupEnabled(
+        enabled: Boolean,
+        rightsAttested: Boolean,
+    ) {
+        val profileLink = setAutoBackupEnabledUseCase(enabled, rightsAttested)
+        updateState {
+            it.copy(
+                profileLink = profileLink,
+                isUpdatingAutoBackup = false,
+                showAutoBackupConfirmation = false,
+                autoBackupRightsAttested = false,
+                error = null,
+            )
         }
     }
 

@@ -76,6 +76,10 @@ class CloudProfileLinkDataRepository(
         updateLink(localProfileId) { link -> link.copy(syncEnabled = enabled) }
     }
 
+    override suspend fun setAutoBackupEnabled(localProfileId: String, enabled: Boolean) = mutex.withLock {
+        updateLink(localProfileId) { link -> link.copy(autoBackupEnabled = enabled) }
+    }
+
     override suspend fun setUploadAttestation(
         localProfileId: String,
         cloudUserId: String,
@@ -145,6 +149,7 @@ private data class CloudProfileLinkRecord(
     val localProfileId: String,
     val cloudUserId: String,
     val syncEnabled: Boolean,
+    val autoBackupEnabled: Boolean = false,
     val uploadAttestation: UploadAttestationRecord? = null,
 )
 
@@ -153,6 +158,7 @@ private fun CloudProfileLinkRecord.toDomain(): CloudProfileLink {
         localProfileId = localProfileId,
         cloudUserId = cloudUserId,
         syncEnabled = syncEnabled,
+        autoBackupEnabled = autoBackupEnabled,
         uploadAttestation = uploadAttestation,
     )
 }

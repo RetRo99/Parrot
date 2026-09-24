@@ -48,6 +48,17 @@ class CloudProfileLinkDataRepositoryTest {
     }
 
     @Test
+    fun `auto backup defaults to off and its changes are persisted`() = runTest {
+        repository.link("profile-a", "account-a")
+        assertEquals(false, repository.getForLocalProfile("profile-a")?.autoBackupEnabled)
+
+        repository.setAutoBackupEnabled("profile-a", enabled = true)
+        val restoredRepository = CloudProfileLinkDataRepository(preferences)
+
+        assertEquals(true, restoredRepository.getForLocalProfile("profile-a")?.autoBackupEnabled)
+    }
+
+    @Test
     fun `conflicting account does not change the existing link state`() = runTest {
         repository.link("profile-a", "account-a")
         repository.setSyncEnabled("profile-a", enabled = true)
@@ -130,6 +141,7 @@ class CloudProfileLinkDataRepositoryTest {
         val migratedRepository = CloudProfileLinkDataRepository(preferences)
 
         assertEquals(null, migratedRepository.getForLocalProfile("profile-a")?.uploadAttestation)
+        assertEquals(false, migratedRepository.getForLocalProfile("profile-a")?.autoBackupEnabled)
         assertTrue(UploadRightsAttestationDataRepository(migratedRepository).requiresReattestation("profile-a"))
     }
 }

@@ -139,7 +139,7 @@ import resources.translations.books_media_readaloud
 import resources.translations.books_media_ready
 import resources.translations.books_progress_local
 import resources.translations.books_progress_remote
-import resources.translations.cloud_backup_attestation
+import resources.translations.cloud_backup_attestation_checkbox
 import resources.translations.cloud_backup_button
 import resources.translations.cloud_backup_cancel
 import resources.translations.cloud_backup_confirm
@@ -1435,7 +1435,7 @@ private fun BackupRightsConfirmationDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = attested, onCheckedChange = onAttestedChanged)
                     Text(
-                        text = stringResource(StringRes.cloud_backup_attestation),
+                        text = stringResource(StringRes.cloud_backup_attestation_checkbox),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

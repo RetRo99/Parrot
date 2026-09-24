@@ -508,6 +508,13 @@
     <string name="cloud_backup_button" tools:ignore="MissingTranslation">Back up to Parrot Cloud</string>
     <string name="cloud_backup_title" tools:ignore="MissingTranslation">Back up this book?</string>
     <string name="cloud_backup_attestation" tools:ignore="MissingTranslation">I confirm I have the right to store this file in my Parrot Cloud account.</string>
+    <string name="cloud_backup_attestation_checkbox" tools:ignore="MissingTranslation">I have the right to back up this file — I own it or have permission from the rights holder.</string>
+    <string name="cloud_backup_autobackup_prompt_title" tools:ignore="MissingTranslation">Back up imported books automatically?</string>
+    <string name="cloud_backup_autobackup_prompt_body" tools:ignore="MissingTranslation">New books you import will be uploaded to your private Parrot Cloud backup. You can change this anytime in Sync &amp; Backup settings.</string>
+    <string name="cloud_backup_autobackup_confirm_body" tools:ignore="MissingTranslation">Books you import will be uploaded to your private Parrot Cloud storage, within your 5 GB quota. This counts against your quota and download bandwidth. By enabling, you confirm the checkbox below.</string>
+    <string name="cloud_backup_autobackup_toggle" tools:ignore="MissingTranslation">Back up new books automatically</string>
+    <string name="cloud_backup_autobackup_enable" tools:ignore="MissingTranslation">Turn on backup</string>
+    <string name="cloud_backup_autobackup_not_now" tools:ignore="MissingTranslation">Not now</string>
     <string name="cloud_backup_confirm" tools:ignore="MissingTranslation">Back up</string>
     <string name="cloud_backup_queued" tools:ignore="MissingTranslation">Backup queued</string>
     <string name="cloud_backup_progress" tools:ignore="MissingTranslation">Backing up · %1$d%%</string>
@@ -528,6 +535,7 @@
     <string name="cloud_download_cancel" tools:ignore="MissingTranslation">Cancel restore</string>
     <string name="cloud_download_retry" tools:ignore="MissingTranslation">Retry restore</string>
     <string name="cloud_backup_all_button" tools:ignore="MissingTranslation">Back up all</string>
+    <string name="cloud_backup_backup_all" tools:ignore="MissingTranslation">Back up all existing books</string>
     <string name="cloud_backup_all_title" tools:ignore="MissingTranslation">Back up all imported books?</string>
     <string name="cloud_backup_all_message" tools:ignore="MissingTranslation">Books linked to your Parrot Cloud library will be queued for backup.</string>
     <string name="cloud_backup_all_queued" tools:ignore="MissingTranslation">Queued %1$d book backups.</string>

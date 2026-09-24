@@ -29,8 +29,14 @@ data class BooksListViewState(
     val isBackingUpAll: Boolean = false,
     val backupAllQueuedCount: Int? = null,
     val backupAllError: String? = null,
+    val pendingAutoBackupBookUuid: String? = null,
+    val importBackupRightsAttested: Boolean = false,
+    val isStartingImportBackup: Boolean = false,
     val error: AppError? = null,
 ) {
+    val showImportBackupAttestation: Boolean
+        get() = pendingAutoBackupBookUuid != null
+
     val filteredBooks: List<BookUiModel>
         get() = books
             .applySearchFilter(searchQuery)

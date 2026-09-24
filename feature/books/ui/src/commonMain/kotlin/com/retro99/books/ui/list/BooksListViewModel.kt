@@ -18,6 +18,7 @@ import com.retro99.books.domain.BookFileTransferManager
 import com.retro99.books.domain.usecase.BackupAllBooksUseCase
 import com.retro99.books.domain.model.BookWithProgressDomainModel
 import com.retro99.books.domain.usecase.ImportEpubUseCase
+import com.retro99.books.domain.usecase.StartBookFileUploadUseCase
 import com.retro99.books.domain.usecase.ObserveAllFavoritesUseCase
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
 import com.retro99.books.ui.model.BookFilterState
@@ -28,6 +29,7 @@ import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.toUiModel
 import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
+import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.preferences.implementation.usecase.ObserveUserPreferenceUseCase
 import com.retro99.preferences.implementation.usecase.SaveUserPreferenceUseCase
@@ -55,6 +57,8 @@ class BooksListViewModel(
     @Provided private val bookFileTransferManager: BookFileTransferManager,
     @Provided private val backupAllBooksUseCase: BackupAllBooksUseCase,
     @Provided private val uploadRightsAttestationRepository: UploadRightsAttestationRepository,
+    @Provided private val cloudProfileLinkRepository: CloudProfileLinkRepository,
+    @Provided private val startBookFileUploadUseCase: StartBookFileUploadUseCase,
     @Provided private val userRegistry: UserRegistry,
 ) : BaseViewModel<BooksListViewState, BooksListIntent>(BooksListViewState()) {
 
@@ -97,6 +101,11 @@ class BooksListViewModel(
             BooksListIntent.OnBackupAllResultDismissed -> updateState {
                 it.copy(backupAllQueuedCount = null, backupAllError = null)
             }
+            is BooksListIntent.OnImportBackupAttestationChanged -> updateState {
+                it.copy(importBackupRightsAttested = intent.attested)
+            }
+            BooksListIntent.OnImportBackupConfirmed -> confirmImportedBookBackup()
+            BooksListIntent.OnImportBackupDismissed -> dismissImportedBookBackupPrompt()
             is BooksListIntent.OnQuickFilterToggled -> toggleQuickFilter(intent.filter)
             is BooksListIntent.OnServerTypeFilterChanged -> setServerTypeFilter(intent.serverType)
             BooksListIntent.OnClearAllFilters -> clearAllFilters()
@@ -293,6 +302,9 @@ class BooksListViewModel(
             importEpubUseCase(file)
                 .onSuccess { book ->
                     analytics.logEvent(BookAnalyticsEvent.BookImported(bookUuid = book.uuid))
+                    viewModelScope.launch {
+                        maybeQueueImportedBookBackup(book.uuid)
+                    }
                 }
                 .onFailure { error ->
                     analytics.logEvent(
@@ -303,6 +315,77 @@ class BooksListViewModel(
                     error.log(analytics, "BooksViewModel: Failed to import book")
                 }
             updateState { it.copy(isImporting = false) }
+        }
+    }
+
+    private suspend fun maybeQueueImportedBookBackup(bookUuid: String) {
+        if (!bookFileTransferManager.supportsUpload(PARROT_CLOUD_SERVER_ID)) return
+
+        try {
+            val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+            val profileLink = cloudProfileLinkRepository.getForLocalProfile(localProfileId)
+                ?: return
+            if (!profileLink.autoBackupEnabled) return
+
+            if (uploadRightsAttestationRepository.requiresReattestation(localProfileId)) {
+                updateState {
+                    it.copy(
+                        pendingAutoBackupBookUuid = bookUuid,
+                        importBackupRightsAttested = false,
+                    )
+                }
+            } else {
+                startBookFileUploadUseCase(
+                    serverId = PARROT_CLOUD_SERVER_ID,
+                    localBookUuid = bookUuid,
+                    localProfileId = localProfileId,
+                )
+            }
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (_: Exception) {
+            // Import is local-first. An unavailable cloud identity must not fail it.
+        }
+    }
+
+    private fun confirmImportedBookBackup() {
+        val bookUuid = viewState.value.pendingAutoBackupBookUuid ?: return
+        if (!viewState.value.importBackupRightsAttested || viewState.value.isStartingImportBackup) return
+        updateState { it.copy(isStartingImportBackup = true) }
+        viewModelScope.launch {
+            try {
+                val localProfileId = userRegistry.getActiveProfileIdOrDefault()
+                val profileLink = cloudProfileLinkRepository.getForLocalProfile(localProfileId)
+                if (profileLink?.autoBackupEnabled == true) {
+                    uploadRightsAttestationRepository.record(localProfileId)
+                    startBookFileUploadUseCase(
+                        serverId = PARROT_CLOUD_SERVER_ID,
+                        localBookUuid = bookUuid,
+                        localProfileId = localProfileId,
+                    )
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: Exception) {
+                // Keep the successful import available locally if backup cannot be queued.
+            }
+            updateState {
+                it.copy(
+                    pendingAutoBackupBookUuid = null,
+                    importBackupRightsAttested = false,
+                    isStartingImportBackup = false,
+                )
+            }
+        }
+    }
+
+    private fun dismissImportedBookBackupPrompt() {
+        if (viewState.value.isStartingImportBackup) return
+        updateState {
+            it.copy(
+                pendingAutoBackupBookUuid = null,
+                importBackupRightsAttested = false,
+            )
         }
     }
 

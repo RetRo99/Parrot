@@ -19,6 +19,9 @@ sealed interface BooksListIntent : BaseIntent {
     data object OnBackupAllConfirmed : BooksListIntent
     data object OnBackupAllDismissed : BooksListIntent
     data object OnBackupAllResultDismissed : BooksListIntent
+    data class OnImportBackupAttestationChanged(val attested: Boolean) : BooksListIntent
+    data object OnImportBackupConfirmed : BooksListIntent
+    data object OnImportBackupDismissed : BooksListIntent
 
     data class OnQuickFilterToggled(val filter: BookQuickFilter) : BooksListIntent
     data class OnServerTypeFilterChanged(val serverType: ServerType?) : BooksListIntent

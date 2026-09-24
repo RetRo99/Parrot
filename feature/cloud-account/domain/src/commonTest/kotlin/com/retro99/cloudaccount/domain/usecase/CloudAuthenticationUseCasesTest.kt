@@ -3,6 +3,7 @@ package com.retro99.cloudaccount.domain.usecase
 import com.retro99.cloudaccount.domain.CloudAccountRepository
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.cloudaccount.domain.PendingCloudAuthenticationRepository
+import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
 import com.retro99.cloudaccount.domain.model.CloudAccount
 import com.retro99.cloudaccount.domain.model.CloudAuthState
 import com.retro99.cloudaccount.domain.model.CloudProfileLink
@@ -81,6 +82,34 @@ class CloudAuthenticationUseCasesTest {
         assertEquals("profile-a", pendingAuthentication?.localProfileId)
         assertEquals(account.id, pendingAuthentication?.cloudUserId)
         assertEquals(account.email, pendingAuthentication?.email)
+    }
+
+    @Test
+    fun `enabling auto backup requires checkbox acceptance and records it before enabling`() = runTest {
+        profileLinkRepository.addLink(
+            CloudProfileLink(
+                localProfileId = "profile-a",
+                cloudUserId = account.id,
+                syncEnabled = false,
+            ),
+        )
+        val attestationRepository = FakeUploadRightsAttestationRepository()
+        val classUnderTest = SetAutoBackupEnabledUseCase(
+            profileLinkRepository = profileLinkRepository,
+            uploadRightsAttestationRepository = attestationRepository,
+            userRegistry = userRegistry,
+        )
+
+        assertFailsWith<IllegalStateException> {
+            classUnderTest(enabled = true)
+        }
+        assertEquals(false, profileLinkRepository.getForLocalProfile("profile-a")?.autoBackupEnabled)
+        assertEquals(0, attestationRepository.recordCount)
+
+        val enabledLink = classUnderTest(enabled = true, rightsAttested = true)
+
+        assertEquals(true, enabledLink.autoBackupEnabled)
+        assertEquals(1, attestationRepository.recordCount)
     }
 
     @Test
@@ -349,6 +378,13 @@ private class FakeCloudProfileLinkRepository : CloudProfileLinkRepository {
         }
     }
 
+    override suspend fun setAutoBackupEnabled(localProfileId: String, enabled: Boolean) {
+        val index = links.indexOfFirst { link -> link.localProfileId == localProfileId }
+        if (index >= 0) {
+            links[index] = links[index].copy(autoBackupEnabled = enabled)
+        }
+    }
+
     override suspend fun setUploadAttestation(
         localProfileId: String,
         cloudUserId: String,
@@ -370,6 +406,23 @@ private class FakeCloudProfileLinkRepository : CloudProfileLinkRepository {
         onUnlink()
         links.removeAll { link -> link.localProfileId == localProfileId }
     }
+}
+
+private class FakeUploadRightsAttestationRepository : UploadRightsAttestationRepository {
+    var recordCount = 0
+
+    override suspend fun current(localProfileId: String): UploadAttestationRecord? = null
+
+    override suspend fun record(localProfileId: String): UploadAttestationRecord {
+        recordCount++
+        return UploadAttestationRecord(
+            attestedAt = "now",
+            tosVersion = "tos-v1",
+            attestationVersion = "rights-v1",
+        )
+    }
+
+    override suspend fun requiresReattestation(localProfileId: String): Boolean = true
 }
 
 private class FakePendingCloudAuthenticationRepository : PendingCloudAuthenticationRepository {

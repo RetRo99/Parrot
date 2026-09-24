@@ -103,12 +103,16 @@ import resources.translations.books_sort_title
 import resources.translations.books_sort_z_to_a
 import resources.translations.books_view_grid
 import resources.translations.books_view_list
-import resources.translations.cloud_backup_all_button
+import resources.translations.cloud_backup_backup_all
 import resources.translations.cloud_backup_all_message
 import resources.translations.cloud_backup_all_queued
 import resources.translations.cloud_backup_all_result_title
 import resources.translations.cloud_backup_all_title
-import resources.translations.cloud_backup_attestation
+import resources.translations.cloud_backup_attestation_checkbox
+import resources.translations.cloud_backup_autobackup_enable
+import resources.translations.cloud_backup_autobackup_not_now
+import resources.translations.cloud_backup_autobackup_prompt_body
+import resources.translations.cloud_backup_autobackup_prompt_title
 import resources.translations.cloud_backup_confirm
 import resources.translations.general_cancel
 import resources.translations.general_close
@@ -163,6 +167,55 @@ private fun BooksListScreenContent(
         ImportingDialog()
     }
 
+    if (viewState.showImportBackupAttestation) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!viewState.isStartingImportBackup) {
+                    intentDispatcher(BooksListIntent.OnImportBackupDismissed)
+                }
+            },
+            title = { Text(stringResource(StringRes.cloud_backup_autobackup_prompt_title)) },
+            text = {
+                Column {
+                    Text(stringResource(StringRes.cloud_backup_autobackup_prompt_body))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 12.dp),
+                    ) {
+                        Checkbox(
+                            checked = viewState.importBackupRightsAttested,
+                            onCheckedChange = {
+                                intentDispatcher(BooksListIntent.OnImportBackupAttestationChanged(it))
+                            },
+                            enabled = !viewState.isStartingImportBackup,
+                        )
+                        Text(stringResource(StringRes.cloud_backup_attestation_checkbox))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = viewState.importBackupRightsAttested && !viewState.isStartingImportBackup,
+                    onClick = { intentDispatcher(BooksListIntent.OnImportBackupConfirmed) },
+                ) {
+                    if (viewState.isStartingImportBackup) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(stringResource(StringRes.cloud_backup_autobackup_enable))
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !viewState.isStartingImportBackup,
+                    onClick = { intentDispatcher(BooksListIntent.OnImportBackupDismissed) },
+                ) {
+                    Text(stringResource(StringRes.cloud_backup_autobackup_not_now))
+                }
+            },
+        )
+    }
+
     if (viewState.showBackupAllConfirmation) {
         AlertDialog(
             onDismissRequest = {
@@ -182,7 +235,7 @@ private fun BooksListScreenContent(
                                 intentDispatcher(BooksListIntent.OnBackupAllAttestationChanged(it))
                             },
                         )
-                        Text(stringResource(StringRes.cloud_backup_attestation))
+                        Text(stringResource(StringRes.cloud_backup_attestation_checkbox))
                     }
                 }
             },
@@ -294,7 +347,7 @@ private fun BooksListScreenContent(
                         horizontalArrangement = Arrangement.End,
                     ) {
                         TextButton(onClick = { intentDispatcher(BooksListIntent.OnBackupAllClicked) }) {
-                            Text(stringResource(StringRes.cloud_backup_all_button))
+                        Text(stringResource(StringRes.cloud_backup_backup_all))
                         }
                     }
                 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +27,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,6 +39,7 @@ import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -112,6 +115,11 @@ import resources.translations.cloud_account_sync_status_uploading_changes
 import resources.translations.cloud_account_sync_status_uploading_files
 import resources.translations.cloud_account_title
 import resources.translations.cloud_account_verification_message
+import resources.translations.cloud_backup_attestation_checkbox
+import resources.translations.cloud_backup_autobackup_confirm_body
+import resources.translations.cloud_backup_autobackup_enable
+import resources.translations.cloud_backup_autobackup_not_now
+import resources.translations.cloud_backup_autobackup_toggle
 import resources.translations.cloud_storage_usage_title
 import resources.translations.cloud_storage_usage_used
 import resources.translations.cloud_storage_usage_reserved
@@ -159,6 +167,17 @@ private fun CloudAccountScreenContent(
         DeleteCloudAccountConfirmationDialog(
             onConfirm = { intentDispatcher(CloudAccountIntent.OnDeleteAccountConfirmed) },
             onDismiss = { intentDispatcher(CloudAccountIntent.OnDeleteAccountDismissed) },
+        )
+    }
+    if (viewState.showAutoBackupConfirmation) {
+        AutoBackupConfirmationDialog(
+            rightsAttested = viewState.autoBackupRightsAttested,
+            isUpdating = viewState.isUpdatingAutoBackup,
+            onRightsAttestedChanged = {
+                intentDispatcher(CloudAccountIntent.OnAutoBackupAttestationChanged(it))
+            },
+            onConfirm = { intentDispatcher(CloudAccountIntent.OnAutoBackupConfirmed) },
+            onDismiss = { intentDispatcher(CloudAccountIntent.OnAutoBackupDismissed) },
         )
     }
 
@@ -222,6 +241,7 @@ private fun CloudAccountScreenContent(
                         storageUsage = viewState.storageUsage,
                         isLoadingStorageUsage = viewState.isLoadingStorageUsage,
                         storageUsageError = viewState.storageUsageError,
+                        isUpdatingAutoBackup = viewState.isUpdatingAutoBackup,
                         onSignOut = {
                             intentDispatcher(CloudAccountIntent.OnSignOutClicked)
                         },
@@ -230,6 +250,9 @@ private fun CloudAccountScreenContent(
                         },
                         onSync = {
                             intentDispatcher(CloudAccountIntent.OnSyncClicked)
+                        },
+                        onAutoBackupToggled = { enabled ->
+                            intentDispatcher(CloudAccountIntent.OnAutoBackupToggled(enabled))
                         },
                     )
                 }
@@ -293,6 +316,49 @@ private fun DeleteCloudAccountConfirmationDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(StringRes.general_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun AutoBackupConfirmationDialog(
+    rightsAttested: Boolean,
+    isUpdating: Boolean,
+    onRightsAttestedChanged: (Boolean) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(StringRes.cloud_backup_autobackup_confirm_body))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = rightsAttested,
+                        onCheckedChange = onRightsAttestedChanged,
+                        enabled = !isUpdating,
+                    )
+                    Text(stringResource(StringRes.cloud_backup_attestation_checkbox))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = rightsAttested && !isUpdating,
+            ) {
+                if (isUpdating) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(stringResource(StringRes.cloud_backup_autobackup_enable))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isUpdating) {
+                Text(stringResource(StringRes.cloud_backup_autobackup_not_now))
             }
         },
     )
@@ -462,9 +528,11 @@ private fun ConnectedAccountContent(
     storageUsage: CloudStorageUsage?,
     isLoadingStorageUsage: Boolean,
     storageUsageError: String?,
+    isUpdatingAutoBackup: Boolean,
     onSignOut: () -> Unit,
     onDeleteAccount: () -> Unit,
     onSync: () -> Unit,
+    onAutoBackupToggled: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -504,6 +572,22 @@ private fun ConnectedAccountContent(
 
                 SyncStatusMessage(status = syncStatus)
                 if (profileLink != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = stringResource(StringRes.cloud_backup_autobackup_toggle),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Switch(
+                            checked = profileLink.autoBackupEnabled,
+                            onCheckedChange = onAutoBackupToggled,
+                            enabled = !isLoading && !isUpdatingAutoBackup,
+                        )
+                    }
                     Spacer(modifier = Modifier.height(12.dp))
                     Button(
                         onClick = onSync,

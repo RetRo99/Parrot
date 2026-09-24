@@ -23,6 +23,14 @@ sealed interface CloudAccountIntent : BaseIntent {
 
     data object OnSyncClicked : CloudAccountIntent
 
+    data class OnAutoBackupToggled(val enabled: Boolean) : CloudAccountIntent
+
+    data class OnAutoBackupAttestationChanged(val attested: Boolean) : CloudAccountIntent
+
+    data object OnAutoBackupConfirmed : CloudAccountIntent
+
+    data object OnAutoBackupDismissed : CloudAccountIntent
+
     data object OnLinkConfirmed : CloudAccountIntent
 
     data object OnLinkDismissed : CloudAccountIntent
