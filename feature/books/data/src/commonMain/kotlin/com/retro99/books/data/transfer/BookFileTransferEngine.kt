@@ -30,6 +30,7 @@ import com.retro99.sync.domain.FileTransferStatusSource
 import com.retro99.sync.domain.SyncPhase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -67,6 +68,7 @@ class BookFileTransferEngine(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val jobsMutex = Mutex()
     private val jobs = mutableMapOf<String, Job>()
+    private val retryTimers = mutableMapOf<String, Job>()
     private val transportByServer = transports.associateBy(BookFileTransferTransport::serverId)
     private val downloadTransportByServer = downloadTransports.associateBy(BookFileDownloadTransport::serverId)
     private val deletionTransportByServer = deletionTransports.associateBy(BookFileDeletionTransport::serverId)
@@ -340,7 +342,10 @@ class BookFileTransferEngine(
     override suspend fun cancelTransfer(transferId: String) {
         val transfer = cloudFilesDatabase.getTransfer(transferId) ?: return
         if (transfer.state !in NON_TERMINAL_STATES) return
-        val job = jobsMutex.withLock { jobs[transfer.transferId] }
+        val job = jobsMutex.withLock {
+            retryTimers.remove(transfer.transferId)?.cancel()
+            jobs[transfer.transferId]
+        }
         job?.cancelAndJoin()
         val latestTransfer = cloudFilesDatabase.getTransfer(transfer.transferId) ?: return
         if (latestTransfer.state !in NON_TERMINAL_STATES) return
@@ -379,23 +384,41 @@ class BookFileTransferEngine(
         } else {
             check(supportsDownload(transfer.serverId)) { "Book restore is not enabled for this server" }
         }
-        if (transfer.state != STATE_FAILED) return
-        cloudFilesDatabase.updateTransfer(
-            transfer.copy(
-                state = STATE_PENDING,
-                cloudBookFileId = if (transfer.direction == DIRECTION_UPLOAD) null else transfer.cloudBookFileId,
-                uploadId = null,
-                storagePath = null,
-                tusUploadUrl = null,
-                tusExpiresAt = null,
-                bytesTransferred = if (transfer.direction == DIRECTION_UPLOAD) 0L else transfer.bytesTransferred,
-                attemptCount = 0,
-                nextAttemptAt = null,
-                lastError = null,
-                updatedAt = now(),
-            ),
-        )
-        schedule(transferId)
+        jobsMutex.withLock {
+            val latest = cloudFilesDatabase.getTransfer(transferId) ?: return@withLock
+            val wasFailed = latest.state == STATE_FAILED
+            val isBackoffPending = latest.state == STATE_PENDING && latest.nextAttemptAt != null
+            if (!wasFailed && !isBackoffPending) return@withLock
+            // If the scheduled attempt has already started, let it finish. The
+            // retry action remains available only while the row is in backoff.
+            if (jobs[transferId]?.isActive == true) return@withLock
+
+            retryTimers.remove(transferId)?.cancel()
+            cloudFilesDatabase.updateTransfer(
+                latest.copy(
+                    state = STATE_PENDING,
+                    cloudBookFileId = if (wasFailed && latest.direction == DIRECTION_UPLOAD) {
+                        null
+                    } else {
+                        latest.cloudBookFileId
+                    },
+                    uploadId = if (wasFailed) null else latest.uploadId,
+                    storagePath = if (wasFailed) null else latest.storagePath,
+                    tusUploadUrl = if (wasFailed) null else latest.tusUploadUrl,
+                    tusExpiresAt = if (wasFailed) null else latest.tusExpiresAt,
+                    bytesTransferred = if (wasFailed && latest.direction == DIRECTION_UPLOAD) {
+                        0L
+                    } else {
+                        latest.bytesTransferred
+                    },
+                    attemptCount = 0,
+                    nextAttemptAt = null,
+                    lastError = null,
+                    updatedAt = now(),
+                ),
+            )
+            scheduleLocked(transferId)
+        }
     }
 
     override fun observeForBook(
@@ -420,34 +443,75 @@ class BookFileTransferEngine(
                     states = RECOVERABLE_STATES,
                 )
                 pending.forEach { transfer ->
-                    val delayMillis = transfer.nextAttemptAt
-                        ?.let(::remainingDelayMillis)
-                        ?: 0L
-                    schedule(transfer.transferId, delayMillis)
+                    val nextAttemptAt = transfer.nextAttemptAt
+                    if (nextAttemptAt == null) {
+                        schedule(transfer.transferId)
+                    } else {
+                        scheduleRetryTimer(
+                            transferId = transfer.transferId,
+                            nextAttemptAt = nextAttemptAt,
+                            delayMillis = remainingDelayMillis(nextAttemptAt),
+                        )
+                    }
                 }
             }
     }
 
-    private suspend fun schedule(transferId: String, delayMillis: Long = 0L) {
+    private suspend fun schedule(transferId: String) {
         jobsMutex.withLock {
-            if (jobs[transferId]?.isActive == true) return
-            jobs[transferId] = scope.launch {
-                val thisJob = currentCoroutineContext()[Job]
-                try {
-                    if (delayMillis > 0) delay(delayMillis)
-                    processTransfer(transferId)
-                } finally {
-                    jobsMutex.withLock {
-                        if (jobs[transferId] === thisJob) jobs.remove(transferId)
+            retryTimers.remove(transferId)?.cancel()
+            scheduleLocked(transferId)
+        }
+    }
+
+    private fun scheduleLocked(transferId: String) {
+        if (jobs[transferId]?.isActive == true) return
+        jobs[transferId] = scope.launch {
+            val thisJob = currentCoroutineContext()[Job]
+            try {
+                processTransfer(transferId)
+            } finally {
+                jobsMutex.withLock {
+                    if (jobs[transferId] === thisJob) jobs.remove(transferId)
+                }
+            }
+        }
+    }
+
+    private suspend fun scheduleRetryTimer(
+        transferId: String,
+        nextAttemptAt: String,
+        delayMillis: Long,
+    ) {
+        jobsMutex.withLock {
+            retryTimers.remove(transferId)?.cancel()
+            val timerJob = scope.launch(start = CoroutineStart.LAZY) {
+                delay(delayMillis.coerceAtLeast(0L))
+                jobsMutex.withLock {
+                    if (retryTimers[transferId] !== currentCoroutineContext()[Job]) return@withLock
+                    retryTimers.remove(transferId)
+                    val latest = cloudFilesDatabase.getTransfer(transferId) ?: return@withLock
+                    if (latest.state == STATE_PENDING && latest.nextAttemptAt == nextAttemptAt) {
+                        scheduleLocked(transferId)
                     }
                 }
             }
+            retryTimers[transferId] = timerJob
+            timerJob.start()
         }
     }
 
     private suspend fun processTransfer(transferId: String) {
         var transfer = cloudFilesDatabase.getTransfer(transferId) ?: return
         if (transfer.state !in RECOVERABLE_STATES) return
+        if (transfer.nextAttemptAt != null || transfer.lastError != null) {
+            transfer = transfer.copy(
+                nextAttemptAt = null,
+                lastError = null,
+                updatedAt = now(),
+            )
+            cloudFilesDatabase.updateTransfer(transfer)
+        }
         if (transfer.direction == DIRECTION_DOWNLOAD) {
             processDownloadTransfer(transfer)
             return
@@ -811,6 +875,10 @@ class BookFileTransferEngine(
 
     private suspend fun scheduleRetry(transfer: CloudFileTransferEntity, error: String) {
         val attempt = transfer.attemptCount + 1
+        if (attempt >= MAX_TRANSFER_ATTEMPTS) {
+            failPermanently(transfer.copy(attemptCount = attempt), error)
+            return
+        }
         val waitSeconds = 1L shl attempt.coerceAtMost(MAX_BACKOFF_EXPONENT)
         val nextAttempt = Clock.System.now() + waitSeconds.seconds
         val pending = transfer.copy(
@@ -821,10 +889,7 @@ class BookFileTransferEngine(
             updatedAt = now(),
         )
         cloudFilesDatabase.updateTransfer(pending)
-        scope.launch {
-            delay(waitSeconds * 1_000)
-            schedule(transfer.transferId)
-        }
+        scheduleRetryTimer(transfer.transferId, pending.nextAttemptAt!!, waitSeconds * 1_000)
     }
 
     private fun transport(serverId: String): BookFileTransferTransport =
@@ -896,6 +961,7 @@ class BookFileTransferEngine(
         const val ORIGIN_CLOUD_DOWNLOAD = "cloud_download"
         const val ERROR_VERIFY_FAILED = "verify_failed"
         const val ERROR_RESTORE_UNAVAILABLE = "restore_unavailable"
+        const val MAX_TRANSFER_ATTEMPTS = 10
         val RECOVERABLE_FINALIZE_REJECTIONS = setOf("upload_incomplete", "upload_expired")
         const val MAX_BACKOFF_EXPONENT = 6
         val ACTIVE_STATES = setOf(STATE_PENDING, STATE_TRANSFERRING, "verifying", STATE_FINALIZING)

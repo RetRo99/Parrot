@@ -224,6 +224,134 @@ class BookFileTransferEngineTest {
     }
 
     @Test
+    fun retryCanForceAPendingTransferThroughItsBackoff() = runTest {
+        val transfer = activeTransfer().copy(
+            direction = "download",
+            state = "pending",
+            localSourceUuid = "restored-book",
+            stagingPath = "/staging/transfer.part",
+            sizeBytes = 6,
+            bytesTransferred = 2,
+            contentHash = "expected-hash",
+            contentHashAlgorithm = "sha-256-v1",
+            uploadId = null,
+            storagePath = null,
+            tusUploadUrl = null,
+            attemptCount = 7,
+            nextAttemptAt = "2999-01-01T00:00:00Z",
+            lastError = "network unavailable",
+        )
+        val fileState = CloudBookFileEntity(
+            libraryBookId = LIBRARY_BOOK_ID,
+            cloudBookId = "cloud-book",
+            cloudBookFileId = "cloud-file",
+            mediaType = "EBOOK",
+            relativePath = "",
+            fileName = "book.epub",
+            status = "available",
+            sizeBytes = 6,
+            contentHash = "expected-hash",
+            contentHashAlgorithm = "sha-256-v1",
+            remoteRevision = 1,
+            updatedAt = "before",
+        )
+        val database = FakeCloudFilesDatabase(transfer, fileState)
+        val fileStore = FakeTransferFileStore().apply {
+            files["/staging/transfer.part"] = "ab".encodeToByteArray()
+        }
+        val transport = ResumingDownloadTransport()
+        val finalized = CompletableDeferred<Unit>()
+        val finalizer = object : DownloadTransferFinalizer {
+            override suspend fun finalize(
+                transfer: CloudFileTransferEntity,
+                request: BookFileDownloadRequest,
+            ): CloudFileTransferEntity {
+                val completed = transfer.copy(
+                    state = "completed",
+                    stagingPath = null,
+                    bytesTransferred = request.sizeBytes,
+                )
+                database.updateTransfer(completed)
+                finalized.complete(Unit)
+                return completed
+            }
+        }
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            importedBooksDatabase = UnusedImportedBooksDatabase,
+            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            transports = emptyList(),
+            downloadTransports = listOf(transport),
+            downloadFinalizer = finalizer,
+            fileStore = fileStore,
+        )
+
+        engine.retry(TRANSFER_ID)
+        finalized.await()
+
+        val retried = database.getTransfer(TRANSFER_ID)
+        assertEquals(2L, transport.requestedOffset)
+        assertEquals("completed", retried?.state)
+        assertEquals(0, retried?.attemptCount)
+        assertNull(retried?.nextAttemptAt)
+    }
+
+    @Test
+    fun transientFailuresBecomeFailedAfterTheAttemptLimit() = runTest {
+        val transfer = activeTransfer().copy(
+            direction = "download",
+            state = "pending",
+            localSourceUuid = "restored-book",
+            stagingPath = "/staging/transfer.part",
+            sizeBytes = 6,
+            bytesTransferred = 0,
+            contentHash = "expected-hash",
+            contentHashAlgorithm = "sha-256-v1",
+            uploadId = null,
+            storagePath = null,
+            tusUploadUrl = null,
+            attemptCount = 9,
+        )
+        val fileState = CloudBookFileEntity(
+            libraryBookId = LIBRARY_BOOK_ID,
+            cloudBookId = "cloud-book",
+            cloudBookFileId = "cloud-file",
+            mediaType = "EBOOK",
+            relativePath = "",
+            fileName = "book.epub",
+            status = "available",
+            sizeBytes = 6,
+            contentHash = "expected-hash",
+            contentHashAlgorithm = "sha-256-v1",
+            remoteRevision = 1,
+            updatedAt = "before",
+        )
+        val database = FakeCloudFilesDatabase(transfer, fileState)
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            importedBooksDatabase = UnusedImportedBooksDatabase,
+            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            transports = emptyList(),
+            downloadTransports = listOf(FailingDownloadTransport()),
+            downloadFinalizer = object : DownloadTransferFinalizer {
+                override suspend fun finalize(
+                    transfer: CloudFileTransferEntity,
+                    request: BookFileDownloadRequest,
+                ): CloudFileTransferEntity = error("Finalization is not expected after a failed download")
+            },
+            fileStore = FakeTransferFileStore(),
+        )
+
+        engine.recoverPendingTransfers()
+        val failed = database.failedTransfer.await()
+
+        assertEquals("failed", failed.state)
+        assertEquals(10, failed.attemptCount)
+        assertEquals("network unavailable", failed.lastError)
+        assertNull(failed.nextAttemptAt)
+    }
+
+    @Test
     fun invalidatingCloudFileDoesNotDeleteAnImportedOriginal() = runTest {
         val transfer = activeTransfer().copy(
             direction = "download",
@@ -290,6 +418,7 @@ class BookFileTransferEngineTest {
     ) : CloudFilesDatabase {
         private val transfers = mutableMapOf(initialTransfer.transferId to initialTransfer)
         val fileStates = mutableListOf(initialFileState)
+        val failedTransfer = CompletableDeferred<CloudFileTransferEntity>()
 
         override suspend fun upsertFileState(file: CloudBookFileEntity) {
             fileStates.removeAll {
@@ -319,6 +448,7 @@ class BookFileTransferEngineTest {
 
         override suspend fun updateTransfer(transfer: CloudFileTransferEntity) {
             transfers[transfer.transferId] = transfer
+            if (transfer.state == "failed") failedTransfer.complete(transfer)
         }
 
         override suspend fun deleteTransfer(transferId: String) {
@@ -393,6 +523,20 @@ class BookFileTransferEngineTest {
             requestedOffset = resumeOffset
             onResponseOffset(resumeOffset)
             onChunk("cdef".encodeToByteArray())
+        }
+    }
+
+    private class FailingDownloadTransport : BookFileDownloadTransport {
+        override val serverId: String = SERVER_ID
+        override val supportsDownload: Boolean = true
+
+        override suspend fun download(
+            request: BookFileDownloadRequest,
+            resumeOffset: Long,
+            onResponseOffset: suspend (offset: Long) -> Unit,
+            onChunk: suspend (bytes: ByteArray) -> Unit,
+        ) {
+            error("network unavailable")
         }
     }
 

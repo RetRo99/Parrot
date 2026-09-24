@@ -1523,6 +1523,15 @@ private fun BookBackupProgressSection(
                     ),
                 )
             }
+            if (transfer.state == "pending" && transfer.attemptCount > 0 && transfer.lastError != null) {
+                TextButton(onClick = { onRetry(transfer.transferId) }) {
+                    Text(
+                        stringResource(
+                            if (isDownload) StringRes.cloud_download_retry else StringRes.cloud_backup_retry,
+                        ),
+                    )
+                }
+            }
         } else if (transfer.state == "failed") {
             if (transfer.transferId == replacingTransferId) {
                 Text(stringResource(StringRes.cloud_backup_replacing))
