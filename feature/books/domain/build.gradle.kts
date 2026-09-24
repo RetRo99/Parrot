@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.koinCompilerPlugin)
+    alias(libs.plugins.kotlinxSerialization)
 }
 
 version = "1.0"

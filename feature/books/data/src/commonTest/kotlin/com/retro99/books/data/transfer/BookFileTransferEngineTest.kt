@@ -352,6 +352,69 @@ class BookFileTransferEngineTest {
     }
 
     @Test
+    fun uploadHashMismatchFailsPermanently() = runTest {
+        val transfer = activeTransfer().copy(
+            state = "pending",
+            bytesTransferred = 0,
+            uploadId = null,
+            storagePath = null,
+            tusUploadUrl = null,
+            rightsAttestation = """{"attested_at":"2026-09-24T00:00:00Z","tos_version":"parrot-cloud-backup-tos-2026-09-24.1","attestation_version":"attest-rights-v1"}""",
+        )
+        val fileState = CloudBookFileEntity(
+            libraryBookId = LIBRARY_BOOK_ID,
+            cloudBookId = "cloud-book",
+            cloudBookFileId = "cloud-file",
+            mediaType = "EBOOK",
+            relativePath = "",
+            fileName = "book.epub",
+            status = "upload_pending",
+            sizeBytes = 512,
+            contentHash = "hash",
+            contentHashAlgorithm = "sha-256-v1",
+            remoteRevision = 0,
+            updatedAt = "before",
+        )
+        val database = FakeCloudFilesDatabase(transfer, fileState)
+        val importedBook = object : ImportedBookEntity {
+            override val uuid = "local-book"
+            override val title = "Book"
+            override val author: String? = null
+            override val description: String? = null
+            override val coverPath: String? = null
+            override val filePath = "/imports/local-book.epub"
+            override val fileSize = 512L
+            override val contentHash: String? = "hash"
+            override val contentHashAlgorithm: String? = "sha-256-v1"
+            override val importedAt = "before"
+            override val lastOpenedAt: String? = null
+            override val bookType = "EBOOK"
+            override val publicationDate: String? = null
+            override val origin = "import"
+        }
+        val importedDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
+            override suspend fun getImportedBookByUuid(uuid: String) = importedBook.takeIf { it.uuid == uuid }
+        }
+        val transport = HashMismatchedUploadTransport()
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            importedBooksDatabase = importedDatabase,
+            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            transports = listOf(transport),
+        )
+
+        assertTrue(engine.supportsUpload(SERVER_ID))
+        assertEquals(listOf(transfer), database.getTransfers(SERVER_ID, listOf("pending")))
+        engine.processTransfer(TRANSFER_ID)
+        val result = requireNotNull(database.getTransfer(TRANSFER_ID))
+
+        assertEquals("failed", result.state, "lastError=${result.lastError}")
+        assertEquals("verify_failed", result.lastError)
+        assertEquals(0, result.attemptCount)
+        assertNull(result.nextAttemptAt)
+    }
+
+    @Test
     fun invalidatingCloudFileDoesNotDeleteAnImportedOriginal() = runTest {
         val transfer = activeTransfer().copy(
             direction = "download",
@@ -538,6 +601,52 @@ class BookFileTransferEngineTest {
         ) {
             error("network unavailable")
         }
+    }
+
+    private class HashMismatchedUploadTransport : BookFileTransferTransport {
+        override val serverId: String = SERVER_ID
+        override val capabilities = TransferTransportCapabilities(
+            resumeMode = TransferResumeMode.ByteOffset,
+            supportsClientSuppliedId = false,
+            supportsReplaceInPlace = false,
+            supportsUpload = true,
+        )
+
+        override suspend fun reserve(request: BookFileUploadRequest): UploadReservationResult =
+            UploadReservationResult.Reserved(
+                UploadReservation(
+                    uploadId = "upload-1",
+                    cloudBookFileId = "cloud-file",
+                    storagePath = "users/test/books/test/file",
+                    uploadEndpoint = "https://cloud.example/upload",
+                ),
+            )
+
+        override suspend fun upload(
+            request: BookFileUploadRequest,
+            reservation: UploadReservation,
+            resumeUrl: String?,
+            resumeOffset: Long,
+            onSession: suspend (url: String, expiresAt: String?) -> Unit,
+            onChunkHashed: suspend (bytes: ByteArray) -> Unit,
+            onProgress: suspend (bytesTransferred: Long) -> Unit,
+        ): UploadSessionResult {
+            onSession("https://cloud.example/session", null)
+            onChunkHashed("different file contents".encodeToByteArray())
+            onProgress(request.sizeBytes)
+            return UploadSessionResult(
+                uploadUrl = "https://cloud.example/session",
+                expiresAt = null,
+                bytesTransferred = request.sizeBytes,
+            )
+        }
+
+        override suspend fun finalize(
+            reservation: UploadReservation,
+            request: BookFileUploadRequest,
+        ): CloudBookFileRecord = error("Finalization is not expected after a hash mismatch")
+
+        override suspend fun cancel(reservation: UploadReservation?, resumeUrl: String?) = Unit
     }
 
     private class RecordingDeletionTransport : BookFileDeletionTransport {

@@ -13,6 +13,7 @@ import com.retro99.books.domain.UploadSessionResult
 import com.retro99.cloud.implementation.transfer.TusUploadClient
 import com.retro99.cloud.implementation.transfer.TusUploadException
 import com.retro99.cloud.implementation.transfer.TusUploadSessionExpiredException
+import com.retro99.cloud.implementation.transfer.TusUploadVerificationException
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -62,6 +63,8 @@ class ParrotCloudBookFileTransferTransport(
             )
         } catch (_: TusUploadSessionExpiredException) {
             throw BookFileTransferSessionExpiredException()
+        } catch (_: TusUploadVerificationException) {
+            throw BookFileTransferRejectedException("verify_failed")
         } catch (exception: TusUploadException) {
             if (exception.statusCode in 400..499 &&
                 exception.statusCode !in setOf(401, 408, 409, 429)

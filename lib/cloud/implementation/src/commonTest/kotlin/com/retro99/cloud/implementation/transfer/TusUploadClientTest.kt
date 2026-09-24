@@ -16,6 +16,28 @@ import kotlinx.coroutines.test.runTest
 
 class TusUploadClientTest {
     @Test
+    fun changedFileSizeIsReportedAsUploadVerificationFailure() = runTest {
+        val client = newClient(byteArrayOf(1, 2, 3)) { error("No HTTP request is expected") }
+
+        assertFailsWith<TusUploadVerificationException> {
+            client.tus.upload(
+                uploadEndpoint = "/storage/v1/upload/resumable",
+                storagePath = "users/u/books/b/f.epub",
+                localPath = "local.epub",
+                sizeBytes = 4,
+                contentHash = "abcd",
+                resumeUrl = null,
+                resumeOffset = 0,
+                onSession = { _, _ -> },
+                onChunkHashed = {},
+                onProgress = {},
+            )
+        }
+
+        client.httpClient.close()
+    }
+
+    @Test
     fun createsSessionAndUploadsBoundedChunkWithAuthAndProgress() = runTest {
         val bytes = byteArrayOf(1, 2, 3, 4)
         val seenMethods = mutableListOf<HttpMethod>()

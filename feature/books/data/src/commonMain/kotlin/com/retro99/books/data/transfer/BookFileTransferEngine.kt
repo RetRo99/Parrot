@@ -501,7 +501,7 @@ class BookFileTransferEngine(
         }
     }
 
-    private suspend fun processTransfer(transferId: String) {
+    internal suspend fun processTransfer(transferId: String) {
         var transfer = cloudFilesDatabase.getTransfer(transferId) ?: return
         if (transfer.state !in RECOVERABLE_STATES) return
         if (transfer.nextAttemptAt != null || transfer.lastError != null) {
@@ -607,7 +607,9 @@ class BookFileTransferEngine(
                         throw exception
                     }
                     val streamedHash = digest.digest().toHexString()
-                    check(streamedHash == request.contentHash) { "Uploaded file hash changed" }
+                    if (streamedHash != request.contentHash) {
+                        throw BookFileTransferRejectedException(ERROR_VERIFY_FAILED)
+                    }
                     transfer = transfer.copy(
                         state = STATE_FINALIZING,
                         bytesTransferred = uploadResult.bytesTransferred,

@@ -31,7 +31,9 @@ class TusUploadClient(
         onProgress: suspend (bytesTransferred: Long) -> Unit,
     ): String {
         require(sizeBytes > 0) { "TUS upload must contain at least one byte" }
-        require(localFileSource.size(localPath) == sizeBytes) { "Upload file size changed" }
+        if (localFileSource.size(localPath) != sizeBytes) {
+            throw TusUploadVerificationException("Upload file size changed")
+        }
 
         var url = resumeUrl
         var expiresAt: String? = null
@@ -65,7 +67,9 @@ class TusUploadClient(
             while (hashedOffset < targetOffset) {
                 val count = minOf(HASH_READ_CHUNK_SIZE.toLong(), targetOffset - hashedOffset).toInt()
                 val bytes = localFileSource.read(localPath, hashedOffset, count)
-                check(bytes.isNotEmpty()) { "Unexpected end of upload file" }
+                if (bytes.isEmpty()) {
+                    throw TusUploadVerificationException("Upload file changed while hashing")
+                }
                 onChunkHashed(bytes)
                 hashedOffset += bytes.size
             }
@@ -76,7 +80,9 @@ class TusUploadClient(
         while (offset < sizeBytes) {
             val chunkLength = minOf(CHUNK_SIZE_BYTES.toLong(), sizeBytes - offset).toInt()
             val chunk = localFileSource.read(localPath, offset, chunkLength)
-            check(chunk.size == chunkLength) { "Unexpected end of upload file" }
+            if (chunk.size != chunkLength) {
+                throw TusUploadVerificationException("Upload file changed while sending")
+            }
             val response = sendPatch(requireNotNull(url), offset, chunk)
             when {
                 response.status == HttpStatusCode.Conflict -> {
@@ -247,6 +253,8 @@ class TusUploadException(
     message: String,
     val statusCode: Int,
 ) : Exception(message)
+
+class TusUploadVerificationException(message: String) : Exception(message)
 
 class TusUploadSessionExpiredException : Exception("TUS upload session expired")
 
