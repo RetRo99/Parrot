@@ -160,8 +160,8 @@ select is(
     (select reserved_bytes::text || ':' || used_bytes::text
      from public.cloud_user_storage
      where cloud_user_id = '13000000-0000-0000-0000-000000000001'),
-    '1212:101',
-    'size mismatch releases its reservation without changing used bytes'
+    '1212:302',
+    'size mismatch releases its reservation and charges the leftover object as orphan usage'
 );
 
 set local role authenticated;
@@ -187,8 +187,8 @@ select is(
     (select reserved_bytes::text || ':' || used_bytes::text
      from public.cloud_user_storage
      where cloud_user_id = '13000000-0000-0000-0000-000000000001'),
-    '909:101',
-    'expired finalize releases its reserved quota'
+    '909:605',
+    'expired finalize releases its reserved quota and charges the leftover object'
 );
 
 set local role authenticated;
@@ -214,7 +214,7 @@ select is(
     (select reserved_bytes::text || ':' || used_bytes::text
      from public.cloud_user_storage
      where cloud_user_id = '13000000-0000-0000-0000-000000000001'),
-    '909:101',
+    '909:605',
     'upload-incomplete does not release quota before a terminal transition'
 );
 
@@ -241,8 +241,8 @@ select is(
     (select reserved_bytes::text || ':' || used_bytes::text
      from public.cloud_user_storage
      where cloud_user_id = '13000000-0000-0000-0000-000000000001'),
-    '404:101',
-    'hash mismatch releases its reservation while preserving committed usage'
+    '404:1110',
+    'hash mismatch releases its reservation and charges the leftover object as orphan usage'
 );
 
 select * from finish();

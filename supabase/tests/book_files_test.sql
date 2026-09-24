@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 set search_path = extensions, public;
-select plan(14);
+select plan(15);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at)
 values (
@@ -114,6 +114,16 @@ select is(
         '{"attested_at":"2026-09-23T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
     )->>'reason',
     'file_exists', 'a different hash requires explicit replacement'
+);
+
+select is(
+    public.reserve_book_upload(
+        '20000000-0000-0000-0000-000000000001', 'application/epub+zip', 'existing.epub', 'replacement.epub',
+        25, 'sha-256-v1', repeat('e', 64),
+        '{"attested_at":"2026-09-23T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
+    )->'existing'->>'cloud_book_file_id',
+    '30000000-0000-0000-0000-000000000001',
+    'file_exists rejections carry the existing file record for the Replace chain'
 );
 
 create temporary table test_upload as

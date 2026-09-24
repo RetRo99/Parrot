@@ -122,8 +122,11 @@ Deno.serve(async (request: Request) => {
     if (deleteUserError) throw deleteUserError
 
     return jsonResponse({ status: 'deleted' })
-  } catch {
-    console.error('Cloud account deletion did not complete')
-    return jsonResponse({ error: 'Cloud account deletion did not complete; retry to resume cleanup' }, 500)
+  } catch (error) {
+    // Log only the failure step and error name: never paths, titles, hashes,
+    // tokens, or URLs (PC-plan §12).
+    const detail = error instanceof Error ? error.name : 'unknown'
+    console.error(`Cloud account deletion did not complete (${detail})`)
+    return jsonResponse({ error: 'Cloud account deletion did not complete; retry to resume cleanup', error_name: detail }, 500)
   }
 })

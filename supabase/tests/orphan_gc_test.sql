@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 set search_path = extensions, public;
-select plan(13);
+select plan(19);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at)
 values (
@@ -99,6 +99,40 @@ select ok(
     'authenticated users cannot run orphan GC'
 );
 
+create temporary table gc_confirm_ok (result jsonb);
+create temporary table gc_confirm_bad (result jsonb);
+grant select, insert on gc_confirm_ok, gc_confirm_bad to service_role;
+set local role service_role;
+set local request.jwt.claim.role = 'service_role';
+insert into gc_confirm_ok
+select public.confirm_orphan_book_file_gc(
+    (result->'files'->0->>'cloud_book_file_id')::uuid,
+    (result->>'claim_id')::uuid
+)
+from gc_result;
+insert into gc_confirm_bad
+select public.confirm_orphan_book_file_gc(
+    (result->'files'->0->>'cloud_book_file_id')::uuid,
+    gen_random_uuid()
+)
+from gc_result;
+reset role;
+
+select is(
+    (select result->>'status' from gc_confirm_ok),
+    'confirmed', 'claim confirmation validates the orphan before deletion'
+);
+select is(
+    (select result->>'reason' from gc_confirm_bad),
+    'gc_claim_not_found', 'a mismatched claim cannot authorize deletion'
+);
+select ok(
+    not has_function_privilege(
+        'authenticated', 'public.confirm_orphan_book_file_gc(uuid,uuid)', 'execute'
+    ),
+    'authenticated users cannot confirm GC claims'
+);
+
 -- Stand in for the worker's Storage API remove() call. In production the GC
 -- script removes the backing object before invoking the completion RPC.
 set local storage.allow_delete_query = 'true';
@@ -140,6 +174,55 @@ select is(
     (select used_bytes from public.cloud_user_storage
      where cloud_user_id = '10000000-0000-0000-0000-000000000031'),
     0::bigint, 'orphan cleanup releases the charged quota'
+);
+
+-- Retry-reset accounting: a replacement reservation must keep the previous
+-- object's real bytes charged until they are deleted or absorbed by finalize.
+create temporary table retry_upload (result jsonb);
+grant select, insert on retry_upload to authenticated;
+set local role authenticated;
+set local request.jwt.claim.sub = '10000000-0000-0000-0000-000000000031';
+set local request.jwt.claim.role = 'authenticated';
+insert into retry_upload
+select public.reserve_book_upload(
+    '20000000-0000-0000-0000-000000000031', 'application/epub+zip', 'retry.epub', 'retry.epub',
+    5, 'sha-256-v1', repeat('d', 64),
+    '{"attested_at":"2026-09-23T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
+);
+reset role;
+
+insert into storage.objects (bucket_id, name, metadata)
+select 'book-files', f.storage_path, '{"size":123}'::jsonb
+from public.cloud_book_files f
+where f.cloud_book_id = '20000000-0000-0000-0000-000000000031'
+  and f.file_name = 'retry.epub';
+update public.cloud_book_uploads
+set status = 'failed', updated_at = timezone('utc', now())
+where upload_id = ((select result->>'upload_id' from retry_upload)::uuid);
+
+select is(
+    (select used_bytes from public.cloud_user_storage
+     where cloud_user_id = '10000000-0000-0000-0000-000000000031'),
+    123::bigint, 'a terminal failed upload charges the real object bytes'
+);
+
+set local role authenticated;
+set local request.jwt.claim.sub = '10000000-0000-0000-0000-000000000031';
+set local request.jwt.claim.role = 'authenticated';
+select is(
+    (public.reserve_book_upload(
+        '20000000-0000-0000-0000-000000000031', 'application/epub+zip', 'retry.epub', 'retry.epub',
+        5, 'sha-256-v1', repeat('d', 64),
+        '{"attested_at":"2026-09-23T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
+    )->>'status'),
+    'reserved', 'the slot accepts a replacement reservation'
+);
+reset role;
+
+select is(
+    (select used_bytes from public.cloud_user_storage
+     where cloud_user_id = '10000000-0000-0000-0000-000000000031'),
+    123::bigint, 'a retry keeps the replaced object charged until deletion or finalize'
 );
 
 select * from finish();

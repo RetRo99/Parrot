@@ -21,7 +21,8 @@ port = 54323
 
 [storage]
 enabled = true
-file_size_limit = "500MiB"
+# No per-file size cap (decision #6): the quota in cloud_user_storage is the
+# enforced bound. Local dev should behave like the Pro plan (500 GB/file).
 
 [functions.delete-cloud-account]
 verify_jwt = true
