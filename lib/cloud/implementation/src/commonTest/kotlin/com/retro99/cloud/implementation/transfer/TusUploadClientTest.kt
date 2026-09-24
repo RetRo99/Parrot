@@ -11,16 +11,56 @@ import io.ktor.http.headersOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 
 class TusUploadClientTest {
     @Test
+    fun supabaseMetadataEncoderUsesStorageVocabularyAndMediaTypeContentType() {
+        val metadata = SupabaseTusMetadataEncoder().encode(
+            TusUploadMetadata(
+                targetPath = "users/u/books/b/file.epub",
+                bookUuid = "book-123",
+                fileName = "file.epub",
+                mediaType = "ebook",
+                sizeBytes = 123,
+                contentHash = "hash-value",
+            ),
+        )
+
+        assertEquals(
+            linkedMapOf(
+                "bucketName" to "book-files",
+                "objectName" to "users/u/books/b/file.epub",
+                "contentType" to "application/epub+zip",
+                "cacheControl" to "3600",
+                "metadata" to "{\"sha256\":\"hash-value\"}",
+            ),
+            metadata,
+        )
+    }
+
+    @Test
+    fun supabaseRequestPolicyLeavesHeadUnauthenticatedAndAuthenticatesWrites() {
+        val policy = SupabaseTusRequestHeaderPolicy(
+            configuration = CloudConfiguration("https://cloud.example", "test-key"),
+            accessTokenProvider = TusAccessTokenProvider { "test-jwt" },
+        )
+
+        assertEquals(emptyMap(), policy.headersFor(TusRequestType.Head))
+        assertEquals(
+            mapOf("Authorization" to "Bearer test-jwt", "apikey" to "test-key"),
+            policy.headersFor(TusRequestType.Patch),
+        )
+    }
+
+    @Test
     fun changedFileSizeIsReportedAsUploadVerificationFailure() = runTest {
         val client = newClient(byteArrayOf(1, 2, 3)) { error("No HTTP request is expected") }
 
         assertFailsWith<TusUploadVerificationException> {
-            client.tus.upload(
+            client.upload(
                 uploadEndpoint = "/storage/v1/upload/resumable",
                 storagePath = "users/u/books/b/f.epub",
                 localPath = "local.epub",
@@ -72,7 +112,7 @@ class TusUploadClientTest {
         val hashed = mutableListOf<Byte>()
         val sessions = mutableListOf<String>()
 
-        val url = client.tus.upload(
+        val url = client.upload(
             uploadEndpoint = "/storage/v1/upload/resumable",
             storagePath = "users/u/books/b/f.epub",
             localPath = "local.epub",
@@ -102,15 +142,19 @@ class TusUploadClientTest {
         val client = newClient(bytes) { request ->
             methods += request.method
             when (request.method) {
-                HttpMethod.Head -> respond(
-                    content = "",
-                    status = HttpStatusCode.OK,
-                    headers = headersOf(
-                        "Upload-Offset" to listOf("2"),
-                        "Upload-Length" to listOf("4"),
-                        "Upload-Expires" to listOf("tomorrow"),
-                    ),
-                )
+                HttpMethod.Head -> {
+                    assertNull(request.headers[HttpHeaders.Authorization])
+                    assertNull(request.headers["apikey"])
+                    respond(
+                        content = "",
+                        status = HttpStatusCode.OK,
+                        headers = headersOf(
+                            "Upload-Offset" to listOf("2"),
+                            "Upload-Length" to listOf("4"),
+                            "Upload-Expires" to listOf("tomorrow"),
+                        ),
+                    )
+                }
 
                 HttpMethod.Patch -> {
                     patchOffsets += request.headers["Upload-Offset"]
@@ -128,7 +172,7 @@ class TusUploadClientTest {
         val hashed = mutableListOf<Byte>()
         val sessions = mutableListOf<Pair<String, String?>>()
 
-        client.tus.upload(
+        client.upload(
             uploadEndpoint = "/storage/v1/upload/resumable",
             storagePath = "users/u/books/b/f.epub",
             localPath = "local.epub",
@@ -181,7 +225,7 @@ class TusUploadClientTest {
             }
         }
 
-        client.tus.upload(
+        client.upload(
             uploadEndpoint = "/storage/v1/upload/resumable",
             storagePath = "users/u/books/b/f.epub",
             localPath = "local.epub",
@@ -233,7 +277,7 @@ class TusUploadClientTest {
         val progress = mutableListOf<Long>()
         val hashed = mutableListOf<Byte>()
 
-        client.tus.upload(
+        client.upload(
             uploadEndpoint = "/storage/v1/upload/resumable",
             storagePath = "users/u/books/b/f.epub",
             localPath = "local.epub",
@@ -308,7 +352,7 @@ class TusUploadClientTest {
             }
         }
 
-        client.tus.upload(
+        client.upload(
             uploadEndpoint = "/storage/v1/upload/resumable",
             storagePath = "users/u/books/b/f.epub",
             localPath = "local.epub",
@@ -395,7 +439,7 @@ class TusUploadClientTest {
         }
         var firstAttemptHashedBytes = 0L
         assertFailsWith<TusUploadSessionExpiredException> {
-            client.tus.upload(
+            client.upload(
                 uploadEndpoint = "/storage/v1/upload/resumable",
                 storagePath = "users/u/books/b/f.epub",
                 localPath = "local.epub",
@@ -412,7 +456,7 @@ class TusUploadClientTest {
         assertEquals(6L * 1024L * 1024L, firstAttemptHashedBytes)
 
         var retryHashedBytes = 0L
-        val result = client.tus.upload(
+        val result = client.upload(
             uploadEndpoint = "/storage/v1/upload/resumable",
             storagePath = "users/u/books/b/f.epub",
             localPath = "local.epub",
@@ -438,6 +482,11 @@ class TusUploadClientTest {
     ): TestClient {
         val engine = MockEngine(handler)
         val httpClient = HttpClient(engine)
+        val configuration = CloudConfiguration(
+            supabaseUrl = "https://cloud.example",
+            publishableKey = "test-key",
+        )
+        val accessTokenProvider = TusAccessTokenProvider { "test-jwt" }
         val tus = TusUploadClient(
             httpClient = httpClient,
             localFileSource = object : TusLocalFileSource {
@@ -449,17 +498,54 @@ class TusUploadClientTest {
                     return fileBytes.copyOfRange(start, end)
                 }
             },
-            configuration = CloudConfiguration(
-                supabaseUrl = "https://cloud.example",
-                publishableKey = "test-key",
-            ),
-            accessTokenProvider = TusAccessTokenProvider { "test-jwt" },
         )
-        return TestClient(tus = tus, httpClient = httpClient)
+        val profile = TusUploadProfile(
+            baseUrl = configuration.supabaseUrl,
+            metadataEncoder = SupabaseTusMetadataEncoder(),
+            requestHeaderPolicy = SupabaseTusRequestHeaderPolicy(
+                configuration = configuration,
+                accessTokenProvider = accessTokenProvider,
+            ),
+        )
+        return TestClient(tus = tus, httpClient = httpClient, profile = profile)
     }
 
     private data class TestClient(
         val tus: TusUploadClient,
         val httpClient: HttpClient,
+        val profile: TusUploadProfile,
+    )
+
+    private suspend fun TestClient.upload(
+        uploadEndpoint: String,
+        storagePath: String,
+        localPath: String,
+        sizeBytes: Long,
+        contentHash: String,
+        resumeUrl: String?,
+        resumeOffset: Long,
+        onSession: suspend (url: String, expiresAt: String?) -> Unit,
+        onHashReset: suspend () -> Unit,
+        onChunkHashed: suspend (bytes: ByteArray) -> Unit,
+        onProgress: suspend (bytesTransferred: Long) -> Unit,
+    ): String = tus.upload(
+        profile = profile,
+        uploadEndpoint = uploadEndpoint,
+        metadata = TusUploadMetadata(
+            targetPath = storagePath,
+            bookUuid = "book-123",
+            fileName = "book.epub",
+            mediaType = "ebook",
+            sizeBytes = sizeBytes,
+            contentHash = contentHash,
+        ),
+        localPath = localPath,
+        sizeBytes = sizeBytes,
+        resumeUrl = resumeUrl,
+        resumeOffset = resumeOffset,
+        onSession = onSession,
+        onHashReset = onHashReset,
+        onChunkHashed = onChunkHashed,
+        onProgress = onProgress,
     )
 }

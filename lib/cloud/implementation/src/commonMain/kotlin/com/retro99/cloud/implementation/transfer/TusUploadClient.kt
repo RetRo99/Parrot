@@ -1,6 +1,5 @@
 package com.retro99.cloud.implementation.transfer
 
-import com.retro99.cloud.implementation.CloudConfiguration
 import io.ktor.client.HttpClient
 import io.ktor.client.request.header
 import io.ktor.client.request.request
@@ -15,15 +14,13 @@ import org.koin.core.annotation.Single
 class TusUploadClient(
     @Provided private val httpClient: HttpClient,
     @Provided private val localFileSource: TusLocalFileSource,
-    @Provided private val configuration: CloudConfiguration,
-    @Provided private val accessTokenProvider: TusAccessTokenProvider,
 ) {
     suspend fun upload(
+        profile: TusUploadProfile,
         uploadEndpoint: String,
-        storagePath: String,
+        metadata: TusUploadMetadata,
         localPath: String,
         sizeBytes: Long,
-        contentHash: String,
         resumeUrl: String?,
         resumeOffset: Long,
         onSession: suspend (url: String, expiresAt: String?) -> Unit,
@@ -41,15 +38,15 @@ class TusUploadClient(
         var offset = 0L
         var hashedOffset = 0L
         if (url == null) {
-            val created = createUpload(uploadEndpoint, storagePath, sizeBytes, contentHash)
+            val created = createUpload(profile, uploadEndpoint, metadata, sizeBytes)
             url = created.url
             expiresAt = created.expiresAt
             offset = created.offset
             onSession(url, expiresAt)
         } else {
-            val head = head(url)
+            val head = head(url, profile.requestHeaderPolicy)
             if (head == null) {
-                val created = createUpload(uploadEndpoint, storagePath, sizeBytes, contentHash)
+                val created = createUpload(profile, uploadEndpoint, metadata, sizeBytes)
                 url = created.url
                 expiresAt = created.expiresAt
                 offset = created.offset
@@ -89,10 +86,11 @@ class TusUploadClient(
             if (chunk.size != chunkLength) {
                 throw TusUploadVerificationException("Upload file changed while sending")
             }
-            val response = sendPatch(requireNotNull(url), offset, chunk)
+            val response = sendPatch(requireNotNull(url), offset, chunk, profile.requestHeaderPolicy)
             when {
                 response.status == HttpStatusCode.Conflict -> {
-                    val head = head(requireNotNull(url)) ?: error("TUS upload session disappeared")
+                    val head = head(requireNotNull(url), profile.requestHeaderPolicy)
+                        ?: error("TUS upload session disappeared")
                     require(head.length == sizeBytes) { "TUS upload length changed" }
                     require(head.offset in 0L..sizeBytes) { "TUS server returned an invalid upload offset" }
                     offset = head.offset
@@ -137,27 +135,19 @@ class TusUploadClient(
     }
 
     private suspend fun createUpload(
+        profile: TusUploadProfile,
         endpoint: String,
-        storagePath: String,
+        metadata: TusUploadMetadata,
         sizeBytes: Long,
-        contentHash: String,
     ): TusCreatedSession {
-        val response = httpClient.request(absoluteUrl(endpoint)) {
+        val response = httpClient.request(absoluteUrl(profile.baseUrl, endpoint)) {
             method = HttpMethod.Post
-            tusHeaders()
+            tusHeaders(TusRequestType.Create, profile.requestHeaderPolicy)
             header(HttpHeaders.ContentLength, "0")
             header(HEADER_UPLOAD_LENGTH, sizeBytes.toString())
             header(
                 HEADER_UPLOAD_METADATA,
-                encodeMetadata(
-                    linkedMapOf(
-                        "bucketName" to "book-files",
-                        "objectName" to storagePath,
-                        "contentType" to "application/epub+zip",
-                        "cacheControl" to "3600",
-                        "metadata" to "{\"sha256\":\"$contentHash\"}",
-                    ),
-                ),
+                encodeMetadata(profile.metadataEncoder.encode(metadata)),
             )
         }
         if (response.status != HttpStatusCode.Created) {
@@ -169,16 +159,16 @@ class TusUploadClient(
         val location = response.headers[HttpHeaders.Location]
             ?: error("TUS create response omitted Location")
         return TusCreatedSession(
-            url = resolveLocation(location),
+            url = resolveLocation(profile.baseUrl, location),
             offset = response.headers[HEADER_UPLOAD_OFFSET]?.toLongOrNull() ?: 0L,
             expiresAt = response.headers[HEADER_UPLOAD_EXPIRES],
         )
     }
 
-    private suspend fun head(url: String): TusHead? {
+    private suspend fun head(url: String, requestHeaderPolicy: TusRequestHeaderPolicy): TusHead? {
         val response = httpClient.request(url) {
             method = HttpMethod.Head
-            tusHeaders()
+            tusHeaders(TusRequestType.Head, requestHeaderPolicy)
         }
         if (response.status == HttpStatusCode.NotFound || response.status == HttpStatusCode.Gone) {
             return null
@@ -196,19 +186,24 @@ class TusUploadClient(
         return TusHead(offset, length, response.headers[HEADER_UPLOAD_EXPIRES])
     }
 
-    private suspend fun sendPatch(url: String, offset: Long, bytes: ByteArray) =
+    private suspend fun sendPatch(
+        url: String,
+        offset: Long,
+        bytes: ByteArray,
+        requestHeaderPolicy: TusRequestHeaderPolicy,
+    ) =
         httpClient.request(url) {
             method = HttpMethod.Patch
-            tusHeaders()
+            tusHeaders(TusRequestType.Patch, requestHeaderPolicy)
             header(HEADER_UPLOAD_OFFSET, offset.toString())
             header(HttpHeaders.ContentType, "application/offset+octet-stream")
             setBody(bytes)
         }
 
-    suspend fun cancel(uploadUrl: String) {
+    suspend fun cancel(uploadUrl: String, requestHeaderPolicy: TusRequestHeaderPolicy) {
         val response = httpClient.request(uploadUrl) {
             method = HttpMethod.Delete
-            tusHeaders()
+            tusHeaders(TusRequestType.Delete, requestHeaderPolicy)
         }
         if (response.status.value !in 200..299 && response.status != HttpStatusCode.NotFound &&
             response.status != HttpStatusCode.Gone && response.status != HttpStatusCode.BadRequest
@@ -220,23 +215,22 @@ class TusUploadClient(
         }
     }
 
-    private fun io.ktor.client.request.HttpRequestBuilder.tusHeaders() {
+    private fun io.ktor.client.request.HttpRequestBuilder.tusHeaders(
+        requestType: TusRequestType,
+        requestHeaderPolicy: TusRequestHeaderPolicy,
+    ) {
         header(HEADER_TUS_RESUMABLE, TUS_VERSION)
-        header(HttpHeaders.Authorization, "Bearer ${accessToken()}")
-        header("apikey", configuration.publishableKey)
+        requestHeaderPolicy.headersFor(requestType).forEach { (name, value) -> header(name, value) }
     }
 
-    private fun accessToken(): String = accessTokenProvider.currentAccessToken()
-        ?: error("Parrot Cloud session is not authenticated")
-
-    private fun absoluteUrl(endpoint: String): String = when {
+    private fun absoluteUrl(baseUrl: String, endpoint: String): String = when {
         endpoint.startsWith("https://") || endpoint.startsWith("http://") -> endpoint
-        else -> "${configuration.supabaseUrl.trimEnd('/')}/${endpoint.trimStart('/')}"
+        else -> "${baseUrl.trimEnd('/')}/${endpoint.trimStart('/')}"
     }
 
-    private fun resolveLocation(location: String): String = when {
+    private fun resolveLocation(baseUrl: String, location: String): String = when {
         location.startsWith("https://") || location.startsWith("http://") -> location
-        else -> "${configuration.supabaseUrl.trimEnd('/')}/${location.trimStart('/')}"
+        else -> "${baseUrl.trimEnd('/')}/${location.trimStart('/')}"
     }
 
     private data class TusCreatedSession(val url: String, val offset: Long, val expiresAt: String?)

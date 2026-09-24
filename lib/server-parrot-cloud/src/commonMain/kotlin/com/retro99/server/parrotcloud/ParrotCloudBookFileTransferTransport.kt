@@ -10,9 +10,14 @@ import com.retro99.books.domain.TransferTransportCapabilities
 import com.retro99.books.domain.UploadReservation
 import com.retro99.books.domain.UploadReservationResult
 import com.retro99.books.domain.UploadSessionResult
+import com.retro99.cloud.implementation.CloudConfiguration
+import com.retro99.cloud.implementation.transfer.SupabaseTusMetadataEncoder
+import com.retro99.cloud.implementation.transfer.SupabaseTusRequestHeaderPolicy
 import com.retro99.cloud.implementation.transfer.TusUploadClient
 import com.retro99.cloud.implementation.transfer.TusUploadException
 import com.retro99.cloud.implementation.transfer.TusUploadSessionExpiredException
+import com.retro99.cloud.implementation.transfer.TusUploadMetadata
+import com.retro99.cloud.implementation.transfer.TusUploadProfile
 import com.retro99.cloud.implementation.transfer.TusUploadVerificationException
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
@@ -21,6 +26,9 @@ import org.koin.core.annotation.Single
 class ParrotCloudBookFileTransferTransport(
     @Provided private val service: ParrotCloudBookFileService,
     @Provided private val tusUploadClient: TusUploadClient,
+    @Provided private val configuration: CloudConfiguration,
+    @Provided private val metadataEncoder: SupabaseTusMetadataEncoder,
+    @Provided private val requestHeaderPolicy: SupabaseTusRequestHeaderPolicy,
 ) : BookFileTransferTransport {
     override val serverId: String = PARROT_CLOUD_SERVER_ID
 
@@ -48,11 +56,23 @@ class ParrotCloudBookFileTransferTransport(
         var expiry: String? = null
         val finalUrl = try {
             tusUploadClient.upload(
+                profile = TusUploadProfile(
+                    baseUrl = configuration.supabaseUrl,
+                    metadataEncoder = metadataEncoder,
+                    requestHeaderPolicy = requestHeaderPolicy,
+                ),
                 uploadEndpoint = reservation.uploadEndpoint,
-                storagePath = reservation.storagePath,
+                metadata = TusUploadMetadata(
+                    targetPath = reservation.storagePath,
+                    bookUuid = request.localBookUuid,
+                    fileName = request.fileName,
+                    mediaType = request.mediaType,
+                    sizeBytes = request.sizeBytes,
+                    contentHash = request.contentHash,
+                    totalFiles = 1,
+                ),
                 localPath = request.localPath,
                 sizeBytes = request.sizeBytes,
-                contentHash = request.contentHash,
                 resumeUrl = resumeUrl,
                 resumeOffset = resumeOffset,
                 onSession = { url, expiresAt ->
@@ -87,7 +107,7 @@ class ParrotCloudBookFileTransferTransport(
 
     override suspend fun cancel(reservation: UploadReservation?, resumeUrl: String?) {
         try {
-            if (resumeUrl != null) tusUploadClient.cancel(resumeUrl)
+            if (resumeUrl != null) tusUploadClient.cancel(resumeUrl, requestHeaderPolicy)
         } finally {
             if (reservation != null) service.cancel(reservation)
         }

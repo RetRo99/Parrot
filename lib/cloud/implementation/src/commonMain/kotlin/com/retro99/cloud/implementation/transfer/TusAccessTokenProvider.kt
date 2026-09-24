@@ -5,10 +5,6 @@ import io.github.jan.supabase.auth.auth
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
-fun interface TusAccessTokenProvider {
-    fun currentAccessToken(): String?
-}
-
 @Single(binds = [TusAccessTokenProvider::class])
 class SupabaseTusAccessTokenProvider(
     @Provided private val clientProvider: SupabaseClientProvider,
