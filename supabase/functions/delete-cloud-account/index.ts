@@ -108,12 +108,11 @@ Deno.serve(async (request: Request) => {
 
     await deleteAccountObjects(admin, accountId)
 
-    // Keep the approved 180-day evidence window while removing the account UUID
-    // from both the relational owner column and the free-form actor field.
-    const { error: redactError } = await admin
-      .from('cloud_file_audit_events')
-      .update({ cloud_user_id: null, actor: 'deleted_account' })
-      .eq('cloud_user_id', accountId)
+    // Keep the approved 180-day evidence window and redact account attribution
+    // without replacing operator identities in takedown/block evidence.
+    const { error: redactError } = await admin.rpc('redact_cloud_account_audit_events', {
+      account_id: accountId,
+    })
     if (redactError) throw redactError
 
     const { error: purgeError } = await admin.rpc('purge_expired_cloud_file_audit_events')
