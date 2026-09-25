@@ -1,11 +1,12 @@
 # Unified library implementation notes
 
-## Current consolidated status — 2026-09-26 (T31)
+## Current consolidated status — 2026-09-26 (T32)
 
 This section supersedes forward-looking status and “remaining gaps” statements in
 the dated development snapshots below. T21–T30 preserve checkpoint evidence;
 T31 records connected-server and two-device Android acceptance after those
-checkpoints. T00–T04 remain useful for the original diagnosis and implementation
+checkpoints. T32 records the completed Samsung-to-emulator Cloud transfer and
+progress flow. T00–T04 remain useful for the original diagnosis and implementation
 history.
 
 - **T24 linked backend:** `supabase migration list --linked` shows all 17 local
@@ -96,6 +97,23 @@ history.
   regression tests cover both paths and verify that 401 remains an error. The host
   tests pass, and the rebuilt debug APK cleared the 404 during Sync now on both
   Samsung and the emulator.
+- **T32 Cloud backup, replica removal, cross-device restore, and resume:** Imported
+  a generated 3,305-byte, four-chapter EPUB named “Unified Library Acceptance
+  Journey” on Samsung `SM-S921B` (`RFCWC0SSVDM`). Reader rendered Chapter Two at
+  25%; the linked database recorded `EPUB/chapter-2.xhtml`, progression `0.25`,
+  and reading-position revision 7. Cloud file status is `available` at 3,305 bytes.
+  Samsung's Group Details showed Cloud available remotely at 25% and, after removing
+  only its Local copy, Local `Removed from source` / `Unavailable`; the Cloud source
+  and progress remained available. On emulator `emulator-5556`, the Books search
+  showed one result row for the fixture with a Parrot Cloud source, 25% progress,
+  and a Downloaded badge. Group Details showed both Parrot Cloud and Local sources;
+  Local was `On this device`, and the transfer reported `Restore complete`. The
+  emulator database has a `DevicePresent` Local resource, an `imported_books` row
+  with origin `cloud_download`, and a completed 3,305-byte Cloud download. Reader
+  opened at Chapter Two and 25%. After force-stopping and relaunching the app, the
+  single result, both locations, downloaded copy, and 25% progress remained; Reader
+  again opened at Chapter Two. Manual Sync now reported 0 sent, 0 received, and 0
+  pending after the Cloud change had already reached the emulator.
 - **T29 Samsung playback regression:** Samsung exposed a Back-navigation crash in
   `RoutineSyncScheduler.close()`. The worker now cancels before its channel, with a
   regression test for closing while the worker waits. Host tests and debug assembly
