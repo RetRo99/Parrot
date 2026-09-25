@@ -39,6 +39,16 @@ INSERT OR REPLACE INTO cloud_file_transfers(
     rights_attestation, state, attempt_count, next_attempt_at, last_error, created_at, updated_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
+updateCloudFileTransferStateIfExpected:
+UPDATE cloud_file_transfers
+SET server_id = ?, direction = ?, library_book_id = ?, cloud_book_id = ?,
+    cloud_book_file_id = ?, media_type = ?, local_source_uuid = ?, staging_path = ?,
+    size_bytes = ?, bytes_transferred = ?, content_hash = ?, content_hash_algorithm = ?,
+    upload_id = ?, storage_path = ?, tus_upload_url = ?, tus_expires_at = ?,
+    rights_attestation = ?, state = ?, attempt_count = ?, next_attempt_at = ?,
+    last_error = ?, created_at = ?, updated_at = ?
+WHERE transfer_id = ? AND state IN ?;
+
 getCloudFileTransfer:
 SELECT * FROM cloud_file_transfers WHERE transfer_id = ?;
 

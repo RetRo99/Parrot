@@ -6,9 +6,11 @@ import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.DownloadState
 import com.retro99.books.domain.BookFileTransfer
+import com.retro99.library.domain.projection.LibraryBookGroup
 
 data class BookDetailViewState(
     val book: BookUiModel? = null,
+    val libraryGroup: LibraryBookGroup? = null,
     val isLoading: Boolean = true,
     val error: AppError? = null,
     val ebookDownloadState: DownloadState = DownloadState.Idle,

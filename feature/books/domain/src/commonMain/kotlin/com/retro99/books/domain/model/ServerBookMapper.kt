@@ -134,3 +134,43 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
         )
     }
 }
+
+fun UnifiedServerBook.toBookDomainModel(): BookDomainModel {
+    val domainBook = book.toBookDomainModel()
+    val memberTypes = memberServerTypes + setOfNotNull(book.serverType)
+    return when (domainBook) {
+        is BookDomainModel.LocalBook -> domainBook.copy(
+            groupedAuthors = book.authors,
+            series = book.series.map { item ->
+                SeriesDomainModel(
+                    uuid = item.id ?: item.name,
+                    name = item.name,
+                    featured = null,
+                    position = item.sequence?.toDouble(),
+                    createdAt = null,
+                    updatedAt = null,
+                )
+            },
+            groupedTags = book.tags.map { tagName ->
+                TagDomainModel(
+                    uuid = tagName,
+                    name = tagName,
+                    createdAt = null,
+                    updatedAt = null,
+                )
+            },
+            unifiedGroupId = groupId,
+            groupMemberUuids = memberUuids,
+            alternateTitles = alternateTitles,
+            groupServerTypes = memberTypes,
+            groupMediaTypes = mediaTypes,
+        )
+        is BookDomainModel.StorytellerBook -> domainBook.copy(
+            unifiedGroupId = groupId,
+            groupMemberUuids = memberUuids,
+            alternateTitles = alternateTitles,
+            groupServerTypes = memberTypes,
+            groupMediaTypes = mediaTypes,
+        )
+    }
+}

@@ -1266,8 +1266,8 @@ class StorytellerAuthenticator(
                 serverId = "", // Will be set by caller
                 username = username,
                 accessToken = tokenResponse.accessToken,
-                refreshToken = tokenResponse.refreshToken,
-                expiresAt = tokenResponse.expiresAt,
+                refreshToken = null, // Storyteller does not support refresh tokens
+                expiresAt = null, // The current expires_in response is not a reliable deadline
             ))
         } catch (e: Exception) {
             Err(mapException(e))
@@ -1276,25 +1276,27 @@ class StorytellerAuthenticator(
 
     override suspend fun validateServer(baseUrl: String): AppResult<ServerValidationResult> {
         return try {
-            // Try to hit the Storyteller API info endpoint
-            val response = httpClient.get("$baseUrl/api/v2/info")
-
-            if (response.status.isSuccess()) {
-                val info = response.body<StorytellerServerInfo>()
-                Ok(ServerValidationResult(
-                    isValid = true,
-                    serverVersion = info.version,
-                    serverName = info.name,
-                    errorMessage = null,
-                ))
+            val normalizedBaseUrl = baseUrl.trimEnd('/')
+            val healthResponse = httpClient.get("$normalizedBaseUrl/api/health")
+            val booksStatus = if (healthResponse.status.isSuccess()) {
+                null
             } else {
-                Ok(ServerValidationResult(
-                    isValid = false,
-                    serverVersion = null,
-                    serverName = null,
-                    errorMessage = "Server returned ${response.status}",
-                ))
+                httpClient.get("$normalizedBaseUrl/api/v2/books").status
             }
+            val isStoryteller = healthResponse.status.isSuccess() ||
+                booksStatus?.isSuccess() == true ||
+                booksStatus?.value in setOf(401, 405)
+
+            Ok(ServerValidationResult(
+                isValid = isStoryteller,
+                serverVersion = null,
+                serverName = if (isStoryteller) "Storyteller" else null,
+                errorMessage = if (isStoryteller) {
+                    null
+                } else {
+                    "Server returned ${booksStatus ?: healthResponse.status}"
+                },
+            ))
         } catch (e: Exception) {
             Ok(ServerValidationResult(
                 isValid = false,
@@ -2593,4 +2595,3 @@ class CredentialsMigration(
 │  └───────────────┘    └─────────────────┘   └────────────────┘              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
-

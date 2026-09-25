@@ -1,6 +1,7 @@
 package com.retro99.database.api.library
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 interface LibraryBooksDatabase {
     suspend fun upsertLibraryBook(book: LibraryBookEntity)
@@ -8,6 +9,9 @@ interface LibraryBooksDatabase {
     suspend fun upsertLocalLibraryBook(book: LibraryBookEntity)
 
     fun getAllLibraryBooks(): Flow<List<LibraryBookEntity>>
+
+    /** Cloud book IDs removed by an authoritative server tombstone. */
+    fun observeDeletedCloudBookIds(): Flow<List<String>> = flowOf(emptyList())
 
     suspend fun getLibraryBookById(libraryBookId: String): LibraryBookEntity?
 
@@ -21,6 +25,11 @@ interface LibraryBooksDatabase {
     }
 
     suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity?
+
+    /** Includes soft-deleted Cloud rows so older revisions cannot resurrect them. */
+    suspend fun getLibraryBookByCloudBookIdIncludingDeleted(
+        cloudBookId: String,
+    ): LibraryBookEntity? = getLibraryBookByCloudBookId(cloudBookId)
 
     suspend fun attachCloudBookId(libraryBookId: String, cloudBookId: String)
 

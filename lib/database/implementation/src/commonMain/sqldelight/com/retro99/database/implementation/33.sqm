@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS pending_cloud_book_file_feed_changes (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    cloud_book_id TEXT NOT NULL,
+    feed_revision INTEGER,
+    payload_json TEXT NOT NULL,
+    received_at TEXT NOT NULL,
+    UNIQUE (cloud_book_id, payload_json)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_cloud_book_file_feed_changes_book
+ON pending_cloud_book_file_feed_changes(cloud_book_id, feed_revision, id);

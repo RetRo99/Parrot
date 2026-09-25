@@ -1,0 +1,41 @@
+ALTER TABLE library_source_snapshot_resources
+ADD COLUMN availability TEXT NOT NULL DEFAULT 'Unknown'
+CHECK (
+    availability IN (
+        'DevicePresent', 'AvailableRemotely', 'TransferPending', 'Unavailable', 'Unknown'
+    )
+);
+
+ALTER TABLE library_source_snapshots ADD COLUMN publication_date TEXT;
+
+CREATE TABLE library_source_snapshot_series (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    native_id TEXT,
+    name TEXT NOT NULL,
+    sequence_value REAL,
+    PRIMARY KEY (profile_id, source_key, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);
+
+CREATE TABLE library_source_snapshot_tags (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    tag TEXT NOT NULL,
+    PRIMARY KEY (profile_id, source_key, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);
+
+CREATE TABLE library_source_snapshot_media_types (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    media_type TEXT NOT NULL,
+    PRIMARY KEY (profile_id, source_key, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);

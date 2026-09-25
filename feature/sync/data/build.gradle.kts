@@ -13,6 +13,8 @@ kotlin {
         namespace = "com.retro99.sync.data"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()

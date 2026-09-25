@@ -1,10 +1,12 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.database.api.library.LibraryGroupsDatabase
 import com.retro99.sync.data.LibraryMutationApplier
 import com.retro99.sync.data.LibraryBookSyncApplier
 import com.retro99.sync.data.SyncLibraryBookSnapshot
 import com.retro99.sync.domain.SyncMutationResponse
+import com.retro99.sync.domain.LibraryGroupDecisionCodec
 import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
@@ -16,6 +18,8 @@ import org.koin.core.annotation.Single
 @Single
 class ParrotCloudLibraryMutationApplier(
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
+    @Provided private val libraryBookRemovalApplier: ParrotCloudLibraryBookRemovalApplier,
+    @Provided private val libraryGroupsDatabase: LibraryGroupsDatabase,
 ) : LibraryMutationApplier {
     private val json = Json {
         encodeDefaults = true
@@ -27,6 +31,34 @@ class ParrotCloudLibraryMutationApplier(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     ) {
+        if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_LIBRARY_GROUP_DECISION) {
+            val payload = LibraryGroupDecisionCodec.decodeLocal(entry.payload)
+            libraryGroupsDatabase.recordAcceptedDecision(
+                profileId = com.retro99.server.api.library.LibraryProfileId(
+                    payload.localProfileId,
+                ),
+                decisionId = payload.decisionId,
+                revision = requireNotNull(response.revision) {
+                    "Accepted grouping decisions must include a server revision"
+                },
+                payload = response.payload ?: error(
+                    "Accepted grouping decisions must return the canonical payload",
+                ),
+            )
+            return
+        }
+        if (
+            entry.entityType == SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK &&
+            entry.operation == SyncOutboxEntry.OPERATION_DELETE
+        ) {
+            libraryBookRemovalApplier.apply(
+                payload = requireNotNull(response.payload) {
+                    "Accepted book removal must return its tombstone payload"
+                },
+                revision = response.revision,
+            )
+            return
+        }
         val payload = json.decodeFromString<ParrotCloudBookPayload>(entry.payload)
         libraryBookSyncApplier.applyAccepted(
             entry = entry,
@@ -39,6 +71,7 @@ class ParrotCloudLibraryMutationApplier(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     ) {
+        if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_LIBRARY_GROUP_DECISION) return
         response.payload?.let { payload ->
             val book = json.decodeFromString<ParrotCloudBookPayload>(payload)
             libraryBookSyncApplier.applyRemote(
@@ -61,5 +94,6 @@ internal fun ParrotCloudBookPayload.toSyncLibraryBookSnapshot(
         format = format,
         remoteRevision = revision ?: remoteRevision,
         metadataJson = metadataJson,
+        deletedAt = deletedAt,
     )
 }

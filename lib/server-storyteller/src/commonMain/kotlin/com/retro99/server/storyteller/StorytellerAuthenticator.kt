@@ -24,7 +24,6 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
-import kotlin.time.Clock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -56,8 +55,6 @@ class StorytellerAuthenticator(
 
             if (response.status.isSuccess()) {
                 val tokenResponse = response.body<StorytellerTokenResponse>()
-                val now = Clock.System.now().toEpochMilliseconds()
-                val expiresAt = tokenResponse.expiresIn?.let { now + it }
 
                 Ok(
                     ServerCredentials(
@@ -65,7 +62,9 @@ class StorytellerAuthenticator(
                         username = username,
                         accessToken = tokenResponse.accessToken,
                         refreshToken = null, // Storyteller doesn't use refresh tokens currently
-                        expiresAt = expiresAt,
+                        // Storyteller uses a rolling server-side session. Its current `expires_in`
+                        // response is not a reliable local deadline.
+                        expiresAt = null,
                     )
                 )
             } else {
@@ -139,27 +138,27 @@ class StorytellerAuthenticator(
 
     override suspend fun validateServer(baseUrl: String): AppResult<ServerValidationResult> {
         return try {
-            val response = httpClient.get("${baseUrl.trimEnd('/')}/api/v2/info")
-
-            if (response.status.isSuccess()) {
-                Ok(
-                    ServerValidationResult(
-                        isValid = true,
-                        serverVersion = null, // Could parse from response if available
-                        serverName = "Storyteller",
-                        errorMessage = null,
-                    )
-                )
+            val normalizedBaseUrl = baseUrl.trimEnd('/')
+            val healthResponse = httpClient.get("$normalizedBaseUrl/api/health")
+            val fallbackStatus = if (healthResponse.status.isSuccess()) {
+                null
             } else {
-                Ok(
-                    ServerValidationResult(
-                        isValid = false,
-                        serverVersion = null,
-                        serverName = null,
-                        errorMessage = "Server returned ${response.status}",
-                    )
-                )
+                httpClient.get("$normalizedBaseUrl/api/v2/books").status
             }
+
+            val isValid = healthResponse.status.isSuccess() ||
+                fallbackStatus?.value in STORYTELLER_AUTH_REQUIRED_STATUS_CODES ||
+                fallbackStatus?.isSuccess() == true
+            val reportedStatus = fallbackStatus ?: healthResponse.status
+
+            Ok(
+                ServerValidationResult(
+                    isValid = isValid,
+                    serverVersion = null,
+                    serverName = if (isValid) "Storyteller" else null,
+                    errorMessage = if (isValid) null else "Server returned $reportedStatus",
+                )
+            )
         } catch (e: Exception) {
             Ok(
                 ServerValidationResult(
@@ -214,6 +213,10 @@ class StorytellerAuthenticator(
         AppTokenLogin("app_token_login"),
     }
 
+    private companion object {
+        val STORYTELLER_AUTH_REQUIRED_STATUS_CODES = setOf(401, 405)
+    }
+
     private class OAuthLoginFailureException(
         step: OAuthStep,
         errorType: String,
@@ -247,4 +250,3 @@ class StorytellerAuthenticator(
         }.getOrNull()
     }
 }
-

@@ -17,9 +17,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
@@ -77,8 +80,11 @@ class ParrotCloudProgressTransport(
         val changes = response.changes
             .filter { change -> change.entityType == ENTITY_TYPE_READING_POSITION }
             .map { change ->
-                val payload = json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(change.payload)
-                payload.toRemoteProgressSnapshot(change.revision)
+                change.payload.toRemoteProgressSnapshot(
+                    revision = change.revision,
+                    isDeleted = change.operation == OPERATION_DELETE ||
+                        change.payload.isPositionTombstone(),
+                )
             }
         return ProgressChangePage(
             changes = changes,
@@ -122,8 +128,10 @@ class ParrotCloudProgressTransport(
                             reason = "Parrot Cloud conflict response omitted payload",
                         )
                     } else {
-                        val remote = json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(payload)
-                            .toRemoteProgressSnapshot(result.revision)
+                        val remote = payload.toRemoteProgressSnapshot(
+                            revision = result.revision,
+                            isDeleted = payload.isPositionTombstone(),
+                        )
                         ProgressPushResult.Conflict(result.mutationId, remote)
                     }
                 }
@@ -173,12 +181,50 @@ class ParrotCloudProgressTransport(
         )
     }
 
+    private fun JsonElement.toRemoteProgressSnapshot(
+        revision: Long?,
+        isDeleted: Boolean,
+    ): RemoteProgressSnapshot {
+        if (!isDeleted) {
+            return json.decodeFromJsonElement<ParrotCloudReadingPositionPayload>(this)
+                .toRemoteProgressSnapshot(revision)
+        }
+        val tombstone = json.decodeFromJsonElement<ParrotCloudReadingPositionTombstone>(this)
+        return RemoteProgressSnapshot(
+            entityId = null,
+            remoteBookId = tombstone.cloudBookId,
+            libraryBookId = tombstone.libraryBookId,
+            kind = ProgressKind.EBOOK,
+            snapshot = ProgressSnapshot(
+                timestamp = null,
+                createdAt = null,
+                updatedAt = tombstone.deletedAt,
+                locator = null,
+                audioTimestampMs = null,
+                chapterIndex = null,
+                progression = null,
+                totalChapters = null,
+                totalDurationMs = null,
+                totalProgression = null,
+                position = null,
+            ),
+            version = revision?.toString() ?: tombstone.remoteRevision?.toString(),
+            observedAt = tombstone.deletedAt,
+            isDeleted = true,
+        )
+    }
+
+    private fun JsonElement.isPositionTombstone(): Boolean =
+        jsonObject[IS_DELETED_FIELD]?.jsonPrimitive?.booleanOrNull == true
+
     private companion object {
         const val ENTITY_TYPE_READING_POSITION = "reading_position"
         const val OPERATION_UPSERT = "upsert"
+        const val OPERATION_DELETE = "delete"
         const val STATUS_ACCEPTED = "accepted"
         const val STATUS_CONFLICT = "conflict"
         const val MAX_BATCH_SIZE = 50
+        const val IS_DELETED_FIELD = "is_deleted"
     }
 }
 
@@ -269,6 +315,21 @@ private data class ParrotCloudPullResponse(
 private data class ParrotCloudRemoteChange(
     @SerialName("entity_type")
     val entityType: String,
+    val operation: String = "upsert",
     val payload: JsonElement,
     val revision: Long,
+)
+
+@Serializable
+private data class ParrotCloudReadingPositionTombstone(
+    @SerialName("cloud_book_id")
+    val cloudBookId: String,
+    @SerialName("library_book_id")
+    val libraryBookId: String,
+    @SerialName("deleted_at")
+    val deletedAt: String,
+    @SerialName("remote_revision")
+    val remoteRevision: Long? = null,
+    @SerialName("is_deleted")
+    val isDeleted: Boolean = true,
 )

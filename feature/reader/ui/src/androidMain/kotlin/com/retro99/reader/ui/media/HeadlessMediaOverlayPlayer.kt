@@ -72,6 +72,7 @@ class HeadlessMediaOverlayPlayer(
     private val smilLoadingManager: SmilLoadingManager,
     private val exoPlayer: ExoPlayer,
     private val bookMetadata: HeadlessBookMetadata?,
+    private val onMediaItemsReplaced: () -> Unit,
 ) {
     private val publication: Publication = epubPublication.publication
 
@@ -373,6 +374,7 @@ class HeadlessMediaOverlayPlayer(
 
         // Set playlist
         exoPlayer.setMediaSources(mediaSources, initialTrackIndex, initialPositionMs)
+        onMediaItemsReplaced()
         exoPlayer.prepare()
 
         // Update tracking

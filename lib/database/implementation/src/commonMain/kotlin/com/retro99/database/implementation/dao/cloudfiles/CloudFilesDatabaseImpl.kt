@@ -2,6 +2,7 @@ package com.retro99.database.implementation.dao.cloudfiles
 
 import com.retro99.database.api.cloudfiles.CloudBookFileEntity
 import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
+import com.retro99.database.api.cloudfiles.PendingCloudFileFeedChange
 import com.retro99.database.api.cloudfiles.CloudFilesDatabase
 import kotlinx.coroutines.flow.Flow
 
@@ -20,11 +21,21 @@ internal class CloudFilesDatabaseImpl(
         relativePath: String,
     ) = dao.deleteFileState(libraryBookId, mediaType, relativePath)
 
+    override suspend fun deleteFileStateByCloudBookFileId(
+        libraryBookId: String,
+        cloudBookFileId: String,
+    ) = dao.deleteFileStateByCloudBookFileId(libraryBookId, cloudBookFileId)
+
     override suspend fun insertTransfer(transfer: CloudFileTransferEntity) = dao.saveTransfer(transfer)
 
     override suspend fun getTransfer(transferId: String) = dao.getTransfer(transferId)
 
     override suspend fun updateTransfer(transfer: CloudFileTransferEntity) = dao.saveTransfer(transfer)
+
+    override suspend fun updateTransferIfState(
+        transfer: CloudFileTransferEntity,
+        expectedStates: List<String>,
+    ) = dao.updateTransferIfState(transfer, expectedStates)
 
     override suspend fun deleteTransfer(transferId: String) = dao.deleteTransfer(transferId)
 
@@ -33,6 +44,28 @@ internal class CloudFilesDatabaseImpl(
 
     override suspend fun getTransfersForCloudFile(cloudBookFileId: String) =
         dao.getTransfersForCloudFile(cloudBookFileId)
+
+    override suspend fun enqueuePendingFileFeedChange(
+        cloudBookId: String,
+        feedRevision: Long?,
+        payloadJson: String,
+        receivedAt: String,
+    ): PendingCloudFileFeedChange = dao.enqueuePendingFileFeedChange(
+        cloudBookId = cloudBookId,
+        feedRevision = feedRevision,
+        payloadJson = payloadJson,
+        receivedAt = receivedAt,
+    )
+
+    override suspend fun getPendingFileFeedChanges(
+        cloudBookId: String,
+    ): List<PendingCloudFileFeedChange> = dao.getPendingFileFeedChanges(cloudBookId)
+
+    override suspend fun getPendingFileFeedCloudBookIds(): List<String> =
+        dao.getPendingFileFeedCloudBookIds()
+
+    override suspend fun deletePendingFileFeedChange(changeId: Long) =
+        dao.deletePendingFileFeedChange(changeId)
 
     override fun observeTransfers(
         serverId: String,
@@ -47,5 +80,6 @@ internal class CloudFilesDatabaseImpl(
     override suspend fun clearAllData() {
         dao.deleteAllFileStates()
         dao.deleteAllTransfers()
+        dao.deleteAllPendingFileFeedChanges()
     }
 }

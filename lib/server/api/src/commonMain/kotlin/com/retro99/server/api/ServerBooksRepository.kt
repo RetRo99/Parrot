@@ -1,8 +1,13 @@
 package com.retro99.server.api
 
+import com.github.michaelbull.result.map
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
+import com.retro99.server.api.library.LibraryAdapterId
+import com.retro99.server.api.library.NativeBookId
+import com.retro99.server.api.library.SourceAccountIdentity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * Server-aware books repository interface.
@@ -15,9 +20,35 @@ interface ServerBooksRepository {
     val serverId: String
 
     /**
+     * Generic library-adapter registration key. Legacy repositories may leave this unset
+     * until they implement the additive source contract.
+     */
+    val libraryAdapterId: LibraryAdapterId?
+        get() = null
+
+    /**
+     * Certified backend/account identity for portable grouping. Implementations must return null
+     * unless both values come from a stable server-owned or authenticated account identifier.
+     */
+    suspend fun libraryAccountIdentity(): SourceAccountIdentity.Portable? = null
+
+    /**
      * Get all books from this server.
      */
     fun getBooks(): Flow<AppResult<List<ServerBook>>>
+
+    /**
+     * Get a source listing with an explicit completeness guarantee.
+     * Existing repositories default to partial until they can prove each emission is complete.
+     */
+    fun getLibraryListing(): Flow<AppResult<ServerBookListing>> = getBooks().map { result ->
+        result.map { books ->
+            ServerBookListing(
+                books = books,
+                completeness = ServerBookListingCompleteness.Partial,
+            )
+        }
+    }
 
     /**
      * Get a specific book by UUID.
@@ -33,6 +64,18 @@ interface ServerBooksRepository {
      * Search for books on this server.
      */
     suspend fun searchBooks(query: String): AppResult<List<ServerBook>>
+}
+
+data class ServerBookListing(
+    val books: List<ServerBook>,
+    val completeness: ServerBookListingCompleteness,
+    /** Explicit source-native removals from this successful listing or change feed. */
+    val removedNativeBookIds: Set<NativeBookId> = emptySet(),
+)
+
+enum class ServerBookListingCompleteness {
+    Complete,
+    Partial,
 }
 
 /**
@@ -74,6 +117,7 @@ data class ServerBook(
     val remoteRevision: Long? = null,
     val mediaResources: List<MediaResource> = emptyList(),
     val localSourceUuid: String? = null,
+    val collections: List<ServerBookCollection> = emptyList(),
 )
 
 enum class RemoteFileAvailability {
@@ -89,4 +133,11 @@ data class ServerBookSeries(
     val id: String?,
     val name: String,
     val sequence: Float?,
+)
+
+data class ServerBookCollection(
+    val id: String,
+    val name: String,
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
 )

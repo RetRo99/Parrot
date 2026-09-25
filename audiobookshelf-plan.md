@@ -1514,7 +1514,7 @@ Use the public ABS demo at https://audiobooks.dev/ (`demo`/`demo`):
 | Parrot Contract | Storyteller (existing) | Audiobookshelf (new) |
 |-----------------|----------------------|---------------------|
 | `login` | `POST /api/v2/token` (form-encoded) | `POST /login` (JSON body) |
-| `validateServer` | `GET /api/v2/info` | `GET /ping` |
+| `validateServer` | `GET /api/health`, then protected `GET /api/v2/books` as a fallback | `GET /ping` |
 | `refreshToken` | Not supported | Not supported |
 | `loginWithAppToken` | `POST /api/v2/token/app` (OAuth) | Not needed (absent) |
 | `getBooks` | `GET /api/v2/books` (flat) | `GET /api/libraries` → `GET /api/libraries/:id/items` (fan-out) |

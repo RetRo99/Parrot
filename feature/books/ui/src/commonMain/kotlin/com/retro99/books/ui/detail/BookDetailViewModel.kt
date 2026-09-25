@@ -28,6 +28,7 @@ import com.retro99.cloudaccount.domain.model.isActiveFor
 import com.retro99.books.ui.model.toUiModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.domain.model.BookType
+import com.retro99.library.domain.projection.LibraryGroupProjectionRepository
 import com.retro99.reader.domain.model.DownloadState
 import com.retro99.reader.domain.usecase.CancelDownloadUseCase
 import com.retro99.reader.domain.usecase.DeleteMediaCacheUseCase
@@ -38,6 +39,7 @@ import com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -52,6 +54,7 @@ import org.koin.core.annotation.Provided
 class BookDetailViewModel(
     @InjectedParam private val serverId: String,
     @InjectedParam private val bookUuid: String,
+    @InjectedParam private val onNavigateToLibraryGroup: (groupId: String) -> Unit,
     @InjectedParam private val onNavigateToReader: (serverId: String, bookUuid: String, bookType: BookType, bookTitle: String) -> Unit,
     @InjectedParam private val onNavigateToSeriesDetail: (seriesUuid: String, seriesName: String) -> Unit,
     @InjectedParam private val onBack: () -> Unit,
@@ -75,6 +78,7 @@ class BookDetailViewModel(
     @Provided private val cloudAccountRepository: CloudAccountRepository,
     @Provided private val cloudProfileLinkRepository: CloudProfileLinkRepository,
     @Provided private val userRegistry: UserRegistry,
+    @Provided private val groupProjectionRepository: LibraryGroupProjectionRepository,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
     BookDetailViewState(),
@@ -82,6 +86,7 @@ class BookDetailViewModel(
     private var transferObservationJob: Job? = null
     private var observedTransferKey: String? = null
     private var activeCloudAccount = false
+    private var redirectedGroupId: String? = null
 
     init {
         analytics.logEvent(
@@ -93,6 +98,7 @@ class BookDetailViewModel(
         observeBookWithProgress()
         observeDownloadStates()
         observeFavoriteState()
+        observeLibraryGroup()
         observeActiveCloudAccount()
     }
 
@@ -309,6 +315,30 @@ class BookDetailViewModel(
         observeFavoriteUseCase(bookUuid)
             .onEach { isFavorite ->
                 updateState { it.copy(isFavorite = isFavorite) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeLibraryGroup() {
+        groupProjectionRepository.observeActiveGroups()
+            .map { groups ->
+                groups.firstOrNull { group ->
+                    group.members.any { member ->
+                        member.snapshot.source.connectionId?.value == serverId &&
+                            (member.sourceKey.nativeBookId.value == bookUuid ||
+                                member.snapshot.resources.any { resource ->
+                                    resource.reference.nativeResourceId == bookUuid
+                                })
+                    }
+                }
+            }
+            .distinctUntilChanged()
+            .onEach { group ->
+                updateState { state -> state.copy(libraryGroup = group) }
+                if (group != null && redirectedGroupId != group.groupId.value) {
+                    redirectedGroupId = group.groupId.value
+                    onNavigateToLibraryGroup(group.groupId.value)
+                }
             }
             .launchIn(viewModelScope)
     }

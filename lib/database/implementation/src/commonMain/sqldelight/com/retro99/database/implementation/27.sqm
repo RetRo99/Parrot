@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS library_group_aliases (
+    profile_id TEXT NOT NULL,
+    alias_group_id TEXT NOT NULL,
+    target_group_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (profile_id, alias_group_id),
+    CHECK (alias_group_id <> target_group_id)
+);
+
+CREATE TABLE IF NOT EXISTS library_manual_separations (
+    profile_id TEXT NOT NULL,
+    first_source_key TEXT NOT NULL,
+    second_source_key TEXT NOT NULL,
+    decision_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (profile_id, first_source_key, second_source_key),
+    UNIQUE (profile_id, decision_id)
+);

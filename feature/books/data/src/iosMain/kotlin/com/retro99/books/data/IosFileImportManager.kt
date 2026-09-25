@@ -11,6 +11,8 @@ import com.retro99.base.server.LOCAL_SERVER_ID
 import com.retro99.base.server.ServerType
 import com.retro99.books.data.source.ImportedBooksLocalSource
 import com.retro99.books.domain.FileImportManager
+import com.retro99.books.domain.LocalBookFileUsageCoordinator
+import com.retro99.books.domain.LocalBookFileUsageLease
 import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.books.domain.model.BookType
 import io.github.vinceglb.filekit.core.PlatformFile
@@ -44,6 +46,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class IosFileImportManager(
     @Provided private val metadataExtractor: EpubMetadataExtractor,
     @Provided private val importedBooksLocalSource: ImportedBooksLocalSource,
+    @Provided private val fileUsageCoordinator: LocalBookFileUsageCoordinator,
 ) : FileImportManager {
 
     private val ebooksDir: String
@@ -210,11 +213,39 @@ class IosFileImportManager(
         return ebookDeleted && readaloudDeleted && coverDeleted
     }
 
+    @OptIn(ExperimentalForeignApi::class)
+    override fun deleteImportedBookReplicaFile(
+        uuid: String,
+        storageReference: String,
+    ): Boolean {
+        val expectedPaths = setOf(
+            "$ebooksDir/${uuid}_${BookType.EBOOK.value}.epub",
+            "$ebooksDir/${uuid}_${BookType.READALOUD.value}.epub",
+        )
+        if (storageReference !in expectedPaths) return false
+        val fileManager = NSFileManager.defaultManager
+        if (!fileManager.fileExistsAtPath(storageReference)) return true
+        return fileManager.removeItemAtPath(storageReference, error = null)
+    }
+
     override suspend fun deleteLocalBook(uuid: String): CompletableResult {
-        // First delete from database
-        return importedBooksLocalSource.deleteImportedBook(uuid).map {
-            // Then delete the actual files (best effort - orphaned files can be cleaned up later)
-            deleteImportedBookFiles(uuid)
+        val paths = listOf(
+            "$ebooksDir/${uuid}_${BookType.EBOOK.value}.epub",
+            "$ebooksDir/${uuid}_${BookType.READALOUD.value}.epub",
+        ).sorted()
+        val leases = mutableListOf<LocalBookFileUsageLease>()
+        try {
+            paths.forEach { path ->
+                leases += fileUsageCoordinator.acquireRemoval(path)
+            }
+
+            return importedBooksLocalSource.deleteImportedBook(uuid).map { _ ->
+                // Delete actual files best-effort; orphaned files can be cleaned up later.
+                deleteImportedBookFiles(uuid)
+                Unit
+            }
+        } finally {
+            leases.asReversed().forEach { lease -> lease.release() }
         }
     }
 }

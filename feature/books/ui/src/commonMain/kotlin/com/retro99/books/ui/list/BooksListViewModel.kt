@@ -22,6 +22,7 @@ import com.retro99.books.domain.usecase.ImportEpubUseCase
 import com.retro99.books.domain.usecase.StartBookFileUploadUseCase
 import com.retro99.books.domain.usecase.ObserveAllFavoritesUseCase
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
+import com.retro99.books.ui.detail.toManualMergeSelections
 import com.retro99.books.ui.model.BookFilterState
 import com.retro99.books.ui.model.BookListViewMode
 import com.retro99.books.ui.model.BookListSettings
@@ -33,18 +34,26 @@ import com.retro99.cloudaccount.domain.CloudAccountRepository
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
 import com.retro99.cloudaccount.domain.model.isActiveFor
+import com.retro99.library.domain.grouping.LibraryManualGroupingRepository
+import com.retro99.library.domain.grouping.MergeLibraryGroupMembersUseCase
+import com.retro99.library.domain.projection.LibraryBookGroup
+import com.retro99.library.domain.projection.LibraryGroupProjectionRepository
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.preferences.implementation.usecase.ObserveUserPreferenceUseCase
 import com.retro99.preferences.implementation.usecase.SaveUserPreferenceUseCase
 import com.retro99.reader.domain.usecase.ObserveAllBooksWithProgressUseCase
+import com.retro99.server.api.library.LibraryGroupId
+import com.retro99.server.api.library.LibraryProfileId
+import com.retro99.server.api.library.SourceBookKey
 import com.retro99.user.api.UserRegistry
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.CancellationException
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
@@ -66,9 +75,15 @@ class BooksListViewModel(
     @Provided private val cloudAccountRepository: CloudAccountRepository,
     @Provided private val startBookFileUploadUseCase: StartBookFileUploadUseCase,
     @Provided private val userRegistry: UserRegistry,
+    @Provided private val groupProjectionRepository: LibraryGroupProjectionRepository,
+    @Provided manualGroupingRepository: LibraryManualGroupingRepository,
 ) : BaseViewModel<BooksListViewState, BooksListIntent>(BooksListViewState()) {
 
     private var currentBooks: List<BookWithProgressDomainModel> = emptyList()
+    private val selectedMergeGroupsById = linkedMapOf<String, LibraryBookGroup>()
+    private var mergeSelectionJob: Job? = null
+    private val mergeLibraryGroupMembersUseCase =
+        MergeLibraryGroupMembersUseCase(manualGroupingRepository)
     val searchFieldState = TextFieldState()
 
     init {
@@ -81,10 +96,32 @@ class BooksListViewModel(
 
     override fun onIntent(intent: BooksListIntent) {
         when (intent) {
-            BooksListIntent.OnRefresh -> refreshProgressInfo()
+            BooksListIntent.OnRefresh -> {
+                cancelMergeSelection()
+                refreshProgressInfo()
+            }
             BooksListIntent.OnSearchToggled -> toggleSearch()
-            is BooksListIntent.OnBookClicked -> onNavigateToBookDetail(intent.book)
-            is BooksListIntent.OnFavoriteClicked -> toggleFavorite(intent.bookUuid)
+            is BooksListIntent.OnBookClicked -> {
+                if (viewState.value.isMergeSelectionMode) {
+                    toggleMergeGroupSelection(intent.book.unifiedGroupId)
+                } else {
+                    onNavigateToBookDetail(intent.book)
+                }
+            }
+            BooksListIntent.OnMergeSelectionStarted -> startMergeSelection()
+            BooksListIntent.OnMergeSelectionCancelled -> cancelMergeSelection()
+            is BooksListIntent.OnMergeGroupSelectionChanged -> {
+                setMergeGroupSelection(intent.groupId, intent.selected)
+            }
+            BooksListIntent.OnMergeRequested -> requestMerge()
+            is BooksListIntent.OnMergeMetadataSourceSelected -> {
+                selectMergeMetadataSource(intent.sourceKey)
+            }
+            BooksListIntent.OnMergeConfirmed -> mergeSelectedGroups()
+            BooksListIntent.OnMergeDismissed -> updateState {
+                it.copy(showMergeConfirmation = false)
+            }
+            is BooksListIntent.OnFavoriteClicked -> toggleFavorite(intent.book)
             is BooksListIntent.OnImportBook -> importBook(intent.file)
             BooksListIntent.OnBackupAllClicked -> updateState {
                 it.copy(
@@ -132,6 +169,179 @@ class BooksListViewModel(
             updateState { it.copy(isRefreshing = false) }
         }
     }
+
+    private fun startMergeSelection() {
+        mergeSelectionJob?.cancel()
+        selectedMergeGroupsById.clear()
+        updateState {
+            it.copy(
+                isMergeSelectionMode = true,
+                selectedMergeGroupIds = emptySet(),
+                mergeMetadataOptions = emptyList(),
+                preferredMergeMetadataSourceKey = null,
+                isResolvingMergeSelection = false,
+                showMergeConfirmation = false,
+                mergeSelectionError = false,
+            )
+        }
+    }
+
+    private fun cancelMergeSelection() {
+        if (viewState.value.isMergingGroups) return
+        mergeSelectionJob?.cancel()
+        mergeSelectionJob = null
+        selectedMergeGroupsById.clear()
+        updateState {
+            it.copy(
+                isMergeSelectionMode = false,
+                selectedMergeGroupIds = emptySet(),
+                mergeMetadataOptions = emptyList(),
+                preferredMergeMetadataSourceKey = null,
+                isResolvingMergeSelection = false,
+                showMergeConfirmation = false,
+                mergeSelectionError = false,
+            )
+        }
+    }
+
+    private fun toggleMergeGroupSelection(groupId: String?) {
+        if (groupId == null) {
+            updateState { it.copy(mergeSelectionError = true) }
+            return
+        }
+        val selected = groupId !in viewState.value.selectedMergeGroupIds
+        setMergeGroupSelection(groupId, selected)
+    }
+
+    private fun setMergeGroupSelection(groupId: String, selected: Boolean) {
+        if (!viewState.value.isMergeSelectionMode || viewState.value.isMergingGroups) return
+        if (!selected) {
+            selectedMergeGroupsById.remove(groupId)
+            val options = selectedMergeMetadataOptions()
+            updateState { state ->
+                state.copy(
+                    selectedMergeGroupIds = state.selectedMergeGroupIds - groupId,
+                    mergeMetadataOptions = options,
+                    preferredMergeMetadataSourceKey = state.preferredMergeMetadataSourceKey
+                        .takeIf { sourceKey ->
+                            options.any { option -> option.sourceKey == sourceKey }
+                        }
+                        ?: options.firstOrNull()?.sourceKey,
+                    mergeSelectionError = false,
+                )
+            }
+            return
+        }
+        if (groupId in selectedMergeGroupsById || viewState.value.isResolvingMergeSelection) return
+
+        updateState { it.copy(isResolvingMergeSelection = true, mergeSelectionError = false) }
+        mergeSelectionJob = viewModelScope.launch {
+            try {
+                val profileId = LibraryProfileId(userRegistry.getActiveProfileIdOrDefault())
+                val requestedGroupId = LibraryGroupId(groupId)
+                val group = groupProjectionRepository.getGroup(profileId, requestedGroupId)
+                check(group != null && group.groupId == requestedGroupId) {
+                    "The selected group changed. Reload the library and try again."
+                }
+                if (!viewState.value.isMergeSelectionMode) return@launch
+                check(group.members.isNotEmpty()) {
+                    "The selected group no longer has members. Reload the library and try again."
+                }
+                selectedMergeGroupsById[groupId] = group
+                val options = selectedMergeMetadataOptions()
+                updateState { state ->
+                    state.copy(
+                        selectedMergeGroupIds = state.selectedMergeGroupIds + groupId,
+                        mergeMetadataOptions = options,
+                        preferredMergeMetadataSourceKey = state.preferredMergeMetadataSourceKey
+                            .takeIf { sourceKey ->
+                                options.any { option -> option.sourceKey == sourceKey }
+                            }
+                            ?: options.firstOrNull()?.sourceKey,
+                        isResolvingMergeSelection = false,
+                        mergeSelectionError = false,
+                    )
+                }
+                mergeSelectionJob = null
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: Exception) {
+                if (!viewState.value.isMergeSelectionMode) return@launch
+                updateState {
+                    it.copy(
+                        isResolvingMergeSelection = false,
+                        mergeSelectionError = true,
+                    )
+                }
+                mergeSelectionJob = null
+            }
+        }
+    }
+
+    private fun requestMerge() {
+        if (!viewState.value.canMergeSelectedGroups) return
+        if (selectedMergeMetadataOptions().isEmpty()) {
+            updateState { it.copy(mergeSelectionError = true) }
+            return
+        }
+        updateState { it.copy(showMergeConfirmation = true, mergeSelectionError = false) }
+    }
+
+    private fun selectMergeMetadataSource(sourceKey: SourceBookKey) {
+        if (viewState.value.isMergingGroups) return
+        val isSelectedMetadataSource = viewState.value.mergeMetadataOptions.any { option ->
+            option.sourceKey == sourceKey
+        }
+        if (!isSelectedMetadataSource) return
+        updateState { it.copy(preferredMergeMetadataSourceKey = sourceKey) }
+    }
+
+    private fun mergeSelectedGroups() {
+        if (!viewState.value.canMergeSelectedGroups) return
+        updateState { it.copy(showMergeConfirmation = false, isMergingGroups = true) }
+        viewModelScope.launch {
+            try {
+                val profileId = LibraryProfileId(userRegistry.getActiveProfileIdOrDefault())
+                val selectedMembers = selectedMergeGroupsById.values
+                    .flatMap { group -> group.toManualMergeSelections() }
+                val preferredMetadataSourceKey = viewState.value.preferredMergeMetadataSourceKey
+                mergeLibraryGroupMembersUseCase(
+                    profileId,
+                    selectedMembers,
+                    preferredMetadataSourceKey,
+                )
+                selectedMergeGroupsById.clear()
+                updateState {
+                    it.copy(
+                        isMergeSelectionMode = false,
+                        selectedMergeGroupIds = emptySet(),
+                        mergeMetadataOptions = emptyList(),
+                        preferredMergeMetadataSourceKey = null,
+                        isMergingGroups = false,
+                        mergeSelectionError = false,
+                    )
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: Exception) {
+                selectedMergeGroupsById.clear()
+                updateState {
+                    it.copy(
+                        isMergeSelectionMode = false,
+                        selectedMergeGroupIds = emptySet(),
+                        mergeMetadataOptions = emptyList(),
+                        preferredMergeMetadataSourceKey = null,
+                        isResolvingMergeSelection = false,
+                        isMergingGroups = false,
+                        mergeSelectionError = true,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun selectedMergeMetadataOptions(): List<MergeMetadataSourceOption> =
+        selectedMergeGroupsById.values.flatMap { group -> group.toMergeMetadataSourceOptions() }
 
     private fun toggleSearch() {
         val currentlyVisible = viewState.value.isSearchVisible
@@ -232,17 +442,21 @@ class BooksListViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun toggleFavorite(bookUuid: String) {
-        val currentIsFavorite = viewState.value.favoriteBookUuids.contains(bookUuid)
-        analytics.logEvent(
-            BookAnalyticsEvent.FavoriteToggled(
-                bookUuid = bookUuid,
-                isFavorite = !currentIsFavorite,
-                source = "list",
+    private fun toggleFavorite(book: BookUiModel) {
+        val action = favoriteClickAction(book, viewState.value.favoriteBookUuids)
+        action.bookUuids.forEach { bookUuid ->
+            analytics.logEvent(
+                BookAnalyticsEvent.FavoriteToggled(
+                    bookUuid = bookUuid,
+                    isFavorite = action.isFavorite,
+                    source = "list",
+                )
             )
-        )
+        }
         viewModelScope.launch {
-            toggleFavoriteUseCase(bookUuid)
+            action.bookUuids.forEach { bookUuid ->
+                toggleFavoriteUseCase.setFavorite(bookUuid, action.isFavorite)
+            }
         }
     }
 
@@ -276,9 +490,18 @@ class BooksListViewModel(
                         }
 
                         val uiBooks = booksWithProgress.map { it.book.toUiModel() }
-                        val progressInfo = booksWithProgress
-                            .filter { it.progressInfo != null }
-                            .associate { it.book.uuid to it.progressInfo!!.toUiModel() }
+                        val progressInfo = buildMap {
+                            booksWithProgress.forEach { bookWithProgress ->
+                                val info = bookWithProgress.progressInfo?.toUiModel()
+                                    ?: return@forEach
+                                bookWithProgress.book.unifiedGroupId?.let { groupId ->
+                                    put(groupId, info)
+                                }
+                                bookWithProgress.book.groupMemberUuids.forEach { bookUuid ->
+                                    put(bookUuid, info)
+                                }
+                            }
+                        }
 
                         updateState {
                             it.copy(

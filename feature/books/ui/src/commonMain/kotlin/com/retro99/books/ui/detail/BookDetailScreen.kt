@@ -112,6 +112,7 @@ import com.retro99.books.domain.BookFileTransfer
 import com.retro99.books.ui.model.SeriesUiModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.DownloadState
+import com.retro99.library.domain.projection.LibraryBookGroup
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -192,12 +193,25 @@ private const val DescriptionExpandThreshold = 200
 fun BookDetailScreen(
     serverId: String,
     bookUuid: String,
-    onNavigateToReader: (serverId: String, bookUuid: String, bookType: BookType, bookTitle: String) -> Unit,
+    onNavigateToLibraryGroup: (groupId: String) -> Unit,
+    onNavigateToReader: (
+        serverId: String,
+        bookUuid: String,
+        bookType: BookType,
+        bookTitle: String,
+    ) -> Unit,
     onNavigateToSeriesDetail: (seriesUuid: String, seriesName: String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BookDetailViewModel = koinViewModel {
-        parametersOf(serverId, bookUuid, onNavigateToReader, onNavigateToSeriesDetail, onBack)
+        parametersOf(
+            serverId,
+            bookUuid,
+            onNavigateToLibraryGroup,
+            onNavigateToReader,
+            onNavigateToSeriesDetail,
+            onBack,
+        )
     },
 ) {
     BaseScreen(
@@ -208,6 +222,8 @@ fun BookDetailScreen(
             viewState.isLoading -> LoadingScreen()
             viewState.book != null -> BookDetailScreenContent(
                 book = viewState.book,
+                libraryGroup = viewState.libraryGroup,
+                onNavigateToReader = onNavigateToReader,
                 ebookDownloadState = viewState.ebookDownloadState,
                 audiobookDownloadState = viewState.audiobookDownloadState,
                 readaloudDownloadState = viewState.readaloudDownloadState,
@@ -237,6 +253,13 @@ fun BookDetailScreen(
 @Composable
 private fun BookDetailScreenContent(
     book: BookUiModel,
+    libraryGroup: LibraryBookGroup?,
+    onNavigateToReader: (
+        serverId: String,
+        bookUuid: String,
+        bookType: BookType,
+        bookTitle: String,
+    ) -> Unit,
     ebookDownloadState: DownloadState,
     audiobookDownloadState: DownloadState,
     readaloudDownloadState: DownloadState,
@@ -432,6 +455,14 @@ private fun BookDetailScreenContent(
                         readaloudDownloadState = readaloudDownloadState,
                         intentDispatcher = intentDispatcher,
                     )
+
+                    libraryGroup?.let { group ->
+                        Spacer(modifier = Modifier.height(20.dp))
+                        LibraryGroupLocationsSection(
+                            group = group,
+                            showReaderActions = false,
+                        )
+                    }
 
                     if (supportsBookBackup) {
                         Spacer(modifier = Modifier.height(12.dp))

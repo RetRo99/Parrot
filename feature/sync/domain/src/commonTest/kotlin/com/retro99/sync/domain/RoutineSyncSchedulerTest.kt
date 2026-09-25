@@ -77,4 +77,22 @@ class RoutineSyncSchedulerTest {
         assertEquals(listOf(30_000L), requests)
         scheduler.close()
     }
+
+    @Test
+    fun closingWhileWaitingForAnotherDirtySignalCancelsWorkerSafely() = runTest {
+        val requests = mutableListOf<Long>()
+        val scheduler = RoutineSyncScheduler(
+            scope = this,
+            nowMillis = { testScheduler.currentTime },
+            requestSync = { requests += testScheduler.currentTime },
+        )
+
+        scheduler.markDirty()
+        runCurrent()
+        scheduler.close()
+        scheduler.close()
+        runCurrent()
+
+        assertEquals(emptyList(), requests)
+    }
 }

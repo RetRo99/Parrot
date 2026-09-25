@@ -110,6 +110,18 @@ class HomeNavigationStateHolder(
         currentBackStack.add(destination)
     }
 
+    /** Replace the visible destination only when it is still the expected route. */
+    fun replaceCurrentDestination(
+        expected: HomeDestination,
+        replacement: HomeDestination,
+    ): Boolean {
+        val stack = currentBackStack
+        if (stack.lastOrNull() != expected || expected == replacement) return false
+
+        stack[stack.lastIndex] = replacement
+        return true
+    }
+
     /**
      * Switch to a different tab.
      */
@@ -155,6 +167,27 @@ class HomeNavigationStateHolder(
         stack.add(destination)
     }
 
+    /** Replace a reader route only when the selected book changes. */
+    fun navigateToReaderReplacing(
+        destination: HomeDestination.Reader,
+        tab: HomeTab = currentTab,
+    ) {
+        val stack = backStacks[tab] ?: return
+        val currentReader = stack.lastOrNull() as? HomeDestination.Reader
+        val isSameReader = currentReader?.let { current ->
+            current.serverId == destination.serverId &&
+                current.bookUuid == destination.bookUuid &&
+                current.bookType == destination.bookType
+        } == true
+
+        if (isSameReader) {
+            currentTab = tab
+            return
+        }
+
+        navigateToReplacing(destination, tab)
+    }
+
     /**
      * Reset all back stacks to their root destinations.
      * Used when switching user profiles to ensure a clean navigation state.
@@ -182,4 +215,3 @@ private val HomeDestinationListSaver = Saver<SnapshotStateList<HomeDestination>,
         Json.decodeFromString<List<HomeDestination>>(jsonString).toMutableStateList()
     }
 )
-

@@ -41,6 +41,7 @@ import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -96,6 +97,8 @@ fun BookItemCard(
     isFavorite: Boolean,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    isSelectedForMerge: Boolean = false,
+    onMergeSelectionChanged: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
     progressInfo: BookProgressInfoUiModel? = null,
     showServerBadge: Boolean = true,
@@ -315,28 +318,37 @@ fun BookItemCard(
                 MediaTypeRow(book = book)
             }
 
-            IconButton(onClick = onFavoriteClick) {
-                AnimatedContent(
-                    targetState = isFavorite,
-                    transitionSpec = {
-                        (scaleIn(initialScale = 0.4f, animationSpec = tween(150)) + fadeIn(tween(150))) togetherWith
-                            (scaleOut(targetScale = 0.4f, animationSpec = tween(150)) + fadeOut(tween(150)))
-                    },
-                    label = "favoriteIcon",
-                ) { favorite ->
-                    Icon(
-                        imageVector = if (favorite) {
-                            Icons.Filled.Favorite
-                        } else {
-                            Icons.Outlined.FavoriteBorder
+            if (onMergeSelectionChanged != null) {
+                Checkbox(
+                    checked = isSelectedForMerge,
+                    onCheckedChange = onMergeSelectionChanged,
+                )
+            } else {
+                IconButton(onClick = onFavoriteClick) {
+                    AnimatedContent(
+                        targetState = isFavorite,
+                        transitionSpec = {
+                            (scaleIn(initialScale = 0.4f, animationSpec = tween(150)) +
+                                fadeIn(tween(150))) togetherWith
+                                (scaleOut(targetScale = 0.4f, animationSpec = tween(150)) +
+                                    fadeOut(tween(150)))
                         },
-                        contentDescription = null,
-                        tint = if (favorite) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
+                        label = "favoriteIcon",
+                    ) { favorite ->
+                        Icon(
+                            imageVector = if (favorite) {
+                                Icons.Filled.Favorite
+                            } else {
+                                Icons.Outlined.FavoriteBorder
+                            },
+                            contentDescription = null,
+                            tint = if (favorite) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -349,6 +361,8 @@ fun BookGridCard(
     isFavorite: Boolean,
     onClick: () -> Unit,
     onFavoriteClick: () -> Unit,
+    isSelectedForMerge: Boolean = false,
+    onMergeSelectionChanged: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
     progressInfo: BookProgressInfoUiModel? = null,
     showServerBadge: Boolean = true,
@@ -374,31 +388,41 @@ fun BookGridCard(
                 contentScale = ContentScale.Crop,
                 contentDescription = book.title,
             )
-            IconButton(
-                onClick = onFavoriteClick,
-                modifier = Modifier.align(Alignment.TopEnd),
-            ) {
-                AnimatedContent(
-                    targetState = isFavorite,
-                    transitionSpec = {
-                        (scaleIn(initialScale = 0.4f, animationSpec = tween(150)) + fadeIn(tween(150))) togetherWith
-                            (scaleOut(targetScale = 0.4f, animationSpec = tween(150)) + fadeOut(tween(150)))
-                    },
-                    label = "favoriteIconGrid",
-                ) { favorite ->
-                    Icon(
-                        imageVector = if (favorite) {
-                            Icons.Filled.Favorite
-                        } else {
-                            Icons.Outlined.FavoriteBorder
+            if (onMergeSelectionChanged != null) {
+                Checkbox(
+                    checked = isSelectedForMerge,
+                    onCheckedChange = onMergeSelectionChanged,
+                    modifier = Modifier.align(Alignment.TopEnd),
+                )
+            } else {
+                IconButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier.align(Alignment.TopEnd),
+                ) {
+                    AnimatedContent(
+                        targetState = isFavorite,
+                        transitionSpec = {
+                            (scaleIn(initialScale = 0.4f, animationSpec = tween(150)) +
+                                fadeIn(tween(150))) togetherWith
+                                (scaleOut(targetScale = 0.4f, animationSpec = tween(150)) +
+                                    fadeOut(tween(150)))
                         },
-                        contentDescription = null,
-                        tint = if (favorite) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        },
-                    )
+                        label = "favoriteIconGrid",
+                    ) { favorite ->
+                        Icon(
+                            imageVector = if (favorite) {
+                                Icons.Filled.Favorite
+                            } else {
+                                Icons.Outlined.FavoriteBorder
+                            },
+                            contentDescription = null,
+                            tint = if (favorite) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
+                        )
+                    }
                 }
             }
             if (progressInfo?.hasAnyCached == true) {

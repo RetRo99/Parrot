@@ -18,6 +18,8 @@ import com.retro99.home.ui.di.HomeUiModule
 import com.retro99.login.data.di.LoginDataModule
 import com.retro99.login.domain.di.LoginDomainModule
 import com.retro99.login.ui.di.LoginUiModule
+import com.retro99.library.data.di.LibraryDataModule
+import com.retro99.library.domain.di.LibraryDomainModule
 import com.retro99.network.implementation.di.NetworkingModule
 import com.retro99.preferences.implementation.di.PreferencesModule
 import com.retro99.reader.data.di.ReaderDataModule
@@ -74,6 +76,8 @@ import org.koin.core.annotation.Module
         HomeDataModule::class,
         BooksDomainModule::class,
         BooksDataModule::class,
+        LibraryDomainModule::class,
+        LibraryDataModule::class,
         BooksUiModule::class,
         ReaderDomainModule::class,
         ReaderDataModule::class,

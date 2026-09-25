@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext HTTP traffic to all domains (development only) -->
+    <!-- REQUIRED: allows connections to user-hosted servers over plain HTTP on the LAN
+         (Storyteller/Audiobookshelf self-hosted instances, raw IPs, .local names).
+         Hosts are user-entered at runtime, so domain-config rules cannot be used.
+         See docs/network-security-and-local-servers.md before changing this. -->
     <base-config cleartextTrafficPermitted="true" />
 </network-security-config>
 

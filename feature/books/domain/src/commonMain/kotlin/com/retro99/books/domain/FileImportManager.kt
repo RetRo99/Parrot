@@ -43,6 +43,12 @@ interface FileImportManager {
     fun deleteImportedBookFiles(uuid: String): Boolean
 
     /**
+     * Removes only the selected imported media file. The reference must be an owned import path;
+     * the shared cover and other media files are deliberately left intact.
+     */
+    fun deleteImportedBookReplicaFile(uuid: String, storageReference: String): Boolean
+
+    /**
      * Deletes a local book completely - both from database and file storage.
      *
      * @param uuid The UUID of the imported book
@@ -50,4 +56,3 @@ interface FileImportManager {
      */
     suspend fun deleteLocalBook(uuid: String): CompletableResult
 }
-

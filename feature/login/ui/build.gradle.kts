@@ -39,7 +39,7 @@ kotlin {
             implementation(projects.translations)
             implementation(projects.feature.login.domain)
             implementation(projects.lib.analytics.api)
+            implementation(projects.lib.server.api)
         }
     }
 }
-

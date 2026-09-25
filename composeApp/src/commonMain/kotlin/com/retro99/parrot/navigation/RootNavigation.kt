@@ -42,7 +42,9 @@ fun RootNavigation(
                 entry<RootDestination.Login> { destination ->
                     LoginNavigation(
                         onLoginSuccess = {
-                            intentDispatcher(RootNavigationIntent.OnLoginSuccess)
+                            intentDispatcher(
+                                RootNavigationIntent.OnLoginSuccess(destination.existingServerId),
+                            )
                         },
                         onBack = if (!destination.initial) {
                             { intentDispatcher(RootNavigationIntent.OnBackFromLogin) }
@@ -50,13 +52,16 @@ fun RootNavigation(
                             null
                         },
                         startAtLogin = !destination.initial,
+                        existingServerId = destination.existingServerId,
                     )
                 }
 
                 entry<RootDestination.Home> {
                     HomeNavigation(
-                        onNavigateToLogin = {
-                            intentDispatcher(RootNavigationIntent.OnLoginClicked)
+                        onNavigateToLogin = { existingServerId ->
+                            intentDispatcher(
+                                RootNavigationIntent.OnLoginClicked(existingServerId),
+                            )
                         },
                     )
                 }
@@ -64,4 +69,3 @@ fun RootNavigation(
         )
     }
 }
-

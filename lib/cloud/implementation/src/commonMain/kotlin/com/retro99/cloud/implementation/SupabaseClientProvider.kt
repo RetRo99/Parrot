@@ -3,6 +3,7 @@ package com.retro99.cloud.implementation
 import com.retro99.user.api.UserRegistry
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.CodeVerifierCache
 import io.github.jan.supabase.auth.FlowType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.koin.core.annotation.Named
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -43,6 +45,9 @@ class SupabaseClientProvider(
     @Provided private val configuration: CloudConfiguration,
     @Provided private val cloudSessionManager: CloudSessionManager,
     @Provided private val userRegistry: UserRegistry,
+    private val authCodeVerifierCache: CodeVerifierCache? = null,
+    @Named("authLifecycleCallbacksEnabled")
+    private val authLifecycleCallbacksEnabled: Boolean? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val profileMutex = Mutex()
@@ -100,6 +105,10 @@ class SupabaseClientProvider(
                 defaultRedirectUrl = configuration.redirectUrl
                 autoLoadFromStorage = false
                 this.sessionManager = profileSessionManager
+                this.codeVerifierCache = authCodeVerifierCache
+                authLifecycleCallbacksEnabled?.let { enabled ->
+                    enableLifecycleCallbacks = enabled
+                }
             }
         }
         return ActiveClientState(

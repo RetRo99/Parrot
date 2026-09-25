@@ -171,11 +171,33 @@ interface BookFileTransferManager {
 
     suspend fun enqueueDownload(serverId: String, libraryBookId: String, mediaType: String): String
 
+    /** Enqueues the exact Cloud file selected by a remote replica target. */
+    suspend fun enqueueDownloadForCloudFile(
+        serverId: String,
+        libraryBookId: String,
+        cloudBookId: String,
+        cloudBookFileId: String,
+    ): String = error("Exact Cloud file downloads are not supported")
+
     suspend fun removeDownload(serverId: String, libraryBookId: String, mediaType: String)
 
     suspend fun deleteRemoteBackup(serverId: String, libraryBookId: String, mediaType: String)
 
-    /** Removes only app-provisioned replicas associated with a deleted cloud file. */
+    /** Deletes the exact selected Cloud file while preserving completed local downloads. */
+    suspend fun deleteRemoteCloudFile(
+        serverId: String,
+        libraryBookId: String,
+        cloudBookId: String,
+        cloudBookFileId: String,
+        mediaType: String,
+    ) {
+        error("Exact Cloud file deletion is not supported")
+    }
+
+    /** Cancel active downloads and clean their staging files without removing completed copies. */
+    suspend fun cancelDownloadsForCloudFile(cloudBookFileId: String)
+
+    /** Removes app-provisioned replicas after an explicit mandatory invalidation event. */
     suspend fun invalidateCloudFile(cloudBookFileId: String)
 
     suspend fun cancel(serverId: String, libraryBookId: String)

@@ -505,7 +505,7 @@
     <string name="cloud_account_sync_status_completed" tools:ignore="MissingTranslation">Sync complete: %1$d sent, %2$d received, %3$d pending.</string>
     <string name="cloud_account_sync_status_items_progress" tools:ignore="MissingTranslation">Completed %1$d of %2$d items.</string>
     <string name="cloud_account_sync_status_bytes_progress" tools:ignore="MissingTranslation">Transferred %1$d of %2$d bytes.</string>
-    <string name="cloud_account_sync_status_last_successful" tools:ignore="MissingTranslation">Last successful delivery: %s</string>
+    <string name="cloud_account_sync_status_last_successful" tools:ignore="MissingTranslation">Last successful delivery: %1$s</string>
     <string name="cloud_backup_button" tools:ignore="MissingTranslation">Back up to Parrot Cloud</string>
     <string name="cloud_backup_title" tools:ignore="MissingTranslation">Back up this book?</string>
     <string name="cloud_backup_attestation" tools:ignore="MissingTranslation">I confirm I have the right to store this file in my Parrot Cloud account.</string>
@@ -565,4 +565,96 @@
     <string name="cloud_storage_usage_reserved" tools:ignore="MissingTranslation">%1$s reserved for active transfers</string>
     <string name="cloud_storage_usage_error" tools:ignore="MissingTranslation">Storage usage unavailable: %1$s</string>
     <string name="cloud_account_sign_in_with_google" tools:ignore="MissingTranslation">Continue with Google</string>
+    <string name="books_detail_sources" tools:ignore="MissingTranslation">Sources and files</string>
+    <string name="books_detail_transfers" tools:ignore="MissingTranslation">Transfers</string>
+    <string name="books_detail_upload_checking" tools:ignore="MissingTranslation">Checking backup availability…</string>
+    <string name="books_detail_upload_unavailable" tools:ignore="MissingTranslation">Backup unavailable</string>
+    <string name="books_detail_source_present" tools:ignore="MissingTranslation">Source available</string>
+    <string name="books_detail_source_stale" tools:ignore="MissingTranslation">Last known source details</string>
+    <string name="books_detail_source_removed" tools:ignore="MissingTranslation">Removed from source</string>
+    <string name="books_detail_resource_device" tools:ignore="MissingTranslation">On this device</string>
+    <string name="books_detail_resource_remote" tools:ignore="MissingTranslation">Available remotely</string>
+    <string name="books_detail_resource_pending" tools:ignore="MissingTranslation">Transfer in progress</string>
+    <string name="books_detail_resource_unavailable" tools:ignore="MissingTranslation">Unavailable</string>
+    <string name="books_detail_resource_unknown" tools:ignore="MissingTranslation">Availability unknown</string>
+    <string name="books_detail_open_resource" tools:ignore="MissingTranslation">Open %1$s</string>
+    <string name="books_detail_group_unavailable" tools:ignore="MissingTranslation">This library group is unavailable.</string>
+    <string name="books_detail_retry" tools:ignore="MissingTranslation">Try again</string>
+    <string name="books_merge_start" tools:ignore="MissingTranslation">Select entries to merge</string>
+    <string name="books_merge_title" tools:ignore="MissingTranslation">Merge entries</string>
+    <string name="books_merge_selection_count" tools:ignore="MissingTranslation">Selected entries: %1$d</string>
+    <string name="books_merge_confirmation" tools:ignore="MissingTranslation">Merge the selected entries into one library entry? Source files and each format's reading or listening progress remain separate.</string>
+    <string name="books_merge_confirm" tools:ignore="MissingTranslation">Merge</string>
+    <string name="books_merge_cancel" tools:ignore="MissingTranslation">Cancel</string>
+    <string name="books_merge_selection_stale" tools:ignore="MissingTranslation">The selected entries changed. Refresh the library and try again.</string>
+    <string name="books_merge_metadata_source" tools:ignore="MissingTranslation">Use display metadata from</string>
+    <string name="books_merge_metadata_details" tools:ignore="MissingTranslation">%1$s · %2$s</string>
+    <string name="books_merge_source_local" tools:ignore="MissingTranslation">This device</string>
+    <string name="books_merge_source_storyteller" tools:ignore="MissingTranslation">Storyteller</string>
+    <string name="books_merge_source_audiobookshelf" tools:ignore="MissingTranslation">Audiobookshelf</string>
+    <string name="books_merge_source_parrot_cloud" tools:ignore="MissingTranslation">Parrot Cloud</string>
+    <string name="books_merge_source_unknown" tools:ignore="MissingTranslation">Other source</string>
+    <string name="books_detail_manage_groups" tools:ignore="MissingTranslation">Manage grouped books</string>
+    <string name="books_detail_manage_done" tools:ignore="MissingTranslation">Done</string>
+    <string name="books_detail_split_selection_count" tools:ignore="MissingTranslation">Selected sources: %1$d</string>
+    <string name="books_detail_split_title" tools:ignore="MissingTranslation">Separate selected sources?</string>
+    <string name="books_detail_split_message" tools:ignore="MissingTranslation">The selected sources will become a separate library entry. Files and progress stay unchanged.</string>
+    <string name="books_detail_split_action" tools:ignore="MissingTranslation">Separate</string>
+    <string name="books_detail_split_stale" tools:ignore="MissingTranslation">The group changed. Reload its details and try again.</string>
+    <string name="books_detail_split_keep_member" tools:ignore="MissingTranslation">Leave at least one source in this group.</string>
+    <string name="books_detail_progress_separate" tools:ignore="MissingTranslation">Each format keeps its own reading or listening progress.</string>
+    <string name="books_detail_remove_device_replica" tools:ignore="MissingTranslation">Remove device copy</string>
+    <string name="books_detail_remove_replica_title" tools:ignore="MissingTranslation">Remove copy from this device?</string>
+    <string name="books_detail_remove_replica_message" tools:ignore="MissingTranslation">Remove the %1$s copy of “%2$s” from this device? The library entry and reading or listening progress will remain.</string>
+    <string name="books_detail_remove_replica_confirm" tools:ignore="MissingTranslation">Remove copy</string>
+    <string name="books_detail_remove_replica_retry" tools:ignore="MissingTranslation">Retry removal</string>
+    <string name="books_detail_remove_replica_stale" tools:ignore="MissingTranslation">The selected device copy changed. Refresh and try again.</string>
+    <string name="books_detail_preferred_media" tools:ignore="MissingTranslation">Preferred source</string>
+    <string name="books_detail_default_media" tools:ignore="MissingTranslation">Default source</string>
+    <string name="books_detail_delete_remote_replica" tools:ignore="MissingTranslation">Delete remote copy</string>
+    <string name="books_detail_delete_remote_replica_title" tools:ignore="MissingTranslation">Delete remote copy?</string>
+    <string name="books_detail_delete_remote_replica_message" tools:ignore="MissingTranslation">Delete the remote %1$s file from “%2$s”? Copies already saved to this device and reading or listening progress will remain.</string>
+    <string name="books_detail_delete_remote_replica_confirm" tools:ignore="MissingTranslation">Delete remote copy</string>
+    <string name="books_detail_delete_remote_replica_stale" tools:ignore="MissingTranslation">The selected remote file changed. Refresh and try again.</string>
+    <string name="books_detail_set_preferred_media" tools:ignore="MissingTranslation">Use as preferred source</string>
+    <string name="books_detail_preferred_media_error" tools:ignore="MissingTranslation">The preferred source could not be saved. Refresh the group and try again.</string>
+    <string name="books_detail_remove_remote_book" tools:ignore="MissingTranslation">Remove book from Cloud</string>
+    <string name="books_detail_remove_remote_book_title" tools:ignore="MissingTranslation">Remove book from Cloud?</string>
+    <string name="books_detail_remove_remote_book_message" tools:ignore="MissingTranslation">Remove “%1$s”, its Cloud backups, metadata, and remote reading or listening progress? Copies on this device and local reading or listening progress will remain.</string>
+    <string name="books_detail_remove_remote_book_confirm" tools:ignore="MissingTranslation">Remove book</string>
+    <string name="books_detail_remove_remote_book_stale" tools:ignore="MissingTranslation">The Cloud book changed. Refresh the library and try again.</string>
+    <string name="books_detail_remote_book_removal_queued" tools:ignore="MissingTranslation">Cloud book removal queued. It will finish when sync completes.</string>
+    <string name="settings_server_pairing_action" tools:ignore="MissingTranslation">Pair devices</string>
+    <string name="settings_server_pairing_manage" tools:ignore="MissingTranslation">Manage pairing</string>
+    <string name="settings_server_pairing_title" tools:ignore="MissingTranslation">Pair %1$s across devices</string>
+    <string name="settings_server_pairing_status_checking" tools:ignore="MissingTranslation">Checking pairing…</string>
+    <string name="settings_server_pairing_status_unpaired" tools:ignore="MissingTranslation">Not paired</string>
+    <string name="settings_server_pairing_status_paired" tools:ignore="MissingTranslation">Paired across devices</string>
+    <string name="settings_server_pairing_account_required" tools:ignore="MissingTranslation">Sign in to the same Parrot Cloud account on both devices before pairing.</string>
+    <string name="settings_server_pairing_cloud_account" tools:ignore="MissingTranslation">Parrot Cloud account: %1$s</string>
+    <string name="settings_server_pairing_cloud_mismatch" tools:ignore="MissingTranslation">This connection is paired to a different Parrot Cloud account. Sign in to that account on this device. Existing group decisions are unchanged.</string>
+    <string name="settings_server_pairing_source_mismatch" tools:ignore="MissingTranslation">This code was created for a different Audiobookshelf account. Use the same Audiobookshelf login on both devices.</string>
+    <string name="settings_server_pairing_not_authenticated" tools:ignore="MissingTranslation">Log in to this Audiobookshelf server before pairing.</string>
+    <string name="settings_server_pairing_account_id_unavailable" tools:ignore="MissingTranslation">Audiobookshelf did not provide an account ID. Check the server login and try again.</string>
+    <string name="settings_server_pairing_server_unavailable" tools:ignore="MissingTranslation">Could not verify this Audiobookshelf connection. Check that the server is online.</string>
+    <string name="settings_server_pairing_reauth_required" tools:ignore="MissingTranslation">Your Parrot Cloud session needs to be restored. Sign in again before pairing.</string>
+    <string name="settings_server_pairing_code" tools:ignore="MissingTranslation">Pairing code</string>
+    <string name="settings_server_pairing_code_created" tools:ignore="MissingTranslation">Copy this code and import it on the other device.</string>
+    <string name="settings_server_pairing_code_hint" tools:ignore="MissingTranslation">Pairing codes contain account information. Share them only with your own devices.</string>
+    <string name="settings_server_pairing_import_hint" tools:ignore="MissingTranslation">Paste a code created on another device using the same Parrot Cloud account, Audiobookshelf server, and Audiobookshelf login.</string>
+    <string name="settings_server_pairing_create_code" tools:ignore="MissingTranslation">Create code</string>
+    <string name="settings_server_pairing_import_code" tools:ignore="MissingTranslation">Import code</string>
+    <string name="settings_server_pairing_dismiss" tools:ignore="MissingTranslation">Done</string>
+    <string name="settings_server_pairing_code_invalid" tools:ignore="MissingTranslation">That pairing code is invalid or incomplete.</string>
+    <string name="settings_server_pairing_unsupported_code" tools:ignore="MissingTranslation">This pairing code uses a newer format. Update both devices and try again.</string>
+    <string name="settings_server_pairing_unpair" tools:ignore="MissingTranslation">Unpair</string>
+    <string name="settings_server_pairing_unpair_complete" tools:ignore="MissingTranslation">Audiobookshelf pairing was removed. Existing group decisions and books were left unchanged.</string>
+    <string name="settings_server_pairing_import_complete" tools:ignore="MissingTranslation">This Audiobookshelf connection is paired with the other device.</string>
+    <string name="settings_server_pairing_code_ready" tools:ignore="MissingTranslation">Pairing code is ready to import on another device.</string>
+    <string name="settings_server_pairing_conflicts" tools:ignore="MissingTranslation">Pairing saved, but %1$d existing source(s) conflict with grouped books. Existing group decisions were left unchanged. Resolve the conflicting books in the Library, then retry pairing.</string>
+    <string name="settings_server_pairing_unpair_blocked" tools:ignore="MissingTranslation">Cannot unpair yet: %1$d Audiobookshelf source(s) still belong to shared groups. Existing group decisions were left unchanged. Resolve them in the Library, then retry.</string>
+    <string name="settings_server_pairing_unexpected_error" tools:ignore="MissingTranslation">Pairing could not be completed. Check your connection and try again.</string>
+    <string name="settings_server_pairing_same_server_required" tools:ignore="MissingTranslation">Both devices must connect to the same Audiobookshelf server installation and use the same Audiobookshelf login.</string>
+    <string name="login_error_saved_server_unavailable" tools:ignore="MissingTranslation">The saved Storyteller connection could not be found. Return to server settings and add it again.</string>
+    <string name="settings_server_reauthenticate" tools:ignore="MissingTranslation">Reauthenticate</string>
 </resources>

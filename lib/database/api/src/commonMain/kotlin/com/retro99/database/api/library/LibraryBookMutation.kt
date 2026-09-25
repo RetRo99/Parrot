@@ -6,4 +6,5 @@ data class LibraryBookMutation(
     val libraryBook: LibraryBookEntity,
     val localBookFile: LocalBookFileEntity,
     val outboxEntry: SyncOutboxEntry,
+    val intentionalReimport: Boolean = false,
 )

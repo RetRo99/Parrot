@@ -950,6 +950,7 @@ class MediaOverlayPlayer(
         }
         Log.d(TAG, "preparePlaylist: calling setMediaSources with ${mediaSources.size} sources")
         player.setMediaSources(mediaSources, initialTrackIndex, initialPositionMs)
+        mediaPlaybackController.onMediaItemsReplaced(player)
         Log.d(TAG, "preparePlaylist: calling player.prepare()")
         player.prepare()
         Log.d(TAG, "preparePlaylist: player.prepare() called, playbackState=${player.playbackState}, mediaItemCount=${player.mediaItemCount}")

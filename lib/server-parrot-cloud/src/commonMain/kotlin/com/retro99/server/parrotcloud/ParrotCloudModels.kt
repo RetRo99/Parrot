@@ -40,6 +40,8 @@ internal data class ParrotCloudBookPayload(
     val metadataJson: String? = null,
     @SerialName("remote_revision")
     val remoteRevision: Long? = null,
+    @SerialName("deleted_at")
+    val deletedAt: String? = null,
 )
 
 internal fun LibraryBookEntity.toServerBook(
@@ -59,6 +61,8 @@ internal fun LibraryBookEntity.toServerBook(
                 contentHashAlgorithm = file.contentHashAlgorithm,
                 localOrigin = localBook?.origin.takeIf { file.mediaType == localBook?.bookType },
                 cloudBookFileId = file.cloudBookFileId,
+                nativeResourceId = file.cloudBookFileId,
+                format = file.mediaType,
             )
         }
     } else {
@@ -72,6 +76,8 @@ internal fun LibraryBookEntity.toServerBook(
                 contentHashAlgorithm = contentHashAlgorithm,
                 localOrigin = localBook?.origin,
                 cloudBookFileId = localBook?.cloudBookFileId,
+                nativeResourceId = localBook?.cloudBookFileId,
+                format = normalizedFormat,
             ),
         )
     }

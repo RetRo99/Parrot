@@ -1,0 +1,160 @@
+CREATE TABLE IF NOT EXISTS library_source_identity_aliases (
+    profile_id TEXT NOT NULL,
+    old_source_key TEXT NOT NULL,
+    target_source_key TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (profile_id, old_source_key),
+    CHECK (old_source_key <> target_source_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_library_source_identity_alias_target
+ON library_source_identity_aliases(profile_id, target_source_key);
+
+getUnresolvedParrotCloudMembershipsForConnection:
+SELECT * FROM library_group_memberships
+WHERE profile_id = ? AND adapter_id = 'parrot-cloud'
+AND identity_kind = 'unresolved' AND backend_id = '' AND account_id = ''
+AND unresolved_connection_id = ? AND execution_connection_id = ?
+ORDER BY native_book_id;
+
+getUnresolvedMembershipForPromotion:
+SELECT * FROM library_group_memberships
+WHERE profile_id = ? AND adapter_id = ? AND identity_kind = 'unresolved'
+AND backend_id = '' AND account_id = '' AND unresolved_connection_id = ?
+AND native_book_id = ?;
+
+getPortableMembershipPromotionTarget:
+SELECT * FROM library_group_memberships
+WHERE profile_id = ? AND adapter_id = ? AND identity_kind = 'portable'
+AND backend_id = ? AND account_id = '' AND unresolved_connection_id = ''
+AND native_book_id = ?;
+
+getPortableMembershipForPromotion:
+SELECT * FROM library_group_memberships
+WHERE profile_id = ? AND adapter_id = ? AND identity_kind = 'portable'
+AND backend_id = ? AND account_id = ? AND unresolved_connection_id = ''
+AND native_book_id = ?;
+
+updateMembershipIdentityForPromotion:
+UPDATE library_group_memberships SET
+    identity_kind = 'portable',
+    backend_id = :backend_id,
+    account_id = :account_id,
+    unresolved_connection_id = '',
+    native_book_id = :target_native_book_id
+WHERE profile_id = :profile_id AND adapter_id = :adapter_id AND identity_kind = 'unresolved'
+AND backend_id = '' AND account_id = ''
+AND unresolved_connection_id = :unresolved_connection_id
+AND native_book_id = :source_native_book_id
+AND execution_connection_id = :execution_connection_id;
+
+deleteUnresolvedMembershipForPromotion:
+DELETE FROM library_group_memberships
+WHERE profile_id = :profile_id AND adapter_id = :adapter_id AND identity_kind = 'unresolved'
+AND backend_id = '' AND account_id = ''
+AND unresolved_connection_id = :unresolved_connection_id
+AND native_book_id = :source_native_book_id
+AND execution_connection_id = :execution_connection_id;
+
+getSourceIdentityAlias:
+SELECT * FROM library_source_identity_aliases
+WHERE profile_id = ? AND old_source_key = ?;
+
+insertSourceIdentityAlias:
+INSERT INTO library_source_identity_aliases(
+    profile_id, old_source_key, target_source_key, created_at
+) VALUES (?, ?, ?, ?);
+
+getSourceSnapshotForPromotion:
+SELECT * FROM library_source_snapshots
+WHERE profile_id = ? AND source_key = ?;
+
+countPromotionResourceKeyCollisions:
+SELECT COUNT(*) FROM library_source_resources AS unresolved
+JOIN library_source_resources AS portable
+    ON portable.profile_id = unresolved.profile_id
+    AND portable.native_resource_id = unresolved.native_resource_id
+    AND portable.revision_present = unresolved.revision_present
+    AND portable.revision_value = unresolved.revision_value
+WHERE unresolved.profile_id = ? AND unresolved.source_key = ?
+AND portable.source_key = ?;
+
+countPromotionSelfSeparations:
+SELECT COUNT(*) FROM library_manual_separations
+WHERE profile_id = ? AND (
+    (first_source_key = ? AND second_source_key = ?)
+    OR (first_source_key = ? AND second_source_key = ?)
+);
+
+getManualSeparationsForIdentityPromotion:
+SELECT * FROM library_manual_separations
+WHERE profile_id = ? AND (first_source_key = ? OR second_source_key = ?)
+ORDER BY decision_id;
+
+deleteManualSeparationForIdentityPromotion:
+DELETE FROM library_manual_separations
+WHERE profile_id = ? AND first_source_key = ? AND second_source_key = ?;
+
+insertManualSeparationForIdentityPromotion:
+INSERT INTO library_manual_separations(
+    profile_id, first_source_key, second_source_key, decision_id, created_at,
+    overridden_by_decision_id
+) VALUES (?, ?, ?, ?, ?, ?);
+
+updatePromotedSourceMetadataPreference:
+UPDATE library_group_metadata_preferences SET source_key = ?
+WHERE profile_id = ? AND source_key = ?;
+
+updatePromotedBookFingerprintSourceKey:
+UPDATE library_identity_evidence SET source_book_key = ?
+WHERE profile_id = ? AND kind = 'book_fingerprint' AND source_book_key = ?;
+
+insertPromotedSourceSnapshot:
+INSERT INTO library_source_snapshots(
+    profile_id, source_key, execution_connection_id, legacy_library_book_id,
+    title, description, cover_reference, publication_date, observed_at_epoch_ms,
+    observed_at_submillisecond_ns, presence, is_authoritative, revision
+)
+SELECT profile_id, ?, execution_connection_id, legacy_library_book_id,
+    title, description, cover_reference, publication_date, observed_at_epoch_ms,
+    observed_at_submillisecond_ns, presence, is_authoritative, revision
+FROM library_source_snapshots WHERE profile_id = ? AND source_key = ?;
+
+copyPromotedSourceSnapshotPeople:
+INSERT INTO library_source_snapshot_people(profile_id, source_key, role, position, name)
+SELECT profile_id, ?, role, position, name
+FROM library_source_snapshot_people WHERE profile_id = ? AND source_key = ?;
+
+copyPromotedSourceSnapshotSeries:
+INSERT INTO library_source_snapshot_series(
+    profile_id, source_key, position, native_id, name, sequence_value
+)
+SELECT profile_id, ?, position, native_id, name, sequence_value
+FROM library_source_snapshot_series WHERE profile_id = ? AND source_key = ?;
+
+copyPromotedSourceSnapshotTags:
+INSERT INTO library_source_snapshot_tags(profile_id, source_key, position, tag)
+SELECT profile_id, ?, position, tag
+FROM library_source_snapshot_tags WHERE profile_id = ? AND source_key = ?;
+
+copyPromotedSourceSnapshotMediaTypes:
+INSERT INTO library_source_snapshot_media_types(profile_id, source_key, position, media_type)
+SELECT profile_id, ?, position, media_type
+FROM library_source_snapshot_media_types WHERE profile_id = ? AND source_key = ?;
+
+copyPromotedSourceSnapshotResources:
+INSERT INTO library_source_snapshot_resources(
+    profile_id, source_key, resource_id, media_type, format, size_bytes, availability,
+    local_storage_reference, remote_resource_reference
+)
+SELECT profile_id, ?, resource_id, media_type, format, size_bytes, availability,
+    local_storage_reference, remote_resource_reference
+FROM library_source_snapshot_resources WHERE profile_id = ? AND source_key = ?;
+
+updatePromotedSourceResourceKeys:
+UPDATE library_source_resources SET source_key = ?
+WHERE profile_id = ? AND source_key = ?;
+
+deletePromotedSourceSnapshot:
+DELETE FROM library_source_snapshots
+WHERE profile_id = ? AND source_key = ?;

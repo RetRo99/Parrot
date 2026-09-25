@@ -1,0 +1,12 @@
+CREATE TABLE IF NOT EXISTS library_source_snapshot_collections (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    native_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at TEXT,
+    updated_at TEXT,
+    PRIMARY KEY (profile_id, source_key, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);

@@ -10,11 +10,20 @@ import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookSortOption
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.SortDirection
+import com.retro99.server.api.library.SourceBookKey
 
 data class BooksListViewState(
     val books: List<BookUiModel> = emptyList(),
     val searchQuery: String = "",
     val isSearchVisible: Boolean = false,
+    val isMergeSelectionMode: Boolean = false,
+    val selectedMergeGroupIds: Set<String> = emptySet(),
+    val mergeMetadataOptions: List<MergeMetadataSourceOption> = emptyList(),
+    val preferredMergeMetadataSourceKey: SourceBookKey? = null,
+    val isResolvingMergeSelection: Boolean = false,
+    val showMergeConfirmation: Boolean = false,
+    val isMergingGroups: Boolean = false,
+    val mergeSelectionError: Boolean = false,
     val favoriteBookUuids: Set<String> = emptySet(),
     val bookProgressInfo: Map<String, BookProgressInfoUiModel> = emptyMap(),
     val filterState: BookFilterState = BookFilterState(),
@@ -38,6 +47,10 @@ data class BooksListViewState(
     val showImportBackupAttestation: Boolean
         get() = pendingAutoBackupBookUuid != null
 
+    val canMergeSelectedGroups: Boolean
+        get() = isMergeSelectionMode && selectedMergeGroupIds.size >= 2 &&
+            !isResolvingMergeSelection && !isMergingGroups
+
     val filteredBooks: List<BookUiModel>
         get() = books
             .applySearchFilter(searchQuery)
@@ -46,22 +59,24 @@ data class BooksListViewState(
             .applySorting(sortConfig)
 
     val showServerBadge: Boolean
-        get() = books.mapNotNull { it.serverType }.distinct().size > 1
+        get() = books.flatMap { book -> book.groupServerTypes }.distinct().size > 1
 
     private fun List<BookUiModel>.applySearchFilter(query: String): List<BookUiModel> {
         if (query.isBlank()) return this
         val lowerQuery = query.lowercase()
         return filter { book ->
-            book.title.lowercase().contains(lowerQuery) ||
-                    book.authors.any { it.lowercase().contains(lowerQuery) } ||
-                    book.series.any { it.name.lowercase().contains(lowerQuery) } ||
-                    book.tags.any { it.lowercase().contains(lowerQuery) }
+            (listOf(book.title) + book.alternateTitles).any { title ->
+                title.lowercase().contains(lowerQuery)
+            } ||
+                    book.authors.any { author -> author.lowercase().contains(lowerQuery) } ||
+                    book.series.any { series -> series.name.lowercase().contains(lowerQuery) } ||
+                    book.tags.any { tag -> tag.lowercase().contains(lowerQuery) }
         }
     }
 
     private fun List<BookUiModel>.applyServerTypeFilter(serverType: ServerType?): List<BookUiModel> {
         if (serverType == null) return this
-        return filter { book -> book.serverType == serverType }
+        return filter { book -> serverType.identifier in book.groupServerTypes }
     }
 
     private fun List<BookUiModel>.applyQuickFilters(
@@ -73,9 +88,12 @@ data class BooksListViewState(
         return filter { book ->
             filters.all { filter ->
                 when (filter) {
-                    BookQuickFilter.FAVORITES -> book.uuid in favoriteUuids
-                    BookQuickFilter.IN_PROGRESS -> (progressInfo[book.uuid]?.displayProgression ?: 0.0) > 0.0
-                    BookQuickFilter.CACHED -> progressInfo[book.uuid]?.hasAnyCached == true
+                    BookQuickFilter.FAVORITES ->
+                        book.groupMemberUuids.any { bookUuid -> bookUuid in favoriteUuids }
+                    BookQuickFilter.IN_PROGRESS -> book.groupProgress(progressInfo)
+                        ?.displayProgression?.let { progression -> progression > 0.0 } == true
+                    BookQuickFilter.CACHED -> book.groupProgress(progressInfo)
+                        ?.hasAnyCached == true
                     BookQuickFilter.HAS_EBOOK -> book.hasEbook
                     BookQuickFilter.HAS_AUDIOBOOK -> book.hasAudiobook || book.hasReadaloud
                     BookQuickFilter.HAS_READALOUD -> book.hasReadaloud
@@ -84,6 +102,11 @@ data class BooksListViewState(
             }
         }
     }
+
+    private fun BookUiModel.groupProgress(
+        progressInfo: Map<String, BookProgressInfoUiModel>,
+    ): BookProgressInfoUiModel? = unifiedGroupId?.let { groupId -> progressInfo[groupId] }
+        ?: groupMemberUuids.firstNotNullOfOrNull { bookUuid -> progressInfo[bookUuid] }
 
     private fun List<BookUiModel>.applySorting(config: BookSortConfig): List<BookUiModel> {
         val comparator: Comparator<BookUiModel> = when (config.option) {

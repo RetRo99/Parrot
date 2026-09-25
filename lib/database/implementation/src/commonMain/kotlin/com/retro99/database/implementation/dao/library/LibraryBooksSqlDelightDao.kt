@@ -40,6 +40,13 @@ internal class LibraryBooksSqlDelightDao(
             .map { rows -> rows.map { row -> row.toEntity() } }
     }
 
+    fun observeDeletedCloudBookIds(): Flow<List<String>> {
+        return databaseManager.getDatabase().libraryBookQueries.getDeletedCloudBookIds()
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { rows -> rows }
+    }
+
     suspend fun getLibraryBookById(libraryBookId: String): LibraryBookEntity? {
         return withContext(Dispatchers.IO) {
             databaseManager.getDatabase().libraryBookQueries.getLibraryBookById(libraryBookId)
@@ -73,6 +80,17 @@ internal class LibraryBooksSqlDelightDao(
         return withContext(Dispatchers.IO) {
             databaseManager.getDatabase().libraryBookQueries
                 .getLibraryBookByCloudBookId(cloudBookId)
+                .executeAsOneOrNull()
+                ?.toEntity()
+        }
+    }
+
+    suspend fun getLibraryBookByCloudBookIdIncludingDeleted(
+        cloudBookId: String,
+    ): LibraryBookEntity? {
+        return withContext(Dispatchers.IO) {
+            databaseManager.getDatabase().libraryBookQueries
+                .getLibraryBookByCloudBookIdIncludingDeleted(cloudBookId)
                 .executeAsOneOrNull()
                 ?.toEntity()
         }

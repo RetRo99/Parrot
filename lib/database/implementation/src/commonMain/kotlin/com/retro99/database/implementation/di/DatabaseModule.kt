@@ -10,6 +10,11 @@ import com.retro99.database.api.cloudfiles.CloudFilesDatabase
 import com.retro99.database.api.favorites.FavoritesDatabase
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.database.api.library.LibraryEvidenceDatabase
+import com.retro99.database.api.library.LibraryGroupsDatabase
+import com.retro99.database.api.library.LibraryReplicaRemovalDatabase
+import com.retro99.database.api.library.LibrarySourceIdentityPromotionDatabase
+import com.retro99.database.api.library.LibrarySourceSnapshotsDatabase
 import com.retro99.database.api.reader.ReaderSettingsDatabase
 import com.retro99.database.api.statistics.ReadingSessionDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
@@ -29,6 +34,11 @@ import com.retro99.database.implementation.dao.importedbooks.ImportedBooksDataba
 import com.retro99.database.implementation.dao.importedbooks.ImportedBooksSqlDelightDao
 import com.retro99.database.implementation.dao.library.LibraryBooksDatabaseImpl
 import com.retro99.database.implementation.dao.library.LibraryBooksSqlDelightDao
+import com.retro99.database.implementation.dao.library.LibraryEvidenceSqlDelightDao
+import com.retro99.database.implementation.dao.library.LibraryGroupsSqlDelightDao
+import com.retro99.database.implementation.dao.library.LibraryReplicaRemovalSqlDelightDao
+import com.retro99.database.implementation.dao.library.LibrarySourceIdentityPromotionSqlDelightDao
+import com.retro99.database.implementation.dao.library.LibrarySourceSnapshotsSqlDelightDao
 import com.retro99.database.implementation.dao.reader.ReaderSettingsDatabaseImpl
 import com.retro99.database.implementation.dao.reader.ReaderSettingsSqlDelightDao
 import com.retro99.database.implementation.dao.statistics.ReadingSessionDatabaseImpl
@@ -153,6 +163,44 @@ class DatabaseModule {
         libraryBooksSqlDelightDao: LibraryBooksSqlDelightDao,
     ): LibraryBooksDatabase {
         return LibraryBooksDatabaseImpl(libraryBooksSqlDelightDao)
+    }
+
+    @Single
+    internal fun provideLibraryGroupsDatabase(
+        databaseManager: DatabaseManager,
+    ): LibraryGroupsDatabase {
+        return LibraryGroupsSqlDelightDao(databaseManager, databaseManager::getDatabase)
+    }
+
+    @Single
+    internal fun provideLibraryReplicaRemovalDatabase(
+        databaseManager: DatabaseManager,
+    ): LibraryReplicaRemovalDatabase {
+        return LibraryReplicaRemovalSqlDelightDao(databaseManager, databaseManager::getDatabase)
+    }
+
+    @Single
+    internal fun provideLibraryEvidenceDatabase(
+        databaseManager: DatabaseManager,
+    ): LibraryEvidenceDatabase {
+        return LibraryEvidenceSqlDelightDao(databaseManager, databaseManager::getDatabase)
+    }
+
+    @Single
+    internal fun provideLibrarySourceSnapshotsDatabase(
+        databaseManager: DatabaseManager,
+    ): LibrarySourceSnapshotsDatabase {
+        return LibrarySourceSnapshotsSqlDelightDao(databaseManager, databaseManager::getDatabase)
+    }
+
+    @Single
+    internal fun provideLibrarySourceIdentityPromotionDatabase(
+        databaseManager: DatabaseManager,
+    ): LibrarySourceIdentityPromotionDatabase {
+        return LibrarySourceIdentityPromotionSqlDelightDao(
+            databaseManager,
+            databaseManager::getDatabase,
+        )
     }
 
     @Single

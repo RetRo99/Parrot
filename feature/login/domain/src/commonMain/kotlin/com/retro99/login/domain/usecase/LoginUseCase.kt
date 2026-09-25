@@ -15,8 +15,15 @@ class LoginUseCase(
         serverUrl: String,
         username: String,
         password: String,
+        existingServerId: String? = null,
     ): CompletableResult {
-        return loginRepository.login(serverType, serverUrl, username, password)
+        return loginRepository.login(
+            serverType = serverType,
+            serverUrl = serverUrl,
+            username = username,
+            password = password,
+            existingServerId = existingServerId,
+        )
     }
 
     suspend fun withOAuth(
@@ -26,4 +33,3 @@ class LoginUseCase(
         return loginRepository.loginWithOAuth(serverType, serverUrl)
     }
 }
-

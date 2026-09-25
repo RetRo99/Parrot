@@ -69,6 +69,8 @@ data class RemoteProgressSnapshot(
     val snapshot: ProgressSnapshot,
     val version: String?,
     val observedAt: String?,
+    /** True when the change feed removes the Cloud progress baseline. */
+    val isDeleted: Boolean = false,
 )
 
 data class ProgressChangePage(

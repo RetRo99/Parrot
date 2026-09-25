@@ -13,6 +13,8 @@ kotlin {
         namespace = "com.retro99.server.api"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -26,6 +28,9 @@ kotlin {
             implementation(libs.coroutines)
             api(libs.ktor.client.core)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
-

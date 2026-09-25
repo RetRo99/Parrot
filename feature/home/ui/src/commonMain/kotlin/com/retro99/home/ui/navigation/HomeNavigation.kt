@@ -17,12 +17,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
 import com.retro99.books.ui.detail.BookDetailScreen
+import com.retro99.books.ui.detail.LibraryGroupDetailScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
 import com.retro99.home.ui.series.SeriesListScreen
 import com.retro99.books.domain.model.BookType
+import com.retro99.library.domain.projection.LibraryReaderTarget
 import com.retro99.reader.ui.audiobook.AudiobookPlayerScreen
 import com.retro99.reader.ui.reader.ReaderScreen
 import com.retro99.settings.ui.SettingsScreen
@@ -33,7 +35,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun HomeNavigation(
-    onNavigateToLogin: () -> Unit,
+    onNavigateToLogin: (String?) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeNavigationViewModel = koinViewModel(),
 ) {
@@ -60,8 +62,7 @@ fun HomeNavigation(
                     navigationState.goBack()
                 }
                 is HomeNavigationEvent.NavigateToReaderReplacing -> {
-                    navigationState.switchTab(event.tab)
-                    navigationState.navigateToReplacing(
+                    navigationState.navigateToReaderReplacing(
                         HomeDestination.Reader(
                             serverId = event.serverId,
                             bookUuid = event.bookUuid,
@@ -137,13 +138,11 @@ fun HomeNavigation(
                     entry<HomeDestination.BooksList> {
                         BooksListScreen(
                             onNavigateToBookDetail = { book ->
+                                val destination = book.unifiedGroupId?.let { groupId ->
+                                    HomeDestination.LibraryGroupDetail(groupId)
+                                } ?: HomeDestination.BookDetail(book.serverId, book.uuid)
                                 intentDispatcher(
-                                    HomeNavigationIntent.NavigateTo(
-                                        HomeDestination.BookDetail(
-                                            serverId = book.serverId,
-                                            bookUuid = book.uuid,
-                                        )
-                                    )
+                                    HomeNavigationIntent.NavigateTo(destination),
                                 )
                             },
                             headerContent = {
@@ -191,13 +190,11 @@ fun HomeNavigation(
                             seriesUuid = destination.seriesUuid,
                             seriesName = destination.seriesName,
                             onNavigateToBookDetail = { book ->
+                                val bookDestination = book.unifiedGroupId?.let { groupId ->
+                                    HomeDestination.LibraryGroupDetail(groupId)
+                                } ?: HomeDestination.BookDetail(book.serverId, book.uuid)
                                 intentDispatcher(
-                                    HomeNavigationIntent.NavigateTo(
-                                        HomeDestination.BookDetail(
-                                            serverId = book.serverId,
-                                            bookUuid = book.uuid,
-                                        )
-                                    )
+                                    HomeNavigationIntent.NavigateTo(bookDestination),
                                 )
                             },
                             onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
@@ -208,6 +205,12 @@ fun HomeNavigation(
                         BookDetailScreen(
                             serverId = destination.serverId,
                             bookUuid = destination.bookUuid,
+                            onNavigateToLibraryGroup = { groupId ->
+                                navigationState.replaceCurrentDestination(
+                                    expected = destination,
+                                    replacement = HomeDestination.LibraryGroupDetail(groupId),
+                                )
+                            },
                             onNavigateToReader = { serverId, bookUuid, bookType, bookTitle ->
                                 intentDispatcher(
                                     HomeNavigationIntent.RequestOpenReader(
@@ -232,11 +235,41 @@ fun HomeNavigation(
                         )
                     }
 
+                    entry<HomeDestination.LibraryGroupDetail> { destination ->
+                        LibraryGroupDetailScreen(
+                            groupId = destination.groupId,
+                            onNavigateToReader = { target, bookType ->
+                                intentDispatcher(
+                                    HomeNavigationIntent.RequestOpenReader(
+                                        serverId = target.connectionId,
+                                        bookUuid = target.nativeBookId,
+                                        bookType = bookType,
+                                        bookTitle = target.title,
+                                        selection = target.toLaunchSelection(),
+                                    ),
+                                )
+                            },
+                            onReplaceWithCanonicalGroup = { canonicalGroupId ->
+                                navigationState.replaceCurrentDestination(
+                                    expected = destination,
+                                    replacement = HomeDestination.LibraryGroupDetail(
+                                        canonicalGroupId,
+                                    ),
+                                )
+                            },
+                            onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                        )
+                    }
+
                     entry<HomeDestination.Reader> { destination ->
                         if (destination.bookType == BookType.AUDIOBOOK) {
                             AudiobookPlayerScreen(
                                 serverId = destination.serverId,
                                 bookUuid = destination.bookUuid,
+                                selectedLocalPath = destination.selection?.localStorageReference,
+                                progressNativeId = destination.selection?.progressNativeId,
+                                progressAdapterId = destination.selection?.progressAdapterId,
+                                progressOwner = destination.selection?.progressOwner,
                                 onClose = { intentDispatcher(HomeNavigationIntent.GoBack) },
                             )
                         } else {
@@ -244,6 +277,10 @@ fun HomeNavigation(
                                 serverId = destination.serverId,
                                 bookUuid = destination.bookUuid,
                                 bookType = destination.bookType,
+                                selectedLocalPath = destination.selection?.localStorageReference,
+                                progressNativeId = destination.selection?.progressNativeId,
+                                progressAdapterId = destination.selection?.progressAdapterId,
+                                progressOwner = destination.selection?.progressOwner,
                                 onClose = { intentDispatcher(HomeNavigationIntent.GoBack) },
                                 onSettingsClick = {
                                     intentDispatcher(
@@ -342,6 +379,16 @@ fun HomeNavigation(
         }
     }
 }
+
+private fun LibraryReaderTarget.toLaunchSelection() =
+    HomeDestination.ReaderLaunchSelection(
+        resourceId = resource.nativeResourceId,
+        resourceRevision = resource.revision,
+        localStorageReference = storage.value,
+        progressAdapterId = progressOwner.adapterId.value,
+        progressNativeId = progressOwner.nativeProgressId,
+        progressOwner = progressOwner,
+    )
 
 @Composable
 private fun HomeBottomNavigationBar(

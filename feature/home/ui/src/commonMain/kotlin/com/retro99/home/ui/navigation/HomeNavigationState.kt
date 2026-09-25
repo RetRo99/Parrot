@@ -39,6 +39,8 @@ data class PlaybackConflictDialogState(
     val targetBookUuid: String,
     /** Type of the target book */
     val targetBookType: BookType,
+    /** Selected device resource and source-specific progress owner */
+    val targetSelection: HomeDestination.ReaderLaunchSelection? = null,
 )
 
 /**
@@ -72,6 +74,5 @@ sealed interface HomeNavigationEvent {
         val tab: HomeTab = HomeTab.Books,
     ) : HomeNavigationEvent
 }
-
 
 

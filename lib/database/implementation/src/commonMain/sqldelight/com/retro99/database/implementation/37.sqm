@@ -1,0 +1,11 @@
+CREATE TABLE library_source_identity_aliases (
+    profile_id TEXT NOT NULL,
+    old_source_key TEXT NOT NULL,
+    target_source_key TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (profile_id, old_source_key),
+    CHECK (old_source_key <> target_source_key)
+);
+
+CREATE INDEX idx_library_source_identity_alias_target
+ON library_source_identity_aliases(profile_id, target_source_key);

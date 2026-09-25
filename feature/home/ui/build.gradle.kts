@@ -16,6 +16,8 @@ kotlin {
         namespace = "com.retro99.feature.home.ui"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -41,6 +43,7 @@ kotlin {
             implementation(projects.feature.home.domain)
             implementation(projects.feature.books.ui)
             implementation(projects.feature.books.domain)
+            implementation(projects.feature.library.domain)
             implementation(projects.feature.reader.ui)
             implementation(projects.feature.reader.domain)
             implementation(projects.feature.settings.ui)
@@ -51,6 +54,10 @@ kotlin {
             implementation(projects.lib.preferences.api)
             implementation(projects.lib.preferences.implementation)
             implementation(projects.lib.user.api)
+        }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
         }
     }
 }

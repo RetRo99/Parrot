@@ -7,6 +7,7 @@ import com.retro99.base.result.CompletableResult
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerPositionLocalSource
 import com.retro99.server.api.ServerReaderRepository
+import com.retro99.server.api.library.LibraryAdapterId
 
 /**
  * Local implementation of ServerReaderRepository.
@@ -17,6 +18,8 @@ class LocalReaderRepository(
     override val serverId: String,
     private val localSource: ServerPositionLocalSource,
 ) : ServerReaderRepository {
+
+    override val libraryAdapterId = LibraryAdapterId("local")
 
     // ==================== Combined Operations ====================
 

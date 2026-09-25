@@ -34,5 +34,44 @@ deleteCloudBookFileState:
 DELETE FROM cloud_book_file_state
 WHERE library_book_id = ? AND media_type = ? AND relative_path = ?;
 
+deleteCloudBookFileStateByCloudBookFileId:
+DELETE FROM cloud_book_file_state
+WHERE library_book_id = ? AND cloud_book_file_id = ?;
+
 deleteAllCloudBookFileStates:
 DELETE FROM cloud_book_file_state;
+
+CREATE TABLE IF NOT EXISTS pending_cloud_book_file_feed_changes (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    cloud_book_id TEXT NOT NULL,
+    feed_revision INTEGER,
+    payload_json TEXT NOT NULL,
+    received_at TEXT NOT NULL,
+    UNIQUE (cloud_book_id, payload_json)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_cloud_book_file_feed_changes_book
+ON pending_cloud_book_file_feed_changes(cloud_book_id, feed_revision, id);
+
+enqueuePendingCloudBookFileFeedChange:
+INSERT OR IGNORE INTO pending_cloud_book_file_feed_changes(
+    cloud_book_id, feed_revision, payload_json, received_at
+) VALUES (?, ?, ?, ?);
+
+getPendingCloudBookFileFeedChange:
+SELECT * FROM pending_cloud_book_file_feed_changes
+WHERE cloud_book_id = ? AND payload_json = ?;
+
+getPendingCloudBookFileFeedChanges:
+SELECT * FROM pending_cloud_book_file_feed_changes
+WHERE cloud_book_id = ?
+ORDER BY CASE WHEN feed_revision IS NULL THEN 1 ELSE 0 END, feed_revision, id;
+
+getPendingCloudBookFileFeedCloudBookIds:
+SELECT DISTINCT cloud_book_id FROM pending_cloud_book_file_feed_changes ORDER BY cloud_book_id;
+
+deletePendingCloudBookFileFeedChange:
+DELETE FROM pending_cloud_book_file_feed_changes WHERE id = ?;
+
+deleteAllPendingCloudBookFileFeedChanges:
+DELETE FROM pending_cloud_book_file_feed_changes;

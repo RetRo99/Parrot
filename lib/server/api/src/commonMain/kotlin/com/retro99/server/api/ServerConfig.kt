@@ -1,6 +1,7 @@
 package com.retro99.server.api
 
 import com.retro99.base.server.ServerType
+import com.retro99.server.api.library.LibrarySourceIdentityBinding
 import kotlinx.serialization.Serializable
 
 /**
@@ -15,5 +16,5 @@ data class ServerConfig(
     val baseUrl: String,               // Base URL (e.g., "https://books.example.com")
     val addedAt: Long,                 // Timestamp when server was added
     val lastConnectedAt: Long? = null, // Last successful connection
+    val libraryIdentityBindings: List<LibrarySourceIdentityBinding> = emptyList(),
 )
-

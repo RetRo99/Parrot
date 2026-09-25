@@ -12,8 +12,9 @@ import kotlin.test.assertEquals
 class LibraryMutationSyncEngineTest {
 
     @Test
-    fun acceptedRejectedAndOmittedResultsKeepDistinctDurableStates() = runTest {
+    fun acceptedRetryableRejectedAndOmittedResultsKeepDistinctDurableStates() = runTest {
         val accepted = entry("accepted")
+        val retryable = entry("retryable")
         val rejected = entry("rejected")
         val omitted = entry("omitted")
         val outbox = RecordingLibraryMutationOutbox()
@@ -28,13 +29,21 @@ class LibraryMutationSyncEngineTest {
                     reason = null,
                 ),
                 SyncMutationResponse(
-                    mutationId = rejected.mutationId,
-                    status = "rate_limited",
+                    mutationId = retryable.mutationId,
+                    status = "retryable",
                     cloudBookId = null,
                     revision = null,
                     payload = null,
-                    reason = "try later",
-                    retryAfterMillis = 5_000L,
+                    reason = "book_files_must_be_removed_first",
+                    retryAfterMillis = 30_000L,
+                ),
+                SyncMutationResponse(
+                    mutationId = rejected.mutationId,
+                    status = "rejected",
+                    cloudBookId = null,
+                    revision = null,
+                    payload = null,
+                    reason = "invalid_group_decision",
                 ),
             ),
         )
@@ -42,24 +51,37 @@ class LibraryMutationSyncEngineTest {
         val engine = LibraryMutationSyncEngine(outbox)
 
         val summary = engine.push(
-            entries = listOf(accepted, rejected, omitted),
+            entries = listOf(accepted, retryable, rejected, omitted),
             transport = transport,
             cursor = "opaque-cursor",
             applier = applier,
         )
 
         assertEquals(1, summary.acknowledgedCount)
+        assertEquals(1, summary.rejectedCount)
         assertEquals(1, summary.retryCount)
         assertEquals(1, summary.unresolvedCount)
         assertEquals(
-            listOf(accepted.mutationId, rejected.mutationId, omitted.mutationId),
+            listOf(
+                accepted.mutationId,
+                retryable.mutationId,
+                rejected.mutationId,
+                omitted.mutationId,
+            ),
             outbox.dispatchedIds,
         )
         assertEquals(listOf(accepted.mutationId), outbox.deletedIds)
-        assertEquals(listOf(rejected.mutationId), outbox.failureIds)
+        assertEquals(listOf(retryable.mutationId), outbox.failureIds)
+        assertEquals(listOf(rejected.mutationId), outbox.conflictIds)
+        assertEquals("invalid_group_decision", outbox.conflictReasons[rejected.mutationId])
         assertEquals(listOf(accepted.mutationId), applier.acceptedIds)
         assertEquals(
-            listOf(accepted.mutationId, rejected.mutationId, omitted.mutationId),
+            listOf(
+                accepted.mutationId,
+                retryable.mutationId,
+                rejected.mutationId,
+                omitted.mutationId,
+            ),
             transport.receivedMutationIds,
         )
         assertEquals("opaque-cursor", transport.receivedCursor)
@@ -120,6 +142,8 @@ private class RecordingLibraryMutationOutbox : SyncOutboxDatabase {
     val dispatchedIds = mutableListOf<String>()
     val deletedIds = mutableListOf<String>()
     val failureIds = mutableListOf<String>()
+    val conflictIds = mutableListOf<String>()
+    val conflictReasons = mutableMapOf<String, String>()
 
     override suspend fun enqueue(entry: SyncOutboxEntry) = Unit
 
@@ -133,7 +157,10 @@ private class RecordingLibraryMutationOutbox : SyncOutboxDatabase {
         dispatchedIds += mutationId
     }
 
-    override suspend fun markConflict(mutationId: String, error: String) = Unit
+    override suspend fun markConflict(mutationId: String, error: String) {
+        conflictIds += mutationId
+        conflictReasons[mutationId] = error
+    }
 
     override suspend fun delete(mutationId: String) {
         deletedIds += mutationId
@@ -149,7 +176,11 @@ private class RecordingLibraryMutationOutbox : SyncOutboxDatabase {
         failureIds += mutationId
     }
 
-    override suspend fun coalesce(entityType: String, entityId: String, entry: SyncOutboxEntry) = Unit
+    override suspend fun coalesce(
+        entityType: String,
+        entityId: String,
+        entry: SyncOutboxEntry,
+    ) = Unit
 
     override suspend fun clearAllData() = Unit
 }

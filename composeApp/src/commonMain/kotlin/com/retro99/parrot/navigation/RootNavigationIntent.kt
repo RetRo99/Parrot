@@ -3,9 +3,8 @@ package com.retro99.parrot.navigation
 import com.retro99.base.ui.BaseIntent
 
 sealed interface RootNavigationIntent : BaseIntent {
-    data object OnLoginSuccess : RootNavigationIntent
+    data class OnLoginSuccess(val existingServerId: String? = null) : RootNavigationIntent
     data object OnLogout : RootNavigationIntent
-    data object OnLoginClicked : RootNavigationIntent
+    data class OnLoginClicked(val existingServerId: String? = null) : RootNavigationIntent
     data object OnBackFromLogin : RootNavigationIntent
 }
-

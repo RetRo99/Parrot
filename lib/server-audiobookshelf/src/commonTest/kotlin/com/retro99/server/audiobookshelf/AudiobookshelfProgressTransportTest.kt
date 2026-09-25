@@ -4,7 +4,10 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
+import com.retro99.base.result.CompletableResult
 import com.retro99.server.api.ServerNetworkClient
+import com.retro99.server.api.ServerPosition
+import com.retro99.server.api.ServerPositionLocalSource
 import com.retro99.server.audiobookshelf.model.AudiobookshelfMediaProgressApiModel
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressLocator
@@ -13,10 +16,13 @@ import com.retro99.sync.domain.ProgressPushResult
 import com.retro99.sync.domain.ProgressSnapshot
 import io.ktor.http.HeadersBuilder
 import io.ktor.util.reflect.TypeInfo
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import retro99.network.api.QueryParamsScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -42,6 +48,30 @@ class AudiobookshelfProgressTransportTest {
         assertEquals(42L, result.getValue("book-1").snapshot.timestamp)
         assertEquals(12_500L, result.getValue("book-1").snapshot.audioTimestampMs)
         assertEquals("library-book-1", result.getValue("book-1").libraryBookId)
+    }
+
+    @Test
+    fun fetchTreatsNotFoundAsNoSavedProgress() = runTest {
+        val client = RecordingNetworkClient(
+            getResult = Err(AppError.ApiError(code = 404, message = "Resource not found")),
+        )
+
+        val result = AudiobookshelfProgressTransport(client)
+            .fetchProgress(setOf("unread-book"))
+
+        assertEquals(emptyMap(), result)
+        assertEquals(listOf("GET:/api/me/progress/unread-book"), client.calls)
+    }
+
+    @Test
+    fun fetchStillFailsForErrorsOtherThanNotFound() = runTest {
+        val client = RecordingNetworkClient(
+            getResult = Err(AppError.ApiError(code = 401, message = "Authentication error")),
+        )
+
+        assertFailsWith<IllegalStateException> {
+            AudiobookshelfProgressTransport(client).fetchProgress(setOf("book-1"))
+        }
     }
 
     @Test
@@ -110,7 +140,44 @@ class AudiobookshelfProgressTransportTest {
     )
 }
 
-private class RecordingNetworkClient(
+class AudiobookshelfReaderRepositoryTest {
+    @Test
+    fun getRemotePositionTreatsNotFoundAsNoSavedProgress() = runTest {
+        val client = RecordingNetworkClient(
+            getResult = Err(AppError.ApiError(code = 404, message = "Resource not found")),
+        )
+        val repository = AudiobookshelfReaderRepository(
+            networkClient = client,
+            localSource = UnusedPositionLocalSource(),
+        )
+
+        val result = repository.getRemotePosition("unread-book")
+
+        assertEquals(Ok<ServerPosition?>(null), result)
+        assertEquals(listOf("GET:/api/me/progress/unread-book"), client.calls)
+    }
+}
+
+private class UnusedPositionLocalSource : ServerPositionLocalSource {
+    override suspend fun getPosition(bookUuid: String): AppResult<ServerPosition?> = Ok(null)
+
+    override suspend fun savePosition(position: ServerPosition): CompletableResult = Ok(Unit)
+
+    override suspend fun savePositionWithSync(
+        position: ServerPosition,
+        remoteAccountId: String,
+    ): CompletableResult = Ok(Unit)
+
+    override suspend fun getAllPositions(): AppResult<List<ServerPosition>> = Ok(emptyList())
+
+    override suspend fun deletePosition(bookUuid: String): CompletableResult = Ok(Unit)
+
+    override fun observePosition(bookUuid: String): Flow<ServerPosition?> = flowOf(null)
+
+    override fun observeAllPositions(): Flow<List<ServerPosition>> = flowOf(emptyList())
+}
+
+internal class RecordingNetworkClient(
     override val serverId: String = "audiobookshelf-1",
     override val baseUrl: String = "https://audiobookshelf.example",
     var getResult: AppResult<Any?> = Ok(null),

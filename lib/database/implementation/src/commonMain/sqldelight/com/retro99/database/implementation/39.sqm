@@ -1,0 +1,44 @@
+ALTER TABLE library_replica_removal_intents
+RENAME TO library_replica_removal_intents_v39;
+
+CREATE TABLE library_replica_removal_intents (
+    operation_id TEXT NOT NULL PRIMARY KEY,
+    profile_id TEXT NOT NULL,
+    group_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    execution_connection_id TEXT NOT NULL,
+    legacy_library_book_id TEXT,
+    resource_native_id TEXT NOT NULL,
+    resource_revision_present INTEGER NOT NULL CHECK (resource_revision_present IN (0, 1)),
+    resource_revision_value TEXT NOT NULL,
+    asset_id TEXT NOT NULL,
+    replica_id TEXT NOT NULL,
+    storage_reference TEXT NOT NULL,
+    requested_at TEXT NOT NULL,
+    phase TEXT NOT NULL CHECK (phase IN ('Requested', 'EffectApplied', 'Completed')),
+    CHECK (resource_revision_present = 1 OR resource_revision_value = '')
+);
+
+INSERT INTO library_replica_removal_intents(
+    operation_id, profile_id, group_id, source_key, execution_connection_id,
+    legacy_library_book_id, resource_native_id, resource_revision_present,
+    resource_revision_value, asset_id, replica_id, storage_reference, requested_at, phase
+)
+SELECT
+    operation_id, profile_id, group_id, source_key, execution_connection_id,
+    legacy_library_book_id, resource_native_id, resource_revision_present,
+    resource_revision_value, asset_id, replica_id, storage_reference, requested_at,
+    CASE phase WHEN 'BytesRemoved' THEN 'EffectApplied' ELSE phase END
+FROM library_replica_removal_intents_v39;
+
+DROP TABLE library_replica_removal_intents_v39;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_library_replica_removal_active_target
+ON library_replica_removal_intents(
+    profile_id, source_key, resource_native_id, resource_revision_present,
+    resource_revision_value, storage_reference
+)
+WHERE phase <> 'Completed';
+
+CREATE INDEX IF NOT EXISTS idx_library_replica_removal_pending
+ON library_replica_removal_intents(profile_id, phase, requested_at);

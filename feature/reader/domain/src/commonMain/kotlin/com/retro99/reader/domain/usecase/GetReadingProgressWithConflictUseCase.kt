@@ -1,8 +1,10 @@
 package com.retro99.reader.domain.usecase
 
+import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map
+import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
@@ -11,6 +13,9 @@ import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerReaderRepository
+import com.retro99.server.api.library.LibraryAdapterId
+import com.retro99.server.api.library.LibraryProgressAdapterRegistry
+import com.retro99.server.api.library.ProgressOwnerRef
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.koin.core.annotation.Factory
@@ -29,6 +34,7 @@ import org.koin.core.annotation.Provided
 class GetReadingProgressWithConflictUseCase(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
     @Provided private val positionDatabase: PositionDatabase,
+    @Provided private val progressAdapterRegistry: LibraryProgressAdapterRegistry,
 ) {
     /**
      * Gets the reading progress for a book with conflict detection.
@@ -38,9 +44,29 @@ class GetReadingProgressWithConflictUseCase(
      * @return [ReadingProgressResult.Resolved] if no conflict or positions are the same,
      *         [ReadingProgressResult.Conflict] if user needs to choose between positions
      */
-    suspend operator fun invoke(serverId: String, bookUuid: String): AppResult<ReadingProgressResult> {
+    suspend operator fun invoke(
+        serverId: String,
+        bookUuid: String,
+        expectedAdapterId: LibraryAdapterId? = null,
+        progressOwner: ProgressOwnerRef? = null,
+    ): AppResult<ReadingProgressResult> {
+        if (progressOwner != null) {
+            return invokeForProgressOwner(
+                serverId = serverId,
+                bookUuid = bookUuid,
+                expectedAdapterId = expectedAdapterId,
+                progressOwner = progressOwner,
+            )
+        }
+
         val serverRepository = repositoryProvider.getReaderRepository(serverId)
             ?: return Ok(ReadingProgressResult.Resolved(null)) // Server not found
+        if (
+            serverRepository.serverId != serverId ||
+            (expectedAdapterId != null && serverRepository.libraryAdapterId != expectedAdapterId)
+        ) {
+            return Err(AppError.NotFoundError("Progress owner does not match the selected source"))
+        }
 
         return coroutineScope {
             val localDeferred = async {
@@ -60,6 +86,60 @@ class GetReadingProgressWithConflictUseCase(
             val localPosition = localDeferred.await().getOrElse { null }?.toDomain()
             val remotePosition = remoteDeferred.await().getOrElse { null }?.toDomain()
 
+            Ok(resolvePositionConflict(localPosition, remotePosition))
+        }
+    }
+
+    private suspend fun invokeForProgressOwner(
+        serverId: String,
+        bookUuid: String,
+        expectedAdapterId: LibraryAdapterId?,
+        progressOwner: ProgressOwnerRef,
+    ): AppResult<ReadingProgressResult> {
+        val ownerConnectionId = progressOwner.source.connectionId?.value
+        if (
+            ownerConnectionId != serverId ||
+            progressOwner.nativeProgressId != bookUuid ||
+            (expectedAdapterId != null && progressOwner.adapterId != expectedAdapterId)
+        ) {
+            return Err(AppError.NotFoundError("Progress owner does not match the selected source"))
+        }
+        val adapter = progressAdapterRegistry.adapter(progressOwner.adapterId)
+            ?: return Err(
+                AppError.NotFoundError(
+                    "No progress adapter registered for ${progressOwner.adapterId.value}",
+                ),
+            )
+        if (adapter.adapterId != progressOwner.adapterId) {
+            return Err(
+                AppError.NotFoundError("Progress adapter does not match the selected source"),
+            )
+        }
+        adapter.validateOwner(progressOwner).getOrElse { error ->
+            return if (error is AppError.NotFoundError) {
+                Ok(ReadingProgressResult.Resolved(null))
+            } else {
+                Err(error)
+            }
+        }
+
+        return coroutineScope {
+            val localDeferred = async {
+                adapter.readLocalPosition(progressOwner)
+            }
+            val remoteDeferred = async {
+                val reconciledBaseline = positionDatabase.getRemotePositionByBookUuid(bookUuid)
+                if (reconciledBaseline != null) {
+                    Ok(reconciledBaseline.toServerPosition(serverId))
+                } else {
+                    // Keep the adapter's direct remote fallback for sources whose
+                    // shared reconciliation baseline has not been populated yet.
+                    adapter.readRemotePosition(progressOwner)
+                }
+            }
+
+            val localPosition = localDeferred.await().getOrElse { null }?.toDomain()
+            val remotePosition = remoteDeferred.await().getOrElse { null }?.toDomain()
             Ok(resolvePositionConflict(localPosition, remotePosition))
         }
     }

@@ -18,6 +18,8 @@ import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.reader.domain.usecase.GetReadingProgressWithConflictUseCase
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
+import com.retro99.server.api.library.LibraryAdapterId
+import com.retro99.server.api.library.ProgressOwnerRef
 import com.retro99.reader.ui.playback.ForegroundServiceController
 import com.retro99.reader.ui.playback.MediaPlaybackController
 import com.retro99.reader.ui.playback.NotificationPermissionHandler
@@ -40,9 +42,7 @@ import java.io.File
 
 @KoinViewModel
 class AudiobookPlayerViewModel(
-    @InjectedParam private val serverId: String,
-    @InjectedParam private val bookUuid: String,
-    @InjectedParam private val onClose: () -> Unit,
+    @InjectedParam private val args: AudiobookPlayerViewModelArgs,
     @Provided private val mediaPlaybackController: MediaPlaybackController,
     @Provided private val foregroundServiceController: ForegroundServiceController,
     @Provided private val notificationPermissionHandler: NotificationPermissionHandler,
@@ -52,14 +52,30 @@ class AudiobookPlayerViewModel(
     @Provided private val getReadingProgressWithConflictUseCase: GetReadingProgressWithConflictUseCase,
     @Provided private val getBookByUuidUseCase: GetBookByUuidUseCase,
 ) : BaseViewModel<AudiobookPlayerViewState, AudiobookPlayerIntent>(
-    AudiobookPlayerViewState(bookUuid = bookUuid)
+    AudiobookPlayerViewState(bookUuid = args.bookUuid)
 ) {
+
+    private val serverId = args.serverId
+    private val bookUuid = args.bookUuid
+    private val selectedLocalPath = args.selectedLocalPath
+    private val progressNativeId = args.progressNativeId
+    private val progressAdapterId = args.progressAdapterId
+    private val progressOwner = args.progressOwner
+    private val onClose = args.onClose
 
     private var player: ExoPlayer? = null
     private var playerListener: Player.Listener? = null
     private var positionUpdateJob: Job? = null
     private var hasRestoredPosition = false
     private var pendingAudioFiles: List<File> = emptyList()
+    private var pendingLocalFileLeasePath: String? = null
+    private val progressBookUuid: String
+        get() = progressOwner?.nativeProgressId
+            ?: progressNativeId?.takeIf { value -> value.isNotBlank() }
+            ?: bookUuid
+    private val expectedProgressAdapterId: LibraryAdapterId?
+        get() = progressOwner?.adapterId
+            ?: progressAdapterId?.takeIf { value -> value.isNotBlank() }?.let(::LibraryAdapterId)
     private val routineSyncScheduler = RoutineSyncScheduler(
         scope = viewModelScope,
         nowMillis = ::nowMillis,
@@ -67,7 +83,7 @@ class AudiobookPlayerViewModel(
             syncNowUseCase(
                 SyncRequest(
                     reason = SyncTriggerReason.ROUTINE_PROGRESS,
-                    scope = SyncScope.Books(setOf(bookUuid)),
+                    scope = SyncScope.Books(setOf(progressBookUuid)),
                     urgency = SyncUrgency.ROUTINE,
                     routineSchedule = routineSchedule,
                 ),
@@ -90,9 +106,15 @@ class AudiobookPlayerViewModel(
                 )
             }
 
+            if (mediaPlaybackController.isBookLoaded(bookUuid)) {
+                reconnectToExistingPlayback()
+                if (player != null) return@launch
+            }
+
             loadAudioFiles()
 
-            if (mediaPlaybackController.isBookLoaded(bookUuid)) {
+            val isBookLoaded = mediaPlaybackController.isBookLoaded(bookUuid)
+            if (isBookLoaded) {
                 reconnectToExistingPlayback()
             }
         }
@@ -128,23 +150,28 @@ class AudiobookPlayerViewModel(
     }
 
     private suspend fun loadAudioFiles() {
-        val result = readerSettingsRepository.prepareEbook(bookUuid, "", BookType.AUDIOBOOK)
-        val cachedPath = result.getOrElse { null }
+        val cachedPath = selectedLocalPath
+            ?: readerSettingsRepository.prepareEbook(bookUuid, "", BookType.AUDIOBOOK)
+                .getOrElse { null }
         if (cachedPath == null) {
             updateState { it.copy(error = "Audio files not found", isLoading = false) }
             return
         }
 
         val dir = File(cachedPath)
-        if (!dir.exists() || !dir.isDirectory) {
-            updateState { it.copy(error = "Audio directory not found", isLoading = false) }
+        if (!dir.exists() || (!dir.isDirectory && !dir.isFile)) {
+            updateState { it.copy(error = "Audio files not found", isLoading = false) }
             return
         }
 
-        val audioFiles = dir.listFiles()
-            ?.filter { it.isFile }
-            ?.sortedBy { it.name }
-            ?: emptyList()
+        val audioFiles = if (dir.isFile) {
+            listOf(dir)
+        } else {
+            dir.listFiles()
+                ?.filter { file -> file.isFile }
+                ?.sortedBy { file -> file.name }
+                ?: emptyList()
+        }
 
         if (audioFiles.isEmpty()) {
             updateState { it.copy(error = "No audio files found", isLoading = false) }
@@ -152,6 +179,7 @@ class AudiobookPlayerViewModel(
         }
 
         pendingAudioFiles = audioFiles
+        pendingLocalFileLeasePath = cachedPath
 
         val trackTitles = audioFiles.map { file ->
             file.nameWithoutExtension.replace(Regex("^\\d+\\s*"), "")
@@ -220,7 +248,10 @@ class AudiobookPlayerViewModel(
                 .setMediaId(file.name)
                 .build()
         }
-        servicePlayer.setMediaItems(mediaItems)
+        mediaPlaybackController.setLocalMediaItems(
+            mediaItems = mediaItems,
+            leasePath = requireNotNull(pendingLocalFileLeasePath),
+        )
 
         mediaPlaybackController.setCurrentPlayingBook(
             serverId = serverId,
@@ -277,7 +308,10 @@ class AudiobookPlayerViewModel(
         )
         withContext(NonCancellable) {
             try {
-                saveReadingProgressUseCase(progress)
+                saveReadingProgressUseCase(
+                    progress = progress,
+                    expectedAdapterId = expectedProgressAdapterId,
+                )
             } catch (e: Exception) {
                 Logger.e(e) { "Failed to save other book audiobook progress" }
             }
@@ -360,7 +394,12 @@ class AudiobookPlayerViewModel(
 
     private suspend fun loadSavedPosition(): PositionDomainModel? {
         return try {
-            getReadingProgressWithConflictUseCase(serverId, bookUuid)
+            getReadingProgressWithConflictUseCase(
+                serverId = serverId,
+                bookUuid = progressBookUuid,
+                expectedAdapterId = expectedProgressAdapterId,
+                progressOwner = progressOwner,
+            )
                 .getOrElse { null }
                 ?.let { result ->
                     when (result) {
@@ -407,7 +446,7 @@ class AudiobookPlayerViewModel(
         }
 
         return PositionDomainModel(
-            bookUuid = bookUuid,
+            bookUuid = progressBookUuid,
             serverId = serverId,
             timestamp = nowMillis(),
             createdAt = null,
@@ -429,7 +468,11 @@ class AudiobookPlayerViewModel(
     private fun saveProgress(progress: PositionDomainModel) {
         viewModelScope.launch(NonCancellable) {
             try {
-                saveReadingProgressUseCase(progress)
+                saveReadingProgressUseCase(
+                    progress = progress,
+                    expectedAdapterId = expectedProgressAdapterId,
+                    progressOwner = progressOwner,
+                )
                     .onSuccess { routineSyncScheduler.markDirty() }
             } catch (e: Exception) {
                 Logger.w(e) { "Failed to save audiobook progress" }
@@ -506,7 +549,7 @@ class AudiobookPlayerViewModel(
             syncNowUseCase(
                 SyncRequest(
                     reason = SyncTriggerReason.READER_CHECKPOINT,
-                    scope = SyncScope.Books(setOf(bookUuid)),
+                    scope = SyncScope.Books(setOf(progressBookUuid)),
                     urgency = SyncUrgency.URGENT,
                 ),
             )
@@ -540,7 +583,11 @@ class AudiobookPlayerViewModel(
 
     private suspend fun saveProgressAndWait(progress: PositionDomainModel) {
         try {
-            saveReadingProgressUseCase(progress)
+            saveReadingProgressUseCase(
+                progress = progress,
+                expectedAdapterId = expectedProgressAdapterId,
+                progressOwner = progressOwner,
+            )
         } catch (e: Exception) {
             Logger.w(e) { "Failed to save final audiobook progress" }
         }

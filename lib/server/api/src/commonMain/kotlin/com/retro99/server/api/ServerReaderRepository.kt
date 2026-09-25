@@ -2,6 +2,7 @@ package com.retro99.server.api
 
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
+import com.retro99.server.api.library.LibraryAdapterId
 import kotlinx.serialization.Serializable
 
 /**
@@ -18,6 +19,10 @@ interface ServerReaderRepository {
      * The server ID this repository is associated with.
      */
     val serverId: String
+
+    /** Adapter owning this repository's native reading progress semantics. */
+    val libraryAdapterId: LibraryAdapterId?
+        get() = null
 
     // ==================== Read Operations ====================
 

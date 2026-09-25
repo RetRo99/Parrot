@@ -110,7 +110,7 @@ begin
         where cloud_user_id = actor;
         update public.cloud_book_uploads
         set status = 'expired', updated_at = timezone('utc', now())
-        where upload_id = upload_row.upload_id;
+        where public.cloud_book_uploads.upload_id = upload_row.upload_id;
         update public.cloud_book_files
         set status = 'upload_failed', revision = revision + 1,
             updated_at = timezone('utc', now())
@@ -383,9 +383,9 @@ begin
     if not found then
         -- The row is gone and storage paths embed the file id, so the path can
         -- never be re-reserved: deletion is safe.
-        update public.cloud_book_file_gc_claims
+        update public.cloud_book_file_gc_claims as claim
         set claimed_at = timezone('utc', now())
-        where cloud_book_file_id = claim_row.cloud_book_file_id;
+        where claim.cloud_book_file_id = claim_row.cloud_book_file_id;
         return jsonb_build_object('status', 'confirmed', 'cloud_book_file_id', cloud_book_file_id);
     end if;
     if file_row.status in ('available', 'deleting') then
@@ -400,9 +400,9 @@ begin
 
     -- Keepalive: extend the lease so it cannot be reaped between this
     -- confirmation and the immediate Storage API delete.
-    update public.cloud_book_file_gc_claims
+    update public.cloud_book_file_gc_claims as claim
     set claimed_at = timezone('utc', now())
-    where cloud_book_file_id = file_row.id;
+    where claim.cloud_book_file_id = file_row.id;
     return jsonb_build_object('status', 'confirmed', 'cloud_book_file_id', file_row.id);
 end;
 $$;

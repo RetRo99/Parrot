@@ -8,6 +8,7 @@ import com.retro99.server.api.ServerNetworkClient
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerPositionLocalSource
 import com.retro99.server.api.ServerReaderRepository
+import com.retro99.server.api.library.LibraryAdapterId
 import com.retro99.server.storyteller.model.StorytellerPositionApiModel
 import com.retro99.server.storyteller.model.toServerPosition
 import retro99.network.api.get
@@ -23,6 +24,7 @@ class StorytellerReaderRepository(
 ) : ServerReaderRepository, BaseRepository {
 
     override val serverId: String = networkClient.serverId
+    override val libraryAdapterId = LibraryAdapterId("storyteller")
 
     // ==================== Combined Operations ====================
 

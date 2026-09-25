@@ -28,6 +28,8 @@ import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.retro99.base.deeplink.DeepLinkUriBuilder
+import com.retro99.books.domain.LocalBookFileUsageCoordinator
+import com.retro99.books.domain.LocalBookFileUsageLease
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.ui.media.MediaOverlayClip
 import com.retro99.reader.ui.media.smil.SmilClipRepository
@@ -88,6 +90,7 @@ class MediaPlaybackService : MediaLibraryService() {
     }
 
     private val controller: MediaPlaybackController by inject()
+    private val fileUsageCoordinator: LocalBookFileUsageCoordinator by inject()
     private val clipRepository: SmilClipRepository by inject()
     private val autoMediaBrowser: AutoMediaBrowser by inject()
     private val headlessSessionFactory: HeadlessSessionFactory by inject()
@@ -96,6 +99,12 @@ class MediaPlaybackService : MediaLibraryService() {
     private var player: ExoPlayer? = null
     private var sessionPlayer: TtsSessionPlayer? = null
     private var mediaSession: MediaLibrarySession? = null
+    private var localMediaFileLease: LocalMediaFileLease? = null
+
+    private data class LocalMediaFileLease(
+        val path: String,
+        val lease: LocalBookFileUsageLease,
+    )
 
     // Active headless playback session (for Android Auto playback without phone app)
     private var activeHeadlessSession: HeadlessPlaybackSession? = null
@@ -351,6 +360,29 @@ class MediaPlaybackService : MediaLibraryService() {
         return mediaSession
     }
 
+    suspend fun setLocalMediaItems(mediaItems: List<MediaItem>, leasePath: String) {
+        require(mediaItems.isNotEmpty()) { "Local playback requires at least one media item" }
+        val currentPlayer = checkNotNull(player) { "Playback service is not ready" }
+        val existingLease = localMediaFileLease?.takeIf { lease -> lease.path == leasePath }
+        val nextLease = existingLease ?: LocalMediaFileLease(
+            path = leasePath,
+            lease = fileUsageCoordinator.acquireUse(leasePath),
+        )
+
+        try {
+            currentPlayer.setMediaItems(mediaItems)
+        } catch (exception: Exception) {
+            if (existingLease == null) nextLease.lease.release()
+            throw exception
+        }
+
+        val previousLease = localMediaFileLease
+        localMediaFileLease = nextLease
+        if (previousLease != null && previousLease !== nextLease) {
+            previousLease.lease.release()
+        }
+    }
+
     override fun onTaskRemoved(rootIntent: Intent?) {
         val currentPlayer = player
         Log.d(TAG, "onTaskRemoved: player=${currentPlayer != null}, mediaItemCount=${currentPlayer?.mediaItemCount}, isPlaying=${currentPlayer?.isPlaying}")
@@ -387,6 +419,7 @@ class MediaPlaybackService : MediaLibraryService() {
         player?.removeListener(playerListener)
         player?.release()
         player = null
+        releaseLocalMediaFileLease()
 
         // Reset state
         playbackContentType = PlaybackContentType.MEDIA_OVERLAY
@@ -397,6 +430,11 @@ class MediaPlaybackService : MediaLibraryService() {
         onChapterClipsExceeded = null
 
         super.onDestroy()
+    }
+
+    internal fun releaseLocalMediaFileLease() {
+        localMediaFileLease?.lease?.release()
+        localMediaFileLease = null
     }
 
     // ==================== Metadata Updates ====================

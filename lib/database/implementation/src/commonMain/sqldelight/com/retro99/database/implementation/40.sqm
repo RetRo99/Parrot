@@ -1,0 +1,3 @@
+ALTER TABLE library_source_snapshots
+ADD COLUMN observed_at_submillisecond_ns INTEGER NOT NULL DEFAULT 0
+    CHECK (observed_at_submillisecond_ns >= 0 AND observed_at_submillisecond_ns < 1000000);

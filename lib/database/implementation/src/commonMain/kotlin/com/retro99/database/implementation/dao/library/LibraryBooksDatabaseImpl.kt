@@ -20,6 +20,10 @@ internal class LibraryBooksDatabaseImpl(
         return sqlDelightDao.getAllLibraryBooks()
     }
 
+    override fun observeDeletedCloudBookIds(): Flow<List<String>> {
+        return sqlDelightDao.observeDeletedCloudBookIds()
+    }
+
     override suspend fun getLibraryBookById(libraryBookId: String): LibraryBookEntity? {
         return sqlDelightDao.getLibraryBookById(libraryBookId)
     }
@@ -37,6 +41,12 @@ internal class LibraryBooksDatabaseImpl(
 
     override suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity? {
         return sqlDelightDao.getLibraryBookByCloudBookId(cloudBookId)
+    }
+
+    override suspend fun getLibraryBookByCloudBookIdIncludingDeleted(
+        cloudBookId: String,
+    ): LibraryBookEntity? {
+        return sqlDelightDao.getLibraryBookByCloudBookIdIncludingDeleted(cloudBookId)
     }
 
     override suspend fun attachCloudBookId(libraryBookId: String, cloudBookId: String) {

@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.koinCompilerPlugin)
+    alias(libs.plugins.kotlinxSerialization)
 }
 
 version = "1.0"
@@ -13,6 +14,8 @@ kotlin {
         namespace = "com.retro99.sync.domain"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -23,6 +26,8 @@ kotlin {
             implementation(libs.koin.core)
             api(libs.koin.annotations)
             implementation(libs.coroutines)
+            implementation(libs.serialization)
+            implementation(projects.lib.server.api)
         }
 
         commonTest.dependencies {

@@ -98,6 +98,8 @@ kotlin {
             implementation(projects.feature.books.ui)
             implementation(projects.feature.books.domain)
             implementation(projects.feature.books.data)
+            implementation(projects.feature.library.domain)
+            implementation(projects.feature.library.data)
             implementation(projects.feature.reader.ui)
             implementation(projects.feature.reader.domain)
             implementation(projects.feature.reader.data)

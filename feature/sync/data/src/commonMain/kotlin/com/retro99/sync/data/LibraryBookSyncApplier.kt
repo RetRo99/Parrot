@@ -15,13 +15,22 @@ import org.koin.core.annotation.Single
 class LibraryBookSyncApplier(
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
 ) {
-    suspend fun applyRemote(snapshot: SyncLibraryBookSnapshot) {
+    suspend fun applyRemote(snapshot: SyncLibraryBookSnapshot): Boolean {
         val existing = snapshot.cloudBookId
-            ?.let { cloudBookId -> libraryBooksDatabase.getLibraryBookByCloudBookId(cloudBookId) }
+            ?.let { cloudBookId ->
+                libraryBooksDatabase.getLibraryBookByCloudBookIdIncludingDeleted(cloudBookId)
+            }
             ?: libraryBooksDatabase.getLibraryBookByContentHash(
                 snapshot.contentHashAlgorithm,
                 snapshot.contentHash,
             )
+        val existingRemoteRevision = existing?.remoteRevision
+        if (
+            existingRemoteRevision != null && snapshot.remoteRevision != null &&
+            existingRemoteRevision > snapshot.remoteRevision
+        ) {
+            return false
+        }
         val libraryBookId = existing?.libraryBookId ?: snapshot.libraryBookId
 
         libraryBooksDatabase.upsertLibraryBook(
@@ -34,9 +43,11 @@ class LibraryBookSyncApplier(
                 author = snapshot.author,
                 format = snapshot.format,
                 remoteRevision = snapshot.remoteRevision,
+                deletedAt = snapshot.deletedAt,
                 metadataJson = snapshot.metadataJson,
             ),
         )
+        return true
     }
 
     suspend fun applyAccepted(
@@ -69,7 +80,7 @@ class LibraryBookSyncApplier(
                 author = existing.author,
                 format = existing.format,
                 remoteRevision = revision,
-                deletedAt = existing.deletedAt,
+                deletedAt = snapshot.deletedAt,
                 metadataJson = existing.metadataJson,
             )
         }
@@ -87,6 +98,7 @@ data class SyncLibraryBookSnapshot(
     val format: String,
     val remoteRevision: Long?,
     val metadataJson: String?,
+    val deletedAt: String? = null,
 )
 
 private data class SyncLibraryBookEntity(

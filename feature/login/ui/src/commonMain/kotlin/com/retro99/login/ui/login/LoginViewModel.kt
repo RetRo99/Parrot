@@ -10,6 +10,7 @@ import com.retro99.base.result.log
 import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.login.domain.usecase.LoginUseCase
+import com.retro99.server.api.ServerRegistry
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -21,21 +22,32 @@ import org.koin.core.annotation.Provided
 class LoginViewModel(
     @Provided private val loginUseCase: LoginUseCase,
     @Provided private val analytics: Analytics,
+    @Provided private val serverRegistry: ServerRegistry,
     @InjectedParam private val onSignInSuccess: () -> Unit,
     @InjectedParam private val onBackClick: () -> Unit,
-) : BaseViewModel<LoginViewState, LoginIntent>(LoginViewState()) {
+    @InjectedParam private val existingServerId: String?,
+) : BaseViewModel<LoginViewState, LoginIntent>(
+    LoginViewState(
+        isReauthentication = existingServerId != null,
+        isServerConfigurationLoading = existingServerId != null,
+    ),
+) {
 
-    val urlState = TextFieldState(initialText = "https://")
+    val urlState = TextFieldState(initialText = if (existingServerId == null) "https://" else "")
     val usernameState = TextFieldState()
     val passwordState = TextFieldState()
 
     init {
         observeTextFieldChanges()
-        updateFormState(
-            url = urlState.text.toString(),
-            username = usernameState.text.toString(),
-            password = passwordState.text.toString(),
-        )
+        if (existingServerId == null) {
+            updateFormState(
+                url = urlState.text.toString(),
+                username = usernameState.text.toString(),
+                password = passwordState.text.toString(),
+            )
+        } else {
+            loadExistingServer(existingServerId)
+        }
     }
 
     private fun observeTextFieldChanges() {
@@ -64,8 +76,41 @@ class LoginViewModel(
 
             currentState.copy(
                 urlError = urlError,
-                isSignInEnabled = allFieldsNotEmpty && noErrors && !currentState.isLoading,
-                isOAuthSignInEnabled = currentState.isOAuthVisible && isValidServerUrl(url) && !currentState.isLoading,
+                isSignInEnabled = allFieldsNotEmpty && noErrors && !currentState.isLoading &&
+                    !currentState.isServerConfigurationLoading &&
+                    !currentState.isExistingServerUnavailable,
+                isOAuthSignInEnabled = currentState.isOAuthVisible && isValidServerUrl(url) &&
+                    !currentState.isLoading && !currentState.isServerConfigurationLoading,
+            )
+        }
+    }
+
+    private fun loadExistingServer(serverId: String) {
+        viewModelScope.launch {
+            val server = serverRegistry.getServer(serverId)
+            if (server == null || server.type != ServerType.Storyteller) {
+                updateState {
+                    it.copy(
+                        isServerConfigurationLoading = false,
+                        isExistingServerUnavailable = true,
+                    )
+                }
+                return@launch
+            }
+
+            urlState.edit {
+                replace(0, length, server.baseUrl)
+            }
+            updateState {
+                it.copy(
+                    selectedServerType = server.type,
+                    isServerConfigurationLoading = false,
+                )
+            }
+            updateFormState(
+                url = urlState.text.toString(),
+                username = usernameState.text.toString(),
+                password = passwordState.text.toString(),
             )
         }
     }
@@ -80,6 +125,7 @@ class LoginViewModel(
     }
 
     private fun handleServerTypeSelected(serverType: ServerType) {
+        if (existingServerId != null) return
         updateState { currentState ->
             currentState.copy(selectedServerType = serverType)
         }
@@ -112,7 +158,13 @@ class LoginViewModel(
             val username = usernameState.text.toString()
             val password = passwordState.text.toString()
 
-            loginUseCase(serverType, url, username, password).fold(
+            loginUseCase(
+                serverType = serverType,
+                serverUrl = url,
+                username = username,
+                password = password,
+                existingServerId = existingServerId,
+            ).fold(
                 success = {
                     analytics.setUserId(username.hashCode().toString())
                     analytics.logEvent(AuthAnalyticsEvent.LoginSucceeded)
@@ -132,6 +184,7 @@ class LoginViewModel(
     }
 
     private fun handleOAuthSignInClicked() {
+        if (existingServerId != null) return
         val url = urlState.text.toString().trim()
         val serverType = viewState.value.selectedServerType
 

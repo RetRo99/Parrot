@@ -16,6 +16,21 @@ sealed class BookDomainModel {
     abstract val description: String?
     abstract val coverUrl: String?
 
+    open val unifiedGroupId: String?
+        get() = null
+
+    open val groupMemberUuids: List<String>
+        get() = listOf(uuid)
+
+    open val alternateTitles: List<String>
+        get() = emptyList()
+
+    open val groupServerTypes: Set<ServerType>
+        get() = setOfNotNull(serverType)
+
+    open val groupMediaTypes: Set<String>
+        get() = emptySet()
+
     open val libraryBookId: String?
         get() = null
 
@@ -73,6 +88,11 @@ sealed class BookDomainModel {
         override val remoteRevision: Long? = null,
         override val mediaResources: List<MediaResource> = emptyList(),
         val localSourceUuid: String? = null,
+        override val unifiedGroupId: String? = null,
+        override val groupMemberUuids: List<String> = listOf(uuid),
+        override val alternateTitles: List<String> = emptyList(),
+        override val groupServerTypes: Set<ServerType> = setOfNotNull(serverType),
+        override val groupMediaTypes: Set<String> = emptySet(),
     ) : BookDomainModel()
 
     /**
@@ -96,9 +116,15 @@ sealed class BookDomainModel {
         val publicationDate: String?,
         val origin: String = "import",
         val cloudBookFileId: String? = null,
+        override val series: List<SeriesDomainModel> = emptyList(),
+        val groupedAuthors: List<String> = listOfNotNull(author),
+        val groupedTags: List<TagDomainModel> = emptyList(),
+        override val unifiedGroupId: String? = null,
+        override val groupMemberUuids: List<String> = listOf(uuid),
+        override val alternateTitles: List<String> = emptyList(),
+        override val groupServerTypes: Set<ServerType> = setOfNotNull(serverType),
+        override val groupMediaTypes: Set<String> = setOf(bookType.value),
     ) : BookDomainModel() {
-        override val series: List<SeriesDomainModel> = emptyList()
-
         override val mediaResources: List<MediaResource> = listOf(
             MediaResource(
                 mediaType = bookType.value,

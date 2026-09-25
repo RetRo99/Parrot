@@ -1,0 +1,112 @@
+CREATE TABLE IF NOT EXISTS library_groups (
+    profile_id TEXT NOT NULL,
+    group_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (profile_id, group_id)
+);
+
+CREATE TABLE IF NOT EXISTS library_group_memberships (
+    profile_id TEXT NOT NULL,
+    adapter_id TEXT NOT NULL,
+    identity_kind TEXT NOT NULL CHECK (identity_kind IN ('portable', 'unresolved')),
+    backend_id TEXT NOT NULL DEFAULT '',
+    account_id TEXT NOT NULL DEFAULT '',
+    unresolved_connection_id TEXT NOT NULL DEFAULT '',
+    native_book_id TEXT NOT NULL,
+    group_id TEXT NOT NULL,
+    execution_connection_id TEXT,
+    legacy_library_book_id TEXT,
+    membership_origin TEXT NOT NULL DEFAULT 'Backfill'
+        CHECK (membership_origin IN ('Backfill', 'Automatic', 'Manual')),
+    revision INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0),
+    decision_id TEXT,
+    PRIMARY KEY (
+        profile_id, adapter_id, identity_kind, backend_id, account_id,
+        unresolved_connection_id, native_book_id
+    ),
+    FOREIGN KEY (profile_id, group_id)
+        REFERENCES library_groups(profile_id, group_id) ON DELETE RESTRICT,
+    CHECK (
+        (identity_kind = 'portable' AND backend_id <> '' AND account_id <> ''
+            AND unresolved_connection_id = '')
+        OR (identity_kind = 'unresolved' AND backend_id = '' AND account_id = ''
+            AND unresolved_connection_id <> ''
+            AND execution_connection_id = unresolved_connection_id)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_library_group_memberships_group
+ON library_group_memberships(profile_id, group_id);
+
+insertLibraryGroup:
+INSERT INTO library_groups(profile_id, group_id, created_at)
+VALUES (?, ?, ?);
+
+getLibraryGroup:
+SELECT * FROM library_groups WHERE profile_id = ? AND group_id = ?;
+
+getLibraryGroupsForProfile:
+SELECT * FROM library_groups WHERE profile_id = ? ORDER BY created_at, group_id;
+
+observeLibraryGroupProjectionChanges:
+SELECT group_id || ':' || created_at AS projection_change
+FROM library_groups WHERE profile_id = :profile_id
+UNION ALL
+SELECT adapter_id || ':' || identity_kind || ':' || backend_id || ':' || account_id || ':' ||
+    unresolved_connection_id || ':' || native_book_id || ':' || group_id || ':' ||
+    membership_origin || ':' || revision || ':' || COALESCE(decision_id, '')
+FROM library_group_memberships WHERE profile_id = :profile_id
+UNION ALL
+SELECT first_source_key || ':' || second_source_key || ':' || decision_id || ':' || created_at || ':' ||
+    COALESCE(overridden_by_decision_id, '')
+FROM library_manual_separations WHERE profile_id = :profile_id
+UNION ALL
+SELECT group_id || ':' || source_key || ':' || decision_id || ':' || server_revision
+FROM library_group_metadata_preferences WHERE profile_id = :profile_id
+UNION ALL
+SELECT group_id || ':' || media_type || ':' || source_key || ':' || decision_id || ':' ||
+    server_revision
+FROM library_group_media_preferences WHERE profile_id = :profile_id
+UNION ALL
+SELECT alias_group_id || ':' || target_group_id || ':' || created_at
+FROM library_group_aliases WHERE profile_id = :profile_id;
+
+insertLibraryGroupMembership:
+INSERT INTO library_group_memberships(
+    profile_id, adapter_id, identity_kind, backend_id, account_id,
+    unresolved_connection_id, native_book_id, group_id, execution_connection_id,
+    legacy_library_book_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateLibraryGroupMembershipSource:
+UPDATE library_group_memberships
+SET execution_connection_id = ?,
+    legacy_library_book_id = COALESCE(:new_legacy_library_book_id, legacy_library_book_id)
+WHERE profile_id = ? AND adapter_id = ? AND identity_kind = ?
+AND backend_id = ? AND account_id = ? AND unresolved_connection_id = ?
+AND native_book_id = ?;
+
+getLibraryGroupMembership:
+SELECT * FROM library_group_memberships
+WHERE profile_id = ? AND adapter_id = ? AND identity_kind = ?
+AND backend_id = ? AND account_id = ? AND unresolved_connection_id = ?
+AND native_book_id = ?;
+
+getLibraryGroupMemberships:
+SELECT * FROM library_group_memberships
+WHERE profile_id = ? AND group_id = ?
+ORDER BY adapter_id, identity_kind, backend_id, account_id,
+    unresolved_connection_id, native_book_id;
+
+getAllLibraryGroupMemberships:
+SELECT * FROM library_group_memberships
+WHERE profile_id = ?
+ORDER BY adapter_id, identity_kind, backend_id, account_id,
+    unresolved_connection_id, native_book_id;
+
+moveLibraryGroupMembership:
+UPDATE library_group_memberships
+SET group_id = ?, membership_origin = ?, revision = ?, decision_id = ?
+WHERE profile_id = ? AND adapter_id = ? AND identity_kind = ?
+AND backend_id = ? AND account_id = ? AND unresolved_connection_id = ?
+AND native_book_id = ?;

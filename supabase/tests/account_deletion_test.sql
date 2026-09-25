@@ -54,6 +54,7 @@ select is(
     2,
     'account deletion redacts all audit rows for the account'
 );
+reset role;
 select is(
     (select actor from public.cloud_file_audit_events
      where action = 'takedown' and reason = 'rights notice'),

@@ -10,4 +10,8 @@ data class MediaResource(
     val contentHashAlgorithm: String? = null,
     val localOrigin: String? = null,
     val cloudBookFileId: String? = null,
+    /** Exact adapter-owned identity; never derive this from a path or media type. */
+    val nativeResourceId: String? = null,
+    val resourceRevision: String? = null,
+    val format: String? = null,
 )

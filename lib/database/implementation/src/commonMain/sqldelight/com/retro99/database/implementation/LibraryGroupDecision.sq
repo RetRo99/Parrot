@@ -1,0 +1,149 @@
+CREATE TABLE IF NOT EXISTS library_group_aliases (
+    profile_id TEXT NOT NULL,
+    alias_group_id TEXT NOT NULL,
+    target_group_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (profile_id, alias_group_id),
+    CHECK (alias_group_id <> target_group_id)
+);
+
+CREATE TABLE IF NOT EXISTS library_manual_separations (
+    profile_id TEXT NOT NULL,
+    first_source_key TEXT NOT NULL,
+    second_source_key TEXT NOT NULL,
+    decision_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    overridden_by_decision_id TEXT,
+    PRIMARY KEY (profile_id, first_source_key, second_source_key),
+    UNIQUE (profile_id, decision_id)
+);
+
+CREATE TABLE IF NOT EXISTS library_group_decision_log (
+    profile_id TEXT NOT NULL,
+    decision_id TEXT NOT NULL,
+    server_revision INTEGER NOT NULL DEFAULT 0 CHECK (server_revision >= 0),
+    payload TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    feed_applied INTEGER NOT NULL DEFAULT 0 CHECK (feed_applied IN (0, 1)),
+    PRIMARY KEY (profile_id, decision_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_library_group_decisions_revision
+ON library_group_decision_log(profile_id, server_revision);
+
+CREATE TABLE IF NOT EXISTS library_group_metadata_preferences (
+    profile_id TEXT NOT NULL,
+    group_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    decision_id TEXT NOT NULL,
+    server_revision INTEGER NOT NULL DEFAULT 0 CHECK (server_revision >= 0),
+    PRIMARY KEY (profile_id, group_id),
+    FOREIGN KEY (profile_id, group_id)
+        REFERENCES library_groups(profile_id, group_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_group_media_preferences (
+    profile_id TEXT NOT NULL,
+    group_id TEXT NOT NULL,
+    media_type TEXT NOT NULL CHECK (length(trim(media_type)) > 0),
+    source_key TEXT NOT NULL,
+    decision_id TEXT NOT NULL,
+    server_revision INTEGER NOT NULL DEFAULT 0 CHECK (server_revision >= 0),
+    PRIMARY KEY (profile_id, group_id, media_type),
+    FOREIGN KEY (profile_id, group_id)
+        REFERENCES library_groups(profile_id, group_id) ON DELETE CASCADE
+);
+
+getLibraryGroupAlias:
+SELECT * FROM library_group_aliases
+WHERE profile_id = ? AND alias_group_id = ?;
+
+insertLibraryGroupAlias:
+INSERT INTO library_group_aliases(profile_id, alias_group_id, target_group_id, created_at)
+VALUES (?, ?, ?, ?);
+
+deleteLibraryGroupAlias:
+DELETE FROM library_group_aliases
+WHERE profile_id = ? AND alias_group_id = ?;
+
+getLibraryManualSeparation:
+SELECT * FROM library_manual_separations
+WHERE profile_id = ? AND first_source_key = ? AND second_source_key = ?;
+
+getLibraryManualSeparations:
+SELECT * FROM library_manual_separations
+WHERE profile_id = ? AND overridden_by_decision_id IS NULL
+ORDER BY first_source_key, second_source_key;
+
+insertLibraryManualSeparation:
+INSERT INTO library_manual_separations(
+    profile_id, first_source_key, second_source_key, decision_id, created_at
+) VALUES (?, ?, ?, ?, ?);
+
+overrideLibraryManualSeparation:
+UPDATE library_manual_separations
+SET overridden_by_decision_id = ?
+WHERE profile_id = ? AND first_source_key = ? AND second_source_key = ?
+AND overridden_by_decision_id IS NULL;
+
+reactivateLibraryManualSeparation:
+UPDATE library_manual_separations
+SET decision_id = ?, created_at = ?, overridden_by_decision_id = NULL
+WHERE profile_id = ? AND first_source_key = ? AND second_source_key = ?
+AND overridden_by_decision_id IS NOT NULL;
+
+getLibraryGroupMetadataPreference:
+SELECT * FROM library_group_metadata_preferences
+WHERE profile_id = ? AND group_id = ?;
+
+getLibraryGroupMediaPreferences:
+SELECT * FROM library_group_media_preferences
+WHERE profile_id = ? AND group_id = ? ORDER BY media_type;
+
+upsertLibraryGroupMetadataPreference:
+INSERT OR REPLACE INTO library_group_metadata_preferences(
+    profile_id, group_id, source_key, decision_id, server_revision
+) VALUES (?, ?, ?, ?, ?);
+
+upsertLibraryGroupMediaPreference:
+INSERT OR REPLACE INTO library_group_media_preferences(
+    profile_id, group_id, media_type, source_key, decision_id, server_revision
+) VALUES (?, ?, ?, ?, ?, ?);
+
+getLibraryGroupDecision:
+SELECT * FROM library_group_decision_log
+WHERE profile_id = ? AND decision_id = ?;
+
+getHighestAppliedLibraryGroupDecisionRevision:
+SELECT MAX(server_revision) FROM library_group_decision_log
+WHERE profile_id = ? AND server_revision > 0 AND feed_applied = 1;
+
+insertLibraryGroupDecision:
+INSERT INTO library_group_decision_log(
+    profile_id, decision_id, server_revision, payload, created_at
+) VALUES (?, ?, ?, ?, ?);
+
+updateLibraryGroupDecisionRevision:
+UPDATE library_group_decision_log
+SET server_revision = ?, payload = ?
+WHERE profile_id = ? AND decision_id = ?;
+
+markLibraryGroupDecisionFeedApplied:
+UPDATE library_group_decision_log
+SET feed_applied = 1
+WHERE profile_id = ? AND decision_id = ?;
+
+updateMembershipDecisionRevision:
+UPDATE library_group_memberships
+SET revision = ?
+WHERE profile_id = ? AND decision_id = ?;
+
+updateMetadataPreferenceRevision:
+UPDATE library_group_metadata_preferences
+SET server_revision = ?
+WHERE profile_id = ? AND decision_id = ?;
+
+updateMediaPreferenceRevision:
+UPDATE library_group_media_preferences
+SET server_revision = ?
+WHERE profile_id = ? AND decision_id = ?;

@@ -12,6 +12,7 @@ import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerReaderRepository
+import com.retro99.server.api.library.LibraryAdapterId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -25,6 +26,7 @@ class ParrotCloudReaderRepository(
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
 ) : ServerReaderRepository {
+    override val libraryAdapterId = LibraryAdapterId("parrot-cloud")
     private val json = Json {
         encodeDefaults = true
     }

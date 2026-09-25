@@ -31,6 +31,28 @@ class LibraryBookJsonCodecTest {
     }
 
     @Test
+    fun encodeMarksOnlyIntentionalReimportsForTombstoneResurrection() {
+        val book = LibraryBookLocalModel(
+            libraryBookId = "hash-123",
+            contentHash = "hash-123",
+            contentHashAlgorithm = "sha256",
+            title = "A book",
+            author = null,
+            format = "ebook",
+        )
+
+        val ordinaryPayload = Json.parseToJsonElement(
+            LibraryBookJsonCodec.encode(book),
+        ).jsonObject
+        val reimportPayload = Json.parseToJsonElement(
+            LibraryBookJsonCodec.encode(book, intentionalReimport = true),
+        ).jsonObject
+
+        assertEquals("false", ordinaryPayload["intentional_reimport"]?.jsonPrimitive?.content)
+        assertEquals("true", reimportPayload["intentional_reimport"]?.jsonPrimitive?.content)
+    }
+
+    @Test
     fun decodeRoundTripsServerOwnedFields() {
         val book = LibraryBookLocalModel(
             libraryBookId = "hash-123",

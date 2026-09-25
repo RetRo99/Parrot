@@ -336,6 +336,7 @@ class TtsReadAloudEngine(
         queuedSentenceIndices.clear()
         queuedSentenceIndices.addAll(index until index + playlist.size)
         playbackPlayer.setMediaItems(playlist)
+        mediaPlaybackController.onMediaItemsReplaced(playbackPlayer)
         playbackPlayer.prepare()
         playbackPlayer.play()
         prefetch(index + 1)

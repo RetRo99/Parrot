@@ -6,6 +6,7 @@ import com.retro99.user.api.UserProfile
 import com.retro99.user.api.UserRegistry
 import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.MemoryCodeVerifierCache
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
 import io.github.jan.supabase.auth.user.UserSession
@@ -135,6 +136,7 @@ class SupabaseClientProviderTest {
 
         assertIs<SessionStatus.Authenticated>(restoredState.status)
         assertEquals("account-a", restoredState.accountId)
+        assertTrue(restoredState.isAuthenticatedAs("account-a"))
     }
 
     @Test
@@ -197,6 +199,8 @@ class SupabaseClientProviderTest {
             ),
             cloudSessionManager = CloudSessionManager(ProviderFakePreferences()),
             userRegistry = userRegistry,
+            authCodeVerifierCache = MemoryCodeVerifierCache(),
+            authLifecycleCallbacksEnabled = false,
         )
     }
 
@@ -208,6 +212,8 @@ class SupabaseClientProviderTest {
             ),
             cloudSessionManager = sessionManager,
             userRegistry = userRegistry,
+            authCodeVerifierCache = MemoryCodeVerifierCache(),
+            authLifecycleCallbacksEnabled = false,
         )
     }
 

@@ -15,6 +15,8 @@ kotlin {
         namespace = "com.retro99.feature.settings.ui"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -39,10 +41,23 @@ kotlin {
             implementation(projects.baseUi)
             implementation(projects.translations)
             implementation(projects.feature.settings.domain)
+            implementation(projects.feature.library.domain)
+            implementation(projects.feature.cloudAccount.domain)
             implementation(projects.feature.reader.domain)
             implementation(projects.lib.analytics.api)
             implementation(projects.lib.server.api)
+            implementation(projects.lib.user.api)
+        }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.coroutines.test)
+        }
+
+        named("androidHostTest") {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+            }
         }
     }
 }
-

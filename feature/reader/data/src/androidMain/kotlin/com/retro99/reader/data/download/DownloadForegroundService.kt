@@ -9,21 +9,29 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.base.result.log
-import com.retro99.reader.data.source.EbookFileDownloader
 import com.retro99.books.domain.model.BookType
+import com.retro99.reader.data.source.EbookFileDownloader
+import com.retro99.reader.data.source.isMultiFileDownload
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.android.ext.android.inject
 
 /**
@@ -34,13 +42,26 @@ import org.koin.android.ext.android.inject
  */
 class DownloadForegroundService : Service() {
 
+    private data class PendingDownload(
+        val bookUuid: String,
+        val bookType: BookType,
+        val filePath: String,
+        val bookTitle: String,
+        val serverId: String,
+    )
+
     private val fileDownloader: EbookFileDownloader by inject()
     private val downloadStateHolder: DownloadStateHolder by inject()
     private val analytics: Analytics by inject()
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val activeJobsLock = Any()
     private val activeJobs = mutableMapOf<String, Job>()
-    private val activeDownloadTitles = mutableMapOf<String, String>()
+    private val cancellingKeys = mutableSetOf<String>()
+    private val pendingDownloads = mutableMapOf<String, PendingDownload>()
+    private val startingKeys = mutableSetOf<String>()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var latestStartId: Int = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -48,6 +69,7 @@ class DownloadForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        latestStartId = startId
         when (intent?.action) {
             ACTION_START_DOWNLOAD -> {
                 val bookUuid = intent.getStringExtra(EXTRA_BOOK_UUID) ?: return START_NOT_STICKY
@@ -108,76 +130,151 @@ class DownloadForegroundService : Service() {
         serverId: String,
     ) {
         val key = "$bookUuid:${bookType.value}"
+        val request = PendingDownload(bookUuid, bookType, filePath, bookTitle, serverId)
+        val isMultiFile = filePath.isMultiFileDownload()
 
-        // Cancel existing job if any
-        activeJobs[key]?.cancel()
+        var activeJob: Job? = null
+        val job = synchronized(activeJobsLock) {
+            when {
+                key in cancellingKeys -> {
+                    pendingDownloads[key] = request
+                    null
+                }
+                key in activeJobs -> null
+                else -> {
+                    val createdJob = serviceScope.launch(start = CoroutineStart.LAZY) {
+                        try {
+                            downloadStateHolder.clearCancelledState(bookUuid, bookType)
+                            downloadStateHolder.updateProgress(bookUuid, bookType, null)
 
-        // Track the title for this download
-        activeDownloadTitles[key] = bookTitle
+                            fileDownloader.downloadEbookWithProgress(
+                                ebookFilePath = filePath,
+                                bookUuid = bookUuid,
+                                bookType = bookType,
+                                serverId = serverId,
+                                onProgress = { bytesDownloaded, totalBytes ->
+                                    val progress = if (totalBytes != null && totalBytes > 0) {
+                                        (bytesDownloaded.toFloat() / totalBytes.toFloat())
+                                            .coerceIn(0f, 1f)
+                                    } else {
+                                        null
+                                    }
+                                    downloadStateHolder.updateProgress(bookUuid, bookType, progress)
+                                    updateNotification(
+                                        bookUuid = bookUuid,
+                                        bookType = bookType,
+                                        bookTitle = bookTitle,
+                                        progress = progress,
+                                    )
+                                },
+                            ).onSuccess {
+                                downloadStateHolder.markCached(bookUuid, bookType)
+                            }.onFailure { error ->
+                                error.log(
+                                    analytics,
+                                    "DownloadForegroundService: Download failed for book=" +
+                                        "$bookUuid, type=$bookType",
+                                )
+                                downloadStateHolder.markFailed(bookUuid, bookType, error)
+                            }
+                        } finally {
+                            val wasCancelled = !currentCoroutineContext().isActive
+                            withContext(NonCancellable) {
+                                if (wasCancelled) {
+                                    if (!isMultiFile) {
+                                        fileDownloader.deleteEbookCache(bookUuid, bookType)
+                                    }
+                                    downloadStateHolder.markIdle(bookUuid, bookType)
+                                }
 
-        val job = serviceScope.launch {
-            // Clear any previous cancellation state before starting new download
-            downloadStateHolder.clearCancelledState(bookUuid, bookType)
-
-            downloadStateHolder.updateProgress(bookUuid, bookType, null)
-
-            fileDownloader.downloadEbookWithProgress(
-                ebookFilePath = filePath,
-                bookUuid = bookUuid,
-                bookType = bookType,
-                serverId = serverId,
-                onProgress = { bytesDownloaded, totalBytes ->
-                    val progress = if (totalBytes != null && totalBytes > 0) {
-                        (bytesDownloaded.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
-                    } else {
-                        null
+                                val pendingRequest = synchronized(activeJobsLock) {
+                                    if (activeJobs[key] === activeJob) {
+                                        activeJobs.remove(key)
+                                    }
+                                    val pending = if (cancellingKeys.remove(key)) {
+                                        pendingDownloads.remove(key)
+                                    } else {
+                                        null
+                                    }
+                                    if (pending != null) startingKeys.add(key)
+                                    pending
+                                }
+                                pendingRequest?.let { pending ->
+                                    startReservedDownload(key, pending)
+                                }
+                                stopSelfIfNoActiveDownloads()
+                            }
+                        }
                     }
-                    downloadStateHolder.updateProgress(bookUuid, bookType, progress)
-                    updateNotification(
-                        bookUuid = bookUuid,
-                        bookType = bookType,
-                        bookTitle = bookTitle,
-                        progress = progress,
-                    )
-                },
-            ).onSuccess {
-                downloadStateHolder.markCached(bookUuid, bookType)
-            }.onFailure { error ->
-                error.log(
-                    analytics,
-                    "DownloadForegroundService: Download failed for book=$bookUuid, type=$bookType",
-                )
-                downloadStateHolder.markFailed(bookUuid, bookType, error)
+                    activeJob = createdJob
+                    activeJobs[key] = createdJob
+                    createdJob
+                }
             }
-
-            activeJobs.remove(key)
-            activeDownloadTitles.remove(key)
-            stopSelfIfNoActiveDownloads()
         }
-
-        activeJobs[key] = job
+        job?.start()
     }
 
     private fun cancelDownload(bookUuid: String, bookType: BookType) {
         val key = "$bookUuid:${bookType.value}"
-        activeJobs[key]?.cancel()
-        activeJobs.remove(key)
-        activeDownloadTitles.remove(key)
-        // Delete partial file to ensure isEbookCached returns false
-        fileDownloader.deleteEbookCache(bookUuid, bookType)
-        serviceScope.launch {
-            downloadStateHolder.markIdle(bookUuid, bookType)
+        val (activeJob, cleanWithoutJob) = synchronized(activeJobsLock) {
+            val job = activeJobs[key]
+            if (job == null) {
+                null to cancellingKeys.add(key)
+            } else {
+                cancellingKeys.add(key)
+                job to false
+            }
         }
-        stopSelfIfNoActiveDownloads()
+        if (activeJob != null) {
+            activeJob.cancel()
+        } else if (cleanWithoutJob) {
+            serviceScope.launch {
+                withContext(NonCancellable) {
+                    downloadStateHolder.markIdle(bookUuid, bookType)
+                    val pendingRequest = synchronized(activeJobsLock) {
+                        val pending = if (cancellingKeys.remove(key)) {
+                            pendingDownloads.remove(key)
+                        } else {
+                            null
+                        }
+                        if (pending != null) startingKeys.add(key)
+                        pending
+                    }
+                    pendingRequest?.let { pending ->
+                        startReservedDownload(key, pending)
+                    }
+                    stopSelfIfNoActiveDownloads()
+                }
+            }
+        }
+    }
+
+    private fun startReservedDownload(key: String, request: PendingDownload) {
+        try {
+            startDownload(
+                request.bookUuid,
+                request.bookType,
+                request.filePath,
+                request.bookTitle,
+                request.serverId,
+            )
+        } finally {
+            synchronized(activeJobsLock) { startingKeys.remove(key) }
+        }
     }
 
     private fun stopSelfIfNoActiveDownloads() {
-        if (activeJobs.isEmpty()) {
+        mainHandler.post {
+            val canStop = synchronized(activeJobsLock) {
+                activeJobs.isEmpty() && cancellingKeys.isEmpty() &&
+                    pendingDownloads.isEmpty() && startingKeys.isEmpty()
+            }
+            if (!canStop || !stopSelfResult(latestStartId)) return@post
+
             stopForeground(STOP_FOREGROUND_REMOVE)
-            // Explicitly cancel the notification to ensure it's removed
             val notificationManager = getSystemService(NotificationManager::class.java)
             notificationManager.cancel(NOTIFICATION_ID)
-            stopSelf()
         }
     }
 
@@ -189,7 +286,7 @@ class DownloadForegroundService : Service() {
     ) {
         val key = "$bookUuid:${bookType.value}"
         // Don't update notification if download was cancelled
-        if (!activeJobs.containsKey(key)) return
+        if (!synchronized(activeJobsLock) { activeJobs.containsKey(key) }) return
 
         val notification = createNotification(
             bookUuid = bookUuid,
@@ -291,4 +388,3 @@ class DownloadForegroundService : Service() {
         }
     }
 }
-

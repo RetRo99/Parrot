@@ -28,6 +28,22 @@ interface ImportedBooksDatabase {
         position: PositionEntity?,
     )
 
+    /**
+     * Saves a restored replica only while its transfer remains active. The
+     * implementation must check and persist in the same transaction so a late
+     * finalizer cannot resurrect a cancelled download.
+     */
+    suspend fun saveRestoredBookWithLibraryMappingIfTransferActive(
+        book: ImportedBookEntity,
+        libraryBook: LibraryBookEntity,
+        localBookFile: LocalBookFileEntity,
+        transfer: CloudFileTransferEntity,
+        position: PositionEntity?,
+    ): Boolean {
+        saveRestoredBookWithLibraryMapping(book, libraryBook, localBookFile, transfer, position)
+        return true
+    }
+
     fun getAllImportedBooks(): Flow<List<ImportedBookEntity>>
 
     suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity?

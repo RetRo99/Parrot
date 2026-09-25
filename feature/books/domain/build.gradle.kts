@@ -14,6 +14,8 @@ kotlin {
         namespace = "com.retro99.feature.books.domain"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -26,12 +28,14 @@ kotlin {
             implementation(libs.coroutines)
             implementation(projects.base)
             implementation(projects.feature.cloudAccount.domain)
+            implementation(projects.feature.library.domain)
             api(projects.lib.server.api)
             implementation(libs.filekit.core)
         }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.coroutines.test)
         }
     }
 }

@@ -2,6 +2,7 @@ package com.retro99.server.storyteller.model
 
 import com.retro99.base.url.CoverUrlBuilder
 import com.retro99.server.api.ServerBook
+import com.retro99.server.api.ServerBookCollection
 import com.retro99.server.api.ServerBookSeries
 import com.retro99.server.api.ServerType
 import kotlinx.serialization.SerialName
@@ -62,6 +63,9 @@ data class StorytellerBookApiModel(
 
     @SerialName("readaloud")
     val readaloud: StorytellerReadaloudApiModel? = null,
+
+    @SerialName("collections")
+    val collections: List<StorytellerCollectionApiModel> = emptyList(),
 )
 
 @Serializable
@@ -105,6 +109,21 @@ data class StorytellerTagApiModel(
 
     @SerialName("name")
     val name: String,
+)
+
+@Serializable
+data class StorytellerCollectionApiModel(
+    @SerialName("uuid")
+    val uuid: String,
+
+    @SerialName("name")
+    val name: String,
+
+    @SerialName("createdAt")
+    val createdAt: String? = null,
+
+    @SerialName("updatedAt")
+    val updatedAt: String? = null,
 )
 
 @Serializable
@@ -153,6 +172,13 @@ fun StorytellerBookApiModel.toDomain(
         // Storyteller books are not local
         isLocal = false,
         serverType = ServerType.Storyteller,
+        collections = collections.map { collection ->
+            ServerBookCollection(
+                id = collection.uuid,
+                name = collection.name,
+                createdAt = collection.createdAt,
+                updatedAt = collection.updatedAt,
+            )
+        },
     )
 }
-

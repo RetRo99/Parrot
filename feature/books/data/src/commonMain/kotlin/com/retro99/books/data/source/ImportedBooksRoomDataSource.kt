@@ -11,6 +11,7 @@ import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.database.api.DatabaseExecutor
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.library.LibraryBookMutation
+import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -20,6 +21,7 @@ import org.koin.core.annotation.Single
 @Single(binds = [ImportedBooksLocalSource::class])
 internal class ImportedBooksRoomDataSource(
     @Provided private val importedBooksDatabase: ImportedBooksDatabase,
+    @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val databaseExecutor: DatabaseExecutor,
 ) : ImportedBooksLocalSource {
 
@@ -29,20 +31,42 @@ internal class ImportedBooksRoomDataSource(
             if (libraryBook == null) {
                 importedBooksDatabase.upsertImportedBook(book.toLocalModel())
             } else {
+                val existing = libraryBooksDatabase.getLibraryBookById(
+                    libraryBook.libraryBookId,
+                )
+                val intentionalReimport = existing?.deletedAt != null
+                val mappedLibraryBook = if (intentionalReimport) {
+                    libraryBook.copy(
+                        cloudBookId = existing?.cloudBookId,
+                        remoteRevision = existing?.remoteRevision,
+                        metadataJson = existing?.metadataJson,
+                    )
+                } else {
+                    libraryBook
+                }
                 importedBooksDatabase.upsertImportedBookWithLibraryMapping(
                     book = book.toLocalModel(),
                     mutation = LibraryBookMutation(
-                        libraryBook = libraryBook,
+                        libraryBook = mappedLibraryBook,
                         localBookFile = LocalBookFileLocalModel(
-                            libraryBookId = libraryBook.libraryBookId,
+                            libraryBookId = mappedLibraryBook.libraryBookId,
                             importedBookUuid = book.uuid,
                         ),
                         outboxEntry = SyncOutboxEntry.new(
                             entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
-                            entityId = libraryBook.libraryBookId,
+                            entityId = mappedLibraryBook.libraryBookId,
                             operation = SyncOutboxEntry.OPERATION_UPSERT,
-                            payload = LibraryBookJsonCodec.encode(libraryBook),
+                            payload = LibraryBookJsonCodec.encode(
+                                book = mappedLibraryBook,
+                                intentionalReimport = intentionalReimport,
+                            ),
+                            baseRevision = if (intentionalReimport) {
+                                existing?.remoteRevision
+                            } else {
+                                null
+                            },
                         ),
+                        intentionalReimport = intentionalReimport,
                     ),
                 )
             }

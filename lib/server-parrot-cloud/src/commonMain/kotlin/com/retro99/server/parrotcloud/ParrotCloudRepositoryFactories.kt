@@ -1,6 +1,7 @@
 package com.retro99.server.parrotcloud
 
 import com.github.michaelbull.result.Ok
+import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.server.api.ServerBooksRepository
 import com.retro99.server.api.ServerBooksRepositoryFactory
 import com.retro99.server.api.ServerConfig
@@ -29,6 +30,8 @@ class ParrotCloudBooksRepositoryFactory(
             syncOutboxDatabase = booksRepository.syncOutboxDatabase,
             cloudFilesDatabase = booksRepository.cloudFilesDatabase,
             importedBooksDatabase = booksRepository.importedBooksDatabase,
+            cloudProfileLinkRepository = booksRepository.cloudProfileLinkRepository,
+            userRegistry = booksRepository.userRegistry,
         )
     }
 }
@@ -39,6 +42,8 @@ class ParrotCloudBooksRepositoryDependencies(
     @Provided val syncOutboxDatabase: com.retro99.database.api.sync.SyncOutboxDatabase,
     @Provided val cloudFilesDatabase: com.retro99.database.api.cloudfiles.CloudFilesDatabase,
     @Provided val importedBooksDatabase: com.retro99.database.api.importedbooks.ImportedBooksDatabase,
+    @Provided val cloudProfileLinkRepository: CloudProfileLinkRepository,
+    @Provided val userRegistry: com.retro99.user.api.UserRegistry,
 )
 
 @Single(binds = [ServerReaderRepositoryFactory::class])

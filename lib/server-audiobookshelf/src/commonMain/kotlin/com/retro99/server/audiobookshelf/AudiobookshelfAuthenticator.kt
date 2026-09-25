@@ -50,6 +50,7 @@ class AudiobookshelfAuthenticator(
                         accessToken = loginResponse.user.token,
                         refreshToken = null,
                         expiresAt = null,
+                        accountId = loginResponse.user.id,
                     ),
                 )
             } else {

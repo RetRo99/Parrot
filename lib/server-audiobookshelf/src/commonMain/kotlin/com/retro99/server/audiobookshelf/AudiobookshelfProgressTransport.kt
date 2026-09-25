@@ -1,6 +1,7 @@
 package com.retro99.server.audiobookshelf
 
 import com.github.michaelbull.result.fold
+import com.retro99.base.result.AppError
 import com.retro99.base.result.CompletableResult
 import com.retro99.server.api.ServerNetworkClient
 import com.retro99.server.api.ServerPosition
@@ -50,7 +51,12 @@ class AudiobookshelfProgressTransport(
                     }
                 },
                 failure = { error ->
-                    throw IllegalStateException("Audiobookshelf progress fetch failed: $error")
+                    if (error !is AppError.ApiError || error.code != 404) {
+                        throw IllegalStateException(
+                            "Audiobookshelf progress fetch failed: $error",
+                        )
+                    }
+                    null
                 },
             )
         }.toMap()

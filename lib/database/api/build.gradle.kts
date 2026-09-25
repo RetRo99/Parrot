@@ -20,6 +20,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.base)
+            api(projects.lib.server.api)
             implementation(libs.coroutines)
             implementation(libs.datetime)
         }

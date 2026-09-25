@@ -35,6 +35,21 @@ sealed class BookUiModel {
 
     abstract val publicationDate: String?
 
+    open val unifiedGroupId: String?
+        get() = null
+
+    open val groupMemberUuids: List<String>
+        get() = listOf(uuid)
+
+    open val alternateTitles: List<String>
+        get() = emptyList()
+
+    open val groupServerTypes: Set<String>
+        get() = setOfNotNull(serverType?.identifier)
+
+    open val groupMediaTypes: Set<String>
+        get() = emptySet()
+
     /**
      * The date when the book was added to the library.
      * For local books this is importedAt, for Storyteller books this is createdAt.
@@ -75,6 +90,11 @@ sealed class BookUiModel {
         val localSourceUuid: String? = null,
         val remoteFileAvailability: String = "None",
         val mediaResources: List<MediaResourceUiModel> = emptyList(),
+        override val unifiedGroupId: String? = null,
+        override val groupMemberUuids: List<String> = listOf(uuid),
+        override val alternateTitles: List<String> = emptyList(),
+        override val groupServerTypes: Set<String> = setOfNotNull(serverType?.identifier),
+        override val groupMediaTypes: Set<String> = emptySet(),
     ) : BookUiModel() {
         override fun filePath(bookType: BookType): String? = when (bookType) {
             BookType.EBOOK -> ebookFilepath
@@ -104,14 +124,23 @@ sealed class BookUiModel {
         val libraryBookId: String? = null,
         val origin: String = "import",
         val cloudBookFileId: String? = null,
+        val groupedAuthors: List<String> = listOfNotNull(author),
+        override val series: List<SeriesUiModel> = emptyList(),
+        override val tags: List<String> = emptyList(),
+        override val unifiedGroupId: String? = null,
+        override val groupMemberUuids: List<String> = listOf(uuid),
+        override val alternateTitles: List<String> = emptyList(),
+        override val groupServerTypes: Set<String> = setOfNotNull(serverType?.identifier),
+        override val groupMediaTypes: Set<String> = setOf(bookType.value),
     ) : BookUiModel() {
-        override val hasEbook: Boolean = bookType == BookType.EBOOK
-        override val hasAudiobook: Boolean = false
-        override val hasReadaloud: Boolean = bookType == BookType.READALOUD
-        override val series: List<SeriesUiModel> = emptyList()
+        override val hasEbook: Boolean
+            get() = bookType == BookType.EBOOK || "ebook" in groupMediaTypes
+        override val hasAudiobook: Boolean
+            get() = "audiobook" in groupMediaTypes
+        override val hasReadaloud: Boolean
+            get() = bookType == BookType.READALOUD || "readaloud" in groupMediaTypes
         override val statusName: String? = null
-        override val authors: List<String> = listOfNotNull(author)
-        override val tags: List<String> = emptyList()
+        override val authors: List<String> = groupedAuthors
         override val subtitle: String? = null
         override val rating: Float? = null
         override val dateAdded: String? = importedAt

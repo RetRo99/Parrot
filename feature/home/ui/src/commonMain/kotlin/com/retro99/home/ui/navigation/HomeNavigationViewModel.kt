@@ -307,12 +307,18 @@ class HomeNavigationViewModel(
                         targetServerId = intent.serverId,
                         targetBookUuid = intent.bookUuid,
                         targetBookType = intent.bookType,
+                        targetSelection = intent.selection,
                     )
                 )
             }
         } else {
             // No conflict, navigate directly
-            navigateToReader(intent.serverId, intent.bookUuid, intent.bookType)
+            navigateToReader(
+                serverId = intent.serverId,
+                bookUuid = intent.bookUuid,
+                bookType = intent.bookType,
+                selection = intent.selection,
+            )
         }
     }
 
@@ -331,6 +337,7 @@ class HomeNavigationViewModel(
             dialogState.targetServerId,
             dialogState.targetBookUuid,
             dialogState.targetBookType,
+            dialogState.targetSelection,
         )
     }
 
@@ -338,13 +345,19 @@ class HomeNavigationViewModel(
         updateState { it.copy(playbackConflictDialog = null) }
     }
 
-    private fun navigateToReader(serverId: String, bookUuid: String, bookType: BookType) {
+    private fun navigateToReader(
+        serverId: String,
+        bookUuid: String,
+        bookType: BookType,
+        selection: HomeDestination.ReaderLaunchSelection? = null,
+    ) {
         emitNavigationEvent(
             HomeNavigationEvent.NavigateTo(
                 HomeDestination.Reader(
                     serverId = serverId,
                     bookUuid = bookUuid,
                     bookType = bookType,
+                    selection = selection,
                 )
             )
         )
@@ -356,4 +369,3 @@ class HomeNavigationViewModel(
         }
     }
 }
-

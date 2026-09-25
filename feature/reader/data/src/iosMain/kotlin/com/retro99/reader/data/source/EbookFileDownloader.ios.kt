@@ -16,6 +16,7 @@ import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
+import platform.Foundation.NSUUID
 import retro99.network.api.NetworkClient
 
 @Single
@@ -53,7 +54,12 @@ actual class EbookFileDownloader(
         if (ebookFilePath.isMultiFileDownload()) {
             downloadMultipleFiles(ebookFilePath, bookUuid, bookType, networkClient)
         } else {
-            downloadSingleFile(ebookFilePath, bookUuid, bookType, networkClient)
+            downloadSingleFile(
+                ebookFilePath,
+                bookUuid,
+                bookType,
+                networkClient,
+            )
         }
     }
 
@@ -67,18 +73,32 @@ actual class EbookFileDownloader(
         val networkClient = networkClientFactory.createForServerId(serverId)
             ?: return@withContext Err(AppError.NotFoundError("Server not found: $serverId"))
         if (ebookFilePath.isMultiFileDownload()) {
-            downloadMultipleFilesWithProgress(ebookFilePath, bookUuid, bookType, networkClient, onProgress)
+            downloadMultipleFilesWithProgress(
+                ebookFilePath,
+                bookUuid,
+                bookType,
+                networkClient,
+                onProgress,
+            )
         } else {
-            downloadSingleFileWithProgress(ebookFilePath, bookUuid, bookType, networkClient, onProgress)
+            downloadSingleFileWithProgress(
+                ebookFilePath,
+                bookUuid,
+                bookType,
+                networkClient,
+                onProgress,
+            )
         }
     }
 
     @OptIn(ExperimentalForeignApi::class)
     actual fun getCachedEbookPath(bookUuid: String, bookType: BookType): String? {
+        recoverPreviousMultiFileBundle(bookUuid, bookType)
         val dirPath = "$ebooksDir/${getDirectoryName(bookUuid, bookType)}"
         val dirExists = NSFileManager.defaultManager.fileExistsAtPath(dirPath)
         if (dirExists) {
-            val contents = NSFileManager.defaultManager.contentsOfDirectoryAtPath(dirPath, error = null)
+            val contents = NSFileManager.defaultManager
+                .contentsOfDirectoryAtPath(dirPath, error = null)
             if (contents != null && (contents as? List<*>)?.isNotEmpty() == true) {
                 return dirPath
             }
@@ -89,10 +109,12 @@ actual class EbookFileDownloader(
 
     @OptIn(ExperimentalForeignApi::class)
     actual fun isEbookCached(bookUuid: String, bookType: BookType): Boolean {
+        recoverPreviousMultiFileBundle(bookUuid, bookType)
         val dirPath = "$ebooksDir/${getDirectoryName(bookUuid, bookType)}"
         val dirExists = NSFileManager.defaultManager.fileExistsAtPath(dirPath)
         if (dirExists) {
-            val contents = NSFileManager.defaultManager.contentsOfDirectoryAtPath(dirPath, error = null)
+            val contents = NSFileManager.defaultManager
+                .contentsOfDirectoryAtPath(dirPath, error = null)
             if (contents != null && (contents as? List<*>)?.isNotEmpty() == true) {
                 return true
             }
@@ -104,9 +126,18 @@ actual class EbookFileDownloader(
 
     @OptIn(ExperimentalForeignApi::class)
     actual fun deleteEbookCache(bookUuid: String, bookType: BookType): Boolean {
+        recoverPreviousMultiFileBundle(bookUuid, bookType)
         val dirPath = "$ebooksDir/${getDirectoryName(bookUuid, bookType)}"
         if (NSFileManager.defaultManager.fileExistsAtPath(dirPath)) {
-            return NSFileManager.defaultManager.removeItemAtPath(dirPath, error = null)
+            if (!NSFileManager.defaultManager.removeItemAtPath(dirPath, error = null)) {
+                return false
+            }
+        }
+        val previousDir = previousBundleDirectory(dirPath)
+        if (NSFileManager.defaultManager.fileExistsAtPath(previousDir) &&
+            !NSFileManager.defaultManager.removeItemAtPath(previousDir, error = null)
+        ) {
+            return false
         }
         val singlePath = "$ebooksDir/${getSingleFileName(bookUuid, bookType)}"
         return if (NSFileManager.defaultManager.fileExistsAtPath(singlePath)) {
@@ -159,25 +190,24 @@ actual class EbookFileDownloader(
     ): AppResult<String> {
         val paths = ebookFilePath.multiFilePaths()
         val targetDir = "$ebooksDir/${getDirectoryName(bookUuid, bookType)}"
-        NSFileManager.defaultManager.createDirectoryAtPath(
-            targetDir,
-            withIntermediateDirectories = true,
-            attributes = null,
-            error = null,
+        val stagingDir = newStagingDirectory(targetDir)
+        return downloadMultiFileBundle(
+            filePaths = paths,
+            destinationPath = { index -> "$stagingDir/${formatFileIndex(index)}" },
+            prepareStagingDirectory = { prepareStagingDirectory(stagingDir) },
+            downloadFile = { path, destinationPath, _ ->
+                val (urlPath, queryParams) = path.parseDownloadPath()
+                networkClient.downloadFileToPath(
+                    path = urlPath,
+                    destinationPath = destinationPath,
+                    queryBuilder = { queryParams.forEach { (key, value) -> key to value } },
+                )
+            },
+            isFailure = { result -> result.isErr },
+            promoteStagingDirectory = { promoteStagingDirectory(stagingDir, targetDir) },
+            deleteStagingDirectory = { deleteStagingDirectory(stagingDir) },
+            successResult = { Ok(targetDir) },
         )
-
-        for ((index, path) in paths.withIndex()) {
-            val localPath = "$targetDir/${formatFileIndex(index)}"
-            val (urlPath, queryParams) = path.parseDownloadPath()
-
-            val result = networkClient.downloadFileToPath(
-                path = urlPath,
-                destinationPath = localPath,
-                queryBuilder = { queryParams.forEach { (k, v) -> k to v } },
-            )
-            if (result.isErr) return result
-        }
-        return Ok(targetDir)
     }
 
     @OptIn(ExperimentalForeignApi::class)
@@ -190,30 +220,106 @@ actual class EbookFileDownloader(
     ): AppResult<String> {
         val paths = ebookFilePath.multiFilePaths()
         val targetDir = "$ebooksDir/${getDirectoryName(bookUuid, bookType)}"
-        NSFileManager.defaultManager.createDirectoryAtPath(
-            targetDir,
+        val stagingDir = newStagingDirectory(targetDir)
+        return downloadMultiFileBundle(
+            filePaths = paths,
+            destinationPath = { index -> "$stagingDir/${formatFileIndex(index)}" },
+            prepareStagingDirectory = { prepareStagingDirectory(stagingDir) },
+            downloadFile = { path, destinationPath, index ->
+                onProgress(index.toLong(), paths.size.toLong())
+                val (urlPath, queryParams) = path.parseDownloadPath()
+                networkClient.downloadFileToPathWithProgress(
+                    path = urlPath,
+                    destinationPath = destinationPath,
+                    onProgress = { _, _ -> },
+                    queryBuilder = { queryParams.forEach { (key, value) -> key to value } },
+                )
+            },
+            isFailure = { result -> result.isErr },
+            promoteStagingDirectory = { promoteStagingDirectory(stagingDir, targetDir) },
+            deleteStagingDirectory = { deleteStagingDirectory(stagingDir) },
+            successResult = {
+                onProgress(paths.size.toLong(), paths.size.toLong())
+                Ok(targetDir)
+            },
+        )
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun newStagingDirectory(targetDir: String): String =
+        "$ebooksDir/.${targetDir.substringAfterLast('/')}.${NSUUID().UUIDString}.download"
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun prepareStagingDirectory(stagingDir: String) {
+        deleteStagingDirectory(stagingDir)
+        val fileManager = NSFileManager.defaultManager
+        fileManager.createDirectoryAtPath(
+            stagingDir,
             withIntermediateDirectories = true,
             attributes = null,
             error = null,
         )
-
-        for ((index, path) in paths.withIndex()) {
-            val localPath = "$targetDir/${formatFileIndex(index)}"
-            val (urlPath, queryParams) = path.parseDownloadPath()
-
-            onProgress(index.toLong(), paths.size.toLong())
-
-            val result = networkClient.downloadFileToPathWithProgress(
-                path = urlPath,
-                destinationPath = localPath,
-                onProgress = { _, _ -> },
-                queryBuilder = { queryParams.forEach { (k, v) -> k to v } },
-            )
-            if (result.isErr) return result
+        if (!fileManager.fileExistsAtPath(stagingDir)) {
+            error("Could not create the multi-file download staging directory")
         }
-        onProgress(paths.size.toLong(), paths.size.toLong())
-        return Ok(targetDir)
     }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun deleteStagingDirectory(stagingDir: String) {
+        val fileManager = NSFileManager.defaultManager
+        if (fileManager.fileExistsAtPath(stagingDir) &&
+            !fileManager.removeItemAtPath(stagingDir, error = null)
+        ) {
+            error("Could not remove the failed multi-file download staging directory")
+        }
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun promoteStagingDirectory(stagingDir: String, targetDir: String) {
+        val fileManager = NSFileManager.defaultManager
+        recoverPreviousMultiFileBundle(targetDir)
+        val previousDir = previousBundleDirectory(targetDir)
+        if (fileManager.fileExistsAtPath(previousDir) &&
+            !fileManager.removeItemAtPath(previousDir, error = null)
+        ) {
+            error("Could not clear the previous multi-file cache directory")
+        }
+
+        val hadPreviousBundle = fileManager.fileExistsAtPath(targetDir)
+        if (hadPreviousBundle &&
+            !fileManager.moveItemAtPath(targetDir, previousDir, error = null)
+        ) {
+            error("Could not preserve the existing multi-file cache directory")
+        }
+        if (!fileManager.moveItemAtPath(stagingDir, targetDir, error = null)) {
+            if (hadPreviousBundle &&
+                !fileManager.moveItemAtPath(previousDir, targetDir, error = null)
+            ) {
+                error("Could not promote the new bundle or restore the existing cache")
+            }
+            error("Could not promote the completed multi-file download")
+        }
+        if (hadPreviousBundle) fileManager.removeItemAtPath(previousDir, error = null)
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun recoverPreviousMultiFileBundle(bookUuid: String, bookType: BookType) {
+        val targetDir = "$ebooksDir/${getDirectoryName(bookUuid, bookType)}"
+        recoverPreviousMultiFileBundle(targetDir)
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun recoverPreviousMultiFileBundle(targetDir: String) {
+        val fileManager = NSFileManager.defaultManager
+        val previousDir = previousBundleDirectory(targetDir)
+        if (!fileManager.fileExistsAtPath(targetDir) &&
+            fileManager.fileExistsAtPath(previousDir)
+        ) {
+            fileManager.moveItemAtPath(previousDir, targetDir, error = null)
+        }
+    }
+
+    private fun previousBundleDirectory(targetDir: String): String = "$targetDir.previous"
 
     private fun formatFileIndex(index: Int): String =
         (index + 1).toString().padStart(2, '0')

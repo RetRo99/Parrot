@@ -3,6 +3,8 @@ package com.retro99.server.parrotcloud
 import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.database.api.library.LibraryGroupsDatabase
+import com.retro99.database.api.library.LibrarySourceIdentityPromotionDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.server.api.ServerPosition
@@ -13,6 +15,8 @@ import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressSyncTransport
 import com.retro99.sync.domain.LibraryMutationSyncTransport
+import com.retro99.sync.domain.LibraryGroupDecisionCodec
+import com.retro99.sync.domain.LibraryGroupSyncReadiness
 import com.retro99.sync.data.ProgressIdentity
 import com.retro99.sync.data.ProgressIdentityResolver
 import com.retro99.sync.data.ProgressOutboxCodec
@@ -26,6 +30,9 @@ import com.retro99.sync.data.SyncOutboxCapability
 import com.retro99.sync.data.DuplicatePositionRepair
 import com.retro99.sync.data.LocalBookUuidResolver
 import com.retro99.sync.data.SyncBoundedPass
+import com.retro99.server.api.library.LibraryProfileId
+import com.retro99.server.api.library.LibrarySourceIdentitySyncAuthorization
+import com.retro99.server.api.library.SourceConnectionId
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.decodeFromString
@@ -43,14 +50,19 @@ class ParrotCloudSyncAdapter(
     @Provided private val localBookUuidResolver: LocalBookUuidResolver,
     @Provided private val duplicatePositionRepair: DuplicatePositionRepair,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
+    @Provided private val libraryGroupsDatabase: LibraryGroupsDatabase,
+    @Provided private val sourceIdentityPromotionDatabase: LibrarySourceIdentityPromotionDatabase,
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
     @Provided private val libraryMutationTransport: LibraryMutationSyncTransport,
     @Provided private val progressTransport: ProgressSyncTransport,
     @Provided private val progressSyncEngine: ProgressSyncEngine,
     @Provided private val libraryMutationSyncEngine: LibraryMutationSyncEngine,
+    @Provided private val librarySourceIdentitySyncAuthorization:
+        LibrarySourceIdentitySyncAuthorization,
     @Provided private val syncBoundedPass: SyncBoundedPass,
     @Provided private val syncPageAdapter: ParrotCloudSyncPageAdapter,
     @Provided private val libraryMutationApplier: ParrotCloudLibraryMutationApplier,
+    @Provided private val libraryBookRemovalApplier: ParrotCloudLibraryBookRemovalApplier,
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
     @Provided private val bookFileChangeApplier: ParrotCloudBookFileChangeApplier,
 ) : SyncPass {
@@ -69,14 +81,26 @@ class ParrotCloudSyncAdapter(
         context: SyncExecutionContext,
         reportPhase: SyncPhaseReporter,
     ): SyncResult {
-        return synchronizeProfile(context.remoteAccountId, reportPhase)
+        return synchronizeProfile(
+            cloudUserId = context.remoteAccountId,
+            localProfileId = context.localProfileId,
+            reportPhase = reportPhase,
+        )
     }
 
     private suspend fun synchronizeProfile(
         cloudUserId: String,
+        localProfileId: String,
         reportPhase: SyncPhaseReporter,
     ): SyncResult {
+        sourceIdentityPromotionDatabase.promoteUnresolvedParrotCloudSources(
+            profileId = LibraryProfileId(localProfileId),
+            connectionId = SourceConnectionId(PARROT_CLOUD_SERVER_ID),
+            cloudUserId = cloudUserId,
+        )
         duplicatePositionRepair.repair()
+        bookFileChangeApplier.replayPending()
+        bookFileChangeApplier.reconcileCompletedTransferEvidence(localProfileId)
         return syncBoundedPass.execute(
             destinationId = PARROT_CLOUD_SERVER_ID,
             remoteAccountId = cloudUserId,
@@ -90,7 +114,12 @@ class ParrotCloudSyncAdapter(
             },
             pushProgressEntries = ::pushProgressMutations,
             pushLibraryMutationEntries = { entries, cursor ->
-                pushLibraryMutations(entries, cursor ?: "0")
+                pushLibraryMutations(
+                    entries = entries,
+                    cursor = cursor ?: "0",
+                    localProfileId = localProfileId,
+                    cloudUserId = cloudUserId,
+                )
             },
             fetchAndApply = { cursor, limit, reportApplying ->
                 syncPageAdapter.fetchPage(
@@ -102,6 +131,7 @@ class ParrotCloudSyncAdapter(
                             entityType = change.entityType,
                             payload = json.decodeFromString<JsonElement>(change.payload),
                             revision = change.revision,
+                            localProfileId = localProfileId,
                         )
                     },
                     onProgressChange = { remote ->
@@ -228,10 +258,21 @@ class ParrotCloudSyncAdapter(
     private suspend fun pushLibraryMutations(
         entries: List<SyncOutboxEntry>,
         cursor: String,
+        localProfileId: String,
+        cloudUserId: String,
     ): Int {
         if (entries.isEmpty()) return 0
-        val summary = libraryMutationSyncEngine.push(
+        val syncableEntries = prepareParrotCloudLibraryMutationsForWire(
             entries = entries,
+            expectedLocalProfileId = localProfileId,
+            linkedConnectionId = SourceConnectionId(PARROT_CLOUD_SERVER_ID),
+            cloudUserId = cloudUserId,
+            promotionDatabase = sourceIdentityPromotionDatabase,
+            identitySyncAuthorization = librarySourceIdentitySyncAuthorization,
+        )
+        if (syncableEntries.isEmpty()) return 0
+        val summary = libraryMutationSyncEngine.push(
+            entries = syncableEntries,
             transport = libraryMutationTransport,
             cursor = cursor,
             applier = libraryMutationApplier,
@@ -254,6 +295,7 @@ class ParrotCloudSyncAdapter(
         entityType: String,
         payload: JsonElement,
         revision: Long?,
+        localProfileId: String,
     ) {
         when (entityType) {
             SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
@@ -261,14 +303,36 @@ class ParrotCloudSyncAdapter(
                 libraryBookSyncApplier.applyRemote(
                     book.toSyncLibraryBookSnapshot(revision),
                 )
+                book.cloudBookId?.let { cloudBookId ->
+                    bookFileChangeApplier.applyPendingForCloudBook(cloudBookId)
+                }
             }
 
-            ENTITY_TYPE_BOOK_FILE -> bookFileChangeApplier.apply(payload)
+            ENTITY_TYPE_LIBRARY_BOOK_DELETED -> {
+                libraryBookRemovalApplier.apply(payload, revision)
+            }
+
+            ENTITY_TYPE_BOOK_FILE -> bookFileChangeApplier.apply(payload, revision)
+            SyncOutboxEntry.ENTITY_TYPE_LIBRARY_GROUP_DECISION -> {
+                val profileId = LibraryProfileId(localProfileId)
+                val wire = LibraryGroupDecisionCodec.decodeWire(json.encodeToString(payload))
+                val local = LibraryGroupDecisionCodec.toLocal(profileId, wire)
+                libraryGroupsDatabase.applySynchronizedDecision(
+                    local.toSynchronizedDecision(
+                        profileId = profileId,
+                        revision = requireNotNull(revision) {
+                            "Synchronized grouping changes must include a revision"
+                        },
+                        encodedPayload = json.encodeToString(wire),
+                    ),
+                )
+            }
         }
     }
 
     private companion object {
         const val SYNC_BATCH_SIZE = 50
+        const val ENTITY_TYPE_LIBRARY_BOOK_DELETED = "library_book_deleted"
         const val ENTITY_TYPE_BOOK_FILE = "book_file"
         const val DEFAULT_CONTENT_HASH_ALGORITHM = "sha-256-v1"
     }

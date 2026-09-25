@@ -48,6 +48,35 @@ class ServerBookExtTest {
     }
 
     @Test
+    fun `aggregateBookReplicas keeps matching hashes separate when library identities differ`() {
+        // Characterizes the legacy boundary; it does not establish how a device got these IDs.
+        val localBook = createBook(
+            uuid = "local-id",
+            serverId = "local",
+            libraryBookId = "sha-256-v1:content-hash",
+            contentHash = "content-hash",
+            contentHashAlgorithm = "sha-256-v1",
+            isLocal = true,
+        )
+        val cloudBook = createBook(
+            uuid = "cloud-id",
+            serverId = "parrot-cloud",
+            libraryBookId = "legacy-library-id",
+            contentHash = "content-hash",
+            contentHashAlgorithm = "sha-256-v1",
+        )
+
+        assertEquals(
+            listOf(localBook, cloudBook),
+            listOf(localBook, cloudBook).aggregateBookReplicas(),
+        )
+        assertEquals(
+            listOf(cloudBook, localBook),
+            listOf(cloudBook, localBook).aggregateBookReplicas(),
+        )
+    }
+
+    @Test
     fun `aggregateBookReplicas keeps unrelated server books`() {
         val firstBook = createBook(
             uuid = "shared-id",

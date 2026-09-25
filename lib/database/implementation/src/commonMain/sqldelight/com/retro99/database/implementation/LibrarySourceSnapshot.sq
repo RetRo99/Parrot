@@ -1,0 +1,362 @@
+CREATE TABLE IF NOT EXISTS library_source_snapshots (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    execution_connection_id TEXT,
+    legacy_library_book_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    cover_reference TEXT,
+    publication_date TEXT,
+    observed_at_epoch_ms INTEGER NOT NULL,
+    observed_at_submillisecond_ns INTEGER NOT NULL DEFAULT 0
+        CHECK (observed_at_submillisecond_ns >= 0 AND observed_at_submillisecond_ns < 1000000),
+    presence TEXT NOT NULL CHECK (presence IN ('Present', 'Removed', 'Unknown')),
+    is_authoritative INTEGER NOT NULL CHECK (is_authoritative IN (0, 1)),
+    revision TEXT,
+    PRIMARY KEY (profile_id, source_key),
+    CHECK (presence <> 'Removed' OR is_authoritative = 1)
+);
+
+CREATE TABLE IF NOT EXISTS library_source_snapshot_people (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('author', 'narrator')),
+    position INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    PRIMARY KEY (profile_id, source_key, role, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_source_snapshot_series (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    native_id TEXT,
+    name TEXT NOT NULL,
+    sequence_value REAL,
+    PRIMARY KEY (profile_id, source_key, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_source_snapshot_tags (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    tag TEXT NOT NULL,
+    PRIMARY KEY (profile_id, source_key, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_source_snapshot_collections (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    native_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at TEXT,
+    updated_at TEXT,
+    PRIMARY KEY (profile_id, source_key, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_source_snapshot_media_types (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    media_type TEXT NOT NULL,
+    PRIMARY KEY (profile_id, source_key, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_source_snapshot_resources (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    resource_id INTEGER NOT NULL,
+    media_type TEXT NOT NULL,
+    format TEXT,
+    size_bytes INTEGER,
+    availability TEXT NOT NULL DEFAULT 'Unknown'
+        CHECK (availability IN ('DevicePresent', 'AvailableRemotely', 'TransferPending', 'Unavailable', 'Unknown')),
+    local_storage_reference TEXT,
+    remote_resource_reference TEXT,
+    PRIMARY KEY (profile_id, source_key, resource_id),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE,
+    FOREIGN KEY (profile_id, resource_id)
+        REFERENCES library_source_resources(profile_id, resource_id),
+    CHECK (local_storage_reference IS NULL OR remote_resource_reference IS NULL)
+);
+
+CREATE TABLE IF NOT EXISTS library_migration_state (
+    profile_id TEXT NOT NULL,
+    migration_id TEXT NOT NULL,
+    last_source_key TEXT,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    PRIMARY KEY (profile_id, migration_id)
+);
+
+insertLibrarySourceSnapshot:
+INSERT OR IGNORE INTO library_source_snapshots(
+    profile_id, source_key, execution_connection_id, legacy_library_book_id,
+    title, description, cover_reference, publication_date, observed_at_epoch_ms,
+    observed_at_submillisecond_ns, presence, is_authoritative, revision
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateLibrarySourceSnapshot:
+UPDATE library_source_snapshots SET
+    execution_connection_id = ?,
+    legacy_library_book_id = COALESCE(?, legacy_library_book_id),
+    title = ?,
+    description = ?,
+    cover_reference = ?,
+    publication_date = ?,
+    observed_at_epoch_ms = ?,
+    observed_at_submillisecond_ns = ?,
+    presence = ?,
+    is_authoritative = ?,
+    revision = COALESCE(?, revision)
+WHERE profile_id = ? AND source_key = ?;
+
+recordUnknownSourceSnapshot:
+INSERT OR IGNORE INTO library_source_snapshots(
+    profile_id, source_key, execution_connection_id, legacy_library_book_id,
+    title, description, cover_reference, publication_date, observed_at_epoch_ms,
+    observed_at_submillisecond_ns, presence, is_authoritative, revision
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Unknown', 0, ?);
+
+updateUnknownSourceSnapshot:
+UPDATE library_source_snapshots SET
+    execution_connection_id = ?,
+    legacy_library_book_id = COALESCE(?, legacy_library_book_id),
+    observed_at_epoch_ms = ?,
+    observed_at_submillisecond_ns = ?,
+    presence = 'Unknown',
+    is_authoritative = 0,
+    revision = COALESCE(?, revision)
+WHERE profile_id = ? AND source_key = ?;
+
+recordRemovedSourceSnapshot:
+INSERT OR IGNORE INTO library_source_snapshots(
+    profile_id, source_key, execution_connection_id, legacy_library_book_id,
+    title, description, cover_reference, publication_date, observed_at_epoch_ms,
+    observed_at_submillisecond_ns, presence, is_authoritative, revision
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Removed', 1, ?);
+
+updateRemovedSourceSnapshot:
+UPDATE library_source_snapshots SET
+    execution_connection_id = ?,
+    legacy_library_book_id = COALESCE(?, legacy_library_book_id),
+    observed_at_epoch_ms = ?,
+    observed_at_submillisecond_ns = ?,
+    presence = 'Removed',
+    is_authoritative = 1,
+    revision = COALESCE(?, revision)
+WHERE profile_id = ? AND source_key = ?;
+
+getLibrarySourceSnapshot:
+SELECT * FROM library_source_snapshots WHERE profile_id = ? AND source_key = ?;
+
+getLibrarySourceSnapshots:
+SELECT * FROM library_source_snapshots
+WHERE profile_id = ? ORDER BY source_key;
+
+getLibrarySourceSnapshotsAfter:
+SELECT * FROM library_source_snapshots
+WHERE profile_id = ? AND source_key > ? ORDER BY source_key LIMIT ?;
+
+observeLibrarySourceSnapshotProjectionChanges:
+SELECT source_key || ':snapshot:' || observed_at_epoch_ms || ':' ||
+    observed_at_submillisecond_ns || ':' || presence || ':' ||
+    is_authoritative || ':' || COALESCE(revision, '') AS projection_change
+FROM library_source_snapshots WHERE profile_id = :profile_id
+UNION ALL
+SELECT source_key || ':person:' || role || ':' || position || ':' || name
+FROM library_source_snapshot_people WHERE profile_id = :profile_id
+UNION ALL
+SELECT source_key || ':series:' || position || ':' || COALESCE(native_id, '') || ':' || name || ':' ||
+    COALESCE(sequence_value, '')
+FROM library_source_snapshot_series WHERE profile_id = :profile_id
+UNION ALL
+SELECT source_key || ':tag:' || position || ':' || tag
+FROM library_source_snapshot_tags WHERE profile_id = :profile_id
+UNION ALL
+SELECT source_key || ':collection:' || position || ':' || native_id || ':' || name || ':' ||
+    COALESCE(created_at, '') || ':' || COALESCE(updated_at, '')
+FROM library_source_snapshot_collections WHERE profile_id = :profile_id
+UNION ALL
+SELECT source_key || ':media:' || position || ':' || media_type
+FROM library_source_snapshot_media_types WHERE profile_id = :profile_id
+UNION ALL
+SELECT source_key || ':snapshot-resource:' || resource_id || ':' || media_type || ':' ||
+    COALESCE(format, '') || ':' || COALESCE(size_bytes, '') || ':' || availability || ':' ||
+    COALESCE(local_storage_reference, '') || ':' || COALESCE(remote_resource_reference, '')
+FROM library_source_snapshot_resources WHERE profile_id = :profile_id
+UNION ALL
+SELECT source_key || ':resource-identity:' || resource_id || ':' || native_resource_id || ':' ||
+    revision_present || ':' || COALESCE(revision_value, '')
+FROM library_source_resources WHERE profile_id = :profile_id;
+
+deleteLibrarySnapshotPeople:
+DELETE FROM library_source_snapshot_people WHERE profile_id = ? AND source_key = ?;
+
+insertLibrarySnapshotPerson:
+INSERT OR REPLACE INTO library_source_snapshot_people(
+    profile_id, source_key, role, position, name
+)
+VALUES (?, ?, ?, ?, ?);
+
+getLibrarySnapshotPeople:
+SELECT * FROM library_source_snapshot_people
+WHERE profile_id = ? AND source_key = ? ORDER BY role, position;
+
+deleteLibrarySnapshotSeries:
+DELETE FROM library_source_snapshot_series WHERE profile_id = ? AND source_key = ?;
+
+insertLibrarySnapshotSeries:
+INSERT OR REPLACE INTO library_source_snapshot_series(
+    profile_id, source_key, position, native_id, name, sequence_value
+) VALUES (?, ?, ?, ?, ?, ?);
+
+getLibrarySnapshotSeries:
+SELECT * FROM library_source_snapshot_series
+WHERE profile_id = ? AND source_key = ? ORDER BY position;
+
+deleteLibrarySnapshotTags:
+DELETE FROM library_source_snapshot_tags WHERE profile_id = ? AND source_key = ?;
+
+insertLibrarySnapshotTag:
+INSERT OR REPLACE INTO library_source_snapshot_tags(profile_id, source_key, position, tag)
+VALUES (?, ?, ?, ?);
+
+getLibrarySnapshotTags:
+SELECT * FROM library_source_snapshot_tags
+WHERE profile_id = ? AND source_key = ? ORDER BY position;
+
+deleteLibrarySnapshotCollections:
+DELETE FROM library_source_snapshot_collections WHERE profile_id = ? AND source_key = ?;
+
+insertLibrarySnapshotCollection:
+INSERT OR REPLACE INTO library_source_snapshot_collections(
+    profile_id, source_key, position, native_id, name, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+getLibrarySnapshotCollections:
+SELECT * FROM library_source_snapshot_collections
+WHERE profile_id = ? AND source_key = ? ORDER BY position;
+
+deleteLibrarySnapshotMediaTypes:
+DELETE FROM library_source_snapshot_media_types WHERE profile_id = ? AND source_key = ?;
+
+insertLibrarySnapshotMediaType:
+INSERT OR REPLACE INTO library_source_snapshot_media_types(
+    profile_id, source_key, position, media_type
+) VALUES (?, ?, ?, ?);
+
+getLibrarySnapshotMediaTypes:
+SELECT * FROM library_source_snapshot_media_types
+WHERE profile_id = ? AND source_key = ? ORDER BY position;
+
+deleteLibrarySnapshotResources:
+DELETE FROM library_source_snapshot_resources WHERE profile_id = ? AND source_key = ?;
+
+insertLibrarySnapshotResource:
+INSERT OR REPLACE INTO library_source_snapshot_resources(
+    profile_id, source_key, resource_id, media_type, format, size_bytes, availability,
+    local_storage_reference, remote_resource_reference
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getLibrarySnapshotResources:
+SELECT source_resources.resource_id AS resource_id,
+    source_resources.profile_id AS profile_id,
+    source_resources.source_key AS source_key,
+    source_resources.native_resource_id AS native_resource_id,
+    source_resources.revision_present AS revision_present,
+    source_resources.revision_value AS revision_value,
+    snapshot_resources.media_type AS media_type,
+    snapshot_resources.format AS format,
+    snapshot_resources.size_bytes AS size_bytes,
+    snapshot_resources.availability AS availability,
+    snapshot_resources.local_storage_reference AS local_storage_reference,
+    snapshot_resources.remote_resource_reference AS remote_resource_reference
+FROM library_source_snapshot_resources AS snapshot_resources
+JOIN library_source_resources AS source_resources
+    ON source_resources.profile_id = snapshot_resources.profile_id
+    AND source_resources.resource_id = snapshot_resources.resource_id
+WHERE snapshot_resources.profile_id = ? AND snapshot_resources.source_key = ?
+ORDER BY snapshot_resources.resource_id;
+
+retireLibrarySnapshotDeviceReplica:
+UPDATE library_source_snapshot_resources
+SET availability = 'Unavailable', local_storage_reference = NULL
+WHERE profile_id = ? AND source_key = ? AND resource_id = ?
+AND local_storage_reference = ?;
+
+countLibrarySnapshotDeviceReplicasForStorageReference:
+SELECT COUNT(*) FROM library_source_snapshot_resources
+WHERE profile_id = ? AND local_storage_reference = ?;
+
+retireLibrarySnapshotRemoteReplica:
+UPDATE library_source_snapshot_resources
+SET availability = CASE
+        WHEN local_storage_reference IS NULL THEN 'Unavailable'
+        ELSE 'DevicePresent'
+    END,
+    remote_resource_reference = NULL
+WHERE profile_id = ? AND source_key = ? AND resource_id = ?
+AND remote_resource_reference = ?;
+
+markLibrarySnapshotResourcesUnavailable:
+UPDATE library_source_snapshot_resources
+SET availability = 'Unavailable',
+    local_storage_reference = NULL,
+    remote_resource_reference = NULL
+WHERE profile_id = ? AND source_key = ?;
+
+retireEvidenceForSourceRemoval:
+UPDATE library_identity_evidence SET is_active = 0
+WHERE profile_id = ? AND is_active = 1 AND (
+    source_book_key = ? OR
+    source_resource_id IN (
+        SELECT resource_id FROM library_source_resources
+        WHERE profile_id = ? AND source_key = ?
+    ) OR destination_resource_id IN (
+        SELECT resource_id FROM library_source_resources
+        WHERE profile_id = ? AND source_key = ?
+    )
+);
+
+retireEvidenceForResource:
+UPDATE library_identity_evidence SET is_active = 0
+WHERE profile_id = ? AND is_active = 1
+AND (source_resource_id = ? OR destination_resource_id = ?);
+
+getActiveSnapshotEvidenceIds:
+SELECT evidence_id FROM library_identity_evidence
+WHERE profile_id = ? AND is_active = 1
+AND provenance_kind = 'Adapter' AND provenance_id = ?;
+
+retireSnapshotEvidenceId:
+UPDATE library_identity_evidence SET is_active = 0
+WHERE profile_id = ? AND evidence_id = ? AND is_active = 1;
+
+insertLibraryMigrationState:
+INSERT OR IGNORE INTO library_migration_state(
+    profile_id, migration_id, last_source_key, started_at, completed_at
+) VALUES (?, ?, NULL, ?, NULL);
+
+getLibraryMigrationState:
+SELECT * FROM library_migration_state WHERE profile_id = ? AND migration_id = ?;
+
+advanceLibraryMigrationState:
+UPDATE library_migration_state SET last_source_key = ?
+WHERE profile_id = ? AND migration_id = ? AND completed_at IS NULL;
+
+completeLibraryMigrationState:
+UPDATE library_migration_state SET completed_at = ?
+WHERE profile_id = ? AND migration_id = ? AND completed_at IS NULL;

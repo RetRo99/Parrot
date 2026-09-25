@@ -11,6 +11,8 @@ import com.retro99.books.domain.model.BookType
 import com.retro99.books.domain.usecase.GetBookByUuidUseCase
 import com.retro99.reader.domain.model.ReaderInitializationData
 import com.retro99.reader.domain.model.ReadingProgressResult
+import com.retro99.server.api.library.LibraryAdapterId
+import com.retro99.server.api.library.ProgressOwnerRef
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
@@ -52,14 +54,32 @@ class InitializeReaderUseCase(
         serverId: String,
         bookUuid: String,
         bookType: BookType,
+        selectedLocalFilePath: String? = null,
+        progressBookUuid: String? = null,
+        progressAdapterId: LibraryAdapterId? = null,
+        progressOwner: ProgressOwnerRef? = null,
     ): AppResult<ReaderInitializationData> =
         coroutineScope {
             val bookResult = getBookByUuidUseCase(serverId, bookUuid).first()
 
             bookResult.flatMap { book ->
                 when (book) {
-                    is BookDomainModel.LocalBook -> initializeImportedBook(book, bookType)
-                    is BookDomainModel.StorytellerBook -> initializeStorytellerBook(book, bookType)
+                    is BookDomainModel.LocalBook -> initializeImportedBook(
+                        book,
+                        bookType,
+                        selectedLocalFilePath,
+                        progressBookUuid ?: bookUuid,
+                        progressAdapterId,
+                        progressOwner,
+                    )
+                    is BookDomainModel.StorytellerBook -> initializeStorytellerBook(
+                        book,
+                        bookType,
+                        selectedLocalFilePath,
+                        progressBookUuid ?: bookUuid,
+                        progressAdapterId,
+                        progressOwner,
+                    )
                 }
             }
         }
@@ -71,6 +91,10 @@ class InitializeReaderUseCase(
     private suspend fun initializeStorytellerBook(
         book: BookDomainModel.StorytellerBook,
         bookType: BookType,
+        selectedLocalFilePath: String?,
+        progressBookUuid: String,
+        progressAdapterId: LibraryAdapterId?,
+        progressOwner: ProgressOwnerRef?,
     ): AppResult<ReaderInitializationData> = coroutineScope {
         val ebookFilePath = when (bookType) {
             BookType.READALOUD -> book.readaloud?.filepath
@@ -80,12 +104,19 @@ class InitializeReaderUseCase(
             AppError.UnknownError(Throwable("Book has no $bookType file"))
         )
 
-        prepareEbookUseCase(book.uuid, ebookFilePath, bookType).flatMap { localPath ->
+        val preparedPath = selectedLocalFilePath?.let(::Ok)
+            ?: prepareEbookUseCase(book.uuid, ebookFilePath, bookType)
+        preparedPath.flatMap { localPath ->
             val settingsDeferred = async {
                 getReaderSettingsUseCase().first()
             }
             val progressDeferred = async {
-                getReadingProgressWithConflictUseCase(book.serverId, book.uuid)
+                getReadingProgressWithConflictUseCase(
+                    serverId = book.serverId,
+                    bookUuid = progressBookUuid,
+                    expectedAdapterId = progressAdapterId,
+                    progressOwner = progressOwner,
+                )
             }
 
             val settings = settingsDeferred.await()
@@ -117,6 +148,10 @@ class InitializeReaderUseCase(
     private suspend fun initializeImportedBook(
         book: BookDomainModel.LocalBook,
         requestedBookType: BookType,
+        selectedLocalFilePath: String?,
+        progressBookUuid: String,
+        progressAdapterId: LibraryAdapterId?,
+        progressOwner: ProgressOwnerRef?,
     ): AppResult<ReaderInitializationData> = coroutineScope {
         // Validate that the requested book type matches the stored book type
         if (requestedBookType != book.bookType) {
@@ -133,7 +168,12 @@ class InitializeReaderUseCase(
             getReaderSettingsUseCase().first()
         }
         val progressDeferred = async {
-            getReadingProgressWithConflictUseCase(book.serverId, book.uuid)
+            getReadingProgressWithConflictUseCase(
+                serverId = book.serverId,
+                bookUuid = progressBookUuid,
+                expectedAdapterId = progressAdapterId,
+                progressOwner = progressOwner,
+            )
         }
 
         val settings = settingsDeferred.await()
@@ -146,7 +186,7 @@ class InitializeReaderUseCase(
                 bookUuid = book.uuid,
                 bookTitle = book.title,
                 bookCoverUrl = book.coverUrl,
-                localEbookPath = book.filePath,
+                localEbookPath = selectedLocalFilePath ?: book.filePath,
                 bookType = book.bookType,
                 initialSettings = settings,
                 progressResult = progressResult,

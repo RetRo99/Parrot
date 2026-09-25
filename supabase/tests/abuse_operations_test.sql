@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 set search_path = extensions, public;
-select plan(25);
+select plan(29);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at)
 values (
@@ -89,6 +89,7 @@ select is(
     'blocked',
     'service role can add a content hash to the block-list'
 );
+reset role;
 select is(
     (select count(*)::integer from public.cloud_content_blocklist
      where content_hash_algorithm = 'sha-256-v1' and content_hash = repeat('f', 64)),
@@ -115,6 +116,7 @@ select is(
     'unblocked',
     'service role can reverse a block-list decision'
 );
+reset role;
 select is(
     (select count(*)::integer from public.cloud_content_blocklist
      where content_hash_algorithm = 'sha-256-v1' and content_hash = repeat('f', 64)),
@@ -138,6 +140,7 @@ select is(
     'deleting',
     'admin takedown marks the file and returns its storage path'
 );
+reset role;
 select is(
     (select count(*)::integer from public.cloud_content_blocklist
      where content_hash_algorithm = 'sha-256-v1' and content_hash = repeat('c', 64)),
@@ -152,17 +155,34 @@ select is(
     'admin takedown publishes the deleting state'
 );
 select is(
+    (select payload->>'invalidation_reason' from public.sync_changes
+     where entity_type = 'book_file' and entity_id = '30000000-0000-0000-0000-000000000022'
+     order by change_id desc limit 1),
+    'mandatory_invalidation',
+    'admin takedown marks the deleting event for mandatory invalidation'
+);
+select is(
     (select count(*)::integer from public.cloud_file_audit_events
      where cloud_book_file_id = '30000000-0000-0000-0000-000000000022'
        and action = 'takedown' and reason = 'rights notice' and actor = 'ops-test'),
     1,
     'admin takedown records the reason and operator'
 );
+set local role service_role;
 select is(
     (public.complete_book_file_deletion('30000000-0000-0000-0000-000000000022')->>'status'),
     'removed',
     'service role finalizes deletion after the object is absent'
 );
+reset role;
+select is(
+    (select payload->>'invalidation_reason' from public.sync_changes
+     where entity_type = 'book_file' and entity_id = '30000000-0000-0000-0000-000000000022'
+     order by change_id desc limit 1),
+    'mandatory_invalidation',
+    'admin takedown preserves its mandatory reason in the removed event'
+);
+set local role service_role;
 select is(
     (public.admin_takedown_book_file(
         '30000000-0000-0000-0000-000000000022', 'rights notice', 'ops-test'
@@ -184,10 +204,22 @@ select is(
     'deleting',
     'owner deletion first marks the remote file as deleting'
 );
+select ok(
+    not ((select payload from public.sync_changes
+          where entity_type = 'book_file' and entity_id = '30000000-0000-0000-0000-000000000021'
+          order by change_id desc limit 1) ? 'invalidation_reason'),
+    'ordinary deletion leaves the deleting event unclassified'
+);
 select is(
     (public.complete_book_file_deletion('30000000-0000-0000-0000-000000000021')->>'status'),
     'removed',
     'deletion completes after the storage object is absent'
+);
+select ok(
+    not ((select payload from public.sync_changes
+          where entity_type = 'book_file' and entity_id = '30000000-0000-0000-0000-000000000021'
+          order by change_id desc limit 1) ? 'invalidation_reason'),
+    'ordinary deletion leaves the removed event unclassified'
 );
 select is(
     (select count(*)::integer from public.cloud_book_files

@@ -29,10 +29,25 @@ internal class LoginDataRepository(
         serverUrl: String,
         username: String,
         password: String,
+        existingServerId: String?,
     ): CompletableResult {
-        val authenticator = authenticatorFactory.create(serverType)
+        val existingServer = existingServerId?.let { serverId ->
+            serverRegistry.getServer(serverId)
+                ?: return Err(AppError.AuthError("Saved server connection was not found"))
+        }
+        if (existingServer != null && existingServer.type != ServerType.Storyteller) {
+            return Err(
+                AppError.AuthError("Only Storyteller connections can be reauthenticated here"),
+            )
+        }
+        if (existingServer != null && serverType != existingServer.type) {
+            return Err(AppError.AuthError("Server type does not match the saved connection"))
+        }
 
-        return authenticator.login(serverUrl, username, password)
+        val loginUrl = existingServer?.baseUrl ?: serverUrl
+        val authenticator = authenticatorFactory.create(existingServer?.type ?: serverType)
+
+        return authenticator.login(loginUrl, username, password)
             .onFailure { error ->
                 // Never log serverUrl for privacy - only log error type
                 analytics.logException(
@@ -41,13 +56,21 @@ internal class LoginDataRepository(
                 )
             }
             .flatMap { credentials ->
-                // Register server in ServerRegistry
-                val serverConfig = serverRegistry.addServer(
-                    name = serverType.displayName,
-                    type = serverType,
-                    baseUrl = serverUrl,
-                )
-                serverRegistry.saveCredentials(credentials.copy(serverId = serverConfig.id))
+                val serverId = if (existingServer != null) {
+                    if (serverRegistry.getServer(existingServer.id) != existingServer) {
+                        return@flatMap Err(
+                            AppError.AuthError("Saved server connection changed during login"),
+                        )
+                    }
+                    existingServer.id
+                } else {
+                    serverRegistry.addServer(
+                        name = serverType.displayName,
+                        type = serverType,
+                        baseUrl = loginUrl,
+                    ).id
+                }
+                serverRegistry.saveCredentials(credentials.copy(serverId = serverId))
 
                 Ok(Unit)
             }
@@ -91,4 +114,3 @@ internal class LoginDataRepository(
             }
     }
 }
-

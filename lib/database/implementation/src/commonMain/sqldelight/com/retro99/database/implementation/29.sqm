@@ -1,0 +1,52 @@
+CREATE TABLE IF NOT EXISTS library_source_snapshots (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    execution_connection_id TEXT,
+    legacy_library_book_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT,
+    cover_reference TEXT,
+    observed_at_epoch_ms INTEGER NOT NULL,
+    presence TEXT NOT NULL CHECK (presence IN ('Present', 'Removed', 'Unknown')),
+    is_authoritative INTEGER NOT NULL CHECK (is_authoritative IN (0, 1)),
+    revision TEXT,
+    PRIMARY KEY (profile_id, source_key),
+    CHECK (presence <> 'Removed' OR is_authoritative = 1)
+);
+
+CREATE TABLE IF NOT EXISTS library_source_snapshot_people (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('author', 'narrator')),
+    position INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    PRIMARY KEY (profile_id, source_key, role, position),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS library_source_snapshot_resources (
+    profile_id TEXT NOT NULL,
+    source_key TEXT NOT NULL,
+    resource_id INTEGER NOT NULL,
+    media_type TEXT NOT NULL,
+    format TEXT,
+    size_bytes INTEGER,
+    local_storage_reference TEXT,
+    remote_resource_reference TEXT,
+    PRIMARY KEY (profile_id, source_key, resource_id),
+    FOREIGN KEY (profile_id, source_key)
+        REFERENCES library_source_snapshots(profile_id, source_key) ON DELETE CASCADE,
+    FOREIGN KEY (profile_id, resource_id)
+        REFERENCES library_source_resources(profile_id, resource_id),
+    CHECK (local_storage_reference IS NULL OR remote_resource_reference IS NULL)
+);
+
+CREATE TABLE IF NOT EXISTS library_migration_state (
+    profile_id TEXT NOT NULL,
+    migration_id TEXT NOT NULL,
+    last_source_key TEXT,
+    started_at TEXT NOT NULL,
+    completed_at TEXT,
+    PRIMARY KEY (profile_id, migration_id)
+);

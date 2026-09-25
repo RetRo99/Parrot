@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,8 +24,11 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.delete
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Add
@@ -49,6 +53,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SuggestionChip
@@ -63,6 +68,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
@@ -78,6 +84,7 @@ import com.retro99.books.ui.model.BookListViewMode
 import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookSortOption
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.books.ui.model.isFavoritedByGroup
 import com.retro99.books.ui.model.SortDirection
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
@@ -88,6 +95,20 @@ import resources.translations.books_empty_filtered_title
 import resources.translations.books_empty_subtitle
 import resources.translations.books_empty_title
 import resources.translations.books_importing
+import resources.translations.books_merge_confirmation
+import resources.translations.books_merge_cancel
+import resources.translations.books_merge_metadata_details
+import resources.translations.books_merge_metadata_source
+import resources.translations.books_merge_source_audiobookshelf
+import resources.translations.books_merge_source_local
+import resources.translations.books_merge_source_parrot_cloud
+import resources.translations.books_merge_source_storyteller
+import resources.translations.books_merge_source_unknown
+import resources.translations.books_merge_start
+import resources.translations.books_merge_title
+import resources.translations.books_merge_confirm
+import resources.translations.books_merge_selection_count
+import resources.translations.books_merge_selection_stale
 import resources.translations.books_reset_filters
 import resources.translations.books_series_with_position
 import resources.translations.books_sort_a_to_z
@@ -166,6 +187,110 @@ private fun BooksListScreenContent(
 
     if (viewState.isImporting) {
         ImportingDialog()
+    }
+
+    if (viewState.showMergeConfirmation) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!viewState.isMergingGroups) {
+                    intentDispatcher(BooksListIntent.OnMergeDismissed)
+                }
+            },
+            title = { Text(stringResource(StringRes.books_merge_title)) },
+            text = {
+                Column {
+                    Text(stringResource(StringRes.books_merge_confirmation))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(stringResource(StringRes.books_merge_metadata_source))
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 280.dp)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        viewState.mergeMetadataOptions.forEach { option ->
+                            val isSelected = option.sourceKey ==
+                                viewState.preferredMergeMetadataSourceKey
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .selectable(
+                                        selected = isSelected,
+                                        onClick = {
+                                            intentDispatcher(
+                                                BooksListIntent.OnMergeMetadataSourceSelected(
+                                                    option.sourceKey,
+                                                ),
+                                            )
+                                        },
+                                        role = Role.RadioButton,
+                                    )
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = null,
+                                )
+                                Column {
+                                    Text(option.title)
+                                    val sourceName = when (option.adapterId) {
+                                        "local" -> stringResource(
+                                            StringRes.books_merge_source_local,
+                                        )
+                                        "storyteller" -> stringResource(
+                                            StringRes.books_merge_source_storyteller,
+                                        )
+                                        "audiobookshelf" -> stringResource(
+                                            StringRes.books_merge_source_audiobookshelf,
+                                        )
+                                        "parrot-cloud" -> stringResource(
+                                            StringRes.books_merge_source_parrot_cloud,
+                                        )
+                                        else -> stringResource(
+                                            StringRes.books_merge_source_unknown,
+                                        )
+                                    }
+                                    val authors = option.authors.joinToString()
+                                    val details = if (authors.isBlank()) {
+                                        sourceName
+                                    } else {
+                                        stringResource(
+                                            StringRes.books_merge_metadata_details,
+                                            sourceName,
+                                            authors,
+                                        )
+                                    }
+                                    Text(details, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !viewState.isMergingGroups,
+                    onClick = { intentDispatcher(BooksListIntent.OnMergeConfirmed) },
+                ) {
+                    if (viewState.isMergingGroups) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text(stringResource(StringRes.books_merge_confirm))
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !viewState.isMergingGroups,
+                    onClick = { intentDispatcher(BooksListIntent.OnMergeDismissed) },
+                ) {
+                    Text(stringResource(StringRes.books_merge_cancel))
+                }
+            },
+        )
     }
 
     if (viewState.showImportBackupAttestation) {
@@ -341,6 +466,62 @@ private fun BooksListScreenContent(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
+                if (viewState.isMergeSelectionMode) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = stringResource(
+                                StringRes.books_merge_selection_count,
+                                viewState.selectedMergeGroupIds.size,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                        TextButton(
+                            enabled = !viewState.isResolvingMergeSelection &&
+                                !viewState.isMergingGroups,
+                            onClick = {
+                                intentDispatcher(BooksListIntent.OnMergeSelectionCancelled)
+                            },
+                        ) {
+                            Text(stringResource(StringRes.books_merge_cancel))
+                        }
+                        Button(
+                            enabled = viewState.canMergeSelectedGroups,
+                            onClick = { intentDispatcher(BooksListIntent.OnMergeRequested) },
+                        ) {
+                            Text(stringResource(StringRes.books_merge_title))
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        TextButton(
+                            onClick = {
+                                intentDispatcher(BooksListIntent.OnMergeSelectionStarted)
+                            },
+                        ) {
+                            Text(stringResource(StringRes.books_merge_start))
+                        }
+                    }
+                }
+
+                if (viewState.mergeSelectionError) {
+                    Text(
+                        text = stringResource(StringRes.books_merge_selection_stale),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+
                 if (viewState.supportsCloudBackup) {
                     Row(
                         modifier = Modifier
@@ -401,14 +582,34 @@ private fun BooksListScreenContent(
                             BookItemCard(
                                 modifier = Modifier.animateItem(),
                                 book = book,
-                                isFavorite = book.uuid in viewState.favoriteBookUuids,
+                                isFavorite = book.isFavoritedByGroup(
+                                    viewState.favoriteBookUuids,
+                                ),
+                                isSelectedForMerge = book.unifiedGroupId in
+                                    viewState.selectedMergeGroupIds,
+                                onMergeSelectionChanged = if (viewState.isMergeSelectionMode) {
+                                    { selected ->
+                                        book.unifiedGroupId?.let { groupId ->
+                                            intentDispatcher(
+                                                BooksListIntent.OnMergeGroupSelectionChanged(
+                                                    groupId = groupId,
+                                                    selected = selected,
+                                                ),
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    null
+                                },
                                 onClick = {
                                     intentDispatcher(BooksListIntent.OnBookClicked(book))
                                 },
                                 onFavoriteClick = {
-                                    intentDispatcher(BooksListIntent.OnFavoriteClicked(book.uuid))
+                                    intentDispatcher(BooksListIntent.OnFavoriteClicked(book))
                                 },
-                                progressInfo = viewState.bookProgressInfo[book.uuid],
+                                progressInfo = book.unifiedGroupId?.let { groupId ->
+                                    viewState.bookProgressInfo[groupId]
+                                } ?: viewState.bookProgressInfo[book.uuid],
                                 showServerBadge = viewState.showServerBadge,
                                 subtitleContent = {
                                     if (book.series.isNotEmpty()) {
@@ -662,14 +863,31 @@ private fun BooksGrid(
             BookGridCard(
                 modifier = Modifier.animateItem(),
                 book = book,
-                isFavorite = book.uuid in viewState.favoriteBookUuids,
+                isFavorite = book.isFavoritedByGroup(viewState.favoriteBookUuids),
+                isSelectedForMerge = book.unifiedGroupId in viewState.selectedMergeGroupIds,
+                onMergeSelectionChanged = if (viewState.isMergeSelectionMode) {
+                    { selected ->
+                        book.unifiedGroupId?.let { groupId ->
+                            intentDispatcher(
+                                BooksListIntent.OnMergeGroupSelectionChanged(
+                                    groupId = groupId,
+                                    selected = selected,
+                                ),
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
                 onClick = {
                     intentDispatcher(BooksListIntent.OnBookClicked(book))
                 },
                 onFavoriteClick = {
-                    intentDispatcher(BooksListIntent.OnFavoriteClicked(book.uuid))
+                    intentDispatcher(BooksListIntent.OnFavoriteClicked(book))
                 },
-                progressInfo = viewState.bookProgressInfo[book.uuid],
+                progressInfo = book.unifiedGroupId?.let { groupId ->
+                    viewState.bookProgressInfo[groupId]
+                } ?: viewState.bookProgressInfo[book.uuid],
                 showServerBadge = viewState.showServerBadge,
             )
         }

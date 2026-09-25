@@ -1,13 +1,18 @@
 package com.retro99.server.audiobookshelf
 
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.map
 import com.retro99.base.repository.BaseRepository
+import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.server.api.ServerNetworkClient
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerPositionLocalSource
 import com.retro99.server.api.ServerReaderRepository
+import com.retro99.server.api.library.LibraryAdapterId
 import com.retro99.server.audiobookshelf.model.AudiobookshelfMediaProgressApiModel
 import com.retro99.server.audiobookshelf.model.toServerPosition
 import retro99.network.api.get
@@ -18,6 +23,7 @@ class AudiobookshelfReaderRepository(
 ) : ServerReaderRepository, BaseRepository {
 
     override val serverId: String = networkClient.serverId
+    override val libraryAdapterId = LibraryAdapterId("audiobookshelf")
 
     override suspend fun getPosition(bookUuid: String): AppResult<ServerPosition?> {
         return remoteWithCacheFallback(
@@ -53,8 +59,17 @@ class AudiobookshelfReaderRepository(
     override suspend fun getRemotePosition(bookUuid: String): AppResult<ServerPosition?> {
         return networkClient.get<AudiobookshelfMediaProgressApiModel?>(
             path = "/api/me/progress/$bookUuid",
-        ).map { apiModel ->
-            apiModel?.toServerPosition(bookUuid, serverId)
-        }
+        ).fold(
+            success = { apiModel ->
+                Ok(apiModel?.toServerPosition(bookUuid, serverId))
+            },
+            failure = { error ->
+                if (error is AppError.ApiError && error.code == 404) {
+                    Ok(null)
+                } else {
+                    Err(error)
+                }
+            },
+        )
     }
 }

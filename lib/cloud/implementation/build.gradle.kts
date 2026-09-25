@@ -14,6 +14,8 @@ kotlin {
         namespace = "com.retro99.cloud.implementation"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()

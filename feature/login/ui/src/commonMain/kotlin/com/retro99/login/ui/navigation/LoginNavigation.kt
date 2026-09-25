@@ -18,6 +18,7 @@ fun LoginNavigation(
     onLoginSuccess: () -> Unit,
     onBack: (() -> Unit)? = null,
     startAtLogin: Boolean = false,
+    existingServerId: String? = null,
     modifier: Modifier = Modifier,
     viewModel: LoginNavigationViewModel = koinViewModel { parametersOf(startAtLogin) },
 ) {
@@ -59,6 +60,7 @@ fun LoginNavigation(
                 entry<LoginDestination.Login> {
                     LoginScreen(
                         onSignInSuccess = onLoginSuccess,
+                        existingServerId = existingServerId,
                         onBackClick = {
                             if (state.backStack.size <= 1 && onBack != null) {
                                 onBack()
@@ -72,4 +74,3 @@ fun LoginNavigation(
         )
     }
 }
-

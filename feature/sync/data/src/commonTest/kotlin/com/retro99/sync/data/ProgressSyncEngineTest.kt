@@ -107,6 +107,24 @@ class ProgressSyncEngineTest {
     }
 
     @Test
+    fun progressTombstoneClearsOnlyRemoteBaseline() = runTest {
+        val positions = RecordingPositionDatabase()
+        val engine = ProgressSyncEngine(
+            syncOutboxDatabase = RecordingOutboxDatabase(emptyList()),
+            positionDatabase = positions,
+        )
+
+        val outcome = engine.applyRemote(
+            remote = remoteSnapshot().copy(isDeleted = true),
+            accountId = "account-1",
+        )
+
+        assertEquals(ProgressPullOutcome.RemoteBaselineDeleted, outcome)
+        assertEquals(listOf("book-1"), positions.deletedRemoteBookIds)
+        assertTrue(positions.localPositions.isEmpty())
+    }
+
+    @Test
     fun refreshRemoteFetchesSelectedBooksAndPreservesLocalProgress() = runTest {
         val mutation = outboxEntry(mutationId = "pending-refresh")
         val outbox = RecordingOutboxDatabase(listOf(mutation))

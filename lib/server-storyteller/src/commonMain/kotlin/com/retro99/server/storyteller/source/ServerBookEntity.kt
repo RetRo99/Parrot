@@ -10,6 +10,7 @@ import com.retro99.database.api.books.SeriesWithPositionEntity
 import com.retro99.database.api.books.StatusEntity
 import com.retro99.database.api.books.TagEntity
 import com.retro99.server.api.ServerBook
+import com.retro99.server.api.ServerBookCollection
 import com.retro99.server.api.ServerBookSeries
 import com.retro99.server.api.ServerType
 
@@ -67,6 +68,13 @@ internal data class SimpleTagEntity(
     override val updatedAt: String?,
 ) : TagEntity
 
+internal data class SimpleCollectionEntity(
+    override val uuid: String,
+    override val name: String,
+    override val createdAt: String?,
+    override val updatedAt: String?,
+) : CollectionEntity
+
 /**
  * Convert ServerBook to BookEntity for caching.
  */
@@ -122,7 +130,14 @@ internal fun ServerBook.toEntity(): BookEntity {
                 updatedAt = null,
             )
         },
-        collections = emptyList(),
+        collections = collections.map { collection ->
+            SimpleCollectionEntity(
+                uuid = collection.id,
+                name = collection.name,
+                createdAt = collection.createdAt,
+                updatedAt = collection.updatedAt,
+            )
+        },
         status = null,
         coverUrl = coverUrl,
         ebook = if (hasEbook) SimpleMediaFileEntity(uuid, "ebook", ebookFilepath, ebookFileSize) else null,
@@ -195,5 +210,13 @@ internal fun BookEntity.toServerBook(baseUrl: String?): ServerBook {
         // Cached books are not local
         isLocal = false,
         serverType = serverType?.let { ServerType.fromIdentifier(it) },
+        collections = collections.map { collection ->
+            ServerBookCollection(
+                id = collection.uuid,
+                name = collection.name,
+                createdAt = collection.createdAt,
+                updatedAt = collection.updatedAt,
+            )
+        },
     )
 }

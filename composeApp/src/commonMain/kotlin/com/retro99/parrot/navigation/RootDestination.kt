@@ -10,9 +10,9 @@ sealed interface RootDestination {
     @Serializable
     data class Login(
         val initial: Boolean,
+        val existingServerId: String? = null,
     ) : RootDestination
 
     @Serializable
     data object Home : RootDestination
 }
-

@@ -38,6 +38,7 @@ import com.retro99.base.ui.LoadingScreen
 import com.retro99.books.ui.components.BookItemCard
 import com.retro99.books.ui.components.BookSearchBar
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.books.ui.model.isFavoritedByGroup
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -154,12 +155,12 @@ private fun SeriesDetailScreenContent(
 
                         BookItemCard(
                             book = book,
-                            isFavorite = book.uuid in viewState.favoriteBookUuids,
+                            isFavorite = book.isFavoritedByGroup(viewState.favoriteBookUuids),
                             onClick = {
                                 intentDispatcher(SeriesDetailIntent.OnBookClicked(book))
                             },
                             onFavoriteClick = {
-                                intentDispatcher(SeriesDetailIntent.OnFavoriteClicked(book.uuid))
+                                intentDispatcher(SeriesDetailIntent.OnFavoriteClicked(book))
                             },
                             headerContent = {
                                 position?.let {
@@ -178,4 +179,3 @@ private fun SeriesDetailScreenContent(
         }
     }
 }
-

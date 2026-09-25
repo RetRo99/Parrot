@@ -16,5 +16,12 @@ class ToggleFavoriteUseCase(
             favoritesRepository.addToFavorites(bookUuid)
         }
     }
-}
 
+    suspend fun setFavorite(bookUuid: String, isFavorite: Boolean): CompletableResult {
+        return if (isFavorite) {
+            favoritesRepository.addToFavorites(bookUuid)
+        } else {
+            favoritesRepository.removeFromFavorites(bookUuid)
+        }
+    }
+}

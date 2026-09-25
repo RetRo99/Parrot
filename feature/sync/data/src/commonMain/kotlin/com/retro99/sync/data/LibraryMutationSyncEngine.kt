@@ -54,6 +54,7 @@ class LibraryMutationSyncEngine(
         val responsesByMutationId = responses.associateBy { response -> response.mutationId }
         var acknowledgedCount = 0
         var conflictCount = 0
+        var rejectedCount = 0
         var retryCount = 0
         var unresolvedCount = 0
 
@@ -77,6 +78,19 @@ class LibraryMutationSyncEngine(
                         conflictCount++
                     }
 
+                    STATUS_REJECTED -> {
+                        syncOutboxDatabase.markConflict(
+                            mutationId = entry.mutationId,
+                            error = response.reason ?: "Remote mutation rejected",
+                        )
+                        rejectedCount++
+                    }
+
+                    STATUS_RETRYABLE -> {
+                        scheduleRetry(entry, response)
+                        retryCount++
+                    }
+
                     else -> {
                         scheduleRetry(entry, response)
                         retryCount++
@@ -88,6 +102,7 @@ class LibraryMutationSyncEngine(
         return LibraryMutationPushSummary(
             acknowledgedCount = acknowledgedCount,
             conflictCount = conflictCount,
+            rejectedCount = rejectedCount,
             retryCount = retryCount,
             unresolvedCount = unresolvedCount,
         )
@@ -111,6 +126,8 @@ class LibraryMutationSyncEngine(
     private companion object {
         const val STATUS_ACCEPTED = "accepted"
         const val STATUS_CONFLICT = "conflict"
+        const val STATUS_REJECTED = "rejected"
+        const val STATUS_RETRYABLE = "retryable"
         const val MAX_BACKOFF_POWER = 6
     }
 }
@@ -130,6 +147,7 @@ interface LibraryMutationApplier {
 data class LibraryMutationPushSummary(
     val acknowledgedCount: Int = 0,
     val conflictCount: Int = 0,
+    val rejectedCount: Int = 0,
     val retryCount: Int = 0,
     val unresolvedCount: Int = 0,
 )

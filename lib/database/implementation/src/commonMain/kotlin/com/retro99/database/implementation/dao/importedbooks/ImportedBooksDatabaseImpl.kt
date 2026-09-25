@@ -37,6 +37,20 @@ internal class ImportedBooksDatabaseImpl(
         sqlDelightDao.saveRestoredBookWithLibraryMapping(book, libraryBook, localBookFile, transfer, position)
     }
 
+    override suspend fun saveRestoredBookWithLibraryMappingIfTransferActive(
+        book: ImportedBookEntity,
+        libraryBook: LibraryBookEntity,
+        localBookFile: LocalBookFileEntity,
+        transfer: CloudFileTransferEntity,
+        position: PositionEntity?,
+    ): Boolean = sqlDelightDao.saveRestoredBookWithLibraryMappingIfTransferActive(
+        book,
+        libraryBook,
+        localBookFile,
+        transfer,
+        position,
+    )
+
     override fun getAllImportedBooks(): Flow<List<ImportedBookEntity>> {
         return sqlDelightDao.getAllImportedBooks()
     }

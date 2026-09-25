@@ -79,6 +79,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import resources.translations.general_back
 import resources.translations.login_error_invalid_url
+import resources.translations.login_error_saved_server_unavailable
 import resources.translations.login_hide_password
 import resources.translations.login_oauth_sign_in_button
 import resources.translations.login_oauth_waiting_message
@@ -99,8 +100,11 @@ import resources.translations.login_username_label
 fun LoginScreen(
     onSignInSuccess: () -> Unit,
     onBackClick: () -> Unit,
+    existingServerId: String? = null,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = koinViewModel { parametersOf(onSignInSuccess, onBackClick) },
+    viewModel: LoginViewModel = koinViewModel {
+        parametersOf(onSignInSuccess, onBackClick, existingServerId)
+    },
 ) {
     BaseScreen(
         modifier = modifier.imePadding(),
@@ -114,6 +118,9 @@ fun LoginScreen(
             isOAuthSignInEnabled = viewState.isOAuthSignInEnabled,
             isOAuthInProgress = viewState.isOAuthInProgress,
             isOAuthVisible = viewState.isOAuthVisible,
+            isReauthentication = viewState.isReauthentication,
+            isServerConfigurationLoading = viewState.isServerConfigurationLoading,
+            isExistingServerUnavailable = viewState.isExistingServerUnavailable,
             isLoading = viewState.isLoading,
             selectedServerType = viewState.selectedServerType,
             urlError = viewState.urlError,
@@ -135,6 +142,9 @@ private fun LoginScreenContent(
     isOAuthSignInEnabled: Boolean,
     isOAuthInProgress: Boolean,
     isOAuthVisible: Boolean,
+    isReauthentication: Boolean,
+    isServerConfigurationLoading: Boolean,
+    isExistingServerUnavailable: Boolean,
     isLoading: Boolean,
     selectedServerType: ServerType,
     urlError: LoginFieldError?,
@@ -146,6 +156,11 @@ private fun LoginScreenContent(
     var passwordVisible by remember { mutableStateOf(false) }
     var serverTypeExpanded by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val visibleLoginError = if (isExistingServerUnavailable) {
+        stringResource(StringRes.login_error_saved_server_unavailable)
+    } else {
+        loginError
+    }
     val urlErrorText = urlError?.let { error ->
         when (error) {
             LoginFieldError.InvalidUrl -> stringResource(StringRes.login_error_invalid_url)
@@ -195,7 +210,9 @@ private fun LoginScreenContent(
 
             ExposedDropdownMenuBox(
                 expanded = serverTypeExpanded,
-                onExpandedChange = { serverTypeExpanded = it },
+                onExpandedChange = { expanded ->
+                    if (!isReauthentication) serverTypeExpanded = expanded
+                },
             ) {
                 OutlinedTextField(
                     value = selectedServerType.displayName,
@@ -238,6 +255,8 @@ private fun LoginScreenContent(
                 leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
                 trailingIcon = { UrlInfoTooltip(serverName = selectedServerType.displayName) },
                 isError = urlError != null,
+                readOnly = isReauthentication,
+                enabled = !isServerConfigurationLoading,
                 supportingText = urlErrorText?.let { { Text(it) } },
                 modifier = Modifier.fillMaxWidth(),
                 lineLimits = TextFieldLineLimits.SingleLine,
@@ -256,6 +275,7 @@ private fun LoginScreenContent(
                 label = { Text(stringResource(StringRes.login_username_label)) },
                 leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !isServerConfigurationLoading && !isExistingServerUnavailable,
                 lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -271,6 +291,7 @@ private fun LoginScreenContent(
                 label = { Text(stringResource(StringRes.login_password_label)) },
                 leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = !isServerConfigurationLoading && !isExistingServerUnavailable,
                 textObfuscationMode = if (passwordVisible) {
                     TextObfuscationMode.Visible
                 } else {
@@ -296,7 +317,7 @@ private fun LoginScreenContent(
             )
 
             AnimatedVisibility(
-                visible = loginError != null,
+                visible = visibleLoginError != null,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically(),
             ) {
@@ -319,7 +340,7 @@ private fun LoginScreenContent(
                                 modifier = Modifier.size(20.dp),
                             )
                             Text(
-                                text = loginError.orEmpty(),
+                                text = visibleLoginError.orEmpty(),
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 style = MaterialTheme.typography.bodySmall,
                             )

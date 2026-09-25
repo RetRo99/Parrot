@@ -34,7 +34,7 @@ class ParrotCloudSyncExecutionContextProvider(
 
         return try {
             clientProvider.withProfileSession(localProfileId) {
-                if (clientProvider.currentSessionState().accountId != link.cloudUserId) {
+                if (!clientProvider.currentSessionState().isAuthenticatedAs(link.cloudUserId)) {
                     return@withProfileSession SyncExecutionResult.NotAuthenticated
                 }
                 profileDatabaseSession.withProfile(localProfileId) {

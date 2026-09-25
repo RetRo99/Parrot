@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.media3.exoplayer.ExoPlayer
 import com.github.michaelbull.result.getOrElse
 import com.retro99.analytics.api.Analytics
+import com.retro99.books.domain.LocalBookFileUsageCoordinator
+import com.retro99.books.domain.LocalBookFileUsageLease
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.data.source.EbookFileDownloader
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
@@ -17,6 +19,7 @@ import com.retro99.reader.ui.media.smil.SmilClipRepository
 import com.retro99.reader.ui.media.smil.SmilLoadingManager
 import com.retro99.reader.ui.media.smil.SmilParser
 import com.retro99.reader.ui.media.smil.SmilQuickScanner
+import com.retro99.reader.ui.playback.MediaPlaybackController
 import com.retro99.reader.ui.playback.MAX_EMBEDDED_ARTWORK_BYTES
 import com.retro99.reader.ui.service.EpubPublicationService
 import com.retro99.sync.domain.usecase.SyncNowUseCase
@@ -57,6 +60,8 @@ class HeadlessSessionFactory(
     @Provided private val analytics: Analytics,
     @Provided private val dataSourceFactory: DynamicPublicationDataSourceFactory,
     @Provided private val serverTokenProvider: ServerTokenProvider,
+    @Provided private val fileUsageCoordinator: LocalBookFileUsageCoordinator,
+    @Provided private val mediaPlaybackController: MediaPlaybackController,
 ) {
 
     /**
@@ -104,82 +109,97 @@ class HeadlessSessionFactory(
             }
         }
 
-        // 3. Open the EPUB publication
-        Log.d(TAG, "HeadlessSessionFactory: Opening publication at $localEbookPath")
-        val publication = publicationService.openPublication(
-            filePath = localEbookPath!!, // Safe - we checked null above
-            serverId = serverId,
-            bookUuid = bookUuid,
-            bookType = BookType.READALOUD,
-        ).getOrElse { null }
+        val resolvedLocalEbookPath: String = localEbookPath
+        val fileUsageLease = fileUsageCoordinator.acquireUse(resolvedLocalEbookPath)
+        var retainFileUsageLease = false
+        try {
+            // 3. Open the EPUB publication
+            Log.d(TAG, "HeadlessSessionFactory: Opening publication for book=$bookUuid")
+            val publication = publicationService.openPublication(
+                filePath = resolvedLocalEbookPath,
+                serverId = serverId,
+                bookUuid = bookUuid,
+                bookType = BookType.READALOUD,
+            ).getOrElse { null }
 
-        if (publication == null) {
-            Log.e(TAG, "HeadlessSessionFactory: Failed to open publication")
-            return null
+            if (publication == null) {
+                Log.e(TAG, "HeadlessSessionFactory: Failed to open publication")
+                return null
+            }
+
+            // 4. Get saved reading position
+            val readerRepo = repositoryProvider.getReaderRepository(serverId)
+            val savedPosition = readerRepo?.getPosition(bookUuid)?.getOrElse { null }
+            val initialChapterHref = savedPosition?.locatorHref
+            val initialPositionMs = savedPosition?.audioTimestampMs
+
+            Log.d(
+                TAG,
+                "HeadlessSessionFactory: Saved position " +
+                    "chapter=$initialChapterHref, posMs=$initialPositionMs",
+            )
+
+            // 5. Configure data source factory for this publication
+            dataSourceFactory.setPublication(publication.publication)
+
+            // 6. Create SMIL components (not from Koin - manually instantiated for headless use)
+            val smilContentProvider = PublicationSmilContentProvider(publication, analytics)
+            val smilChapterIndex = SmilChapterIndex()
+            val smilClipCache = SmilClipCache()
+            val smilLoadingManager = SmilLoadingManager(
+                smilParser = smilParser,
+                quickScanner = quickScanner,
+                analytics = analytics,
+                index = smilChapterIndex,
+                cache = smilClipCache,
+                clipRepository = clipRepository,
+                contentProvider = smilContentProvider,
+            )
+
+            // 7. Download cover artwork for Android Auto display
+            val coverArtwork = downloadCoverImage(book.coverUrl, serverId)
+            Log.d(TAG, "HeadlessSessionFactory: Cover artwork=${coverArtwork?.size ?: 0} bytes")
+
+            // 8. Create book metadata for notifications
+            val bookMetadata = HeadlessBookMetadata(
+                title = book.title,
+                author = book.authors.joinToString(", "),
+                coverArtwork = coverArtwork,
+            )
+
+            // 9. Create HeadlessMediaOverlayPlayer
+            val headlessPlayer = HeadlessMediaOverlayPlayer(
+                epubPublication = publication,
+                analytics = analytics,
+                smilLoadingManager = smilLoadingManager,
+                exoPlayer = exoPlayer,
+                bookMetadata = bookMetadata,
+                onMediaItemsReplaced = { mediaPlaybackController.onMediaItemsReplaced(exoPlayer) },
+            )
+
+            // 10. Create and return the session
+            Log.d(TAG, "HeadlessSessionFactory: Session created successfully")
+            val session = HeadlessPlaybackSession(
+                serverId = serverId,
+                bookUuid = bookUuid,
+                bookTitle = book.title,
+                coverUrl = book.coverUrl,
+                publication = publication,
+                player = headlessPlayer,
+                smilLoadingManager = smilLoadingManager,
+                saveProgressUseCase = saveProgressUseCase,
+                syncNowUseCase = syncNowUseCase,
+                analytics = analytics,
+                exoPlayer = exoPlayer,
+                initialChapterHref = initialChapterHref,
+                initialPositionMs = initialPositionMs,
+                fileUsageLease = fileUsageLease,
+            )
+            retainFileUsageLease = true
+            return session
+        } finally {
+            if (!retainFileUsageLease) fileUsageLease.release()
         }
-
-        // 4. Get saved reading position
-        val readerRepo = repositoryProvider.getReaderRepository(serverId)
-        val savedPosition = readerRepo?.getPosition(bookUuid)?.getOrElse { null }
-        val initialChapterHref = savedPosition?.locatorHref
-        val initialPositionMs = savedPosition?.audioTimestampMs
-
-        Log.d(TAG, "HeadlessSessionFactory: Saved position - chapter=$initialChapterHref, posMs=$initialPositionMs")
-
-        // 5. Configure data source factory for this publication
-        dataSourceFactory.setPublication(publication.publication)
-
-        // 6. Create SMIL components (not from Koin - manually instantiated for headless use)
-        val smilContentProvider = PublicationSmilContentProvider(publication, analytics)
-        val smilChapterIndex = SmilChapterIndex()
-        val smilClipCache = SmilClipCache()
-        val smilLoadingManager = SmilLoadingManager(
-            smilParser = smilParser,
-            quickScanner = quickScanner,
-            analytics = analytics,
-            index = smilChapterIndex,
-            cache = smilClipCache,
-            clipRepository = clipRepository,
-            contentProvider = smilContentProvider,
-        )
-
-        // 7. Download cover artwork for Android Auto display
-        val coverArtwork = downloadCoverImage(book.coverUrl, serverId)
-        Log.d(TAG, "HeadlessSessionFactory: Cover artwork=${coverArtwork?.size ?: 0} bytes")
-
-        // 8. Create book metadata for notifications
-        val bookMetadata = HeadlessBookMetadata(
-            title = book.title,
-            author = book.authors.joinToString(", "),
-            coverArtwork = coverArtwork,
-        )
-
-        // 9. Create HeadlessMediaOverlayPlayer
-        val headlessPlayer = HeadlessMediaOverlayPlayer(
-            epubPublication = publication,
-            analytics = analytics,
-            smilLoadingManager = smilLoadingManager,
-            exoPlayer = exoPlayer,
-            bookMetadata = bookMetadata,
-        )
-
-        // 10. Create and return the session
-        Log.d(TAG, "HeadlessSessionFactory: Session created successfully")
-        return HeadlessPlaybackSession(
-            serverId = serverId,
-            bookUuid = bookUuid,
-            bookTitle = book.title,
-            coverUrl = book.coverUrl,
-            publication = publication,
-            player = headlessPlayer,
-            smilLoadingManager = smilLoadingManager,
-            saveProgressUseCase = saveProgressUseCase,
-            syncNowUseCase = syncNowUseCase,
-            analytics = analytics,
-            exoPlayer = exoPlayer,
-            initialChapterHref = initialChapterHref,
-            initialPositionMs = initialPositionMs,
-        )
     }
 
     /**

@@ -20,6 +20,7 @@ import com.retro99.database.api.library.LocalBookFileEntity
 import com.retro99.database.api.library.LibraryBookMutation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -113,12 +114,57 @@ class DownloadFinalizerTest {
 
         val request = request(hash, bytes.size.toLong())
         assertFailsWith<IllegalStateException> {
-            fixture.finalizer.finalize(downloadTransfer(request.libraryBookId, bytes.size.toLong()), request)
+            fixture.finalizer.finalize(
+                downloadTransfer(request.libraryBookId, bytes.size.toLong()),
+                request,
+            )
         }
 
         assertTrue(fixture.importedDatabase.restoredWrites.isEmpty())
         assertTrue("/imports/local-restored_ebook.epub" !in fixture.fileStore.files)
         assertEquals(0, fixture.metadataExtractor.calls)
+    }
+
+    @Test
+    fun downloadedBytesWithMismatchedHashAreNotPublishedOrAssociated() = runTest {
+        val expectedBytes = "expected book data".encodeToByteArray()
+        val downloadedBytes = "tampered book data".encodeToByteArray()
+        assertEquals(expectedBytes.size, downloadedBytes.size)
+        val expectedHash = sha256(expectedBytes).toHexString()
+        val fixture = fixture(expectedBytes, expectedHash)
+        fixture.fileStore.files["/staging/download-1.part"] = downloadedBytes
+        val request = request(expectedHash, expectedBytes.size.toLong())
+
+        assertFailsWith<DownloadHashMismatchException> {
+            fixture.finalizer.finalize(
+                downloadTransfer(request.libraryBookId, expectedBytes.size.toLong()),
+                request,
+            )
+        }
+
+        assertTrue(fixture.importedDatabase.restoredWrites.isEmpty())
+        assertTrue("/imports/local-restored_ebook.epub" !in fixture.fileStore.files)
+        assertEquals(0, fixture.metadataExtractor.calls)
+    }
+
+    @Test
+    fun cancelledTransferDuringFinalizationDoesNotPublishDownloadedReplica() = runTest {
+        val bytes = "cancelled restore".encodeToByteArray()
+        val hash = sha256(bytes).toHexString()
+        val fixture = fixture(bytes, hash)
+        fixture.importedDatabase.allowTransferFinalization = false
+        val request = request(hash, bytes.size.toLong())
+
+        assertFailsWith<CancellationException> {
+            fixture.finalizer.finalize(
+                downloadTransfer(request.libraryBookId, bytes.size.toLong()),
+                request,
+            )
+        }
+
+        assertTrue(fixture.importedDatabase.restoredWrites.isEmpty())
+        assertTrue("/imports/local-restored_ebook.epub" !in fixture.fileStore.files)
+        assertTrue("/staging/download-1.part" !in fixture.fileStore.files)
     }
 
     private fun fixture(
@@ -181,6 +227,7 @@ class DownloadFinalizerTest {
         private val existingBook: ImportedBookEntity?,
     ) : EmptyImportedBooksDatabase() {
         val restoredWrites = mutableListOf<RestoredWrite>()
+        var allowTransferFinalization = true
         var legacyWriteCount = 0
             private set
 
@@ -195,6 +242,18 @@ class DownloadFinalizerTest {
             position: PositionEntity?,
         ) {
             restoredWrites += RestoredWrite(book, libraryBook, localBookFile, transfer, position)
+        }
+
+        override suspend fun saveRestoredBookWithLibraryMappingIfTransferActive(
+            book: ImportedBookEntity,
+            libraryBook: LibraryBookEntity,
+            localBookFile: LocalBookFileEntity,
+            transfer: CloudFileTransferEntity,
+            position: PositionEntity?,
+        ): Boolean {
+            if (!allowTransferFinalization) return false
+            saveRestoredBookWithLibraryMapping(book, libraryBook, localBookFile, transfer, position)
+            return true
         }
 
         override suspend fun upsertImportedBook(book: ImportedBookEntity) {

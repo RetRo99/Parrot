@@ -22,6 +22,7 @@ data class SyncOutboxEntry(
     companion object {
         const val ENTITY_TYPE_BOOKMARK = "bookmark"
         const val ENTITY_TYPE_LIBRARY_BOOK = "library_book"
+        const val ENTITY_TYPE_LIBRARY_GROUP_DECISION = "library_group_decision"
         const val ENTITY_TYPE_READER_SETTINGS = "reader_settings"
         const val ENTITY_TYPE_READING_POSITION = "reading_position"
 

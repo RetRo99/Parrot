@@ -96,6 +96,10 @@ class ProgressSyncEngine(
         identityResolver: ProgressIdentityResolver = ProgressIdentityResolver.Default,
     ): ProgressPullOutcome {
         val identity = identityResolver.resolve(remote)
+        if (remote.isDeleted) {
+            positionDatabase.deleteRemotePosition(identity.localBookUuid)
+            return ProgressPullOutcome.RemoteBaselineDeleted
+        }
         val remotePosition = remote.toPositionEntity(identity)
         val pending = syncOutboxDatabase.getPending(accountId)
         val hasPendingLocalProgress = pending.any { entry ->
@@ -245,6 +249,7 @@ data class ProgressPushSummary(
 enum class ProgressPullOutcome {
     AppliedToLocal,
     PreservedLocalProgress,
+    RemoteBaselineDeleted,
 }
 
 private fun RemoteProgressSnapshot.toPositionEntity(

@@ -14,6 +14,8 @@ kotlin {
         namespace = "com.retro99.server.audiobookshelf"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -28,6 +30,7 @@ kotlin {
             implementation(libs.datetime)
             implementation(libs.ktor.client.core)
             implementation(projects.base)
+            implementation(projects.feature.cloudAccount.domain)
             implementation(projects.lib.analytics.api)
             implementation(projects.lib.server.api)
             implementation(projects.lib.server.implementation)
@@ -36,12 +39,17 @@ kotlin {
             implementation(projects.lib.serverStoryteller)
             implementation(projects.feature.sync.domain)
             implementation(projects.feature.sync.data)
+            implementation(projects.feature.reader.domain)
+            implementation(projects.feature.books.domain)
             implementation(projects.lib.user.api)
         }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.coroutines.test)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.client.mock)
+            implementation(libs.ktor.serialization.kotlinx.json)
         }
     }
 }

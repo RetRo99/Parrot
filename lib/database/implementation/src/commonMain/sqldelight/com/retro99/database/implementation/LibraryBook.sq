@@ -61,6 +61,11 @@ SELECT * FROM library_books
 WHERE deleted_at IS NULL
 ORDER BY title ASC;
 
+getDeletedCloudBookIds:
+SELECT cloud_book_id FROM library_books
+WHERE deleted_at IS NOT NULL AND cloud_book_id IS NOT NULL
+ORDER BY cloud_book_id ASC;
+
 getLibraryBookById:
 SELECT * FROM library_books WHERE library_book_id = ?;
 
@@ -77,6 +82,10 @@ AND deleted_at IS NULL;
 getLibraryBookByCloudBookId:
 SELECT * FROM library_books
 WHERE cloud_book_id = ? AND deleted_at IS NULL;
+
+getLibraryBookByCloudBookIdIncludingDeleted:
+SELECT * FROM library_books
+WHERE cloud_book_id = ?;
 
 attachCloudBookId:
 UPDATE library_books

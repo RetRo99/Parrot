@@ -110,6 +110,7 @@ internal class RecordingNetworkClient(
     override val baseUrl: String = "https://storyteller.example",
     var getResult: AppResult<Any?> = Ok(null),
     var postResult: AppResult<Any?> = Ok(Unit),
+    private val getResultsByPath: Map<String, AppResult<Any?>> = emptyMap(),
 ) : ServerNetworkClient {
     val calls = mutableListOf<String>()
     var postBody: Any? = null
@@ -122,7 +123,7 @@ internal class RecordingNetworkClient(
         headers: HeadersBuilder.() -> Unit,
     ): AppResult<T> {
         calls += "GET:$path"
-        return getResult as AppResult<T>
+        return (getResultsByPath[path] ?: getResult) as AppResult<T>
     }
 
     @Suppress("UNCHECKED_CAST")

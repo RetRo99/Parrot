@@ -1,6 +1,7 @@
 package com.retro99.reader.ui.playback
 
 import android.util.Log
+import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
@@ -170,6 +171,18 @@ class MediaPlaybackController {
 
     fun setChapterClips(clips: List<MediaOverlayClip>) {
         synchronized(lock) { _serviceInstance?.setChapterClips(clips) }
+    }
+
+    suspend fun setLocalMediaItems(mediaItems: List<MediaItem>, leasePath: String) {
+        val service = synchronized(lock) { _serviceInstance }
+            ?: error("Playback service is not running")
+        service.setLocalMediaItems(mediaItems, leasePath)
+    }
+
+    fun onMediaItemsReplaced(player: ExoPlayer) {
+        synchronized(lock) {
+            if (_player === player) _serviceInstance?.releaseLocalMediaFileLease()
+        }
     }
 
     fun prepareForTtsPlayback(

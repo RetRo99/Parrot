@@ -6,13 +6,24 @@ import com.retro99.books.ui.model.BookListViewMode
 import com.retro99.books.ui.model.BookQuickFilter
 import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.server.api.library.SourceBookKey
 import io.github.vinceglb.filekit.core.PlatformFile
 
 sealed interface BooksListIntent : BaseIntent {
     data object OnRefresh : BooksListIntent
     data object OnSearchToggled : BooksListIntent
     data class OnBookClicked(val book: BookUiModel) : BooksListIntent
-    data class OnFavoriteClicked(val bookUuid: String) : BooksListIntent
+    data object OnMergeSelectionStarted : BooksListIntent
+    data object OnMergeSelectionCancelled : BooksListIntent
+    data class OnMergeGroupSelectionChanged(
+        val groupId: String,
+        val selected: Boolean,
+    ) : BooksListIntent
+    data object OnMergeRequested : BooksListIntent
+    data class OnMergeMetadataSourceSelected(val sourceKey: SourceBookKey) : BooksListIntent
+    data object OnMergeConfirmed : BooksListIntent
+    data object OnMergeDismissed : BooksListIntent
+    data class OnFavoriteClicked(val book: BookUiModel) : BooksListIntent
     data class OnImportBook(val file: PlatformFile) : BooksListIntent
     data object OnBackupAllClicked : BooksListIntent
     data class OnBackupAllAttestationChanged(val attested: Boolean) : BooksListIntent

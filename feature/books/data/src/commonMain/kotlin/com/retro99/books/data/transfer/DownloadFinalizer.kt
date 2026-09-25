@@ -16,6 +16,7 @@ import com.retro99.database.api.importedbooks.ImportedBookEntity
 import com.retro99.database.api.importedbooks.ImportedBooksDatabase
 import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Provided
@@ -135,7 +136,7 @@ class DownloadFinalizer(
                 libraryBookId = libraryBook.libraryBookId,
             )
         }
-        importedBooksDatabase.saveRestoredBookWithLibraryMapping(
+        val saved = importedBooksDatabase.saveRestoredBookWithLibraryMappingIfTransferActive(
             book = importedBook,
             libraryBook = libraryBook,
             localBookFile = LocalBookFileLocalModel(
@@ -145,6 +146,13 @@ class DownloadFinalizer(
             transfer = completedTransfer,
             position = localPosition,
         )
+        if (!saved) {
+            if (existing == null) {
+                fileStore.delete(importedFilePath)
+                importedBook.coverPath?.let { coverPath -> fileStore.delete(coverPath) }
+            }
+            throw CancellationException("Download was cancelled before finalization")
+        }
         fileStore.delete(stagingPath)
         completedTransfer
     }

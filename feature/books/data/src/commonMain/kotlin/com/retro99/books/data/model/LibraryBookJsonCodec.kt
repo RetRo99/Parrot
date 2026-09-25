@@ -11,7 +11,10 @@ internal object LibraryBookJsonCodec {
         encodeDefaults = true
     }
 
-    fun encode(book: LibraryBookEntity): String {
+    fun encode(
+        book: LibraryBookEntity,
+        intentionalReimport: Boolean = false,
+    ): String {
         return json.encodeToString(
             LibraryBookPayload(
                 libraryBookId = book.libraryBookId,
@@ -24,6 +27,7 @@ internal object LibraryBookJsonCodec {
                 deletedAt = book.deletedAt,
                 cloudBookId = book.cloudBookId,
                 metadataJson = book.metadataJson,
+                intentionalReimport = intentionalReimport,
             ),
         )
     }
@@ -52,4 +56,6 @@ private data class LibraryBookPayload(
     override val cloudBookId: String? = null,
     @SerialName("metadata_json")
     override val metadataJson: String? = null,
+    @SerialName("intentional_reimport")
+    val intentionalReimport: Boolean = false,
 ) : LibraryBookEntity

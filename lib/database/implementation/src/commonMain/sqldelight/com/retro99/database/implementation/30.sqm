@@ -1,0 +1,8 @@
+ALTER TABLE library_group_memberships
+ADD COLUMN membership_origin TEXT NOT NULL DEFAULT 'Backfill'
+CHECK (membership_origin IN ('Backfill', 'Automatic', 'Manual'));
+
+ALTER TABLE library_group_memberships
+ADD COLUMN revision INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0);
+
+ALTER TABLE library_group_memberships ADD COLUMN decision_id TEXT;

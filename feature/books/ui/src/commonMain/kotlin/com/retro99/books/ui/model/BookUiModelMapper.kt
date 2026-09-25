@@ -40,6 +40,11 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
                 cloudBookFileId = resource.cloudBookFileId,
             )
         },
+        unifiedGroupId = unifiedGroupId,
+        groupMemberUuids = groupMemberUuids,
+        alternateTitles = alternateTitles,
+        groupServerTypes = groupServerTypes.map { serverType -> serverType.identifier }.toSet(),
+        groupMediaTypes = groupMediaTypes,
     )
     is BookDomainModel.LocalBook -> BookUiModel.LocalBook(
         uuid = uuid,
@@ -58,6 +63,14 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
         libraryBookId = libraryBookId,
         origin = origin,
         cloudBookFileId = cloudBookFileId,
+        groupedAuthors = groupedAuthors,
+        series = series.map { item -> item.toUiModel() },
+        tags = groupedTags.map { tag -> tag.name },
+        unifiedGroupId = unifiedGroupId,
+        groupMemberUuids = groupMemberUuids,
+        alternateTitles = alternateTitles,
+        groupServerTypes = groupServerTypes.map { serverType -> serverType.identifier }.toSet(),
+        groupMediaTypes = groupMediaTypes,
     )
 }
 

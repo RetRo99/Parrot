@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.media3.common.Player
+import com.retro99.server.api.library.ProgressOwnerRef
 import com.retro99.reader.ui.reader.KeepScreenOn
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -13,10 +14,24 @@ import org.koin.core.parameter.parametersOf
 actual fun AudiobookPlayerScreen(
     serverId: String,
     bookUuid: String,
+    selectedLocalPath: String?,
+    progressNativeId: String?,
+    progressAdapterId: String?,
+    progressOwner: ProgressOwnerRef?,
     onClose: () -> Unit,
 ) {
     val viewModel: AudiobookPlayerViewModel = koinViewModel {
-        parametersOf(serverId, bookUuid, onClose)
+        parametersOf(
+            AudiobookPlayerViewModelArgs(
+                serverId = serverId,
+                bookUuid = bookUuid,
+                selectedLocalPath = selectedLocalPath,
+                progressNativeId = progressNativeId,
+                progressAdapterId = progressAdapterId,
+                progressOwner = progressOwner,
+                onClose = onClose,
+            ),
+        )
     }
     val state by viewModel.viewState.collectAsState()
 

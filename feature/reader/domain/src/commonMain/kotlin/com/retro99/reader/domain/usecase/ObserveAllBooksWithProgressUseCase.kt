@@ -3,30 +3,31 @@ package com.retro99.reader.domain.usecase
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getOrElse
 import com.retro99.base.result.AppResult
+import com.retro99.books.domain.model.BookMemberProgressDomainModel
 import com.retro99.books.domain.model.BookProgressInfoDomainModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.books.domain.model.BookWithProgressDomainModel
-import com.retro99.books.domain.model.aggregateBookReplicas
+import com.retro99.books.domain.model.UnifiedBookProgressSource
+import com.retro99.books.domain.model.UnifiedServerBook
 import com.retro99.books.domain.model.toBookDomainModel
+import com.retro99.books.domain.usecase.ObserveUnifiedServerBooksUseCase
 import com.retro99.reader.domain.ReaderSettingsRepository
 import com.retro99.server.api.AuthenticatedRepositoryProvider
-import com.retro99.server.api.ServerBook
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerPositionLocalSource
+import com.retro99.server.api.library.SourceBookKey
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
 
 /**
  * Combined use case that observes all books with their progress information.
- * 
+ *
  * Combines book fetching from all servers with reactive progress observation.
  * Returns a list of [BookWithProgressDomainModel] that updates when:
  * - Books are added/removed from servers
@@ -37,9 +38,9 @@ class ObserveAllBooksWithProgressUseCase(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
     @Provided private val readerSettingsRepository: ReaderSettingsRepository,
     @Provided private val positionLocalSource: ServerPositionLocalSource,
+    @Provided private val observeUnifiedServerBooksUseCase: ObserveUnifiedServerBooksUseCase,
 ) {
-    // Cache of remote progressions - fetched once per refresh
-    private val remoteProgressionCache = mutableMapOf<String, Double?>()
+    private val remotePositionCache = mutableMapOf<ProgressCacheKey, ServerPosition?>()
 
     // Trigger to force re-evaluation when remote progress is fetched
     private val refreshTrigger = MutableStateFlow(0)
@@ -49,31 +50,14 @@ class ObserveAllBooksWithProgressUseCase(
      *
      * @return Flow of books with progress, sorted by title
      */
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     operator fun invoke(): Flow<AppResult<List<BookWithProgressDomainModel>>> {
-        return repositoryProvider.observeBooksRepositories()
-            .flatMapLatest { repositories ->
-                val bookFlows = repositories.map { repo ->
-                    repo.getBooks()
-                }
-
-                if (bookFlows.isEmpty()) {
-                    flowOf(Ok(emptyList()))
-                } else {
-                    // Combine all book flows with position observation and refresh trigger
-                    combine(
-                        combine(bookFlows) { results ->
-                            results
-                                .flatMap { result -> result.getOrElse { emptyList() } }
-                                .aggregateBookReplicas()
-                        },
-                        positionLocalSource.observeAllPositions(),
-                        refreshTrigger
-                    ) { books, localPositions, _ ->
-                        buildBooksWithProgress(books, localPositions)
-                    }
-                }
-            }
+        return combine(
+            observeUnifiedServerBooksUseCase(),
+            positionLocalSource.observeAllPositions(),
+            refreshTrigger,
+        ) { unifiedBooks, localPositions, _ ->
+            buildBooksWithProgress(unifiedBooks, localPositions)
+        }
     }
 
     /**
@@ -84,14 +68,26 @@ class ObserveAllBooksWithProgressUseCase(
     suspend fun fetchRemoteProgress(books: List<BookWithProgressDomainModel>) {
         if (books.isEmpty()) return
 
+        val progressSources = books.flatMap { bookWithProgress ->
+            bookWithProgress.memberProgress
+        }.distinctBy { member ->
+            progressCacheKey(member.sourceKey, member.serverId, member.bookUuid)
+        }
+
         coroutineScope {
-            books.map { bookWithProgress ->
+            progressSources.mapNotNull { member ->
+                val serverId = member.serverId ?: return@mapNotNull null
+                if (serverId.isBlank()) return@mapNotNull null
                 async {
-                    val book = bookWithProgress.book
-                    val readerRepo = repositoryProvider.getReaderRepository(book.serverId)
-                    val remotePosition = readerRepo?.getRemotePosition(book.uuid)
+                    val cacheKey = progressCacheKey(
+                        member.sourceKey,
+                        serverId,
+                        member.bookUuid,
+                    )
+                    val readerRepo = repositoryProvider.getReaderRepository(serverId)
+                    val remotePosition = readerRepo?.getRemotePosition(member.bookUuid)
                         ?.getOrElse { null }
-                    remoteProgressionCache[book.uuid] = remotePosition?.totalProgression
+                    remotePositionCache[cacheKey] = remotePosition
                 }
             }.awaitAll()
         }
@@ -104,70 +100,187 @@ class ObserveAllBooksWithProgressUseCase(
      * Clears the remote progress cache.
      */
     fun clearCache() {
-        remoteProgressionCache.clear()
+        remotePositionCache.clear()
     }
 
     private suspend fun buildBooksWithProgress(
-        books: List<ServerBook>,
+        books: List<UnifiedServerBook>,
         localPositions: List<ServerPosition>,
     ): AppResult<List<BookWithProgressDomainModel>> {
-        val localPositionMap = localPositions.associateBy { it.bookUuid }
-        val libraryPositionMap = localPositions
-            .filter { position -> position.libraryBookId != null }
-            .groupBy { position -> position.libraryBookId }
-            .mapValues { (_, positions) ->
-                positions.maxWithOrNull(
-                    compareBy({ position -> position.remoteRevision }, { position -> position.updatedAt }),
+        val positionsByLibraryBookId = latestPositionsByLibraryBookId(localPositions)
+        val booksWithProgress = books.map { unifiedBook ->
+            val serverBook = unifiedBook.book
+            val progressSources = unifiedBook.progressSources.ifEmpty {
+                listOf(
+                    UnifiedBookProgressSource(
+                        sourceKey = null,
+                        serverId = serverBook.serverId,
+                        bookUuid = serverBook.uuid,
+                        libraryBookId = serverBook.libraryBookId,
+                        mediaTypes = unifiedBook.mediaTypes,
+                    ),
                 )
             }
-
-        val booksWithProgress = books.map { serverBook ->
-            val bookUuid = serverBook.uuid
-            val localPosition = serverBook.libraryBookId?.let { libraryBookId ->
-                libraryPositionMap[libraryBookId]
-            } ?: localPositionMap[bookUuid]
-            val remoteProgression = remoteProgressionCache[bookUuid]
-
-            val progressInfo = createProgressInfo(
-                bookUuid = bookUuid,
-                localPosition = localPosition,
-                remoteProgression = remoteProgression,
+            val ambiguousBookUuids = progressSources
+                .groupBy { source -> source.bookUuid }
+                .filterValues { sources ->
+                    sources.map { source -> source.sourceKey to source.serverId }
+                        .distinct()
+                        .size > 1
+                }
+                .keys
+            val ambiguousSourceScopes = progressSources
+                .groupBy { source -> source.bookUuid to source.serverId }
+                .filterValues { sources ->
+                    sources.map { source -> source.sourceKey }.distinct().size > 1
+                }
+                .keys
+            val memberProgress = progressSources.map { source ->
+                createMemberProgress(
+                    source = source,
+                    groupMediaTypes = unifiedBook.mediaTypes,
+                    localPositions = localPositions,
+                    positionsByLibraryBookId = positionsByLibraryBookId,
+                    ambiguousBookUuids = ambiguousBookUuids,
+                    ambiguousSourceScopes = ambiguousSourceScopes,
+                )
+            }
+            val progressInfo = projectReadingListProgress(
+                fallbackBookUuid = serverBook.uuid,
+                preferredMediaSourceKeys = unifiedBook.preferredMediaSourceKeys,
+                memberProgress = memberProgress,
             )
 
             BookWithProgressDomainModel(
-                book = serverBook.toBookDomainModel(),
+                book = unifiedBook.toBookDomainModel(),
                 progressInfo = progressInfo,
+                memberProgress = memberProgress,
             )
         }
 
         return Ok(booksWithProgress.sortedBy { it.book.title.lowercase() })
     }
 
+    private suspend fun createMemberProgress(
+        source: UnifiedBookProgressSource,
+        groupMediaTypes: Set<String>,
+        localPositions: List<ServerPosition>,
+        positionsByLibraryBookId: Map<String, ServerPosition>,
+        ambiguousBookUuids: Set<String>,
+        ambiguousSourceScopes: Set<Pair<String, String?>>,
+    ): BookMemberProgressDomainModel {
+        val mediaTypes = source.mediaTypes.ifEmpty { groupMediaTypes }
+            .map { mediaType -> mediaType.lowercase() }
+            .filter { mediaType -> BookType.entries.any { type -> type.value == mediaType } }
+            .toSet()
+        val progressSource = source.copy(mediaTypes = mediaTypes)
+        val localPositionsByMediaType = mediaTypes.associateWith { mediaType ->
+            resolveMemberLocalPosition(
+                source = progressSource,
+                positions = localPositions,
+                positionsByLibraryBookId = positionsByLibraryBookId,
+                ambiguousBookUuids = ambiguousBookUuids,
+                ambiguousSourceScopes = ambiguousSourceScopes,
+                mediaType = mediaType,
+            )
+        }
+        val remotePosition = source.serverId?.let { serverId ->
+            remotePositionCache[
+                progressCacheKey(source.sourceKey, serverId, source.bookUuid),
+            ]
+        }
+        val progressInfoByMediaType = mediaTypes.associateWith { mediaType ->
+            val compatibleLocalPosition = localPositionsByMediaType[mediaType]
+            val compatibleRemotePosition = remotePosition
+                ?.takeIf { position -> position.supportsMediaType(mediaType, mediaTypes) }
+            createProgressInfo(
+                source = source,
+                mediaType = mediaType,
+                localPosition = compatibleLocalPosition,
+                remotePosition = compatibleRemotePosition,
+            )
+        }
+        val savedPositionUpdatedAtByMediaType = mediaTypes.associateWith { mediaType ->
+            listOfNotNull(
+                localPositionsByMediaType[mediaType],
+                remotePosition?.takeIf { position ->
+                    position.supportsMediaType(mediaType, mediaTypes)
+                },
+            ).maxOfOrNull { position -> position.savedPositionUpdatedAt().orEmpty() }
+                ?.takeIf { updatedAt -> updatedAt.isNotEmpty() }
+        }
+
+        return BookMemberProgressDomainModel(
+            sourceKey = source.sourceKey,
+            serverId = source.serverId,
+            bookUuid = source.bookUuid,
+            mediaTypes = mediaTypes,
+            progressInfoByMediaType = progressInfoByMediaType,
+            savedPositionUpdatedAtByMediaType = savedPositionUpdatedAtByMediaType,
+        )
+    }
+
     private suspend fun createProgressInfo(
-        bookUuid: String,
+        source: UnifiedBookProgressSource,
+        mediaType: String,
         localPosition: ServerPosition?,
-        remoteProgression: Double?,
+        remotePosition: ServerPosition?,
     ): BookProgressInfoDomainModel? {
-        val isEbookCached = readerSettingsRepository.isEbookCached(bookUuid, BookType.EBOOK)
-        val isAudiobookCached = readerSettingsRepository.isEbookCached(bookUuid, BookType.AUDIOBOOK)
-        val isReadaloudCached = readerSettingsRepository.isEbookCached(bookUuid, BookType.READALOUD)
-
+        val bookType = BookType.entries.firstOrNull { type -> type.value == mediaType }
+            ?: return null
+        val isCached = readerSettingsRepository.isEbookCached(source.bookUuid, bookType)
         val localProgression = localPosition?.totalProgression
-        val hasLocalProgress = localProgression != null && localProgression > 0.0
-        val hasRemoteProgress = remoteProgression != null && remoteProgression > 0.0
-        val hasCached = isEbookCached || isAudiobookCached || isReadaloudCached
+        val remoteProgression = remotePosition?.totalProgression
 
-        return if (hasLocalProgress || hasRemoteProgress || hasCached) {
+        return if (localProgression != null || remoteProgression != null || isCached) {
             BookProgressInfoDomainModel(
-                bookUuid = bookUuid,
+                bookUuid = source.bookUuid,
                 localProgression = localProgression,
                 remoteProgression = remoteProgression,
-                isEbookCached = isEbookCached,
-                isAudiobookCached = isAudiobookCached,
-                isReadaloudCached = isReadaloudCached,
+                isEbookCached = mediaType == BookType.EBOOK.value && isCached,
+                isAudiobookCached = mediaType == BookType.AUDIOBOOK.value && isCached,
+                isReadaloudCached = mediaType == BookType.READALOUD.value && isCached,
             )
         } else {
             null
         }
     }
+
+    private fun progressCacheKey(
+        sourceKey: SourceBookKey?,
+        serverId: String?,
+        bookUuid: String,
+    ): ProgressCacheKey = ProgressCacheKey(sourceKey, serverId, bookUuid)
 }
+
+private data class ProgressCacheKey(
+    val sourceKey: SourceBookKey?,
+    val serverId: String?,
+    val bookUuid: String,
+)
+
+internal fun ServerPosition.supportsMediaType(
+    mediaType: String,
+    sourceMediaTypes: Set<String>,
+): Boolean {
+    if (mediaType !in sourceMediaTypes) return false
+    val hasAudioPosition = audioTimestampMs != null || totalDurationMs != null
+    val hasEbookLocation = locatorHref != null || locatorType != null ||
+        locatorTarget != null || cssSelector != null || position != null
+
+    return when {
+        hasAudioPosition && hasEbookLocation -> mediaType == BookType.READALOUD.value
+        hasAudioPosition -> if (BookType.AUDIOBOOK.value in sourceMediaTypes) {
+            mediaType == BookType.AUDIOBOOK.value
+        } else {
+            mediaType == BookType.READALOUD.value
+        }
+        hasEbookLocation -> mediaType == BookType.EBOOK.value ||
+            mediaType == BookType.READALOUD.value
+        sourceMediaTypes.size == 1 -> sourceMediaTypes.single() == mediaType
+        else -> false
+    }
+}
+
+private fun ServerPosition.savedPositionUpdatedAt(): String? =
+    updatedAt ?: createdAt ?: timestamp?.toString()

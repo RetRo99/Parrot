@@ -14,6 +14,8 @@ kotlin {
         namespace = "com.retro99.server.storyteller"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -35,13 +37,18 @@ kotlin {
             implementation(projects.lib.network.implementation)
             implementation(projects.lib.database.api)
             implementation(projects.lib.user.api)
+            implementation(projects.feature.books.domain)
             implementation(projects.feature.sync.domain)
             implementation(projects.feature.sync.data)
+            implementation(projects.feature.reader.domain)
         }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.coroutines.test)
+            implementation(libs.ktor.client.mock)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
         }
     }
 }

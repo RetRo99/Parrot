@@ -32,8 +32,8 @@ class RoutineSyncScheduler(
     }
 
     override fun close() {
-        dirtySignals.close()
         worker.cancel()
+        dirtySignals.cancel()
     }
 
     private suspend fun runWorker() {

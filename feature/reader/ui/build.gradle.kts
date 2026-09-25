@@ -48,6 +48,7 @@ kotlin {
             implementation(projects.baseUi)
             implementation(projects.translations)
             implementation(projects.feature.reader.domain)
+            api(projects.lib.server.api)
             implementation(projects.feature.sync.domain)
             implementation(projects.feature.books.domain)
             implementation(projects.feature.books.ui)
@@ -71,7 +72,6 @@ kotlin {
             implementation(libs.androidx.fragment)
             implementation(libs.androidx.lifecycle.process)
             implementation(projects.feature.reader.data)
-            implementation(projects.lib.server.api)
             implementation(files("libs/sherpa-onnx-1.13.8.aar"))
             implementation(libs.commons.compress)
         }

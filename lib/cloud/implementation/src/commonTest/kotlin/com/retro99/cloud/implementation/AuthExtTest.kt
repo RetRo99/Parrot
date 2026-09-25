@@ -2,6 +2,7 @@ package com.retro99.cloud.implementation
 
 import io.github.jan.supabase.annotations.SupabaseInternal
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.MemoryCodeVerifierCache
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.user.UserInfo
@@ -67,6 +68,7 @@ class AuthExtTest {
                 autoLoadFromStorage = false
                 autoSetupPlatform = false
                 sessionManager = profileManager
+                codeVerifierCache = MemoryCodeVerifierCache()
             }
         }
         try {
@@ -157,6 +159,7 @@ class AuthExtTest {
                 autoLoadFromStorage = false
                 autoSetupPlatform = false
                 sessionManager = profileManager
+                codeVerifierCache = MemoryCodeVerifierCache()
             }
         }
         try {

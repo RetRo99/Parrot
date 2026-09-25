@@ -13,15 +13,21 @@ import org.koin.core.annotation.Single
 class AudiobookshelfBooksRepositoryFactory(
     @Provided private val networkClientFactory: ServerNetworkClientProvider,
     @Provided private val localSource: ServerBooksLocalSource,
+    @Provided private val identityBindingStore: AudiobookshelfLibraryIdentityBindingProvider,
 ) : ServerBooksRepositoryFactory {
 
     override val serverType: ServerType = ServerType.Audiobookshelf
 
     override fun create(serverConfig: ServerConfig): ServerBooksRepository {
         require(serverConfig.type == ServerType.Audiobookshelf) {
-            "AudiobookshelfBooksRepositoryFactory can only create repositories for Audiobookshelf servers"
+            "AudiobookshelfBooksRepositoryFactory can only create " +
+                "repositories for Audiobookshelf servers"
         }
         val networkClient = networkClientFactory.create(serverConfig)
-        return AudiobookshelfBooksRepository(networkClient, localSource)
+        return AudiobookshelfBooksRepository(
+            networkClient = networkClient,
+            localSource = localSource,
+            identityBindingStore = identityBindingStore,
+        )
     }
 }

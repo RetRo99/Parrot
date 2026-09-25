@@ -15,19 +15,26 @@ class GetBooksBySeriesUseCase(
     operator fun invoke(seriesName: String): Flow<AppResult<List<BookDomainModel>>> {
         return getBooksUseCase().map { result ->
             result.map { books ->
-                books.filterIsInstance<BookDomainModel.StorytellerBook>()
-                    .filter { book ->
-                        book.series.any { it.name.equals(seriesName, ignoreCase = true) }
-                    }.sortedWith(
-                        compareBy(
-                            { book ->
-                                book.series.find { it.name.equals(seriesName, ignoreCase = true) }?.position ?: Double.MAX_VALUE
-                            },
-                            { it.title },
-                        ),
-                    )
+                booksInSeries(books, seriesName)
             }
         }
     }
 }
 
+internal fun booksInSeries(
+    books: List<BookDomainModel>,
+    seriesName: String,
+): List<BookDomainModel> = books
+    .filter { book ->
+        book.series.any { series -> series.name.equals(seriesName, ignoreCase = true) }
+    }
+    .sortedWith(
+        compareBy(
+            { book ->
+                book.series.find { series ->
+                    series.name.equals(seriesName, ignoreCase = true)
+                }?.position ?: Double.MAX_VALUE
+            },
+            { book -> book.title },
+        ),
+    )

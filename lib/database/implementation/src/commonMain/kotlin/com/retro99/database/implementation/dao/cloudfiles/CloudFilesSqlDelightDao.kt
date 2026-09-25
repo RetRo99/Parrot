@@ -4,8 +4,10 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import com.retro99.database.api.cloudfiles.CloudBookFileEntity
 import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
+import com.retro99.database.api.cloudfiles.PendingCloudFileFeedChange
 import com.retro99.database.implementation.Cloud_book_file_state
 import com.retro99.database.implementation.Cloud_file_transfers
+import com.retro99.database.implementation.Pending_cloud_book_file_feed_changes
 import com.retro99.database.implementation.DatabaseManager
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.Dispatchers
@@ -62,12 +64,72 @@ internal class CloudFilesSqlDelightDao(
                 .deleteCloudBookFileState(libraryBookId, mediaType, relativePath)
         }
 
+    suspend fun deleteFileStateByCloudBookFileId(
+        libraryBookId: String,
+        cloudBookFileId: String,
+    ) = withContext(Dispatchers.IO) {
+        databaseManager.getDatabase().cloudBookFileStateQueries
+            .deleteCloudBookFileStateByCloudBookFileId(libraryBookId, cloudBookFileId)
+    }
+
     suspend fun deleteAllFileStates() = withContext(Dispatchers.IO) {
         databaseManager.getDatabase().cloudBookFileStateQueries.deleteAllCloudBookFileStates()
     }
 
     suspend fun saveTransfer(transfer: CloudFileTransferEntity) = withContext(Dispatchers.IO) {
-        databaseManager.getDatabase().cloudFileTransferQueries.insertCloudFileTransfer(
+        databaseManager.getDatabase().saveCloudFileTransfer(transfer)
+    }
+
+    suspend fun updateTransferIfState(
+        transfer: CloudFileTransferEntity,
+        expectedStates: List<String>,
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (expectedStates.isEmpty()) return@withContext false
+        val database = databaseManager.getDatabase()
+        database.transactionWithResult {
+            val current = database.cloudFileTransferQueries
+                .getCloudFileTransfer(transfer.transferId)
+                .executeAsOneOrNull()
+            if (current == null || current.state !in expectedStates) {
+                return@transactionWithResult false
+            }
+            database.cloudFileTransferQueries.updateCloudFileTransferStateIfExpected(
+                server_id = transfer.serverId,
+                direction = transfer.direction,
+                library_book_id = transfer.libraryBookId,
+                cloud_book_id = transfer.cloudBookId,
+                cloud_book_file_id = transfer.cloudBookFileId,
+                media_type = transfer.mediaType,
+                local_source_uuid = transfer.localSourceUuid,
+                staging_path = transfer.stagingPath,
+                size_bytes = transfer.sizeBytes,
+                bytes_transferred = transfer.bytesTransferred,
+                content_hash = transfer.contentHash,
+                content_hash_algorithm = transfer.contentHashAlgorithm,
+                upload_id = transfer.uploadId,
+                storage_path = transfer.storagePath,
+                tus_upload_url = transfer.tusUploadUrl,
+                tus_expires_at = transfer.tusExpiresAt,
+                rights_attestation = transfer.rightsAttestation,
+                state = transfer.state,
+                attempt_count = transfer.attemptCount.toLong(),
+                next_attempt_at = transfer.nextAttemptAt,
+                last_error = transfer.lastError,
+                created_at = transfer.createdAt,
+                updated_at = transfer.updatedAt,
+                transfer_id = transfer.transferId,
+                state_ = expectedStates,
+            )
+            database.cloudFileTransferQueries.getCloudFileTransfer(transfer.transferId)
+                .executeAsOneOrNull()
+                ?.toEntity() == transfer
+        }
+    }
+
+    private fun com.retro99.database.implementation.AppDatabase.saveCloudFileTransfer(
+        transfer: CloudFileTransferEntity,
+    ) {
+        cloudFileTransferQueries.insertCloudFileTransfer(
             transfer_id = transfer.transferId,
             server_id = transfer.serverId,
             direction = transfer.direction,
@@ -130,6 +192,52 @@ internal class CloudFilesSqlDelightDao(
             .getCloudFileTransfersForCloudFile(cloudBookFileId)
             .executeAsList()
             .map(Cloud_file_transfers::toEntity)
+    }
+
+    suspend fun enqueuePendingFileFeedChange(
+        cloudBookId: String,
+        feedRevision: Long?,
+        payloadJson: String,
+        receivedAt: String,
+    ): PendingCloudFileFeedChange = withContext(Dispatchers.IO) {
+        require(cloudBookId.isNotBlank())
+        require(payloadJson.isNotBlank())
+        require(receivedAt.isNotBlank())
+        val queries = databaseManager.getDatabase().cloudBookFileStateQueries
+        queries.enqueuePendingCloudBookFileFeedChange(
+            cloudBookId,
+            feedRevision,
+            payloadJson,
+            receivedAt,
+        )
+        queries.getPendingCloudBookFileFeedChange(cloudBookId, payloadJson)
+            .executeAsOne()
+            .toPendingFileFeedChange()
+    }
+
+    suspend fun getPendingFileFeedChanges(
+        cloudBookId: String,
+    ): List<PendingCloudFileFeedChange> = withContext(Dispatchers.IO) {
+        databaseManager.getDatabase().cloudBookFileStateQueries
+            .getPendingCloudBookFileFeedChanges(cloudBookId)
+            .executeAsList()
+            .map(Pending_cloud_book_file_feed_changes::toPendingFileFeedChange)
+    }
+
+    suspend fun getPendingFileFeedCloudBookIds(): List<String> = withContext(Dispatchers.IO) {
+        databaseManager.getDatabase().cloudBookFileStateQueries
+            .getPendingCloudBookFileFeedCloudBookIds()
+            .executeAsList()
+    }
+
+    suspend fun deletePendingFileFeedChange(changeId: Long) = withContext(Dispatchers.IO) {
+        databaseManager.getDatabase().cloudBookFileStateQueries
+            .deletePendingCloudBookFileFeedChange(changeId)
+    }
+
+    suspend fun deleteAllPendingFileFeedChanges() = withContext(Dispatchers.IO) {
+        databaseManager.getDatabase().cloudBookFileStateQueries
+            .deleteAllPendingCloudBookFileFeedChanges()
     }
 
     fun observeTransfers(serverId: String, libraryBookId: String): Flow<List<CloudFileTransferEntity>> =
@@ -211,3 +319,12 @@ private fun Cloud_file_transfers.toEntity() = CloudFileTransferEntity(
     createdAt = created_at,
     updatedAt = updated_at,
 )
+
+private fun Pending_cloud_book_file_feed_changes.toPendingFileFeedChange() =
+    PendingCloudFileFeedChange(
+        id = id,
+        cloudBookId = cloud_book_id,
+        feedRevision = feed_revision,
+        payloadJson = payload_json,
+        receivedAt = received_at,
+    )

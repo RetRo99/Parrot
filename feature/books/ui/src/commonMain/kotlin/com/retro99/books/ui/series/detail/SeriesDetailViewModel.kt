@@ -14,6 +14,7 @@ import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.usecase.GetBooksBySeriesUseCase
 import com.retro99.books.domain.usecase.ObserveAllFavoritesUseCase
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
+import com.retro99.books.ui.list.favoriteClickAction
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.toUiModel
 import kotlinx.coroutines.flow.launchIn
@@ -55,7 +56,7 @@ class SeriesDetailViewModel(
             SeriesDetailIntent.OnRefresh -> observeBooks()
             SeriesDetailIntent.OnSearchToggled -> toggleSearch()
             is SeriesDetailIntent.OnBookClicked -> onNavigateToBookDetail(intent.book)
-            is SeriesDetailIntent.OnFavoriteClicked -> toggleFavorite(intent.bookUuid)
+            is SeriesDetailIntent.OnFavoriteClicked -> toggleFavorite(intent.book)
         }
     }
 
@@ -79,17 +80,21 @@ class SeriesDetailViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun toggleFavorite(bookUuid: String) {
-        val currentIsFavorite = viewState.value.favoriteBookUuids.contains(bookUuid)
-        analytics.logEvent(
-            BookAnalyticsEvent.FavoriteToggled(
-                bookUuid = bookUuid,
-                isFavorite = !currentIsFavorite,
-                source = "series_detail",
-            ),
-        )
+    private fun toggleFavorite(book: BookUiModel) {
+        val action = favoriteClickAction(book, viewState.value.favoriteBookUuids)
+        action.bookUuids.forEach { bookUuid ->
+            analytics.logEvent(
+                BookAnalyticsEvent.FavoriteToggled(
+                    bookUuid = bookUuid,
+                    isFavorite = action.isFavorite,
+                    source = "series_detail",
+                ),
+            )
+        }
         viewModelScope.launch {
-            toggleFavoriteUseCase(bookUuid)
+            action.bookUuids.forEach { bookUuid ->
+                toggleFavoriteUseCase.setFavorite(bookUuid, action.isFavorite)
+            }
         }
     }
 
@@ -132,4 +137,3 @@ class SeriesDetailViewModel(
             .launchIn(viewModelScope)
     }
 }
-

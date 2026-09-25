@@ -2,6 +2,7 @@ package com.retro99.home.ui.navigation
 
 import androidx.navigation3.runtime.NavKey
 import com.retro99.books.domain.model.BookType
+import com.retro99.server.api.library.ProgressOwnerRef
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -38,6 +39,11 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
     ) : HomeDestination
 
     @Serializable
+    data class LibraryGroupDetail(
+        val groupId: String,
+    ) : HomeDestination
+
+    @Serializable
     data class SeriesDetail(
         val seriesUuid: String,
         val seriesName: String,
@@ -54,10 +60,21 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
         val serverId: String,
         val bookUuid: String,
         val bookType: BookType,
+        val selection: ReaderLaunchSelection? = null,
     ) : HomeDestination {
         @Transient
         override val showBottomBar: Boolean = false
     }
+
+    @Serializable
+    data class ReaderLaunchSelection(
+        val resourceId: String,
+        val resourceRevision: String?,
+        val localStorageReference: String,
+        val progressAdapterId: String,
+        val progressNativeId: String,
+        val progressOwner: ProgressOwnerRef? = null,
+    )
 
     @Serializable
     data object Settings : HomeDestination {

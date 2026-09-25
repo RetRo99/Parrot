@@ -13,6 +13,8 @@ kotlin {
         namespace = "com.retro99.feature.reader.domain"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -28,6 +30,11 @@ kotlin {
             implementation(projects.feature.books.domain)
             implementation(projects.lib.database.api)
             implementation(projects.lib.server.api)
+        }
+
+        commonTest.dependencies {
+            implementation(libs.coroutines.test)
+            implementation(libs.kotlin.test)
         }
     }
 }

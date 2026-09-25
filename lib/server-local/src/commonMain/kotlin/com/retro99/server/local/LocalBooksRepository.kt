@@ -2,15 +2,20 @@ package com.retro99.server.local
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.map
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.books.data.source.ImportedBooksLocalSource
 import com.retro99.books.domain.model.BookDomainModel
-import com.retro99.server.api.ServerBook
 import com.retro99.server.api.MediaResource
+import com.retro99.server.api.ServerBook
+import com.retro99.server.api.ServerBookListing
+import com.retro99.server.api.ServerBookListingCompleteness
 import com.retro99.server.api.ServerBooksRepository
 import com.retro99.server.api.ServerType
+import com.retro99.server.api.library.LocalContentIdentity
+import com.retro99.server.api.library.LibraryAdapterId
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -23,11 +28,23 @@ class LocalBooksRepository(
     override val serverId: String,
 ) : ServerBooksRepository {
 
+    override val libraryAdapterId = LibraryAdapterId("local")
+
     override fun getBooks(): Flow<AppResult<List<ServerBook>>> {
         return localSource.observeAllImportedBooks().map { books ->
             Ok(books.map { it.toServerBook(serverId) })
         }
     }
+
+    override fun getLibraryListing(): Flow<AppResult<ServerBookListing>> =
+        getBooks().map { result ->
+            result.map { books ->
+                ServerBookListing(
+                    books = books,
+                    completeness = ServerBookListingCompleteness.Complete,
+                )
+            }
+        }
 
     override fun getBook(uuid: String): Flow<AppResult<ServerBook>> {
         return localSource.observeAllImportedBooks().map { books ->
@@ -57,7 +74,12 @@ class LocalBooksRepository(
 private fun BookDomainModel.LocalBook.toServerBook(serverId: String): ServerBook {
     val isEbook = bookType == com.retro99.books.domain.model.BookType.EBOOK
     val isReadaloud = bookType == com.retro99.books.domain.model.BookType.READALOUD
-    val normalizedHashAlgorithm = contentHashAlgorithm ?: "sha-256-v1"
+    val normalizedHashAlgorithm = contentHashAlgorithm
+    val canonicalHash = if (normalizedHashAlgorithm == LocalContentIdentity.HASH_ALGORITHM) {
+        LocalContentIdentity.canonicalHash(contentHash)
+    } else {
+        null
+    }
 
     return ServerBook(
         uuid = uuid,
@@ -86,7 +108,9 @@ private fun BookDomainModel.LocalBook.toServerBook(serverId: String): ServerBook
         publicationDate = publicationDate,
         isLocal = true,
         serverType = ServerType.Local,
-        libraryBookId = contentHash?.let { hash -> "$normalizedHashAlgorithm:$hash" },
+        libraryBookId = canonicalHash?.let { hash ->
+            "${LocalContentIdentity.HASH_ALGORITHM}:$hash"
+        },
         contentHash = contentHash,
         contentHashAlgorithm = normalizedHashAlgorithm,
         mediaResources = listOf(
@@ -98,6 +122,8 @@ private fun BookDomainModel.LocalBook.toServerBook(serverId: String): ServerBook
                 contentHashAlgorithm = normalizedHashAlgorithm,
                 localOrigin = origin,
                 cloudBookFileId = cloudBookFileId,
+                nativeResourceId = uuid,
+                format = bookType.value,
             ),
         ),
     )

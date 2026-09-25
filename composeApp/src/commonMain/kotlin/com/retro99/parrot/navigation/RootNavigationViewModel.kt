@@ -23,16 +23,25 @@ class RootNavigationViewModel(
 
     override fun onIntent(intent: RootNavigationIntent) {
         when (intent) {
-            RootNavigationIntent.OnLoginSuccess -> handleLoginSuccess()
+            is RootNavigationIntent.OnLoginSuccess -> {
+                handleLoginSuccess(intent.existingServerId)
+            }
             RootNavigationIntent.OnLogout -> handleLogout()
-            RootNavigationIntent.OnLoginClicked -> handleLoginClicked()
+            is RootNavigationIntent.OnLoginClicked -> {
+                handleLoginClicked(intent.existingServerId)
+            }
             RootNavigationIntent.OnBackFromLogin -> handleBackFromLogin()
         }
     }
 
-    private fun handleLoginClicked() {
+    private fun handleLoginClicked(existingServerId: String?) {
         updateState { state ->
-            state.copy(backStack = state.backStack + RootDestination.Login(false))
+            state.copy(
+                backStack = state.backStack + RootDestination.Login(
+                    initial = false,
+                    existingServerId = existingServerId,
+                ),
+            )
         }
     }
 
@@ -56,9 +65,13 @@ class RootNavigationViewModel(
         }
     }
 
-    private fun handleLoginSuccess() {
+    private fun handleLoginSuccess(existingServerId: String?) {
         updateState { state ->
-            state.copy(backStack = listOf(RootDestination.Home))
+            if (existingServerId != null) {
+                state.copy(backStack = state.backStack.dropLast(1))
+            } else {
+                state.copy(backStack = listOf(RootDestination.Home))
+            }
         }
     }
 
@@ -74,4 +87,3 @@ class RootNavigationViewModel(
         }
     }
 }
-

@@ -81,6 +81,7 @@ import com.retro99.reader.domain.model.ChapterProgressDisplayMode
 import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.domain.model.ProgressBarPosition
 import com.retro99.reader.domain.model.ProgressIndicatorMode
+import com.retro99.server.api.library.ProgressOwnerRef
 import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.ChapterReadingTimeInfo
@@ -129,11 +130,27 @@ fun ReaderScreen(
     serverId: String,
     bookUuid: String,
     bookType: BookType,
+    selectedLocalPath: String? = null,
+    progressNativeId: String? = null,
+    progressAdapterId: String? = null,
+    progressOwner: ProgressOwnerRef? = null,
     onClose: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ReaderViewModel = koinViewModel {
-        parametersOf(serverId, bookUuid, bookType, onClose, onSettingsClick)
+        parametersOf(
+            ReaderViewModelArgs(
+                serverId = serverId,
+                bookUuid = bookUuid,
+                bookType = bookType,
+                onClose = onClose,
+                onSettingsClick = onSettingsClick,
+                selectedLocalPath = selectedLocalPath,
+                progressNativeId = progressNativeId,
+                progressAdapterId = progressAdapterId,
+                progressOwner = progressOwner,
+            ),
+        )
     },
 ) {
     // Intercept hardware back press to ensure audio progress is saved before navigation

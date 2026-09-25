@@ -1,0 +1,35 @@
+CREATE TABLE IF NOT EXISTS library_groups (
+    profile_id TEXT NOT NULL,
+    group_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (profile_id, group_id)
+);
+
+CREATE TABLE IF NOT EXISTS library_group_memberships (
+    profile_id TEXT NOT NULL,
+    adapter_id TEXT NOT NULL,
+    identity_kind TEXT NOT NULL CHECK (identity_kind IN ('portable', 'unresolved')),
+    backend_id TEXT NOT NULL DEFAULT '',
+    account_id TEXT NOT NULL DEFAULT '',
+    unresolved_connection_id TEXT NOT NULL DEFAULT '',
+    native_book_id TEXT NOT NULL,
+    group_id TEXT NOT NULL,
+    execution_connection_id TEXT,
+    legacy_library_book_id TEXT,
+    PRIMARY KEY (
+        profile_id, adapter_id, identity_kind, backend_id, account_id,
+        unresolved_connection_id, native_book_id
+    ),
+    FOREIGN KEY (profile_id, group_id)
+        REFERENCES library_groups(profile_id, group_id) ON DELETE RESTRICT,
+    CHECK (
+        (identity_kind = 'portable' AND backend_id <> '' AND account_id <> ''
+            AND unresolved_connection_id = '')
+        OR (identity_kind = 'unresolved' AND backend_id = '' AND account_id = ''
+            AND unresolved_connection_id <> ''
+            AND execution_connection_id = unresolved_connection_id)
+    )
+);
+
+CREATE INDEX IF NOT EXISTS idx_library_group_memberships_group
+ON library_group_memberships(profile_id, group_id);

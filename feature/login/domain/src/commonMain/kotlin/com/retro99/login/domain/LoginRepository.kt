@@ -10,6 +10,7 @@ interface LoginRepository {
         serverUrl: String,
         username: String,
         password: String,
+        existingServerId: String? = null,
     ): CompletableResult
 
     suspend fun loginWithOAuth(

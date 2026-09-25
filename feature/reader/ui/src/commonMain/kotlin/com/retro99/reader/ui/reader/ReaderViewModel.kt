@@ -10,6 +10,8 @@ import com.retro99.base.now
 import com.retro99.base.nowMillis
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
+import com.retro99.books.domain.LocalBookFileUsageCoordinator
+import com.retro99.books.domain.LocalBookFileUsageLease
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.BookmarkDomainModel
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
@@ -27,6 +29,8 @@ import com.retro99.reader.domain.usecase.SaveReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.domain.usecase.SetCurrentlyReadingUseCase
 import com.retro99.reader.domain.usecase.UpdateBookmarkTitleUseCase
+import com.retro99.server.api.library.LibraryAdapterId
+import com.retro99.server.api.library.ProgressOwnerRef
 import com.retro99.reader.ui.di.InitialAudioPosition
 import com.retro99.reader.ui.di.ReaderScope
 import com.retro99.reader.ui.model.BookmarkUiModel
@@ -82,11 +86,7 @@ import kotlin.time.TimeSource
 
 @KoinViewModel
 class ReaderViewModel(
-    @InjectedParam private val serverId: String,
-    @InjectedParam private val bookUuid: String,
-    @InjectedParam private val bookType: BookType,
-    @InjectedParam private val onClose: () -> Unit,
-    @InjectedParam private val onSettingsClick: () -> Unit,
+    @InjectedParam private val args: ReaderViewModelArgs,
     @Provided private val initializeReaderUseCase: InitializeReaderUseCase,
     @Provided private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
     @Provided private val getReaderSettingsUseCase: GetReaderSettingsUseCase,
@@ -103,13 +103,40 @@ class ReaderViewModel(
     @Provided private val publicationService: EpubPublicationService,
     @Provided private val analytics: Analytics,
     @Provided private val supertonicTermsStore: SupertonicTermsStore,
+    @Provided private val fileUsageCoordinator: LocalBookFileUsageCoordinator,
 ) : BaseViewModel<ReaderViewState, ReaderIntent>(
     ReaderViewState(
-        bookUuid = bookUuid,
-        bookType = bookType,
+        bookUuid = args.bookUuid,
+        bookType = args.bookType,
         hasAcceptedSupertonicTerms = supertonicTermsStore.hasAcceptedCurrentTerms(),
     )
 ) {
+    private val serverId = args.serverId
+
+    private val bookUuid = args.bookUuid
+
+    private val bookType = args.bookType
+
+    private val onClose = args.onClose
+
+    private val onSettingsClick = args.onSettingsClick
+
+    private val selectedLocalPath = args.selectedLocalPath
+
+    private val progressNativeId = args.progressNativeId
+
+    private val progressAdapterId = args.progressAdapterId
+
+    private val progressOwner = args.progressOwner
+
+    private val progressBookUuid: String
+        get() = progressOwner?.nativeProgressId
+            ?: progressNativeId?.takeIf { value -> value.isNotBlank() }
+            ?: bookUuid
+
+    private val expectedProgressAdapterId: LibraryAdapterId?
+        get() = progressOwner?.adapterId
+            ?: progressAdapterId?.takeIf { value -> value.isNotBlank() }?.let(::LibraryAdapterId)
 
     private val readerScope: Scope by lazy {
         getKoin().getOrCreateScope<ReaderScope>(bookUuid).apply {
@@ -146,6 +173,8 @@ class ReaderViewModel(
     }
 
     private var activeNarrationController: NarrationController? = null
+
+    private var publicationFileLease: LocalBookFileUsageLease? = null
 
     private val syncCoordinator: ReaderSyncCoordinator by lazy {
         readerScope.get<ReaderSyncCoordinator>().also {
@@ -188,7 +217,7 @@ class ReaderViewModel(
             syncNowUseCase(
                 SyncRequest(
                     reason = SyncTriggerReason.ROUTINE_PROGRESS,
-                    scope = SyncScope.Books(setOf(bookUuid)),
+                    scope = SyncScope.Books(setOf(progressBookUuid)),
                     urgency = SyncUrgency.ROUTINE,
                     routineSchedule = routineSchedule,
                 ),
@@ -443,11 +472,19 @@ class ReaderViewModel(
             syncNowUseCase(
                 SyncRequest(
                     reason = SyncTriggerReason.BOOK_OPEN,
-                    scope = SyncScope.Books(setOf(bookUuid)),
+                    scope = SyncScope.Books(setOf(progressBookUuid)),
                     urgency = SyncUrgency.ROUTINE,
                 ),
             )
-            initializeReaderUseCase(serverId, bookUuid, bookType)
+            initializeReaderUseCase(
+                serverId = serverId,
+                bookUuid = bookUuid,
+                bookType = bookType,
+                selectedLocalFilePath = selectedLocalPath,
+                progressBookUuid = progressBookUuid,
+                progressAdapterId = expectedProgressAdapterId,
+                progressOwner = progressOwner,
+            )
                 .onSuccess { data ->
                     openPublication(data)
                 }
@@ -464,73 +501,80 @@ class ReaderViewModel(
         val bookType = data.bookType
         val (position, conflict) = data.progressResult.toUiData()
 
-        publicationService.openPublication(
-            filePath = data.localEbookPath,
-            serverId = data.serverId,
-            bookUuid = data.bookUuid,
-            bookType = bookType,
-        ).onSuccess { publication ->
-            // Track book opened event
-            bookOpenedTimestamp = nowMillis()
-            analytics.logEvent(
-                ReaderAnalyticsEvent.BookOpened(
-                    bookUuid = data.bookUuid,
-                    bookType = bookType.name,
-                )
+        val lease = fileUsageCoordinator.acquireUse(data.localEbookPath)
+        var retainLease = false
+        try {
+            publicationService.openPublication(
+                filePath = data.localEbookPath,
+                serverId = data.serverId,
+                bookUuid = data.bookUuid,
+                bookType = bookType,
             )
-
-            // Create PublicationState with initial settings and position
-            val publicationState = PublicationState(
-                publication = publication,
-                settings = settings,
-                position = position,
-                customFonts = customFonts,
-            )
-
-            updateState { state ->
-                state.copy(
-                    bookUuid = data.bookUuid,
-                    bookTitle = data.bookTitle,
-                    bookCoverUrl = data.bookCoverUrl,
-                    publicationState = publicationState,
-                    bookType = bookType,
-                    positionConflict = conflict,
-                    error = null,
-                    currentAudioPositionMs = position?.audioTimestampMs ?: 0L,
-                    tableOfContents = publication.tableOfContents,
-                )
-            }
-            // Start observing after publication is ready
-            observeBookLocationChanges()
-            observeReadingTimeInfo()
-            observeReadingSpeedPersistence()
-            observeSettingsChanges()
-            observeCustomFontChanges()
-            observeBookmarks()
-            // Initialize audio after publication is in state
-            if (publication.hasMediaOverlays) {
-                initAudio()
-            } else {
-                if (bookType == BookType.READALOUD) {
-                    // Track when a ReadAloud book is missing media overlays and show snackbar
+                .onSuccess { publication ->
+                    // Track book opened event
+                    bookOpenedTimestamp = nowMillis()
                     analytics.logEvent(
-                        ReaderAnalyticsEvent.ReadAloudMissingMediaOverlays(
+                        ReaderAnalyticsEvent.BookOpened(
                             bookUuid = data.bookUuid,
+                            bookType = bookType.name,
                         ),
                     )
-                    updateState { state -> state.copy(showNoAudioMessage = true) }
+
+                    val publicationState = PublicationState(
+                        publication = publication,
+                        settings = settings,
+                        position = position,
+                        customFonts = customFonts,
+                    )
+
+                    updateState { state ->
+                        state.copy(
+                            bookUuid = data.bookUuid,
+                            bookTitle = data.bookTitle,
+                            bookCoverUrl = data.bookCoverUrl,
+                            publicationState = publicationState,
+                            bookType = bookType,
+                            positionConflict = conflict,
+                            error = null,
+                            currentAudioPositionMs = position?.audioTimestampMs ?: 0L,
+                            tableOfContents = publication.tableOfContents,
+                        )
+                    }
+                    publicationFileLease = lease
+                    retainLease = true
+
+                    observeBookLocationChanges()
+                    observeReadingTimeInfo()
+                    observeReadingSpeedPersistence()
+                    observeSettingsChanges()
+                    observeCustomFontChanges()
+                    observeBookmarks()
+                    if (publication.hasMediaOverlays) {
+                        initAudio()
+                    } else {
+                        if (bookType == BookType.READALOUD) {
+                            analytics.logEvent(
+                                ReaderAnalyticsEvent.ReadAloudMissingMediaOverlays(
+                                    bookUuid = data.bookUuid,
+                                ),
+                            )
+                            updateState { state -> state.copy(showNoAudioMessage = true) }
+                        }
+                        initTts()
+                    }
                 }
-                initTts()
-            }
-        }.onFailure { error ->
-            analytics.logEvent(
-                ReaderAnalyticsEvent.BookOpenFailed(
-                    bookUuid = data.bookUuid,
-                    bookType = bookType.name,
-                    errorMessage = error.message ?: "Unknown publication error",
-                )
-            )
-            updateState { it.copy(error = error) }
+                .onFailure { error ->
+                    analytics.logEvent(
+                        ReaderAnalyticsEvent.BookOpenFailed(
+                            bookUuid = data.bookUuid,
+                            bookType = bookType.name,
+                            errorMessage = error.message ?: "Unknown publication error",
+                        ),
+                    )
+                    updateState { it.copy(error = error) }
+                }
+        } finally {
+            if (!retainLease) lease.release()
         }
     }
 
@@ -1109,7 +1153,7 @@ class ReaderViewModel(
         val currentState = viewState.value
         val audioTimestamp = currentState.currentAudioPositionMs.takeIf { it > 0 }
         val positionDomainModel = PositionDomainModel(
-            bookUuid = bookUuid,
+            bookUuid = progressBookUuid,
             serverId = serverId,
             timestamp = nowMillis(),
             createdAt = position.createdAt,
@@ -1129,7 +1173,11 @@ class ReaderViewModel(
         )
 
         viewModelScope.launch {
-            saveReadingProgressUseCase(positionDomainModel)
+            saveReadingProgressUseCase(
+                progress = positionDomainModel,
+                expectedAdapterId = expectedProgressAdapterId,
+                progressOwner = progressOwner,
+            )
                 .onSuccess { routineSyncScheduler.markDirty() }
         }
     }
@@ -1454,7 +1502,7 @@ class ReaderViewModel(
             syncNowUseCase(
                 SyncRequest(
                     reason = SyncTriggerReason.READER_CHECKPOINT,
-                    scope = SyncScope.Books(setOf(bookUuid)),
+                    scope = SyncScope.Books(setOf(progressBookUuid)),
                     urgency = SyncUrgency.URGENT,
                 ),
             )
@@ -1722,7 +1770,7 @@ class ReaderViewModel(
 
         val now = now().toString()
         val positionDomainModel = PositionDomainModel(
-            bookUuid = bookUuid,
+            bookUuid = progressBookUuid,
             serverId = serverId,
             timestamp = nowMillis(),
             createdAt = currentPosition.createdAt,
@@ -1739,7 +1787,11 @@ class ReaderViewModel(
             totalProgression = currentPosition.totalProgression,
             position = currentPosition.position,
         )
-        saveReadingProgressUseCase(positionDomainModel)
+        saveReadingProgressUseCase(
+            progress = positionDomainModel,
+            expectedAdapterId = expectedProgressAdapterId,
+            progressOwner = progressOwner,
+        )
             .onSuccess { routineSyncScheduler.markDirty() }
     }
 
@@ -1747,6 +1799,8 @@ class ReaderViewModel(
         routineSyncScheduler.close()
         super.onCleared()
         readerScope.close()
+        publicationFileLease?.release()
+        publicationFileLease = null
     }
 
     private companion object {

@@ -5,6 +5,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.base.nowMillis
+import com.retro99.books.domain.LocalBookFileUsageLease
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.ui.media.HeadlessMediaOverlayPlayer
@@ -56,6 +57,7 @@ class HeadlessPlaybackSession(
     private val exoPlayer: ExoPlayer,
     private val initialChapterHref: String?,
     private val initialPositionMs: Long?,
+    private val fileUsageLease: LocalBookFileUsageLease,
 ) : AutoCloseable {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -257,5 +259,8 @@ class HeadlessPlaybackSession(
         }
         positionSaveJob?.cancel()
         player.release()
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
+        fileUsageLease.release()
     }
 }
