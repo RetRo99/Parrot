@@ -345,9 +345,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0021 — Welcome actions are clipped and unreachable in landscape
 
 - **Severity / user impact:** Medium; in landscape on Welcome, Get Started and Browse without account are below the viewport and cannot be reached, blocking both sign-in and guest onboarding until the user restores portrait.
-- **Status:** CONFIRMED on the Samsung, before source changes. Fix and retest pending.
+- **Status:** FIXED and functionally retested on the Samsung; the pre-fix failure is retained. Case 9 remains incomplete for separate QA-BUG-0022 Analytics/diagnostics deduplication.
 - **Screen/test IDs:** Welcome rotation case 9; shared lifecycle case 741.
-- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; Parrot `com.retro99.parrot` 0.4.5 (21), debug, source commit `e572e53e468d4add814494ecbdcc2d3f3d22922b`, APK SHA-256 `eff1d63323f0ffbf7ee3af12cf2dff2b5608e065120e82734ded01a98178fbbe`.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; fix commit `b10b42112feddcca1cd197fbf1195ebd76768087`; Parrot `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `f67dc0ea4ccf68254d301bf76d9e83b9603de72a83161210136360a402a87226` (local and pulled Samsung package match).
 - **Preconditions:** Fresh unauthenticated Welcome in portrait; no account or app data changes during the test.
 - **Exact reproduction:** On the Samsung, lock WindowManager user rotation to landscape with `adb -s RFCWC0SSVDM shell cmd window user-rotation lock 1`; wait for a 2340×1080 app viewport; observe the Welcome screen and try an upward swipe over its content.
 - **Expected:** Welcome reflows or scrolls so the page and onboarding actions remain usable in landscape, without crashes or duplicated content.
@@ -356,8 +356,8 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** [case-9 pre-fix run](manual-qa-evidence/2026-09-26/case-009-welcome-rotation-pre-fix.txt), [portrait before](manual-qa-evidence/2026-09-26/case-009-welcome-portrait-before.png), [landscape](manual-qa-evidence/2026-09-26/case-009-welcome-landscape.png), [landscape after swipe](manual-qa-evidence/2026-09-26/case-009-welcome-landscape-after-swipe.png), [portrait recovery](manual-qa-evidence/2026-09-26/case-009-welcome-portrait-return.png).
 - **Root cause:** The Welcome screen uses a non-scrollable centered vertical `Column` sized against the available height; its fixed content stack exceeds landscape viewport height and is clipped.
 - **Affected files:** `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/welcome/WelcomeScreen.kt`; related QA evidence/results.
-- **Fix reference / commit:** Pending. Expected fix is to make the content vertically scrollable/adaptive in compact viewports, with unchanged portrait layout.
-- **Retest:** NOT RUN after fix. Verify landscape and portrait on the Samsung, reach both CTAs by swipe as needed, confirm no content duplication or crash, restore original free rotation mode, and record a hash-matched build.
+- **Fix reference / commit:** Make Welcome's main content vertically scrollable, detect compact-height viewports, and emit one bounded `welcome_layout`/`compact_viewport` breadcrumb confirming scroll recovery; add a regression test for the breadcrumb's fixed safe context and deduplication. Commit `b10b42112feddcca1cd197fbf1195ebd76768087`.
+- **Retest:** PASS on Samsung, 2026-09-26. Hash-matched build `f67dc0ea4ccf68254d301bf76d9e83b9603de72a83161210136360a402a87226` retained all content in landscape; two in-app upward swipes revealed Get Started, then both Get Started and Browse without account together. Portrait still rendered fully and was restored; no crash or duplicate visible cards. One compact-layout breadcrumb appeared. `:feature:login:ui:iosSimulatorArm64Test` (including its breadcrumb test) and `:androidApp:assembleDebug` passed. Evidence: [QA-BUG-0021 retest](manual-qa-evidence/2026-09-26/case-009-welcome-scroll-fix-retest.txt) and [landscape actions screenshot](manual-qa-evidence/2026-09-26/case-009-scrollfix-landscape-actions.png). QA-BUG-0022 screen-view and visible-breadcrumb duplicates remain a separate open case-9 failure; no Firebase ingestion or Crashlytics delivery claim.
 
 ## QA-BUG-0022 — Welcome screen-view event duplicates on rotation
 

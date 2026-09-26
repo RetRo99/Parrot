@@ -1,0 +1,20 @@
+Case 9 — Welcome rotation — QA-BUG-0021 functional retest PASS; case remains incomplete for QA-BUG-0022 — 2026-09-26
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`, 1080×2340 portrait, gesture navigation.
+- Package `com.retro99.parrot` 0.4.5 (21), debug, source commit `b10b42112feddcca1cd197fbf1195ebd76768087`; APK SHA-256 `f67dc0ea4ccf68254d301bf76d9e83b9603de72a83161210136360a402a87226` (local and Samsung-pulled hashes match). This is the QA-BUG-0021 scroll/diagnostic fix; the separate QA-BUG-0022 event-deduplication fix is not applied yet.
+- App PID `7002`; root unauthenticated Welcome. No account or app-data changes.
+
+Steps / result
+1. Installed the fixed debug APK in place (`adb install -r`), without clearing Parrot data; hash-verified the installed `base.apk`. Portrait screenshot: [`case-009-scrollfix-portrait.png`](case-009-scrollfix-portrait.png).
+2. Simulated Samsung landscape using `adb -s RFCWC0SSVDM shell cmd window user-rotation lock 1`. The top-of-screen capture is [`case-009-scrollfix-landscape-top.png`](case-009-scrollfix-landscape-top.png).
+3. Swiped within app content, not the system gesture/navigation bar, twice using `adb -s RFCWC0SSVDM shell input swipe 1200 760 1200 180 600`. After the first swipe, Get Started was visible; after the second, both **Get Started** and **Browse without account** were visible together. Evidence: [`case-009-scrollfix-landscape-mid-swipe.png`](case-009-scrollfix-landscape-mid-swipe.png) and [`case-009-scrollfix-landscape-actions.png`](case-009-scrollfix-landscape-actions.png). The content list scrolled; one each of the three feature cards remained in order; no duplicated content or crash observed.
+4. Returned to portrait, restored original free rotation mode and captured [`case-009-scrollfix-portrait-return.png`](case-009-scrollfix-portrait-return.png). Verified `cmd window user-rotation=free`, `accelerometer_rotation=1`, `user_rotation=0`, display 1080×2340. Device-wide rotation settings are restored.
+
+Results
+- **Functional: PASS for QA-BUG-0021.** Landscape Welcome now scrolls to both onboarding actions; portrait still shows the full page; rotation back restores a usable Welcome. No route was selected and no app data changed.
+- **Analytics: FAIL for case 9 overall.** The distinct QA-BUG-0022 defect remains: local debug logs show `welcome_screen_viewed` at `23:51:00.819` on initial launch, again at `23:51:23.577` on landscape rotation, and again at `23:56:12.869` on portrait return. Each repeats the unchanged `source_screen=splash, entry_point=app_launch`. These are not separate app launches. Firebase ingestion was not checked and is waived.
+- **Diagnostics: PARTIAL for case 9 overall.** The new compact-layout breadcrumb appeared once at `23:51:23.578`: `screen=welcome action=layout_adaptation operation=welcome_layout stage=compact_viewport outcome=succeeded reason_code=scroll_enabled`. No fatal marker occurred and no Crashlytics non-fatal was expected for this successfully recovered layout. The destination-visible breadcrumb still duplicates with the screen-view event; QA-BUG-0022 remains open. Crashlytics delivery is not verified.
+- **Automated checks:** `:feature:login:ui:iosSimulatorArm64Test` and `:androidApp:assembleDebug` passed. The new ViewModel breadcrumb regression test passed (LoginNavigationViewModelTest: 6 tests, 0 failures); build output also reports 2 Welcome badge variant tests, 0 failures.
+
+The initial `y=950` swipes during the same device run began at the Android gesture-navigation strip and did not scroll; [`case-009-scrollfix-landscape-bottom.png`](case-009-scrollfix-landscape-bottom.png) preserves that exploratory frame, not a failed app-content scroll. Successful retest gestures began inside the feature card. No device setting remains changed.
