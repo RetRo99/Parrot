@@ -1,0 +1,19 @@
+QA-BUG-0006 bounded diagnostic context retest
+Date: 2026-09-26
+
+Build checks
+- `./gradlew :composeApp:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug` completed BUILD SUCCESSFUL.
+- `DiagnosticPayloadSanitizerTest`: 4 tests, 0 failures/errors. Includes safe typed context retained, arbitrary caller text omitted, unsafe path-like values/unknown fields removed, and throwable/cause messages redacted.
+- `AnalyticsParameterSanitizerTest`: 4 tests, 0 failures/errors.
+- `DiagnosticPayloadSanitizerAndroidTest`: 1 test, 0 failures/errors.
+- `StartupAuthRouteResolverTest`: 3 tests, 0 failures/errors (startup uses the new typed diagnostic context on fallback).
+
+Samsung verification
+- Device: RFCWC0SSVDM, SM-S921B, Android 16 / API 36, One UI 8.0.
+- App: `com.retro99.parrot` 0.4.5 (21), debug APK.
+- Latest breadcrumb-build local and pulled installed APK SHA-256: `069d68a5eee622b9bb24445995596495a5261ab0b3f128e1c41d2faf71ec4e82`.
+- Fresh-process normal startup reached Books/Home. Local debug output showed a bounded `started` breadcrumb (`screen=splash`, `operation=check_auth_state`) and a bounded `route_selected` breadcrumb (`screen=home`, `source_screen=splash`, `outcome=succeeded`), plus the launch-route event. No fatal entry was observed.
+- No controlled handled failure was induced, so exception context was not observed on-device. Crashlytics production delivery/context was not verified.
+
+Disposition
+- Focused sanitizer, startup fallback and local breadcrumb behavior passed, but this does not close the broad instrumentation gap: numerous feature call sites still pass legacy free-form messages, and no general per-operation correlation ID is generated. Diagnostic case 506 and representative Firebase Crashlytics delivery remain BLOCKED pending authorized Firebase Console access and a safe failure fixture. QA-BUG-0006 stays open/partially remediated; not a PASS for end-to-end diagnostic delivery.

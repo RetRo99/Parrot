@@ -1,0 +1,17 @@
+QA-BUG-0009 startup auth failure fallback retest
+Date: 2026-09-26
+
+Host regression
+- Task: `:composeApp:testAndroidHostTest` — PASS.
+- 3 tests, 0 failures/errors: successful auth check selects normal route; thrown ordinary exception invokes reporting callback once and selects Welcome fallback; CancellationException is rethrown and is not reported.
+
+Samsung normal-route regression
+- Device: RFCWC0SSVDM, SM-S921B, Android 16 / API 36, One UI 8.0; locale `en-GB`.
+- Package: `com.retro99.parrot` v0.4.5 (21), debug build.
+- `:androidApp:assembleDebug` succeeded; app installed/replaced without clearing app data.
+- Local APK and Samsung pulled base APK SHA-256 both `24af701b53ff5b76b69baba7f54cee0e044f98dff9a083d6e5dea74801155ee9`.
+- Force-stop then launcher launch (not a process-death simulation); Books/Home appeared in about six seconds. No screenshot retained because the Home surface displayed book titles/covers unrelated to the startup assertion.
+- Fresh PID log had one `app_launch_route_resolved` event `{screen=home, source_screen=splash, entry_point=app_launch, outcome=success}` and no FATAL EXCEPTION/AndroidRuntime fatal entry.
+
+Limitations
+- The failure branch was exercised by host logic test only. No preference/server-registry fault was injected on the Samsung because there is no authorized disposable fault fixture. The non-fatal was not delivered to Firebase Console; Crashlytics verification remains BLOCKED. This is not an end-to-end pass for case 508.

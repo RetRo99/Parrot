@@ -1,0 +1,17 @@
+QA-BUG-0007 setting-value Analytics retest
+Date: 2026-09-26
+
+Change and checks
+- Provider boundary now retains only an approved `setting_name` and a normalized `value_bucket`; `new_value` is never forwarded.
+- Covered fixed enum, boolean, numeric, custom font and ARGB color categories, invalid/out-of-range inputs, and unknown setting names.
+- `./gradlew :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug` — BUILD SUCCESSFUL.
+- Host tests: 4 Analytics parameter sanitizer tests + 6 diagnostic sanitizer tests + 1 Android throwable-sanitizer test; 11 total, 0 failures/errors.
+
+Samsung test
+- Device: serial RFCWC0SSVDM, SM-S921B, Android 16/API 36, One UI 8.0.
+- Package: `com.retro99.parrot` 0.4.5 (21), debug variant.
+- Local APK and APK pulled from the Samsung matched SHA-256 `82a2429d001b6538061480bcdb6a18fa5fcc0fa4fff0449c991a1e84cfd267bf`.
+- Navigated Books → downloaded book detail → Reader → Settings → Reader settings; tapped the Dark theme option.
+- PID-scoped DebugAnalyticsManager output: `Analytics Event: setting_changed | Parameters: {setting_name=theme, value_bucket=dark}`. No `new_value` or raw preference value appeared.
+- No screenshot retained: the underlying reader preview contained text unrelated to this analytics assertion; the sanitized local event excerpt is the evidence.
+- This confirms local debug-provider behavior only. Firebase Analytics delivery remains waived/unverified. The test altered only demo reader theme preference; restore to default is planned during the upcoming clean-install QA reset.
