@@ -34,6 +34,7 @@ class LoginViewModel(
     val usernameState = TextFieldState()
     val passwordState = TextFieldState()
     private var lastFailedLogin: Pair<String, String>? = null
+    private val loginSubmissionGate = LoginSubmissionGate()
     private val activeLoginAttempts = mutableMapOf<String, LoginAttempt>()
 
     init {
@@ -98,6 +99,7 @@ class LoginViewModel(
     }
 
     private fun handleSignInClicked() {
+        if (!loginSubmissionGate.tryStart()) return
         val url = urlState.text.toString().trim()
         val serverType = viewState.value.selectedServerType
         val attempt = beginLoginAttempt(serverType, authMethod = "credentials")
@@ -133,6 +135,7 @@ class LoginViewModel(
     }
 
     private fun handleOAuthSignInClicked() {
+        if (!loginSubmissionGate.tryStart()) return
         val url = urlState.text.toString().trim()
         val serverType = viewState.value.selectedServerType
         val attempt = beginLoginAttempt(serverType, authMethod = "oauth")
@@ -224,6 +227,7 @@ class LoginViewModel(
         error: AppError,
         attempt: LoginAttempt,
     ) {
+        loginSubmissionGate.finish()
         activeLoginAttempts.remove(attempt.correlationId)
         lastFailedLogin = attempt.serverType.identifier to attempt.authMethod
         val durationMs = attempt.startedAt.elapsedNow().inWholeMilliseconds.coerceAtLeast(0)
