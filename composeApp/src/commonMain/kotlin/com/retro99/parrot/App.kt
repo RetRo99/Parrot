@@ -10,7 +10,7 @@ import com.retro99.base.ui.compose.ParrotTheme
 import com.retro99.parrot.navigation.RootNavigation
 
 @Composable
-fun App() {
+fun App(onRootWelcomeBack: (() -> Unit)? = null) {
     val platform = getPlatform()
 
     ParrotTheme(eink = platform.isEink) {
@@ -19,6 +19,7 @@ fun App() {
             color = MaterialTheme.colorScheme.background,
         ) {
             RootNavigation(
+                onRootWelcomeBack = onRootWelcomeBack,
                 modifier = Modifier
                     .navigationBarsPadding(),
             )

@@ -83,7 +83,7 @@ class MainActivity : FragmentActivity() {
         notificationPermissionHandler.register(this)
 
         setContent {
-            App()
+            App(onRootWelcomeBack = { finish() })
         }
 
         // Handle deep link if activity was started with one

@@ -103,6 +103,25 @@ class LoginNavigationViewModelTest {
         )
     }
 
+    @Test
+    fun backIntentPreservesWelcomeAsTheOnlyDestination() {
+        val viewModel = createViewModel(RecordingPreferences(), RecordingAnalytics())
+
+        viewModel.onIntent(LoginNavigationIntent.OnBackClicked)
+
+        assertEquals(listOf(LoginDestination.Welcome), viewModel.currentViewState().backStack)
+    }
+
+    @Test
+    fun backIntentPopsLoginAndReturnsToWelcome() {
+        val viewModel = createViewModel(RecordingPreferences(), RecordingAnalytics())
+        viewModel.onIntent(LoginNavigationIntent.NavigateTo(LoginDestination.Login))
+
+        viewModel.onIntent(LoginNavigationIntent.OnBackClicked)
+
+        assertEquals(listOf(LoginDestination.Welcome), viewModel.currentViewState().backStack)
+    }
+
     private fun createViewModel(
         preferences: RecordingPreferences,
         analytics: RecordingAnalytics,

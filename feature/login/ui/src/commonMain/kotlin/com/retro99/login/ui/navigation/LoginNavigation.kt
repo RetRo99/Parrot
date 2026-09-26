@@ -4,6 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
@@ -24,6 +27,10 @@ fun LoginNavigation(
     viewModel: LoginNavigationViewModel = koinViewModel { parametersOf(startAtLogin) },
 ) {
     BaseScreen(viewModel = viewModel) { state, intentDispatcher ->
+        val rootWelcomeBackState = rememberNavigationEventState(NavigationEventInfo.None)
+        val isRootWelcomeBackEnabled =
+            state.backStack == listOf(LoginDestination.Welcome) && onRootBack != null
+
         LaunchedEffect(state.backStack.lastOrNull()) {
             val visibleDestination = state.backStack.lastOrNull() ?: return@LaunchedEffect
             viewModel.onDestinationVisible(
@@ -83,6 +90,14 @@ fun LoginNavigation(
                     )
                 }
             }
+        )
+
+        NavigationBackHandler(
+            state = rootWelcomeBackState,
+            isBackEnabled = isRootWelcomeBackEnabled,
+            onBackCompleted = {
+                onRootBack?.let(viewModel::onWelcomeSystemBack)
+            },
         )
     }
 }

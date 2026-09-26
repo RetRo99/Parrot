@@ -16,6 +16,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun RootNavigation(
     modifier: Modifier = Modifier,
+    onRootWelcomeBack: (() -> Unit)? = null,
     viewModel: RootNavigationViewModel = koinViewModel(),
 ) {
     BaseScreen(viewModel = viewModel) { state, intentDispatcher ->
@@ -53,6 +54,7 @@ fun RootNavigation(
                         } else {
                             null
                         },
+                        onRootBack = if (destination.initial) onRootWelcomeBack else null,
                         startAtLogin = !destination.initial,
                     )
                 }

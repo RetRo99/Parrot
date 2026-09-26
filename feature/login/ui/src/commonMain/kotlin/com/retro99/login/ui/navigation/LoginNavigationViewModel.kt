@@ -116,7 +116,11 @@ class LoginNavigationViewModel(
         when (intent) {
             LoginNavigationIntent.OnBackClicked -> {
                 updateState { state ->
-                    state.copy(backStack = state.backStack.dropLast(1))
+                    if (state.backStack.size > 1) {
+                        state.copy(backStack = state.backStack.dropLast(1))
+                    } else {
+                        state
+                    }
                 }
             }
 
