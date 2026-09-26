@@ -193,14 +193,17 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
     /** Records the route selected by the completed startup/authentication check. */
     data class AppLaunchRouteResolved(
         val destination: String,
+        val outcome: String = "success",
+        val reasonCode: String? = null,
     ) : NavigationAnalyticsEvent {
         override val name: String = "app_launch_route_resolved"
-        override val parameters: Map<String, Any> = mapOf(
-            "screen" to destination,
-            "source_screen" to "splash",
-            "entry_point" to "app_launch",
-            "outcome" to "success",
-        )
+        override val parameters: Map<String, Any> = buildMap {
+            put("screen", destination)
+            put("source_screen", "splash")
+            put("entry_point", "app_launch")
+            put("outcome", outcome)
+            reasonCode?.let { put("reason_code", it) }
+        }
     }
 
     /**

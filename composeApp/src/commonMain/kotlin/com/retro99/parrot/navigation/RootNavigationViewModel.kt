@@ -3,6 +3,7 @@ package com.retro99.parrot.navigation
 import androidx.lifecycle.viewModelScope
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AuthAnalyticsEvent
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.auth.domain.usecase.CheckAuthStateUseCase
 import com.retro99.auth.domain.usecase.LogoutUseCase
@@ -45,15 +46,32 @@ class RootNavigationViewModel(
 
     private fun checkAuthState() {
         viewModelScope.launch {
-            val isLoggedIn = checkAuthStateUseCase()
-            val destination = if (isLoggedIn) {
+            val resolution = resolveStartupAuthState(
+                checkAuthState = { checkAuthStateUseCase() },
+                reportUnexpectedFailure = { failure ->
+                    analytics.logException(
+                        failure,
+                        DiagnosticContext(
+                            screen = "splash",
+                            action = "resolve_startup_route",
+                            operation = "check_auth_state",
+                            stage = "read_persisted_state",
+                            outcome = "failed",
+                            reasonCode = "auth_state_check_failed",
+                        ),
+                    )
+                },
+            )
+            val destination = if (resolution.isAuthenticated) {
                 RootDestination.Home
             } else {
                 RootDestination.Login(true)
             }
             analytics.logEvent(
                 NavigationAnalyticsEvent.AppLaunchRouteResolved(
-                    destination = if (isLoggedIn) "home" else "welcome",
+                    destination = if (resolution.isAuthenticated) "home" else "welcome",
+                    outcome = if (resolution.usedFallback) "fallback" else "success",
+                    reasonCode = if (resolution.usedFallback) "auth_state_check_failed" else null,
                 ),
             )
             updateState { state ->
