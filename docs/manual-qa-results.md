@@ -32,6 +32,7 @@ Run manifest: [manual-qa-run-report.md](manual-qa-run-report.md). All cases begi
 | Case | Variant / evidence | Functional | Analytics | Diagnostics | Notes / defect |
 |---:|---|---|---|---|---|
 | 1 | Cold start on first install; current installed app was already provisioned | BLOCKED | NOT RUN | NOT RUN | The Samsung already has `com.retro99.parrot` installed and was displaying `MainActivity`. Case 1 requires a clean first-install state with no permissions granted. Do not uninstall or clear app data without confirmation: current app/profile/fixture ownership is unknown. A disposable QA Android user/profile or explicit authorization to reset app data is required. No case-1 launch steps were performed; no PASS is claimed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-001-first-install-blocked.txt). |
+| 2 | Cold start when already signed in | BLOCKED | NOT RUN | NOT RUN | Requires a known signed-in QA server session before killing/relaunching. No controlled server credentials were provided, and the current session is unverified; no account state was inspected or changed. No test steps were performed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-002-signed-in-cold-start-blocked.txt). |
 
 ## Screen groups C–M
 
