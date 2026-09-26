@@ -139,13 +139,14 @@ class LoginNavigationViewModelTest {
     }
 
     @Test
-    fun visibilityAfterARealDestinationChangeIsReportedAgain() {
+    fun returningToWelcomeUsesPreviousDestinationWhenBackStackHasNoSource() {
         val analytics = RecordingAnalytics()
         val viewModel = createViewModel(RecordingPreferences(), analytics)
 
         viewModel.onDestinationVisible(LoginDestination.Welcome, source = null)
         viewModel.onDestinationVisible(LoginDestination.Login, source = LoginDestination.Welcome)
-        viewModel.onDestinationVisible(LoginDestination.Welcome, source = LoginDestination.Login)
+        // After popping Login, the current back stack is only [Welcome], so its source is null.
+        viewModel.onDestinationVisible(LoginDestination.Welcome, source = null)
 
         assertEquals(
             listOf("welcome_screen_viewed", "login_screen_viewed", "welcome_screen_viewed"),
@@ -161,6 +162,16 @@ class LoginNavigationViewModelTest {
             1,
             analytics.events.count { it.name == "welcome_action_completed" },
         )
+
+        val welcomeViews = analytics.events.filter { it.name == "welcome_screen_viewed" }
+        assertEquals("splash", welcomeViews.first().parameters["source_screen"])
+        assertEquals("app_launch", welcomeViews.first().parameters["entry_point"])
+        assertEquals("login", welcomeViews.last().parameters["source_screen"])
+        assertEquals("back_navigation", welcomeViews.last().parameters["entry_point"])
+
+        val returnedWelcomeBreadcrumb = analytics.breadcrumbs.last { it.screen == "welcome" }
+        assertEquals("login", returnedWelcomeBreadcrumb.sourceScreen)
+        assertEquals("back_navigation", returnedWelcomeBreadcrumb.entryPoint)
     }
 
     @Test

@@ -44,15 +44,17 @@ class LoginNavigationViewModel(
 
     fun onDestinationVisible(destination: LoginDestination, source: LoginDestination?) {
         if (lastVisibleDestination == destination) return
+        val previousVisibleDestination = lastVisibleDestination
         lastVisibleDestination = destination
+        val resolvedSource = source ?: previousVisibleDestination
 
         if (destination != LoginDestination.Welcome) {
             resetCompactWelcomeLayoutBreadcrumb()
         }
         when (destination) {
             LoginDestination.Welcome -> {
-                val sourceScreen = if (source == null) "splash" else "login"
-                val entryPoint = if (source == null) "app_launch" else "back_navigation"
+                val sourceScreen = if (resolvedSource == null) "splash" else "login"
+                val entryPoint = if (resolvedSource == null) "app_launch" else "back_navigation"
                 analytics.logEvent(AuthAnalyticsEvent.WelcomeViewed(sourceScreen, entryPoint))
                 analytics.logBreadcrumb(
                     DiagnosticContext(
@@ -69,12 +71,12 @@ class LoginNavigationViewModel(
 
             LoginDestination.Login -> {
                 val sourceScreen = when {
-                    source == LoginDestination.Welcome -> "welcome"
+                    resolvedSource == LoginDestination.Welcome -> "welcome"
                     startAtLogin -> "home"
                     else -> "login_navigation"
                 }
                 val entryPoint = when {
-                    source == LoginDestination.Welcome -> "get_started"
+                    resolvedSource == LoginDestination.Welcome -> "get_started"
                     startAtLogin -> "add_server"
                     else -> "navigation"
                 }
