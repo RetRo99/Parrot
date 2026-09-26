@@ -1,0 +1,24 @@
+Case 10 — Welcome Home/background/resume — functional PASS; lifecycle instrumentation FAIL — 2026-09-27
+
+Device/build
+- Physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`; portrait 1080×2340, gesture navigation.
+- Package `com.retro99.parrot` 0.4.5 (21), debug, source commit `9958d084bf40bcf24024058c4d084fa04c3e1749`; APK SHA-256 `5c8fa064366ac9f03a642135e1e198babe8c9ad1e10415ff181a7296c2093adf` (hash-matched local and installed build from case 9).
+- App PID `22863`; root unauthenticated Welcome. No credentials entered; no app data changed.
+
+Steps
+1. Captured Welcome before background: [`case-010-welcome-before-home.png`](case-010-welcome-before-home.png).
+2. Sent Android Home (`adb -s RFCWC0SSVDM shell input keyevent 3`), waited five seconds. Verified top resumed activity was Samsung Launcher `bitpit.launcher/.ui.HomeActivity`, and Parrot process PID `22863` remained alive. Captured [`case-010-device-home.png`](case-010-device-home.png).
+3. Returned via the existing task using `adb -s RFCWC0SSVDM shell am start -W -n com.retro99.parrot/.android.MainActivity`. Android reported `Warning: Activity not started, its current task has been brought to the front`, `LaunchState: HOT`; verified the same Parrot PID and MainActivity resumed. Captured [`case-010-welcome-after-resume.png`](case-010-welcome-after-resume.png).
+4. Inspected PID-scoped local logs for lifecycle, foreground/background, Welcome screen-view, diagnostic and fatal markers.
+
+Results
+- **Functional: PASS.** The same Welcome content and actions were restored; no splash/login flash, route reset, blank view or crash. The app process remained alive and the original activity task returned.
+- **Analytics: FAIL — lifecycle observability gap.** Cold-start Welcome had one `welcome_screen_viewed` at `00:16:26.556` with `splash`/`app_launch`. Home/background and foreground resume produced no app-background/app-foreground event and no resumed Welcome exposure. The route did not change, so no duplicate route-view event is expected; the missing app lifecycle transition is the defect.
+- **Diagnostics: FAIL — lifecycle breadcrumbs absent.** No bounded `app_visibility` background or foreground transition breadcrumbs appeared for the actual Home/resume. No crash or unexpected recovery failure was induced; no Crashlytics non-fatal was expected for the successful resume.
+- **No Firebase delivery claim.** Local debug-provider log inspection only; Firebase Analytics ingestion is waived and Crashlytics delivery remains separately blocked.
+
+Source audit
+- `MainActivity` already handles `onPause`/`onStart`/`onStop`/`onResume` for OAuth, network and sync, but reports no lifecycle Analytics event or diagnostic breadcrumb.
+- `LoginNavigation` reports a destination only when its back-stack key changes. It does not observe app foreground/background state; it therefore emits no exposure transition on ordinary resume.
+
+The view-exposure boundary for the fix is: keep route-view events deduplicated across rotations and recomposition; report one typed app lifecycle transition and matching breadcrumb when Parrot actually leaves the foreground and when it returns. The resume signal distinguishes restored foreground state without falsely reporting a new navigation or duplicate screen-route change.
