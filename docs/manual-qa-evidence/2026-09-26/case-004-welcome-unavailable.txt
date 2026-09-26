@@ -1,0 +1,5 @@
+Case 4 precondition check — BLOCKED before execution
+Date: 2026-09-26, about 16:24 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Observation: the installed app was already running in `MainActivity`; the Welcome route was not the current destination. No first-run reset or logout was performed because current app/profile data and authentication ownership are unconfirmed. Case 4 requires Welcome's “Get Started” action, so its UI action cannot be reached safely from the current state without changing account/app state.
+No tap, navigation, Analytics assertion or diagnostic assertion was performed for case 4. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. Requires safe Welcome-route access via a disposable QA profile or authorized reset/session fixture.

@@ -1,0 +1,5 @@
+Case 3 precondition check — BLOCKED before case execution
+Date: 2026-09-26, about 16:23 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Blocker: case 3 requires a disposable guest-mode first-run state, a local test library, and a relaunch after selecting “Browse without account.” The installed app/profile data and local library are not confirmed disposable; no controlled guest fixture was provided. Case 1's safe first-install prerequisite is likewise unavailable.
+No guest selection, app-data reset, process-kill, relaunch or local-library mutation was performed. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. A disposable guest QA profile/library or explicit authorization to reset app data is required.
