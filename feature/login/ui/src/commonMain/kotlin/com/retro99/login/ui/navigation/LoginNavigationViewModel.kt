@@ -3,6 +3,7 @@ package com.retro99.login.ui.navigation
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
+import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.base.buildconfig.BuildConfig
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.login.domain.usecase.SkipLoginUseCase
@@ -72,6 +73,43 @@ class LoginNavigationViewModel(
                 )
             }
         }
+    }
+
+    fun onWelcomeSystemBack(onExit: () -> Unit) {
+        val context = DiagnosticContext(
+            screen = "welcome",
+            sourceScreen = "welcome",
+            entryPoint = "system_back",
+            action = "system_back",
+            operation = "exit_app",
+        )
+        analytics.logBreadcrumb(context.copy(stage = "started", outcome = "started"))
+        try {
+            onExit()
+        } catch (cancellation: CancellationException) {
+            throw cancellation
+        } catch (failure: Exception) {
+            val failureContext = context.copy(
+                stage = "request_exit",
+                outcome = "failed",
+                reasonCode = "app_exit_failed",
+            )
+            analytics.logEvent(
+                NavigationAnalyticsEvent.WelcomeRootBackCompleted(
+                    NavigationAnalyticsEvent.WelcomeRootBackOutcome.Failed,
+                ),
+            )
+            analytics.logBreadcrumb(failureContext)
+            analytics.logException(failure, failureContext)
+            return
+        }
+
+        analytics.logEvent(
+            NavigationAnalyticsEvent.WelcomeRootBackCompleted(
+                NavigationAnalyticsEvent.WelcomeRootBackOutcome.Exited,
+            ),
+        )
+        analytics.logBreadcrumb(context.copy(stage = "exit_requested", outcome = "succeeded"))
     }
 
     override fun onIntent(intent: LoginNavigationIntent) {

@@ -18,6 +18,7 @@ fun LoginNavigation(
     onLoginSuccess: () -> Unit,
     onGuestModeSelected: () -> Unit,
     onBack: (() -> Unit)? = null,
+    onRootBack: (() -> Unit)? = null,
     startAtLogin: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: LoginNavigationViewModel = koinViewModel { parametersOf(startAtLogin) },
@@ -40,10 +41,13 @@ fun LoginNavigation(
         NavDisplay(
             backStack = state.backStack,
             onBack = {
-                if (state.backStack.size <= 1 && onBack != null) {
-                    onBack()
-                } else {
-                    intentDispatcher(LoginNavigationIntent.OnBackClicked)
+                when {
+                    state.backStack.size > 1 ->
+                        intentDispatcher(LoginNavigationIntent.OnBackClicked)
+
+                    onBack != null -> onBack()
+
+                    onRootBack != null -> viewModel.onWelcomeSystemBack(onRootBack)
                 }
             },
             modifier = modifier,

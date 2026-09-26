@@ -3,6 +3,7 @@ package com.retro99.login.ui.navigation
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
+import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.base.buildconfig.BuildConfig
 import com.retro99.login.domain.usecase.SkipLoginUseCase
 import com.retro99.preferences.api.Preferences
@@ -55,6 +56,51 @@ class LoginNavigationViewModelTest {
         )
         assertEquals(1, analytics.exceptions.size)
         assertTrue(analytics.breadcrumbs.any { it.stage == "preference_persisted" && it.outcome == "succeeded" })
+    }
+
+    @Test
+    fun welcomeSystemBackReportsExitOutcomeAndBreadcrumbsOnce() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(RecordingPreferences(), analytics)
+        var exitRequests = 0
+
+        viewModel.onWelcomeSystemBack { exitRequests += 1 }
+
+        assertEquals(1, exitRequests)
+        assertEquals(1, analytics.events.size)
+        assertEquals("navigation_back", analytics.events.single().name)
+        assertEquals(
+            mapOf(
+                "screen" to "welcome",
+                "source_screen" to "welcome",
+                "destination_screen" to "app_exit",
+                "entry_point" to "system_back",
+                "outcome" to "exited",
+            ),
+            analytics.events.single().parameters,
+        )
+        assertEquals(
+            listOf("started" to "started", "exit_requested" to "succeeded"),
+            analytics.breadcrumbs.map { it.stage to it.outcome },
+        )
+        assertTrue(analytics.exceptions.isEmpty())
+    }
+
+    @Test
+    fun welcomeSystemBackReportsUnexpectedExitCallbackFailure() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(RecordingPreferences(), analytics)
+
+        viewModel.onWelcomeSystemBack { throw IllegalStateException("private callback detail") }
+
+        assertEquals(1, analytics.events.size)
+        assertEquals("failed", analytics.events.single().parameters["outcome"])
+        assertEquals(1, analytics.exceptions.size)
+        assertEquals("app_exit_failed", analytics.exceptions.single().second.reasonCode)
+        assertEquals(
+            listOf("started" to "started", "request_exit" to "failed"),
+            analytics.breadcrumbs.map { it.stage to it.outcome },
+        )
     }
 
     private fun createViewModel(

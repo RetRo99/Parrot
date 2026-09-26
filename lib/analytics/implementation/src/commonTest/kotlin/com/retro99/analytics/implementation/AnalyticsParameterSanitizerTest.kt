@@ -101,6 +101,33 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun rootWelcomeBackRetainsBoundedExitOutcome() {
+        val exited = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.WelcomeRootBackCompleted(
+                NavigationAnalyticsEvent.WelcomeRootBackOutcome.Exited,
+            ).parameters,
+        )
+        val failed = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.WelcomeRootBackCompleted(
+                NavigationAnalyticsEvent.WelcomeRootBackOutcome.Failed,
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "welcome",
+                "source_screen" to "welcome",
+                "destination_screen" to "app_exit",
+                "entry_point" to "system_back",
+                "outcome" to "exited",
+            ),
+            exited,
+        )
+        assertEquals("failed", failed["outcome"])
+        assertEquals("app_exit", failed["destination_screen"])
+    }
+
+    @Test
     fun welcomeEventsRetainOnlyBoundedRouteAndOutcomeDimensions() {
         val viewed = sanitizeAnalyticsParameters(
             AuthAnalyticsEvent.WelcomeViewed(

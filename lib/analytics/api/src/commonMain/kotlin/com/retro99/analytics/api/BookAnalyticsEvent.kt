@@ -304,6 +304,25 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
  */
 sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
 
+    enum class WelcomeRootBackOutcome(val value: String) {
+        Exited("exited"),
+        Failed("failed"),
+    }
+
+    /** Records the terminal outcome of system Back from the root Welcome destination. */
+    data class WelcomeRootBackCompleted(
+        val outcome: WelcomeRootBackOutcome,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "navigation_back"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "welcome",
+            "source_screen" to "welcome",
+            "destination_screen" to "app_exit",
+            "entry_point" to "system_back",
+            "outcome" to outcome.value,
+        )
+    }
+
     /** Records one actual Home root exposure, attributed to its bounded navigation source. */
     data class HomeViewed(
         val sourceScreen: String,

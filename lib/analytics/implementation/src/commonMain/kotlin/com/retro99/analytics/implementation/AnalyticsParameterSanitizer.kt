@@ -134,6 +134,7 @@ private val SAFE_DIMENSION = Regex("[A-Za-z][A-Za-z0-9_]{0,63}")
 private val SAFE_STRING_KEYS = setOf(
     "screen",
     "source_screen",
+    "destination_screen",
     "entry_point",
     "action",
     "operation",
