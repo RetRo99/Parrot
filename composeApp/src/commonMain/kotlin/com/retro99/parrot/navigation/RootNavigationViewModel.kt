@@ -46,6 +46,15 @@ class RootNavigationViewModel(
 
     private fun checkAuthState() {
         viewModelScope.launch {
+            analytics.logBreadcrumb(
+                DiagnosticContext(
+                    screen = "splash",
+                    action = "resolve_startup_route",
+                    operation = "check_auth_state",
+                    stage = "started",
+                    outcome = "started",
+                ),
+            )
             val resolution = resolveStartupAuthState(
                 checkAuthState = { checkAuthStateUseCase() },
                 reportUnexpectedFailure = { failure ->
@@ -72,6 +81,18 @@ class RootNavigationViewModel(
                     destination = if (resolution.isAuthenticated) "home" else "welcome",
                     outcome = if (resolution.usedFallback) "fallback" else "success",
                     reasonCode = if (resolution.usedFallback) "auth_state_check_failed" else null,
+                ),
+            )
+            analytics.logBreadcrumb(
+                DiagnosticContext(
+                    screen = if (resolution.isAuthenticated) "home" else "welcome",
+                    sourceScreen = "splash",
+                    entryPoint = "app_launch",
+                    action = "resolve_startup_route",
+                    operation = "check_auth_state",
+                    stage = "route_selected",
+                    outcome = if (resolution.usedFallback) "fallback" else "succeeded",
+                    reasonCode = if (resolution.usedFallback) "auth_state_check_failed" else "auth_state_check_completed",
                 ),
             )
             updateState { state ->

@@ -27,6 +27,14 @@ class AnalyticsManager(
         )
     }
 
+    override fun logBreadcrumb(context: DiagnosticContext) {
+        val breadcrumb = sanitizeDiagnosticContext(context) ?: return
+        firebaseCrashlytics.log(breadcrumb)
+        if (shouldLogHandledExceptionsToFile()) {
+            fileLogger.log("diagnostic", breadcrumb)
+        }
+    }
+
     private fun reportException(throwable: Throwable, sanitizedMessage: String?) {
         val sanitizedThrowable = sanitizeDiagnosticThrowable(throwable)
         // Log to Crashlytics

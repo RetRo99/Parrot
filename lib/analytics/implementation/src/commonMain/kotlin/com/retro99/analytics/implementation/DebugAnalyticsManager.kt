@@ -26,6 +26,14 @@ class DebugAnalyticsManager(
         )
     }
 
+    override fun logBreadcrumb(context: DiagnosticContext) {
+        val breadcrumb = sanitizeDiagnosticContext(context) ?: return
+        logger.d { "Diagnostic breadcrumb: $breadcrumb" }
+        if (shouldLogHandledExceptionsToFile()) {
+            fileLogger.log("diagnostic", breadcrumb)
+        }
+    }
+
     private fun reportException(throwable: Throwable, sanitizedMessage: String?) {
         val sanitizedThrowable = sanitizeDiagnosticThrowable(throwable)
         logger.e(sanitizedThrowable) {

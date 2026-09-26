@@ -7,6 +7,11 @@ interface Analytics {
      */
     fun logException(throwable: Throwable, message: String?)
 
+    /** Adds a bounded, non-fatal operation breadcrumb to the configured diagnostic provider. */
+    fun logBreadcrumb(context: DiagnosticContext) {
+        // Preserve source compatibility. Production and debug providers override this method.
+    }
+
     /** Reports an unexpected failure with structured, bounded context in diagnostic breadcrumbs. */
     fun logException(throwable: Throwable, context: DiagnosticContext) {
         // Preserve source compatibility for alternate providers. Production/debug providers
