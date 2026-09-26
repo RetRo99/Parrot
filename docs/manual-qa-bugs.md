@@ -290,3 +290,37 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Affected files:** Login navigation ViewModel/state/composable, Welcome strings, common tests, test plan/results and QA bug register.
 - **Fix reference / commit:** Catch unexpected persistence exceptions at the Welcome action boundary while rethrowing cancellation; emit one bounded failed action outcome/breadcrumb and one contextual exception report; keep Welcome visible with safe retry guidance; clear the message on retry and commit guest navigation only after persistence succeeds. Common failure/recovery regression test added. Commit `54708a90bbd7432f57859707edf4e268eeca2c2f`.
 - **Retest:** Common injected-failure/retry test PASS; `:feature:login:ui:iosSimulatorArm64Test` passed (12 tests) and `:androidApp:assembleDebug` succeeded. Samsung hash-matched APK PASS for the successful guest path and cold restart in case 3, including attempt/success events and breadcrumbs. **Case 755 failure UI/non-fatal/recovery on Samsung: BLOCKED**, because no safe app-scoped preference write-fault fixture exists; Crashlytics delivery/symbolication remains unverified. No device failure-branch PASS is claimed.
+
+## QA-BUG-0018 — System Back can remove the only Welcome destination
+
+- **Severity / impact:** Medium; pressing system Back on fresh Welcome can leave the nested Login navigation with no destination, potentially rendering a blank onboarding screen or causing navigation failure until restart.
+- **Status:** SUSPECTED from source audit; the unsafe final-entry removal is confirmed in code, but the resulting Samsung UI symptom has not yet been observed. Recorded before fix. Case 522 is the reproduction; case 756 adds explicit exit/relaunch verification.
+- **Screen/test IDs:** Welcome cases 6, 522, 756; Login nested-back case 28; shared journey case 747.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16/API 36, One UI 8.0; package `com.retro99.parrot` 0.4.5 (21), debug; source audit/build commit `54708a90bbd7432f57859707edf4e268eeca2c2f`, installed APK SHA-256 `3ff3af279ca4682bd7773c86c96bbe1d3505c97a169357987d61bf4f4842e335`.
+- **Preconditions:** Fresh unauthenticated startup; LoginNavigation has only `LoginDestination.Welcome` and receives `onBack=null` from the initial root Login route.
+- **Exact reproduction (source audit):** `LoginNavigation` configures `NavDisplay.onBack` to call `OnBackClicked` unless a valid non-null root callback is available. On `[Welcome]` with `onBack=null`, it dispatches `OnBackClicked`; `LoginNavigationViewModel` unconditionally applies `backStack.dropLast(1)`, producing `[]`.
+- **Expected:** Root Back must exit the Android activity cleanly without removing the only Welcome navigation entry; relaunch must resolve to usable Welcome. Ordinary Back must not report a Crashlytics exception or a false Home exposure.
+- **Actual (source-level):** The only Welcome entry is removed. Whether Navigation3 renders blank, invokes another handler, or exits cleanly is not confirmed on the Samsung yet.
+- **Frequency:** Deterministic in the current source whenever system Back reaches the nested LoginNavigation with a singleton Welcome stack and no root Back callback.
+- **Evidence:** Source audit in `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/navigation/LoginNavigation.kt` (`NavDisplay.onBack`) and `LoginNavigationViewModel.kt` (`OnBackClicked`); Samsung root Welcome screenshot is in `case-006-welcome-arrow-availability-run.txt` and confirms the route's arrow is absent (toolbar case 6 is N-A). No Back action was performed in that screenshot run.
+- **Root cause:** The local navigation state does not distinguish a poppable nested route from the terminal Welcome root; `dropLast(1)` is applied without a final-entry guard or exit callback.
+- **Affected files:** LoginNavigation composable/ViewModel/intent, Android MainActivity/App exit callback, common navigation tests, test plan/results, bug register.
+- **Fix reference / commit:** Pending. Planned fix: preserve `[Welcome]` on root Back, route the Android root Back to `Activity.finish()` through an explicit callback, and add regression coverage for both root exit and nested Login→Welcome pop.
+- **Retest:** NOT RUN. Samsung case 522 and case 756 are pending; do not claim fixed until the hash-matched build exits cleanly and relaunches to Welcome.
+
+## QA-BUG-0019 — Welcome system Back has no navigation usage event
+
+- **Severity / impact:** Low/Medium; root onboarding abandonment through system Back is invisible, and Back journeys cannot be distinguished from remaining on Welcome or entering Login.
+- **Status:** CONFIRMED instrumentation gap by source audit; fix not implemented. Recorded before any event schema/code change. Case 756 added.
+- **Screen/test IDs:** Welcome cases 522 and 756; related Back/navigation coverage cases 6, 28, 523 and shared journey 747.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), debug, source audit at `54708a90bbd7432f57859707edf4e268eeca2c2f`, APK SHA-256 `3ff3af279ca4682bd7773c86c96bbe1d3505c97a169357987d61bf4f4842e335`.
+- **Preconditions:** Actual root Welcome exposure, followed by system Back.
+- **Exact reproduction (source audit):** Existing `NavigationAnalyticsEvent` contains Home exposure, app-launch route, tab switch, search and deep-link events, but no Back-navigation event. Root `LoginNavigation` dispatches `OnBackClicked` for system Back, and no producer records source, destination, entry point or outcome for the Back action. No system Back was performed during the arrow-availability run.
+- **Expected:** Emit exactly one bounded `navigation_back` event with `screen=welcome`, `source_screen=welcome`, `destination_screen=app_exit`, `entry_point=system_back`, `outcome=exited`; emit bounded start/completed breadcrumbs for the route outcome. No exception for ordinary Back; no Home exposure.
+- **Actual:** No Analytics event or Back-operation breadcrumbs are produced for this root system Back path.
+- **Frequency:** Every root Welcome system Back action; runtime event omission has not yet been observed on-device.
+- **Evidence:** Source audit of `lib/analytics/api/src/commonMain/kotlin/com/retro99/analytics/api/BookAnalyticsEvent.kt` (`NavigationAnalyticsEvent`) and `LoginNavigation.kt`; schema also requires sanitizer registration. See case 756 for the planned Samsung check.
+- **Root cause:** Navigation events cover selected destinations and Home exposure but do not model Back actions/outcomes; root Back has no reporting boundary.
+- **Affected files:** Navigation Analytics event schema/sanitizer/tests, LoginNavigation ViewModel/intent, run results and event dictionary.
+- **Fix reference / commit:** Pending. Add a bounded typed Back event and root-Welcome start/completed breadcrumbs; add schema/provider tests and emit at the actual system-Back root boundary, not on recomposition or tap intent alone.
+- **Retest:** NOT RUN. Firebase Analytics ingestion is waived; local event/breadcrumb counts must be verified on Samsung for case 756. Crashlytics is not expected for ordinary Back.

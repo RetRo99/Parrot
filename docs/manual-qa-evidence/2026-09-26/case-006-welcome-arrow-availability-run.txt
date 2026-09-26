@@ -1,0 +1,23 @@
+Case 6 — Welcome toolbar back-arrow availability — N-A — 2026-09-26
+
+Device/build
+- Samsung serial `RFCWC0SSVDM`; model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), debug, source commit `54708a90bbd7432f57859707edf4e268eeca2c2f`; installed/local APK SHA-256 `3ff3af279ca4682bd7773c86c96bbe1d3505c97a169357987d61bf4f4842e335`.
+
+Preconditions and steps
+1. Under the user's authorization, cleared only Parrot app data and launched `com.retro99.parrot/.android.MainActivity` to the fresh unauthenticated root Welcome route. This intentionally removed the previously imported local QA book; its persistence result remains in the case-3 evidence.
+2. Inspected the actual Samsung Welcome screen. The top-left area has no toolbar Back arrow; the screenshot visibly shows the route and available controls: [`case-006-welcome-no-toolbar-back.png`](case-006-welcome-no-toolbar-back.png).
+3. No Back action was performed in this case. Root system Back belongs to case 522 and the newly appended telemetry/relaunch case 756.
+
+Source reconciliation
+- `RootNavigation` launches the initial Welcome with `RootDestination.Login(initial=true)`, which passes `onBack=null` to `LoginNavigation`.
+- `WelcomeScreen` renders its toolbar arrow only when `onBack != null`; therefore the toolbar arrow is not reachable on the current root Welcome. Other root Login entries that receive a Back callback start directly at Login rather than Welcome.
+- The source audit separately identified the root system-Back stack issue QA-BUG-0018 and missing usage event QA-BUG-0019. They are recorded before implementation; cases 522/756 remain NOT RUN.
+
+Results
+- **Functional: N-A** — no Welcome toolbar Back arrow is offered on the reachable root route; no missing UI control is claimed as a failure. System Back is covered by cases 522/756.
+- **Analytics: N-A** — no toolbar action exists in this route; no event result is claimed. Root system-Back telemetry remains NOT RUN under case 756.
+- **Diagnostics: N-A** — no Back operation/failure was induced. Root system-Back navigation safety remains NOT RUN under case 522.
+- `uiautomator` returned no elements and the activity-query helper timed out while the Welcome Compose route was animating. The saved screenshot visually confirms the route and absent arrow; this is recorded as a helper limitation, not an application failure.
+
+No credential was entered. Only Parrot app data was cleared; the installed APK/build and device-wide settings were unchanged.

@@ -58,7 +58,7 @@ Ordinary cached-library browsing, sign-in handshakes, downloads, account control
 | 3 | Cold start in guest mode | Choose "Browse without account", kill, relaunch | Splash routes to Home in guest mode, local library intact |
 | 4 | Get Started | Tap "Get Started" | Server login screen opens with server-type dropdown |
 | 5 | Browse without account | Tap "Browse without account" | Home opens with local-only library; no server books; import still works |
-| 6 | Back arrow on Welcome | Reach Welcome via back (logged out flow) and tap the back arrow | Navigates back or exits cleanly — never a blank screen or crash |
+| 6 | Welcome toolbar back-arrow availability | Reach the unauthenticated root Welcome and inspect the top-left control; if no toolbar arrow is offered, record N-A (system Back is case 522) | A toolbar arrow is offered only when it returns to a valid prior route; root Welcome must not expose a decorative or broken Back action |
 | 7 | Build badge | Inspect the badge on Welcome on debug vs release builds | DEBUG badge only on debug builds, RELEASE badge only on release builds |
 | 8 | E-ink theming (e-ink) | Launch on an e-ink device | E-ink theme applied and animations disabled app-wide |
 | 9 | Rotation on Welcome | Rotate device on Welcome | Layout re-lays out, no duplicated content, no crash |
@@ -1014,3 +1014,9 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 755 | Guest-mode preference write failure and retry | On Welcome, make the `SkippedLogin` preference write fail; tap Browse without account; restore writes and retry | Stay on a usable Welcome screen with actionable retry guidance; emit one failed action outcome and bounded diagnostic, one actionable non-fatal for the unexpected failure; do not route Home or emit Home exposure until persistence succeeds; retry succeeds once and routes Home once |
+
+## 38. Welcome root Back reliability and telemetry extension
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 756 | Welcome root system-Back usage and exit outcome | From fresh root Welcome, press system Back; verify app exits cleanly, relaunch, and inspect local event/breadcrumb sequence | The Welcome route is not removed from its only entry; activity exits cleanly and relaunch returns to usable Welcome. Emit one bounded `navigation_back` (`screen=welcome`, `source_screen=welcome`, `destination_screen=app_exit`, `entry_point=system_back`, `outcome=exited`) and start/completed diagnostic breadcrumbs; no Home exposure, blank screen, duplicate event, or Crashlytics exception for ordinary Back |

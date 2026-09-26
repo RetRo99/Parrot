@@ -1,5 +1,4 @@
-Case 6 precondition check — BLOCKED before execution
+Case 6 precondition check — HISTORICAL BLOCKER, SUPERSEDED BY N-A REACHABILITY RESULT
 Date: 2026-09-26, about 16:26 CEST (device time)
 Device: Samsung SM-S921B, serial RFCWC0SSVDM
-Blocker: case 6 requires the logged-out flow to navigate back to Welcome and tap its back arrow. The current route is the app's MainActivity, not the logged-out Welcome flow; no logout or state reset was authorized. Thus neither the Welcome back-arrow control nor its clean-exit behavior is reachable under the current safe fixture state.
-No Back action was tested for case 6. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. Requires an authorized logged-out/Welcome fixture.
+This preflight lacked authorization to reset app data and had not reached Welcome. Later, Parrot data was cleared under the user's authorization and the physical Welcome route was inspected. The toolbar Back arrow is not offered on root Welcome, so case 6 is now N-A; the actual system Back action remains a separate NOT RUN case 522/756. See [case-006-welcome-arrow-availability-run.txt](case-006-welcome-arrow-availability-run.txt). This historical blocker is superseded.
