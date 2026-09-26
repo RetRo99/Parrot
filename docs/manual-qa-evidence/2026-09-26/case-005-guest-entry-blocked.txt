@@ -1,0 +1,5 @@
+Case 5 precondition check — BLOCKED before execution
+Date: 2026-09-26, about 16:25 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Blocker: case 5 requires selecting “Browse without account” from Welcome and validating a disposable local-only library/import path. Welcome is not the current route, and no controlled guest/local test library is available. The installed app/profile data is not confirmed disposable; no logout, app-data reset, import or library mutation was attempted.
+No case-5 UI actions or telemetry assertions were performed. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. Requires safe Welcome access and a disposable guest/local fixture.

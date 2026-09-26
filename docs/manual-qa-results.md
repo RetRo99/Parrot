@@ -35,6 +35,7 @@ Run manifest: [manual-qa-run-report.md](manual-qa-run-report.md). All cases begi
 | 2 | Cold start when already signed in | BLOCKED | NOT RUN | NOT RUN | Requires a known signed-in QA server session before killing/relaunching. No controlled server credentials were provided, and the current session is unverified; no account state was inspected or changed. No test steps were performed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-002-signed-in-cold-start-blocked.txt). |
 | 3 | Cold start in guest mode | BLOCKED | NOT RUN | NOT RUN | Requires a disposable guest first-run state and local test library; current app/profile data is not confirmed disposable, so no guest selection or data reset was performed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-003-guest-cold-start-blocked.txt). |
 | 4 | Get Started | BLOCKED | NOT RUN | NOT RUN | Welcome screen is not the current route; reaching it would require an unapproved reset/logout. No UI action was performed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-004-welcome-unavailable.txt). |
+| 5 | Browse without account | BLOCKED | NOT RUN | NOT RUN | Welcome and a disposable local-only guest library are unavailable; no route or data mutation was attempted. [Precondition evidence](manual-qa-evidence/2026-09-26/case-005-guest-entry-blocked.txt). |
 
 ## Screen groups C–M
 
