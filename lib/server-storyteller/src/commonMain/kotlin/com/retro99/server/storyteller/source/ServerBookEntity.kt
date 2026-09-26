@@ -79,7 +79,7 @@ internal fun ServerBook.toEntity(): BookEntity {
         title = title,
         subtitle = null,
         language = null,
-        publicationDate = null,
+        publicationDate = publicationDate,
         description = description,
         rating = null,
         suffix = null,
@@ -135,7 +135,7 @@ internal data class SimpleMediaFileEntity(
     override val bookUuid: String,
     override val type: String,
     override val filepath: String? = null,
-    val size: Long? = null,
+    override val size: Long? = null,
 ) : MediaFileEntity {
     override val uuid: String = "$bookUuid-$type"
     override val missing: Int? = null
@@ -168,16 +168,19 @@ internal fun BookEntity.toServerBook(baseUrl: String?): ServerBook {
         title = title,
         description = description,
         coverUrl = coverUrl ?: CoverUrlBuilder.buildCoverUrl(baseUrl, uuid),
-        authors = authors.map { it.name },
-        narrators = narrators.map { it.name },
+        // Relations are sorted to match toDomain(): the cache queries order by name, the
+        // API returns its own order, and cachedRemoteFlow compares the two representations
+        // to decide whether the cache needs rewriting.
+        authors = authors.map { it.name }.sorted(),
+        narrators = narrators.map { it.name }.sorted(),
         series = series.map { s ->
             ServerBookSeries(
                 id = s.uuid,
                 name = s.name,
                 sequence = s.position?.toFloat(),
             )
-        },
-        tags = tags.map { it.name },
+        }.sortedBy { it.name },
+        tags = tags.map { it.name }.sorted(),
         hasEbook = ebook != null,
         hasAudiobook = audiobook != null,
         hasReadaloud = readaloud != null,
@@ -185,13 +188,14 @@ internal fun BookEntity.toServerBook(baseUrl: String?): ServerBook {
         ebookFilepath = ebook?.filepath,
         audiobookFilepath = audiobook?.filepath,
         readaloudFilepath = readaloud?.filepath,
-        // File sizes - need to cast to SimpleMediaFileEntity to access size
-        ebookFileSize = (ebook as? SimpleMediaFileEntity)?.size,
-        audiobookFileSize = (audiobook as? SimpleMediaFileEntity)?.size,
+        // File sizes
+        ebookFileSize = ebook?.size,
+        audiobookFileSize = audiobook?.size,
         readaloudFileSize = null, // Readaloud doesn't have size
         // Timestamps
         createdAt = createdAt,
         lastOpenedAt = null, // Not stored in entity
+        publicationDate = publicationDate,
         // Cached books are not local
         isLocal = false,
         serverType = serverType?.let { ServerType.fromIdentifier(it) },

@@ -50,6 +50,9 @@ import com.retro99.translations.StringRes
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import org.jetbrains.compose.resources.stringResource
+import resources.translations.action_delete
+import resources.translations.action_edit
+import resources.translations.reader_bookmark_add
 import resources.translations.reader_bookmark_add_current_page
 import resources.translations.reader_bookmark_default_title
 import resources.translations.reader_bookmark_days_ago
@@ -154,7 +157,7 @@ private fun BookmarksSheetContent(
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = null,
+                contentDescription = stringResource(StringRes.reader_bookmark_add),
             )
             Text(
                 text = stringResource(StringRes.reader_bookmark_add_current_page),
@@ -262,7 +265,7 @@ private fun BookmarkRow(
         ) {
             Icon(
                 imageVector = Icons.Default.Bookmark,
-                contentDescription = null,
+                contentDescription = stringResource(StringRes.reader_bookmark_default_title),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Column(modifier = Modifier.weight(1f)) {
@@ -298,7 +301,7 @@ private fun BookmarkRow(
             IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = null,
+                    contentDescription = stringResource(StringRes.action_delete),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
@@ -309,7 +312,7 @@ private fun BookmarkRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.DragHandle,
-                    contentDescription = null,
+                    contentDescription = stringResource(StringRes.action_edit),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
                 )

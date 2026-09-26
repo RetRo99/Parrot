@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.LoadingScreen
+import com.retro99.base.ui.compose.TooltipIconButton
 import com.retro99.books.ui.components.BookItemCard
 import com.retro99.books.ui.components.BookSearchBar
 import com.retro99.books.ui.model.BookUiModel
@@ -43,6 +44,7 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import resources.translations.general_back
+import resources.translations.series_action_search
 import resources.translations.series_detail_position
 
 @Composable
@@ -98,18 +100,15 @@ private fun SeriesDetailScreenContent(
                     }
                 },
                 actions = {
-                    IconButton(
+                    TooltipIconButton(
+                        tooltip = stringResource(StringRes.series_action_search),
+                        icon = if (viewState.isSearchVisible) {
+                            Icons.Filled.Close
+                        } else {
+                            Icons.Filled.Search
+                        },
                         onClick = { intentDispatcher(SeriesDetailIntent.OnSearchToggled) },
-                    ) {
-                        Icon(
-                            imageVector = if (viewState.isSearchVisible) {
-                                Icons.Filled.Close
-                            } else {
-                                Icons.Filled.Search
-                            },
-                            contentDescription = null,
-                        )
-                    }
+                    )
                 },
             )
         },

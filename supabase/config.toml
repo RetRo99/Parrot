@@ -26,3 +26,6 @@ enabled = true
 
 [functions.delete-cloud-account]
 verify_jwt = true
+
+[functions.generate-recap]
+verify_jwt = true

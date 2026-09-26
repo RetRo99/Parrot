@@ -479,6 +479,7 @@ internal class BooksSqlDelightDao(
                 type = mediaFile.type,
                 filepath = mediaFile.filepath,
                 missing = mediaFile.missing?.toLong(),
+                size = mediaFile.size,
                 created_at = mediaFile.createdAt,
                 updated_at = mediaFile.updatedAt,
             )
@@ -494,6 +495,7 @@ internal class BooksSqlDelightDao(
                     type = row.type,
                     filepath = row.filepath,
                     missing = row.missing?.toInt(),
+                    size = row.size,
                     createdAt = row.created_at,
                     updatedAt = row.updated_at,
                 )

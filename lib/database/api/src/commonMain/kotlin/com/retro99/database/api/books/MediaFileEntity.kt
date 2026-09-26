@@ -10,6 +10,7 @@ interface MediaFileEntity {
     val type: String // "ebook" or "audiobook"
     val filepath: String?
     val missing: Int?
+    val size: Long?
     val createdAt: String?
     val updatedAt: String?
 }

@@ -2,6 +2,7 @@ package com.retro99.home.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CollectionsBookmark
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -10,6 +11,7 @@ import org.jetbrains.compose.resources.StringResource
 import resources.translations.home_tab_books
 import resources.translations.home_tab_series
 import resources.translations.home_tab_settings
+import resources.translations.home_tab_statistics
 
 /**
  * Represents the tabs in the Home bottom navigation bar.
@@ -35,6 +37,11 @@ enum class HomeTab(
         icon = Icons.Filled.CollectionsBookmark,
         labelRes = StringRes.home_tab_series,
         startDestination = HomeDestination.SeriesList,
+    ),
+    Statistics(
+        icon = Icons.Filled.BarChart,
+        labelRes = StringRes.home_tab_statistics,
+        startDestination = HomeDestination.Statistics,
     ),
 //    Authors(
 //        icon = Icons.Filled.Person,

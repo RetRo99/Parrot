@@ -68,7 +68,10 @@ import com.retro99.base.server.ServerType
 import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.translations.StringRes
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import resources.translations.books_action_favorite
+import resources.translations.books_action_unfavorite
 import resources.translations.books_cached_indicator
 import resources.translations.books_media_audio
 import resources.translations.books_media_ebook
@@ -330,7 +333,13 @@ fun BookItemCard(
                         } else {
                             Icons.Outlined.FavoriteBorder
                         },
-                        contentDescription = null,
+                        contentDescription = stringResource(
+                            if (favorite) {
+                                StringRes.books_action_unfavorite
+                            } else {
+                                StringRes.books_action_favorite
+                            }
+                        ),
                         tint = if (favorite) {
                             MaterialTheme.colorScheme.error
                         } else {
@@ -392,7 +401,13 @@ fun BookGridCard(
                         } else {
                             Icons.Outlined.FavoriteBorder
                         },
-                        contentDescription = null,
+                        contentDescription = stringResource(
+                            if (favorite) {
+                                StringRes.books_action_unfavorite
+                            } else {
+                                StringRes.books_action_favorite
+                            }
+                        ),
                         tint = if (favorite) {
                             MaterialTheme.colorScheme.error
                         } else {
@@ -610,6 +625,7 @@ fun ServerTypeBadge(
  *
  * @param searchFieldState The text field state for the search input
  * @param isVisible Whether the search bar is currently visible (used for focus management)
+ * @param placeholderRes Placeholder string shown while the field is empty
  * @param modifier Modifier for the search bar
  */
 @Composable
@@ -617,6 +633,7 @@ fun BookSearchBar(
     searchFieldState: TextFieldState,
     isVisible: Boolean,
     modifier: Modifier = Modifier,
+    placeholderRes: StringResource = StringRes.books_search_placeholder,
 ) {
     val focusRequester = remember { FocusRequester() }
 
@@ -629,7 +646,7 @@ fun BookSearchBar(
     OutlinedTextField(
         state = searchFieldState,
         modifier = modifier.focusRequester(focusRequester),
-        placeholder = { Text(stringResource(StringRes.books_search_placeholder)) },
+        placeholder = { Text(stringResource(placeholderRes)) },
         leadingIcon = {
             Icon(
                 imageVector = Icons.Filled.Search,

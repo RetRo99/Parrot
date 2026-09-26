@@ -39,6 +39,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.compose.CoilImage
 import com.retro99.books.domain.model.BookType
+import com.retro99.translations.StringRes
+import org.jetbrains.compose.resources.stringResource
+import resources.translations.continue_reading_clear
+import resources.translations.continue_reading_more
+import resources.translations.continue_reading_title
 
 /**
  * Size of the floating bubble in dp.
@@ -147,7 +152,7 @@ fun ContinueReadingShelf(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Continue reading",
+                        text = stringResource(StringRes.continue_reading_title),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
@@ -187,7 +192,7 @@ fun ContinueReadingShelf(
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Continue reading",
+                        contentDescription = stringResource(StringRes.continue_reading_title),
                         modifier = Modifier.padding(10.dp).size(24.dp),
                         tint = MaterialTheme.colorScheme.onPrimary,
                     )
@@ -216,7 +221,7 @@ private fun ContinueReadingOverflowMenu(
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
-                contentDescription = "More options",
+                contentDescription = stringResource(StringRes.continue_reading_more),
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
             )
@@ -227,7 +232,7 @@ private fun ContinueReadingOverflowMenu(
             onDismissRequest = { menuExpanded = false },
         ) {
             DropdownMenuItem(
-                text = { Text("Clear") },
+                text = { Text(stringResource(StringRes.continue_reading_clear)) },
                 onClick = {
                     menuExpanded = false
                     onClear()

@@ -59,10 +59,16 @@ interface BaseRepository : KoinComponent {
 
             deferredRemote.await()
                 .onSuccess { remoteData ->
-                    saveToCache(remoteData).logOnFailure(
-                        analytics,
-                        "Failed to save data to cache",
-                    )
+                    // Skip the cache write when the remote payload matches what is already
+                    // stored. These flows are polled continuously and the write fans out over
+                    // several tables per book, so replaying it on every poll dominated the
+                    // app's storage writes.
+                    if (remoteData != cachedData) {
+                        saveToCache(remoteData).logOnFailure(
+                            analytics,
+                            "Failed to save data to cache",
+                        )
+                    }
                     emit(Ok(remoteData))
                 }
                 .getOrElse { error ->

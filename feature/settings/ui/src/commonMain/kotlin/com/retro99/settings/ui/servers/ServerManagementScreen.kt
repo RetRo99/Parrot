@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -20,7 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,11 +40,17 @@ import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import resources.translations.action_delete
+import resources.translations.app_settings_logout
 import resources.translations.general_back
 import resources.translations.settings_server_management_add
 import resources.translations.settings_server_management_empty
 import resources.translations.settings_server_management_empty_hint
 import resources.translations.settings_server_management_title
+import resources.translations.settings_server_logged_in_as
+import resources.translations.settings_server_login_failed
+import resources.translations.settings_server_not_logged_in
+import resources.translations.settings_server_session_expired
 
 @Composable
 fun ServerManagementScreen(
@@ -89,11 +96,16 @@ private fun ServerManagementScreenContent(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = { intentDispatcher(ServerManagementIntent.OnAddServerClick) },
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(StringRes.settings_server_management_add))
-            }
+                icon = {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = stringResource(StringRes.settings_server_management_add),
+                    )
+                },
+                text = { Text(stringResource(StringRes.settings_server_management_add)) },
+            )
         },
     ) { paddingValues ->
         Column(
@@ -195,8 +207,8 @@ private fun ServerListItem(
             if (authState is ServerAuthState.Authenticated) {
                 IconButton(onClick = onLogoutClick) {
                     Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = null,
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = stringResource(StringRes.app_settings_logout),
                     )
                 }
             }
@@ -204,7 +216,7 @@ private fun ServerListItem(
             IconButton(onClick = onRemoveClick) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = null,
+                    contentDescription = stringResource(StringRes.action_delete),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }
@@ -214,10 +226,14 @@ private fun ServerListItem(
 
 @Composable
 private fun ServerAuthState.toDisplayString(): String = when (this) {
-    is ServerAuthState.Authenticated -> "Logged in as $username"
-    is ServerAuthState.NotAuthenticated -> "Not logged in"
-    is ServerAuthState.TokenExpired -> "Session expired"
-    is ServerAuthState.AuthenticationFailed -> "Login failed"
+    is ServerAuthState.Authenticated ->
+        stringResource(StringRes.settings_server_logged_in_as, username)
+    is ServerAuthState.NotAuthenticated ->
+        stringResource(StringRes.settings_server_not_logged_in)
+    is ServerAuthState.TokenExpired ->
+        stringResource(StringRes.settings_server_session_expired)
+    is ServerAuthState.AuthenticationFailed ->
+        stringResource(StringRes.settings_server_login_failed)
 }
 
 @Composable

@@ -31,8 +31,10 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,6 +42,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -68,6 +71,9 @@ import com.retro99.user.api.UserProfile
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import resources.translations.action_delete
+import resources.translations.action_edit
+import resources.translations.action_rename
 import resources.translations.app_settings_clear_logs
 import resources.translations.app_settings_clear_logs_description
 import resources.translations.app_settings_clear_current_book
@@ -82,6 +88,18 @@ import resources.translations.app_settings_no_logs
 import resources.translations.app_settings_open_last_book
 import resources.translations.app_settings_open_last_book_description
 import resources.translations.app_settings_section_account
+import resources.translations.app_settings_section_profiles
+import resources.translations.app_settings_profile_active
+import resources.translations.app_settings_profile_add
+import resources.translations.app_settings_profile_add_title
+import resources.translations.app_settings_profile_delete_message
+import resources.translations.app_settings_profile_delete_title
+import resources.translations.app_settings_profile_name_label
+import resources.translations.app_settings_profile_rename_title
+import resources.translations.app_settings_reading_statistics
+import resources.translations.app_settings_reading_statistics_description
+import resources.translations.app_settings_reader_settings
+import resources.translations.app_settings_reader_settings_description
 import resources.translations.app_settings_servers
 import resources.translations.app_settings_servers_description
 import resources.translations.app_settings_sync_backup
@@ -94,14 +112,14 @@ import resources.translations.app_settings_show_continue_reading
 import resources.translations.app_settings_show_continue_reading_description
 import resources.translations.app_settings_title
 import resources.translations.app_settings_version
-import resources.translations.statistics_description
-import resources.translations.statistics_title
+import resources.translations.general_cancel
 
 @Composable
 fun AppSettingsScreen(
     onNavigateToStatistics: () -> Unit,
     onNavigateToServerManagement: () -> Unit,
     onNavigateToSyncAndBackup: () -> Unit,
+    onNavigateToReaderSettings: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AppSettingsViewModel = koinViewModel(),
 ) {
@@ -114,6 +132,7 @@ fun AppSettingsScreen(
             onNavigateToStatistics = onNavigateToStatistics,
             onNavigateToServerManagement = onNavigateToServerManagement,
             onNavigateToSyncAndBackup = onNavigateToSyncAndBackup,
+            onNavigateToReaderSettings = onNavigateToReaderSettings,
             intentDispatcher = intentDispatcher,
         )
     }
@@ -125,6 +144,7 @@ private fun AppSettingsScreenContent(
     onNavigateToStatistics: () -> Unit,
     onNavigateToServerManagement: () -> Unit,
     onNavigateToSyncAndBackup: () -> Unit,
+    onNavigateToReaderSettings: () -> Unit,
     intentDispatcher: IntentDispatcher<AppSettingsIntent>,
     modifier: Modifier = Modifier,
     buildConfig: BuildConfig = koinInject(),
@@ -175,7 +195,7 @@ private fun AppSettingsScreenContent(
 
             // Profiles Section
             SettingsSectionHeader(
-                title = "Profiles",
+                title = stringResource(StringRes.app_settings_section_profiles),
             )
 
             ProfilesRow(
@@ -235,6 +255,13 @@ private fun AppSettingsScreenContent(
                 title = stringResource(StringRes.app_settings_section_reading),
             )
 
+            SettingsItem(
+                icon = Icons.Default.Tune,
+                title = stringResource(StringRes.app_settings_reader_settings),
+                description = stringResource(StringRes.app_settings_reader_settings_description),
+                onClick = onNavigateToReaderSettings,
+            )
+
             SettingsToggleItem(
                 icon = Icons.Default.MenuBook,
                 title = stringResource(StringRes.app_settings_open_last_book),
@@ -267,9 +294,33 @@ private fun AppSettingsScreenContent(
 
             SettingsItem(
                 icon = Icons.Default.BarChart,
-                title = stringResource(StringRes.statistics_title),
-                description = stringResource(StringRes.statistics_description),
+                title = stringResource(StringRes.app_settings_reading_statistics),
+                description = stringResource(StringRes.app_settings_reading_statistics_description),
                 onClick = onNavigateToStatistics,
+            )
+
+            HorizontalDivider()
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Account Section: adding servers and syncing sit above Support
+            // because they are the tasks people come here for.
+            SettingsSectionHeader(
+                title = stringResource(StringRes.app_settings_section_account),
+            )
+
+            SettingsItem(
+                icon = Icons.Default.Dns,
+                title = stringResource(StringRes.app_settings_servers),
+                description = stringResource(StringRes.app_settings_servers_description),
+                onClick = onNavigateToServerManagement,
+            )
+
+            SettingsItem(
+                icon = Icons.Default.Cloud,
+                title = stringResource(StringRes.app_settings_sync_backup),
+                description = stringResource(StringRes.app_settings_sync_backup_description),
+                onClick = onNavigateToSyncAndBackup,
             )
 
             HorizontalDivider()
@@ -318,46 +369,21 @@ private fun AppSettingsScreenContent(
 
             HorizontalDivider()
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Account Section
-            SettingsSectionHeader(
-                title = stringResource(StringRes.app_settings_section_account),
+            // Version info at the end of the scrolling content, so it never overlaps rows
+            Text(
+                text = stringResource(
+                    StringRes.app_settings_version,
+                    buildConfig.versionName,
+                    buildConfig.versionCode,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp, bottom = 32.dp),
             )
-
-            SettingsItem(
-                icon = Icons.Default.Dns,
-                title = stringResource(StringRes.app_settings_servers),
-                description = stringResource(StringRes.app_settings_servers_description),
-                onClick = onNavigateToServerManagement,
-            )
-
-            SettingsItem(
-                icon = Icons.Default.Cloud,
-                title = stringResource(StringRes.app_settings_sync_backup),
-                description = stringResource(StringRes.app_settings_sync_backup_description),
-                onClick = onNavigateToSyncAndBackup,
-            )
-
-            HorizontalDivider()
-
-            // Add bottom padding to account for version text
-            Spacer(modifier = Modifier.height(48.dp))
         }
-
-        // Version info at the bottom
-        Text(
-            text = stringResource(
-                StringRes.app_settings_version,
-                buildConfig.versionName,
-                buildConfig.versionCode,
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 16.dp),
-        )
 
         SnackbarHost(
             hostState = snackbarHostState,
@@ -571,7 +597,7 @@ private fun ProfileItem(
                     if (isActive) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Active profile",
+                            contentDescription = stringResource(StringRes.app_settings_profile_active),
                             tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(24.dp),
                         )
@@ -602,17 +628,33 @@ private fun ProfileItem(
             }
         }
 
+        // Visible edit affordance: opens the same menu as long-press so profile
+        // management never depends on a hidden gesture.
+        IconButton(
+            onClick = onLongClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(32.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = stringResource(StringRes.action_edit),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+
         DropdownMenu(
             expanded = isMenuVisible,
             onDismissRequest = onMenuDismissed,
         ) {
             DropdownMenuItem(
-                text = { Text("Rename") },
+                text = { Text(stringResource(StringRes.action_rename)) },
                 onClick = onRenameClicked,
             )
             if (canDelete) {
                 DropdownMenuItem(
-                    text = { Text("Delete") },
+                    text = { Text(stringResource(StringRes.action_delete)) },
                     onClick = onDeleteClicked,
                 )
             }
@@ -648,7 +690,7 @@ private fun AddProfileItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Add profile",
+                    contentDescription = stringResource(StringRes.app_settings_profile_add),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
                 )
@@ -657,7 +699,7 @@ private fun AddProfileItem(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Add",
+                text = stringResource(StringRes.app_settings_profile_add),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -677,13 +719,13 @@ private fun AddProfileDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = "Add Profile")
+            Text(text = stringResource(StringRes.app_settings_profile_add_title))
         },
         text = {
             OutlinedTextField(
                 value = profileName,
                 onValueChange = { profileName = it },
-                label = { Text("Profile name") },
+                label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -693,12 +735,12 @@ private fun AddProfileDialog(
                 onClick = { onConfirm(profileName) },
                 enabled = profileName.isNotBlank(),
             ) {
-                Text("Add")
+                Text(stringResource(StringRes.app_settings_profile_add))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(StringRes.general_cancel))
             }
         },
     )
@@ -715,13 +757,13 @@ private fun RenameProfileDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = "Rename Profile")
+            Text(text = stringResource(StringRes.app_settings_profile_rename_title))
         },
         text = {
             OutlinedTextField(
                 value = profileName,
                 onValueChange = { profileName = it },
-                label = { Text("Profile name") },
+                label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -731,12 +773,12 @@ private fun RenameProfileDialog(
                 onClick = { onConfirm(profileName) },
                 enabled = profileName.isNotBlank(),
             ) {
-                Text("Rename")
+                Text(stringResource(StringRes.action_rename))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(StringRes.general_cancel))
             }
         },
     )
@@ -751,19 +793,19 @@ private fun DeleteProfileConfirmationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = "Delete Profile")
+            Text(text = stringResource(StringRes.app_settings_profile_delete_title))
         },
         text = {
-            Text(text = "Are you sure you want to delete the profile \"$profileName\"? This will remove all associated data.")
+            Text(text = stringResource(StringRes.app_settings_profile_delete_message))
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Delete")
+                Text(stringResource(StringRes.action_delete))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(StringRes.general_cancel))
             }
         },
     )

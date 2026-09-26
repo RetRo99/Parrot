@@ -11,6 +11,7 @@ data class MediaFileSqlDelightEntity(
     override val type: String,
     override val filepath: String?,
     override val missing: Int?,
+    override val size: Long?,
     override val createdAt: String?,
     override val updatedAt: String?,
 ) : MediaFileEntity

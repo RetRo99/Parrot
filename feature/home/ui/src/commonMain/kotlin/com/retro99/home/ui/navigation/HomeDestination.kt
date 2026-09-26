@@ -82,4 +82,17 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
 
     @Serializable
     data object Statistics : HomeDestination
+
+    /**
+     * Destinations where the floating continue-reading bubble must stay hidden:
+     * settings-style screens (it would cover rows, toggles, and buttons) and the
+     * book detail screen (it would cover the progress bar it duplicates).
+     */
+    val hidesContinueBubble: Boolean
+        get() = this is Settings ||
+            this is AppSettings ||
+            this is ServerManagement ||
+            this is SyncAndBackup ||
+            this is Statistics ||
+            this is BookDetail
 }

@@ -127,21 +127,24 @@ fun StorytellerBookApiModel.toDomain(
         title = title,
         description = description,
         coverUrl = CoverUrlBuilder.buildCoverUrl(baseUrl, uuid),
-        authors = authors.map { it.name },
-        narrators = narrators.map { it.name },
+        authors = authors.map { it.name }.sorted(),
+        narrators = narrators.map { it.name }.sorted(),
         series = series.map {
             ServerBookSeries(
                 id = it.uuid ?: it.id?.toString(),
                 name = it.name,
                 sequence = it.position,
             )
-        },
-        tags = tags.map { it.name },
+        }.sortedBy { it.name },
+        tags = tags.map { it.name }.sorted(),
         hasEbook = ebook?.filepath != null,
         hasAudiobook = hasAudiobook,
         hasReadaloud = readaloud?.filepath != null,
         ebookFilepath = ebook?.filepath?.let { "/api/v2/books/$uuid/files?format=ebook" },
-        audiobookFilepath = audiobook?.filepath?.let { "/api/v2/books/$uuid/files?format=audiobook" },
+        // Keep the path consistent with hasAudiobook: a missing size means the book is
+        // treated as having no audiobook, so it must not carry an audiobook path either.
+        audiobookFilepath = audiobook?.takeIf { hasAudiobook }
+            ?.filepath?.let { "/api/v2/books/$uuid/files?format=audiobook" },
         readaloudFilepath = readaloud?.filepath?.let { "/api/v2/books/$uuid/files?format=readaloud" },
         ebookFileSize = ebook?.size,
         audiobookFileSize = audiobook?.size,

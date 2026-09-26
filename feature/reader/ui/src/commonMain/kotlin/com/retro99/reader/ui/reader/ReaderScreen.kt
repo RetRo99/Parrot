@@ -23,7 +23,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -31,7 +30,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
@@ -76,6 +74,7 @@ import com.retro99.base.nowMillis
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.LoadingScreen
+import com.retro99.base.ui.compose.TooltipIconButton
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.ChapterProgressDisplayMode
 import com.retro99.reader.domain.model.NavigationAction
@@ -97,26 +96,32 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import resources.translations.general_close
+import resources.translations.mini_player_pause
+import resources.translations.mini_player_play
+import resources.translations.reader_action_bookmarks
+import resources.translations.reader_action_readaloud
+import resources.translations.reader_action_settings
+import resources.translations.reader_action_toc
 import resources.translations.reader_bookmark_added
 import resources.translations.reader_bookmark_already_exists
 import resources.translations.reader_bookmark_no_more_bookmarks
 import resources.translations.reader_bookmark_save_failed
 import resources.translations.reader_bookmark_undo
-import resources.translations.reader_bookmarks_title
-import resources.translations.reader_overflow_more
+import resources.translations.reader_page_of_pages
 import resources.translations.reader_readaloud_no_audio
 import resources.translations.reader_time_remaining_less_than_minute
 import resources.translations.reader_time_remaining_minutes
 import resources.translations.reader_toc_jumped_to_chapter
-import resources.translations.reader_toc_title
 import resources.translations.reader_toc_undo
 import resources.translations.reader_tts_pause
 import resources.translations.reader_tts_read_aloud
 import resources.translations.reader_tts_voice_settings
 import resources.translations.settings_changed
-import resources.translations.settings_icon_content_description
 import resources.translations.settings_tts_enabled
 import resources.translations.settings_undo
+import resources.translations.sleep_timer_ending_soon_title
+import resources.translations.sleep_timer_let_it_end
+import resources.translations.sleep_timer_postpone
 import kotlin.math.abs
 
 private val logger = Logger.withTag("ReaderScreen")
@@ -293,6 +298,21 @@ private fun ReaderScreenContent(
             }
         }
 
+        // ReaderToolbar owns the close action, but it only exists once content is loaded
+        // and auto-hides after CONTROLS_AUTO_HIDE_DELAY_MS. Before publicationState is set
+        // there is otherwise no visible way out of a slow or failed open.
+        if (viewState.publicationState == null) {
+            TooltipIconButton(
+                tooltip = stringResource(StringRes.general_close),
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                onClick = { intentDispatcher(ReaderIntent.Close) },
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .statusBarsPadding()
+                    .padding(start = 8.dp, top = 4.dp),
+            )
+        }
+
         viewState.positionConflict?.let { conflict ->
             PositionConflictDialog(
                 conflict = conflict,
@@ -335,12 +355,12 @@ private fun ReaderScreenContent(
 
         if (viewState.showSleepTimerWarningPrompt && viewState.sleepTimerRemainingMs != null) {
             SleepTimerDurationDialog(
-                title = "Sleep timer ending soon",
+                title = stringResource(StringRes.sleep_timer_ending_soon_title),
                 message = "Playback will pause in ${
                     formatSleepTimerLabel(viewState.sleepTimerRemainingMs)
                 }. Choose how many more minutes to keep listening.",
-                confirmLabel = "Postpone",
-                dismissLabel = "Let it end",
+                confirmLabel = stringResource(StringRes.sleep_timer_postpone),
+                dismissLabel = stringResource(StringRes.sleep_timer_let_it_end),
                 initialMinutes = 5,
                 onConfirm = { minutes ->
                     intentDispatcher(ReaderIntent.StartSleepTimer(minutes * 60_000L))
@@ -699,7 +719,7 @@ private fun ReaderContent(
                 }
             }
 
-            // Top toolbar with overflow menu
+            // Top toolbar with labelled actions
             this@Column.AnimatedVisibility(
                 visible = areControlsVisible,
                 enter = fadeIn() + slideInVertically { -it },
@@ -845,11 +865,11 @@ private fun ReaderToolbar(
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var overflowExpanded by remember { mutableStateOf(false) }
-    val overflowDescription = stringResource(StringRes.reader_overflow_more)
-    val tocLabel = stringResource(StringRes.reader_toc_title)
-    val bookmarksLabel = stringResource(StringRes.reader_bookmarks_title)
-    val settingsLabel = stringResource(StringRes.settings_icon_content_description)
+    val closeLabel = stringResource(StringRes.general_close)
+    val tocLabel = stringResource(StringRes.reader_action_toc)
+    val bookmarksLabel = stringResource(StringRes.reader_action_bookmarks)
+    val readAloudLabel = stringResource(StringRes.reader_action_readaloud)
+    val settingsLabel = stringResource(StringRes.reader_action_settings)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -861,18 +881,14 @@ private fun ReaderToolbar(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
+            TooltipIconButton(
+                tooltip = closeLabel,
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
                 onClick = {
                     onInteraction()
                     onCloseClick()
                 },
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(StringRes.general_close),
-                    tint = MaterialTheme.colorScheme.onSurface,
-                )
-            }
+            )
 
             Text(
                 text = bookTitle,
@@ -883,19 +899,35 @@ private fun ReaderToolbar(
                 modifier = Modifier.weight(1f),
             )
 
+            TooltipIconButton(
+                tooltip = tocLabel,
+                icon = Icons.AutoMirrored.Filled.List,
+                onClick = {
+                    onInteraction()
+                    onTocClick()
+                },
+            )
+
+            TooltipIconButton(
+                tooltip = bookmarksLabel,
+                icon = Icons.Default.Bookmark,
+                onClick = {
+                    onInteraction()
+                    onBookmarksClick()
+                },
+            )
+
             if (showTtsAction) {
                 Box {
                     var ttsExpanded by remember { mutableStateOf(false) }
-                    IconButton(onClick = {
-                        onInteraction()
-                        ttsExpanded = true
-                    }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                            contentDescription = stringResource(StringRes.reader_tts_read_aloud),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
+                    TooltipIconButton(
+                        tooltip = readAloudLabel,
+                        icon = Icons.AutoMirrored.Filled.VolumeUp,
+                        onClick = {
+                            onInteraction()
+                            ttsExpanded = true
+                        },
+                    )
                     DropdownMenu(
                         expanded = ttsExpanded,
                         onDismissRequest = { ttsExpanded = false },
@@ -931,7 +963,11 @@ private fun ReaderToolbar(
                                         } else {
                                             Icons.Default.PlayArrow
                                         },
-                                        contentDescription = null,
+                                        contentDescription = if (isTtsPlaying) {
+                                            stringResource(StringRes.mini_player_pause)
+                                        } else {
+                                            stringResource(StringRes.mini_player_play)
+                                        },
                                         modifier = Modifier.size(20.dp),
                                     )
                                 },
@@ -948,7 +984,7 @@ private fun ReaderToolbar(
                                 leadingIcon = {
                                     Icon(
                                         Icons.Default.Settings,
-                                        contentDescription = null,
+                                        contentDescription = stringResource(StringRes.reader_tts_voice_settings),
                                         modifier = Modifier.size(20.dp),
                                     )
                                 },
@@ -963,66 +999,14 @@ private fun ReaderToolbar(
                 }
             }
 
-            Box {
-                IconButton(onClick = {
+            TooltipIconButton(
+                tooltip = settingsLabel,
+                icon = Icons.Default.Settings,
+                onClick = {
                     onInteraction()
                     onSettingsClick()
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = settingsLabel,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-            }
-
-            Box {
-                IconButton(onClick = {
-                    onInteraction()
-                    overflowExpanded = true
-                }) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = overflowDescription,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                DropdownMenu(
-                    expanded = overflowExpanded,
-                    onDismissRequest = { overflowExpanded = false },
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(tocLabel) },
-                        leadingIcon = {
-                            Icon(
-                                Icons.AutoMirrored.Filled.List,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        },
-                        onClick = {
-                            overflowExpanded = false
-                            onInteraction()
-                            onTocClick()
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(bookmarksLabel) },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Bookmark,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        },
-                        onClick = {
-                            overflowExpanded = false
-                            onInteraction()
-                            onBookmarksClick()
-                        },
-                    )
-                }
-            }
+                },
+            )
         }
     }
 }
@@ -1164,7 +1148,9 @@ private fun ReadingProgressBar(
                     chapterProgressPercent?.let { "($it%)" } ?: ""
                 }
                 ChapterProgressDisplayMode.RELATIVE -> {
-                    chapterInfo?.let { "(${it.currentPage}/${it.totalPages})" } ?: ""
+                    chapterInfo?.let {
+                        stringResource(StringRes.reader_page_of_pages, it.currentPage, it.totalPages)
+                    } ?: ""
                 }
                 ChapterProgressDisplayMode.FIXED -> {
                     fixedPosition?.let { "($it)" } ?: ""

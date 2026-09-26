@@ -9,6 +9,7 @@ data class MediaFileLocalModel(
     override val type: String,
     override val filepath: String?,
     override val missing: Int?,
+    override val size: Long?,
     override val createdAt: String?,
     override val updatedAt: String?,
 ) : MediaFileEntity
@@ -18,6 +19,7 @@ fun MediaFileLocalModel.toDomain(): MediaFileDomainModel {
         uuid = uuid,
         filepath = filepath,
         missing = missing,
+        size = size,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )
@@ -30,6 +32,7 @@ fun MediaFileDomainModel.toLocal(bookUuid: String, type: String): MediaFileLocal
         type = type,
         filepath = filepath,
         missing = missing,
+        size = size,
         createdAt = createdAt,
         updatedAt = updatedAt,
     )

@@ -49,7 +49,9 @@ import org.koin.core.parameter.parametersOf
 import resources.translations.general_back
 import resources.translations.statistics_books_read
 import resources.translations.statistics_current_streak
+import resources.translations.statistics_day_singular
 import resources.translations.statistics_days
+import resources.translations.statistics_empty_hint
 import resources.translations.statistics_longest_streak
 import resources.translations.statistics_month
 import resources.translations.statistics_title
@@ -62,6 +64,7 @@ import resources.translations.statistics_week
 fun StatisticsScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    showBack: Boolean = true,
     viewModel: StatisticsViewModel = koinViewModel { parametersOf(onBack) },
 ) {
     BaseScreen(
@@ -73,6 +76,7 @@ fun StatisticsScreen(
             else -> StatisticsScreenContent(
                 viewState = viewState,
                 intentDispatcher = intentDispatcher,
+                showBack = showBack,
             )
         }
     }
@@ -84,17 +88,20 @@ private fun StatisticsScreenContent(
     viewState: StatisticsViewState,
     intentDispatcher: IntentDispatcher<StatisticsIntent>,
     modifier: Modifier = Modifier,
+    showBack: Boolean = true,
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(StringRes.statistics_title)) },
                 navigationIcon = {
-                    IconButton(onClick = { intentDispatcher(StatisticsIntent.OnBackClicked) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(StringRes.general_back),
-                        )
+                    if (showBack) {
+                        IconButton(onClick = { intentDispatcher(StatisticsIntent.OnBackClicked) }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(StringRes.general_back),
+                            )
+                        }
                     }
                 },
             )
@@ -179,15 +186,21 @@ private fun StatisticsContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Time Statistics Section
-        item {
-            Text(
-                text = stringResource(StringRes.statistics_title),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
+        // Nothing recorded yet: say so instead of showing a wall of zeros.
+        if (stats.totalSessions == 0L && stats.totalBooksRead == 0L) {
+            item {
+                Text(
+                    text = stringResource(StringRes.statistics_empty_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
+                )
+            }
         }
 
+        // Time Statistics Section (the top app bar already carries the screen title)
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -267,14 +280,14 @@ private fun StatisticsContent(
             ) {
                 StatCard(
                     title = stringResource(StringRes.statistics_current_streak),
-                    value = TextWrapper.Resource(StringRes.statistics_days, stats.currentStreak),
+                    value = dayCountResource(stats.currentStreak),
                     icon = Icons.Default.LocalFireDepartment,
                     onClick = onCurrentStreakClick,
                     modifier = Modifier.weight(1f),
                 )
                 StatCard(
                     title = stringResource(StringRes.statistics_longest_streak),
-                    value = TextWrapper.Resource(StringRes.statistics_days, stats.longestStreak),
+                    value = dayCountResource(stats.longestStreak),
                     icon = Icons.Default.LocalFireDepartment,
                     onClick = onLongestStreakClick,
                     modifier = Modifier.weight(1f),
@@ -283,6 +296,12 @@ private fun StatisticsContent(
         }
     }
 }
+
+/** "1 day" instead of "1 days" when the streak is a single day. */
+private fun dayCountResource(count: Int): TextWrapper = TextWrapper.Resource(
+    if (count == 1) StringRes.statistics_day_singular else StringRes.statistics_days,
+    count,
+)
 
 @Composable
 private fun StatCard(
@@ -324,7 +343,7 @@ private fun StatCard(
             Text(
                 text = stringTextWrapper(value),
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 text = title,

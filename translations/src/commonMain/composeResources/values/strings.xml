@@ -385,7 +385,7 @@
     <string name="app_settings_clear_current_book_description" tools:ignore="MissingTranslation">Remove the current reading progress shortcut</string>
     <string name="app_settings_current_book_cleared" tools:ignore="MissingTranslation">Current book cleared</string>
     <string name="app_settings_show_continue_reading" tools:ignore="MissingTranslation">Show Continue Reading</string>
-    <string name="app_settings_show_continue_reading_description" tools:ignore="MissingTranslation">Display the continue reading shortcut on the books list</string>
+    <string name="app_settings_show_continue_reading_description" tools:ignore="MissingTranslation">Show a continue-reading card on the book list and a floating shortcut on other screens</string>
     <string name="settings_tts_enabled" tools:ignore="MissingTranslation">Text-to-Speech</string>
     <string name="settings_tts_enabled_description" tools:ignore="MissingTranslation">Read books aloud with on-device voices</string>
     <string name="reader_tts_voice" tools:ignore="MissingTranslation">Voice</string>
@@ -480,6 +480,7 @@
     <string name="cloud_account_delete_confirm" tools:ignore="MissingTranslation">Delete account</string>
     <string name="cloud_account_reauthentication_required" tools:ignore="MissingTranslation">Please sign in again to resume cloud access.</string>
     <string name="cloud_account_refresh_unavailable" tools:ignore="MissingTranslation">Cloud access is temporarily unavailable. Your local reading remains available.</string>
+    <string name="cloud_account_sign_in_hint" tools:ignore="MissingTranslation">Enter your email and password, then sign in. New here? Create an account below.</string>
     <string name="cloud_account_profile_already_linked" tools:ignore="MissingTranslation">This local profile is already linked to another cloud account.</string>
     <string name="cloud_account_not_configured" tools:ignore="MissingTranslation">Cloud account access is not configured yet.</string>
     <string name="cloud_account_generic_error" tools:ignore="MissingTranslation">Cloud account action failed. Please try again.</string>
@@ -565,4 +566,127 @@
     <string name="cloud_storage_usage_reserved" tools:ignore="MissingTranslation">%1$s reserved for active transfers</string>
     <string name="cloud_storage_usage_error" tools:ignore="MissingTranslation">Storage usage unavailable: %1$s</string>
     <string name="cloud_account_sign_in_with_google" tools:ignore="MissingTranslation">Continue with Google</string>
+
+    <!-- UX redesign: shared actions -->
+    <string name="action_import_book" tools:ignore="MissingTranslation">Import book</string>
+    <string name="action_edit" tools:ignore="MissingTranslation">Edit</string>
+    <string name="action_delete" tools:ignore="MissingTranslation">Delete</string>
+    <string name="action_rename" tools:ignore="MissingTranslation">Rename</string>
+    <string name="action_save" tools:ignore="MissingTranslation">Save</string>
+
+    <!-- Bottom navigation -->
+    <string name="home_tab_statistics" tools:ignore="MissingTranslation">Statistics</string>
+
+    <!-- Reader toolbar -->
+    <string name="reader_settings_title" tools:ignore="MissingTranslation">Reader settings</string>
+    <string name="reader_page_of_pages" tools:ignore="MissingTranslation">Page %1$d of %2$d</string>
+    <string name="reader_action_toc" tools:ignore="MissingTranslation">Table of contents</string>
+    <string name="reader_action_bookmarks" tools:ignore="MissingTranslation">Bookmarks</string>
+    <string name="reader_action_settings" tools:ignore="MissingTranslation">Reader settings</string>
+    <string name="reader_action_readaloud" tools:ignore="MissingTranslation">Read aloud</string>
+    <string name="reader_action_more" tools:ignore="MissingTranslation">More options</string>
+
+    <!-- Books list actions -->
+    <string name="books_action_import" tools:ignore="MissingTranslation">Import book</string>
+    <string name="books_action_search" tools:ignore="MissingTranslation">Search books</string>
+    <string name="books_action_filter" tools:ignore="MissingTranslation">Filter books</string>
+    <string name="books_action_sort" tools:ignore="MissingTranslation">Sort books</string>
+    <string name="books_action_view" tools:ignore="MissingTranslation">Switch between list and grid</string>
+    <string name="books_action_favorite" tools:ignore="MissingTranslation">Add to favorites</string>
+    <string name="books_action_unfavorite" tools:ignore="MissingTranslation">Remove from favorites</string>
+    <string name="books_empty_import_cta" tools:ignore="MissingTranslation">Import a book</string>
+    <string name="books_import_hint" tools:ignore="MissingTranslation">Import EPUB or audio files from this device</string>
+
+    <!-- Series -->
+    <string name="series_search_placeholder" tools:ignore="MissingTranslation">Search series</string>
+    <string name="series_action_search" tools:ignore="MissingTranslation">Search series</string>
+
+    <!-- Profiles -->
+    <string name="app_settings_section_profiles" tools:ignore="MissingTranslation">Profiles</string>
+    <string name="app_settings_section_profiles_description" tools:ignore="MissingTranslation">Switch between reader profiles on this device</string>
+    <string name="app_settings_profile_add" tools:ignore="MissingTranslation">Add profile</string>
+    <string name="app_settings_profile_add_title" tools:ignore="MissingTranslation">Add profile</string>
+    <string name="app_settings_profile_rename_title" tools:ignore="MissingTranslation">Rename profile</string>
+    <string name="app_settings_profile_name_label" tools:ignore="MissingTranslation">Profile name</string>
+    <string name="app_settings_profile_delete_title" tools:ignore="MissingTranslation">Delete profile?</string>
+    <string name="app_settings_profile_delete_message" tools:ignore="MissingTranslation">This profile and its reading history will be removed from this device.</string>
+    <string name="app_settings_profile_active" tools:ignore="MissingTranslation">Active</string>
+    <string name="app_settings_profile_switch_hint" tools:ignore="MissingTranslation">Tap a profile to switch to it</string>
+
+    <!-- Settings hub -->
+    <string name="app_settings_section_reader" tools:ignore="MissingTranslation">Reading</string>
+    <string name="app_settings_reader_settings" tools:ignore="MissingTranslation">Reader settings</string>
+    <string name="app_settings_reader_settings_description" tools:ignore="MissingTranslation">Appearance, typography, navigation and read aloud</string>
+    <string name="app_settings_reading_statistics" tools:ignore="MissingTranslation">Reading statistics</string>
+    <string name="app_settings_reading_statistics_description" tools:ignore="MissingTranslation">Books read, sessions and reading streak</string>
+
+    <!-- Mini player -->
+    <string name="mini_player_play" tools:ignore="MissingTranslation">Play</string>
+    <string name="mini_player_pause" tools:ignore="MissingTranslation">Pause</string>
+    <string name="mini_player_stop" tools:ignore="MissingTranslation">Stop playback</string>
+    <string name="mini_player_open" tools:ignore="MissingTranslation">Open player</string>
+    <string name="mini_player_now_playing" tools:ignore="MissingTranslation">Now playing</string>
+    <string name="mini_player_paused" tools:ignore="MissingTranslation">Paused</string>
+
+    <!-- Continue reading -->
+    <string name="continue_reading_title" tools:ignore="MissingTranslation">Continue reading</string>
+    <string name="continue_reading_more" tools:ignore="MissingTranslation">More options</string>
+    <string name="continue_reading_clear" tools:ignore="MissingTranslation">Clear</string>
+
+    <!-- Playback conflict -->
+    <string name="playback_conflict_title" tools:ignore="MissingTranslation">Stop listening?</string>
+    <string name="playback_conflict_message" tools:ignore="MissingTranslation">%1$s is currently playing. Opening a new book will stop the audio.</string>
+    <string name="playback_conflict_stop_open" tools:ignore="MissingTranslation">Stop and open</string>
+
+    <!-- Sleep timer -->
+    <string name="sleep_timer_ending_soon_title" tools:ignore="MissingTranslation">Sleep timer ending soon</string>
+    <string name="sleep_timer_postpone" tools:ignore="MissingTranslation">Postpone</string>
+    <string name="sleep_timer_let_it_end" tools:ignore="MissingTranslation">Let it end</string>
+    <string name="sleep_timer_custom" tools:ignore="MissingTranslation">Custom…</string>
+    <string name="sleep_timer_end_of_audio" tools:ignore="MissingTranslation">End of audio</string>
+
+    <!-- UX redesign: one obvious primary action per screen -->
+    <string name="books_detail_action_read" tools:ignore="MissingTranslation">Read</string>
+    <string name="books_detail_action_continue_reading" tools:ignore="MissingTranslation">Continue reading (%1$d%)</string>
+    <string name="books_detail_action_listen" tools:ignore="MissingTranslation">Listen</string>
+    <string name="books_detail_action_continue_listening" tools:ignore="MissingTranslation">Continue listening (%1$d%)</string>
+    <string name="books_detail_action_download_to_read" tools:ignore="MissingTranslation">Download to read</string>
+    <string name="books_detail_action_download_to_listen" tools:ignore="MissingTranslation">Download to listen</string>
+    <string name="books_detail_action_downloading" tools:ignore="MissingTranslation">Downloading… %1$d%</string>
+    <string name="books_detail_action_download_failed" tools:ignore="MissingTranslation">Couldn’t download. Tap to try again.</string>
+    <string name="books_detail_secondary_formats" tools:ignore="MissingTranslation">Other formats</string>
+    <string name="books_detail_remove_download" tools:ignore="MissingTranslation">Remove download from this device</string>
+
+    <!-- UX redesign: server management -->
+    <string name="settings_server_sign_out" tools:ignore="MissingTranslation">Sign out of %1$s</string>
+    <string name="settings_server_remove" tools:ignore="MissingTranslation">Remove %1$s from Parrot</string>
+    <string name="settings_server_logged_in_as" tools:ignore="MissingTranslation">Logged in as %1$s</string>
+    <string name="settings_server_not_logged_in" tools:ignore="MissingTranslation">Not logged in</string>
+    <string name="settings_server_session_expired" tools:ignore="MissingTranslation">Session expired</string>
+    <string name="settings_server_login_failed" tools:ignore="MissingTranslation">Login failed</string>
+
+    <!-- UX redesign: plain-language error messages -->
+    <string name="cloud_account_error_could_not_connect" tools:ignore="MissingTranslation">Couldn’t reach the server. Check that you’re online and that the server address is correct, then try again.</string>
+    <string name="cloud_account_error_timeout" tools:ignore="MissingTranslation">The server took too long to answer. Check your connection and try again.</string>
+    <string name="cloud_account_error_server" tools:ignore="MissingTranslation">The server ran into a problem. Wait a moment and try again.</string>
+    <string name="cloud_account_error_generic" tools:ignore="MissingTranslation">Something went wrong. Try again.</string>
+
+    <!-- UX redesign: statistics and login -->
+    <string name="statistics_day_singular" tools:ignore="MissingTranslation">%1$d day</string>
+    <string name="statistics_empty_hint" tools:ignore="MissingTranslation">No reading activity yet. Open a book and your time, sessions and streaks will appear here.</string>
+    <string name="login_sign_in_hint" tools:ignore="MissingTranslation">Enter the address of your server, then sign in with your username and password.</string>
+
+    <!-- UX redesign: sleep timer & player labels -->
+    <string name="sleep_timer_minutes_label" tools:ignore="MissingTranslation">Minutes</string>
+    <string name="sleep_timer_custom_hint" tools:ignore="MissingTranslation">Choose %1$d–%2$d minutes</string>
+    <string name="sleep_timer_cancel" tools:ignore="MissingTranslation">Cancel timer</string>
+    <string name="readaloud_sleep_timer" tools:ignore="MissingTranslation">Sleep timer</string>
+    <string name="readaloud_audio_only_mode" tools:ignore="MissingTranslation">Audio only mode</string>
+    <string name="audiobook_previous_track" tools:ignore="MissingTranslation">Previous track</string>
+    <string name="audiobook_next_track" tools:ignore="MissingTranslation">Next track</string>
+    <string name="audiobook_rewind_10" tools:ignore="MissingTranslation">Back 10 seconds</string>
+    <string name="audiobook_forward_10" tools:ignore="MissingTranslation">Forward 10 seconds</string>
+    <string name="audiobook_all_tracks" tools:ignore="MissingTranslation">View all tracks</string>
+    <string name="general_ok" tools:ignore="MissingTranslation">OK</string>
+    <string name="settings_custom_color" tools:ignore="MissingTranslation">Custom color</string>
 </resources>

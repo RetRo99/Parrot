@@ -76,6 +76,10 @@ import resources.translations.cloud_account_delete
 import resources.translations.cloud_account_delete_confirm
 import resources.translations.cloud_account_delete_message
 import resources.translations.cloud_account_delete_title
+import resources.translations.cloud_account_error_could_not_connect
+import resources.translations.cloud_account_error_generic
+import resources.translations.cloud_account_error_server
+import resources.translations.cloud_account_error_timeout
 import resources.translations.cloud_account_email_label
 import resources.translations.cloud_account_enable_sync
 import resources.translations.cloud_account_generic_error
@@ -89,6 +93,7 @@ import resources.translations.cloud_account_profile_already_linked
 import resources.translations.cloud_account_reauthentication_required
 import resources.translations.cloud_account_refresh_unavailable
 import resources.translations.cloud_account_sign_in
+import resources.translations.cloud_account_sign_in_hint
 import resources.translations.cloud_account_sign_in_with_google
 import resources.translations.cloud_account_sign_out
 import resources.translations.cloud_account_switch_to_create
@@ -459,6 +464,15 @@ private fun AccountFormContent(
             }
         }
 
+        if (!viewState.isSubmitEnabled && !viewState.isLoading) {
+            Text(
+                text = stringResource(StringRes.cloud_account_sign_in_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
         OutlinedButton(
             onClick = {
                 intentDispatcher(CloudAccountIntent.OnGoogleSignInClicked)
@@ -723,7 +737,7 @@ private fun StorageUsageCard(
                     }
                 }
                 error != null -> Text(
-                    stringResource(StringRes.cloud_storage_usage_error, error),
+                    stringResource(StringRes.cloud_storage_usage_error, friendlyErrorMessage(error)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -743,6 +757,33 @@ private fun Long.toStorageLabel(): String {
     val whole = value.toLong()
     val tenth = ((value - whole) * 10).toInt()
     return if (unitIndex == 0) "$whole ${units[unitIndex]}" else "$whole.$tenth ${units[unitIndex]}"
+}
+
+/**
+ * Raw transport errors ("HTTP request to http://… (POST) failed with message:
+ * Failed to connect to …") mean nothing to a reader. Translate the common cases
+ * into plain language and keep the original text only when it is short enough
+ * to be readable.
+ */
+@Composable
+private fun friendlyErrorMessage(raw: String): String {
+    val lower = raw.lowercase()
+    val friendlyRes = when {
+        "failed to connect" in lower ||
+            "connection refused" in lower ||
+            "unable to resolve host" in lower ||
+            "unknownhost" in lower.replace(" ", "") ||
+            "network is unreachable" in lower ||
+            "connectionreset" in lower.replace(" ", "") ||
+            "software caused connection" in lower ->
+            StringRes.cloud_account_error_could_not_connect
+        "timeout" in lower || "timed out" in lower ->
+            StringRes.cloud_account_error_timeout
+        "http request to" in lower || "exception" in lower || "sql" in lower ->
+            StringRes.cloud_account_error_generic
+        else -> return raw
+    }
+    return stringResource(friendlyRes)
 }
 
 @Composable
@@ -777,7 +818,7 @@ private fun SyncStatusMessage(
         is SyncStatus.Failed -> {
             val failure = stringResource(
                 StringRes.cloud_account_sync_status_failed,
-                status.error,
+                friendlyErrorMessage(status.error),
                 status.pendingCount,
             )
             val retryMessage = stringResource(
@@ -857,28 +898,42 @@ private fun AuthStateMessage(
         is CloudAuthState.ReauthenticationRequired -> StatusMessage(
             message = stringResource(StringRes.cloud_account_reauthentication_required),
             modifier = modifier,
+            tone = StatusTone.Warning,
         )
         is CloudAuthState.RefreshUnavailable -> StatusMessage(
             message = stringResource(StringRes.cloud_account_refresh_unavailable),
             modifier = modifier,
+            tone = StatusTone.Warning,
         )
         else -> Unit
     }
 }
 
+private enum class StatusTone { Info, Warning }
+
 @Composable
 private fun StatusMessage(
     message: String,
     modifier: Modifier = Modifier,
+    tone: StatusTone = StatusTone.Info,
 ) {
+    // Problems must not wear the green "everything is fine" styling.
+    val containerColor = when (tone) {
+        StatusTone.Info -> MaterialTheme.colorScheme.primaryContainer
+        StatusTone.Warning -> MaterialTheme.colorScheme.errorContainer
+    }
+    val contentColor = when (tone) {
+        StatusTone.Info -> MaterialTheme.colorScheme.onPrimaryContainer
+        StatusTone.Warning -> MaterialTheme.colorScheme.onErrorContainer
+    }
     Surface(
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = containerColor,
         shape = MaterialTheme.shapes.small,
         modifier = modifier.fillMaxWidth(),
     ) {
         Text(
             text = message,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = contentColor,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(12.dp),
         )

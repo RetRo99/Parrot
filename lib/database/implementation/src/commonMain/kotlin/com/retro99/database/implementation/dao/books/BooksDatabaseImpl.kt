@@ -342,6 +342,7 @@ internal class BooksDatabaseImpl(
             type = type,
             filepath = filepath,
             missing = missing,
+            size = size,
             createdAt = createdAt,
             updatedAt = updatedAt,
         )

@@ -32,6 +32,9 @@ class RoutineSyncScheduler(
     }
 
     override fun close() {
+        // Idempotent: callers close this both from the reader and from onCleared().
+        // Closing wakes a parked receiveCatching() with a closed result instead of
+        // throwing ClosedReceiveChannelException into the caller's coroutine.
         dirtySignals.close()
         worker.cancel()
     }
@@ -60,10 +63,13 @@ class RoutineSyncScheduler(
             val waitMillis = nextDeadline - now
 
             if (waitMillis > 0L) {
-                val newerDirtyAt = withTimeoutOrNull(waitMillis) {
-                    dirtySignals.receive()
+                // receiveCatching() rather than receive(): a close() arriving during this
+                // wait must stop the worker cleanly instead of throwing into its scope.
+                val received = withTimeoutOrNull(waitMillis) {
+                    dirtySignals.receiveCatching()
                 }
-                if (newerDirtyAt != null) {
+                if (received != null) {
+                    val newerDirtyAt = received.getOrNull() ?: return
                     lastDirtyAt = newerDirtyAt
                     continue
                 }

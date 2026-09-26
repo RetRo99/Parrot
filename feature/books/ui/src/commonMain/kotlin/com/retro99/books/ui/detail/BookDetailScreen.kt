@@ -17,7 +17,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,12 +47,14 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Checkbox
@@ -124,8 +125,18 @@ import resources.translations.books_delete_local_button
 import resources.translations.books_delete_local_confirm
 import resources.translations.books_delete_local_message
 import resources.translations.books_delete_local_title
+import resources.translations.books_detail_action_continue_listening
+import resources.translations.books_detail_action_continue_reading
+import resources.translations.books_detail_action_download_failed
+import resources.translations.books_detail_action_download_to_listen
+import resources.translations.books_detail_action_download_to_read
+import resources.translations.books_detail_action_downloading
+import resources.translations.books_detail_action_listen
+import resources.translations.books_detail_action_read
 import resources.translations.books_detail_description
 import resources.translations.books_detail_publication_date
+import resources.translations.books_detail_remove_download
+import resources.translations.books_detail_secondary_formats
 import resources.translations.books_detail_remove_favorite
 import resources.translations.books_detail_series
 import resources.translations.books_detail_show_less
@@ -423,15 +434,43 @@ private fun BookDetailScreenContent(
 
                     BookHeader(book = book)
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    MediaActionButtons(
+                    PrimaryMediaAction(
                         book = book,
                         ebookDownloadState = ebookDownloadState,
                         audiobookDownloadState = audiobookDownloadState,
                         readaloudDownloadState = readaloudDownloadState,
+                        progressPercent = progressInfo?.progressPercent ?: 0,
                         intentDispatcher = intentDispatcher,
                     )
+
+                    val mediaFormatCount =
+                        listOf(book.hasEbook, book.hasReadaloud, book.hasAudiobook).count { it }
+                    if (mediaFormatCount > 1) {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        SectionTitle(text = stringResource(StringRes.books_detail_secondary_formats))
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        MediaActionButtons(
+                            book = book,
+                            ebookDownloadState = ebookDownloadState,
+                            audiobookDownloadState = audiobookDownloadState,
+                            readaloudDownloadState = readaloudDownloadState,
+                            intentDispatcher = intentDispatcher,
+                        )
+                    } else {
+                        // One format: the primary action above already covers it,
+                        // so no duplicate card — only housekeeping for the on-device copy.
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SingleFormatHousekeeping(
+                            book = book,
+                            ebookDownloadState = ebookDownloadState,
+                            audiobookDownloadState = audiobookDownloadState,
+                            readaloudDownloadState = readaloudDownloadState,
+                            intentDispatcher = intentDispatcher,
+                        )
+                    }
 
                     if (supportsBookBackup) {
                         Spacer(modifier = Modifier.height(12.dp))
@@ -440,7 +479,10 @@ private fun BookDetailScreenContent(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
                         ) {
-                            Icon(imageVector = Icons.Outlined.Download, contentDescription = null)
+                            Icon(
+                                imageVector = Icons.Outlined.Download,
+                                contentDescription = stringResource(StringRes.cloud_backup_button),
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(text = stringResource(StringRes.cloud_backup_button))
                         }
@@ -454,6 +496,11 @@ private fun BookDetailScreenContent(
                             }
                             .forEach { resource ->
                                 val bookType = BookType.fromValue(resource.mediaType)
+                                val mediaTypeName = when (bookType) {
+                                    BookType.EBOOK -> stringResource(StringRes.books_media_ebook)
+                                    BookType.READALOUD -> stringResource(StringRes.books_media_readaloud)
+                                    BookType.AUDIOBOOK -> stringResource(StringRes.books_media_audio)
+                                }
                                 Spacer(modifier = Modifier.height(8.dp))
                                 OutlinedButton(
                                     onClick = {
@@ -462,16 +509,18 @@ private fun BookDetailScreenContent(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(16.dp),
                                 ) {
-                                    Icon(imageVector = Icons.Outlined.Delete, contentDescription = null)
+                                    Icon(
+                                        imageVector = Icons.Outlined.Delete,
+                                        contentDescription = stringResource(
+                                            StringRes.cloud_backup_delete_button,
+                                            mediaTypeName,
+                                        ),
+                                    )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = stringResource(
                                             StringRes.cloud_backup_delete_button,
-                                            when (bookType) {
-                                                BookType.EBOOK -> stringResource(StringRes.books_media_ebook)
-                                                BookType.READALOUD -> stringResource(StringRes.books_media_readaloud)
-                                                BookType.AUDIOBOOK -> stringResource(StringRes.books_media_audio)
-                                            },
+                                            mediaTypeName,
                                         ),
                                     )
                                 }
@@ -514,11 +563,14 @@ private fun BookDetailScreenContent(
                     }
 
                     book.description?.let { description ->
-                        if (description.isNotBlank()) {
+                        val readableDescription = remember(description) {
+                            plainTextDescription(description)
+                        }
+                        if (readableDescription.isNotBlank()) {
                             Spacer(modifier = Modifier.height(20.dp))
                             SectionDivider()
                             Spacer(modifier = Modifier.height(20.dp))
-                            DescriptionSection(description = description)
+                            DescriptionSection(description = readableDescription)
                         }
                     }
 
@@ -605,11 +657,9 @@ private fun BookHeader(
                     fontWeight = FontWeight.Bold,
                 ),
                 color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .basicMarquee(),
+                modifier = Modifier.fillMaxWidth(),
             )
 
             book.subtitle?.let { subtitle ->
@@ -621,9 +671,7 @@ private fun BookHeader(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .basicMarquee(),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -657,17 +705,35 @@ private fun BookHeader(
                 }
             }
 
-            book.publicationDate?.let { date ->
-                if (date.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
-                    MetadataItem(
-                        label = stringResource(StringRes.books_detail_publication_date),
-                        value = date,
-                    )
-                }
+            val publicationDisplay = remember(book.publicationDate) {
+                formatPublicationDate(book.publicationDate)
+            }
+            if (publicationDisplay != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                MetadataItem(
+                    label = stringResource(StringRes.books_detail_publication_date),
+                    value = publicationDisplay,
+                )
             }
         }
     }
+}
+
+/**
+ * Turns raw metadata dates into something a reader can scan at a glance:
+ * "2021" instead of "2021-05-04T00:00:00.000Z". Placeholder dates such as
+ * "0101-01-01..." have no meaning for a reader, so they are hidden entirely.
+ *
+ * @return the display value, or null when the date should not be shown.
+ */
+private fun formatPublicationDate(raw: String?): String? {
+    val value = raw?.trim().orEmpty()
+    if (value.isEmpty()) return null
+    val datePart = value.take(10).split("-")
+    if (datePart.size < 3) return value
+    val year = datePart[0].toIntOrNull() ?: return value
+    if (year < 1000) return null
+    return year.toString()
 }
 
 @Composable
@@ -849,6 +915,104 @@ private fun ProgressRow(
     }
 }
 
+/**
+ * The one action a reader should see first: read, continue where they left off,
+ * listen, or download. Falls back to the per-format cards below when the book
+ * has no media available.
+ */
+@Composable
+private fun PrimaryMediaAction(
+    book: BookUiModel,
+    ebookDownloadState: DownloadState,
+    audiobookDownloadState: DownloadState,
+    readaloudDownloadState: DownloadState,
+    progressPercent: Int,
+    intentDispatcher: IntentDispatcher<BookDetailIntent>,
+    modifier: Modifier = Modifier,
+) {
+    val primaryType = when {
+        book.hasEbook -> BookType.EBOOK
+        book.hasReadaloud -> BookType.READALOUD
+        book.hasAudiobook -> BookType.AUDIOBOOK
+        else -> null
+    }
+    if (primaryType == null) return
+
+    val rawState = when (primaryType) {
+        BookType.EBOOK -> ebookDownloadState
+        BookType.AUDIOBOOK -> audiobookDownloadState
+        BookType.READALOUD -> readaloudDownloadState
+    }
+    val state = if (book is BookUiModel.LocalBook) DownloadState.Cached else rawState
+    val isAudio = primaryType != BookType.EBOOK
+    val isCached = state is DownloadState.Cached
+    val isDownloading = state is DownloadState.Downloading
+    val isFailed = state is DownloadState.Failed
+
+    val label = when {
+        isDownloading -> {
+            val percent = (state as DownloadState.Downloading).progress
+                ?.let { (it * 100).toInt() }
+            if (percent != null) {
+                stringResource(StringRes.books_detail_action_downloading, percent)
+            } else {
+                stringResource(StringRes.books_detail_action_downloading, 0)
+            }
+        }
+        isFailed -> stringResource(StringRes.books_detail_action_download_failed)
+        !isCached && isAudio -> stringResource(StringRes.books_detail_action_download_to_listen)
+        !isCached -> stringResource(StringRes.books_detail_action_download_to_read)
+        isAudio && progressPercent > 0 ->
+            stringResource(StringRes.books_detail_action_continue_listening, progressPercent)
+        !isAudio && progressPercent > 0 ->
+            stringResource(StringRes.books_detail_action_continue_reading, progressPercent)
+        isAudio -> stringResource(StringRes.books_detail_action_listen)
+        else -> stringResource(StringRes.books_detail_action_read)
+    }
+
+    Button(
+        onClick = {
+            if (isCached) {
+                when (primaryType) {
+                    BookType.EBOOK -> intentDispatcher(BookDetailIntent.OnReadEbookClicked)
+                    BookType.AUDIOBOOK -> intentDispatcher(BookDetailIntent.OnPlayAudiobookClicked)
+                    BookType.READALOUD -> intentDispatcher(BookDetailIntent.OnReadReadaloudClicked)
+                }
+            } else {
+                intentDispatcher(BookDetailIntent.OnDownloadClicked(primaryType))
+            }
+        },
+        enabled = !isDownloading,
+        shape = RoundedCornerShape(16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+    ) {
+        if (isDownloading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = MaterialTheme.colorScheme.onPrimary,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        } else {
+            Icon(
+                imageVector = if (isAudio) Icons.Filled.PlayArrow else Icons.AutoMirrored.Outlined.MenuBook,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
 @Composable
 private fun MediaActionButtons(
     book: BookUiModel,
@@ -916,6 +1080,52 @@ private fun BookUiModel.localOrigin(bookType: BookType): String? =
         ?.mediaResources
         ?.firstOrNull { resource -> resource.mediaType.equals(bookType.value, ignoreCase = true) }
         ?.localOrigin
+
+/**
+ * Single-format books only: the primary action already covers reading/listening,
+ * so all that is left here is managing the on-device copy.
+ */
+@Composable
+private fun SingleFormatHousekeeping(
+    book: BookUiModel,
+    ebookDownloadState: DownloadState,
+    audiobookDownloadState: DownloadState,
+    readaloudDownloadState: DownloadState,
+    intentDispatcher: IntentDispatcher<BookDetailIntent>,
+    modifier: Modifier = Modifier,
+) {
+    val primaryType = when {
+        book.hasEbook -> BookType.EBOOK
+        book.hasReadaloud -> BookType.READALOUD
+        book.hasAudiobook -> BookType.AUDIOBOOK
+        else -> return
+    }
+    val rawState = when (primaryType) {
+        BookType.EBOOK -> ebookDownloadState
+        BookType.AUDIOBOOK -> audiobookDownloadState
+        BookType.READALOUD -> readaloudDownloadState
+    }
+    val isCached = (book is BookUiModel.LocalBook) || rawState is DownloadState.Cached
+    val canDeleteCache = book.localOrigin(primaryType) != "import"
+    if (!isCached || !canDeleteCache) return
+
+    TextButton(
+        onClick = { intentDispatcher(BookDetailIntent.OnDeleteCacheClicked(primaryType)) },
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Delete,
+            contentDescription = stringResource(StringRes.books_detail_remove_download),
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = stringResource(StringRes.books_detail_remove_download),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 @Composable
 private fun MediaButton(
@@ -996,7 +1206,11 @@ private fun MediaButton(
                 } else {
                     Icon(
                         imageVector = if (isCached) Icons.AutoMirrored.Outlined.MenuBook else icon,
-                        contentDescription = null,
+                        contentDescription = if (isCached) {
+                            label
+                        } else {
+                            stringResource(StringRes.books_media_download)
+                        },
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
@@ -1036,7 +1250,7 @@ private fun MediaButton(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = null,
+                            contentDescription = stringResource(StringRes.general_cancel),
                             modifier = Modifier.size(10.dp),
                             tint = MaterialTheme.colorScheme.error,
                         )
@@ -1061,7 +1275,7 @@ private fun MediaButton(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = null,
+                            contentDescription = stringResource(StringRes.books_media_ready),
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -1104,7 +1318,7 @@ private fun MediaButton(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Download,
-                            contentDescription = null,
+                            contentDescription = stringResource(StringRes.books_media_download),
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -1124,6 +1338,32 @@ private fun MediaButton(
             }
         }
     }
+}
+
+/**
+ * Publishers deliver descriptions as HTML (`<p><b>…`), which the markdown
+ * renderer draws as nothing at all - leaving an empty "Description" heading.
+ * Convert markup to plain text so the reader sees the words, and let callers
+ * hide the section entirely when nothing readable is left.
+ */
+private fun plainTextDescription(description: String): String {
+    val withBreaks = description
+        .replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n\n")
+        .replace(Regex("</p>", RegexOption.IGNORE_CASE), "\n\n")
+        .replace(Regex("</div>", RegexOption.IGNORE_CASE), "\n\n")
+        .replace(Regex("</?[a-zA-Z][^>]*>"), " ")
+    return withBreaks
+        .replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace(Regex("[ \t]+"), " ")
+        .replace(Regex(" +([,.;:!?)])"), "$1")
+        .replace(Regex(" *\n *"), "\n")
+        .replace(Regex("\n{3,}"), "\n\n")
+        .trim()
 }
 
 @Composable
@@ -1605,7 +1845,7 @@ private fun DeleteLocalBookButton(
     ) {
         Icon(
             imageVector = Icons.Outlined.Delete,
-            contentDescription = null,
+            contentDescription = stringResource(StringRes.books_delete_local_button),
             modifier = Modifier.size(18.dp),
         )
         Spacer(modifier = Modifier.width(8.dp))

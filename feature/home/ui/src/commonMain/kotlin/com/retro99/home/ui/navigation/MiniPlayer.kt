@@ -32,6 +32,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.compose.CoilImage
 import com.retro99.reader.ui.playback.NowPlayingInfo
+import com.retro99.translations.StringRes
+import org.jetbrains.compose.resources.stringResource
+import resources.translations.mini_player_now_playing
+import resources.translations.mini_player_paused
+import resources.translations.mini_player_pause
+import resources.translations.mini_player_play
+import resources.translations.mini_player_stop
 
 /**
  * Mini-player component that shows currently playing audio.
@@ -85,7 +92,7 @@ fun MiniPlayer(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = if (isPlaying) "Now playing" else "Paused",
+                    text = if (isPlaying) stringResource(StringRes.mini_player_now_playing) else stringResource(StringRes.mini_player_paused),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -101,7 +108,7 @@ fun MiniPlayer(
             ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    contentDescription = if (isPlaying) stringResource(StringRes.mini_player_pause) else stringResource(StringRes.mini_player_play),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
@@ -113,7 +120,7 @@ fun MiniPlayer(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Stop playback",
+                    contentDescription = stringResource(StringRes.mini_player_stop),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

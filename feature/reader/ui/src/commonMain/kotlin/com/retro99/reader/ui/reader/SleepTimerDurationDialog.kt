@@ -24,6 +24,10 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import com.retro99.translations.StringRes
+import org.jetbrains.compose.resources.stringResource
+import resources.translations.sleep_timer_custom_hint
+import resources.translations.sleep_timer_minutes_label
 
 private const val MIN_CUSTOM_SLEEP_TIMER_MINUTES = 1
 private const val MAX_CUSTOM_SLEEP_TIMER_MINUTES = 180
@@ -78,9 +82,15 @@ internal fun SleepTimerDurationDialog(
                             .take(3)
                             .toTextFieldValueWithCursorAtEnd()
                     },
-                    label = { Text("Minutes") },
+                    label = { Text(stringResource(StringRes.sleep_timer_minutes_label)) },
                     supportingText = {
-                        Text("Choose $MIN_CUSTOM_SLEEP_TIMER_MINUTES-$MAX_CUSTOM_SLEEP_TIMER_MINUTES minutes")
+                        Text(
+                            stringResource(
+                                StringRes.sleep_timer_custom_hint,
+                                MIN_CUSTOM_SLEEP_TIMER_MINUTES,
+                                MAX_CUSTOM_SLEEP_TIMER_MINUTES,
+                            )
+                        )
                     },
                     isError = minutesText.text.isNotEmpty() && !isValid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

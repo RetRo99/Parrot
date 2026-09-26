@@ -77,4 +77,43 @@ class RoutineSyncSchedulerTest {
         assertEquals(listOf(30_000L), requests)
         scheduler.close()
     }
+
+    /**
+     * Regression: closing while the worker was parked in the debounce wait used to throw
+     * ClosedReceiveChannelException into the host scope and crash the app.
+     */
+    @Test
+    fun closeWhileWorkerIsWaitingDoesNotThrow() = runTest {
+        val requests = mutableListOf<Long>()
+        val scheduler = RoutineSyncScheduler(
+            scope = this,
+            nowMillis = { testScheduler.currentTime },
+            requestSync = { requests += testScheduler.currentTime },
+        )
+
+        scheduler.markDirty()
+        runCurrent()
+        // The worker is now parked in the debounce wait, which is where close() used to
+        // resume it with an exception. This must not throw and must not fire a request.
+        scheduler.close()
+        advanceTimeBy(RoutineSyncScheduler.MAX_DIRTY_WAIT_MS)
+        runCurrent()
+
+        assertEquals(emptyList(), requests)
+    }
+
+    @Test
+    fun closeIsIdempotent() = runTest {
+        val scheduler = RoutineSyncScheduler(
+            scope = this,
+            nowMillis = { testScheduler.currentTime },
+            requestSync = { },
+        )
+
+        scheduler.markDirty()
+        runCurrent()
+        scheduler.close()
+        // Callers close both from the reader and from onCleared().
+        scheduler.close()
+    }
 }

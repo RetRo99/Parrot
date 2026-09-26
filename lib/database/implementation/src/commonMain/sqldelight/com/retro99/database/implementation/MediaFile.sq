@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS media_files (
     type TEXT NOT NULL,
     filepath TEXT,
     missing INTEGER,
+    size INTEGER,
     created_at TEXT,
     updated_at TEXT
 );
@@ -17,8 +18,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_media_files_book_type ON media_files(book_
 
 -- Queries
 upsertMediaFile:
-INSERT OR REPLACE INTO media_files(uuid, book_uuid, type, filepath, missing, created_at, updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO media_files(uuid, book_uuid, type, filepath, missing, size, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 getMediaFilesByBookUuid:
 SELECT * FROM media_files WHERE book_uuid = ?;

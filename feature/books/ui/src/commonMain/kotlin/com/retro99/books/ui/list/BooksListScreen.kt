@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,6 +33,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Search
@@ -38,23 +41,26 @@ import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,6 +69,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
@@ -70,6 +78,8 @@ import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
+import com.retro99.base.ui.compose.ParrotEmptyState
+import com.retro99.base.ui.compose.TooltipIconButton
 import com.retro99.books.ui.components.BookFilterBottomSheet
 import com.retro99.books.ui.components.BookGridCard
 import com.retro99.books.ui.components.BookItemCard
@@ -83,8 +93,14 @@ import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import resources.translations.books_action_filter
+import resources.translations.books_action_import
+import resources.translations.books_action_search
+import resources.translations.books_action_sort
+import resources.translations.books_action_view
 import resources.translations.books_empty_filtered_subtitle
 import resources.translations.books_empty_filtered_title
+import resources.translations.books_empty_import_cta
 import resources.translations.books_empty_subtitle
 import resources.translations.books_empty_title
 import resources.translations.books_importing
@@ -307,12 +323,23 @@ private fun BooksListScreenContent(
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { filePickerLauncher.launch() },
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = null,
+            // With an empty library the empty-state CTA is the one obvious action,
+            // so the FAB would only duplicate it.
+            val libraryIsEmpty = viewState.filteredBooks.isEmpty() &&
+                !viewState.isLoading &&
+                viewState.filterState.activeFilterCount == 0
+            if (!libraryIsEmpty) {
+                ExtendedFloatingActionButton(
+                    onClick = { filePickerLauncher.launch() },
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = null,
+                        )
+                    },
+                    text = {
+                        Text(text = stringResource(StringRes.books_action_import))
+                    },
                 )
             }
         },
@@ -342,15 +369,19 @@ private fun BooksListScreenContent(
                 )
 
                 if (viewState.supportsCloudBackup) {
-                    Row(
+                    OutlinedButton(
+                        onClick = { intentDispatcher(BooksListIntent.OnBackupAllClicked) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.End,
+                        shape = RoundedCornerShape(16.dp),
                     ) {
-                        TextButton(onClick = { intentDispatcher(BooksListIntent.OnBackupAllClicked) }) {
+                        Icon(
+                            imageVector = Icons.Filled.CloudUpload,
+                            contentDescription = null,
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(StringRes.cloud_backup_backup_all))
-                        }
                     }
                 }
 
@@ -371,6 +402,7 @@ private fun BooksListScreenContent(
                 if (viewState.filteredBooks.isEmpty() && !viewState.isLoading) {
                     EmptyBooksState(
                         hasActiveFilters = viewState.filterState.hasActiveFilters || viewState.searchQuery.isNotBlank(),
+                        onImportBook = { filePickerLauncher.launch() },
                         onResetFilters = {
                             intentDispatcher(BooksListIntent.OnClearAllFilters)
                             searchFieldState.edit { delete(0, length) }
@@ -463,16 +495,15 @@ private fun BooksListToolbar(
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onSearchToggled) {
-                Icon(
-                    imageVector = if (isSearchVisible) {
-                        Icons.Filled.Clear
-                    } else {
-                        Icons.Filled.Search
-                    },
-                    contentDescription = null,
-                )
-            }
+            TooltipIconButton(
+                tooltip = stringResource(StringRes.books_action_search),
+                icon = if (isSearchVisible) {
+                    Icons.Filled.Clear
+                } else {
+                    Icons.Filled.Search
+                },
+                onClick = onSearchToggled,
+            )
 
             BadgedBox(
                 badge = {
@@ -483,12 +514,11 @@ private fun BooksListToolbar(
                     }
                 },
             ) {
-                IconButton(onClick = onFiltersClicked) {
-                    Icon(
-                        imageVector = Icons.Filled.FilterList,
-                        contentDescription = null,
-                    )
-                }
+                TooltipIconButton(
+                    tooltip = stringResource(StringRes.books_action_filter),
+                    icon = Icons.Filled.FilterList,
+                    onClick = onFiltersClicked,
+                )
             }
 
             Spacer(modifier = Modifier.size(4.dp))
@@ -524,14 +554,24 @@ private fun CompactSortSelector(
     }
 
     Box(modifier = modifier) {
-        SuggestionChip(
-            onClick = { expanded = true },
-            label = {
-                Text(
-                    text = "${stringResource(option.labelRes)} ${stringResource(directionLabel)}",
-                )
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+            tooltip = {
+                PlainTooltip {
+                    Text(text = stringResource(StringRes.books_action_sort))
+                }
             },
-        )
+            state = rememberTooltipState(),
+        ) {
+            SuggestionChip(
+                onClick = { expanded = true },
+                label = {
+                    Text(
+                        text = "${stringResource(option.labelRes)} ${stringResource(directionLabel)}",
+                    )
+                },
+            )
+        }
 
         DropdownMenu(
             expanded = expanded,
@@ -553,6 +593,13 @@ private fun CompactSortSelector(
 
             HorizontalDivider()
 
+            val directionText = stringResource(
+                if (sortConfig.direction == SortDirection.ASCENDING) {
+                    option.ascendingLabel
+                } else {
+                    option.descendingLabel
+                }
+            )
             DropdownMenuItem(
                 text = {
                     Row(
@@ -565,17 +612,11 @@ private fun CompactSortSelector(
                             } else {
                                 Icons.Filled.ArrowDownward
                             },
-                            contentDescription = null,
+                            contentDescription = directionText,
                             modifier = Modifier.size(18.dp),
                         )
                         Text(
-                            text = stringResource(
-                                if (sortConfig.direction == SortDirection.ASCENDING) {
-                                    option.ascendingLabel
-                                } else {
-                                    option.descendingLabel
-                                }
-                            ),
+                            text = directionText,
                         )
                     }
                 },
@@ -594,33 +635,34 @@ private fun ViewModeIconToggle(
     onViewModeChanged: (BookListViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val viewModeGroupDescription = stringResource(StringRes.books_action_view)
     Row(
-        modifier = modifier,
+        modifier = modifier.semantics {
+            contentDescription = viewModeGroupDescription
+        },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = { onViewModeChanged(BookListViewMode.LIST) }) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ViewList,
-                contentDescription = stringResource(StringRes.books_view_list),
-                tint = if (viewMode == BookListViewMode.LIST) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-        }
+        TooltipIconButton(
+            tooltip = stringResource(StringRes.books_view_list),
+            icon = Icons.AutoMirrored.Filled.ViewList,
+            onClick = { onViewModeChanged(BookListViewMode.LIST) },
+            tint = if (viewMode == BookListViewMode.LIST) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
 
-        IconButton(onClick = { onViewModeChanged(BookListViewMode.GRID) }) {
-            Icon(
-                imageVector = Icons.Filled.GridView,
-                contentDescription = stringResource(StringRes.books_view_grid),
-                tint = if (viewMode == BookListViewMode.GRID) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-        }
+        TooltipIconButton(
+            tooltip = stringResource(StringRes.books_view_grid),
+            icon = Icons.Filled.GridView,
+            onClick = { onViewModeChanged(BookListViewMode.GRID) },
+            tint = if (viewMode == BookListViewMode.GRID) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
     }
 }
 
@@ -679,6 +721,7 @@ private fun BooksGrid(
 @Composable
 private fun EmptyBooksState(
     hasActiveFilters: Boolean,
+    onImportBook: () -> Unit,
     onResetFilters: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -686,46 +729,22 @@ private fun EmptyBooksState(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.MenuBook,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        if (hasActiveFilters) {
+            ParrotEmptyState(
+                title = stringResource(StringRes.books_empty_filtered_title),
+                message = stringResource(StringRes.books_empty_filtered_subtitle),
+                icon = Icons.AutoMirrored.Outlined.MenuBook,
+                actionLabel = stringResource(StringRes.books_reset_filters),
+                onAction = onResetFilters,
             )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(
-                    if (hasActiveFilters) {
-                        StringRes.books_empty_filtered_title
-                    } else {
-                        StringRes.books_empty_title
-                    }
-                ),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        } else {
+            ParrotEmptyState(
+                title = stringResource(StringRes.books_empty_title),
+                message = stringResource(StringRes.books_empty_subtitle),
+                icon = Icons.AutoMirrored.Outlined.MenuBook,
+                actionLabel = stringResource(StringRes.books_empty_import_cta),
+                onAction = onImportBook,
             )
-            Text(
-                text = stringResource(
-                    if (hasActiveFilters) {
-                        StringRes.books_empty_filtered_subtitle
-                    } else {
-                        StringRes.books_empty_subtitle
-                    }
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            )
-
-            if (hasActiveFilters) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = onResetFilters) {
-                    Text(text = stringResource(StringRes.books_reset_filters))
-                }
-            }
         }
     }
 }

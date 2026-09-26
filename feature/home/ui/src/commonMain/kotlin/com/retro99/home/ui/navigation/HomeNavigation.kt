@@ -277,6 +277,11 @@ fun HomeNavigation(
                                     HomeNavigationIntent.NavigateTo(HomeDestination.SyncAndBackup)
                                 )
                             },
+                            onNavigateToReaderSettings = {
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(HomeDestination.Settings)
+                                )
+                            },
                         )
                     }
 
@@ -297,6 +302,9 @@ fun HomeNavigation(
                     entry<HomeDestination.Statistics> {
                         StatisticsScreen(
                             onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                            // Back arrow only makes sense when Statistics is pushed onto a stack;
+                            // as a tab root it is the root of its own tab.
+                            showBack = navigationState.currentBackStack.size > 1,
                         )
                     }
                 },
@@ -304,9 +312,17 @@ fun HomeNavigation(
         }
 
         // Draggable floating bubble for Continue Reading
-        // Only show when position is loaded (not null) to avoid flicker
+        // Only show when position is loaded (not null) to avoid flicker.
+        // It stays off settings-style screens (they carry toggles and rows the
+        // bubble would otherwise cover) and off the reader.
         val bubblePosition = uiState.bubblePosition
-        if (!isInReader && currentDestination !is HomeDestination.BooksList && currentlyReading != null && bubblePosition != null && uiState.showContinueReading) {
+        if (!isInReader &&
+            currentDestination !is HomeDestination.BooksList &&
+            currentDestination?.hidesContinueBubble != true &&
+            currentlyReading != null &&
+            bubblePosition != null &&
+            uiState.showContinueReading
+        ) {
             DraggableFloatingBubble(
                 modifier = Modifier.fillMaxSize(),
                 initialSide = bubblePosition.toBubbleSide(),

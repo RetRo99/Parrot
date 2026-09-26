@@ -56,6 +56,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -71,10 +73,14 @@ import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.Res
+import resources.translations.books_detail_show_less
+import resources.translations.books_detail_show_more
 import resources.translations.general_back
 import resources.translations.general_cancel
 import resources.translations.general_close
 import resources.translations.general_retry
+import resources.translations.mini_player_play
+import resources.translations.mini_player_stop
 import resources.translations.reader_tts_agree_and_download
 import resources.translations.reader_tts_ai_generated_disclosure
 import resources.translations.reader_tts_best_quality
@@ -640,7 +646,7 @@ private fun SelectedVoicePreviewButton(
             Button(onClick = onStopPreview) {
                 Icon(
                     imageVector = Icons.Default.Stop,
-                    contentDescription = null,
+                    contentDescription = stringResource(StringRes.mini_player_stop),
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -669,7 +675,7 @@ private fun SelectedVoicePreviewButton(
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
+                    contentDescription = stringResource(StringRes.mini_player_play),
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -699,7 +705,11 @@ private fun PreviewTextEditor(
                 } else {
                     Icons.Default.KeyboardArrowDown
                 },
-                contentDescription = null,
+                contentDescription = if (expanded) {
+                    stringResource(StringRes.books_detail_show_less)
+                } else {
+                    stringResource(StringRes.books_detail_show_more)
+                },
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(stringResource(StringRes.reader_tts_preview_text))
@@ -1268,7 +1278,11 @@ private fun VoiceGroupHeader(
             } else {
                 Icons.Default.KeyboardArrowDown
             },
-            contentDescription = null,
+            contentDescription = if (expanded) {
+                stringResource(StringRes.books_detail_show_less)
+            } else {
+                stringResource(StringRes.books_detail_show_more)
+            },
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -1291,6 +1305,7 @@ private fun ReadingControls(
         ValueSlider(
             value = rate,
             onValueChange = onRateChanged,
+            label = stringResource(StringRes.reader_tts_speed),
             showRangeLabels = true,
         )
         TextButton(
@@ -1305,7 +1320,11 @@ private fun ReadingControls(
                 } else {
                     Icons.Default.KeyboardArrowDown
                 },
-                contentDescription = null,
+                contentDescription = if (isPitchControlExpanded) {
+                    stringResource(StringRes.books_detail_show_less)
+                } else {
+                    stringResource(StringRes.books_detail_show_more)
+                },
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(stringResource(StringRes.reader_tts_pitch))
@@ -1314,6 +1333,7 @@ private fun ReadingControls(
             ValueSlider(
                 value = pitch,
                 onValueChange = onPitchChanged,
+                label = stringResource(StringRes.reader_tts_pitch),
             )
         }
     }
@@ -1323,6 +1343,7 @@ private fun ReadingControls(
 private fun ValueSlider(
     value: Float,
     onValueChange: (Float) -> Unit,
+    label: String,
     showRangeLabels: Boolean = false,
 ) {
     var dragValue by remember { mutableStateOf<Float?>(null) }
@@ -1361,7 +1382,9 @@ private fun ValueSlider(
             },
             valueRange = MIN_SPEECH_VALUE..MAX_SPEECH_VALUE,
             steps = SPEECH_VALUE_STEPS,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = label },
         )
         if (showRangeLabels) {
             Row(modifier = Modifier.fillMaxWidth()) {

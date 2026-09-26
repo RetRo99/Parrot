@@ -62,9 +62,20 @@ import com.retro99.base.ui.IntentDispatcher
 import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
+import resources.translations.books_detail_show_less
+import resources.translations.books_detail_show_more
+import resources.translations.general_cancel
+import resources.translations.mini_player_pause
+import resources.translations.mini_player_play
+import resources.translations.readaloud_audio_only_mode
+import resources.translations.readaloud_sleep_timer
 import resources.translations.reader_tts_preparing
+import resources.translations.sleep_timer_cancel
 import resources.translations.reader_tts_system
 import resources.translations.reader_tts_voice
+import resources.translations.settings_audio_progress_bar
+import resources.translations.sleep_timer_custom
+import resources.translations.sleep_timer_end_of_audio
 
 private const val DISMISS_THRESHOLD_DP = 80
 
@@ -230,7 +241,7 @@ private fun SecondaryControlsRow(
             IconButton(onClick = { intentDispatcher(ReaderIntent.ToggleAudioOnlyMode) }) {
                 Icon(
                     imageVector = Icons.Outlined.Headphones,
-                    contentDescription = "Audio only mode",
+                    contentDescription = stringResource(StringRes.readaloud_audio_only_mode),
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -273,7 +284,11 @@ private fun PlaybackControlsRow(
             } else {
                 Icon(
                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    contentDescription = if (isPlaying) {
+                        stringResource(StringRes.mini_player_pause)
+                    } else {
+                        stringResource(StringRes.mini_player_play)
+                    },
                     modifier = Modifier.size(28.dp),
                     tint = MaterialTheme.colorScheme.onPrimary,
                 )
@@ -291,7 +306,11 @@ private fun PlaybackControlsRow(
             )
             Icon(
                 imageVector = Icons.Default.ExpandMore,
-                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                contentDescription = if (isExpanded) {
+                    stringResource(StringRes.books_detail_show_less)
+                } else {
+                    stringResource(StringRes.books_detail_show_more)
+                },
                 modifier = Modifier.rotate(rotation),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
@@ -308,6 +327,7 @@ private fun SeekBar(
 ) {
     val duration = totalDurationMs ?: 0L
     val progress = if (duration > 0) currentPositionMs.toFloat() / duration else 0f
+    val seekBarDescription = stringResource(StringRes.settings_audio_progress_bar)
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Slider(
@@ -316,7 +336,9 @@ private fun SeekBar(
                 onInteraction()
                 if (duration > 0) onSeek((it * duration).toLong())
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics { contentDescription = seekBarDescription },
         )
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
             Text(formatDuration(currentPositionMs), style = MaterialTheme.typography.bodySmall)
@@ -415,7 +437,7 @@ private fun SleepTimerButton(
     TextButton(onClick = { expanded = true }) {
         Icon(
             imageVector = if (sleepTimerRemainingMs == null) Icons.Default.Timer else Icons.Default.TimerOff,
-            contentDescription = "Sleep timer",
+            contentDescription = stringResource(StringRes.readaloud_sleep_timer),
             modifier = Modifier.size(18.dp),
         )
         Spacer(modifier = Modifier.width(4.dp))
@@ -436,7 +458,7 @@ private fun SleepTimerButton(
                 )
             }
             DropdownMenuItem(
-                text = { Text("Custom...") },
+                text = { Text(stringResource(StringRes.sleep_timer_custom)) },
                 onClick = {
                     expanded = false
                     showCustomTimerDialog = true
@@ -444,7 +466,7 @@ private fun SleepTimerButton(
             )
             if (remainingToEndMs != null) {
                 DropdownMenuItem(
-                    text = { Text("End of audio") },
+                    text = { Text(stringResource(StringRes.sleep_timer_end_of_audio)) },
                     onClick = {
                         intentDispatcher(ReaderIntent.StartSleepTimer(remainingToEndMs))
                         expanded = false
@@ -453,7 +475,7 @@ private fun SleepTimerButton(
             }
             if (sleepTimerRemainingMs != null) {
                 DropdownMenuItem(
-                    text = { Text("Cancel timer") },
+                    text = { Text(stringResource(StringRes.sleep_timer_cancel)) },
                     onClick = {
                         intentDispatcher(ReaderIntent.CancelSleepTimer)
                         expanded = false
@@ -468,7 +490,7 @@ private fun SleepTimerButton(
             title = "Custom sleep timer",
             message = "Choose how long playback should continue before pausing.",
             confirmLabel = "Start",
-            dismissLabel = "Cancel",
+            dismissLabel = stringResource(StringRes.general_cancel),
             initialMinutes = sleepTimerRemainingMs
                 ?.let { ((it + 59_999L) / 60_000L).toInt().coerceAtLeast(1) }
                 ?: 5,

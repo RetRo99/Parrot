@@ -59,6 +59,7 @@ import com.retro99.sync.domain.usecase.SyncNowUseCase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -174,6 +175,9 @@ class ReaderViewModel(
 
     /** Timestamp when the book was opened, used for calculating reading duration */
     private var bookOpenedTimestamp: Long = 0L
+
+    /** Guards against Close and back both navigating away from the reader. */
+    private var hasRequestedClose: Boolean = false
 
     /** Monotonic mark used to generate unique bookmark IDs with nanosecond precision. */
     private val bookmarkIdMark = TimeSource.Monotonic.markNow()
@@ -1393,7 +1397,15 @@ class ReaderViewModel(
     }
 
     fun close() {
-        viewModelScope.launch {
+        // Leaving the reader must never wait on persistence or the network. The toolbar
+        // arrow is the only visible way out and blocking here made it look dead. The work
+        // runs on a NonCancellable coroutine so it still completes after navigation clears
+        // this ViewModel (same pattern as AudiobookPlayerViewModel.close()); the sync
+        // outbox holds the reading position even if the checkpoint below never runs.
+        if (hasRequestedClose) return
+        hasRequestedClose = true
+
+        viewModelScope.launch(NonCancellable) {
             // Only save audio position if this is a ReadAloud book with actual media overlays
             if (viewState.value.isReadAloud) {
                 saveCurrentAudioPositionSync()
@@ -1458,9 +1470,9 @@ class ReaderViewModel(
                     urgency = SyncUrgency.URGENT,
                 ),
             )
-
-            onClose()
         }
+
+        onClose()
     }
 
     /** Toggles the active ReadAloud or TTS narration implementation. */

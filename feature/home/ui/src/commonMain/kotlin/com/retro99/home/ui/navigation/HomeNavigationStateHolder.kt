@@ -33,12 +33,14 @@ fun rememberHomeNavigationState(
     // Each back stack automatically persists its state using kotlinx.serialization
     val booksBackStack = rememberSaveableBackStack(HomeTab.Books.startDestination)
     val seriesBackStack = rememberSaveableBackStack(HomeTab.Series.startDestination)
+    val statisticsBackStack = rememberSaveableBackStack(HomeTab.Statistics.startDestination)
     val settingsBackStack = rememberSaveableBackStack(HomeTab.Settings.startDestination)
 
     val backStacks: Map<HomeTab, SnapshotStateList<HomeDestination>> = remember {
         mapOf(
             HomeTab.Books to booksBackStack,
             HomeTab.Series to seriesBackStack,
+            HomeTab.Statistics to statisticsBackStack,
             HomeTab.Settings to settingsBackStack,
         )
     }

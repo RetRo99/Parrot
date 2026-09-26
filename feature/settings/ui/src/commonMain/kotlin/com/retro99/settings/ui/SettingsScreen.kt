@@ -94,9 +94,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import resources.translations.books_detail_show_less
+import resources.translations.books_detail_show_more
+import resources.translations.general_cancel
 import resources.translations.general_close
+import resources.translations.general_ok
 import resources.translations.settings_audio_progress_bar
 import resources.translations.settings_audio_progress_bar_description
+import resources.translations.settings_custom_color
 import resources.translations.settings_changed
 import resources.translations.settings_chapter_progress
 import resources.translations.settings_chapter_progress_fixed
@@ -187,7 +192,7 @@ import resources.translations.settings_theme_dark
 import resources.translations.settings_theme_light
 import resources.translations.settings_theme_sepia
 import resources.translations.settings_theme_system
-import resources.translations.settings_title
+import resources.translations.reader_settings_title
 import resources.translations.settings_tts_enabled
 import resources.translations.settings_tts_enabled_description
 import resources.translations.settings_underline_color
@@ -754,7 +759,7 @@ private fun SettingsSheetHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(StringRes.settings_title),
+            text = stringResource(StringRes.reader_settings_title),
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -980,12 +985,12 @@ private fun StepperSetting(
                         }
                     },
                 ) {
-                    Text("OK")
+                    Text(stringResource(StringRes.general_ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showManualDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(StringRes.general_cancel))
                 }
             },
         )
@@ -1075,7 +1080,7 @@ private fun ColorSelector(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Custom color",
+                    contentDescription = stringResource(StringRes.settings_custom_color),
                     tint = if (selectedColor !in PresetHighlightColors) {
                         MaterialTheme.colorScheme.onSurface
                     } else {
@@ -1126,7 +1131,7 @@ private fun ColorSwatch(
         if (isSelected) {
             Icon(
                 imageVector = Icons.Default.Check,
-                contentDescription = null,
+                contentDescription = stringResource(StringRes.settings_selected),
                 tint = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.size(20.dp),
             )
@@ -1192,12 +1197,12 @@ private fun ColorPickerDialog(
                     onColorSelected(argb)
                 },
             ) {
-                Text("OK")
+                Text(stringResource(StringRes.general_ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(StringRes.general_cancel))
             }
         },
     )
@@ -1535,7 +1540,11 @@ private fun ExpandableSettingsSection(
             }
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = null,
+                contentDescription = if (isExpanded) {
+                    stringResource(StringRes.books_detail_show_less)
+                } else {
+                    stringResource(StringRes.books_detail_show_more)
+                },
                 modifier = Modifier.rotate(rotationAngle),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
@@ -1628,7 +1637,11 @@ private fun FontFamilySelector(
             }
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
-                contentDescription = if (isExpanded) "Collapse" else "Expand",
+                contentDescription = if (isExpanded) {
+                    stringResource(StringRes.books_detail_show_less)
+                } else {
+                    stringResource(StringRes.books_detail_show_more)
+                },
                 modifier = Modifier.rotate(rotationAngle),
             )
         }
@@ -1652,7 +1665,7 @@ private fun FontFamilySelector(
                 TextButton(onClick = onAddFont) {
                     Icon(
                         imageVector = Icons.Filled.Add,
-                        contentDescription = null,
+                        contentDescription = stringResource(StringRes.settings_font_family_add),
                         modifier = Modifier.size(18.dp),
                     )
                     Text(text = stringResource(StringRes.settings_font_family_add))
@@ -1720,7 +1733,7 @@ private fun FontFamilyOptionRow(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Check,
-                    contentDescription = null,
+                    contentDescription = stringResource(StringRes.settings_selected),
                     tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(18.dp),
                 )

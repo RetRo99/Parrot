@@ -86,6 +86,7 @@ import resources.translations.login_password_label
 import resources.translations.login_server_type_label
 import resources.translations.login_show_password
 import resources.translations.login_sign_in_button
+import resources.translations.login_sign_in_hint
 import resources.translations.login_subtitle
 import resources.translations.login_title
 import resources.translations.login_url_info
@@ -344,6 +345,18 @@ private fun LoginScreenContent(
                 } else {
                     Text(stringResource(StringRes.login_sign_in_button))
                 }
+            }
+
+            if (!isSignInEnabled && !isLoading) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = stringResource(StringRes.login_sign_in_hint),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             if (isOAuthVisible) {

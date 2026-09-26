@@ -57,6 +57,9 @@ import androidx.compose.ui.unit.dp
 import com.retro99.reader.ui.model.TocItemUiModel
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
+import resources.translations.books_detail_show_less
+import resources.translations.books_detail_show_more
+import resources.translations.books_search_clear
 import resources.translations.reader_toc_next_chapter
 import resources.translations.reader_toc_no_chapters
 import resources.translations.reader_toc_no_results
@@ -254,7 +257,7 @@ private fun TocSearchBar(
         leadingIcon = {
             Icon(
                 imageVector = Icons.Filled.Search,
-                contentDescription = null,
+                contentDescription = stringResource(StringRes.reader_toc_search_hint),
             )
         },
         trailingIcon = {
@@ -262,7 +265,7 @@ private fun TocSearchBar(
                 IconButton(onClick = { searchFieldState.clearText() }) {
                     Icon(
                         imageVector = Icons.Filled.Clear,
-                        contentDescription = null,
+                        contentDescription = stringResource(StringRes.books_search_clear),
                     )
                 }
             }
@@ -383,7 +386,11 @@ private fun TocItemRow(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ExpandMore,
-                        contentDescription = null,
+                        contentDescription = if (entry.isExpanded) {
+                            stringResource(StringRes.books_detail_show_less)
+                        } else {
+                            stringResource(StringRes.books_detail_show_more)
+                        },
                         modifier = Modifier.graphicsLayer { rotationZ = chevronRotation },
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

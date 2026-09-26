@@ -89,6 +89,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -101,6 +103,19 @@ import kotlinx.coroutines.launch
 import com.retro99.base.ui.compose.CoilImage
 import com.retro99.base.ui.compose.backdropColorScheme
 import com.retro99.base.ui.compose.rememberDominantColorState
+import com.retro99.translations.StringRes
+import org.jetbrains.compose.resources.stringResource
+import resources.translations.audiobook_all_tracks
+import resources.translations.audiobook_forward_10
+import resources.translations.audiobook_next_track
+import resources.translations.audiobook_previous_track
+import resources.translations.audiobook_rewind_10
+import resources.translations.books_view_list
+import resources.translations.general_close
+import resources.translations.mini_player_pause
+import resources.translations.mini_player_play
+import resources.translations.reader_tts_speed
+import resources.translations.settings_audio_progress_bar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,7 +181,7 @@ fun AudioPlayerScreen(
                             IconButton(onClick = onBack) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Close",
+                                    contentDescription = stringResource(StringRes.general_close),
                                 )
                             }
                         },
@@ -389,17 +404,21 @@ private fun AudioPlayerContent(
                 IconButton(
                     onClick = callbacks.onPreviousTrack,
                     enabled = !atFirstTrack,
+                    modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.SkipPrevious,
-                        contentDescription = "Previous track",
+                        contentDescription = stringResource(StringRes.audiobook_previous_track),
                         modifier = Modifier.size(32.dp),
                     )
                 }
-                IconButton(onClick = callbacks.onSkipBackward) {
+                IconButton(
+                    onClick = callbacks.onSkipBackward,
+                    modifier = Modifier.size(48.dp),
+                ) {
                     Icon(
                         imageVector = Icons.Filled.Replay10,
-                        contentDescription = "Back 10 seconds",
+                        contentDescription = stringResource(StringRes.audiobook_rewind_10),
                         modifier = Modifier.size(36.dp),
                     )
                 }
@@ -437,27 +456,35 @@ private fun AudioPlayerContent(
                         ) { icon ->
                             Icon(
                                 imageVector = icon,
-                                contentDescription = if (state.isPlaying) "Pause" else "Play",
+                                contentDescription = if (state.isPlaying) {
+                                    stringResource(StringRes.mini_player_pause)
+                                } else {
+                                    stringResource(StringRes.mini_player_play)
+                                },
                                 modifier = Modifier.size(36.dp),
                                 tint = MaterialTheme.colorScheme.onPrimary,
                             )
                         }
                     }
                 }
-                IconButton(onClick = callbacks.onSkipForward) {
+                IconButton(
+                    onClick = callbacks.onSkipForward,
+                    modifier = Modifier.size(48.dp),
+                ) {
                     Icon(
                         imageVector = Icons.Filled.Forward10,
-                        contentDescription = "Forward 10 seconds",
+                        contentDescription = stringResource(StringRes.audiobook_forward_10),
                         modifier = Modifier.size(36.dp),
                     )
                 }
                 IconButton(
                     onClick = callbacks.onNextTrack,
                     enabled = !atLastTrack,
+                    modifier = Modifier.size(48.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Filled.SkipNext,
-                        contentDescription = "Next track",
+                        contentDescription = stringResource(StringRes.audiobook_next_track),
                         modifier = Modifier.size(32.dp),
                     )
                 }
@@ -485,7 +512,7 @@ private fun AudioPlayerContent(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                        contentDescription = null,
+                        contentDescription = stringResource(StringRes.books_view_list),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     val currentTrackTitle = state.trackTitles.getOrNull(state.currentTrackIndex)
@@ -506,7 +533,7 @@ private fun AudioPlayerContent(
                     )
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "View all tracks",
+                        contentDescription = stringResource(StringRes.audiobook_all_tracks),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -546,7 +573,7 @@ private fun PlaybackSpeedButton(
     TextButton(onClick = { expanded = true }) {
         Icon(
             imageVector = Icons.Filled.Speed,
-            contentDescription = null,
+            contentDescription = stringResource(StringRes.reader_tts_speed),
             modifier = Modifier.size(18.dp),
             tint = MaterialTheme.colorScheme.onSurface,
         )
@@ -599,6 +626,7 @@ private fun AudioPlayerSeekBar(
     } else {
         0f
     }
+    val seekBarDescription = stringResource(StringRes.settings_audio_progress_bar)
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Slider(
@@ -611,6 +639,7 @@ private fun AudioPlayerSeekBar(
                 isDragging = false
                 onSeek(dragPositionMs)
             },
+            modifier = Modifier.semantics { contentDescription = seekBarDescription },
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -800,7 +829,9 @@ private fun AudioPlayerErrorView(message: String, onClose: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(24.dp))
-            TextButton(onClick = onClose) { Text("Close") }
+            TextButton(onClick = onClose) {
+                Text(stringResource(StringRes.general_close))
+            }
         }
     }
 }

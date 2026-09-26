@@ -161,18 +161,21 @@ private fun darkBackdropScheme(seed: Color): ColorScheme {
     val onSurface = Color.White
     val surfaceVariant = seed.blend(Color.Black, 0.4f)
     val onSurfaceVariant = Color.White.copy(alpha = 0.7f)
-    val primary = seed.blend(Color.White, 0.3f)
-    val onPrimary = Color.Black
-    val primaryContainer = seed.blend(Color.Black, 0.3f)
-    val onPrimaryContainer = Color.White
-    val secondary = seed.blend(Color.White, 0.2f)
-    val onSecondary = Color.Black
-    val secondaryContainer = seed.blend(Color.Black, 0.5f)
-    val onSecondaryContainer = Color.White
-    val tertiary = seed.blend(Color.White, 0.25f)
-    val onTertiary = Color.Black
-    val tertiaryContainer = seed.blend(Color.Black, 0.4f)
-    val onTertiaryContainer = Color.White
+    // Action colors stay on the brand palette: a muted cover must never turn the
+    // primary CTA grey, which reads as "disabled".
+    val brand = ParrotDarkColorScheme
+    val primary = brand.primary
+    val onPrimary = brand.onPrimary
+    val primaryContainer = brand.primaryContainer
+    val onPrimaryContainer = brand.onPrimaryContainer
+    val secondary = brand.secondary
+    val onSecondary = brand.onSecondary
+    val secondaryContainer = brand.secondaryContainer
+    val onSecondaryContainer = brand.onSecondaryContainer
+    val tertiary = brand.tertiary
+    val onTertiary = brand.onTertiary
+    val tertiaryContainer = brand.tertiaryContainer
+    val onTertiaryContainer = brand.onTertiaryContainer
     val background = surface
     val onBackground = Color.White
     val outline = Color.White.copy(alpha = 0.2f)
@@ -222,18 +225,21 @@ private fun lightBackdropScheme(seed: Color): ColorScheme {
     val onSurface = Color.Black
     val surfaceVariant = seed.blend(Color.White, 0.5f)
     val onSurfaceVariant = Color.Black.copy(alpha = 0.65f)
-    val primary = seed.blend(Color.Black, 0.35f)
-    val onPrimary = Color.White
-    val primaryContainer = seed.blend(Color.White, 0.4f)
-    val onPrimaryContainer = Color.Black
-    val secondary = seed.blend(Color.Black, 0.25f)
-    val onSecondary = Color.White
-    val secondaryContainer = seed.blend(Color.White, 0.3f)
-    val onSecondaryContainer = Color.Black
-    val tertiary = seed.blend(Color.Black, 0.3f)
-    val onTertiary = Color.White
-    val tertiaryContainer = seed.blend(Color.White, 0.45f)
-    val onTertiaryContainer = Color.Black
+    // Keep action colors on the brand palette so the primary CTA always reads
+    // as tappable, whatever the cover looks like.
+    val brand = ParrotLightColorScheme
+    val primary = brand.primary
+    val onPrimary = brand.onPrimary
+    val primaryContainer = brand.primaryContainer
+    val onPrimaryContainer = brand.onPrimaryContainer
+    val secondary = brand.secondary
+    val onSecondary = brand.onSecondary
+    val secondaryContainer = brand.secondaryContainer
+    val onSecondaryContainer = brand.onSecondaryContainer
+    val tertiary = brand.tertiary
+    val onTertiary = brand.onTertiary
+    val tertiaryContainer = brand.tertiaryContainer
+    val onTertiaryContainer = brand.onTertiaryContainer
     val background = surface
     val onBackground = Color.Black
     val outline = Color.Black.copy(alpha = 0.25f)

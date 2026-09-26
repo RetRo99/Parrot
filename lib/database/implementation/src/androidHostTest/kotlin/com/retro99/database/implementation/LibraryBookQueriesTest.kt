@@ -159,6 +159,21 @@ class LibraryBookQueriesTest {
                 """.trimIndent(),
                 parameters = 0,
             )
+            migrationDriver.execute(
+                identifier = null,
+                sql = """
+                    CREATE TABLE media_files (
+                        uuid TEXT NOT NULL PRIMARY KEY,
+                        book_uuid TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        filepath TEXT,
+                        missing INTEGER,
+                        created_at TEXT,
+                        updated_at TEXT
+                    );
+                """.trimIndent(),
+                parameters = 0,
+            )
             AppDatabase.Schema.migrate(migrationDriver, 17, AppDatabase.Schema.version)
             val migrated = AppDatabase(migrationDriver)
 
