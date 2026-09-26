@@ -1,0 +1,33 @@
+Case 7 — Welcome build badge, release variant — FAIL — 2026-09-26
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`; SM-S921B, Android 16/API 36, One UI 8.0, build `S921BXXSGDZG1`, 1080×2340 portrait, gesture navigation.
+- Package `com.retro99.parrot`, version 0.4.5 (21), Android release build, non-debuggable. Candidate built from app-code tree at `a90bbe8c16ecf7ca8605ce1c9960d133d3d035b0`; subsequent `49a1e9ad` was documentation-only at install time.
+- Release APK SHA-256 (local and Samsung-pulled installed APK): `5f16d8e9ba4c1233d60754da66e85f22f66fc967bd4d1cf317b38a50aa88342b`.
+- Release signing fell back to the Android debug certificate because `keystore.properties` is absent. Local debug and release APK signer SHA-256 both `1ca8cd201b1372d06d1fad8b82213abc50bf955678b078e3368cc1b6d0a4cf36`, allowing an in-place replacement. No Parrot data was cleared.
+- `dumpsys package` reports version 0.4.5/code 21 and no `DEBUGGABLE` flag; `run-as com.retro99.parrot id` returned `package not debuggable`.
+
+Preconditions and steps
+1. Started with Parrot at fresh unauthenticated root Welcome after the previously authorized Parrot-only data reset. Installed release with `adb -s RFCWC0SSVDM install -r androidApp/build/outputs/apk/release/androidApp-release.apk`; preserved existing Parrot data. Local and installed APK hashes match.
+2. Launched `com.retro99.parrot/.android.MainActivity` on the Samsung and waited for Welcome. No sign-in or other app action was performed.
+3. Inspected the top-right badge area and captured [`case-007-release-welcome.png`](case-007-release-welcome.png).
+
+Observed
+- Welcome rendered and remained usable, but the top-right area had **neither RELEASE nor DEBUG**. This confirms QA-BUG-0020 against the case-7 expected RELEASE badge. Frequency: 1/1 release exposures.
+- Source audit agrees: `WelcomeScreen` renders `BuildTypeBadge` only within `if (isDebug)` and has no non-debug branch; the `welcome_build_release` string exists but is not referenced.
+- Release assembly succeeded with minification/resource shrinking. R8 emitted warnings about missing `nl.adaptivity.xmlutil.util.SerializationProvider` service classes. This is a follow-up validation note for the Reader/XML execution pass; no reader parsing was exercised in this case and no user-visible XML failure was observed here.
+
+Results
+- **Functional: FAIL** — release build reached usable Welcome, but its required RELEASE marker was absent. QA-BUG-0020 recorded before code changes; fix and Samsung retest are pending.
+- **Analytics: N-A for the static badge check.** The release Firebase provider was selected by this non-debug APK, but screen-view ingestion was not inspected or claimed. Firebase settings request log below is a separate connectivity/delivery blocker; local debug logs are not available from this release provider.
+- **Diagnostics: N-A for the static badge check.** No user-impacting runtime failure occurred, so no Crashlytics non-fatal was expected. There was no fatal exception in the app process. Crashlytics delivery is not demonstrated.
+
+Sanitized release-process excerpt (PID 19827)
+```
+09-26 23:19:41.536 I FirebaseCrashlytics: Initializing Firebase Crashlytics 19.4.4 for com.retro99.parrot
+09-26 23:19:41.589 E FirebaseCrashlytics: Settings request failed.
+09-26 23:19:41.589 E FirebaseCrashlytics: java.net.ConnectException: Failed to connect to firebase-settings.crashlytics.com/0.0.0.0:443
+```
+This records a failed settings request only; it does not establish why the endpoint resolved to `0.0.0.0` or prove successful/failed non-fatal ingestion. Authorized Console verification remains unavailable.
+
+Build command: `./gradlew :androidApp:assembleRelease` — BUILD SUCCESSFUL. An initial shell wait hit its 120-second command timeout during R8; a subsequent run completed in 1m55s. No source code was changed for this case run. The test device remains on the release variant until the focused badge fix/retest is installed.
