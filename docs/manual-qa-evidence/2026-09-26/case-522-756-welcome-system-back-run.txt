@@ -1,0 +1,36 @@
+Cases 522 and 756 — Root Welcome system Back, exit and return — PASS — 2026-09-26
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`; model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `S921BXXSGDZG1`, gesture navigation.
+- Package `com.retro99.parrot`, version 0.4.5 (21), debug; tested source commit `492f1ac1a17d744f6d0d73332e4d97c003366bc3`.
+- Local debug APK and Samsung-pulled installed APK SHA-256 both `630fdab19b8b0b8c5a4d317c1c25eff68457f686b9658a00a7b066a0c5841fba`.
+- Firebase Analytics ingestion remains waived; the app build uses the local debug provider. Device clock was about 22:52–22:54; timezone was not independently verified.
+
+Preconditions and steps
+1. Used the authorized Parrot-only data reset recorded under case 6, installed the hash-matched debug APK and force-stopped only Parrot before launch. Startup resolved to unauthenticated Welcome; no credential was used.
+2. Confirmed visible Welcome controls and DEBUG badge. Evidence: [`case-522-fixed-welcome-before-back.png`](case-522-fixed-welcome-before-back.png).
+3. Sent one Android system Back key event with `adb -s RFCWC0SSVDM shell input keyevent KEYCODE_BACK`. Parrot's MainActivity finished and Android returned to the prior task (`com.android.settings/.Settings`); the Samsung `topResumedActivity` no longer named Parrot. No system Settings controls were touched. The Settings screenshot was deliberately not retained because it displayed an account name.
+4. PID 6075 logged one Welcome Back start breadcrumb, exactly one `navigation_back` event with terminal `outcome=exited`, and one completion breadcrumb. There were no Home exposure events or fatal-exception markers in this process.
+5. Relaunched `MainActivity` without clearing data. Startup resolved to Welcome and emitted one Welcome exposure; the screen was fully visible and usable. Evidence: [`case-522-fixed-after-relaunch-confirmed.png`](case-522-fixed-after-relaunch-confirmed.png). Current activity was `com.retro99.parrot/.android.MainActivity`.
+
+Sanitized final-build PID-scoped evidence
+```
+09-26 22:52:45.565 Diagnostic breadcrumb: diagnostic_context screen=welcome source_screen=welcome entry_point=system_back action=system_back operation=exit_app stage=started outcome=started
+09-26 22:52:45.572 Analytics Event: navigation_back | Parameters: {screen=welcome, source_screen=welcome, destination_screen=app_exit, entry_point=system_back, outcome=exited}
+09-26 22:52:45.573 Diagnostic breadcrumb: diagnostic_context screen=welcome source_screen=welcome entry_point=system_back action=system_back operation=exit_app stage=exit_requested outcome=succeeded
+```
+
+Results
+- **Case 522 functional: PASS** — root system Back exited the Parrot Activity cleanly; relaunch returned to a usable Welcome route. No blank screen or crash.
+- **Case 522 Analytics: PASS (local debug provider only)** — exactly one bounded `navigation_back` outcome event for system Back; no false Home exposure. Firebase ingestion is not claimed.
+- **Case 522 diagnostics: PASS (local breadcrumbs)** — one start and one completed exit-request breadcrumb; no exception was reported for ordinary Back and no fatal marker was present. Crashlytics delivery was not expected or tested for ordinary Back.
+- **Case 756 functional: PASS (shared run)** — exercised the same root Back/exit/relaunch transition; it is one shared execution, not an independent repeat.
+- **Case 756 Analytics: PASS (local debug provider only)** — event name, exact bounded dimensions, count and outcome match the appended case. Firebase ingestion is not claimed.
+- **Case 756 diagnostics: PASS (local breadcrumbs)** — expected start/completion stages observed exactly once; no exception or fatal marker. Crashlytics is not expected for ordinary Back.
+
+Historical failed instrumentation probe from the same screen pass
+- Before adding an explicit `NavigationBackHandler`, a Samsung Back action on an intermediate debug APK (SHA-256 `80f32b8466a9717f861586e554f504901bbc98736b57947597e4fa1d3d724c3a`; uncommitted source snapshot based on instrumentation commit `de487a5d`) also returned cleanly to the prior Android task. It emitted **no** `navigation_back` event or Back breadcrumb. This confirmed QA-BUG-0019 at runtime and showed that `NavDisplay` did not invoke its callback at the singleton root. No system Settings screenshot from that attempt is retained. The final hash-matched `492f1ac1` build adds the explicit root handler and passes as above.
+
+Pre-handler Welcome screen (no account or external personal content visible): [`case-522-welcome-before-back.png`](case-522-welcome-before-back.png). This is contextual evidence only; the intermediate-build Back outcome is described from the activity/log observations above.
+
+The final build's unit/host checks passed: `:feature:login:ui:iosSimulatorArm64Test`, `:lib:analytics:implementation:testAndroidHostTest` and `:androidApp:assembleDebug`. The source fix has a regression test ensuring the singleton Welcome route is preserved if a Back intent is delivered. No device-wide settings or other apps were changed.
