@@ -11,7 +11,7 @@ import org.koin.core.annotation.Provided
 
 @KoinViewModel
 class LoginNavigationViewModel(
-    startAtLogin: Boolean,
+    private val startAtLogin: Boolean,
     @Provided private val buildConfig: BuildConfig,
     @Provided private val skipLoginUseCase: SkipLoginUseCase,
     @Provided private val analytics: Analytics,
@@ -39,6 +39,16 @@ class LoginNavigationViewModel(
             }
 
             LoginDestination.Login -> {
+                val sourceScreen = when {
+                    source == LoginDestination.Welcome -> "welcome"
+                    startAtLogin -> "home"
+                    else -> "login_navigation"
+                }
+                val entryPoint = when {
+                    source == LoginDestination.Welcome -> "get_started"
+                    startAtLogin -> "add_server"
+                    else -> "navigation"
+                }
                 if (source == LoginDestination.Welcome) {
                     analytics.logEvent(
                         AuthAnalyticsEvent.WelcomeActionCompleted(
@@ -46,18 +56,19 @@ class LoginNavigationViewModel(
                             outcome = "succeeded",
                         ),
                     )
-                    analytics.logBreadcrumb(
-                        DiagnosticContext(
-                            screen = "login",
-                            sourceScreen = "welcome",
-                            entryPoint = "get_started",
-                            action = "navigate_to_login",
-                            operation = "onboarding_route",
-                            stage = "visible",
-                            outcome = "succeeded",
-                        ),
-                    )
                 }
+                analytics.logEvent(AuthAnalyticsEvent.LoginViewed(sourceScreen, entryPoint))
+                analytics.logBreadcrumb(
+                    DiagnosticContext(
+                        screen = "login",
+                        sourceScreen = sourceScreen,
+                        entryPoint = entryPoint,
+                        action = "screen_view",
+                        operation = "login_route",
+                        stage = "visible",
+                        outcome = "succeeded",
+                    ),
+                )
             }
         }
     }

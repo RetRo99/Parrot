@@ -50,6 +50,7 @@ class LoginFailureDiagnosticsTest {
             error = AppError.UnknownError(IllegalStateException("private response details")),
             serverType = ServerType.Storyteller,
             authMethod = "credentials",
+            correlationId = "12345678-1234-1234-1234-123456789abc",
         )
 
         assertEquals(1, analytics.exceptions.size)
@@ -62,6 +63,7 @@ class LoginFailureDiagnosticsTest {
                 outcome = "failed",
                 reasonCode = "unexpected_failure",
                 serverType = "storyteller",
+                correlationId = "12345678-1234-1234-1234-123456789abc",
             ),
             analytics.exceptions.single().second,
         )

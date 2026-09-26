@@ -11,6 +11,7 @@ internal fun reportUnexpectedLoginFailure(
     error: AppError,
     serverType: ServerType,
     authMethod: String,
+    correlationId: String? = null,
 ) {
     // Rejections, OAuth cancellation and other AuthError outcomes are ordinary recovery paths.
     if (!error.shouldReportException || error is AppError.AuthError) return
@@ -33,6 +34,7 @@ internal fun reportUnexpectedLoginFailure(
                 is AppError.NotFoundError -> "auth_resource_missing"
             },
             serverType = serverType.identifier,
+            correlationId = correlationId,
         ),
     )
 }

@@ -81,6 +81,6 @@ object StorytellerOAuthCallbackRegistry {
     }
 
     fun cancelPending(message: String): Boolean {
-        return pendingToken?.complete(Err(AppError.AuthError(message))) == true
+        return pendingToken?.complete(Err(AppError.AuthError(message, isCancellation = true))) == true
     }
 }

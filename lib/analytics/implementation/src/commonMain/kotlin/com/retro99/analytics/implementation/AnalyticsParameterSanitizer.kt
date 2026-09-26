@@ -145,6 +145,7 @@ private val SAFE_STRING_KEYS = setOf(
     "section_name",
     "direction",
     "error_type",
+    "auth_method",
     "step",
     "tab_name",
     "server_type",
@@ -177,6 +178,7 @@ private val SAFE_SETTING_BUCKETS = setOf(
 private val SAFE_BOOLEAN_KEYS = setOf(
     "is_enabled",
     "is_success",
+    "is_retry",
     "is_favorite",
     "is_neural",
     "is_timeout",

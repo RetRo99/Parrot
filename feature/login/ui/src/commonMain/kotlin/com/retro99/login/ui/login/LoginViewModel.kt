@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.fold
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AuthAnalyticsEvent
+import com.retro99.analytics.api.DiagnosticContext
+import com.retro99.base.result.AppError
 import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.login.domain.usecase.LoginUseCase
@@ -15,6 +17,10 @@ import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @KoinViewModel
 class LoginViewModel(
@@ -27,6 +33,8 @@ class LoginViewModel(
     val urlState = TextFieldState(initialText = "https://")
     val usernameState = TextFieldState()
     val passwordState = TextFieldState()
+    private var lastFailedLogin: Pair<String, String>? = null
+    private val activeLoginAttempts = mutableMapOf<String, LoginAttempt>()
 
     init {
         observeTextFieldChanges()
@@ -92,10 +100,7 @@ class LoginViewModel(
     private fun handleSignInClicked() {
         val url = urlState.text.toString().trim()
         val serverType = viewState.value.selectedServerType
-
-        analytics.logEvent(
-            AuthAnalyticsEvent.LoginAttempted(serverUrlHash = url.hashCode().toString())
-        )
+        val attempt = beginLoginAttempt(serverType, authMethod = "credentials")
 
         updateState {
             it.copy(
@@ -113,21 +118,13 @@ class LoginViewModel(
 
             loginUseCase(serverType, url, username, password).fold(
                 success = {
-                    clearLoginAnalyticsIdentity(analytics)
-                    analytics.logEvent(AuthAnalyticsEvent.LoginSucceeded)
+                    completeLogin(attempt)
                     onSignInSuccess()
                 },
                 failure = { error ->
-                    analytics.logEvent(
-                        AuthAnalyticsEvent.LoginFailed(
-                            errorType = error::class.simpleName ?: "unknown",
-                        )
-                    )
-                    reportUnexpectedLoginFailure(
-                        analytics = analytics,
+                    failLoginAttempt(
                         error = error,
-                        serverType = serverType,
-                        authMethod = "credentials",
+                        attempt = attempt,
                     )
                     updateAfterLoginFailure(error.message)
                 },
@@ -138,10 +135,7 @@ class LoginViewModel(
     private fun handleOAuthSignInClicked() {
         val url = urlState.text.toString().trim()
         val serverType = viewState.value.selectedServerType
-
-        analytics.logEvent(
-            AuthAnalyticsEvent.LoginAttempted(serverUrlHash = url.hashCode().toString())
-        )
+        val attempt = beginLoginAttempt(serverType, authMethod = "oauth")
 
         updateState {
             it.copy(
@@ -156,26 +150,184 @@ class LoginViewModel(
         viewModelScope.launch {
             loginUseCase.withOAuth(serverType, url).fold(
                 success = {
-                    clearLoginAnalyticsIdentity(analytics)
-                    analytics.logEvent(AuthAnalyticsEvent.LoginSucceeded)
+                    completeLogin(attempt)
                     onSignInSuccess()
                 },
                 failure = { error ->
-                    analytics.logEvent(
-                        AuthAnalyticsEvent.LoginFailed(
-                            errorType = error::class.simpleName ?: "unknown",
-                        )
-                    )
-                    reportUnexpectedLoginFailure(
-                        analytics = analytics,
+                    failLoginAttempt(
                         error = error,
-                        serverType = serverType,
-                        authMethod = "oauth",
+                        attempt = attempt,
                     )
                     updateAfterLoginFailure(error.message)
                 },
             )
         }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun beginLoginAttempt(serverType: ServerType, authMethod: String): LoginAttempt {
+        val attempt = LoginAttempt(
+            serverType = serverType,
+            authMethod = authMethod,
+            startedAt = TimeSource.Monotonic.markNow(),
+            correlationId = Uuid.random().toString(),
+        )
+        val isRetry = lastFailedLogin == (serverType.identifier to authMethod)
+        activeLoginAttempts[attempt.correlationId] = attempt
+        analytics.logEvent(
+            AuthAnalyticsEvent.LoginAttempted(
+                serverType = serverType.identifier,
+                authMethod = authMethod,
+                isRetry = isRetry,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "login",
+                action = "sign_in",
+                operation = "${authMethod}_login",
+                stage = "started",
+                outcome = "started",
+                serverType = serverType.identifier,
+                correlationId = attempt.correlationId,
+            ),
+        )
+        return attempt
+    }
+
+    private fun completeLogin(attempt: LoginAttempt) {
+        activeLoginAttempts.remove(attempt.correlationId)
+        lastFailedLogin = null
+        val durationMs = attempt.startedAt.elapsedNow().inWholeMilliseconds.coerceAtLeast(0)
+        clearLoginAnalyticsIdentity(analytics)
+        analytics.logEvent(
+            AuthAnalyticsEvent.LoginSucceeded(
+                serverType = attempt.serverType.identifier,
+                authMethod = attempt.authMethod,
+                durationMs = durationMs,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "login",
+                action = "sign_in",
+                operation = "${attempt.authMethod}_login",
+                stage = "credentials_persisted",
+                outcome = "succeeded",
+                serverType = attempt.serverType.identifier,
+                correlationId = attempt.correlationId,
+            ),
+        )
+    }
+
+    private fun failLoginAttempt(
+        error: AppError,
+        attempt: LoginAttempt,
+    ) {
+        activeLoginAttempts.remove(attempt.correlationId)
+        lastFailedLogin = attempt.serverType.identifier to attempt.authMethod
+        val durationMs = attempt.startedAt.elapsedNow().inWholeMilliseconds.coerceAtLeast(0)
+        val isCancelled = (error as? AppError.AuthError)?.isCancellation == true
+        if (isCancelled) {
+            val reasonCode = if (attempt.authMethod == "oauth") "oauth_cancelled" else "login_cancelled"
+            analytics.logEvent(
+                AuthAnalyticsEvent.LoginCancelled(
+                    serverType = attempt.serverType.identifier,
+                    authMethod = attempt.authMethod,
+                    reasonCode = reasonCode,
+                    durationMs = durationMs,
+                ),
+            )
+            analytics.logBreadcrumb(
+                DiagnosticContext(
+                    screen = "login",
+                    action = "sign_in",
+                    operation = "${attempt.authMethod}_login",
+                    stage = if (attempt.authMethod == "oauth") "oauth_callback" else "authentication",
+                    outcome = "cancelled",
+                    reasonCode = reasonCode,
+                    serverType = attempt.serverType.identifier,
+                    correlationId = attempt.correlationId,
+                ),
+            )
+        } else {
+            val errorType = loginErrorType(error)
+            analytics.logEvent(
+                AuthAnalyticsEvent.LoginFailed(
+                    serverType = attempt.serverType.identifier,
+                    authMethod = attempt.authMethod,
+                    errorType = errorType,
+                    durationMs = durationMs,
+                ),
+            )
+            analytics.logBreadcrumb(
+                DiagnosticContext(
+                    screen = "login",
+                    action = "sign_in",
+                    operation = "${attempt.authMethod}_login",
+                    stage = "authentication",
+                    outcome = "failed",
+                    reasonCode = errorType,
+                    serverType = attempt.serverType.identifier,
+                    correlationId = attempt.correlationId,
+                ),
+            )
+        }
+        reportUnexpectedLoginFailure(
+            analytics = analytics,
+            error = error,
+            serverType = attempt.serverType,
+            authMethod = attempt.authMethod,
+            correlationId = attempt.correlationId,
+        )
+    }
+
+    override fun onCleared() {
+        activeLoginAttempts.values.forEach { attempt ->
+            val durationMs = attempt.startedAt.elapsedNow().inWholeMilliseconds.coerceAtLeast(0)
+            analytics.logEvent(
+                AuthAnalyticsEvent.LoginAbandoned(
+                    serverType = attempt.serverType.identifier,
+                    authMethod = attempt.authMethod,
+                    reasonCode = "left_login_screen",
+                    durationMs = durationMs,
+                ),
+            )
+            analytics.logBreadcrumb(
+                DiagnosticContext(
+                    screen = "login",
+                    action = "sign_in",
+                    operation = "${attempt.authMethod}_login",
+                    stage = "screen_exit",
+                    outcome = "abandoned",
+                    reasonCode = "left_login_screen",
+                    serverType = attempt.serverType.identifier,
+                    correlationId = attempt.correlationId,
+                ),
+            )
+        }
+        activeLoginAttempts.clear()
+        super.onCleared()
+    }
+
+    private data class LoginAttempt(
+        val serverType: ServerType,
+        val authMethod: String,
+        val startedAt: TimeMark,
+        val correlationId: String,
+    )
+
+    private fun loginErrorType(error: AppError): String = when (error) {
+        is AppError.NetworkError -> when {
+            error.isConnectivity -> "network_unavailable"
+            error.isTimeout -> "network_timeout"
+            else -> "network_failure"
+        }
+        is AppError.ApiError -> "api_failure"
+        is AppError.DatabaseError -> "database_failure"
+        is AppError.UnknownError -> "unexpected_failure"
+        is AppError.AuthError -> "auth_failure"
+        is AppError.NotFoundError -> "not_found"
     }
 
     private fun updateAfterLoginFailure(errorMessage: String?) {

@@ -113,6 +113,117 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun loginEventsRetainRouteMethodRetryAndTerminalOutcomesWithoutIdentifiers() {
+        val viewed = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginViewed(
+                sourceScreen = "welcome",
+                entryPoint = "get_started",
+            ).parameters,
+        )
+        val attempted = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginAttempted(
+                serverType = "storyteller",
+                authMethod = "credentials",
+                isRetry = true,
+            ).parameters,
+        )
+        val succeeded = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginSucceeded(
+                serverType = "storyteller",
+                authMethod = "credentials",
+                durationMs = 1_250,
+            ).parameters,
+        )
+        val failed = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginFailed(
+                serverType = "audiobookshelf",
+                authMethod = "credentials",
+                errorType = "network_unavailable",
+                durationMs = 250,
+            ).parameters,
+        )
+        val cancelled = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginCancelled(
+                serverType = "storyteller",
+                authMethod = "oauth",
+                reasonCode = "oauth_cancelled",
+                durationMs = 4_000,
+            ).parameters,
+        )
+        val abandoned = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginAbandoned(
+                serverType = "storyteller",
+                authMethod = "oauth",
+                reasonCode = "left_login_screen",
+                durationMs = 2_500,
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf("screen" to "login", "source_screen" to "welcome", "entry_point" to "get_started"),
+            viewed,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "sign_in",
+                "server_type" to "storyteller",
+                "auth_method" to "credentials",
+                "is_retry" to true,
+                "outcome" to "started",
+            ),
+            attempted,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "sign_in",
+                "server_type" to "storyteller",
+                "auth_method" to "credentials",
+                "outcome" to "succeeded",
+                "duration_ms" to 1_250L,
+            ),
+            succeeded,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "sign_in",
+                "server_type" to "audiobookshelf",
+                "auth_method" to "credentials",
+                "error_type" to "network_unavailable",
+                "outcome" to "failed",
+                "duration_ms" to 250L,
+            ),
+            failed,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "sign_in",
+                "server_type" to "storyteller",
+                "auth_method" to "oauth",
+                "reason_code" to "oauth_cancelled",
+                "outcome" to "cancelled",
+                "duration_ms" to 4_000L,
+            ),
+            cancelled,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "sign_in",
+                "server_type" to "storyteller",
+                "auth_method" to "oauth",
+                "reason_code" to "left_login_screen",
+                "outcome" to "abandoned",
+                "duration_ms" to 2_500L,
+            ),
+            abandoned,
+        )
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(

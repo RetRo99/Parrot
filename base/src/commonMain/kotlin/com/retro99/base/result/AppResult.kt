@@ -48,7 +48,10 @@ sealed class AppError(open val message: String?) {
     /**
      * Authentication error (e.g., invalid credentials, expired token).
      */
-    data class AuthError(override val message: String?) : AppError(message)
+    data class AuthError(
+        override val message: String?,
+        val isCancellation: Boolean = false,
+    ) : AppError(message)
 
     /**
      * Resource not found error.

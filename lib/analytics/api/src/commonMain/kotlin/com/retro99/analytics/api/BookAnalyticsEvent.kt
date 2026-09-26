@@ -176,25 +176,101 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
         )
     }
 
-    data class LoginAttempted(
-        val serverUrlHash: String,
+    data class LoginViewed(
+        val sourceScreen: String,
+        val entryPoint: String,
     ) : AuthAnalyticsEvent {
-        override val name: String = "login_attempted"
+        override val name: String = "login_screen_viewed"
         override val parameters: Map<String, Any> = mapOf(
-            "server_url_hash" to serverUrlHash,
+            "screen" to "login",
+            "source_screen" to sourceScreen,
+            "entry_point" to entryPoint,
         )
     }
 
-    data object LoginSucceeded : AuthAnalyticsEvent {
+    data class LoginAttempted(
+        val serverType: String,
+        val authMethod: String,
+        val isRetry: Boolean,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "sign_in",
+            "server_type" to serverType,
+            "auth_method" to authMethod,
+            "is_retry" to isRetry,
+            "outcome" to "started",
+        )
+    }
+
+    data class LoginSucceeded(
+        val serverType: String,
+        val authMethod: String,
+        val durationMs: Long,
+    ) : AuthAnalyticsEvent {
         override val name: String = "login_succeeded"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "sign_in",
+            "server_type" to serverType,
+            "auth_method" to authMethod,
+            "outcome" to "succeeded",
+            "duration_ms" to durationMs,
+        )
     }
 
     data class LoginFailed(
+        val serverType: String,
+        val authMethod: String,
         val errorType: String,
+        val durationMs: Long,
     ) : AuthAnalyticsEvent {
         override val name: String = "login_failed"
         override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "sign_in",
+            "server_type" to serverType,
+            "auth_method" to authMethod,
             "error_type" to errorType,
+            "outcome" to "failed",
+            "duration_ms" to durationMs,
+        )
+    }
+
+    data class LoginCancelled(
+        val serverType: String,
+        val authMethod: String,
+        val reasonCode: String,
+        val durationMs: Long,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_cancelled"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "sign_in",
+            "server_type" to serverType,
+            "auth_method" to authMethod,
+            "reason_code" to reasonCode,
+            "outcome" to "cancelled",
+            "duration_ms" to durationMs,
+        )
+    }
+
+    data class LoginAbandoned(
+        val serverType: String,
+        val authMethod: String,
+        val reasonCode: String,
+        val durationMs: Long,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_abandoned"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "sign_in",
+            "server_type" to serverType,
+            "auth_method" to authMethod,
+            "reason_code" to reasonCode,
+            "outcome" to "abandoned",
+            "duration_ms" to durationMs,
         )
     }
 
@@ -205,8 +281,11 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
     ) : AuthAnalyticsEvent {
         override val name: String = "oauth_login_step_failed"
         override val parameters: Map<String, Any> = buildMap {
+            put("screen", "login")
+            put("auth_method", "oauth")
             put("step", step)
             put("error_type", errorType)
+            put("outcome", "failed")
             statusCode?.let { put("status_code", it) }
         }
     }
