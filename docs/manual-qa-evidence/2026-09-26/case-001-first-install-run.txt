@@ -1,0 +1,35 @@
+Case 1 — Cold start on first install
+Date: 2026-09-26 (Samsung local clock; timezone not independently verified)
+
+Device and build
+- Samsung serial: RFCWC0SSVDM; model SM-S921B; Android 16/API 36; One UI 8.0.
+- Locale: en-GB. Portrait 1080×2340, gesture navigation.
+- Installed package: `com.retro99.parrot` 0.4.5 (21), debug, source commit `eead19774c367f93675e5d775cc7ad7a5f038e4b`.
+- APK SHA-256 local and pulled from Samsung: `059d4d881adb604310d8301c8de47cd979616d3f9738d0dcfdd58d90ced7620b`.
+
+Preconditions and steps
+1. Explicitly targeted serial `RFCWC0SSVDM`.
+2. Uninstalled only `com.retro99.parrot` (authorized first-install reset); installed the current debug APK with ADB. Package `firstInstallTime` and `lastUpdateTime` both became 2026-09-26 17:56:22.
+3. Launched the package from its launcher activity; made no app selections and granted no permission.
+4. Captured the visible Welcome screen: `case-001-first-install-welcome.png`.
+
+Expected / actual
+- Expected: Splash followed by Welcome, with Get Started and Browse without account.
+- Actual: Startup completed to the Welcome screen with both actions and the expected reading/audio/server feature content; no dialog or loading state remained. No app permission prompt appeared. `POST_NOTIFICATIONS` is `granted=false`; package runtime-permission section showed no granted runtime permissions.
+- The automation helper timed out trying to locate visible `Get Started`, and its UI hierarchy dump timed out, while the subsequent screenshot visibly showed the label. This is recorded as a UI-automation selector limitation, not an app failure.
+- The Welcome screenshot also appears to lack the expected DEBUG badge although the installed APK is marked `DEBUGGABLE`; this observation is separately recorded as QA-BUG-0011 and does not alter case 1's functional assertion.
+
+Results
+- Functional: PASS — fresh installation launched to usable Welcome with the two expected primary actions and without granting permissions.
+- Analytics: PASS (local debug provider only) — PID-scoped log had exactly one `app_launch_route_resolved` event `{screen=welcome, source_screen=splash, entry_point=app_launch, outcome=success}` and exactly one `welcome_screen_viewed` event `{screen=welcome, source_screen=splash, entry_point=app_launch}`. No Firebase Analytics delivery claim.
+- Diagnostics: PASS (local breadcrumbs only) — one startup `started` breadcrumb, one `route_selected` breadcrumb for Welcome, and one Welcome `visible` breadcrumb; no FATAL/AndroidRuntime fatal entry. No user-impacting failure was induced; Crashlytics delivery is not tested by this case.
+- Installed APK and local build identity matched. Background `sync_run_completed` events were present but unrelated to the screen assertion.
+
+Relevant PID-scoped log excerpt (2026-09-26 17:56:45, PID 6898)
+```
+Diagnostic breadcrumb: diagnostic_context screen=splash action=resolve_startup_route operation=check_auth_state stage=started outcome=started
+Analytics Event: app_launch_route_resolved | Parameters: {screen=welcome, source_screen=splash, entry_point=app_launch, outcome=success}
+Diagnostic breadcrumb: diagnostic_context screen=welcome source_screen=splash entry_point=app_launch action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded reason_code=auth_state_check_completed
+Analytics Event: welcome_screen_viewed | Parameters: {screen=welcome, source_screen=splash, entry_point=app_launch}
+Diagnostic breadcrumb: diagnostic_context screen=welcome source_screen=splash entry_point=app_launch action=screen_view operation=onboarding_route stage=visible outcome=succeeded
+```

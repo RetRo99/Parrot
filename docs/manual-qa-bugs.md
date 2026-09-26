@@ -5,7 +5,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0001 — Analytics event parameters are forwarded without privacy filtering
 
 - **Severity / impact:** Medium; potential privacy exposure and high-cardinality telemetry, and values can also appear in debug logs.
-- **Status:** Fixed in source; Android host tests and Samsung debug-provider retest PASS; Firebase Analytics ingestion waived by user (not claimed); commit hash pending.
+- **Status:** Fixed in source; Android host tests and Samsung debug-provider retest PASS; Firebase Analytics ingestion waived by user (not claimed).
 - **Screen/test IDs:** Setup 509, 511; applies across all event-producing screens.
 - **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; package `com.retro99.parrot` v0.4.5 (21), debug; exercised APK SHA-256 `f77dc3563cf2b1828af20628ac89ed9054e3d15a442c6130927f13e1b60eb937` from source `956ec8a443d2236396c490a3056efdf9a1181e32` plus QA-BUG-0001 changes; fix commit below.
 - **Preconditions:** Emit any event type with free-form/high-cardinality parameters.
@@ -22,7 +22,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0002 — Exception diagnostics include raw throwable/message context
 
 - **Severity / impact:** Medium; exception text/cause chains may contain private paths, request details or user input in diagnostic reporting.
-- **Status:** Fixed in source; six Android host tests and Samsung debug local retest PASS; Crashlytics delivery blocked; commit hash pending.
+- **Status:** Fixed in source; six Android host tests and Samsung debug local retest PASS; Crashlytics delivery blocked.
 - **Screen/test IDs:** Setup 506, 509, 510; applies to all exception-reporting screens.
 - **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; installed package `com.retro99.parrot` v0.4.5 (21), debug APK from commit `ffef0a3d03ca73b4ffcff8cf9a47a243e035d2ac` plus uncommitted QA-BUG-0002 changes.
 - **Preconditions:** A handled exception is reported with an optional message or a sensitive throwable message/cause.
@@ -38,20 +38,20 @@ Keep every entry, including fixed and duplicate observations. These first findin
 
 ## QA-BUG-0003 — Deterministic account/URL hashes are assigned as Firebase user IDs
 
-- **Severity / impact:** Medium; suspected linkability of server usernames/URLs through an unkeyed, low-entropy identifier shared with Analytics and Crashlytics.
-- **Status:** Suspected privacy gap; source confirms the identifier reaches the provider, but no real credential or Firebase payload has been inspected.
+- **Severity / impact:** Medium; confirmed code path can link server usernames/URLs through deterministic, low-entropy identifiers shared with Analytics and Crashlytics. Actual Firebase delivery/payload has not been inspected.
+- **Status:** Confirmed source-level privacy defect. A real credential and Firebase payload have not been exercised/inspected.
 - **Screen/test IDs:** Setup 509, 511; login cases 22–36 and 534.
-- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; package `com.retro99.parrot` v0.4.5 (21); source audit `956ec8a443d2236396c490a3056efdf9a1181e32` plus the QA-BUG-0001 working-tree fix.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; current package `com.retro99.parrot` v0.4.5 (21), debug, source through `b720ca69b9b76454af98b620adc5b1bcb7ac75f7`; source path confirmed at `LoginViewModel.kt:117,155`.
 - **Preconditions:** Successful credentials or OAuth login using a controlled test account/server.
-- **Reproduction:** Source inspection: `LoginViewModel` calls `setUserId(username.hashCode().toString())` after credentials login and `setUserId(url.hashCode().toString())` after OAuth. `AnalyticsManager.setUserId` forwards the same string to both Firebase Analytics and Crashlytics.
+- **Reproduction:** Source inspection: `LoginViewModel` calls `setUserId(username.hashCode().toString())` after credentials login and `setUserId(url.hashCode().toString())` after OAuth. `AnalyticsManager.setUserId` forwards the same string to both Firebase Analytics and Crashlytics. The code path is confirmed; Firebase acceptance/delivery is not.
 - **Expected:** Use a documented non-identifying analytics identity compatible with the single-device measurement policy; do not derive a stable reporting identifier from username or server URL.
 - **Actual:** Java `String.hashCode()` is a deterministic, unkeyed, low-entropy derivative and is sent unchanged as the Firebase user ID. Whether this is accepted by the configured project is not verified.
 - **Frequency:** On each successful login; identifier remains stable for equal username/URL values.
 - **Evidence:** `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/login/LoginViewModel.kt:117,155`; `lib/analytics/implementation/src/commonMain/kotlin/com/retro99/analytics/implementation/AnalyticsManager.kt:34-37`.
 - **Root cause:** Hashing was treated as anonymization and reused as provider identity without a reviewed privacy policy.
-- **Affected files:** Login ViewModel and analytics user-identity contract/providers (fix pending).
-- **Fix reference / commit:** Pending.
-- **Retest:** NOT RUN. Requires a controlled QA login identity, Firebase Analytics/Crashlytics access and a reviewed identity policy; do not use production credentials.
+- **Affected files:** Login ViewModel and analytics user-identity contract/providers.
+- **Fix reference / commit:** Pending. Proposed remediation is to clear provider identity (`setUserId(null)`) on successful credentials/OAuth login rather than deriving identity from account name or server URL; no replacement identifier will be introduced without an approved policy.
+- **Retest:** NOT RUN. Requires successful controlled QA login on Samsung to verify the debug provider receives only `null` after success; the test credential is currently inaccessible to this continuation. Firebase Analytics delivery was waived, but Crashlytics delivery remains a separate blocked check.
 
 ## QA-BUG-0004 — Failed login is reported to Crashlytics at repository and UI boundaries
 
@@ -158,7 +158,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0010 — Welcome exposure and entry outcomes are not instrumented
 
 - **Severity / impact:** Medium; first-run users' Welcome exposure and the choices that lead to login or guest mode cannot be measured, and broken onboarding transitions cannot be distinguished from abandonment.
-- **Status:** Confirmed by source audit; runtime has not yet been exercised on a clean install.
+- **Status:** IMPLEMENTED; Welcome exposure event has passed a Samsung first-install check. Get Started and guest-mode attempt/completion outcomes still require on-device retest under cases 4–5.
 - **Screen/test IDs:** Startup/Welcome cases 1, 4–7, 10, 13–14, 521–524; setup 508 and 747.
 - **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), debug; source at `0e6713e57038fc6f8cab1a6c3684ffc2f4383614`, installed APK SHA-256 `069d68a5eee622b9bb24445995596495a5261ab0b3f128e1c41d2faf71ec4e82` before the instrumentation fix.
 - **Preconditions:** Reach Welcome after startup resolves to the unauthenticated route; tap Get Started or Browse without account.
@@ -169,5 +169,22 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** `composeApp/src/commonMain/kotlin/com/retro99/parrot/navigation/RootNavigationViewModel.kt`; `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/navigation/LoginNavigation.kt`; `LoginNavigationViewModel.kt`; `WelcomeScreen.kt`. Catalogue defines first-install, Get Started, guest and repeated-action coverage at the IDs above.
 - **Root cause:** Instrumentation was added at the root auth-route decision, but not at the nested login navigation route visibility or Welcome action/state-transition boundaries.
 - **Affected files:** Login navigation ViewModel/Compose entry, Auth Analytics event model, analytics provider sanitizer regression tests and QA event dictionary.
-- **Fix reference / commit:** Pending.
-- **Retest:** NOT RUN. Requires a clean Samsung install, local debug-provider inspection for exactly one Welcome exposure plus accepted action/outcome events, and verification that credentials/private data are absent. Firebase Analytics delivery is waived by the user; local logs will not be described as Firebase delivery.
+- **Fix reference / commit:** Bounded Welcome view/action events plus route-visible and guest-preference-persisted breadcrumbs; commit `eead19774c367f93675e5d775cc7ad7a5f038e4b`.
+- **Retest:** PARTIAL PASS on Samsung first install, case 1, 2026-09-26. APK hash matched `059d4d881adb604310d8301c8de47cd979616d3f9738d0dcfdd58d90ced7620b`; exactly one local `welcome_screen_viewed` event and matching Welcome-visible breadcrumb followed the startup route. Host sanitizer tests and Android build passed. Case 4 Get Started and case 5 guest action events are not yet tested. Firebase Analytics delivery is waived/not claimed. Evidence: `case-001-first-install-run.txt`, `case-001-first-install-welcome.png`.
+
+## QA-BUG-0011 — Debug Welcome build badge is absent in the debug APK
+
+- **Severity / impact:** Low; QA/debug users cannot visually distinguish the debug build from a release build at the Welcome screen, reducing the chance of identifying the wrong variant during testing.
+- **Status:** FIXED and retested on the Samsung debug variant. The separate release-badge comparison in case 7 remains NOT RUN.
+- **Screen/test IDs:** Welcome case 7 (debug variant); observed incidentally while capturing case 1.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), debug APK at commit `eead19774c367f93675e5d775cc7ad7a5f038e4b`, SHA-256 `059d4d881adb604310d8301c8de47cd979616d3f9738d0dcfdd58d90ced7620b`; package metadata reports `DEBUGGABLE`.
+- **Preconditions:** Fresh install the debug APK and launch to Welcome.
+- **Exact reproduction:** On 2026-09-26, uninstall only Parrot, install the hash-recorded debug APK, and launch. Inspect the top-right Welcome area. The installed package has `DEBUGGABLE` in `dumpsys package`, but no DEBUG badge appears in the captured Welcome screen.
+- **Expected:** Welcome shows the DEBUG badge in a debuggable build; release comparison is still pending.
+- **Actual:** No visible DEBUG badge on the debug Welcome screen.
+- **Frequency:** 1/1 observed fresh-install runs; repeatability to be checked after diagnosis.
+- **Evidence:** `case-001-first-install-welcome.png`; package/build and screen observations: `case-001-first-install-run.txt`.
+- **Root cause:** The ViewModel consumed the named Boolean instead of reading the registered `BuildConfig` directly. The named Boolean path resulted in `isDebug=false` in the Welcome state despite the debug package flag; injecting `BuildConfig` and reading its property fixes the state on device. The underlying Koin named-binding mismatch was not independently reproduced outside this ViewModel.
+- **Affected files:** `feature/login/ui/.../LoginNavigationViewModel.kt`, `LoginNavigation.kt`, `WelcomeScreen.kt`; platform BuildConfig/Koin binding if the runtime flag is false.
+- **Fix reference / commit:** `LoginNavigationViewModel` now injects `BuildConfig` directly and initializes `LoginNavigationState.isDebug` from `buildConfig.isDebug`; added a common test for debug/release state mapping. Commit `b720ca69b9b76454af98b620adc5b1bcb7ac75f7`.
+- **Retest:** PASS for the debug variant on 2026-09-26. `:feature:login:ui:iosSimulatorArm64Test` passed 1 state test; analytics Android host tests passed 12/12; Android UI module compiled and debug APK assembled. Samsung APK matched local hash `b6dd4a4cee8df560e3c5ed8097f3a14407c58703f777d29edb5d8322be167092`; text selector found Get Started and screenshot visibly shows DEBUG. Local Welcome exposure event/breadcrumb remained present and no fatal was observed. Evidence: `qa-bug-0011-debug-badge-retest.txt` and `.png`. Release variant portion of case 7 remains NOT RUN; no Firebase Analytics delivery is claimed.

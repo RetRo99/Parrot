@@ -1,0 +1,19 @@
+QA-BUG-0005 retest attempt 1 — FAIL
+Date: 2026-09-26, approximately 15:48 CEST
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Build: com.retro99.parrot 0.4.5 (21), debug; source commit ffef0a3d03ca73b4ffcff8cf9a47a243e035d2ac plus uncommitted QA-BUG-0005 classifier changes
+Action: cold-started MainActivity with Wi-Fi enabled and airplane mode off while configured server endpoints were unreachable.
+Result: six sanitized handled-exception records between 15:48:07 and 15:48:17 (about 11 seconds); therefore the first fix was incomplete. At least three stack traces include `ServerHttpClientFactory.kt:78`. The app also emitted sanitized `network_request_failed` outcomes for `connection_failed` and HTTP 404 responses. A subsequent complete boundary fix was retested separately; this failed observation is retained as history.
+
+```text
+09-26 15:48:07.706 E: Exception occurred with message: Handled exception; free-form context omitted
+09-26 15:48:07.706 E: SanitizedDiagnosticException: Handled failure (Exception)
+09-26 15:48:07.706 E: at com.retro99.network.implementation.ServerHttpClientFactory$create$1$4$1.invokeSuspend(ServerHttpClientFactory.kt:78)
+09-26 15:48:07.709 D: Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+09-26 15:48:08.127 D: Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+09-26 15:48:17.537 E: Exception occurred with message: Handled exception; free-form context omitted
+09-26 15:48:17.537 E: SanitizedDiagnosticException: Handled failure (Exception)
+09-26 15:48:17.537 E: at com.retro99.network.implementation.ServerHttpClientFactory$create$1$4$1.invokeSuspend(ServerHttpClientFactory.kt:78)
+```
+
+Only fixed sanitized markers, exception types, stable event fields, and source stack frames are retained; no URL, host, credentials, endpoint or content appears. This is local debug evidence only, not Firebase ingestion.

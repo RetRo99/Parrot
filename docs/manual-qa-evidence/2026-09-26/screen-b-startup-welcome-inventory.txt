@@ -1,0 +1,38 @@
+Screen inventory: Startup and Welcome (Samsung run 2026-09-26)
+
+Scope/evidence
+- Physical device: Samsung SM-S921B, Android 16/API 36, One UI 8.0, portrait, gesture navigation, locale en-GB.
+- Inspected implementation: `RootNavigationViewModel.kt`, `RootNavigation.kt`, `SplashScreen.kt`, `LoginNavigation.kt`, `LoginNavigationViewModel.kt`, `WelcomeScreen.kt`; executed clean-install case 1 on commit `eead1977` and debug-badge retest on `b720ca69`.
+- This inventory covers startup and Welcome only. Login, authentication callbacks and recovery screens need a separate inventory before their device pass.
+
+Reachable route map
+- Launcher/cold or warm launch → Splash (root initial state) → auth check → either Home or the initial LoginNavigation containing Welcome. Case mapping: 1–3, 13–14, 471, 515–520.
+- Startup auth-check unexpected exception → bounded Crashlytics report, fallback to Welcome and `app_launch_route_resolved(outcome=fallback)`; controlled failure remains untested (QA-BUG-0009 device injection gap).
+- Welcome → Get Started appends the login form; mapping 4, 521, 523–524.
+- Welcome → Browse without account synchronously persists guest mode, then switches root navigation to Home; mapping 5, 521.
+- Welcome root Back is supplied by RootNavigation's onBack behavior; the initial destination has no parent `onBack` callback. The toolbar arrow only exists when a non-null callback is passed to `WelcomeScreen`; case 6 must verify the reachable route and actual control rather than assume the arrow exists. System Back root behavior is case 522.
+- Welcome is not otherwise exposed from the app's Add Server route: current root navigation starts that flow directly at Login. Confirm any additional reachable route if implementation changes.
+
+Control inventory
+- Get Started button: active navigation action; attempt/success local Analytics and bounded diagnostic breadcrumbs are implemented, but device action retest remains pending (case 4).
+- Browse without account TextButton: active guest-mode persistence/navigation; attempt/success events and breadcrumbs are implemented, but device action retest remains pending (case 5).
+- Optional top-left back IconButton: rendered only when `onBack != null`; absent on the first-install Welcome instance. Verify nested-route availability under case 6.
+- DEBUG build badge: static, noninteractive marker. Debug variant visually retested PASS after QA-BUG-0011; release variant not run (case 7).
+- Parrot logo: decorative, continuously pulsing animation; no click handler.
+- Three feature cards (Ebook Reader, ReadAloud, Multiple Servers): informational surfaces, no click handler.
+- No search, filter, sort, overflow menu, dialog, bottom sheet, form, retry button, or explicit empty/error state is reachable on Welcome.
+
+States and exits
+- Loading: Splash is the startup loading route; case 471. Welcome has no loading indicator.
+- Content: Welcome title/subtitle, feature cards, Get Started and Browse without account; case 1.
+- Error/fallback: startup auth check exception falls back to Welcome; failure injection not yet verified on Samsung.
+- Exit/navigation: Get Started → Login; guest choice → Home; Back behavior depends on root/navigation path; Home/background/resume/rotation/process restoration cases 9–14, 515–524.
+- No test has been run for Welcome rotation, lifecycle, repeated taps, or system Back yet.
+
+Current event/diagnostic dictionary
+- `app_launch_route_resolved`: root auth route, `screen`, `source_screen=splash`, `entry_point=app_launch`, `outcome` success/fallback; emitted after auth-state resolution, not recomposition.
+- `welcome_screen_viewed`: emitted from `LaunchedEffect` when Welcome becomes the visible nested destination; bounded screen/source/entry parameters.
+- `welcome_action_attempted`: action values `get_started` or `browse_without_account`, outcome started.
+- `welcome_action_completed`: same bounded actions, emitted when Login becomes visible or the guest preference is committed; terminal outcome succeeded.
+- Diagnostic breadcrumbs cover auth-check start, route selection, Welcome visibility, Welcome action start, and guest preference persistence. No user text, credentials, URLs, book title or file path is sent.
+- Debug provider logs are local-only; Firebase Analytics ingestion is waived and is not claimed. Crashlytics delivery remains unverified.

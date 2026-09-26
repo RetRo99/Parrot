@@ -1,0 +1,20 @@
+QA-BUG-0005 retest attempt 2 — PASS for expected transport failures
+Date: 2026-09-26, about 15:56 CEST
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Build: com.retro99.parrot 0.4.5 (21), debug; source commit 338d4ab29745d6e1a1b82524161d0fc9c5eabd2d plus uncommitted QA-BUG-0005 changes
+Action: cold-started MainActivity with Wi-Fi enabled, airplane mode off, and existing configured server endpoints unreachable. Captured a bounded continuous app-PID logcat stream, filtered to safe event names/parameters and the generic sanitized-exception marker.
+Result: zero `Exception occurred with message: Handled exception; free-form context omitted` markers; nine `network_request_failed` analytics entries were visible with only stable error types/booleans/status codes. Device timestamps span 15:56:24–15:56:54 although the host capture was requested for 18 seconds; timing is imprecise and is not used as a performance-duration result.
+
+```text
+09-26 15:56:24.177 D: Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+09-26 15:56:24.550 D: Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+09-26 15:56:24.573 D: Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+09-26 15:56:24.589 D: Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+09-26 15:56:24.607 D: Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+09-26 15:56:24.877 D: Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+09-26 15:56:33.967 D: Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+09-26 15:56:43.994 D: Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+09-26 15:56:54.029 D: Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+```
+
+The debug provider is local-only; no Firebase ingestion is claimed. This is not the full comparative performance case 513.
