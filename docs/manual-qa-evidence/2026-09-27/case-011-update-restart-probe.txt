@@ -1,0 +1,31 @@
+Case 11 — saved-position launch after update-triggered process restart (probe only)
+Date: 2026-09-27, Samsung local time CEST (+0200).
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`; model SM-S921B (Galaxy S24); Android 16/API 36; One UI 8.0 build `S921BXXSGDZG1`; gesture navigation.
+- Package `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug. Installed/local APK SHA-256 `b00fcb8c301412013aa1776399c3266749dd953a4ae85c64232505139ff6abd3`.
+- The APK was assembled from the App Settings observer changes subsequently committed as `4277213608f77256b0ab922f18cf2a4c83ce589c` (build artifact created immediately before that commit). PID after relaunch: `10858`.
+- Profile “Default” (local/guest). No credentials were entered, no Parrot app data was cleared, and no account/server data was changed.
+
+Preconditions and execution
+1. Imported the controlled repository fixture `iosApp/iosApp/sample-books/PrideAndPrejudice.epub` from Downloads through Parrot's Books → Import a book flow. App-reported title: *Pride and Prejudice*.
+2. “Open Last Book on Launch” was enabled. Read the book for over 60 seconds and exited Reader with system Back; Book Detail showed “Continue reading (48%)”. Reader had reported page 26 of 64 at 48% immediately before exit.
+3. Built and installed an updated debug APK with `adb install -r` (data-preserving replacement). The prior Parrot PID was no longer present; Launcher was top-resumed. Explicitly launched Parrot through its normal MainActivity entry point. This was an update-triggered process restart, not a separately controlled force-stop/kill.
+4. App startup produced the Home route-resolution event, followed by last-book launch attempt and terminal success. Reader opened *Pride and Prejudice* at page 26 of 64, 48%, with readable text visible. Screenshot: [`case-011-after-bug0027-install.png`](case-011-after-bug0027-install.png).
+
+Observed local DebugAnalyticsManager log lines (PID `10858`, `threadtime`)
+```text
+09-27 01:39:58.297 Analytics Event: app_launch_route_resolved | {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}
+09-27 01:39:58.297 Diagnostic breadcrumb: ... screen=home ... action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded
+09-27 01:39:58.333 Analytics Event: last_book_launch_attempted | {screen=home, source_screen=splash, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=navigation, outcome=started, book_type=ebook}
+09-27 01:39:58.334 Diagnostic breadcrumb: ... screen=home ... action=open_last_book operation=reader_open stage=navigation outcome=started media_type=ebook
+09-27 01:39:58.650 Analytics Event: home_screen_viewed | {screen=home, source_screen=splash, entry_point=app_launch}
+09-27 01:39:59.135 Analytics Event: book_opened | {book_type=EBOOK}
+09-27 01:39:59.136 Analytics Event: last_book_launch_completed | {screen=reader, source_screen=home, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=usable_content, outcome=succeeded, book_type=ebook}
+09-27 01:39:59.137 Diagnostic breadcrumb: ... screen=reader ... action=open_last_book operation=reader_open stage=usable_content outcome=succeeded media_type=ebook
+```
+
+Result/disposition
+- This update-restart variant functionally restored the saved current book and 48% position. The local debug provider showed one attempt and one terminal success plus bounded start/success breadcrumbs. Firebase Analytics delivery is waived and not claimed; no failure was induced, and Crashlytics delivery is not established.
+- This is not a PASS for the entire catalogue case 11: its prescribed user-controlled kill/relaunch variant remains NOT RUN. QA-BUG-0026's abrupt process-death-while-reading suspicion also remains untested.
+- During the following Settings state check, Clear Current Book appeared after QA-BUG-0027 and was tapped to prepare the no-current-book fixture. The launch preference remained enabled. Case 12's relaunch has not yet occurred.

@@ -1,0 +1,24 @@
+Case 426 — Clear current book: post-QA-BUG-0027 UI result and instrumentation gap
+Date: 2026-09-27, Samsung local time CEST (+0200).
+
+Device/build
+- Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`.
+- `com.retro99.parrot` 0.4.5 (21), debug; APK SHA-256 `b00fcb8c301412013aa1776399c3266749dd953a4ae85c64232505139ff6abd3`, from source changes committed in `4277213608f77256b0ab922f18cf2a4c83ce589c`; process PID `10858`.
+- Local “Default” profile. “Open Last Book on Launch” and “Show Continue Reading” were checked. The controlled Pride and Prejudice EPUB had a current-reading entry after a >60-second reading session.
+
+Steps/result
+1. After the data-preserving app update and last-book launch, opened Settings. “Clear Current Book” was visible between “Show Continue Reading” and “Reading statistics”; screenshot: [`case-011-settings-clear-current-fixed.png`](case-011-settings-clear-current-fixed.png).
+2. Tapped “Clear Current Book.” The action returned to Settings without a confirmation dialog; the shipped UI presents a transient success snackbar. The state update removed the row; screenshot/UI evidence: [`case-426-clear-current-result.png`](case-426-clear-current-result.png). The two reading preference toggles remained checked. This established the no-current-book app state; do not infer that case 12 launch was already run.
+3. PID-scoped local logs showed the observer startup/state breadcrumbs and one `current_book_cleared` event:
+```text
+09-27 01:40:59.421 Diagnostic breadcrumb: diagnostic_context screen=app_settings action=observe_current_book operation=current_book_state stage=started outcome=started
+09-27 01:40:59.548 Diagnostic breadcrumb: diagnostic_context screen=app_settings action=observe_current_book operation=current_book_state stage=state_updated outcome=available
+09-27 01:41:41.010 Analytics Event: current_book_cleared
+```
+4. No clear-attempt event or clear-operation start/success/failure breadcrumb appeared for that action in the PID-scoped buffer. Source inspection confirms the action only calls `ClearCurrentlyReadingUseCase`, logs `AppSettingsAnalyticsEvent.CurrentBookCleared`, and updates the view state; it has no exception boundary or failed-operation outcome. The `current_book_state` observer breadcrumbs are not action telemetry.
+
+Case results
+- Functional for the exercised clear action: PASS (row appeared after state restoration and was removed on clear). Confirmation dialog: N-A (implemented action is immediate with a snackbar). The snackbar was transient and is not separately evidenced; the post-action state is captured.
+- Analytics: FAIL for required attempt/outcome semantics; success-only `current_book_cleared` was observed once. Local debug evidence only; Firebase delivery is waived and not claimed.
+- Diagnostics: FAIL for action-level start/terminal breadcrumbs and failure reporting. No failure was induced; no Crashlytics delivery claim is made.
+- QA-BUG-0027's UI-state defect is fixed/retested. QA-BUG-0028 records the separate source/log-confirmed instrumentation gap. No credentials or identifying book data were included in telemetry evidence.
