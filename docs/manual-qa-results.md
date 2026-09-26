@@ -37,6 +37,10 @@ Run manifest: [manual-qa-run-report.md](manual-qa-run-report.md). All cases begi
 | 4 | Get Started | BLOCKED | NOT RUN | NOT RUN | Welcome screen is not the current route; reaching it would require an unapproved reset/logout. No UI action was performed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-004-welcome-unavailable.txt). |
 | 5 | Browse without account | BLOCKED | NOT RUN | NOT RUN | Welcome and a disposable local-only guest library are unavailable; no route or data mutation was attempted. [Precondition evidence](manual-qa-evidence/2026-09-26/case-005-guest-entry-blocked.txt). |
 | 6 | Back arrow on Welcome | BLOCKED | NOT RUN | NOT RUN | The logged-out Welcome route is unavailable; no logout/reset or Back action was performed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-006-welcome-back-blocked.txt). |
+| 7 | Build badge (debug and release) | BLOCKED | NOT RUN | NOT RUN | Welcome is unreachable, and installing a different signing variant into the current profile is not authorized; neither badge was checked. [Precondition evidence](manual-qa-evidence/2026-09-26/case-007-release-badge-blocked.txt). |
+| 8 | E-ink theming | DEFERRED | N-A (platform deferred) | DEFERRED | No e-ink hardware for this pass; per test-plan scope override. [Disposition](manual-qa-evidence/2026-09-26/case-008-eink-deferred.txt). |
+| 9 | Rotation on Welcome | BLOCKED | NOT RUN | NOT RUN | Welcome is unreachable without an authorized reset/logout; no rotation was performed for this case. [Precondition evidence](manual-qa-evidence/2026-09-26/case-009-welcome-rotation-blocked.txt). |
+| 10 | Background and resume on Welcome | BLOCKED | NOT RUN | NOT RUN | Welcome is unreachable without an authorized reset/logout; no background/resume interaction was performed for this case. [Precondition evidence](manual-qa-evidence/2026-09-26/case-010-welcome-resume-blocked.txt). |
 
 ## Screen groups C–M
 

@@ -1,0 +1,4 @@
+Case 8 — DEFERRED
+Date: 2026-09-26
+Device for this run: Samsung SM-S921B, serial RFCWC0SSVDM (not e-ink hardware)
+The test plan explicitly defers e-ink theming to an e-ink device pass. No applicable e-ink hardware is connected/identified. No e-ink UI or animation result is claimed.

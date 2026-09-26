@@ -1,0 +1,5 @@
+Case 9 precondition check — BLOCKED before execution
+Date: 2026-09-26, about 16:27 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Blocker: the required Welcome screen is not reachable safely from the current installed app/profile state; no logout or first-install reset was authorized. No rotation was performed for case 9, and no layout/crash outcome was observed.
+Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. Requires a safe Welcome-route fixture.

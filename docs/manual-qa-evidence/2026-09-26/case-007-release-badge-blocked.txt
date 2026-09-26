@@ -1,0 +1,5 @@
+Case 7 precondition check — BLOCKED before execution
+Date: 2026-09-26, about 16:27 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Blocker: case 7 requires observing the build badge on Welcome in both debug and release builds. The app is not on Welcome, and replacing the installed debug package with a release-signature build could alter the current app installation/session. No isolated package/profile is configured and no replacement was authorized.
+Neither badge variant was inspected; no release build was installed for this case. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. Requires isolated Welcome state and safe debug/release install strategy.

@@ -38,7 +38,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 
 ## Progress
 
-**Current test:** Case 6 — App launch & onboarding; blocked before execution because the logged-out Welcome route is unavailable. Cases 1–5 were recorded BLOCKED for first-install/session/guest/Welcome prerequisites. Continue in numbered catalogue order.
+**Current test:** Case 10 — App launch & onboarding; blocked before execution because Welcome is unavailable. Cases 1–7 and 9–10 are blocked on safe Welcome/session prerequisites; case 8 is explicitly DEFERRED for unavailable e-ink hardware. Continue in numbered catalogue order.
 
 | Area | Status | Notes |
 |---|---|---|
@@ -52,7 +52,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 | Crashlytics delivery / symbolication / breadcrumbs (506–508) | BLOCKED | No authorized Firebase Console session, controlled corrupt-file fixture or release-device test. |
 | Privacy / duplicate / QA classification (509–511) | FAIL / BLOCKED | QA-BUG-0001 passes host tests/local debug output. Distinctive payload use is not yet executed; Crashlytics payload inspection is blocked. QA-BUG-0002 sanitized local exception retest passes. Source audit confirms duplicate login reports (QA-BUG-0004); startup confirms network exception flood (QA-BUG-0005). QA-BUG-0003 and production QA-traffic policy remain open. |
 | Offline telemetry / overhead / cleanup (512–514) | NOT RUN | These need an instrumented on-device pass. |
-| Screen groups B–M | IN PROGRESS / NOT RUN | Case 1 is blocked before execution by the unavailable safe first-install fixture; no app screen has been signed off. |
+| Screen groups B–M | IN PROGRESS / NOT RUN | Cases 1–7 and 9–10 are blocked before execution by unavailable safe first-install/session/Welcome fixtures; case 8 is deferred for e-ink hardware. No app screen has been signed off. |
 
 ## Blockers and prerequisites
 
@@ -62,6 +62,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 4. Need run-specific continuous/logged evidence capture and complete device/settings baseline before executing screen cases.
 5. Bluetooth/headset fixtures are not confirmed available; those cases will be BLOCKED if reached without the accessory. Authors navigation is conditionally disabled per source documentation and must be confirmed against installed navigation before disposition.
 6. Case 1 needs a disposable first-install state. Do not erase the currently installed app/profile data without explicit authorization or a confirmed safe QA user/profile.
+7. Cases 2–7 and 9–10 need controlled signed-in/guest state or safe access to Welcome; no account logout, app-data reset or build-signature replacement is authorized.
 
 ## User-approved verification scope adjustment
 
@@ -69,4 +70,4 @@ On 2026-09-26 the user reported having tested debug event behavior and stated th
 
 ## Final summary
 
-**IN PROGRESS — no screen signed off.** Per user direction, execution is proceeding from catalogue case 1 upward. Cases 1–6 are blocked before test steps: case 1 needs safe first-install state, case 2 a controlled signed-in QA server session, case 3 a disposable guest state/local library, and cases 4–6 logged-out/Welcome-route fixtures. Setup cases 495–496 and local setup case 503 are preparatory evidence; case 503 is not Firebase delivery evidence. Ten Android host tests passed, and debug/release builds succeeded. QA-BUG-0005 is fixed, committed (`d1e18128`), installed/hash-matched, and post-commit retested successfully; the stale attempt 3 was invalid and excluded. Other setup requirements remain blocked, waived or not run. The user waived Firebase Analytics ingestion checks; Crashlytics delivery remains unverified.
+**IN PROGRESS — no screen signed off.** Per user direction, execution is proceeding from catalogue case 1 upward. Cases 1–7 and 9–10 are blocked before test steps by first-install/session/Welcome prerequisites; case 8 is deferred because no e-ink device is available. Setup cases 495–496 and local setup case 503 are preparatory evidence; case 503 is not Firebase delivery evidence. Ten Android host tests passed, and debug/release builds succeeded. QA-BUG-0005 is fixed, committed (`d1e18128`), installed/hash-matched, and post-commit retested successfully; the stale attempt 3 was invalid and excluded. Other setup requirements remain blocked, waived or not run. The user waived Firebase Analytics ingestion checks; Crashlytics delivery remains unverified.
