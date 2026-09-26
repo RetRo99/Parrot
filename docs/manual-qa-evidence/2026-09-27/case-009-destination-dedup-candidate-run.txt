@@ -1,0 +1,26 @@
+Case 9 — Welcome exposure after rotation and real route change — QA-BUG-0022 candidate retest; QA-BUG-0023 discovered — 2026-09-27 device time
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`; restored portrait, gesture navigation.
+- Package `com.retro99.parrot` 0.4.5 (21), debug, APK SHA-256 `b220792ab34fd0f58f3533c64093f85842f799e096d0dbb4a3d82dcd109b9973` (local and Samsung-pulled `base.apk` match).
+- Candidate APK built from repository commit `56043bdcd785b5ef376492b3193a8216125f7f9a` plus the not-yet-committed QA-BUG-0022 destination-dedup change in `LoginNavigationViewModel.kt` and its tests. The separate QA-BUG-0023 source-attribution behavior is unchanged and was documented before its fix.
+- PID `15778`; no sign-in credentials entered and no data cleared.
+
+Steps
+1. Installed in place without clearing Parrot data and launched to root Welcome. Screenshot: [`case-009-dedup-portrait-before.png`](case-009-dedup-portrait-before.png).
+2. Kept Parrot in the foreground and locked WindowManager rotation portrait→landscape→portrait; restored original `user-rotation=free`, `accelerometer_rotation=1`, `user_rotation=0`. Captured [`case-009-dedup-landscape.png`](case-009-dedup-landscape.png) and [`case-009-dedup-portrait-return.png`](case-009-dedup-portrait-return.png).
+3. A preliminary tap at (540,1508) left Welcome unchanged; this exploratory screenshot is [`case-009-dedup-login.png`](case-009-dedup-login.png) and is not counted as navigation. Tapped Get Started once at (540,1768) to expose the actual Login destination, without entering credentials. Captured [`case-009-dedup-login-reached.png`](case-009-dedup-login-reached.png).
+4. Pressed Android system Back once to return to Welcome and inspected PID-scoped local event/breadcrumb logs. Captured [`case-009-dedup-welcome-route-return.png`](case-009-dedup-welcome-route-return.png). This is a narrow instrumentation regression check, not a full execution of nested Login Back case 28.
+
+Observed
+- `welcome_screen_viewed` occurred once on initial launch (`00:03:03.542`). No Welcome view event or `screen_view` breadcrumb was emitted on either orientation change; compact layout produced exactly one `welcome_layout` breadcrumb (`00:03:25.807`, `stage=compact_viewport`, `outcome=succeeded`, `reason_code=scroll_enabled`). This candidate's rotation dedup behavior passes locally; Firebase ingestion is not claimed.
+- Get Started emitted one attempt (`00:04:38.499`), one success on Login visibility and one `login_screen_viewed` (`00:04:38.524`), with its matching Login-visible breadcrumb.
+- Returning to Welcome after Login emitted one new `welcome_screen_viewed` and visible breadcrumb at `00:06:05.610`, so actual route changes are not suppressed. However, both reported `source_screen=splash, entry_point=app_launch`; expected is `source_screen=login, entry_point=back_navigation`. This confirms QA-BUG-0023. Source audit: after popping `[Welcome, Login]` to `[Welcome]`, `LoginNavigation` derives the source from the current stack's prior entry, which is null, and `LoginNavigationViewModel` interprets null as cold app launch.
+- No fatal exception marker appeared. No Crashlytics delivery or Firebase Analytics ingestion was verified. No credentials were retained; system rotation settings were restored.
+
+Automated checks before installing this candidate: `:feature:login:ui:iosSimulatorArm64Test` passed (LoginNavigationViewModelTest: 8 tests, 0 failures, including duplicate visibility and real destination-change regressions); `:androidApp:assembleDebug` passed. The installed APK hash matches the assembled artifact.
+
+Separate signals
+- **QA-BUG-0022 Analytics/diagnostics candidate retest:** rotation-specific duplicate Welcome event/breadcrumb did not recur on this candidate; final code commit and retest documentation are pending.
+- **QA-BUG-0023 Analytics/diagnostics:** FAIL — a real Login→Welcome route transition is emitted once but falsely attributed to Splash/app launch; recorded before the attribution fix.
+- **Functional:** not a full case-28 Back result. Case-9 functional landscape scroll PASS remains evidenced separately by the QA-BUG-0021 retest.

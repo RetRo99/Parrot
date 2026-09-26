@@ -362,7 +362,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0022 — Welcome screen-view event duplicates on rotation
 
 - **Severity / user impact:** Low; Analytics overcounts Welcome exposure and the local diagnostic trail attributes rotation to a repeated app-launch exposure, corrupting navigation funnels and journey reconstruction.
-- **Status:** CONFIRMED on the Samsung, before source changes. Fix and retest pending.
+- **Status:** CONFIRMED before source changes; rotation dedup fix is implemented and passed a Samsung candidate retest. Final fix commit and post-commit documentation are pending; QA-BUG-0023 was found during real-route validation.
 - **Screen/test IDs:** Welcome case 9; shared lifecycle case 741; screen-journey reconstruction case 747.
 - **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; Parrot `com.retro99.parrot` 0.4.5 (21), debug, source commit `e572e53e468d4add814494ecbdcc2d3f3d22922b`, APK SHA-256 `eff1d63323f0ffbf7ee3af12cf2dff2b5608e065120e82734ded01a98178fbbe`.
 - **Preconditions:** Parrot foreground on root Welcome after one cold launch; local debug provider available.
@@ -374,4 +374,21 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Root cause:** `LoginNavigation`'s destination-keyed `LaunchedEffect` restarts on Activity configuration recreation; `LoginNavigationViewModel.onDestinationVisible` unconditionally reports the unchanged Welcome destination each time.
 - **Affected files:** `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/navigation/LoginNavigation.kt`, `LoginNavigationViewModel.kt`, common ViewModel tests and Welcome event dictionary/results.
 - **Fix reference / commit:** Pending. Preserve the current visible exposure across configuration recreation while still recording real route changes and not turning Compose recomposition into screen views; add a regression test.
-- **Retest:** NOT RUN after fix. Rotate on a hash-matched Samsung build and confirm no extra Welcome screen-view or visible breadcrumb; verify actual new route exposure still records once. Firebase ingestion is waived and is not claimed.
+- **Retest:** Candidate retest PASS on Samsung 2026-09-27: one Welcome view/breadcrumb at initial launch, none on portrait→landscape→portrait, then one new view/breadcrumb after actual Login→Welcome navigation. Candidate APK SHA-256 `b220792ab34fd0f58f3533c64093f85842f799e096d0dbb4a3d82dcd109b9973`, based on `56043bdc` plus uncommitted dedup code. Evidence: [candidate route/rotation run](manual-qa-evidence/2026-09-27/case-009-destination-dedup-candidate-run.txt). This candidate retest verifies local DebugAnalyticsManager only; final code commit/rebuild/retest remains pending and QA-BUG-0023 attribution failure is separately recorded. Firebase ingestion is waived and not claimed.
+
+## QA-BUG-0023 — Returning from Login is attributed as a cold app launch
+
+- **Severity / user impact:** Low; Analytics funnels and the diagnostic journey trail misclassify a real Login→Welcome Back navigation as a new Splash→Welcome app launch.
+- **Status:** CONFIRMED on the Samsung candidate build, before source changes for this bug. Fix and retest pending.
+- **Screen/test IDs:** Welcome case 9 route-change instrumentation check; nested Login Back case 28/523; screen-journey reconstruction case 747. The probe was not a full case-28 execution.
+- **Device/build/commit:** Physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`); Parrot `com.retro99.parrot` 0.4.5 (21), debug. Candidate APK SHA-256 `b220792ab34fd0f58f3533c64093f85842f799e096d0dbb4a3d82dcd109b9973`, built from commit `56043bdcd785b5ef376492b3193a8216125f7f9a` plus the uncommitted QA-BUG-0022 dedup implementation; the attribution behavior under test had not been changed.
+- **Preconditions:** App foreground on unauthenticated root Welcome; local debug Analytics provider; no credentials entered.
+- **Exact reproduction:** Tap Get Started to navigate to Login, do not enter credentials, then press system Back once to return to Welcome. Inspect `welcome_screen_viewed` and the corresponding `screen_view` diagnostic context.
+- **Expected:** Returning to Welcome from Login emits exactly one screen exposure with `source_screen=login` and `entry_point=back_navigation`, not Splash/app-launch attribution.
+- **Actual:** The destination change emitted one `welcome_screen_viewed` and one visible breadcrumb but both incorrectly carried `source_screen=splash`, `entry_point=app_launch`.
+- **Frequency:** Reproduced 1/1 route-return probe on this candidate build.
+- **Evidence:** [candidate route/rotation run](manual-qa-evidence/2026-09-27/case-009-destination-dedup-candidate-run.txt), including the Welcome-before, Login, and Welcome-return screenshots and PID-scoped event excerpt.
+- **Root cause:** After Login is popped, `LoginNavigation` derives `source` from the prior entry in the *current* back stack. The resulting root stack contains only Welcome, so source is null; `LoginNavigationViewModel` treats null as proof of cold app launch, ignoring the previously visible Login destination.
+- **Affected files:** `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/navigation/LoginNavigation.kt`, `LoginNavigationViewModel.kt`, common navigation ViewModel tests, QA results and event/diagnostic coverage map.
+- **Fix reference / commit:** Pending. Use the previous visible destination only as a fallback when the current stack supplies no source; preserve explicit stack sources and suppress same-destination configuration recreation. Add a regression asserting both event and breadcrumb attribution after a Login→Welcome pop.
+- **Retest:** NOT RUN after fix. Verify hash-matched Samsung run emits the expected Login/back-navigation attribution once, retains Splash/app-launch attribution on cold launch, and still deduplicates rotation. Firebase Analytics ingestion is waived; local logs alone do not prove Firebase delivery.
