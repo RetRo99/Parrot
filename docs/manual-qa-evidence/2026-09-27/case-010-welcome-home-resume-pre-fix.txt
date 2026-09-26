@@ -7,7 +7,7 @@ Device/build
 
 Steps
 1. Captured Welcome before background: [`case-010-welcome-before-home.png`](case-010-welcome-before-home.png).
-2. Sent Android Home (`adb -s RFCWC0SSVDM shell input keyevent 3`), waited five seconds. Verified top resumed activity was Samsung Launcher `bitpit.launcher/.ui.HomeActivity`, and Parrot process PID `22863` remained alive. Captured [`case-010-device-home.png`](case-010-device-home.png).
+2. Sent Android Home (`adb -s RFCWC0SSVDM shell input keyevent 3`), waited five seconds. Verified top resumed activity was Samsung Launcher `bitpit.launcher/.ui.HomeActivity`, and Parrot process PID `22863` remained alive. A launcher screenshot was initially captured but is intentionally not retained because it included unrelated personal notifications; the activity/PID verification is the evidence for this step.
 3. Returned via the existing task using `adb -s RFCWC0SSVDM shell am start -W -n com.retro99.parrot/.android.MainActivity`. Android reported `Warning: Activity not started, its current task has been brought to the front`, `LaunchState: HOT`; verified the same Parrot PID and MainActivity resumed. Captured [`case-010-welcome-after-resume.png`](case-010-welcome-after-resume.png).
 4. Inspected PID-scoped local logs for lifecycle, foreground/background, Welcome screen-view, diagnostic and fatal markers.
 

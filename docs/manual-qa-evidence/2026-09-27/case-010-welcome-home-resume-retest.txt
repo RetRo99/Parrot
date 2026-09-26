@@ -1,0 +1,37 @@
+Case 10 — Welcome background and resume — PASS — 2026-09-27
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`, model SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`; portrait 1080×2340, gesture navigation.
+- Package `com.retro99.parrot`, version 0.4.5 (21), target SDK 36, debuggable. Source commit `159fcb331ecd95ba9e154c5a510ae8bb6f008283` (`fix(analytics): report app visibility transitions [QA-BUG-0024, test 10]`).
+- Debug APK SHA-256 local and Samsung-pulled `base.apk`: `44529a4d0508ccb2965e4cb3cec5b5fa6ac8d2f3d35590fb91522a62565b2c63`.
+- App PID `7573` from cold launch through Home, resume and rotation. Unauthenticated root Welcome; no credentials entered and no app data cleared.
+
+Execution
+1. Installed the debug APK in place without clearing Parrot data; verified the package version and pulled APK hash. Force-stopped only Parrot as test setup, then launched MainActivity cold. Welcome appeared with the same two actions. Screenshot: [`case-010-fix-welcome-before-home.png`](case-010-fix-welcome-before-home.png).
+2. Sent Android Home with `adb -s RFCWC0SSVDM shell input keyevent 3`, waited five seconds, and verified `bitpit.launcher/.ui.HomeActivity` was top-resumed while Parrot PID `7573` remained alive. The launcher screenshot is intentionally not retained because it contained unrelated personal notifications; the foreground-activity and process checks are recorded here.
+3. Returned the existing task with `adb -s RFCWC0SSVDM shell am start -W -n com.retro99.parrot/.android.MainActivity`. Android reported the existing task was brought to front and `LaunchState: HOT`; PID `7573` remained unchanged. Welcome was restored with Get Started and Browse without account, no intervening Splash/Login/blank state. Screenshot: [`case-010-fix-welcome-after-resume.png`](case-010-fix-welcome-after-resume.png).
+4. While foregrounded, rotated portrait→landscape→portrait via WindowManager `user-rotation`; restored and verified `user-rotation=free`, `accelerometer_rotation=1`, `user_rotation=0`. Screenshots: [`case-010-fix-welcome-landscape.png`](case-010-fix-welcome-landscape.png), [`case-010-fix-welcome-portrait-return.png`](case-010-fix-welcome-portrait-return.png). No app visibility transitions were emitted for the configuration changes.
+5. Checked PID-scoped `logcat` for lifecycle events/breadcrumbs, Welcome route exposure and fatal markers.
+
+Observed PID-scoped local debug log excerpt
+```text
+09-27 00:39:49.499 Analytics Event: welcome_screen_viewed {screen=welcome, source_screen=splash, entry_point=app_launch}
+09-27 00:39:49.499 Diagnostic breadcrumb: screen=welcome source_screen=splash entry_point=app_launch action=screen_view operation=onboarding_route stage=visible outcome=succeeded
+09-27 00:40:06.168 Analytics Event: app_visibility_changed {screen=app, action=lifecycle, operation=app_visibility, stage=background, outcome=backgrounded}
+09-27 00:40:06.171 Diagnostic breadcrumb: screen=app action=lifecycle operation=app_visibility stage=background outcome=backgrounded
+09-27 00:40:12.463 Analytics Event: app_visibility_changed {screen=app, action=lifecycle, operation=app_visibility, stage=foreground, outcome=foregrounded}
+09-27 00:40:12.463 Diagnostic breadcrumb: screen=app action=lifecycle operation=app_visibility stage=foreground outcome=foregrounded
+```
+
+Results (independent)
+- **Functional: PASS.** The Home→five-second background→resume sequence retained the same process, Welcome route, content and controls; there was no blank screen, login/splash flash, broken state or crash.
+- **Analytics: PASS for the local debug provider.** Exactly one `app_visibility_changed` event was observed for each actual transition (background then foreground); no extra `welcome_screen_viewed` event appeared on resume or either rotation. Firebase Analytics ingestion is waived and not claimed.
+- **Diagnostics: PASS for expected lifecycle context.** Exactly one matching background and foreground breadcrumb appeared; neither orientation recreation emitted a lifecycle transition. No unexpected failure was induced, so no Crashlytics non-fatal was expected. Crashlytics issue delivery/symbolication were not tested by this normal-flow case.
+
+Automated checks
+- `:composeApp:testAndroidHostTest`: PASS; `AppVisibilityReporterTest` 1 test, zero failures.
+- `:lib:analytics:implementation:testAndroidHostTest`: PASS; `AnalyticsParameterSanitizerTest` 9 tests, zero failures, including bounded app-visibility dimensions.
+- `:androidApp:assembleDebug`: PASS; assembled APK hash matches the installed Samsung package.
+- `:composeApp:iosSimulatorArm64Test`: BLOCKED at `linkDebugTestIosSimulatorArm64`; Apple linker reports `framework 'FirebaseCore' not found`. This environment limitation does not affect the passing Android host tests or Samsung Android build/run.
+
+The earlier case-10 run documented the missing instrumentation before the fix: [pre-fix evidence](case-010-welcome-home-resume-pre-fix.txt). All Analytics observations here are local `DebugAnalyticsManager` logs, not Firebase ingestion evidence.
