@@ -1008,3 +1008,9 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 754 | Home route exposure and source | Enter Home from each reachable source (guest selection, successful credentials login, cold-start authenticated/guest route); inspect the local event/breadcrumb, trigger recomposition and switch tabs | One Home exposure per actual visible root entry with the correct bounded source/entry point; no event merely from a tap/persisted preference and no duplicate from recomposition/tab changes |
+
+## 37. Welcome guest-mode persistence failure extension
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 755 | Guest-mode preference write failure and retry | On Welcome, make the `SkippedLogin` preference write fail; tap Browse without account; restore writes and retry | Stay on a usable Welcome screen with actionable retry guidance; emit one failed action outcome and bounded diagnostic, one actionable non-fatal for the unexpected failure; do not route Home or emit Home exposure until persistence succeeds; retry succeeds once and routes Home once |

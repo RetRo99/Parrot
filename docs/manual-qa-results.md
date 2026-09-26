@@ -48,6 +48,18 @@ Source audit identified QA-BUG-0006 (still open/partially remediated) and QA-BUG
 | 12 | Open last book on launch (no current book) | NOT RUN | NOT RUN | NOT RUN | Previous preservation-based BLOCKED disposition withdrawn; prepare a no-current-book fixture before testing. Historical note: [case-012](manual-qa-evidence/2026-09-26/case-012-last-book-no-current-blocked.txt). |
 | 13 | Locale rendering (Spanish device locale) | BLOCKED (partial: reachable Books, Series, Statistics and Settings surfaces rendered English; other routes were not reached) | PASS after QA-BUG-0008 fix (first run exposed missing startup event; retest emitted one `app_launch_route_resolved` event on launch; local provider only) | NOT RUN (no induced UX failure; relaunch showed no fatal exception in the PID-scoped check; actionable Crashlytics delivery/context not verified, QA-BUG-0006 remains open) | Locale changed from `en-GB` to `es-ES`, app force-stopped/launched, four reachable tabs inspected and screenshots saved; locale restored to `en-GB`. Retest build `0.4.5` (21), APK SHA-256 `b2045002…882f4`. Firebase Analytics ingestion is waived, not claimed. [Run evidence](manual-qa-evidence/2026-09-26/case-013-locale-run.txt); [instrumentation retest](manual-qa-evidence/2026-09-26/case-013-launch-event-retest.txt). |
 
+### Welcome/startup action and instrumentation map
+
+| Reachable entry/action/exit | Test IDs | Existing/required usage event | Diagnostic/failure coverage |
+|---|---:|---|---|
+| Splash cold launch → Welcome; visible exposure | 1, 3, 14, 515–520 | `app_launch_route_resolved`, then one `welcome_screen_viewed` with bounded source/entry point | Startup start/route-selected breadcrumbs; unexpected auth-state-read failure handled by QA-BUG-0009. App lifecycle/route restoration still needs its mapped cases. |
+| Get Started → Login | 4, 15–36, 521, 523–534, 751–753 | `welcome_action_attempted`, completion only on Login visibility, then `login_screen_viewed` | Bounded route start/visible breadcrumbs. Auth and persistence failures mapped to Login/QA-BUG-0015; case 753 has no safe Samsung write-fault fixture. |
+| Browse without account → Home | 3, 5, 11–12, 521, 754–755 | Guest attempt and persisted-state completion, followed by one actual `home_screen_viewed` with `welcome` / `browse_without_account` attribution | Start/persisted/visible breadcrumbs. Preference-write failure was identified as QA-BUG-0017; case 755 covers failure and recovery. |
+| Root Welcome system Back; conditional toolbar Back from nested Login | 6, 28, 522–523 | No success event for dismissal; route exposure only when Welcome actually becomes visible again | No failure diagnostic for ordinary Back; verify correct root/nested dismissal and no blank route. Toolbar arrow is not offered on initial-root Welcome. |
+| Repeated Welcome actions / foreground return | 10, 515–516, 521, 740–741, 747 | One accepted attempt and one committed terminal outcome per action; screen exposure follows actual visibility | Deduplication/lifecycle restoration not yet verified; avoid interpreting Compose recomposition as a new exposure. |
+
+Welcome event names and safe dimensions: `welcome_screen_viewed(screen, source_screen, entry_point)`, `welcome_action_attempted(screen, action, outcome=started)`, `welcome_action_completed(screen, action, outcome)`; guest Home entry then emits `home_screen_viewed(screen, source_screen, entry_point)`. Local debug-provider observations are recorded separately from Firebase delivery. A QA-BUG-0017 exception is unexpected only when persistence itself throws; ordinary Back, validation and repeated taps must not create Crashlytics noise.
+
 Cases 14–36 and Login extensions 515–534, 751–753 (not yet fully exercised; case 22 sign-in was a case-2 precondition only):
 
 | Case | Variant / evidence | Functional | Analytics | Diagnostics | Notes / defect |
@@ -103,6 +115,7 @@ Cases 14–36 and Login extensions 515–534, 751–753 (not yet fully exercised
 | 754 | Guest selection Home exposure (case 5) | NOT RUN | NOT RUN | NOT RUN | Pending ordered Welcome guest-action case 5; instrumentation is committed in `20c39318`. |
 | 754 | Guest cold-start Home exposure (case 3) | NOT RUN | NOT RUN | NOT RUN | Pending ordered case 3 guest persistence run; whether guest mode resolves to Home at cold start remains to be executed on-device. |
 | 754 | Recomposition and tab-switch deduplication | NOT RUN | NOT RUN | NOT RUN | No recomposition or tab-switch sequence was run after Home entry; retain as an explicit case-754 requirement. |
+| 755 | Guest-mode preference write failure and retry | NOT RUN | NOT RUN | NOT RUN | Added after source audit found the synchronous `SkippedLogin` preference write is not protected. QA-BUG-0017 recorded before fix; no failure has been induced. Safe Samsung write-fault fixture availability pending. |
 
 ### Login instrumentation preflight (source/build verification only)
 
@@ -115,7 +128,7 @@ Cases 14–36 and Login extensions 515–534, 751–753 (not yet fully exercised
 | `oauth_login_step_failed` | Bounded Storyteller OAuth exchange stage and status code | Existing name retained; Samsung OAuth path NOT RUN |
 | Login diagnostics | Typed start/stage/terminal breadcrumbs with diagnostic-only correlation ID; one unexpected report at UI boundary | Unit tests/build PASS; local Samsung failure breadcrumbs and Crashlytics delivery NOT RUN/BLOCKED |
 
-All case-level Analytics statuses below remain NOT RUN until observed on the Samsung. Debug provider evidence is local-only; Firebase Analytics ingestion is waived and never inferred from local logs. Crashlytics delivery remains required and blocked by unavailable authorized Console access.
+Case-level Analytics status is reported per row above; cases 1, 2 and 4 have local-provider evidence and remaining cases are individually NOT RUN unless stated. Debug provider evidence is local-only; Firebase Analytics ingestion is waived and never inferred from local logs. Crashlytics delivery remains required and blocked by unavailable authorized Console access.
 
 ## Screen groups C–M
 

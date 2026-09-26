@@ -91,7 +91,7 @@ Every row also inherits screen entry/exit, back/dismiss source, loading duration
 | Screen/surface | Usage signals | Experience degradation to diagnose/report |
 |---|---|---|
 | Splash/startup | Launch source, warm/cold route, usable-screen timing | Bootstrap/database failure, invalid restored route, stuck splash, fallback from missing last book |
-| Welcome | Welcome viewed, get started, guest chosen | Tap with no navigation, failed guest initialisation, repeated onboarding loop |
+| Welcome | Welcome viewed, get started, guest chosen | Tap with no navigation, failed guest preference persistence/initialisation, repeated onboarding loop (cases 1, 3–7, 515–524, 755) |
 | Server login | Server type, credentials/OAuth method, submit/outcome, cancel/retry | Unhandled auth response, callback mismatch, transport failure outcome, stuck loading, account not persisted |
 | Home/tab navigation | Tab switched, route transitions, Back, continue-reading entry | Duplicate routes, wrong stack, wrong profile/book target, restoration failure |
 | Books library | Search opened/committed with count bucket, filters, sort, layout, book selected, refresh | Query/refresh failure, stale state, lost cache, favourite rollback, materially slow content |
