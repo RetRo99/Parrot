@@ -156,4 +156,43 @@ class DiagnosticPayloadSanitizerTest {
         assertEquals("diagnostic_context screen=books_library", sanitized)
         assertFalse(sanitized.orEmpty().contains("private"))
     }
+
+    @Test
+    fun settingChangesRetainOnlyApprovedValueBuckets() {
+        val enumValue = sanitizeAnalyticsParameters(
+            mapOf("setting_name" to "theme", "new_value" to "DARK"),
+        )
+        val numericValue = sanitizeAnalyticsParameters(
+            mapOf("setting_name" to "font_size", "new_value" to "22.0"),
+        )
+        val booleanValue = sanitizeAnalyticsParameters(
+            mapOf("setting_name" to "tts_enabled", "new_value" to "true"),
+        )
+
+        assertEquals(mapOf("setting_name" to "theme", "value_bucket" to "dark"), enumValue)
+        assertEquals(mapOf("setting_name" to "font_size", "value_bucket" to "medium"), numericValue)
+        assertEquals(mapOf("setting_name" to "tts_enabled", "value_bucket" to "enabled"), booleanValue)
+    }
+
+    @Test
+    fun settingChangesNeverForwardRawCustomOrUnboundedValues() {
+        val customFont = sanitizeAnalyticsParameters(
+            mapOf("setting_name" to "font_family", "new_value" to "private-font-filename.ttf"),
+        )
+        val rawColor = sanitizeAnalyticsParameters(
+            mapOf("setting_name" to "highlight_color_argb", "new_value" to "-2130771968"),
+        )
+        val invalidNumeric = sanitizeAnalyticsParameters(
+            mapOf("setting_name" to "font_size", "new_value" to "999999"),
+        )
+        val unknownSetting = sanitizeAnalyticsParameters(
+            mapOf("setting_name" to "private_setting", "new_value" to "private-value"),
+        )
+
+        assertEquals(mapOf("setting_name" to "font_family", "value_bucket" to "custom"), customFont)
+        assertFalse(rawColor.containsKey("new_value"))
+        assertEquals(mapOf("setting_name" to "highlight_color_argb", "value_bucket" to "mid"), rawColor)
+        assertEquals(mapOf("setting_name" to "font_size"), invalidNumeric)
+        assertEquals(emptyMap(), unknownSetting)
+    }
 }
