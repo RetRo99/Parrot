@@ -69,6 +69,28 @@ class LoginFailureDiagnosticsTest {
         )
     }
 
+    @Test
+    fun persistenceFailureContextUsesPersistenceStageAndSafeReason() {
+        val error = AppError.DatabaseError(
+            throwable = IllegalStateException("private storage details"),
+            table = "server_registry",
+        )
+
+        assertEquals("credentials_persistence", loginFailureDiagnosticStage(error))
+        assertEquals("local_database_failure", loginFailureDiagnosticReasonCode(error))
+    }
+
+    @Test
+    fun failedServerRegistrationRollbackUsesDistinctReason() {
+        val error = AppError.DatabaseError(
+            throwable = IllegalStateException("private rollback details"),
+            table = "server_registry_rollback",
+        )
+
+        assertEquals("credentials_persistence", loginFailureDiagnosticStage(error))
+        assertEquals("server_registration_rollback_failed", loginFailureDiagnosticReasonCode(error))
+    }
+
     private class RecordingAnalytics : Analytics {
         val exceptions = mutableListOf<Pair<Throwable, DiagnosticContext>>()
 
