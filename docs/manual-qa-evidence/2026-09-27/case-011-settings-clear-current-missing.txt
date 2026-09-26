@@ -1,0 +1,20 @@
+Preflight observation for case 11 / case 426 — Clear current book row missing
+Date: 2026-09-27 (device local time CEST; timezone independently observed as +0200).
+
+Device/build
+- Samsung serial `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`, gesture navigation.
+- `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug, installed source commit `ccd20066786a3ee178821fb699cd5aa9d2561266`; local and Samsung-pulled APK SHA-256 `484505d137720fbef050c6b3c187b6148f6720404399c2613135ee32bba31ccf`.
+- PID `22347`; guest/local profile labelled “Default”; no account credentials entered; no app data cleared.
+
+Precondition/execution
+1. Selected “Browse without account” from Welcome and reached local Home.
+2. Imported the unique controlled fixture `Parrot-QA-Case11-PrideAndPrejudice.epub` (24,846,289 bytes, from repository `iosApp/iosApp/sample-books/PrideAndPrejudice.epub`) through the app’s Import action and Android DocumentsUI. The book appeared as *Pride and Prejudice* by Jane Austen.
+3. In Settings, enabled “Open Last Book on Launch”; accessibility state reported the switch checked.
+4. Opened the book from its detail screen. Local process logs recorded `book_opened` at 01:26:06 CEST. A page-turn from cover showed readable Project Gutenberg text (screen reported page 1 of 36), followed by further reading. At 01:28:58 CEST used Android Back; Book Detail showed “Continue reading (48%)”. This progress display is recorded as observed state, not as proof of the exact new checkpoint value.
+5. Reopened Settings. “Open Last Book on Launch” remained checked. The expected conditional “Clear current book” row was absent between “Show Continue Reading” and “Reading statistics”. Screenshot: [`case-011-settings-clear-current-missing.png`](case-011-settings-clear-current-missing.png).
+
+Result/disposition
+- Case 426 preflight functional observation: FAIL (the documented Clear current book control is unavailable); Analytics and diagnostics for attempting the clear action: NOT RUN (there was no actionable row). This is not a full App Settings case-426 pass; confirm/cancel/outcome coverage remains pending.
+- The case-11 cold relaunch has not yet been performed. The persistence of the current-book reference must be established by the cold-launch observation rather than inferred from this missing row.
+- Source audit: `AppSettingsViewState.hasCurrentlyReadingBook` defaults false; `AppSettingsViewModel` never initializes/observes it from the current-book getter/flow and only writes false after clearing. This confirms QA-BUG-0027.
+- The exact temporary Downloads fixture and DocumentsUI search history entry are still present at this point; cleanup is pending after the required launch/restore run.
