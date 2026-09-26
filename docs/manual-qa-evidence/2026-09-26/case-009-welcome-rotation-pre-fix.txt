@@ -1,0 +1,25 @@
+Case 9 — Rotate Welcome — FAIL before fix — 2026-09-26
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`, 1080×2340 portrait, gesture navigation.
+- Package `com.retro99.parrot` 0.4.5 (21), debuggable, app-code commit `e572e53e468d4add814494ecbdcc2d3f3d22922b`, APK SHA-256 `eff1d63323f0ffbf7ee3af12cf2dff2b5608e065120e82734ded01a98178fbbe` (local and installed match per case-7 retest record).
+- App PID remained `28075`. Parrot was already at unauthenticated root Welcome; no account, app data or fixture was changed.
+
+Preconditions / exact steps
+1. Began in portrait with `cmd window user-rotation`=`free`, `accelerometer_rotation`=`1`, `user_rotation`=`0`, top activity `com.retro99.parrot/.android.MainActivity`. Captured [portrait before](case-009-welcome-portrait-before.png).
+2. Used Samsung's WindowManager rotation test control, `adb -s RFCWC0SSVDM shell cmd window user-rotation lock 1`, to simulate landscape. Waited four seconds; display bounds changed to `2340x1080`; app process/activity remained foreground. Captured [landscape](case-009-welcome-landscape.png).
+3. Swiped up over the visible content (`input swipe 1200 950 1200 120 500`), waited two seconds and captured [landscape after attempted scroll](case-009-welcome-landscape-after-swipe.png).
+4. Returned to portrait (`user-rotation lock 0`), then restored the original free/sensor rotation mode. Verified final `user-rotation`=`free`, `accelerometer_rotation`=`1`, `user_rotation`=`0`, display `1080x2340`; captured [portrait after return](case-009-welcome-portrait-return.png).
+5. Inspected PID-scoped local debug logs for `welcome_screen_viewed`, its screen-visible diagnostic breadcrumb and fatal markers.
+
+Observed / results
+- **Functional: FAIL.** Portrait showed the complete Welcome screen and both actions. Landscape reflowed the logo/title/description and first feature card, but the remaining feature cards and both primary actions (`Get Started`, `Browse without account`) were outside the viewport. The up-swipe did not scroll the column; no route or control could be reached in landscape. Returning to portrait restored the full Welcome screen. This is reproducible from the source layout: the main `Column` is centered in a fixed available height, contains all vertical content, and has no scroll/adaptive landscape behavior.
+- **Analytics: FAIL.** A single continuous Welcome foreground session emitted `welcome_screen_viewed` three times: initial app launch at `23:31:16.272`, landscape configuration at `23:39:27.914`, and portrait return at `23:41:37.283`. All three carried the unchanged `source_screen=splash, entry_point=app_launch`; rotations were not new app launches or route exposures. The initial plus one-rotation event pair is sufficient to reproduce the duplicate; the portrait return confirmed it again. Each duplicate event also repeated the `stage=visible` diagnostic breadcrumb.
+- **Diagnostics: FAIL for degraded-layout diagnosis; no crash occurred.** The only rotation-related diagnostic signal was another successful Welcome-visible breadcrumb. No bounded rotation/layout-adaptation breadcrumb or failure context explained that the core entry actions were clipped; no fatal marker appeared. There is no exception to report for this deterministic layout defect. These evidence gaps are logged separately from the screen-view Analytics defect.
+- No duplicate visible cards/content or crash was observed; normal portrait recovery succeeded.
+
+Source audit
+- `WelcomeScreen`'s main `Column` fills the available height, centers all content and lacks `verticalScroll`; landscape height is insufficient for the fixed vertical stack, leaving the CTAs off-screen.
+- `LoginNavigation` calls `onDestinationVisible` from `LaunchedEffect(state.backStack.lastOrNull())`. Activity configuration recreation restarts the effect while the Welcome route remains the same, and `LoginNavigationViewModel.onDestinationVisible` logs another view/breadcrumb without exposure deduplication.
+
+No Crashlytics non-fatal or Firebase Analytics delivery was verified. Analytics evidence is local `DebugAnalyticsManager` only; ingestion is user-waived and not claimed. This run record captures the pre-fix failures; each independent bug is recorded before its source fix.

@@ -341,3 +341,37 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Affected files:** `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/welcome/WelcomeScreen.kt`, new `WelcomeBuildBadgeVariant.kt`, common regression tests, QA results and run report.
 - **Fix reference / commit:** Render exactly one badge from a tested `isDebug` → `Debug`/`Release` variant mapping; use the defined RELEASE string and the primary theme color for release. Added common tests for both mappings. Commit `e572e53e468d4add814494ecbdcc2d3f3d22922b`.
 - **Retest:** PASS on Samsung 2026-09-26. Release build hash `d2e97bc8398305705c8e25b0006c6608db52bc93f95febf72906e84df09480f2` visibly displayed RELEASE without DEBUG; debug build hash `eff1d63323f0ffbf7ee3af12cf2dff2b5608e065120e82734ded01a98178fbbe` visibly displayed DEBUG without RELEASE. Local and Samsung-pulled hashes match for both. `:feature:login:ui:iosSimulatorArm64Test` passed; new variant tests report 2/2, zero failures; debug and minified release assemblies succeeded. Screenshots and full steps are linked above. Static badge checks have Analytics/diagnostics N-A; release Firebase Analytics and Crashlytics delivery are not claimed. Release R8 service warnings remain a separate Reader validation note.
+
+## QA-BUG-0021 — Welcome actions are clipped and unreachable in landscape
+
+- **Severity / user impact:** Medium; in landscape on Welcome, Get Started and Browse without account are below the viewport and cannot be reached, blocking both sign-in and guest onboarding until the user restores portrait.
+- **Status:** CONFIRMED on the Samsung, before source changes. Fix and retest pending.
+- **Screen/test IDs:** Welcome rotation case 9; shared lifecycle case 741.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; Parrot `com.retro99.parrot` 0.4.5 (21), debug, source commit `e572e53e468d4add814494ecbdcc2d3f3d22922b`, APK SHA-256 `eff1d63323f0ffbf7ee3af12cf2dff2b5608e065120e82734ded01a98178fbbe`.
+- **Preconditions:** Fresh unauthenticated Welcome in portrait; no account or app data changes during the test.
+- **Exact reproduction:** On the Samsung, lock WindowManager user rotation to landscape with `adb -s RFCWC0SSVDM shell cmd window user-rotation lock 1`; wait for a 2340×1080 app viewport; observe the Welcome screen and try an upward swipe over its content.
+- **Expected:** Welcome reflows or scrolls so the page and onboarding actions remain usable in landscape, without crashes or duplicated content.
+- **Actual:** Logo/title/description and the first feature card render; subsequent cards and both primary actions are below the viewport. Swiping does not scroll. Portrait restoration restores the full screen.
+- **Frequency:** 1/1 landscape exposure; reproduced after the orientation transition. No crash.
+- **Evidence:** [case-9 pre-fix run](manual-qa-evidence/2026-09-26/case-009-welcome-rotation-pre-fix.txt), [portrait before](manual-qa-evidence/2026-09-26/case-009-welcome-portrait-before.png), [landscape](manual-qa-evidence/2026-09-26/case-009-welcome-landscape.png), [landscape after swipe](manual-qa-evidence/2026-09-26/case-009-welcome-landscape-after-swipe.png), [portrait recovery](manual-qa-evidence/2026-09-26/case-009-welcome-portrait-return.png).
+- **Root cause:** The Welcome screen uses a non-scrollable centered vertical `Column` sized against the available height; its fixed content stack exceeds landscape viewport height and is clipped.
+- **Affected files:** `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/welcome/WelcomeScreen.kt`; related QA evidence/results.
+- **Fix reference / commit:** Pending. Expected fix is to make the content vertically scrollable/adaptive in compact viewports, with unchanged portrait layout.
+- **Retest:** NOT RUN after fix. Verify landscape and portrait on the Samsung, reach both CTAs by swipe as needed, confirm no content duplication or crash, restore original free rotation mode, and record a hash-matched build.
+
+## QA-BUG-0022 — Welcome screen-view event duplicates on rotation
+
+- **Severity / user impact:** Low; Analytics overcounts Welcome exposure and the local diagnostic trail attributes rotation to a repeated app-launch exposure, corrupting navigation funnels and journey reconstruction.
+- **Status:** CONFIRMED on the Samsung, before source changes. Fix and retest pending.
+- **Screen/test IDs:** Welcome case 9; shared lifecycle case 741; screen-journey reconstruction case 747.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; Parrot `com.retro99.parrot` 0.4.5 (21), debug, source commit `e572e53e468d4add814494ecbdcc2d3f3d22922b`, APK SHA-256 `eff1d63323f0ffbf7ee3af12cf2dff2b5608e065120e82734ded01a98178fbbe`.
+- **Preconditions:** Parrot foreground on root Welcome after one cold launch; local debug provider available.
+- **Exact reproduction:** Capture PID-scoped local logs; keep Parrot foreground and rotate portrait→landscape→portrait using `cmd window user-rotation`; inspect `welcome_screen_viewed` and `screen_view` diagnostic breadcrumbs.
+- **Expected:** One Welcome exposure for this continuous visible destination, not another app-launch exposure for an orientation-only configuration change. An actual new foreground entry/route visit should remain observable according to the defined exposure boundary.
+- **Actual:** Three identical `welcome_screen_viewed` events and three successful `stage=visible` breadcrumbs appeared during one foreground session: initial launch at `23:31:16.272`, landscape at `23:39:27.914`, and portrait return at `23:41:37.283`; all retain `source_screen=splash, entry_point=app_launch`.
+- **Frequency:** 2 extra exposures across the portrait→landscape→portrait cycle; one extra event occurred on each configuration change.
+- **Evidence:** [case-9 pre-fix run/log excerpt](manual-qa-evidence/2026-09-26/case-009-welcome-rotation-pre-fix.txt); portrait/landscape screenshots linked in QA-BUG-0021's evidence.
+- **Root cause:** `LoginNavigation`'s destination-keyed `LaunchedEffect` restarts on Activity configuration recreation; `LoginNavigationViewModel.onDestinationVisible` unconditionally reports the unchanged Welcome destination each time.
+- **Affected files:** `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/navigation/LoginNavigation.kt`, `LoginNavigationViewModel.kt`, common ViewModel tests and Welcome event dictionary/results.
+- **Fix reference / commit:** Pending. Preserve the current visible exposure across configuration recreation while still recording real route changes and not turning Compose recomposition into screen views; add a regression test.
+- **Retest:** NOT RUN after fix. Rotate on a hash-matched Samsung build and confirm no extra Welcome screen-view or visible breadcrumb; verify actual new route exposure still records once. Firebase ingestion is waived and is not claimed.
