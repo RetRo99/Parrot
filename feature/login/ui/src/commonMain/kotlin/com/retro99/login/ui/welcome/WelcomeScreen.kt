@@ -59,6 +59,7 @@ import resources.translations.welcome_feature_reading_description
 import resources.translations.welcome_feature_reading_title
 import resources.translations.welcome_feature_servers_description
 import resources.translations.welcome_feature_servers_title
+import resources.translations.welcome_guest_mode_failed
 import resources.translations.welcome_sign_in_button
 import resources.translations.welcome_skip_login
 import resources.translations.welcome_subtitle
@@ -69,6 +70,7 @@ fun WelcomeScreen(
     isDebug: Boolean,
     onSignInClick: () -> Unit,
     onSkipLoginClick: () -> Unit,
+    guestModeError: Boolean = false,
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -222,6 +224,18 @@ fun WelcomeScreen(
                     text = stringResource(StringRes.welcome_skip_login),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (guestModeError) {
+                Text(
+                    text = stringResource(StringRes.welcome_guest_mode_failed),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
                 )
             }
         }

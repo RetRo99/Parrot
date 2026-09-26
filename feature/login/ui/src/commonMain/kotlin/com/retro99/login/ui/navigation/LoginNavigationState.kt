@@ -6,6 +6,7 @@ data class LoginNavigationState(
     val backStack: List<LoginDestination> = listOf(LoginDestination.Welcome),
     val isDebug: Boolean = false,
     val skipLoginComplete: Boolean = false,
+    val guestModeError: Boolean = false,
 )
 
 internal fun initialLoginNavigationState(

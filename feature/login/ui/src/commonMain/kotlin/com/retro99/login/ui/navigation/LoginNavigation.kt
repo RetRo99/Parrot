@@ -55,6 +55,7 @@ fun LoginNavigation(
                 entry<LoginDestination.Welcome> {
                     WelcomeScreen(
                         isDebug = state.isDebug,
+                        guestModeError = state.guestModeError,
                         onSignInClick = {
                             intentDispatcher(LoginNavigationIntent.NavigateTo(LoginDestination.Login))
                         },

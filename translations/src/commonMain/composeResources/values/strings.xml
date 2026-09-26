@@ -35,6 +35,7 @@
     <string name="welcome_subtitle">Read and listen to your favorite books, anytime, anywhere</string>
     <string name="welcome_sign_in_button">Get Started</string>
     <string name="welcome_skip_login">Browse without account</string>
+    <string name="welcome_guest_mode_failed">Couldn’t save guest mode. Please try again.</string>
     <string name="welcome_build_debug">DEBUG</string>
     <string name="welcome_build_release">RELEASE</string>
     <string name="welcome_feature_reading_title">Ebook Reader</string>

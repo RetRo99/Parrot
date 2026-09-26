@@ -6,6 +6,7 @@ import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.base.buildconfig.BuildConfig
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.login.domain.usecase.SkipLoginUseCase
+import kotlinx.coroutines.CancellationException
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
 
@@ -103,17 +104,37 @@ class LoginNavigationViewModel(
             }
 
             LoginNavigationIntent.OnSkipLoginClicked -> {
+                updateState { state -> state.copy(guestModeError = false) }
                 analytics.logEvent(AuthAnalyticsEvent.WelcomeActionAttempted("browse_without_account"))
-                analytics.logBreadcrumb(
-                    DiagnosticContext(
-                        screen = "welcome",
-                        action = "browse_without_account",
-                        operation = "persist_guest_mode",
-                        stage = "started",
-                        outcome = "started",
-                    ),
+                val startContext = DiagnosticContext(
+                    screen = "welcome",
+                    action = "browse_without_account",
+                    operation = "persist_guest_mode",
+                    stage = "started",
+                    outcome = "started",
                 )
-                skipLoginUseCase()
+                analytics.logBreadcrumb(startContext)
+                try {
+                    skipLoginUseCase()
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (failure: Exception) {
+                    val failureContext = startContext.copy(
+                        stage = "persist_preference",
+                        outcome = "failed",
+                        reasonCode = "guest_mode_persistence_failed",
+                    )
+                    analytics.logEvent(
+                        AuthAnalyticsEvent.WelcomeActionCompleted(
+                            action = "browse_without_account",
+                            outcome = "failed",
+                        ),
+                    )
+                    analytics.logBreadcrumb(failureContext)
+                    analytics.logException(failure, failureContext)
+                    updateState { state -> state.copy(guestModeError = true) }
+                    return
+                }
                 analytics.logEvent(
                     AuthAnalyticsEvent.WelcomeActionCompleted(
                         action = "browse_without_account",
@@ -130,7 +151,7 @@ class LoginNavigationViewModel(
                     ),
                 )
                 updateState { state ->
-                    state.copy(skipLoginComplete = true)
+                    state.copy(skipLoginComplete = true, guestModeError = false)
                 }
             }
         }
