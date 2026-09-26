@@ -304,6 +304,28 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
  */
 sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
 
+    enum class AppVisibility(val value: String) {
+        Foreground("foreground"),
+        Background("background"),
+    }
+
+    /** Records a real app visibility transition; configuration changes are not app backgrounding. */
+    data class AppVisibilityChanged(
+        val visibility: AppVisibility,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "app_visibility_changed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "app",
+            "action" to "lifecycle",
+            "operation" to "app_visibility",
+            "stage" to visibility.value,
+            "outcome" to when (visibility) {
+                AppVisibility.Foreground -> "foregrounded"
+                AppVisibility.Background -> "backgrounded"
+            },
+        )
+    }
+
     enum class WelcomeRootBackOutcome(val value: String) {
         Exited("exited"),
         Failed("failed"),

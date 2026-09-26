@@ -15,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import com.retro99.home.ui.deeplink.DeepLinkHandler
 import com.retro99.login.data.oauth.StorytellerOAuthCallbackRegistry
 import com.retro99.parrot.App
+import com.retro99.parrot.lifecycle.AppVisibilityReporter
 import com.retro99.parrot.CloudOAuthCallbackBridge
 import com.retro99.parrot.SyncTriggerBridge
 import com.retro99.reader.ui.fragment.EpubFragmentFactoryHelper
@@ -28,6 +29,7 @@ import org.koin.android.ext.android.inject
 
 class MainActivity : FragmentActivity() {
 
+    private val appVisibilityReporter: AppVisibilityReporter by inject()
     private val notificationPermissionHandler: NotificationPermissionHandler by inject()
     private val deepLinkHandler: DeepLinkHandler by inject()
     private val syncNowUseCase: SyncNowUseCase by inject()
@@ -103,6 +105,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
+        appVisibilityReporter.onActivityStarted()
         isNetworkAvailable = connectivityManager.activeNetwork != null
         if (!isConnectivityCallbackRegistered) {
             connectivityManager.registerDefaultNetworkCallback(connectivityCallback)
@@ -119,6 +122,10 @@ class MainActivity : FragmentActivity() {
             SyncTriggerBridge.shared.onBackground()
             SyncWorkScheduler.enqueue(this)
         }
+        appVisibilityReporter.onActivityStopped(
+            isChangingConfigurations = isChangingConfigurations,
+            isFinishing = isFinishing,
+        )
         super.onStop()
     }
 

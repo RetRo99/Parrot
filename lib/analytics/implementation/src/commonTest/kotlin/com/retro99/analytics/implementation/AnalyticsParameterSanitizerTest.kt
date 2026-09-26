@@ -128,6 +128,33 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun appVisibilityRetainsBoundedLifecycleState() {
+        val background = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.AppVisibilityChanged(
+                NavigationAnalyticsEvent.AppVisibility.Background,
+            ).parameters,
+        )
+        val foreground = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.AppVisibilityChanged(
+                NavigationAnalyticsEvent.AppVisibility.Foreground,
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "app",
+                "action" to "lifecycle",
+                "operation" to "app_visibility",
+                "stage" to "background",
+                "outcome" to "backgrounded",
+            ),
+            background,
+        )
+        assertEquals("foreground", foreground["stage"])
+        assertEquals("foregrounded", foreground["outcome"])
+    }
+
+    @Test
     fun welcomeEventsRetainOnlyBoundedRouteAndOutcomeDimensions() {
         val viewed = sanitizeAnalyticsParameters(
             AuthAnalyticsEvent.WelcomeViewed(
