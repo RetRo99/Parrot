@@ -16,13 +16,15 @@ class AnalyticsManager(
 ) : Analytics {
 
     override fun logException(throwable: Throwable, message: String?) {
+        val sanitizedThrowable = sanitizeDiagnosticThrowable(throwable)
+        val sanitizedMessage = sanitizeDiagnosticMessage(message)
         // Log to Crashlytics
-        message?.let { firebaseCrashlytics.log(it) }
-        firebaseCrashlytics.recordException(throwable)
+        sanitizedMessage?.let { firebaseCrashlytics.log(it) }
+        firebaseCrashlytics.recordException(sanitizedThrowable)
 
         // Also log to file for user sharing (if enabled and not crash-only)
         if (shouldLogHandledExceptionsToFile()) {
-            fileLogger.logException(throwable, message)
+            fileLogger.logException(sanitizedThrowable, sanitizedMessage)
         }
     }
 

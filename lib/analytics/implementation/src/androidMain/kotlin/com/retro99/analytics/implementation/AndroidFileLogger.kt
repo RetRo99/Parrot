@@ -22,15 +22,17 @@ class AndroidFileLogger(
         get() = File(context.filesDir, LOG_FILE_NAME)
 
     override fun logException(throwable: Throwable, message: String?) {
+        val sanitizedThrowable = sanitizeDiagnosticThrowable(throwable)
+        val sanitizedMessage = sanitizeDiagnosticMessage(message)
         val timestamp = getCurrentTimestamp()
         val logEntry = buildString {
             appendLine("[$timestamp] ERROR")
-            if (!message.isNullOrEmpty()) {
-                appendLine("Message: $message")
+            if (!sanitizedMessage.isNullOrEmpty()) {
+                appendLine("Message: $sanitizedMessage")
             }
-            appendLine("Exception: ${throwable::class.simpleName}: ${throwable.message}")
+            appendLine("Exception: ${sanitizedThrowable::class.simpleName}: ${sanitizedThrowable.message}")
             appendLine("Stack trace:")
-            appendLine(throwable.stackTraceToString())
+            appendLine(sanitizedThrowable.stackTraceToString())
             appendLine("---")
         }
         appendToLogFile(logEntry)
@@ -99,4 +101,3 @@ class AndroidFileLogger(
             "${localDateTime.second.toString().padStart(2, '0')}"
     }
 }
-

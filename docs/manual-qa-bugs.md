@@ -5,9 +5,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0001 — Analytics event parameters are forwarded without privacy filtering
 
 - **Severity / impact:** Medium; potential privacy exposure and high-cardinality telemetry, and values can also appear in debug logs.
-- **Status:** Fixed in source; Android host tests and Samsung debug-provider retest PASS; Firebase verification BLOCKED; commit hash pending.
+- **Status:** Fixed in source; Android host tests and Samsung debug-provider retest PASS; Firebase Analytics ingestion waived by user (not claimed); commit hash pending.
 - **Screen/test IDs:** Setup 509, 511; applies across all event-producing screens.
-- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; installed package `com.retro99.parrot` v0.4.5 (21), debuggable, installed commit unknown; source under audit `956ec8a443d2236396c490a3056efdf9a1181e32`.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; package `com.retro99.parrot` v0.4.5 (21), debug; exercised APK SHA-256 `f77dc3563cf2b1828af20628ac89ed9054e3d15a442c6130927f13e1b60eb937` from source `956ec8a443d2236396c490a3056efdf9a1181e32` plus QA-BUG-0001 changes; fix commit below.
 - **Preconditions:** Emit any event type with free-form/high-cardinality parameters.
 - **Reproduction:** Source inspection: `AnalyticsManager.logEvent` forwards `event.parameters` unchanged to Firebase; `DebugAnalyticsManager.logEvent` writes the complete parameter map. Event types include `book_uuid`, `profile_name`, `font_name`, `error_message`, and `server_url_hash`.
 - **Expected:** Analytics/debug telemetry excludes private or high-cardinality values; stable event names and safe categorical parameters remain usable.
@@ -16,15 +16,15 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** Original pass-through at `AnalyticsManager.kt:29-32` and `DebugAnalyticsManager.kt:31-39` on `956ec8a`; affected events include `AnalyticsEvent.kt:21-29,133-144` and `BookAnalyticsEvent.kt:276-283`. Retest excerpt: [`setup-debug-provider-events.txt`](manual-qa-evidence/2026-09-26/setup-debug-provider-events.txt); host test report: `lib/analytics/implementation/build/reports/tests/testAndroidHostTest/index.html`.
 - **Root cause:** No shared parameter redaction/allowlist at either analytics provider boundary.
 - **Affected files:** `lib/analytics/implementation/src/commonMain/kotlin/com/retro99/analytics/implementation/AnalyticsParameterSanitizer.kt`, `AnalyticsManager.kt`, `DebugAnalyticsManager.kt`, test configuration and `AnalyticsParameterSanitizerTest.kt`.
-- **Fix reference / commit:** Added fail-closed provider-boundary filtering; only registered bounded categorical/numeric/boolean dimensions are emitted. Commit hash pending.
-- **Retest:** PASS — three Android host unit tests; Android debug/release builds successful; Samsung debug APK installed and hash-matched; cold-start emitted local events with approved fields only. Aggregate iOS `allTests` was BLOCKED by missing `FirebaseCore`; Android host tests pass. Firebase DebugView payload remains BLOCKED.
+- **Fix reference / commit:** Added fail-closed provider-boundary filtering; only registered bounded categorical/numeric/boolean dimensions are emitted. Commit `ffef0a3d03ca73b4ffcff8cf9a47a243e035d2ac`.
+- **Retest:** PASS — three Android host unit tests; Android debug/release builds successful; Samsung debug APK installed and hash-matched; cold-start emitted local events with approved fields only. Aggregate iOS `allTests` was BLOCKED by missing `FirebaseCore`; Android host tests pass. User waived Firebase Analytics ingestion verification; delivery is not claimed.
 
 ## QA-BUG-0002 — Exception diagnostics include raw throwable/message context
 
 - **Severity / impact:** Medium; exception text/cause chains may contain private paths, request details or user input in diagnostic reporting.
-- **Status:** Confirmed source-level instrumentation defect; fix pending; Crashlytics delivery not verified.
+- **Status:** Fixed in source; six Android host tests and Samsung debug local retest PASS; Crashlytics delivery blocked; commit hash pending.
 - **Screen/test IDs:** Setup 506, 509, 510; applies to all exception-reporting screens.
-- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; installed package `com.retro99.parrot` v0.4.5 (21), debuggable, installed commit unknown; source under audit `956ec8a443d2236396c490a3056efdf9a1181e32`.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; installed package `com.retro99.parrot` v0.4.5 (21), debug APK from commit `ffef0a3d03ca73b4ffcff8cf9a47a243e035d2ac` plus uncommitted QA-BUG-0002 changes.
 - **Preconditions:** A handled exception is reported with an optional message or a sensitive throwable message/cause.
 - **Reproduction:** Source inspection: production `AnalyticsManager.logException` logs `message` to Crashlytics and passes the original throwable to `recordException`; debug provider logs the throwable and message.
 - **Expected:** Preserve actionable operation context and useful stack/cause while sanitizing free-form throwable/message content; report once at the impact-aware boundary.
@@ -32,9 +32,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Frequency:** Every reported handled exception with free-form context.
 - **Evidence:** `lib/analytics/implementation/src/commonMain/kotlin/com/retro99/analytics/implementation/AnalyticsManager.kt:18-26`; `DebugAnalyticsManager.kt:17-28`.
 - **Root cause:** No diagnostic context/throwable sanitization boundary.
-- **Affected files:** Provider implementations and diagnostic sanitization/tests (fix pending).
-- **Fix reference / commit:** Pending.
-- **Retest:** NOT RUN. Required: sanitizer tests, one controlled failure per boundary, deduplication check and Firebase Crashlytics issue with useful/sanitized stack/context.
+- **Affected files:** `DiagnosticPayloadSanitizer.kt` and Android/iOS actuals; `AnalyticsManager.kt`, `DebugAnalyticsManager.kt`, `AndroidFileLogger.kt`, `IosFileLogger.kt`; common and Android host tests.
+- **Fix reference / commit:** Free-form context is omitted; sanitized exception wrappers preserve safe type/cause structure and Android original stack frames; file and debug log paths use the sanitized wrapper. Commit hash pending.
+- **Retest:** PASS locally — six Android host tests passed (3 analytics-parameter, 2 diagnostic-payload, 1 Android stack-preservation); iOS main/test source compilation passed; debug/release app builds passed. On Samsung, cold startup produced sanitized exception records with only generic context and exception/cause types, while preserving stack frames per host regression test. Firebase Crashlytics issue/symbolication remains BLOCKED and is not claimed.
 
 ## QA-BUG-0003 — Deterministic account/URL hashes are assigned as Firebase user IDs
 
@@ -52,3 +52,37 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Affected files:** Login ViewModel and analytics user-identity contract/providers (fix pending).
 - **Fix reference / commit:** Pending.
 - **Retest:** NOT RUN. Requires a controlled QA login identity, Firebase Analytics/Crashlytics access and a reviewed identity policy; do not use production credentials.
+
+## QA-BUG-0004 — Failed login is reported to Crashlytics at repository and UI boundaries
+
+- **Severity / impact:** Medium; expected credential/network failures can create duplicate Crashlytics non-fatals and exception noise for ordinary recovery.
+- **Status:** Confirmed source-level duplicate-reporting/instrumentation defect; runtime report count not yet observed.
+- **Screen/test IDs:** Setup 510; login cases 23–24, 525, 534.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; package `com.retro99.parrot` v0.4.5 (21); source under audit `ffef0a3d` plus in-progress QA-BUG-0002 changes.
+- **Preconditions:** Login operation returns an `AppError` and reaches the ViewModel failure callback.
+- **Reproduction:** Source inspection: `LoginDataRepository.login` logs each auth failure in `onFailure`; `LoginViewModel` then logs the same failure with `error.log(analytics, ...)`. The OAuth path has the same repository/UI pattern.
+- **Expected:** Ordinary wrong credentials/network conditions produce a bounded outcome event and recovery breadcrumb, not Crashlytics non-fatals; any unexpected user-impacting failure is submitted once at the boundary with useful context.
+- **Actual:** Two `logException` calls are reachable for the same failed login; the current provider records each call as a separate Crashlytics exception.
+- **Frequency:** Each failed credentials/OAuth operation that reaches both layers.
+- **Evidence:** `feature/login/data/src/commonMain/kotlin/com/retro99/login/data/LoginDataRepository.kt:35-41,70-80`; `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/login/LoginViewModel.kt:121-128,159-165`.
+- **Root cause:** Both data and presentation boundaries independently report a failure that is propagated to the caller.
+- **Affected files:** Login data repository, Login ViewModel and possibly auth error classification (fix pending).
+- **Fix reference / commit:** Pending.
+- **Retest:** NOT RUN. Required: wrong-credentials and controlled transport failure; verify outcome events/recovery and one-or-zero Crashlytics reports as appropriate in a Firebase-enabled build.
+
+## QA-BUG-0005 — Routine network failures flood handled-exception reporting
+
+- **Severity / impact:** Medium; repeated expected transport/HTTP failures create excessive local diagnostic entries and would submit repeated Crashlytics non-fatals in the production provider, obscuring actionable failures.
+- **Status:** Confirmed on-device in the local debug provider and confirmed by source audit; Firebase submission/count not verified.
+- **Screen/test IDs:** Setup 503 (observation), 512/513 (related acceptance checks; not completed); affects network-backed screens.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16, One UI 8.0; `com.retro99.parrot` v0.4.5 (21), debug; source `ffef0a3d` plus uncommitted QA-BUG-0002 changes.
+- **Preconditions:** Launch with a configured media server endpoint that is unreachable while Wi-Fi is enabled and airplane mode is off.
+- **Reproduction:** On 2026-09-26 at approximately 15:39 CEST, cold-start `MainActivity` on serial `RFCWC0SSVDM`; filtered app logcat for the sanitized debug exception marker. Nineteen handled-exception records appeared in approximately 14 seconds, including `ConnectException` / `ErrnoException` causes. No endpoint, URL, account or content data is retained in evidence.
+- **Expected:** Connectivity/timeout failures and ordinary HTTP outcomes produce bounded breadcrumbs and operation outcome events, not one Crashlytics issue per request. Escalate only unexpected handling/recovery failures.
+- **Actual:** `KtorNetworkClient.handleException` unconditionally calls `analytics.logException` for each failed request, including connectivity errors; `handleHttpError` also calls it for normal HTTP responses. The release provider records each call as a Crashlytics non-fatal.
+- **Frequency:** 19 local exception records in this launch; exact rate varies with active requests/retries.
+- **Evidence:** Sanitized excerpt and count: [`case-503-sanitized-diagnostics.txt`](manual-qa-evidence/2026-09-26/case-503-sanitized-diagnostics.txt). Source: `lib/network/implementation/src/commonMain/kotlin/com/retro99/network/implementation/KtorNetworkClient.kt:305-336,364-397`.
+- **Root cause:** Network outcome classification does not gate exception reporting; every failed operation is treated as an unexpected diagnostic exception.
+- **Affected files:** `KtorNetworkClient.kt`, network analytics events/tests (fix pending).
+- **Fix reference / commit:** Pending.
+- **Retest:** NOT RUN. Required: transport offline/timeout and expected HTTP response tests; verify a single outcome event/bounded breadcrumb, no non-fatal for ordinary failures, and one actionable non-fatal only for an injected unexpected handling failure. Firebase verification remains separately blocked.

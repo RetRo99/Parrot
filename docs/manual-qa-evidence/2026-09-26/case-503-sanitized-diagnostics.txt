@@ -1,0 +1,23 @@
+Case 503 — local debug exception sanitization and volume observation
+Run time: 2026-09-26, about 15:39 CEST
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Package/build: com.retro99.parrot 0.4.5 (21), debug; source commit ffef0a3d plus uncommitted QA-BUG-0002 changes
+Action: cold-started MainActivity with Wi-Fi enabled, airplane mode off, and an existing server endpoint unreachable.
+Capture command filtered only the fixed sanitized marker/type names from app-scoped logcat:
+
+```sh
+PID=$(adb -s RFCWC0SSVDM shell pidof com.retro99.parrot | tr -d '\r')
+adb -s RFCWC0SSVDM logcat -d -v threadtime -T '09-26 15:39:32.000' --pid="$PID" \
+  | grep -E 'Exception occurred with message|SanitizedDiagnosticException|Handled failure'
+```
+
+Observed **19** handled-exception records between 15:39:36 and 15:39:46 (approximately 14 seconds). Representative sanitized lines:
+
+```text
+09-26 15:39:36.694 E: Exception occurred with message: Handled exception; free-form context omitted
+09-26 15:39:36.694 E: SanitizedDiagnosticException: Handled failure (Exception)
+09-26 15:39:36.694 E: Caused by: SanitizedDiagnosticException: Handled failure (ConnectException)
+09-26 15:39:36.694 E: Caused by: SanitizedDiagnosticException: Handled failure (ErrnoException)
+```
+
+No request URL, server host, credential, profile, book or file payload was retained. This is local debug logging only; it does not prove Firebase ingestion. The request-failure volume is registered as QA-BUG-0005; test 513's comparative overhead exercise remains NOT RUN.

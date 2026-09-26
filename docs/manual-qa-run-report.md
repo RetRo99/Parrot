@@ -4,18 +4,18 @@
 
 - **Run date:** 2026-09-26 (local device time; timezone not independently verified)
 - **Repository:** `/Users/rokretar/StudioProjects/StoryTellerKMP`
-- **Source commit:** `956ec8a443d2236396c490a3056efdf9a1181e32` (`Implement UI refresh and recap support`)
+- **Source commit:** `ffef0a3d03ca73b4ffcff8cf9a47a243e035d2ac` (`fix(analytics): filter event dimensions [QA-BUG-0001, test 509]`); QA-BUG-0002 changes are currently uncommitted.
 - **Working tree at start:** clean except for the user-provided, untracked `docs/manual-qa-goal.md` and `docs/manual-qa-test-plan.md`; preserve both.
 - **Required physical device:** serial `RFCWC0SSVDM`; model `SM-S921B` (Galaxy S24)
 - **OS:** Android 16 / API 36; One UI 8.0 (device property `ro.build.version.oneui=80500`); build `S921BXXSGDZG1`; security patch 2026-07-05
 - **Display/navigation baseline:** portrait, 1080×2340 px, physical density 480 dpi / override 420 dpi, font scale 1.0, gesture navigation (`navigation_mode=2`)
 - **Power/network/permissions baseline:** battery saver off; airplane mode off; notification permission granted; active network appears Wi‑Fi; app storage volume 65 GB free of 224 GB; other permissions/settings and active profile not yet inventoried
 - **Installed package:** `com.retro99.parrot`, version `0.4.5` (version code `21`), target SDK 36, debuggable, installer reported `null` (ADB/package-manager install source unavailable)
-- **Installed build provenance:** updated from the current QA working tree with `adb -s RFCWC0SSVDM install -r .../androidApp-debug.apk`; package version remains `0.4.5` (21), debuggable, installer `null`. Installed APK SHA-256 `f77dc3563cf2b1828af20628ac89ed9054e3d15a442c6130927f13e1b60eb937` exactly matches the local debug APK. Build inputs are source commit `956ec8a443d2236396c490a3056efdf9a1181e32` plus uncommitted QA-BUG-0001 changes; rebuild/reinstall after committing before finalizing case 496.
-- **Builds attempted from current source:** `./gradlew :androidApp:assembleDebug :androidApp:assembleRelease` — **BUILD SUCCESSFUL**. Release minification emitted missing XML serialization service warnings; release Crashlytics mapping-file task ran. Debug APK SHA-256 `f77dc3563cf2b1828af20628ac89ed9054e3d15a442c6130927f13e1b60eb937`; release APK SHA-256 `020ee5da105c90e901596377ded26003b1c2c0d2962ac1d820c5ca474be6ebbe`.
-- **Verification commands:** `./gradlew :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug :androidApp:assembleRelease` — **BUILD SUCCESSFUL**; Android host unit tests passed. Separate `:lib:analytics:implementation:allTests` failed at iOS test linking because `FirebaseCore` is unavailable in the Xcode toolchain; Android host tests passed independently.
+- **Installed build provenance:** updated in place from the QA working tree; package version remains `0.4.5` (21), debuggable, installer `null`. Installed APK SHA-256 `7ced27f33b538ceca645827faec256f463efe4c806e0faa6f07fed119b193e40` exactly matches the local debug APK. Build inputs are commit `ffef0a3d03ca73b4ffcff8cf9a47a243e035d2ac` plus uncommitted QA-BUG-0002 changes; case 496 still needs a clean post-commit build/reinstall.
+- **Builds attempted from current source:** `./gradlew :androidApp:assembleDebug :androidApp:assembleRelease` — **BUILD SUCCESSFUL**. Release minification emitted missing XML serialization service warnings; Crashlytics mapping task ran. Debug APK SHA-256 `7ced27f33b538ceca645827faec256f463efe4c806e0faa6f07fed119b193e40`; release APK SHA-256 `f5d59bb14fa71c236593b15dc135c4d6f06ee9c2352cb97397eb8c4e848a34a5`; mapping SHA-256 `5810dad882ee18e9d42a483ecbeca41096c020e78f5f921a5a4e493057a9e04e`.
+- **Verification command:** `./gradlew :lib:analytics:implementation:testAndroidHostTest :lib:analytics:implementation:compileKotlinIosSimulatorArm64 :lib:analytics:implementation:compileTestKotlinIosSimulatorArm64 :androidApp:assembleDebug :androidApp:assembleRelease` — **BUILD SUCCESSFUL**; six Android host tests passed; iOS main/test source compilation passed. An earlier aggregate `allTests` attempt could not link the iOS test runner because `FirebaseCore` is unavailable in the Xcode toolchain.
 - **Current visible destination at start:** Reader. A screenshot was briefly captured, found to contain book text, and deleted; no reader-content screenshot is retained.
-- **Firebase QA status:** Debug provider is local-only (`DebugAnalyticsManager`). Firebase-backed release build exists, but is not yet installed/exercised; Firebase Console/DebugView/Crashlytics delivery and symbolication have not been verified.
+- **Firebase QA status:** The user waived Firebase Analytics ingestion verification on 2026-09-26 and accepted visible debug events for app-side Analytics checks. This does **not** prove Firebase delivery; no Firebase ingestion claim will be made. Crashlytics non-fatal delivery and symbolication remain required and unverified. Debug provider is local-only (`DebugAnalyticsManager`).
 
 ## Commands / evidence
 
@@ -43,24 +43,29 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 | Area | Status | Notes |
 |---|---|---|
 | Device selection (495) | PASS | Physical SM-S921B enumerated and all inspected with explicit serial. |
-| Tested build identity (496) | BLOCKED | Installed APK matches current-source debug output, but the build includes uncommitted QA-BUG-0001 changes; clean post-commit build/reinstall still required. |
+| Tested build identity (496) | BLOCKED | Installed APK matches current-source debug output, but the build includes uncommitted QA-BUG-0002 changes; clean post-commit build/reinstall still required. |
 | Device baseline (497) | BLOCKED | Core values recorded; active profile, complete permission/settings inventory and repeatable test fixture still missing. |
 | Fixtures (S2–S5; 498–501) | BLOCKED / partial | No identified server/cloud credentials or controlled media/failure fixtures yet. Device can toggle airplane mode and kill processes; safe low-storage fixture absent. |
 | Labelled log capture (502) | NOT RUN | Timestamp-filtered logcat excerpt captured for case 503; continuous capture was not started. |
-| Debug provider (503) | PASS | Cold-started the installed debug build on Samsung; local events observed. See [`setup-debug-provider-events.txt`](manual-qa-evidence/2026-09-26/setup-debug-provider-events.txt). |
-| Firebase delivery / DebugView / Crashlytics (504–508) | BLOCKED | Firebase-backed release APK built; not installed or executed and no Firebase Console evidence available yet. No controlled corrupt-file fixture identified. |
-| Privacy / duplicate / QA classification (509–511) | BLOCKED / FAIL | QA-BUG-0001 has a fail-closed parameter sanitizer; tests and Samsung debug log pass, but Firebase inspection is blocked. Raw exception context risk QA-BUG-0002 remains. A source-confirmed, suspected user-identity privacy gap (QA-BUG-0003) and the QA traffic exclusion policy remain unverified. |
+| Debug provider (503) | FAIL (diagnostics) / PASS (analytics) | Cold-started debug build; local analytics observed, but 19 sanitized handled-exception records appeared in ~14 seconds for unreachable-server requests (QA-BUG-0005). See both case-503 evidence files. |
+| Firebase Analytics delivery (504–505) | DEFERRED (user waiver) | User accepts debug-provider event visibility for Analytics checks; Firebase ingestion remains unverified and is not claimed. |
+| Crashlytics delivery / symbolication / breadcrumbs (506–508) | BLOCKED | No authorized Firebase Console session, controlled corrupt-file fixture or release-device test. |
+| Privacy / duplicate / QA classification (509–511) | FAIL / BLOCKED | QA-BUG-0001 passes host tests/local debug output. Distinctive payload use is not yet executed; Crashlytics payload inspection is blocked. QA-BUG-0002 sanitized local exception retest passes. Source audit confirms duplicate login reports (QA-BUG-0004); startup confirms network exception flood (QA-BUG-0005). QA-BUG-0003 and production QA-traffic policy remain open. |
 | Offline telemetry / overhead / cleanup (512–514) | NOT RUN | These need an instrumented on-device pass. |
 | Screen groups B–M | NOT RUN | No screen pass has begun. |
 
 ## Blockers and prerequisites
 
 1. Need a repeatable controlled QA account/media fixture set: Storyteller/Audiobookshelf library, Parrot Cloud account, valid/corrupt/large EPUBs and fault-injection fixture.
-2. Need authorized access to Firebase DebugView and Crashlytics for the project configured in this build, plus agreement on QA event exclusion/classification.
+2. Need authorized Firebase Console access for Crashlytics non-fatal delivery/symbolication and an agreed production QA-traffic policy. Firebase Analytics ingestion was waived by the user; no ingestion claim will be made. Opening Console redirects to Google sign-in; no authorized account is available in this browser session (tab `tab_53bffb7c-3a99-4faf-a663-fa33695c06e8`).
 3. Need a safe, explicitly allocated test profile/data set before destructive imports/deletions, low-storage tests or switching the active app build.
 4. Need run-specific continuous/logged evidence capture and complete device/settings baseline before executing screen cases.
 5. Bluetooth/headset fixtures are not confirmed available; those cases will be BLOCKED if reached without the accessory. Authors navigation is conditionally disabled per source documentation and must be confirmed against installed navigation before disposition.
 
+## User-approved verification scope adjustment
+
+On 2026-09-26 the user reported having tested debug event behavior and stated that seeing events in the debug build is sufficient. For Firebase **Analytics** event-delivery checks only, accept local debug-provider visibility and record Firebase ingestion tests 504–505 as DEFERRED by user waiver. Do not label debug logs as Firebase delivery: the current `DebugAnalyticsManager` writes local Kermit logs and does not forward to Firebase. Crashlytics non-fatal delivery/symbolication are separate and remain required unless the user also waives them.
+
 ## Final summary
 
-**IN PROGRESS — no screen signed off.** Setup case 495 and the debug-provider demonstration passed; setup remains incomplete. The analytics parameter sanitizer passed Android host tests, Android debug/release builds and local Samsung log verification. Firebase ingestion is not claimed. QA-BUG-0002 remains open; QA-BUG-0001 still needs Firebase payload verification and a clean post-commit build/retest.
+**IN PROGRESS — no screen signed off.** Setup case 495 passed; case 503 found a diagnostics flood. Six Android host tests and Android debug/release builds pass. The user waived Firebase Analytics ingestion checks; Firebase delivery is not claimed. Crashlytics delivery remains unverified. QA-BUG-0002 is locally retested and awaiting its focused commit; QA-BUG-0005 needs a fix before proceeding.

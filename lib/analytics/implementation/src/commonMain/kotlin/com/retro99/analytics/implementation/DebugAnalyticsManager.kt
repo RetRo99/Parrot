@@ -15,16 +15,18 @@ class DebugAnalyticsManager(
     private val logger = Logger.withTag("čič")
 
     override fun logException(throwable: Throwable, message: String?) {
-        logger.e(throwable) {
-            if (message.isNullOrEmpty()) {
+        val sanitizedThrowable = sanitizeDiagnosticThrowable(throwable)
+        val sanitizedMessage = sanitizeDiagnosticMessage(message)
+        logger.e(sanitizedThrowable) {
+            if (sanitizedMessage.isNullOrEmpty()) {
                 "Exception occurred"
             } else {
-                "Exception occurred with message: $message"
+                "Exception occurred with message: $sanitizedMessage"
             }
         }
         // Also log to file for user sharing (if enabled and not crash-only)
         if (shouldLogHandledExceptionsToFile()) {
-            fileLogger.logException(throwable, message)
+            fileLogger.logException(sanitizedThrowable, sanitizedMessage)
         }
     }
 

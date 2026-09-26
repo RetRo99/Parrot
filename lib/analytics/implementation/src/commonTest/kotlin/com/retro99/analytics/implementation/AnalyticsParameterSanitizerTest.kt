@@ -3,6 +3,7 @@ package com.retro99.analytics.implementation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 
 class AnalyticsParameterSanitizerTest {
 
@@ -69,5 +70,31 @@ class AnalyticsParameterSanitizerTest {
 
         assertEquals(emptyMap(), sanitized)
         assertFalse("profile_name" in sanitized)
+    }
+}
+
+class DiagnosticPayloadSanitizerTest {
+
+    @Test
+    fun removesThrowableAndCauseMessagesButRetainsTypesAndCauseStructure() {
+        val cause = IllegalStateException("private cause path /storage/emulated/0/secret.epub")
+        val original = IllegalArgumentException("private server response: user@example.invalid", cause)
+
+        val sanitized = sanitizeDiagnosticThrowable(original)
+
+        val root = assertIs<SanitizedDiagnosticException>(sanitized)
+        assertEquals("IllegalArgumentException", root.sourceType)
+        assertFalse(sanitized.stackTraceToString().contains("user@example.invalid"))
+        assertFalse(sanitized.stackTraceToString().contains("secret.epub"))
+        val sanitizedCause = assertIs<SanitizedDiagnosticException>(root.cause)
+        assertEquals("IllegalStateException", sanitizedCause.sourceType)
+    }
+
+    @Test
+    fun diagnosticMessageNeverForwardsCallerText() {
+        val sanitized = sanitizeDiagnosticMessage("private profile and /private/file.epub")
+
+        assertEquals("Handled exception; free-form context omitted", sanitized)
+        assertFalse(sanitized.orEmpty().contains("private profile"))
     }
 }
