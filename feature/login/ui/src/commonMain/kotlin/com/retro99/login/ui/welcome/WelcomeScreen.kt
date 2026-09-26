@@ -53,6 +53,7 @@ import org.jetbrains.compose.resources.stringResource
 import resources.icons.Res
 import resources.icons.ic_parrot_logo
 import resources.translations.welcome_build_debug
+import resources.translations.welcome_build_release
 import resources.translations.welcome_feature_audio_description
 import resources.translations.welcome_feature_audio_title
 import resources.translations.welcome_feature_reading_description
@@ -103,16 +104,21 @@ fun WelcomeScreen(
             }
         }
 
-        if (isDebug) {
-            BuildTypeBadge(
-                text = stringResource(StringRes.welcome_build_debug),
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(16.dp),
-            )
-        }
+        val buildBadgeVariant = welcomeBuildBadgeVariant(isDebug)
+        BuildTypeBadge(
+            text = when (buildBadgeVariant) {
+                WelcomeBuildBadgeVariant.Debug -> stringResource(StringRes.welcome_build_debug)
+                WelcomeBuildBadgeVariant.Release -> stringResource(StringRes.welcome_build_release)
+            },
+            color = when (buildBadgeVariant) {
+                WelcomeBuildBadgeVariant.Debug -> MaterialTheme.colorScheme.error
+                WelcomeBuildBadgeVariant.Release -> MaterialTheme.colorScheme.primary
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(16.dp),
+        )
 
         Column(
             modifier = Modifier
