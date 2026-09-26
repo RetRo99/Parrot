@@ -1,0 +1,26 @@
+QA-BUG-0015 source/build/device smoke retest — 2026-09-26
+
+Device and build
+- ADB serial `RFCWC0SSVDM`; Samsung SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation.
+- Source fix commit: `befb812c30cc2fe6ede5162fe6960c6149cab2f2`.
+- Package `com.retro99.parrot`, version 0.4.5 (21), target SDK 36, debuggable.
+- Forced Gradle command: `./gradlew :feature:login:ui:iosSimulatorArm64Test :androidApp:assembleDebug --rerun-tasks --console=plain` — **BUILD SUCCESSFUL** (58 seconds).
+- Local APK SHA-256: `7026af5d51d17e7ee6aad09604e7b6510e63812190de7000513fd57654295693`.
+- APK pulled from the Samsung after install SHA-256: same `7026af5d51d17e7ee6aad09604e7b6510e63812190de7000513fd57654295693`.
+
+Regression coverage and results
+- `persistenceFailureContextUsesPersistenceStageAndSafeReason`: PASS — maps registry persistence to `credentials_persistence` / `local_database_failure`.
+- `failedServerRegistrationRollbackUsesDistinctReason`: PASS — maps failed compensating rollback to `credentials_persistence` / `server_registration_rollback_failed`.
+- Login UI iOS simulator test suite: PASS.
+- Android debug APK assembly: PASS.
+
+Samsung deployment smoke
+- Installed the rebuilt APK on the explicit Samsung serial and launched Parrot.
+- UI hierarchy showed Welcome, DEBUG, Get Started and Browse without account; screenshot: `qa-bug-0015-build-retest-welcome.png`.
+- PID-scoped local debug output showed `Set User ID: null (cleared)`, exactly one successful `app_launch_route_resolved` for Welcome and one `welcome_screen_viewed`. No fatal exception line appeared.
+- This is an installation/normal-startup smoke only. No authentication or persistence failure was induced, and no QA-BUG-0015 failure breadcrumb was observed on-device.
+
+Disposition
+- Source mapping correction and code/build regression tests: PASS.
+- Samsung behavior for an actual failed credential persistence operation: BLOCKED, because no safe registry/preferences write-fault injection fixture is available. Case 753 remains BLOCKED; normal startup is not a substitute.
+- Firebase Crashlytics delivery/context remains unverified; the debug provider only logs locally. Firebase Analytics ingestion is waived and not claimed.

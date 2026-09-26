@@ -94,10 +94,10 @@ Cases 14–36 and Login extensions 515–534, 751–753 (all not yet exercised):
 | 531 | Wrong endpoint response | NOT RUN | NOT RUN | NOT RUN | Malformed response fixture unavailable. |
 | 532 | OAuth callback replay | NOT RUN | NOT RUN | NOT RUN | Callback replay fixture not run. |
 | 533 | OAuth stale/mismatched callback | NOT RUN | NOT RUN | NOT RUN | Stale callback fixture not run. |
-| 534 | Authentication event semantics | NOT RUN | NOT RUN | NOT RUN | Auth attempt/success/failure/cancel/abandon schemas are implemented and sanitizer-tested, but no Samsung outcome sequence has been exercised; source audit QA-BUG-0015 found the persistence-failure breadcrumb stage mismatch, recorded before fix. |
+| 534 | Authentication event semantics | NOT RUN | NOT RUN | NOT RUN | Auth attempt/success/failure/cancel/abandon schemas are implemented and sanitizer-tested, but no Samsung outcome sequence has been exercised. QA-BUG-0015 stage mapping is fixed in `befb812c`; the failure-path device assertion remains blocked with case 753. |
 | 751 | Server-type dropdown dismissals | NOT RUN | NOT RUN | NOT RUN | Outside-tap/system-Back variants pending; appended to catalogue. |
 | 752 | URL help tooltip dismissals | NOT RUN | NOT RUN | NOT RUN | Button/outside/system-Back variants pending; appended to catalogue. |
-| 753 | Server/credential persistence failure | BLOCKED | BLOCKED | BLOCKED | QA-BUG-0013 implementation and regression tests are committed (`dc005fa5`), but no safe registry/preferences fault-injection fixture is available on the Samsung. QA-BUG-0015 separately records a source-confirmed failure-breadcrumb classification mismatch, identified before its fix. No failure was induced; normal sign-in does not substitute. |
+| 753 | Server/credential persistence failure | BLOCKED | BLOCKED | BLOCKED | QA-BUG-0013 implementation/tests (`dc005fa5`) and QA-BUG-0015 diagnostic mapping fix/tests (`befb812c`) are committed. No safe registry/preferences fault-injection fixture is available on the Samsung. No failure was induced; normal sign-in does not substitute. |
 
 ### Login instrumentation preflight (source/build verification only)
 
