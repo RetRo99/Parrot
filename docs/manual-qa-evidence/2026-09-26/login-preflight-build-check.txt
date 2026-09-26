@@ -1,0 +1,41 @@
+Login instrumentation build preflight — 2026-09-26
+
+Device
+- Explicit ADB serial: RFCWC0SSVDM
+- Model: SM-S921B (Samsung Galaxy S24)
+- Android 16 / API 36; One UI 8.0 (`ro.build.version.oneui=80500`)
+- Navigation mode: gesture (`settings secure navigation_mode=2`)
+- Locale: en-GB (no locale changes made for this preflight)
+
+Installed build
+- Package: com.retro99.parrot
+- Version: 0.4.5 (versionCode 21), target SDK 36, debuggable
+- Source HEAD: f8de389005c90e74d61577b568967d540eb1a501
+- Local APK: androidApp/build/outputs/apk/debug/androidApp-debug.apk
+- Local APK SHA-256: ca6a342c1aafa9c1677d9db149f9c1e1fac46deff27bd54b3d8a4077e88a3249
+- APK pulled from the Samsung after install has the same SHA-256.
+- Device package metadata reports versionName=0.4.5, versionCode=21.
+
+Relevant commits in this build
+- 31ed740d3cbe8ffaf58ae49ff7706b90bcd1d22c — clear account-derived analytics identity
+- d97de1b8e2a7b5f84d203bfac14bf18f639b512f and 51846059fc47d0ed9f14406c47a38698f353f253 — centralize unexpected Login exception reporting
+- b62deb359afef44a59b4423069e1de2693cbdc84 — Login route/outcome events and operation breadcrumbs
+- dc005fa5f61d431fd2ac56dd739771233dc4d4c8 — recover from local credential persistence failure
+- f8de389005c90e74d61577b568967d540eb1a501 — atomic single-flight Login submission gate
+
+Verification (all forced task executions completed successfully)
+- `:lib:analytics:implementation:testAndroidHostTest`
+- `:feature:login:ui:iosSimulatorArm64Test`
+- `:feature:login:data:iosSimulatorArm64Test`
+- `:lib:server:implementation:iosSimulatorArm64Test`
+- `:lib:server-storyteller:iosSimulatorArm64Test`
+- `:lib:server-audiobookshelf:iosSimulatorArm64Test`
+- `:androidApp:assembleDebug`
+- Test/build output logs were kept in the approved local OpenCode temp directory; no credential or user payload is included in this evidence.
+
+Observed state before the ordered case-2 run
+- App launched to Welcome on the latest hash-matched build. UI hierarchy exposed DEBUG, Get Started, and Browse without account. Screenshot: `login-preflight-welcome.png`.
+- Fresh-process identity-clear check on this same build: force-stop/relaunch `com.retro99.parrot`, then inspect only PID 26856. Local debug output showed one `Set User ID: null (cleared)`, one `app_launch_route_resolved` with `screen=welcome`/`outcome=success`, and one `welcome_screen_viewed`; no fatal line appeared. This is local-provider evidence only, not Firebase delivery.
+- No Login form submission or demo credential was used during this preflight. Case 2 remains NOT RUN at this point.
+- QA-BUG-0013 source regression tests cover save failure, rollback attempt/failure classification, success and cancellation; Samsung failure injection for case 753 is BLOCKED because there is no safe registry/preferences fault-injection fixture. No failure was fabricated.
+- Firebase Analytics ingestion is waived and not claimed. Crashlytics Console delivery/symbolication remains blocked by unavailable authorized Console access.

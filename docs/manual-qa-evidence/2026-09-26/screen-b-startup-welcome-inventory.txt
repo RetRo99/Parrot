@@ -34,12 +34,16 @@ Login screen route and control inventory (source-audited; Samsung action pass pe
 - Error content: inline error container appears on failed login and remains until a new submission clears it; no explicit dismiss or retry button (retry by resubmitting). Cases 23–24, 26–27, 30, 525, 531, 534.
 - No additional dialogs/sheets are present in LoginScreen. Android keyboard is a system surface and must be tested for Next/Done, Back-to-dismiss, overlap and rotation.
 
-Login instrumentation/failure map from source audit
-- Existing `login_attempted`, `login_succeeded`, `login_failed` events exist; `login_attempted` currently supplies only `server_url_hash`, which is intentionally removed by the provider allowlist. Outcomes omit bounded server type/auth method/retry/cancel dimensions; no Login screen exposure event or Login operation breadcrumbs are emitted. This is QA-BUG-0012 and overlaps repository-wide QA-BUG-0006; Firebase Analytics delivery is waived, local-provider behavior remains the app-side check.
-- Repository `onFailure` logs exceptions and LoginViewModel also calls `error.log`; for errors whose `shouldReportException` is true, one failed operation can produce two non-fatals. Repository logging is unconditional for expected network/auth outcomes. See QA-BUG-0004.
-- After authenticator success, `LoginDataRepository` calls `ServerRegistry.addServer` and `saveCredentials` inside a plain `flatMap` transform. A thrown persistence exception escapes; LoginViewModel's `viewModelScope.launch` has no catch/finally around the operation, so loading may remain active and the exception may reach the uncaught coroutine handler. New case 753 and QA-BUG-0013 cover this failure path.
-- Login success currently sets Firebase user identity to username/server-URL hashes (QA-BUG-0003); fix/verification is required before entering the demo credentials.
-- Source does not yet guard repeated sign-in/OAuth intents while `isLoading`; rapid submit race remains a suspected case-526 risk pending focused test (QA-BUG-0014).
+Login instrumentation/failure map (source changes committed; Samsung action pass pending)
+- `login_screen_viewed`: emitted once per actual visible Login destination with bounded source/entry-point fields. `LoginNavigation` keys the callback to the top destination, not general recomposition.
+- `login_attempted`: accepted credentials/OAuth attempt; parameters are screen, action, server type, auth method, retry Boolean and `outcome=started`. No URL, username, password, token or correlation ID is in Analytics parameters.
+- `login_succeeded`: emitted only after authentication and local credential persistence both succeed; includes server type, method, `outcome=succeeded` and elapsed milliseconds.
+- `login_failed`, `login_cancelled` and `login_abandoned`: distinct terminal outcomes. Explicit OAuth cancellation has a typed cancellation flag; leaving during an active operation records abandonment. `oauth_login_step_failed` remains a bounded OAuth-stage event.
+- Operation breadcrumbs carry screen/action/operation/stage/outcome, server type and a diagnostic-only correlation ID at start and terminal outcome. Unexpected failures are reported once at the Login recovery boundary. Expected credential rejection and connectivity/cancellation outcomes are not Crashlytics non-fatals. This is QA-BUG-0012; Analytics observation remains local-only under the user's waiver.
+- QA-BUG-0004 lower-layer exception reporters were removed; expected HTTP/transport outcomes are classified, with UI as the single unexpected-failure report boundary. Unit/build checks pass; Samsung failure-path counts and Crashlytics delivery are not yet verified.
+- QA-BUG-0013 is fixed in source to roll back in-memory registry/credential changes, compensate server registration, preserve cancellation and return a recoverable Login failure. A safe device write-fault fixture is unavailable, so new case 753 is BLOCKED for functional/runtime verification.
+- QA-BUG-0003's account/URL-derived Firebase identity was removed; the committed cold-start verification confirms provider identity clears on startup. A successful Login identity-clear check is still pending.
+- QA-BUG-0014's credentials/OAuth submission gate is committed and has a regression test. Samsung rapid-submit/delayed-network retest under case 526 remains pending; the prior source-audit risk is not closed by source inspection alone.
 
 States and exits
 - Loading: Splash is the startup loading route; case 471. Welcome has no loading indicator.

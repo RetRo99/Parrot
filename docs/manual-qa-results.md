@@ -20,8 +20,8 @@ Run manifest: [manual-qa-run-report.md](manual-qa-run-report.md). All cases begi
 | 506 | Controlled non-fatal delivery | BLOCKED | N-A (Crashlytics case) | BLOCKED | Controlled fixture and Crashlytics Console evidence unavailable; no non-fatal was deliberately submitted. |
 | 507 | Optimized-build symbolication | BLOCKED | N-A (Crashlytics case) | BLOCKED | Release mapping generated; no uploaded/symbolicated controlled issue verified. |
 | 508 | Breadcrumb correlation | BLOCKED | N-A (diagnostic case) | BLOCKED | No labelled Books → Detail → Reader controlled failure run. |
-| 509 | Sensitive-data inspection | BLOCKED | BLOCKED (distinctive payload exercise not run) | BLOCKED (Crashlytics delivery inspection) | QA-BUG-0001 source issue fixed with a provider-boundary allowlist; host tests and local debug output pass. Firebase Analytics ingestion is waived, but distinctive user text was not exercised. QA-BUG-0002 sanitizer passes locally; QA-BUG-0003 remains suspected. |
-| 510 | Exception deduplication | NOT RUN | N-A (diagnostic case) | FAIL (source audit; runtime not run) | Login failure is reported by both `LoginDataRepository` and `LoginViewModel` (QA-BUG-0004); runtime non-fatal count is unverified. QA-BUG-0002 exception context fix is in progress. |
+| 509 | Sensitive-data inspection | BLOCKED | BLOCKED (distinctive payload exercise not run) | BLOCKED (Crashlytics delivery inspection) | QA-BUG-0001 provider allowlist and QA-BUG-0002 diagnostic sanitizer pass locally. QA-BUG-0003 identity derivation was removed and startup clear observed on Samsung; successful Login payload and distinctive text are not yet exercised. Firebase Analytics ingestion is waived. |
+| 510 | Exception deduplication | NOT RUN | N-A (diagnostic case) | BLOCKED (Firebase/non-fatal runtime count unavailable) | QA-BUG-0004 duplicate reporters were removed in `d97de1b8` and `51846059`; forced Login/authenticator tests/build pass. Samsung wrong-credential/transport run and Crashlytics count are still pending/blocked. |
 | 511 | QA traffic classification | BLOCKED | BLOCKED | N-A (reporting policy case) | No agreed QA exclusion policy or build/environment marker found in the inspected reporting path; Firebase runtime remains unverified. |
 | 512 | Offline telemetry resilience | NOT RUN | NOT RUN | NOT RUN | Network was online; no offline telemetry exercise. |
 | 513 | Logging overhead | NOT RUN | NOT RUN | NOT RUN | No comparative timed/scroll/playback test. |
@@ -60,8 +60,8 @@ Cases 14–36 and Login extensions 515–534, 751–753 (all not yet exercised):
 | 19 | Password masking | NOT RUN | NOT RUN | NOT RUN | Password field not exercised. |
 | 20 | Show/hide password | NOT RUN | NOT RUN | NOT RUN | Visibility toggle not exercised. |
 | 21 | IME Sign-in action | NOT RUN | NOT RUN | NOT RUN | Valid-form submit via keyboard not exercised. |
-| 22 | Successful sign-in (credentials) | NOT RUN | NOT RUN | NOT RUN | Demo credential available, but no login attempted before Login instrumentation/privacy fixes. |
-| 23 | Wrong credentials | NOT RUN | NOT RUN | NOT RUN | No controlled rejection attempted; QA-BUG-0004 duplicate/non-fatal behavior remains open. |
+| 22 | Successful sign-in (credentials) | NOT RUN | NOT RUN | NOT RUN | Demo sign-in has not yet been attempted on the latest instrumentation build; use only in Parrot UI. QA-BUG-0003 identity clear and QA-BUG-0013 normal success branch remain to verify on-device. |
+| 23 | Wrong credentials | NOT RUN | NOT RUN | NOT RUN | No rejection attempted yet. QA-BUG-0004 reporter centralization is source/test verified; Samsung outcome and diagnostics path remain pending. |
 | 24 | Network error on sign-in | NOT RUN | NOT RUN | NOT RUN | Offline submit/recovery not exercised. |
 | 25 | OAuth happy path | NOT RUN | NOT RUN | NOT RUN | Browser/app handoff not exercised. |
 | 26 | OAuth cancelled | NOT RUN | NOT RUN | NOT RUN | Cancellation path not exercised. |
@@ -86,7 +86,7 @@ Cases 14–36 and Login extensions 515–534, 751–753 (all not yet exercised):
 | 523 | Login keyboard Back | NOT RUN | NOT RUN | NOT RUN | IME dismissal and subsequent navigation Back pending. |
 | 524 | Login from Add Server Back | NOT RUN | NOT RUN | NOT RUN | Return-to-Servers path not exercised. |
 | 525 | Login editing after rejection | NOT RUN | NOT RUN | NOT RUN | Rejection/edit/retry not exercised. |
-| 526 | Login submit race | NOT RUN | NOT RUN | NOT RUN | No delayed repeated submit; QA-BUG-0014 suspected from source audit. |
+| 526 | Login submit race | NOT RUN | NOT RUN | NOT RUN | Atomic single-flight gate is committed (`f8de3890`) and Login regression tests/debug build pass; no Samsung rapid submit or controlled delayed endpoint run yet. QA-BUG-0014 remains suspected pending device retest. |
 | 527 | Login Back while loading | NOT RUN | NOT RUN | NOT RUN | No pending request/leave/late-callback test. |
 | 528 | Switch server type after input | NOT RUN | NOT RUN | NOT RUN | Input retention/request type not tested. |
 | 529 | Clipboard and whitespace | NOT RUN | NOT RUN | NOT RUN | No whitespace/clipboard interaction. |
@@ -97,7 +97,20 @@ Cases 14–36 and Login extensions 515–534, 751–753 (all not yet exercised):
 | 534 | Authentication event semantics | NOT RUN | NOT RUN | NOT RUN | Auth event/schema fixes pending; no outcome sequence exercised. |
 | 751 | Server-type dropdown dismissals | NOT RUN | NOT RUN | NOT RUN | Outside-tap/system-Back variants pending; appended to catalogue. |
 | 752 | URL help tooltip dismissals | NOT RUN | NOT RUN | NOT RUN | Button/outside/system-Back variants pending; appended to catalogue. |
-| 753 | Server/credential persistence failure | NOT RUN | NOT RUN | NOT RUN | No safe local persistence fault fixture; QA-BUG-0013 source defect remains open. |
+| 753 | Server/credential persistence failure | BLOCKED | BLOCKED | BLOCKED | QA-BUG-0013 implementation and regression tests are committed (`dc005fa5`), but no safe registry/preferences fault-injection fixture is available on the Samsung. No failure was induced; normal sign-in does not substitute. |
+
+### Login instrumentation preflight (source/build verification only)
+
+| Signal | Emission boundary and safe fields | Verification before UI pass |
+|---|---|---|
+| `login_screen_viewed` | Actual visible Login route; source screen and entry point | Auth Analytics sanitizer tests PASS; Samsung exposure still NOT RUN |
+| `login_attempted` | Accepted credentials/OAuth submit; server type, method, retry, started outcome | Sanitizer tests PASS; Samsung sequence still NOT RUN |
+| `login_succeeded` | Only after auth and local credential persistence; method/server type/outcome/duration | Source boundary PASS; Samsung sign-in still NOT RUN |
+| `login_failed` / `login_cancelled` / `login_abandoned` | Distinct terminal states and bounded reason codes | Schema sanitizer tests PASS; device outcomes still NOT RUN |
+| `oauth_login_step_failed` | Bounded Storyteller OAuth exchange stage and status code | Existing name retained; Samsung OAuth path NOT RUN |
+| Login diagnostics | Typed start/stage/terminal breadcrumbs with diagnostic-only correlation ID; one unexpected report at UI boundary | Unit tests/build PASS; local Samsung failure breadcrumbs and Crashlytics delivery NOT RUN/BLOCKED |
+
+All case-level Analytics statuses below remain NOT RUN until observed on the Samsung. Debug provider evidence is local-only; Firebase Analytics ingestion is waived and never inferred from local logs. Crashlytics delivery remains required and blocked by unavailable authorized Console access.
 
 ## Screen groups C–M
 
