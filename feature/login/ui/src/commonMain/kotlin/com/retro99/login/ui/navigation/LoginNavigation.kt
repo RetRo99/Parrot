@@ -22,6 +22,14 @@ fun LoginNavigation(
     viewModel: LoginNavigationViewModel = koinViewModel { parametersOf(startAtLogin) },
 ) {
     BaseScreen(viewModel = viewModel) { state, intentDispatcher ->
+        LaunchedEffect(state.backStack.lastOrNull()) {
+            val visibleDestination = state.backStack.lastOrNull() ?: return@LaunchedEffect
+            viewModel.onDestinationVisible(
+                destination = visibleDestination,
+                source = state.backStack.getOrNull(state.backStack.lastIndex - 1),
+            )
+        }
+
         LaunchedEffect(state.skipLoginComplete) {
             if (state.skipLoginComplete) {
                 onLoginSuccess()
@@ -72,4 +80,3 @@ fun LoginNavigation(
         )
     }
 }
-

@@ -5,6 +5,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import com.retro99.analytics.api.DiagnosticContext
+import com.retro99.analytics.api.AuthAnalyticsEvent
 
 class AnalyticsParameterSanitizerTest {
 
@@ -76,6 +77,38 @@ class AnalyticsParameterSanitizerTest {
                 "outcome" to "success",
             ),
             sanitized,
+        )
+    }
+
+    @Test
+    fun welcomeEventsRetainOnlyBoundedRouteAndOutcomeDimensions() {
+        val viewed = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.WelcomeViewed(
+                sourceScreen = "splash",
+                entryPoint = "app_launch",
+            ).parameters,
+        )
+        val attempted = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.WelcomeActionAttempted("get_started").parameters,
+        )
+        val completed = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.WelcomeActionCompleted(
+                action = "browse_without_account",
+                outcome = "succeeded",
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf("screen" to "welcome", "source_screen" to "splash", "entry_point" to "app_launch"),
+            viewed,
+        )
+        assertEquals(
+            mapOf("screen" to "welcome", "action" to "get_started", "outcome" to "started"),
+            attempted,
+        )
+        assertEquals(
+            mapOf("screen" to "welcome", "action" to "browse_without_account", "outcome" to "succeeded"),
+            completed,
         )
     }
 

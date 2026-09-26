@@ -141,6 +141,41 @@ sealed interface BookAnalyticsEvent : AnalyticsEvent {
  */
 sealed interface AuthAnalyticsEvent : AnalyticsEvent {
 
+    data class WelcomeViewed(
+        val sourceScreen: String,
+        val entryPoint: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "welcome_screen_viewed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "welcome",
+            "source_screen" to sourceScreen,
+            "entry_point" to entryPoint,
+        )
+    }
+
+    data class WelcomeActionAttempted(
+        val action: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "welcome_action_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "welcome",
+            "action" to action,
+            "outcome" to "started",
+        )
+    }
+
+    data class WelcomeActionCompleted(
+        val action: String,
+        val outcome: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "welcome_action_completed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "welcome",
+            "action" to action,
+            "outcome" to outcome,
+        )
+    }
+
     data class LoginAttempted(
         val serverUrlHash: String,
     ) : AuthAnalyticsEvent {
