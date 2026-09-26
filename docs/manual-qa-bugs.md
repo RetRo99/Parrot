@@ -121,6 +121,23 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Fix reference / commit:** Added shared atomic submission gate, released on recoverable failures, plus a retry-after-failure regression test. Commit `f8de389005c90e74d61577b568967d540eb1a501`.
 - **Retest:** PASS for forced Login iOS simulator tests and Android debug assembly; Samsung delayed-response rapid submit remains NOT RUN pending case 526 and a controlled slow endpoint. Because the original race was only suspected, keep runtime disposition open until that check.
 
+## QA-BUG-0015 — Login credential-persistence failure breadcrumb is mislabeled as authentication
+
+- **Severity / impact:** Low; the user receives the intended recoverable Login error, but a handled local persistence failure is attributed to remote authentication in the preceding breadcrumb, making failure-path diagnosis less reliable.
+- **Status:** CONFIRMED by source audit; no persistence failure has been injected on-device. Fix not yet applied.
+- **Screen/test IDs:** Login cases 22, 25, 34, 36, 534 and 753; diagnostic setup 506, 508 and 510.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16/API 36, One UI 8.0; package `com.retro99.parrot` v0.4.5 (21), debug; source at `0c94e85e3f116fb68dfc4f7da323a8e6aab3cba3`, installed APK SHA-256 `ca6a342c1aafa9c1677d9db149f9c1e1fac46deff27bd54b3d8a4077e88a3249`.
+- **Preconditions:** Authentication succeeds remotely, then `ServerRegistry.addServer` or credential persistence returns the recoverable `AppError.DatabaseError` created by `persistLoginCredentials`.
+- **Exact reproduction:** Source trace: `persistLoginCredentials` maps local registration/credential-write exceptions to `AppError.DatabaseError`; `LoginViewModel.failLoginAttempt` then emits a terminal diagnostic breadcrumb with `stage="authentication"` and `reasonCode="database_failure"` for every non-cancellation failure. The same operation's Crashlytics exception context in `LoginFailureDiagnostics` correctly uses `stage="credentials_persistence"`, so breadcrumb and issue context disagree.
+- **Expected:** Emit the failure breadcrumb with `stage="credentials_persistence"` and a bounded persistence reason (`local_database_failure` or `server_registration_rollback_failed`), aligned with the single exception report. Keep ordinary auth rejection/network/cancellation classifications unchanged.
+- **Actual:** The failed operation is represented as an authentication-stage/database_failure breadcrumb, while the exception context identifies credential persistence.
+- **Frequency:** Every caught persistence error while storing a successful credentials/OAuth login.
+- **Evidence:** Source at `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/login/LoginViewModel.kt` (`failLoginAttempt`) and `LoginFailureDiagnostics.kt`; report-time device fault fixture is unavailable and has not been fabricated.
+- **Root cause:** Terminal breadcrumb context uses the generic authentication stage and Analytics error bucket instead of operation-stage/reason mapping for `DatabaseError`.
+- **Affected files:** Login UI ViewModel and Login failure diagnostics tests.
+- **Fix reference / commit:** Pending.
+- **Retest:** NOT RUN. Add focused mapping tests, force Login/UI tests and Android assembly, then exercise a controlled Samsung case-753 failure if a safe fixture becomes available. No fix may be claimed on-device without that retest.
+
 ## QA-BUG-0005 — Routine network failures flood handled-exception reporting
 
 - **Severity / impact:** Medium; repeated expected transport/HTTP failures create excessive local diagnostic entries and would submit repeated Crashlytics non-fatals in the production provider, obscuring actionable failures.

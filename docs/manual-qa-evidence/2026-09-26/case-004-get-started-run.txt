@@ -1,0 +1,31 @@
+Case 4 — Get Started route to Login — Samsung, 2026-09-26
+
+Build/device
+- Samsung serial RFCWC0SSVDM, model SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation, locale en-GB.
+- Package com.retro99.parrot 0.4.5 (21), debug, source commit f8de389005c90e74d61577b568967d540eb1a501.
+- Local and Samsung-pulled APK SHA-256 ca6a342c1aafa9c1677d9db149f9c1e1fac46deff27bd54b3d8a4077e88a3249.
+
+Preconditions and actual steps
+- Latest hash-matched build was at Welcome with no Login form values.
+- Tapped Get Started once (used as the required Login route precondition for case 2).
+- Login rendered with Sign In title, Storyteller server type selected, URL field initialized to `https://`, empty username/password fields, disabled Sign In and disabled Continue in browser actions, and a toolbar Back affordance.
+- No credentials were entered; no authentication request was submitted.
+
+Expected / actual
+- Expected: Login screen opens with server-type selection.
+- Actual: Login screen opened and server-type selection was visible; no crash or blank route.
+- Functional: PASS.
+- Analytics: PASS (local debug provider only): exactly one `welcome_action_attempted` `{screen=welcome, action=get_started, outcome=started}`, one `welcome_action_completed` `{screen=welcome, action=get_started, outcome=succeeded}`, and one `login_screen_viewed` `{screen=login, source_screen=welcome, entry_point=get_started}` in PID 26856.
+- Diagnostics: PASS (local debug provider only): one bounded Login route-visible breadcrumb with source `welcome`, entry `get_started`, stage `visible`, outcome `succeeded`; no failure was induced.
+- Firebase Analytics delivery is not claimed. Crashlytics delivery was not exercised.
+
+Evidence
+- UI screenshot with empty fields: `case-004-get-started-login.png`.
+- PID-scoped sanitized local event/breadcrumb excerpt is preserved below.
+
+```text
+D/čič (26856): Analytics Event: welcome_action_attempted | Parameters: {screen=welcome, action=get_started, outcome=started}
+D/čič (26856): Analytics Event: welcome_action_completed | Parameters: {screen=welcome, action=get_started, outcome=succeeded}
+D/čič (26856): Analytics Event: login_screen_viewed | Parameters: {screen=login, source_screen=welcome, entry_point=get_started}
+D/čič (26856): Diagnostic breadcrumb: diagnostic_context screen=login source_screen=welcome entry_point=get_started action=screen_view operation=login_route stage=visible outcome=succeeded
+```
