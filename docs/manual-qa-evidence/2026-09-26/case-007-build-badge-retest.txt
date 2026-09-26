@@ -1,0 +1,26 @@
+Case 7 — Welcome build badge, debug and release variants — PASS after QA-BUG-0020 fix — 2026-09-26
+
+Device
+- Physical Samsung serial `RFCWC0SSVDM`; SM-S921B, Android 16/API 36, One UI 8.0, build `S921BXXSGDZG1`; portrait 1080×2340, gesture navigation.
+
+Fix/build identity
+- The pre-fix Samsung failure (release build showed neither badge) remains recorded in [case-007-release-badge-run.txt](case-007-release-badge-run.txt) and [case-007-release-welcome.png](case-007-release-welcome.png). QA-BUG-0020 was documented before any source change.
+- The retest build was assembled from source tree based on discovery commit `c958d07cdd2db65533f1c519f23dead14a33002a` plus the QA-BUG-0020 badge fix, committed as `e572e53e468d4add814494ecbdcc2d3f3d22922b` (the build inputs match that commit).
+- Package `com.retro99.parrot`, version 0.4.5 (21), target SDK 36. The release build is minified, Firebase-configured and signed by the fallback Android debug certificate; release and debug signer SHA-256 is `1ca8cd201b1372d06d1fad8b82213abc50bf955678b078e3368cc1b6d0a4cf36`.
+- Release APK SHA-256 (local and Samsung-pulled): `d2e97bc8398305705c8e25b0006c6608db52bc93f95febf72906e84df09480f2`.
+- Debug APK SHA-256 (local and Samsung-pulled): `eff1d63323f0ffbf7ee3af12cf2dff2b5608e065120e82734ded01a98178fbbe`.
+- Both variants were installed in-place with `adb -s RFCWC0SSVDM install -r`; no app data was cleared. On debug install, `dumpsys package` confirmed `DEBUGGABLE`; the release candidate manifest has no debuggable attribute (false by default). The package version remained 0.4.5/code 21.
+
+Steps and result
+1. Built release using `./gradlew :androidApp:assembleRelease`, hash-verified it locally, installed it over the existing Parrot package without clearing data, pulled the installed APK and confirmed its SHA-256 matched.
+2. Force-stopped only Parrot and launched `MainActivity` to Welcome. The non-debuggable release screen showed **RELEASE** at top right and no DEBUG marker. Screenshot: [`case-007-release-welcome-retest.png`](case-007-release-welcome-retest.png).
+3. Built debug using `./gradlew :androidApp:assembleDebug`, installed it in place without clearing data, pulled the installed APK and confirmed its SHA-256 matched.
+4. Launched `MainActivity` to Welcome. The debuggable build showed **DEBUG** at top right and no RELEASE marker. Screenshot: [`case-007-debug-welcome-retest.png`](case-007-debug-welcome-retest.png).
+
+Results
+- **Functional: PASS** — both variants display exactly their expected badge; neither displays the other variant's badge. Welcome and its Get Started/guest controls remained visible. This is the post-fix result; the earlier release FAIL is retained in its own evidence and QA-BUG-0020 history.
+- **Analytics: N-A for static badge verification.** The debug Welcome exposure produced one local `welcome_screen_viewed` event and one visible breadcrumb (PID 28075); Firebase Analytics ingestion was not checked. The release Firebase screen-view event was not inspected or claimed.
+- **Diagnostics: N-A for static badge verification.** No runtime failure occurred, so no Crashlytics non-fatal was expected; no fatal marker appeared. In the release process PID 26744, Crashlytics initialized but its settings request again failed; no delivery/symbolication claim is made. The failure is recorded in the earlier case-7 run evidence and remains a separate blocker.
+- **Automated checks:** `:feature:login:ui:iosSimulatorArm64Test` passed; the added `WelcomeBuildBadgeVariantTest` reports 2 tests, 0 failures/errors. `:androidApp:assembleRelease` and `:androidApp:assembleDebug` both succeeded. R8 again warned about `nl.adaptivity.xmlutil.util.SerializationProvider` service classes; no reader/XML operation was exercised here, so that release warning remains a note for the Reader pass.
+
+No unrelated app, user data, device-wide setting or account was changed. The Samsung is currently on the hash-matched debug variant for local instrumentation and upcoming cases.
