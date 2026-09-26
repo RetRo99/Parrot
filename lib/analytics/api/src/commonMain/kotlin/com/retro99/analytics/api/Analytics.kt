@@ -7,6 +7,13 @@ interface Analytics {
      */
     fun logException(throwable: Throwable, message: String?)
 
+    /** Reports an unexpected failure with structured, bounded context in diagnostic breadcrumbs. */
+    fun logException(throwable: Throwable, context: DiagnosticContext) {
+        // Preserve source compatibility for alternate providers. Production/debug providers
+        // override this overload so the typed context is validated and retained.
+        logException(throwable, null)
+    }
+
     /**
      * Logs an analytics event for tracking user behavior and app usage.
      *

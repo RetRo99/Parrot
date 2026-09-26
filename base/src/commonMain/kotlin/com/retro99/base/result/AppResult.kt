@@ -7,6 +7,7 @@ import com.github.michaelbull.result.annotation.UnsafeResultValueAccess
 import com.github.michaelbull.result.asErr
 import com.github.michaelbull.result.onFailure
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.StringResource
 import resources.translations.error_api_generic
@@ -155,6 +156,14 @@ inline infix fun <V, U> AppResult<V>.mapCatching(transform: (V) -> U): AppResult
  * @return The same AppError for chaining
  */
 fun AppError.log(analytics: Analytics, context: String): AppError {
+    if (shouldReportException) {
+        analytics.logException(toThrowable(), context)
+    }
+    return this
+}
+
+/** Logs an unexpected error with validated structured context and returns it unchanged. */
+fun AppError.log(analytics: Analytics, context: DiagnosticContext): AppError {
     if (shouldReportException) {
         analytics.logException(toThrowable(), context)
     }

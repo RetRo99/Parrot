@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import com.retro99.analytics.api.DiagnosticContext
 
 class AnalyticsParameterSanitizerTest {
 
@@ -119,7 +120,40 @@ class DiagnosticPayloadSanitizerTest {
     fun diagnosticMessageNeverForwardsCallerText() {
         val sanitized = sanitizeDiagnosticMessage("private profile and /private/file.epub")
 
-        assertEquals("Handled exception; free-form context omitted", sanitized)
+        assertEquals("Handled failure; free-form context omitted", sanitized)
         assertFalse(sanitized.orEmpty().contains("private profile"))
+    }
+
+    @Test
+    fun retainsBoundedStructuredDiagnosticContextAndDropsUnsafeValues() {
+        val context = sanitizeDiagnosticContext(
+            DiagnosticContext(
+                screen = "books_library",
+                action = "refresh",
+                operation = "load_books",
+                stage = "remote_fetch",
+                outcome = "failed",
+                reasonCode = "connection_failed",
+                serverType = "audiobookshelf",
+                correlationId = "8b64e753-439e-4428-93c8-b39252d30a19",
+            ),
+        )
+
+        assertEquals(
+            "diagnostic_context screen=books_library action=refresh operation=load_books " +
+                "stage=remote_fetch outcome=failed reason_code=connection_failed " +
+                "server_type=audiobookshelf correlation_id=8b64e753-439e-4428-93c8-b39252d30a19",
+            context,
+        )
+    }
+
+    @Test
+    fun diagnosticContextRejectsFreeFormFieldsAndUnknownKeys() {
+        val sanitized = sanitizeDiagnosticMessage(
+            "diagnostic_context screen=books_library reason_code=private/path profile_name=private",
+        )
+
+        assertEquals("diagnostic_context screen=books_library", sanitized)
+        assertFalse(sanitized.orEmpty().contains("private"))
     }
 }

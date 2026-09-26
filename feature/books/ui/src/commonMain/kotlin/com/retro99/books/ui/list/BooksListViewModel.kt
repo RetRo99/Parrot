@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.analytics.api.BooksListAnalyticsEvent
 import com.retro99.analytics.api.NavigationAnalyticsEvent
@@ -291,7 +292,17 @@ class BooksListViewModel(
                         }
                     }
                     .onFailure { error ->
-                        error.log(analytics, "BooksViewModel: Failed to load books")
+                        error.log(
+                            analytics,
+                            DiagnosticContext(
+                                screen = "books_library",
+                                action = "load",
+                                operation = "load_books",
+                                stage = "library_query",
+                                outcome = "failed",
+                                reasonCode = "books_load_failed",
+                            ),
+                        )
                         updateState {
                             it.copy(
                                 isLoading = false,
@@ -320,7 +331,17 @@ class BooksListViewModel(
                             errorType = error::class.simpleName ?: "unknown",
                         ),
                     )
-                    error.log(analytics, "BooksViewModel: Failed to import book")
+                    error.log(
+                        analytics,
+                        DiagnosticContext(
+                            screen = "books_library",
+                            action = "import",
+                            operation = "import_book",
+                            stage = "import_processing",
+                            outcome = "failed",
+                            reasonCode = "book_import_failed",
+                        ),
+                    )
                 }
             updateState { it.copy(isImporting = false) }
         }

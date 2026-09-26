@@ -2,6 +2,7 @@ package com.retro99.analytics.implementation
 
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AnalyticsEvent
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.FileLogger
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
@@ -16,8 +17,18 @@ class AnalyticsManager(
 ) : Analytics {
 
     override fun logException(throwable: Throwable, message: String?) {
+        reportException(throwable, sanitizeDiagnosticMessage(message))
+    }
+
+    override fun logException(throwable: Throwable, context: DiagnosticContext) {
+        reportException(
+            throwable,
+            sanitizeDiagnosticContext(context) ?: "Handled failure; no valid structured context",
+        )
+    }
+
+    private fun reportException(throwable: Throwable, sanitizedMessage: String?) {
         val sanitizedThrowable = sanitizeDiagnosticThrowable(throwable)
-        val sanitizedMessage = sanitizeDiagnosticMessage(message)
         // Log to Crashlytics
         sanitizedMessage?.let { firebaseCrashlytics.log(it) }
         firebaseCrashlytics.recordException(sanitizedThrowable)
