@@ -1,0 +1,36 @@
+Case 9 — Welcome rotation and route attribution — PASS — 2026-09-27
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`, model SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0, build `S921BXXSGDZG1`; portrait 1080×2340, gesture navigation.
+- Package `com.retro99.parrot`, version 0.4.5 (21), target SDK 36, debuggable. Source commit `9958d084bf40bcf24024058c4d084fa04c3e1749` includes QA-BUG-0023 fix and QA-BUG-0022 dedup commit `b685661a96255c991155ea7fbc9e2a51ac56f403`.
+- Debug APK SHA-256 local and pulled from Samsung `base.apk`: `5c8fa064366ac9f03a642135e1e198babe8c9ad1e10415ff181a7296c2093adf`.
+- App PID `22863`; unauthenticated Welcome. No credentials entered and no app data cleared.
+
+Steps
+1. Installed the debug APK in place with `adb -s RFCWC0SSVDM install -r`; verified the Samsung-pulled package hash equals the local APK. Force-stopped only Parrot and relaunched to cold Welcome. Captured [`case-009-attribution-portrait-before.png`](case-009-attribution-portrait-before.png).
+2. Kept Parrot foreground and rotated portrait→landscape→portrait using Samsung WindowManager `user-rotation lock 1`, then `lock 0`. Captured [`case-009-attribution-landscape.png`](case-009-attribution-landscape.png) and [`case-009-attribution-portrait-return.png`](case-009-attribution-portrait-return.png). The compact viewport breadcrumb appeared once; no extra Welcome view event or visible breadcrumb appeared on either rotation.
+3. Tapped Get Started at (540,1768), did not enter any Login values, and captured [`case-009-attribution-login.png`](case-009-attribution-login.png).
+4. Pressed Android system Back once; captured the immediate return [`case-009-attribution-welcome-return.png`](case-009-attribution-welcome-return.png), then captured the settled screen after three seconds [`case-009-attribution-welcome-return-final.png`](case-009-attribution-welcome-return-final.png). This is a narrow route-attribution check, not a full case-28 Back/dismissal inventory.
+5. Restored and verified `user-rotation=free`, `accelerometer_rotation=1`, `user_rotation=0`; device settings and portrait orientation are restored.
+
+Observed PID-scoped local debug log excerpt
+```text
+00:16:26.556 Analytics Event: welcome_screen_viewed {screen=welcome, source_screen=splash, entry_point=app_launch}
+00:16:26.556 Diagnostic breadcrumb: screen=welcome source_screen=splash entry_point=app_launch action=screen_view operation=onboarding_route stage=visible outcome=succeeded
+00:16:43.812 Diagnostic breadcrumb: screen=welcome action=layout_adaptation operation=welcome_layout stage=compact_viewport outcome=succeeded reason_code=scroll_enabled
+00:17:02.261 Analytics Event: welcome_action_attempted {screen=welcome, action=get_started, outcome=started}
+00:17:02.261 Diagnostic breadcrumb: screen=welcome action=get_started operation=onboarding_route stage=started outcome=started
+00:17:02.275 Analytics Event: welcome_action_completed {screen=welcome, action=get_started, outcome=succeeded}
+00:17:02.275 Analytics Event: login_screen_viewed {screen=login, source_screen=welcome, entry_point=get_started}
+00:17:02.275 Diagnostic breadcrumb: screen=login source_screen=welcome entry_point=get_started action=screen_view operation=login_route stage=visible outcome=succeeded
+00:17:06.880 Analytics Event: welcome_screen_viewed {screen=welcome, source_screen=login, entry_point=back_navigation}
+00:17:06.880 Diagnostic breadcrumb: screen=welcome source_screen=login entry_point=back_navigation action=screen_view operation=onboarding_route stage=visible outcome=succeeded
+```
+
+Results (kept separate)
+- **Functional: PASS for case 9.** Landscape layout adapts/scrolls (QA-BUG-0021 fix previously Samsung-retested); portrait returns usable. No duplicate cards/content or crash observed. This journey's Login and system-Back route were usable; full case 28 remains NOT RUN.
+- **Analytics: PASS locally for tested scenario.** Exactly one cold-start Welcome exposure; zero additional Welcome exposures on the two rotations; one Login exposure; one Welcome exposure on actual Login→Welcome route, correctly attributed `login`/`back_navigation`. One Get Started attempt and success were observed. Firebase Analytics ingestion is waived, not claimed.
+- **Diagnostics: PASS locally for tested scenario.** One compact-layout recovery breadcrumb and one corresponding screen-visible breadcrumb per actual Welcome route; Login-visible breadcrumb and its returning-Welcome counterpart carry the correct sources. No crash or unexpected failure was induced; no Crashlytics non-fatal was expected. Firebase Crashlytics delivery was not tested by this screen pass.
+- **Automated checks:** `:feature:login:ui:iosSimulatorArm64Test` passed (8 `LoginNavigationViewModelTest` tests, 0 failures, including repeated-destination suppression and back-stack-source fallback); `:androidApp:assembleDebug` passed. Samsung package SHA-256 matched the built APK.
+
+This is a debug-provider observation only. It does not establish Firebase Analytics ingestion or Crashlytics issue delivery/symbolication.
