@@ -38,7 +38,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 
 ## Progress
 
-**Current test:** Case 12 — App launch & onboarding; blocked before execution because no disposable profile/current-book fixture is available. Cases 1–7, 9–12 are blocked on safe onboarding/session/content prerequisites; case 8 is explicitly DEFERRED for unavailable e-ink hardware. Continue in numbered catalogue order.
+**Current test:** Case 14 — App launch & onboarding; locale case 13 was executed in part (reachable main tabs rendered English), but remains BLOCKED for unvisited routes and has an Analytics gap QA-BUG-0008. Case 14 offline cold start has not started. Cases 1–7, 9–12 remain blocked on safe onboarding/session/content prerequisites; case 8 is DEFERRED for unavailable e-ink hardware. Device locale was restored to `en-GB`.
 
 | Area | Status | Notes |
 |---|---|---|
@@ -53,6 +53,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 | Privacy / duplicate / QA classification (509–511) | FAIL / BLOCKED | QA-BUG-0001 passes host tests/local debug output. Distinctive payload use is not yet executed; Crashlytics payload inspection is blocked. QA-BUG-0002 sanitized local exception retest passes. Source audit confirms duplicate login reports (QA-BUG-0004); startup confirms network exception flood (QA-BUG-0005). QA-BUG-0003 and production QA-traffic policy remain open. |
 | Offline telemetry / overhead / cleanup (512–514) | NOT RUN | These need an instrumented on-device pass. |
 | Screen groups B–M | IN PROGRESS / NOT RUN | Cases 1–7 and 9–10 are blocked before execution by unavailable safe first-install/session/Welcome fixtures; case 8 is deferred for e-ink hardware. No app screen has been signed off. |
+| Case 13 — Locale rendering | BLOCKED / partial | On Samsung locale `es-ES`, reachable Books, Series, Statistics and Settings surfaces rendered English with no visible clipping in captured areas; other routes not reached. Locale restored to `en-GB`. Initial run found QA-BUG-0008; fixed/retested with exactly one `app_launch_route_resolved` local debug event after relaunch. No Crashlytics delivery claim. Evidence: `case-013-locale-*.png`, `case-013-locale-run.txt`, `case-013-launch-event-retest.txt`. |
 
 ## Blockers and prerequisites
 
@@ -64,6 +65,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 6. Case 1 needs a disposable first-install state. Do not erase the currently installed app/profile data without explicit authorization or a confirmed safe QA user/profile.
 7. Cases 2–7 and 9–10 need controlled signed-in/guest state or safe access to Welcome; no account logout, app-data reset or build-signature replacement is authorized.
 8. Source audit of group B found QA-BUG-0006 (safe diagnostic operation context is discarded) and QA-BUG-0007 (setting preference values are filtered out). Both are recorded before fixes; this group is not instrumentation-ready until corrected and verified.
+9. Case 13 exposed missing startup route Analytics (QA-BUG-0008), now fixed and retested locally on the Samsung; commit hash is to be recorded with this focused fix. Case 13 remains incomplete because Welcome and other routes were not reached.
 
 ## User-approved verification scope adjustment
 
@@ -71,4 +73,4 @@ On 2026-09-26 the user reported having tested debug event behavior and stated th
 
 ## Final summary
 
-**IN PROGRESS — no screen signed off.** Per user direction, execution is proceeding from catalogue case 1 upward. Cases 1–7 and 9–12 are blocked before test steps by first-install/session/Welcome/content prerequisites; case 8 is deferred because no e-ink device is available. Group B source audit recorded QA-BUG-0006 and QA-BUG-0007 before fixes; exception reports currently lack structured operation context, and setting values are filtered out. Setup cases 495–496 and local setup case 503 are preparatory evidence; case 503 is not Firebase delivery evidence. Ten Android host tests passed, and debug/release builds succeeded. QA-BUG-0005 is fixed, committed (`d1e18128`), installed/hash-matched, and post-commit retested successfully; the stale attempt 3 was invalid and excluded. Other setup requirements remain blocked, waived or not run. The user waived Firebase Analytics ingestion checks; Crashlytics delivery remains unverified.
+**IN PROGRESS — no screen signed off.** Per user direction, execution is proceeding from catalogue case 1 upward. Cases 1–7 and 9–12 are blocked before test steps by first-install/session/Welcome/content prerequisites; case 8 is deferred because no e-ink device is available. Case 13 is partially exercised on `es-ES`: four reachable main tabs rendered English; locale restored to `en-GB`; full case is BLOCKED for unvisited routes. QA-BUG-0008 startup-route Analytics is fixed and locally retested; commit pending. QA-BUG-0006 (safe diagnostic context discarded) and QA-BUG-0007 (setting values filtered) remain open. Setup cases 495–496 and local setup case 503 are preparatory evidence; case 503 is not Firebase delivery evidence. Ten Android host tests passed, and debug/release builds succeeded. QA-BUG-0005 is fixed, committed (`d1e18128`), installed/hash-matched, and post-commit retested successfully; the stale attempt 3 was invalid and excluded. Other setup requirements remain blocked, waived or not run. The user waived Firebase Analytics ingestion checks; Crashlytics delivery remains unverified.

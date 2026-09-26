@@ -1,0 +1,16 @@
+Case 13 instrumentation retest — QA-BUG-0008
+Date: 2026-09-26, Samsung local device time
+
+Build and device
+- Device: RFCWC0SSVDM, SM-S921B, Android 16 / API 36, One UI 8.0.
+- Package: com.retro99.parrot 0.4.5 (21), debuggable.
+- Built with: `./gradlew :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug` — BUILD SUCCESSFUL.
+- Host tests: analytics implementation Android host test task passed (includes the safe startup-route schema regression).
+- APK: `androidApp/build/outputs/apk/debug/androidApp-debug.apk`, SHA-256 `b20450020aa372fd8ad57d77791dd975ade482cf15e072793f22b7367ed882f4`.
+- Installed APK was pulled from the Samsung and hash-matched the local APK exactly.
+- The app was force-stopped (not data-cleared) and relaunched on the original `en-GB` locale.
+
+Observed, PID-scoped local debug output (app PID 24983)
+`09-26 16:54:05.278 D čič: Analytics Event: app_launch_route_resolved | Parameters: {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}`
+
+Exactly one startup route event was observed in the fresh process. The UI reached Books/Home. No FATAL EXCEPTION or AndroidRuntime fatal entry was observed in the queried PID log buffer. This verifies local DebugAnalyticsManager behavior only; no Firebase Analytics ingestion or Crashlytics delivery is claimed. Device locale remained/restored as `en-GB`.

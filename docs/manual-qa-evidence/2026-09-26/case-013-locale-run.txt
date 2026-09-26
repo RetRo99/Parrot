@@ -1,0 +1,42 @@
+Case 13 — Locale rendering
+Run date: 2026-09-26 (device local time; timezone not independently verified)
+
+Device/build
+- Explicit ADB serial: RFCWC0SSVDM
+- Model: SM-S921B / Galaxy S24
+- Android 16 / API 36; One UI 8.0 (ro.build.version.oneui=80500)
+- Package: com.retro99.parrot, version 0.4.5, versionCode 21
+- Tested installed debug APK SHA-256: b1f6d3ed57189df9cafb001a154c490526078687150331e479bd3680c080595e
+- Installed source build: QA-BUG-0005 fix build at d1e18128288d7342c211d226a9041387a0974796; current documentation/source HEAD at test: c0c9dccfe81da5c0cc9c07751d1e4361a7630e10
+
+Preconditions and steps actually performed
+1. Baseline device locale was en-GB (`settings get system system_locales`).
+2. Used Samsung Settings > Language to add and set Español (España), producing device locale es-ES.
+3. Force-stopped com.retro99.parrot and relaunched it through the launcher. Existing installed signed-in profile and library were not changed.
+4. Inspected the rendered Books, Series, Statistics and Settings destinations. Captured screenshots and UI hierarchy for visible labels.
+5. Restored the device locale to en-GB and verified `cmd locale get-device-locale` and `settings get system system_locales` both returned en-GB.
+
+Expected / observed
+- Expected: app UI strings remain English under a non-English device locale and sampled content fits without clipping/overflow.
+- Observed: visible UI labels on Books, Series, Statistics and Settings remained English; sampled controls and text were legible, with no observed locale-related clipping/overflow. Book-title ellipsis in a constrained list card is normal truncation, not scored as a locale defect.
+- Scope limitation: Welcome/login and nested destinations were unavailable/not visited, so the full “all UI strings” assertion is not established. Functional result is BLOCKED (partial evidence), not PASS.
+
+Separate result dimensions
+- Functional: BLOCKED — the four reachable main destinations passed visual sampling, but not all app routes/strings were visited.
+- Analytics: FAIL — PID-scoped DebugAnalyticsManager output showed `tab_switched` for Series and Statistics and `statistics_viewed`; no startup/Home destination exposure event appeared after launch. See QA-BUG-0008. This is local debug evidence only, not Firebase ingestion.
+- Diagnostics: NOT RUN — no user-experience failure was induced. The process relaunched and remained usable; the bounded PID log excerpt contained no FATAL EXCEPTION/AndroidRuntime fatal entry. This is not Crashlytics delivery or context evidence; QA-BUG-0006 remains open.
+
+Sanitized local log observations (app PID 19391; no raw payloads retained)
+- 16:45:28–16:46:18: network_request_failed outcome records occurred while the app background requests were failing; omitted here because they are unrelated to locale rendering and contain no locale result.
+- 16:46:07: `tab_switched` (Series)
+- 16:46:24: `tab_switched` (Statistics); `statistics_viewed`
+- 16:46:37: `tab_switched` (Settings)
+- Fatal error scan: no FATAL EXCEPTION or AndroidRuntime fatal entry in the captured app-PID buffer.
+
+Artifacts
+- case-013-locale-books.png
+- case-013-locale-series.png
+- case-013-locale-statistics.png
+- case-013-locale-settings.png
+
+No app data was cleared. Locale was restored to its original en-GB value. No Firebase ingestion or Crashlytics delivery is claimed.

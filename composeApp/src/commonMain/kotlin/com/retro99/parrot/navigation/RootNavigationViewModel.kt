@@ -3,6 +3,7 @@ package com.retro99.parrot.navigation
 import androidx.lifecycle.viewModelScope
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AuthAnalyticsEvent
+import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.auth.domain.usecase.CheckAuthStateUseCase
 import com.retro99.auth.domain.usecase.LogoutUseCase
 import com.retro99.base.ui.BaseViewModel
@@ -50,6 +51,11 @@ class RootNavigationViewModel(
             } else {
                 RootDestination.Login(true)
             }
+            analytics.logEvent(
+                NavigationAnalyticsEvent.AppLaunchRouteResolved(
+                    destination = if (isLoggedIn) "home" else "welcome",
+                ),
+            )
             updateState { state ->
                 state.copy(backStack = listOf(destination))
             }
@@ -74,4 +80,3 @@ class RootNavigationViewModel(
         }
     }
 }
-

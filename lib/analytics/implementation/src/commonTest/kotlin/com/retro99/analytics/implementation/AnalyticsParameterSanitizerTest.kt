@@ -57,6 +57,28 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun retainsSafeStartupRouteDimensions() {
+        val sanitized = sanitizeAnalyticsParameters(
+            mapOf(
+                "screen" to "home",
+                "source_screen" to "splash",
+                "entry_point" to "app_launch",
+                "outcome" to "success",
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "home",
+                "source_screen" to "splash",
+                "entry_point" to "app_launch",
+                "outcome" to "success",
+            ),
+            sanitized,
+        )
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(
