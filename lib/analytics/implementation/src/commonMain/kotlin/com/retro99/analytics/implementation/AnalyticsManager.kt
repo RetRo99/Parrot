@@ -27,7 +27,7 @@ class AnalyticsManager(
     }
 
     override fun logEvent(event: AnalyticsEvent) {
-        val parameters = event.parameters.takeIf { it.isNotEmpty() }
+        val parameters = sanitizeAnalyticsParameters(event.parameters).takeIf { it.isNotEmpty() }
         firebaseAnalytics.logEvent(event.name, parameters)
     }
 

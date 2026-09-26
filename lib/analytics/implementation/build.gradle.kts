@@ -13,6 +13,8 @@ kotlin {
         namespace = "com.retro99.analytics.implementation"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -29,6 +31,14 @@ kotlin {
             api(libs.gitlive.firebase.kotlin.crashlytics)
             api(libs.gitlive.firebase.kotlin.analytics)
             implementation(projects.base)
+        }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+        named("androidHostTest") {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+            }
         }
         androidMain.dependencies {
             implementation(libs.firebase.crashlytics.android)

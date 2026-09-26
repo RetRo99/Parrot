@@ -29,10 +29,11 @@ class DebugAnalyticsManager(
     }
 
     override fun logEvent(event: AnalyticsEvent) {
+        val parameters = sanitizeAnalyticsParameters(event.parameters)
         val eventMessage = buildString {
             append("Analytics Event: ${event.name}")
-            if (event.parameters.isNotEmpty()) {
-                append(" | Parameters: ${event.parameters}")
+            if (parameters.isNotEmpty()) {
+                append(" | Parameters: $parameters")
             }
         }
         logger.d { eventMessage }

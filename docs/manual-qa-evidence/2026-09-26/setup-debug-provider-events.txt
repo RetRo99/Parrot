@@ -1,0 +1,14 @@
+Case 503 — debug-provider smoke evidence
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Package/build: com.retro99.parrot 0.4.5 (21), debug; source commit 956ec8a443d2236396c490a3056efdf9a1181e32 plus QA-BUG-0001 working-tree changes
+Action: cold-started MainActivity after an in-place debug APK update; observed app startup events.
+Capture: `adb -s RFCWC0SSVDM logcat -d -v threadtime -T '09-26 15:32:16.000' --pid=<Parrot PID> | grep -F 'Analytics Event:'`
+Observed local-only `DebugAnalyticsManager` output (reviewed; no book/profile/search/file/user text was present):
+
+```text
+09-26 15:32:23.321 D: Analytics Event: network_request_failed | Parameters: {error_type=io_error, is_timeout=false, is_connectivity=false}
+09-26 15:32:23.976 D: Analytics Event: network_request_failed | Parameters: {error_type=io_error, is_timeout=false, is_connectivity=false}
+09-26 15:32:24.122 D: Analytics Event: sync_run_completed | Parameters: {duration_ms=1129}
+```
+
+This proves local debug logging only, not Firebase delivery. Logcat was dumped after the action rather than captured continuously, so case 502 remains NOT RUN.
