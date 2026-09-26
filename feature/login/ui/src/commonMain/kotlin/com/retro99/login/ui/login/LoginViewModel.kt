@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.fold
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AuthAnalyticsEvent
-import com.retro99.base.result.log
 import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.login.domain.usecase.LoginUseCase
@@ -124,7 +123,12 @@ class LoginViewModel(
                             errorType = error::class.simpleName ?: "unknown",
                         )
                     )
-                    error.log(analytics, "LoginViewModel: Failed to login")
+                    reportUnexpectedLoginFailure(
+                        analytics = analytics,
+                        error = error,
+                        serverType = serverType,
+                        authMethod = "credentials",
+                    )
                     updateAfterLoginFailure(error.message)
                 },
             )
@@ -162,7 +166,12 @@ class LoginViewModel(
                             errorType = error::class.simpleName ?: "unknown",
                         )
                     )
-                    error.log(analytics, "LoginViewModel: Failed to login with OAuth")
+                    reportUnexpectedLoginFailure(
+                        analytics = analytics,
+                        error = error,
+                        serverType = serverType,
+                        authMethod = "oauth",
+                    )
                     updateAfterLoginFailure(error.message)
                 },
             )

@@ -33,13 +33,6 @@ internal class LoginDataRepository(
         val authenticator = authenticatorFactory.create(serverType)
 
         return authenticator.login(serverUrl, username, password)
-            .onFailure { error ->
-                // Never log serverUrl for privacy - only log error type
-                analytics.logException(
-                    error.toThrowable(),
-                    "LoginRepository: Login failed | errorType=${error::class.simpleName}"
-                )
-            }
             .flatMap { credentials ->
                 // Register server in ServerRegistry
                 val serverConfig = serverRegistry.addServer(
@@ -74,10 +67,6 @@ internal class LoginDataRepository(
                         errorType = error::class.simpleName ?: "AppError",
                     )
                 )
-                analytics.logException(
-                    error.toThrowable(),
-                    "LoginRepository: OAuth login failed | errorType=${error::class.simpleName}"
-                )
             }
             .flatMap { credentials ->
                 val serverConfig = serverRegistry.addServer(
@@ -91,4 +80,3 @@ internal class LoginDataRepository(
             }
     }
 }
-
