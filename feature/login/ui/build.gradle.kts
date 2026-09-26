@@ -40,6 +40,9 @@ kotlin {
             implementation(projects.feature.login.domain)
             implementation(projects.lib.analytics.api)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
-

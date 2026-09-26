@@ -3,27 +3,20 @@ package com.retro99.login.ui.navigation
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
+import com.retro99.base.buildconfig.BuildConfig
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.login.domain.usecase.SkipLoginUseCase
 import org.koin.core.annotation.KoinViewModel
-import org.koin.core.annotation.Named
 import org.koin.core.annotation.Provided
 
 @KoinViewModel
 class LoginNavigationViewModel(
     startAtLogin: Boolean,
-    @Provided @Named("isDebug") isDebug: Boolean,
+    @Provided private val buildConfig: BuildConfig,
     @Provided private val skipLoginUseCase: SkipLoginUseCase,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<LoginNavigationState, LoginNavigationIntent>(
-    LoginNavigationState(
-        backStack = if (startAtLogin) {
-            listOf(LoginDestination.Login)
-        } else {
-            listOf(LoginDestination.Welcome)
-        },
-        isDebug = isDebug,
-    ),
+    initialLoginNavigationState(startAtLogin, buildConfig),
 ) {
 
     fun onDestinationVisible(destination: LoginDestination, source: LoginDestination?) {

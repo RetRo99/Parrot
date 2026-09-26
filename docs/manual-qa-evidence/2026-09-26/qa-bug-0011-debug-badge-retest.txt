@@ -1,0 +1,18 @@
+QA-BUG-0011 — DEBUG badge retest
+Date: 2026-09-26
+
+Checks
+- `:feature:login:ui:iosSimulatorArm64Test` — 1 test, 0 failures/errors (`initialWelcomeRouteUsesInjectedDebugBuildConfig`). This is a host logic test for forwarding the injected `BuildConfig.isDebug` value into Welcome state; it is not an Android UI test.
+- `:lib:analytics:implementation:testAndroidHostTest` — 12 host tests across analytics parameter, diagnostic payload and Android throwable-sanitizer suites; 0 failures/errors.
+- `:feature:login:ui:compileAndroidMain` and `:androidApp:assembleDebug` — BUILD SUCCESSFUL.
+
+Samsung retest
+- Device RFCWC0SSVDM, SM-S921B, Android 16/API 36, One UI 8.0, locale en-GB.
+- Installed app `com.retro99.parrot` 0.4.5 (21), debug. APK SHA-256 matched local and pulled Samsung base APK: `b6dd4a4cee8df560e3c5ed8097f3a14407c58703f777d29edb5d8322be167092`.
+- Package metadata continues to report `DEBUGGABLE`.
+- Force-stopped and relaunched to Welcome. Android text selector found “Get Started”; the screenshot `qa-bug-0011-debug-badge-retest.png` visibly shows the DEBUG badge at top right.
+- The same launch emitted one `welcome_screen_viewed` local debug event and its Welcome-visible breadcrumb; no fatal exception was present. The local event is not Firebase Analytics delivery evidence.
+
+Disposition
+- Debug-variant portion of case 7: PASS after fix.
+- Release-variant portion of case 7: NOT RUN; comparison remains outstanding.
