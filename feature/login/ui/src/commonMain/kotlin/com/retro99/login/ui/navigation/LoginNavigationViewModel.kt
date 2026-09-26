@@ -20,6 +20,7 @@ class LoginNavigationViewModel(
 ) : BaseViewModel<LoginNavigationState, LoginNavigationIntent>(
     initialLoginNavigationState(startAtLogin, buildConfig),
 ) {
+    private var lastVisibleDestination: LoginDestination? = null
     private var compactWelcomeLayoutBreadcrumbLogged = false
 
     fun onWelcomeCompactLayoutAvailable() {
@@ -42,6 +43,9 @@ class LoginNavigationViewModel(
     }
 
     fun onDestinationVisible(destination: LoginDestination, source: LoginDestination?) {
+        if (lastVisibleDestination == destination) return
+        lastVisibleDestination = destination
+
         if (destination != LoginDestination.Welcome) {
             resetCompactWelcomeLayoutBreadcrumb()
         }

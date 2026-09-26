@@ -121,6 +121,49 @@ class LoginNavigationViewModelTest {
     }
 
     @Test
+    fun repeatedDestinationVisibilityDoesNotDuplicateExposureOrBreadcrumb() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(RecordingPreferences(), analytics)
+
+        viewModel.onDestinationVisible(LoginDestination.Welcome, source = null)
+        viewModel.onDestinationVisible(LoginDestination.Welcome, source = null)
+
+        assertEquals(
+            1,
+            analytics.events.count { it.name == "welcome_screen_viewed" },
+        )
+        assertEquals(
+            1,
+            analytics.breadcrumbs.count { it.action == "screen_view" },
+        )
+    }
+
+    @Test
+    fun visibilityAfterARealDestinationChangeIsReportedAgain() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(RecordingPreferences(), analytics)
+
+        viewModel.onDestinationVisible(LoginDestination.Welcome, source = null)
+        viewModel.onDestinationVisible(LoginDestination.Login, source = LoginDestination.Welcome)
+        viewModel.onDestinationVisible(LoginDestination.Welcome, source = LoginDestination.Login)
+
+        assertEquals(
+            listOf("welcome_screen_viewed", "login_screen_viewed", "welcome_screen_viewed"),
+            analytics.events.filter {
+                it.name == "welcome_screen_viewed" || it.name == "login_screen_viewed"
+            }.map { it.name },
+        )
+        assertEquals(
+            3,
+            analytics.breadcrumbs.count { it.action == "screen_view" },
+        )
+        assertEquals(
+            1,
+            analytics.events.count { it.name == "welcome_action_completed" },
+        )
+    }
+
+    @Test
     fun backIntentPreservesWelcomeAsTheOnlyDestination() {
         val viewModel = createViewModel(RecordingPreferences(), RecordingAnalytics())
 
