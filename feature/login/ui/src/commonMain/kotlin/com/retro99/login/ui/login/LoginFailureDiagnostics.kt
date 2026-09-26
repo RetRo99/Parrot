@@ -22,13 +22,17 @@ internal fun reportUnexpectedLoginFailure(
             screen = "login",
             action = "sign_in",
             operation = "${authMethod}_login",
-            stage = "authentication",
+            stage = if (error is AppError.DatabaseError) "credentials_persistence" else "authentication",
             outcome = "failed",
             reasonCode = when (error) {
                 is AppError.NetworkError ->
                     if (error.isConnectivity) "network_unavailable" else "network_failure"
                 is AppError.ApiError -> "auth_http_error"
-                is AppError.DatabaseError -> "local_database_failure"
+                is AppError.DatabaseError -> if (error.table == "server_registry_rollback") {
+                    "server_registration_rollback_failed"
+                } else {
+                    "local_database_failure"
+                }
                 is AppError.UnknownError -> "unexpected_failure"
                 is AppError.AuthError -> "auth_rejected"
                 is AppError.NotFoundError -> "auth_resource_missing"

@@ -1,7 +1,7 @@
 package com.retro99.login.data
 
 import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.flatMap
 import com.retro99.base.result.AppError
 import com.retro99.base.result.CompletableResult
@@ -30,15 +30,18 @@ internal class LoginDataRepository(
 
         return authenticator.login(serverUrl, username, password)
             .flatMap { credentials ->
-                // Register server in ServerRegistry
-                val serverConfig = serverRegistry.addServer(
-                    name = serverType.displayName,
-                    type = serverType,
-                    baseUrl = serverUrl,
+                persistLoginCredentials(
+                    credentials = credentials,
+                    addServer = {
+                        serverRegistry.addServer(
+                            name = serverType.displayName,
+                            type = serverType,
+                            baseUrl = serverUrl,
+                        )
+                    },
+                    saveCredentials = serverRegistry::saveCredentials,
+                    removeServer = serverRegistry::removeServer,
                 )
-                serverRegistry.saveCredentials(credentials.copy(serverId = serverConfig.id))
-
-                Ok(Unit)
             }
     }
 
@@ -57,14 +60,18 @@ internal class LoginDataRepository(
                 authenticator.loginWithAppToken(serverUrl, appToken)
             }
             .flatMap { credentials ->
-                val serverConfig = serverRegistry.addServer(
-                    name = serverType.displayName,
-                    type = serverType,
-                    baseUrl = serverUrl,
+                persistLoginCredentials(
+                    credentials = credentials,
+                    addServer = {
+                        serverRegistry.addServer(
+                            name = serverType.displayName,
+                            type = serverType,
+                            baseUrl = serverUrl,
+                        )
+                    },
+                    saveCredentials = serverRegistry::saveCredentials,
+                    removeServer = serverRegistry::removeServer,
                 )
-                serverRegistry.saveCredentials(credentials.copy(serverId = serverConfig.id))
-
-                Ok(Unit)
             }
     }
 }

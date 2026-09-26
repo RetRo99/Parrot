@@ -116,7 +116,7 @@ class LoginViewModel(
             val username = usernameState.text.toString()
             val password = passwordState.text.toString()
 
-            loginUseCase(serverType, url, username, password).fold(
+            performLoginSafely { loginUseCase(serverType, url, username, password) }.fold(
                 success = {
                     completeLogin(attempt)
                     onSignInSuccess()
@@ -148,7 +148,7 @@ class LoginViewModel(
         }
 
         viewModelScope.launch {
-            loginUseCase.withOAuth(serverType, url).fold(
+            performLoginSafely { loginUseCase.withOAuth(serverType, url) }.fold(
                 success = {
                     completeLogin(attempt)
                     onSignInSuccess()

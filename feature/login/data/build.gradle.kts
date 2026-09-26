@@ -27,5 +27,11 @@ kotlin {
             implementation(projects.lib.server.api)
             implementation(projects.feature.login.domain)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.kotlin.result)
+            implementation(libs.coroutines.test)
+        }
     }
 }

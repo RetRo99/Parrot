@@ -33,6 +33,9 @@ kotlin {
             implementation(projects.lib.database.api)
             implementation(projects.lib.user.api)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
-

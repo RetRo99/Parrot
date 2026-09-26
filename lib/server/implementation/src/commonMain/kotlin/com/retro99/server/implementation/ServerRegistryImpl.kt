@@ -153,8 +153,13 @@ class ServerRegistryImpl(
             addedAt = Clock.System.now().toEpochMilliseconds(),
         )
 
-        _servers.update { it + (config.id to config) }
-        persistServers()
+        val previousServers = _servers.value
+        persistStateMutation(
+            previousValue = previousServers,
+            updatedValue = previousServers + (config.id to config),
+            update = { _servers.value = it },
+            persist = ::persistServers,
+        )
 
         config
     }
@@ -261,8 +266,13 @@ class ServerRegistryImpl(
         check(authStateProviders.none { provider -> provider.serverType == server?.type }) {
             "Managed servers do not store ServerCredentials"
         }
-        _credentials.update { it + (credentials.serverId to credentials) }
-        persistCredentials()
+        val previousCredentials = _credentials.value
+        persistStateMutation(
+            previousValue = previousCredentials,
+            updatedValue = previousCredentials + (credentials.serverId to credentials),
+            update = { _credentials.value = it },
+            persist = ::persistCredentials,
+        )
     }
 
     override suspend fun getCredentials(serverId: String): ServerCredentials? {
