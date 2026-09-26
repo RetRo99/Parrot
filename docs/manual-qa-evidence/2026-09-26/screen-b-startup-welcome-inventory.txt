@@ -3,7 +3,7 @@ Screen inventory: Startup and Welcome (Samsung run 2026-09-26)
 Scope/evidence
 - Physical device: Samsung SM-S921B, Android 16/API 36, One UI 8.0, portrait, gesture navigation, locale en-GB.
 - Inspected implementation: `RootNavigationViewModel.kt`, `RootNavigation.kt`, `SplashScreen.kt`, `LoginNavigation.kt`, `LoginNavigationViewModel.kt`, `WelcomeScreen.kt`; executed clean-install case 1 on commit `eead1977` and debug-badge retest on `b720ca69`.
-- This inventory covers startup and Welcome only. Login, authentication callbacks and recovery screens need a separate inventory before their device pass.
+- This inventory covers startup, Welcome and the nested server Login screen. Authentication callback variants are mapped below; OAuth callback/failure recovery still needs its own runtime inventory before those cases.
 
 Reachable route map
 - Launcher/cold or warm launch → Splash (root initial state) → auth check → either Home or the initial LoginNavigation containing Welcome. Case mapping: 1–3, 13–14, 471, 515–520.
@@ -21,6 +21,25 @@ Control inventory
 - Parrot logo: decorative, continuously pulsing animation; no click handler.
 - Three feature cards (Ebook Reader, ReadAloud, Multiple Servers): informational surfaces, no click handler.
 - No search, filter, sort, overflow menu, dialog, bottom sheet, form, retry button, or explicit empty/error state is reachable on Welcome.
+
+Login screen route and control inventory (source-audited; Samsung action pass pending)
+- Entry: Welcome → Get Started appends Login; direct root Login with `startAtLogin=true` is used for Add Server from Home/Settings. Tests 4, 15–36, 443–444, 521–534.
+- Exit: toolbar Back invokes root `onBack`; nested/system Back behavior depends on LoginNavigation's current stack/callback. Cases 28, 523–524, 527.
+- Server-type dropdown: Storyteller and Audiobookshelf are offered; Local and Parrot Cloud are filtered out. Expand, select each option, outside-dismiss and system-Back dismissal. Cases 15, 528, new 751.
+- Server URL field: editable single-line URI; help icon opens persistent tooltip with title/description and explicit dismiss button; outside/system Back dismissals need verification. URL format validation is inline. Cases 16–17, 34, 530–531, new 752.
+- Username field: editable single-line text; Next moves focus to password. Cases 18, 21, 29, 35, 529.
+- Password field: secure by default; eye toggle reveals/re-masks; IME Done clears focus and submits only when valid/enabled. Cases 18–21, 29, 35, 529.
+- Sign In: disabled unless URL/username/password are present and URL valid; button and IME share the same intent. Loading indicator replaces label and the button is disabled while loading. Cases 17–18, 21–24, 29, 34–36, 525–531, 534.
+- OAuth: Storyteller-only outlined button; selected server URL required; launches external app/browser; waiting message and spinner; callback returns token or cancellation/timeout/error. Cases 25–27, 31–32, 457–458, 526–534.
+- Error content: inline error container appears on failed login and remains until a new submission clears it; no explicit dismiss or retry button (retry by resubmitting). Cases 23–24, 26–27, 30, 525, 531, 534.
+- No additional dialogs/sheets are present in LoginScreen. Android keyboard is a system surface and must be tested for Next/Done, Back-to-dismiss, overlap and rotation.
+
+Login instrumentation/failure map from source audit
+- Existing `login_attempted`, `login_succeeded`, `login_failed` events exist; `login_attempted` currently supplies only `server_url_hash`, which is intentionally removed by the provider allowlist. Outcomes omit bounded server type/auth method/retry/cancel dimensions; no Login screen exposure event or Login operation breadcrumbs are emitted. This is QA-BUG-0012 and overlaps repository-wide QA-BUG-0006; Firebase Analytics delivery is waived, local-provider behavior remains the app-side check.
+- Repository `onFailure` logs exceptions and LoginViewModel also calls `error.log`; for errors whose `shouldReportException` is true, one failed operation can produce two non-fatals. Repository logging is unconditional for expected network/auth outcomes. See QA-BUG-0004.
+- After authenticator success, `LoginDataRepository` calls `ServerRegistry.addServer` and `saveCredentials` inside a plain `flatMap` transform. A thrown persistence exception escapes; LoginViewModel's `viewModelScope.launch` has no catch/finally around the operation, so loading may remain active and the exception may reach the uncaught coroutine handler. New case 753 and QA-BUG-0013 cover this failure path.
+- Login success currently sets Firebase user identity to username/server-URL hashes (QA-BUG-0003); fix/verification is required before entering the demo credentials.
+- Source does not yet guard repeated sign-in/OAuth intents while `isLoading`; rapid submit race remains a suspected case-526 risk pending focused test (QA-BUG-0014).
 
 States and exits
 - Loading: Splash is the startup loading route; case 471. Welcome has no loading indicator.

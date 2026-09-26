@@ -51,7 +51,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Root cause:** Hashing was treated as anonymization and reused as provider identity without a reviewed privacy policy.
 - **Affected files:** Login ViewModel and analytics user-identity contract/providers.
 - **Fix reference / commit:** Pending. Proposed remediation is to clear provider identity (`setUserId(null)`) on successful credentials/OAuth login rather than deriving identity from account name or server URL; no replacement identifier will be introduced without an approved policy.
-- **Retest:** NOT RUN. Requires successful controlled QA login on Samsung to verify the debug provider receives only `null` after success; the test credential is currently inaccessible to this continuation. Firebase Analytics delivery was waived, but Crashlytics delivery remains a separate blocked check.
+- **Retest:** NOT RUN. The controlled QA credential is now available for UI-only use; successful login has not been attempted while the privacy fix is pending. Verify the Samsung debug provider receives only `null` after success. Firebase Analytics delivery was waived, but Crashlytics delivery remains a separate blocked check.
 
 ## QA-BUG-0004 — Failed login is reported to Crashlytics at repository and UI boundaries
 
@@ -69,6 +69,57 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Affected files:** Login data repository, Login ViewModel and possibly auth error classification (fix pending).
 - **Fix reference / commit:** Pending.
 - **Retest:** NOT RUN. Required: wrong-credentials and controlled transport failure; verify outcome events/recovery and one-or-zero Crashlytics reports as appropriate in a Firebase-enabled build.
+
+## QA-BUG-0012 — Login exposure and operation telemetry lack safe route/outcome context
+
+- **Severity / impact:** Medium; login usage, method-specific outcomes, cancellation and retries cannot be reconstructed, and unexpected failures have no bounded Login operation breadcrumb context.
+- **Status:** Confirmed by source audit; runtime login action checks have not yet been run on the Samsung.
+- **Screen/test IDs:** Login cases 15–36 and 521–534; setup 508–510, 534; overlaps QA-BUG-0006 for diagnostic context and QA-BUG-0003 for private identifiers.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16/API 36, One UI 8.0; current `com.retro99.parrot` v0.4.5 (21), debug, source through `c9f708ed220b54d3550d05f6ae9a9e6bc51e2cc2`.
+- **Preconditions:** Reach the Login destination from Welcome or Add Server; perform a credentials or OAuth attempt.
+- **Exact reproduction:** `LoginNavigationViewModel.onDestinationVisible` emits only the success completion when Login follows Welcome; it does not emit a Login screen-view event. `LoginViewModel` emits `login_attempted` with only `server_url_hash`, which is dropped by the fail-closed sanitizer; `login_succeeded`/`login_failed` lack server type and auth method and there is no cancel/retry dimension. Its exception report uses the legacy free-form context overload, and no start/stage/terminal Login breadcrumbs are emitted.
+- **Expected:** One bounded Login exposure per visible destination, source/entry attribution, server type and auth method on accepted attempts and terminal outcomes, explicit cancellation/retry distinction, and bounded breadcrumbs around authentication and local credential persistence. Never include URL, username, password, token or full callback URI.
+- **Actual:** Login exposure is absent; the attempted event's only parameter is filtered; terminal events are under-specified; operation breadcrumb sequence is absent.
+- **Frequency:** Every Login exposure/attempt/outcome.
+- **Evidence:** `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/navigation/LoginNavigationViewModel.kt`; `LoginNavigation.kt`; `login/LoginViewModel.kt`; `lib/analytics/api/.../BookAnalyticsEvent.kt` AuthAnalyticsEvent; `AnalyticsParameterSanitizer.kt` approved key set.
+- **Root cause:** Auth telemetry predates the provider privacy allowlist and was not migrated to bounded dimensions or actual route visibility; Login operation boundaries have not adopted the typed diagnostic context API.
+- **Affected files:** Auth Analytics event hierarchy/sanitizer tests, login navigation/UI ViewModels, login repository and diagnostics tests.
+- **Fix reference / commit:** Pending.
+- **Retest:** NOT RUN. Before the Samsung login pass, compile/test the schema and run cases 4, 15–21, 22–28, 34–36 and 521–534 where fixtures permit. Verify exact local event counts/parameters and breadcrumbs in the debug provider; Firebase Analytics ingestion is waived, not claimed. Crashlytics delivery remains separately required.
+
+## QA-BUG-0013 — Local server/credential persistence exception escapes the login flow
+
+- **Severity / impact:** High; after successful remote authentication, a local registry/database failure can escape the coroutine, crash the app or strand the user in a perpetual loading state without a recovery message.
+- **Status:** Confirmed by source audit; failure not yet injected on the Samsung.
+- **Screen/test IDs:** Login success cases 22, 25, 31–32, 525–534; new persistence-failure case 753; diagnostic setup cases 506, 508, 510.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16/API 36, One UI 8.0; current `com.retro99.parrot` v0.4.5 (21), debug, source through `c9f708ed220b54d3550d05f6ae9a9e6bc51e2cc2`.
+- **Preconditions:** Authenticator returns valid credentials; `ServerRegistry.addServer` or `saveCredentials` throws during local persistence.
+- **Exact reproduction:** `LoginDataRepository.login` and `loginWithOAuth` use `flatMap` to call `serverRegistry.addServer` and `saveCredentials` without `runCatchingAsAppError` or another exception boundary. `LoginViewModel` launches the use case in `viewModelScope` without catching exceptions or resetting `isLoading` in a `finally` block.
+- **Expected:** Preserve coroutine cancellation; convert unexpected persistence exceptions to a recoverable result, keep the user on Login, terminate loading, report once with bounded `screen=login`, operation/stage/reason context, and permit retry. Do not route Home until persistence completes.
+- **Actual:** A thrown registry/database exception escapes the result pipeline and login coroutine; there is no guaranteed state reset or in-screen recovery.
+- **Frequency:** Conditional on local server-registration/credential persistence failure after remote auth succeeds.
+- **Evidence:** `feature/login/data/src/commonMain/kotlin/com/retro99/login/data/LoginDataRepository.kt:43-53,82-90`; `feature/login/ui/src/commonMain/kotlin/com/retro99/login/ui/login/LoginViewModel.kt:111-130,152-168`; `AppResult.kt` provides `runCatchingAsAppError`/`mapCatching` helpers but this path does not use them.
+- **Root cause:** Remote auth result and local persistence are composed with a non-catching `flatMap`; UI launches the suspend call without an exception boundary.
+- **Affected files:** LoginDataRepository/use case/ViewModel and login repository/UI tests; typed diagnostics.
+- **Fix reference / commit:** Pending.
+- **Retest:** NOT RUN. Add regression coverage for thrown persistence failure and `CancellationException`; execute a controlled local persistence-failure fixture on the Samsung if safely injectable. Crashlytics delivery remains unverified.
+
+## QA-BUG-0014 — Rapid Login intents may start parallel authentication attempts
+
+- **Severity / impact:** Medium; an input race may create duplicate server registrations, credential writes or external OAuth launches and multiply attempt/outcome events.
+- **Status:** SUSPECTED from source audit; no repeated-tap runtime reproduction yet.
+- **Screen/test IDs:** Login cases 36, 526–527; setup 510 and 534.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM` / SM-S921B, Android 16/API 36, One UI 8.0; current `com.retro99.parrot` v0.4.5 (21), debug, source through `c9f708ed220b54d3550d05f6ae9a9e6bc51e2cc2`.
+- **Preconditions:** Valid login form; a delayed server response; deliver multiple Sign In/IME or OAuth intents before recomposition disables the button.
+- **Exact reproduction:** Source audit: the UI disables buttons based on `isLoading`, but `LoginViewModel.handleSignInClicked` and `handleOAuthSignInClicked` do not check current `isLoading` before launching a new coroutine. `BaseViewModel.onIntent` dispatches directly without serialization. Whether real Samsung input can win this timing window remains unverified.
+- **Expected:** Atomically accept at most one in-flight credentials or OAuth attempt; one terminal result and no duplicate server/account registration.
+- **Actual:** The ViewModel contains no explicit in-flight guard; duplicate calls may race before the disabled state is recomposed.
+- **Frequency:** Unknown; expected to require rapid input on a delayed flow.
+- **Evidence:** `LoginViewModel.kt:73-79,93-110,134-150`; `BaseViewModel.kt:16-22`; catalogue cases 36 and 526.
+- **Root cause:** UI disabled-state is the only duplicate-submit control; ViewModel intent handlers do not enforce idempotent single-flight semantics.
+- **Affected files:** Login ViewModel and its regression tests.
+- **Fix reference / commit:** Pending.
+- **Retest:** NOT RUN. Reproduce with a delayed test endpoint and rapid button/IME/OAuth actions; verify one request and event sequence before closing as confirmed/fixed or downgrading as non-reproducible.
 
 ## QA-BUG-0005 — Routine network failures flood handled-exception reporting
 

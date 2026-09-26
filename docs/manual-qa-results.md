@@ -34,7 +34,7 @@ Source audit identified QA-BUG-0006 (still open/partially remediated) and QA-BUG
 | Case | Variant / evidence | Functional | Analytics | Diagnostics | Notes / defect |
 |---:|---|---|---|---|---|
 | 1 | Cold start on first install; debug APK, no permissions granted | PASS | PASS (local debug provider only) | PASS (local breadcrumbs; no failure induced) | Parrot alone was uninstalled/reinstalled under the user's authorization. Welcome displayed Get Started and Browse without account; `POST_NOTIFICATIONS` remained denied and no runtime permission was granted. One `app_launch_route_resolved`, one `welcome_screen_viewed`, and startup/visible breadcrumbs appeared in PID-scoped local logs. APK hash matched local/installed `059d4d…7620b`, source commit `eead1977`. A UI hierarchy helper timed out because it could not reach Compose idle, but the screenshot visually confirms the labels; not treated as an app failure. The initial screenshot also exposed QA-BUG-0011 (badge missing), fixed and retested separately. Evidence: [run record](manual-qa-evidence/2026-09-26/case-001-first-install-run.txt), [Welcome screenshot](manual-qa-evidence/2026-09-26/case-001-first-install-welcome.png). Firebase delivery is not claimed. |
-| 2 | Cold start when already signed in | BLOCKED | NOT RUN | NOT RUN | Requires a successful Storyteller sign-in first. The user supplied demo credentials earlier, but their values are not present in this continuation and no authorized credential-store access is available. No login was attempted with guessed or unrelated credentials. The earlier data-preservation blocker is withdrawn; this is a separate missing-credential blocker. Resume case 2 when the supplied credential is accessible. Evidence: [current blocker](manual-qa-evidence/2026-09-26/case-002-missing-credential-blocker.txt); retain historical note [case-002](manual-qa-evidence/2026-09-26/case-002-signed-in-cold-start-blocked.txt). |
+| 2 | Cold start when already signed in | NOT RUN | NOT RUN | NOT RUN | The user re-shared the Storyteller demo credential during this continuation; it is available for the login UI but deliberately omitted from all files/logs. Login has not yet been attempted while the Login-screen audit/fixes are in progress. Prior missing-credential blocker is resolved; retain the historical [case-002 blocker evidence](manual-qa-evidence/2026-09-26/case-002-missing-credential-blocker.txt). |
 | 3 | Cold start in guest mode | NOT RUN | NOT RUN | NOT RUN | Previous preservation-based BLOCKED disposition withdrawn. Need perform guest entry and create/import a safe local test EPUB before verifying persistence on the next cold start; no step executed. Historical note: [case-003](manual-qa-evidence/2026-09-26/case-003-guest-cold-start-blocked.txt). |
 | 4 | Get Started | NOT RUN | NOT RUN | NOT RUN | Welcome is reachable on the current clean-install route. No button action executed yet; exercise after case 2–3 setup in case order. Historical note: [case-004](manual-qa-evidence/2026-09-26/case-004-welcome-unavailable.txt). |
 | 5 | Browse without account | NOT RUN | NOT RUN | NOT RUN | Previous data-preservation blocker withdrawn. Guest action/outcome events are implemented but not yet exercised; no UI action executed. Historical note: [case-005](manual-qa-evidence/2026-09-26/case-005-guest-entry-blocked.txt). |
@@ -47,6 +47,57 @@ Source audit identified QA-BUG-0006 (still open/partially remediated) and QA-BUG
 | 11 | Open last book on launch (enabled) | NOT RUN | NOT RUN | NOT RUN | Previous preservation-based BLOCKED disposition withdrawn; create/import a controlled local EPUB and saved position before testing. Historical note: [case-011](manual-qa-evidence/2026-09-26/case-011-last-book-launch-blocked.txt). |
 | 12 | Open last book on launch (no current book) | NOT RUN | NOT RUN | NOT RUN | Previous preservation-based BLOCKED disposition withdrawn; prepare a no-current-book fixture before testing. Historical note: [case-012](manual-qa-evidence/2026-09-26/case-012-last-book-no-current-blocked.txt). |
 | 13 | Locale rendering (Spanish device locale) | BLOCKED (partial: reachable Books, Series, Statistics and Settings surfaces rendered English; other routes were not reached) | PASS after QA-BUG-0008 fix (first run exposed missing startup event; retest emitted one `app_launch_route_resolved` event on launch; local provider only) | NOT RUN (no induced UX failure; relaunch showed no fatal exception in the PID-scoped check; actionable Crashlytics delivery/context not verified, QA-BUG-0006 remains open) | Locale changed from `en-GB` to `es-ES`, app force-stopped/launched, four reachable tabs inspected and screenshots saved; locale restored to `en-GB`. Retest build `0.4.5` (21), APK SHA-256 `b2045002…882f4`. Firebase Analytics ingestion is waived, not claimed. [Run evidence](manual-qa-evidence/2026-09-26/case-013-locale-run.txt); [instrumentation retest](manual-qa-evidence/2026-09-26/case-013-launch-event-retest.txt). |
+
+Cases 14–36 and Login extensions 515–534, 751–753 (all not yet exercised):
+
+| Case | Variant / evidence | Functional | Analytics | Diagnostics | Notes / defect |
+|---:|---|---|---|---|---|
+| 14 | Offline cold start | NOT RUN | NOT RUN | NOT RUN | Network currently appears online; no offline cold launch performed. |
+| 15 | Server-type dropdown options | NOT RUN | NOT RUN | NOT RUN | Source says Storyteller and Audiobookshelf only; Samsung check pending. |
+| 16 | URL help tooltip | NOT RUN | NOT RUN | NOT RUN | Help icon and tooltip dismissal not exercised. |
+| 17 | Invalid URL validation | NOT RUN | NOT RUN | NOT RUN | No invalid URL submitted. |
+| 18 | Empty submit validation | NOT RUN | NOT RUN | NOT RUN | No empty-form interaction performed. |
+| 19 | Password masking | NOT RUN | NOT RUN | NOT RUN | Password field not exercised. |
+| 20 | Show/hide password | NOT RUN | NOT RUN | NOT RUN | Visibility toggle not exercised. |
+| 21 | IME Sign-in action | NOT RUN | NOT RUN | NOT RUN | Valid-form submit via keyboard not exercised. |
+| 22 | Successful sign-in (credentials) | NOT RUN | NOT RUN | NOT RUN | Demo credential available, but no login attempted before Login instrumentation/privacy fixes. |
+| 23 | Wrong credentials | NOT RUN | NOT RUN | NOT RUN | No controlled rejection attempted; QA-BUG-0004 duplicate/non-fatal behavior remains open. |
+| 24 | Network error on sign-in | NOT RUN | NOT RUN | NOT RUN | Offline submit/recovery not exercised. |
+| 25 | OAuth happy path | NOT RUN | NOT RUN | NOT RUN | Browser/app handoff not exercised. |
+| 26 | OAuth cancelled | NOT RUN | NOT RUN | NOT RUN | Cancellation path not exercised. |
+| 27 | OAuth while backgrounded | NOT RUN | NOT RUN | NOT RUN | App lifecycle interruption not exercised. |
+| 28 | Back from Login | NOT RUN | NOT RUN | NOT RUN | Toolbar/system Back variants pending. |
+| 29 | Rotation during login | NOT RUN | NOT RUN | NOT RUN | No form state/rotation check. |
+| 30 | Session expired | NOT RUN | NOT RUN | NOT RUN | Requires signed-in session and controlled expiry; not attempted. |
+| 31 | Storyteller OAuth deep-link callback | NOT RUN | NOT RUN | NOT RUN | Callback not exercised. |
+| 32 | Google auth callback | NOT RUN | NOT RUN | NOT RUN | Callback not exercised. |
+| 33 | Add a second server account | NOT RUN | NOT RUN | NOT RUN | No account addition performed. |
+| 34 | URL variants | NOT RUN | NOT RUN | NOT RUN | Normalization not tested. |
+| 35 | Keyboard overlap | NOT RUN | NOT RUN | NOT RUN | Small-screen/IME coverage not run. |
+| 36 | Slow sign-in response | NOT RUN | NOT RUN | NOT RUN | No delayed endpoint/duplicate-submit check. |
+| 515 | Warm launcher return | NOT RUN | NOT RUN | NOT RUN | Welcome route not backgrounded/reopened. |
+| 516 | Launcher rapid taps | NOT RUN | NOT RUN | NOT RUN | Startup duplicate-launch behavior not tested. |
+| 517 | Upgrade with local data | NOT RUN | NOT RUN | NOT RUN | No fixture-preserving upgrade run. |
+| 518 | Missing last-book file at startup | NOT RUN | NOT RUN | NOT RUN | No reopen-last-book fixture or missing-file injection. |
+| 519 | Deleted last-book reference | NOT RUN | NOT RUN | NOT RUN | No last-book deletion/relaunch run. |
+| 520 | Back during startup | NOT RUN | NOT RUN | NOT RUN | No startup Back action performed. |
+| 521 | Repeated Welcome action | NOT RUN | NOT RUN | NOT RUN | Rapid Get Started/guest taps pending. |
+| 522 | Welcome root system Back | NOT RUN | NOT RUN | NOT RUN | No system Back on root Welcome. |
+| 523 | Login keyboard Back | NOT RUN | NOT RUN | NOT RUN | IME dismissal and subsequent navigation Back pending. |
+| 524 | Login from Add Server Back | NOT RUN | NOT RUN | NOT RUN | Return-to-Servers path not exercised. |
+| 525 | Login editing after rejection | NOT RUN | NOT RUN | NOT RUN | Rejection/edit/retry not exercised. |
+| 526 | Login submit race | NOT RUN | NOT RUN | NOT RUN | No delayed repeated submit; QA-BUG-0014 suspected from source audit. |
+| 527 | Login Back while loading | NOT RUN | NOT RUN | NOT RUN | No pending request/leave/late-callback test. |
+| 528 | Switch server type after input | NOT RUN | NOT RUN | NOT RUN | Input retention/request type not tested. |
+| 529 | Clipboard and whitespace | NOT RUN | NOT RUN | NOT RUN | No whitespace/clipboard interaction. |
+| 530 | Untrusted/expired TLS | NOT RUN | NOT RUN | NOT RUN | Controlled TLS endpoint unavailable. |
+| 531 | Wrong endpoint response | NOT RUN | NOT RUN | NOT RUN | Malformed response fixture unavailable. |
+| 532 | OAuth callback replay | NOT RUN | NOT RUN | NOT RUN | Callback replay fixture not run. |
+| 533 | OAuth stale/mismatched callback | NOT RUN | NOT RUN | NOT RUN | Stale callback fixture not run. |
+| 534 | Authentication event semantics | NOT RUN | NOT RUN | NOT RUN | Auth event/schema fixes pending; no outcome sequence exercised. |
+| 751 | Server-type dropdown dismissals | NOT RUN | NOT RUN | NOT RUN | Outside-tap/system-Back variants pending; appended to catalogue. |
+| 752 | URL help tooltip dismissals | NOT RUN | NOT RUN | NOT RUN | Button/outside/system-Back variants pending; appended to catalogue. |
+| 753 | Server/credential persistence failure | NOT RUN | NOT RUN | NOT RUN | No safe local persistence fault fixture; QA-BUG-0013 source defect remains open. |
 
 ## Screen groups C–M
 
