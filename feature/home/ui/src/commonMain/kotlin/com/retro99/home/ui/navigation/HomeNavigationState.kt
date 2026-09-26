@@ -70,8 +70,8 @@ sealed interface HomeNavigationEvent {
         val bookUuid: String,
         val bookType: BookType,
         val tab: HomeTab = HomeTab.Books,
+        val isLastBookOnLaunch: Boolean = false,
     ) : HomeNavigationEvent
 }
-
 
 

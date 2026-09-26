@@ -155,6 +155,55 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun lastBookLaunchEventsRetainBoundedAttemptAndTerminalOutcomesWithoutIdentifiers() {
+        val attempted = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.LastBookLaunchAttempted(
+                bookType = "imported",
+            ).parameters + ("book_uuid" to "private-book-id"),
+        )
+        val completed = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.LastBookLaunchCompleted(
+                screen = "reader",
+                outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Failed,
+                reasonCode = "publication_open_failed",
+                bookType = "imported",
+            ).parameters + mapOf(
+                "book_uuid" to "private-book-id",
+                "book_title" to "private title",
+                "file_path" to "/private/path.epub",
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "home",
+                "source_screen" to "splash",
+                "entry_point" to "app_launch",
+                "action" to "open_last_book",
+                "operation" to "reader_open",
+                "stage" to "navigation",
+                "outcome" to "started",
+                "book_type" to "imported",
+            ),
+            attempted,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "reader",
+                "source_screen" to "home",
+                "entry_point" to "app_launch",
+                "action" to "open_last_book",
+                "operation" to "reader_open",
+                "stage" to "terminal",
+                "outcome" to "failed",
+                "reason_code" to "publication_open_failed",
+                "book_type" to "imported",
+            ),
+            completed,
+        )
+    }
+
+    @Test
     fun welcomeEventsRetainOnlyBoundedRouteAndOutcomeDimensions() {
         val viewed = sanitizeAnalyticsParameters(
             AuthAnalyticsEvent.WelcomeViewed(

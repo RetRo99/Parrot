@@ -417,6 +417,53 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
             "book_uuid" to bookUuid,
         )
     }
+
+    /** Records an enabled last-book startup attempt without exposing the local book identifier. */
+    data class LastBookLaunchAttempted(
+        val bookType: String,
+        val stage: String = "navigation",
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "last_book_launch_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "home",
+            "source_screen" to "splash",
+            "entry_point" to "app_launch",
+            "action" to "open_last_book",
+            "operation" to "reader_open",
+            "stage" to stage,
+            "outcome" to "started",
+            "book_type" to bookType,
+        )
+    }
+
+    enum class LastBookLaunchOutcome(val value: String) {
+        Succeeded("succeeded"),
+        Failed("failed"),
+        Skipped("skipped"),
+        Cancelled("cancelled"),
+    }
+
+    /** Records the terminal result of startup resume, only after content is usable or skipped. */
+    data class LastBookLaunchCompleted(
+        val screen: String,
+        val outcome: LastBookLaunchOutcome,
+        val stage: String = "terminal",
+        val reasonCode: String? = null,
+        val bookType: String? = null,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "last_book_launch_completed"
+        override val parameters: Map<String, Any> = buildMap {
+            put("screen", screen)
+            put("source_screen", if (screen == "reader") "home" else "splash")
+            put("entry_point", "app_launch")
+            put("action", "open_last_book")
+            put("operation", "reader_open")
+            put("stage", stage)
+            put("outcome", outcome.value)
+            reasonCode?.let { put("reason_code", it) }
+            bookType?.let { put("book_type", it) }
+        }
+    }
 }
 
 /**

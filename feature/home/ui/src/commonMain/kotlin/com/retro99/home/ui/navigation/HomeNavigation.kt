@@ -66,6 +66,7 @@ fun HomeNavigation(
                             serverId = event.serverId,
                             bookUuid = event.bookUuid,
                             bookType = event.bookType,
+                            isLastBookOnLaunch = event.isLastBookOnLaunch,
                         ),
                         event.tab,
                     )
@@ -244,6 +245,7 @@ fun HomeNavigation(
                                 serverId = destination.serverId,
                                 bookUuid = destination.bookUuid,
                                 bookType = destination.bookType,
+                                isLastBookOnLaunch = destination.isLastBookOnLaunch,
                                 onClose = { intentDispatcher(HomeNavigationIntent.GoBack) },
                                 onSettingsClick = {
                                     intentDispatcher(

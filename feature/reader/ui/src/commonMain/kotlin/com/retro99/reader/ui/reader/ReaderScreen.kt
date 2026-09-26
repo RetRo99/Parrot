@@ -134,11 +134,12 @@ fun ReaderScreen(
     serverId: String,
     bookUuid: String,
     bookType: BookType,
+    isLastBookOnLaunch: Boolean = false,
     onClose: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ReaderViewModel = koinViewModel {
-        parametersOf(serverId, bookUuid, bookType, onClose, onSettingsClick)
+        parametersOf(serverId, bookUuid, bookType, isLastBookOnLaunch, onClose, onSettingsClick)
     },
 ) {
     // Intercept hardware back press to ensure audio progress is saved before navigation

@@ -3,6 +3,7 @@ package com.retro99.home.ui.navigation
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
@@ -134,10 +135,45 @@ class HomeNavigationViewModel(
         )
         if (!isEnabled) return
 
-        val currentlyReading = getCurrentlyReadingUseCase() ?: return
-
+        val currentlyReading = getCurrentlyReadingUseCase()
+        if (currentlyReading == null) {
+            analytics.logEvent(
+                NavigationAnalyticsEvent.LastBookLaunchCompleted(
+                    screen = "home",
+                    outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Skipped,
+                    reasonCode = "no_current_book",
+                ),
+            )
+            analytics.logBreadcrumb(
+                DiagnosticContext(
+                    screen = "home",
+                    sourceScreen = "splash",
+                    entryPoint = "app_launch",
+                    action = "open_last_book",
+                    operation = "reader_open",
+                    stage = "terminal",
+                    outcome = "skipped",
+                    reasonCode = "no_current_book",
+                ),
+            )
+            return
+        }
         analytics.logEvent(
-            NavigationAnalyticsEvent.ContinueReadingLaunched(bookUuid = currentlyReading.bookUuid),
+            NavigationAnalyticsEvent.LastBookLaunchAttempted(
+                bookType = currentlyReading.bookType.name.lowercase(),
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "home",
+                sourceScreen = "splash",
+                entryPoint = "app_launch",
+                action = "open_last_book",
+                operation = "reader_open",
+                stage = "navigation",
+                outcome = "started",
+                mediaType = currentlyReading.bookType.name.lowercase(),
+            ),
         )
 
         emitNavigationEvent(
@@ -146,6 +182,7 @@ class HomeNavigationViewModel(
                 bookUuid = currentlyReading.bookUuid,
                 bookType = currentlyReading.bookType,
                 tab = HomeTab.Books,
+                isLastBookOnLaunch = true,
             )
         )
     }
@@ -356,4 +393,3 @@ class HomeNavigationViewModel(
         }
     }
 }
-

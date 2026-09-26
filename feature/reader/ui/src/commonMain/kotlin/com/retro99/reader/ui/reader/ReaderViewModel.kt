@@ -4,10 +4,13 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.DiagnosticContext
+import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.analytics.api.ReaderAnalyticsEvent
 import com.retro99.base.formatCurrentTime
 import com.retro99.base.now
 import com.retro99.base.nowMillis
+import com.retro99.base.result.AppError
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
@@ -86,6 +89,7 @@ class ReaderViewModel(
     @InjectedParam private val serverId: String,
     @InjectedParam private val bookUuid: String,
     @InjectedParam private val bookType: BookType,
+    @InjectedParam private val isLastBookOnLaunch: Boolean,
     @InjectedParam private val onClose: () -> Unit,
     @InjectedParam private val onSettingsClick: () -> Unit,
     @Provided private val initializeReaderUseCase: InitializeReaderUseCase,
@@ -178,6 +182,9 @@ class ReaderViewModel(
 
     /** Guards against Close and back both navigating away from the reader. */
     private var hasRequestedClose: Boolean = false
+
+    /** Prevents success, failure and close callbacks from reporting multiple launch outcomes. */
+    private val lastBookLaunchOutcomeGate = LastBookLaunchOutcomeGate()
 
     /** Monotonic mark used to generate unique bookmark IDs with nanosecond precision. */
     private val bookmarkIdMark = TimeSource.Monotonic.markNow()
@@ -329,6 +336,27 @@ class ReaderViewModel(
 
     private fun retry() {
         updateState { it.copy(error = null) }
+        if (isLastBookOnLaunch) {
+            lastBookLaunchOutcomeGate.beginAttempt()
+            analytics.logEvent(
+                NavigationAnalyticsEvent.LastBookLaunchAttempted(
+                    bookType = bookType.name.lowercase(),
+                    stage = "retry",
+                ),
+            )
+            analytics.logBreadcrumb(
+                DiagnosticContext(
+                    screen = "reader",
+                    sourceScreen = "home",
+                    entryPoint = "app_launch",
+                    action = "open_last_book",
+                    operation = "reader_open",
+                    stage = "retry",
+                    outcome = "started",
+                    mediaType = bookType.name.lowercase(),
+                ),
+            )
+        }
         initializeReader()
     }
 
@@ -456,7 +484,18 @@ class ReaderViewModel(
                     openPublication(data)
                 }
                 .onFailure { error ->
-                    error.log(analytics, "ReaderViewModel: Failed to initialize reader")
+                    analytics.logEvent(
+                        ReaderAnalyticsEvent.BookOpenFailed(
+                            bookUuid = bookUuid,
+                            bookType = bookType.name,
+                            errorMessage = error.message ?: "Unknown reader initialization error",
+                        ),
+                    )
+                    reportReaderOpenFailure(
+                        error = error,
+                        stage = "initialization",
+                        reasonCode = "reader_initialization_failed",
+                    )
                     updateState { it.copy(error = error) }
                 }
         }
@@ -504,6 +543,13 @@ class ReaderViewModel(
                     tableOfContents = publication.tableOfContents,
                 )
             }
+            if (isLastBookOnLaunch) {
+                reportLastBookLaunchOutcome(
+                    outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Succeeded,
+                    stage = "usable_content",
+                    reasonCode = null,
+                )
+            }
             // Start observing after publication is ready
             observeBookLocationChanges()
             observeReadingTimeInfo()
@@ -534,7 +580,77 @@ class ReaderViewModel(
                     errorMessage = error.message ?: "Unknown publication error",
                 )
             )
+            reportReaderOpenFailure(
+                error = error,
+                stage = "publication",
+                reasonCode = "publication_open_failed",
+            )
             updateState { it.copy(error = error) }
+        }
+    }
+
+    private fun reportReaderOpenFailure(
+        error: AppError,
+        stage: String,
+        reasonCode: String,
+    ) {
+        val context = DiagnosticContext(
+            screen = "reader",
+            sourceScreen = "home".takeIf { isLastBookOnLaunch },
+            entryPoint = "app_launch".takeIf { isLastBookOnLaunch },
+            action = if (isLastBookOnLaunch) "open_last_book" else "open_book",
+            operation = "reader_open",
+            stage = stage,
+            outcome = "failed",
+            reasonCode = reasonCode,
+            mediaType = bookType.name.lowercase(),
+        )
+        if (isLastBookOnLaunch) {
+            reportLastBookLaunchOutcome(
+                outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Failed,
+                stage = "terminal",
+                reasonCode = reasonCode,
+                error = error,
+            )
+        } else if (error.shouldReportException) {
+            error.log(analytics, context)
+        } else {
+            analytics.logBreadcrumb(context)
+        }
+    }
+
+    private fun reportLastBookLaunchOutcome(
+        outcome: NavigationAnalyticsEvent.LastBookLaunchOutcome,
+        stage: String,
+        reasonCode: String?,
+        error: AppError? = null,
+    ) {
+        if (!isLastBookOnLaunch || !lastBookLaunchOutcomeGate.tryResolve()) return
+
+        analytics.logEvent(
+            NavigationAnalyticsEvent.LastBookLaunchCompleted(
+                screen = "reader",
+                outcome = outcome,
+                stage = stage,
+                reasonCode = reasonCode,
+                bookType = bookType.name.lowercase(),
+            ),
+        )
+        val context = DiagnosticContext(
+            screen = "reader",
+            sourceScreen = "home",
+            entryPoint = "app_launch",
+            action = "open_last_book",
+            operation = "reader_open",
+            stage = stage,
+            outcome = outcome.value,
+            reasonCode = reasonCode,
+            mediaType = bookType.name.lowercase(),
+        )
+        if (error != null && error.shouldReportException) {
+            error.log(analytics, context)
+        } else {
+            analytics.logBreadcrumb(context)
         }
     }
 
@@ -1404,6 +1520,11 @@ class ReaderViewModel(
         // outbox holds the reading position even if the checkpoint below never runs.
         if (hasRequestedClose) return
         hasRequestedClose = true
+        reportLastBookLaunchOutcome(
+            outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Cancelled,
+            stage = "terminal",
+            reasonCode = "closed_before_content",
+        )
 
         viewModelScope.launch(NonCancellable) {
             // Only save audio position if this is a ReadAloud book with actual media overlays
