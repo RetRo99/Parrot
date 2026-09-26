@@ -1,0 +1,5 @@
+Case 6 precondition check — BLOCKED before execution
+Date: 2026-09-26, about 16:26 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Blocker: case 6 requires the logged-out flow to navigate back to Welcome and tap its back arrow. The current route is the app's MainActivity, not the logged-out Welcome flow; no logout or state reset was authorized. Thus neither the Welcome back-arrow control nor its clean-exit behavior is reachable under the current safe fixture state.
+No Back action was tested for case 6. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. Requires an authorized logged-out/Welcome fixture.
