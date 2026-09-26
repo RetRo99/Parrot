@@ -104,6 +104,23 @@ class LoginNavigationViewModelTest {
     }
 
     @Test
+    fun compactWelcomeLayoutLogsOneRecoveryBreadcrumb() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(RecordingPreferences(), analytics)
+
+        viewModel.onWelcomeCompactLayoutAvailable()
+        viewModel.onWelcomeCompactLayoutAvailable()
+
+        assertEquals(1, analytics.breadcrumbs.size)
+        assertEquals("welcome", analytics.breadcrumbs.single().screen)
+        assertEquals("layout_adaptation", analytics.breadcrumbs.single().action)
+        assertEquals("welcome_layout", analytics.breadcrumbs.single().operation)
+        assertEquals("compact_viewport", analytics.breadcrumbs.single().stage)
+        assertEquals("succeeded", analytics.breadcrumbs.single().outcome)
+        assertEquals("scroll_enabled", analytics.breadcrumbs.single().reasonCode)
+    }
+
+    @Test
     fun backIntentPreservesWelcomeAsTheOnlyDestination() {
         val viewModel = createViewModel(RecordingPreferences(), RecordingAnalytics())
 

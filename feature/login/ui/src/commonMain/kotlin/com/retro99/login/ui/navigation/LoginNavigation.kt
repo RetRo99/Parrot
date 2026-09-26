@@ -66,6 +66,7 @@ fun LoginNavigation(
                 entry<LoginDestination.Welcome> {
                     WelcomeScreen(
                         isDebug = state.isDebug,
+                        onCompactLayoutAvailable = viewModel::onWelcomeCompactLayoutAvailable,
                         guestModeError = state.guestModeError,
                         onSignInClick = {
                             intentDispatcher(LoginNavigationIntent.NavigateTo(LoginDestination.Login))

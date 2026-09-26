@@ -20,8 +20,31 @@ class LoginNavigationViewModel(
 ) : BaseViewModel<LoginNavigationState, LoginNavigationIntent>(
     initialLoginNavigationState(startAtLogin, buildConfig),
 ) {
+    private var compactWelcomeLayoutBreadcrumbLogged = false
+
+    fun onWelcomeCompactLayoutAvailable() {
+        if (compactWelcomeLayoutBreadcrumbLogged) return
+        compactWelcomeLayoutBreadcrumbLogged = true
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "welcome",
+                action = "layout_adaptation",
+                operation = "welcome_layout",
+                stage = "compact_viewport",
+                outcome = "succeeded",
+                reasonCode = "scroll_enabled",
+            ),
+        )
+    }
+
+    private fun resetCompactWelcomeLayoutBreadcrumb() {
+        compactWelcomeLayoutBreadcrumbLogged = false
+    }
 
     fun onDestinationVisible(destination: LoginDestination, source: LoginDestination?) {
+        if (destination != LoginDestination.Welcome) {
+            resetCompactWelcomeLayoutBreadcrumb()
+        }
         when (destination) {
             LoginDestination.Welcome -> {
                 val sourceScreen = if (source == null) "splash" else "login"
