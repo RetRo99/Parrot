@@ -27,10 +27,13 @@ interface Analytics {
     fun logEvent(event: AnalyticsEvent)
 
     /**
-     * Sets the user ID for analytics tracking.
-     * This helps track user journeys across sessions.
-     *
-     * @param userId The user identifier (should be hashed for privacy), or null to clear
+     * Sets a policy-approved, non-identifying user ID for analytics tracking, or null to clear it.
+     * Do not treat an unkeyed hash of a username, email, URL, or other identifier as anonymous.
      */
     fun setUserId(userId: String?)
+}
+
+/** Clears any previously persisted provider identity when no approved anonymous ID is available. */
+fun Analytics.clearUserIdentity() {
+    setUserId(null)
 }

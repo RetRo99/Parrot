@@ -2,6 +2,7 @@ package com.retro99.parrot.navigation
 
 import androidx.lifecycle.viewModelScope
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.clearUserIdentity
 import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
@@ -20,6 +21,7 @@ class RootNavigationViewModel(
 ) : BaseViewModel<RootNavigationState, RootNavigationIntent>(RootNavigationState()) {
 
     init {
+        analytics.clearUserIdentity()
         checkAuthState()
     }
 

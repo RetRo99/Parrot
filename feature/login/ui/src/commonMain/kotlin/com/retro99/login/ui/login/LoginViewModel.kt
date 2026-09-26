@@ -114,7 +114,7 @@ class LoginViewModel(
 
             loginUseCase(serverType, url, username, password).fold(
                 success = {
-                    analytics.setUserId(username.hashCode().toString())
+                    clearLoginAnalyticsIdentity(analytics)
                     analytics.logEvent(AuthAnalyticsEvent.LoginSucceeded)
                     onSignInSuccess()
                 },
@@ -152,7 +152,7 @@ class LoginViewModel(
         viewModelScope.launch {
             loginUseCase.withOAuth(serverType, url).fold(
                 success = {
-                    analytics.setUserId(url.hashCode().toString())
+                    clearLoginAnalyticsIdentity(analytics)
                     analytics.logEvent(AuthAnalyticsEvent.LoginSucceeded)
                     onSignInSuccess()
                 },
