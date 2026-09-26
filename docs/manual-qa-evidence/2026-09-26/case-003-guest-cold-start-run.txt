@@ -1,0 +1,44 @@
+Cases 3 and 5 — Guest selection, local import and cold start — PASS — 2026-09-26
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`; model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `S921BXXSGDZG1`, gesture navigation.
+- Package `com.retro99.parrot`, version 0.4.5 (21), debug; tested source commit `54708a90bbd7432f57859707edf4e268eeca2c2f`.
+- Local and Samsung-pulled installed APK SHA-256 both `3ff3af279ca4682bd7773c86c96bbe1d3505c97a169357987d61bf4f4842e335`.
+- Device clock showed approximately 22:12–22:16; timezone was not independently verified. No credential or account identifier was used or retained.
+
+Preconditions and steps
+1. Reinstalled the debug APK over the existing package, verified the pulled APK hash, and used the authorized `pm clear` operation on Parrot only to create a fresh unauthenticated/guest fixture. No other package data was cleared.
+2. Launched `com.retro99.parrot/.android.MainActivity`. Welcome appeared with Get Started, Browse without account and the DEBUG badge. Evidence: [`case-003-welcome.png`](case-003-welcome.png).
+3. Tapped Browse without account. Home/Books became visible in guest mode with the expected empty-library prompt. Local PID 10779 logs show one `welcome_action_attempted` and one successful `welcome_action_completed`, followed by one `home_screen_viewed` with `source_screen=welcome`, `entry_point=browse_without_account`; matching start, preference-persisted and Home-visible breadcrumbs appeared. Evidence: [`case-003-home-after-guest.png`](case-003-home-after-guest.png).
+4. To verify non-empty local-library persistence for case 3, pushed the repository's public-domain `PrideAndPrejudice.epub` into Downloads as a temporary fixture, selected only that exact newly created filename in Parrot's system file picker, and imported it. Parrot showed *Pride and Prejudice* by Jane Austen as an eBook. The local library had no configured remote server/account after the app-data reset; no server books were present. Evidence: [`case-003-home-imported.png`](case-003-home-imported.png).
+5. Removed the exact temporary source file from Downloads after import; the imported Parrot library record remained. Removed the DocumentsUI search-history entry created for that exact fixture filename and backed out of the picker. No unrelated Download item or search-history entry was selected or changed.
+6. Force-stopped only Parrot and relaunched its MainActivity. On new PID 14689, one `app_launch_route_resolved` selected Home (`source_screen=splash`, `entry_point=app_launch`, `outcome=success`), followed by one `home_screen_viewed` with matching attribution and visible-route breadcrumb. Books, Series, Statistics and Settings were present; *Pride and Prejudice* remained visible. No Welcome/Login route was shown. Evidence: [`case-003-home-after-relaunch.png`](case-003-home-after-relaunch.png).
+
+Results
+- **Case 3 functional: PASS** — persisted guest choice routed directly to usable Home after force-stop/relaunch; one imported local EPUB remained in the library.
+- **Case 3 Analytics: PASS (local debug provider only)** — first Welcome exposure/startup, one guest attempt and success, one Welcome→Home exposure, and one Home cold-start route/exposure were observed with bounded sources and no duplicate in either process. Firebase Analytics ingestion is waived and not claimed.
+- **Case 3 diagnostics: PASS for the exercised success path (local breadcrumbs)** — guest action start, preference persistence, actual Home visibility and cold-start route selection were recorded. No failure was induced; Crashlytics delivery is not tested by this case.
+- **Case 5 functional: PASS (shared journey)** — Browse without account reached Home with no remote account/books, and importing the controlled local EPUB succeeded. The same action also supplied case 3's persistent-library fixture; this is explicitly one shared run, not two independent repeats.
+- **Case 5 Analytics: PASS (local debug provider only)** — exactly one guest attempt, successful completion and guest-source Home exposure. Firebase ingestion is waived and not claimed.
+- **Case 5 diagnostics: PASS for the exercised success path (local breadcrumbs)** — start, persisted preference and actual destination visibility recorded; no failure induced.
+- `uiautomator dump` could not reach Compose idle on the initial Welcome route; screenshot confirms the Welcome controls. Android accessibility hierarchy worked on Home before and after relaunch.
+
+Sanitized PID-scoped local debug evidence
+```
+PID 10779, guest action:
+Analytics Event: welcome_action_attempted | {screen=welcome, action=browse_without_account, outcome=started}
+Diagnostic breadcrumb: screen=welcome action=browse_without_account operation=persist_guest_mode stage=started outcome=started
+Analytics Event: welcome_action_completed | {screen=welcome, action=browse_without_account, outcome=succeeded}
+Diagnostic breadcrumb: screen=welcome action=browse_without_account operation=persist_guest_mode stage=preference_persisted outcome=succeeded
+Analytics Event: home_screen_viewed | {screen=home, source_screen=welcome, entry_point=browse_without_account}
+Diagnostic breadcrumb: screen=home source_screen=welcome entry_point=browse_without_account action=screen_view operation=home_route stage=visible outcome=succeeded
+
+PID 14689, force-stop/relaunch:
+Diagnostic breadcrumb: screen=splash action=resolve_startup_route operation=check_auth_state stage=started outcome=started
+Analytics Event: app_launch_route_resolved | {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}
+Diagnostic breadcrumb: screen=home source_screen=splash entry_point=app_launch action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded reason_code=auth_state_check_completed
+Analytics Event: home_screen_viewed | {screen=home, source_screen=splash, entry_point=app_launch}
+Diagnostic breadcrumb: screen=home source_screen=splash entry_point=app_launch action=screen_view operation=home_route stage=visible outcome=succeeded
+```
+
+The PID-scoped check found no fatal-exception marker in either app process. The guest-preference write-failure/retry variant is separate case 755; it was not induced on the Samsung because no safe app-scoped write-fault fixture is available. Its common regression test passed; see QA-BUG-0017 and case 755. Firebase Crashlytics delivery remains unverified.

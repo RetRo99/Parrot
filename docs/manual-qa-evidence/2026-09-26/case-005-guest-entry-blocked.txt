@@ -1,5 +1,4 @@
-Case 5 precondition check — BLOCKED before execution
+Case 5 precondition check — HISTORICAL BLOCKER, SUPERSEDED BY SHARED CASE-3/5 PASS RUN
 Date: 2026-09-26, about 16:25 CEST (device time)
 Device: Samsung SM-S921B, serial RFCWC0SSVDM
-Blocker: case 5 requires selecting “Browse without account” from Welcome and validating a disposable local-only library/import path. Welcome is not the current route, and no controlled guest/local test library is available. The installed app/profile data is not confirmed disposable; no logout, app-data reset, import or library mutation was attempted.
-No case-5 UI actions or telemetry assertions were performed. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. Requires safe Welcome access and a disposable guest/local fixture.
+At this preflight, app-data reset and a local test fixture were unavailable. The blocker was later cleared with authorized Parrot-only data reset and one controlled local EPUB import. Cases 3 and 5 passed in a shared Samsung journey; see [case-003-guest-cold-start-run.txt](case-003-guest-cold-start-run.txt). This historical snapshot is not the current disposition, and the shared run is not an independent repeat.

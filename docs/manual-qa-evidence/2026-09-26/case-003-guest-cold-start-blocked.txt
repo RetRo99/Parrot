@@ -1,5 +1,4 @@
-Case 3 precondition check — BLOCKED before case execution
+Case 3 precondition check — HISTORICAL BLOCKER, SUPERSEDED BY PASS RUN
 Date: 2026-09-26, about 16:23 CEST (device time)
 Device: Samsung SM-S921B, serial RFCWC0SSVDM
-Blocker: case 3 requires a disposable guest-mode first-run state, a local test library, and a relaunch after selecting “Browse without account.” The installed app/profile data and local library are not confirmed disposable; no controlled guest fixture was provided. Case 1's safe first-install prerequisite is likewise unavailable.
-No guest selection, app-data reset, process-kill, relaunch or local-library mutation was performed. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. A disposable guest QA profile/library or explicit authorization to reset app data is required.
+At this preflight, app-data reset and a local EPUB fixture were not yet authorized/available. This historical blocker was cleared when Parrot-only app data was reset under the user's authorization and a controlled local EPUB was imported. Cases 3 and 5 subsequently passed on the Samsung; see [case-003-guest-cold-start-run.txt](case-003-guest-cold-start-run.txt). Do not treat this as the current disposition.
