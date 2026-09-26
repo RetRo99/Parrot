@@ -38,7 +38,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 
 ## Progress
 
-**Current test:** Case 10 — App launch & onboarding; blocked before execution because Welcome is unavailable. Cases 1–7 and 9–10 are blocked on safe Welcome/session prerequisites; case 8 is explicitly DEFERRED for unavailable e-ink hardware. Continue in numbered catalogue order.
+**Current test:** Case 12 — App launch & onboarding; blocked before execution because no disposable profile/current-book fixture is available. Cases 1–7, 9–12 are blocked on safe onboarding/session/content prerequisites; case 8 is explicitly DEFERRED for unavailable e-ink hardware. Continue in numbered catalogue order.
 
 | Area | Status | Notes |
 |---|---|---|
@@ -63,6 +63,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 5. Bluetooth/headset fixtures are not confirmed available; those cases will be BLOCKED if reached without the accessory. Authors navigation is conditionally disabled per source documentation and must be confirmed against installed navigation before disposition.
 6. Case 1 needs a disposable first-install state. Do not erase the currently installed app/profile data without explicit authorization or a confirmed safe QA user/profile.
 7. Cases 2–7 and 9–10 need controlled signed-in/guest state or safe access to Welcome; no account logout, app-data reset or build-signature replacement is authorized.
+8. Source audit of group B found QA-BUG-0006 (safe diagnostic operation context is discarded) and QA-BUG-0007 (setting preference values are filtered out). Both are recorded before fixes; this group is not instrumentation-ready until corrected and verified.
 
 ## User-approved verification scope adjustment
 
@@ -70,4 +71,4 @@ On 2026-09-26 the user reported having tested debug event behavior and stated th
 
 ## Final summary
 
-**IN PROGRESS — no screen signed off.** Per user direction, execution is proceeding from catalogue case 1 upward. Cases 1–7 and 9–10 are blocked before test steps by first-install/session/Welcome prerequisites; case 8 is deferred because no e-ink device is available. Setup cases 495–496 and local setup case 503 are preparatory evidence; case 503 is not Firebase delivery evidence. Ten Android host tests passed, and debug/release builds succeeded. QA-BUG-0005 is fixed, committed (`d1e18128`), installed/hash-matched, and post-commit retested successfully; the stale attempt 3 was invalid and excluded. Other setup requirements remain blocked, waived or not run. The user waived Firebase Analytics ingestion checks; Crashlytics delivery remains unverified.
+**IN PROGRESS — no screen signed off.** Per user direction, execution is proceeding from catalogue case 1 upward. Cases 1–7 and 9–12 are blocked before test steps by first-install/session/Welcome/content prerequisites; case 8 is deferred because no e-ink device is available. Group B source audit recorded QA-BUG-0006 and QA-BUG-0007 before fixes; exception reports currently lack structured operation context, and setting values are filtered out. Setup cases 495–496 and local setup case 503 are preparatory evidence; case 503 is not Firebase delivery evidence. Ten Android host tests passed, and debug/release builds succeeded. QA-BUG-0005 is fixed, committed (`d1e18128`), installed/hash-matched, and post-commit retested successfully; the stale attempt 3 was invalid and excluded. Other setup requirements remain blocked, waived or not run. The user waived Firebase Analytics ingestion checks; Crashlytics delivery remains unverified.

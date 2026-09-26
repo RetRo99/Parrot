@@ -29,6 +29,8 @@ Run manifest: [manual-qa-run-report.md](manual-qa-run-report.md). All cases begi
 
 ## B — App launch & onboarding
 
+Source audit before the first device pass identified open instrumentation defects QA-BUG-0006 (exception reports omit structured screen/action/stage context) and QA-BUG-0007 (setting-change values are dropped by the provider allowlist). Cases 1–12 below are blocked/deferred before their actions; these findings are not PASS results. Fixes and verification are pending.
+
 | Case | Variant / evidence | Functional | Analytics | Diagnostics | Notes / defect |
 |---:|---|---|---|---|---|
 | 1 | Cold start on first install; current installed app was already provisioned | BLOCKED | NOT RUN | NOT RUN | The Samsung already has `com.retro99.parrot` installed and was displaying `MainActivity`. Case 1 requires a clean first-install state with no permissions granted. Do not uninstall or clear app data without confirmation: current app/profile/fixture ownership is unknown. A disposable QA Android user/profile or explicit authorization to reset app data is required. No case-1 launch steps were performed; no PASS is claimed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-001-first-install-blocked.txt). |
@@ -41,6 +43,8 @@ Run manifest: [manual-qa-run-report.md](manual-qa-run-report.md). All cases begi
 | 8 | E-ink theming | DEFERRED | N-A (platform deferred) | DEFERRED | No e-ink hardware for this pass; per test-plan scope override. [Disposition](manual-qa-evidence/2026-09-26/case-008-eink-deferred.txt). |
 | 9 | Rotation on Welcome | BLOCKED | NOT RUN | NOT RUN | Welcome is unreachable without an authorized reset/logout; no rotation was performed for this case. [Precondition evidence](manual-qa-evidence/2026-09-26/case-009-welcome-rotation-blocked.txt). |
 | 10 | Background and resume on Welcome | BLOCKED | NOT RUN | NOT RUN | Welcome is unreachable without an authorized reset/logout; no background/resume interaction was performed for this case. [Precondition evidence](manual-qa-evidence/2026-09-26/case-010-welcome-resume-blocked.txt). |
+| 11 | Open last book on launch (enabled) | BLOCKED | NOT RUN | NOT RUN | No disposable QA book/position fixture; existing preference/progress was not changed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-011-last-book-launch-blocked.txt). |
+| 12 | Open last book on launch (no current book) | BLOCKED | NOT RUN | NOT RUN | No disposable profile/current-book fixture; existing current-book state and preference were not changed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-012-last-book-no-current-blocked.txt). |
 
 ## Screen groups C–M
 

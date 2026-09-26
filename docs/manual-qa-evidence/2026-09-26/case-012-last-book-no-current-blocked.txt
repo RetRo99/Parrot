@@ -1,0 +1,5 @@
+Case 12 precondition check — BLOCKED before execution
+Date: 2026-09-26, about 16:29 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Blocker: case 12 requires enabling “Open last book on launch,” clearing the current-book state, and relaunching. No disposable QA profile/library is allocated; clearing the existing current-book preference could affect the app's user's state. No setting or progress was changed.
+No case-12 actions were performed. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. Requires a disposable profile/current-book fixture and authorization for that state change.

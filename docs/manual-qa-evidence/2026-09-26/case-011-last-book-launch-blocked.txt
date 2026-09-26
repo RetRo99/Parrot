@@ -1,0 +1,5 @@
+Case 11 precondition check — BLOCKED before execution
+Date: 2026-09-26, about 16:28 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Blocker: case 11 would change the “Open last book on launch” preference, open/read a book, and relaunch into its saved position. No controlled QA book/position fixture is available and existing preference/library ownership is unknown. Changing the preference or reading position could alter user state; no setting or content was changed.
+No case-11 actions were performed. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. Requires a disposable reading fixture/profile and permission to change its setting/progress.
