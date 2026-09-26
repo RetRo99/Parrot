@@ -1,0 +1,12 @@
+QA-BUG-0005 retest attempt 5 — post-commit PASS for expected transport failures
+Date: 2026-09-26, about 16:19 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Source commit: d1e18128288d7342c211d226a9041387a0974796
+Build: com.retro99.parrot 0.4.5 (21), debug. The APK was rebuilt from the committed tree, installed with `adb install -r`, then the installed `base.apk` was pulled and SHA-256 compared with the local output; hashes matched: `b1f6d3ed57189df9cafb001a154c490526078687150331e479bd3680c080595e`.
+Action: force-stopped and cold-started MainActivity with Wi-Fi enabled and airplane mode off. Confirmed fresh app PID 26313 and captured only that PID's logcat for a bounded 20-second interval. Host elapsed time was 23.71 seconds including launch/setup/teardown.
+Result: 2 local `network_request_failed` outcome events; 0 sanitized handled-exception markers. Timestamps are inside the capture interval. The PID-scoped stream had 24 lines total. This is local DebugAnalyticsManager evidence only, not Firebase delivery and not the comparative logging-overhead case 513.
+
+```text
+09-26 16:18:51.727 26313 26357 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+09-26 16:19:01.736 26313 26444 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+```
