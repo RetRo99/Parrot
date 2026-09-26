@@ -425,14 +425,15 @@ sealed interface NetworkAnalyticsEvent : AnalyticsEvent {
         val errorType: String,
         val isTimeout: Boolean,
         val isConnectivity: Boolean,
+        val statusCode: Int? = null,
     ) : NetworkAnalyticsEvent {
         override val name: String = "network_request_failed"
-        override val parameters: Map<String, Any> = mapOf(
-            "endpoint" to endpoint,
-            "error_type" to errorType,
-            "is_timeout" to isTimeout,
-            "is_connectivity" to isConnectivity,
-        )
+        override val parameters: Map<String, Any> = buildMap {
+            put("endpoint", endpoint)
+            put("error_type", errorType)
+            put("is_timeout", isTimeout)
+            put("is_connectivity", isConnectivity)
+            statusCode?.let { put("status_code", it) }
+        }
     }
 }
-

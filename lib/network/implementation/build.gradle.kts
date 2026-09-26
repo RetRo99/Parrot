@@ -14,6 +14,8 @@ kotlin {
         namespace = "com.retro99.network.implementation"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -34,6 +36,14 @@ kotlin {
             implementation(projects.feature.auth.domain)
             implementation(projects.lib.analytics.api)
         }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+        named("androidHostTest") {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+            }
+        }
 
         androidMain.dependencies {
             implementation(libs.ktor.client.okhttp)
@@ -43,4 +53,3 @@ kotlin {
         }
     }
 }
-

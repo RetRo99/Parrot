@@ -1,0 +1,13 @@
+QA-BUG-0005 retest attempt 4 — PASS for expected transport failures
+Date: 2026-09-26, about 16:13 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Build: com.retro99.parrot 0.4.5 (21), debug; source commit 338d4ab29745d6e1a1b82524161d0fc9c5eabd2d plus uncommitted QA-BUG-0005 changes
+Action: force-stopped and cold-started MainActivity with Wi-Fi enabled and airplane mode off. After confirming fresh app PID 24356, captured only that PID's logcat for a bounded 20-second interval. The host command took 23.62 seconds including launch/setup/teardown. Matching event timestamps are within the capture interval.
+Result: 2 local `network_request_failed` outcome events; 0 sanitized handled-exception markers. The events expose only bounded error type and boolean categories. PID-scoped output contained 23 lines total. This is local DebugAnalyticsManager evidence only, not Firebase delivery and not the comparative logging-overhead case 513.
+
+```text
+09-26 16:13:36.906 24356 24479 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+09-26 16:13:46.957 24356 24407 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=connection_failed, is_timeout=false, is_connectivity=true}
+```
+
+Capture correction history: a subsequent attempt 3 script read the generic tag's buffered logcat without a PID/time-window constraint; it counted 372 historical network event lines and 255 historical exception-marker lines timestamped around 15:07, not the attempted 16:xx interval. Those counts are invalid for retest outcomes and are excluded from pass/fail. They are retained here as an audit note; the raw unfiltered stream was not saved.

@@ -7,6 +7,7 @@ import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
+import com.retro99.base.result.log
 import com.retro99.base.result.logOnFailure
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
@@ -47,10 +48,7 @@ interface BaseRepository : KoinComponent {
             val cacheResult = deferredCache.await()
             val cachedData = cacheResult.getOrElse { cacheError ->
                 // Log cache read failures for debugging - these were previously silent!
-                analytics.logException(
-                    cacheError.toThrowable(),
-                    "Cache read failed, will rely on remote source",
-                )
+                cacheError.log(analytics, "Cache read failed, will rely on remote source")
                 null
             }
             if (cachedData != null) {
@@ -73,8 +71,8 @@ interface BaseRepository : KoinComponent {
                 }
                 .getOrElse { error ->
                     // Log the remote error for debugging, even when falling back to cache
-                    analytics.logException(
-                        error.toThrowable(),
+                    error.log(
+                        analytics,
                         "Remote fetch failed${if (cachedData != null) ", using cached data" else ""}",
                     )
                     if (cachedData == null) {
@@ -117,10 +115,7 @@ interface BaseRepository : KoinComponent {
             val cacheResult = cacheSource()
             val cachedData = cacheResult.getOrElse { cacheError ->
                 // Log cache read failures for debugging - these were previously silent!
-                analytics.logException(
-                    cacheError.toThrowable(),
-                    "Cache fallback read failed after remote error",
-                )
+                cacheError.log(analytics, "Cache fallback read failed after remote error")
                 null
             }
             return if (cachedData != null) {

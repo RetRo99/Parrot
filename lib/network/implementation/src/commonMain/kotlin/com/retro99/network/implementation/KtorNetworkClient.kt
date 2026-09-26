@@ -41,8 +41,6 @@ import kotlinx.serialization.SerializationException
 import retro99.network.api.NetworkClient
 import retro99.network.api.QueryParamsScope
 
-private const val CONNECT_TIMEOUT_MS = 30_000L // 30 seconds
-
 /**
  * Ktor-based implementation of NetworkClient.
  *
@@ -292,7 +290,6 @@ class KtorNetworkClient(
         return try {
             Ok(response.body(typeInfo))
         } catch (e: Exception) {
-            analytics.logException(e, "Failed to parse response for type: ${typeInfo.type}")
             Err(
                 AppError.ApiError(
                     code = 0,
@@ -324,14 +321,14 @@ class KtorNetworkClient(
                 )
             )
         }
-        // Log HTTP errors for debugging - only log endpoint path, never URLs
-        analytics.logException(
-            Exception("HTTP $errorCode: $errorBody"),
-            buildString {
-                append("HTTP error on request")
-                append(" | endpoint=$endpoint")
-                append(" | statusCode=$errorCode")
-            }
+        analytics.logEvent(
+            NetworkAnalyticsEvent.NetworkRequestFailed(
+                endpoint = endpoint,
+                errorType = "http_error",
+                isTimeout = false,
+                isConnectivity = false,
+                statusCode = errorCode,
+            ),
         )
         return error
     }
@@ -362,90 +359,44 @@ class KtorNetworkClient(
     }
 
     private fun handleException(e: Exception, endpoint: String): AppResult<Nothing> {
-        val errorType = classifyNetworkError(e)
-        val isTimeout = e is ConnectTimeoutException || e is SocketTimeoutException
-        val isConnectivity = isConnectivityError(e)
+        val failure = classifyNetworkFailure(e)
 
-        // Build detailed context message for debugging - only log endpoint path, never URLs
-        val contextMessage = buildString {
-            append("Network request exception")
-            append(" | endpoint=$endpoint")
-            append(" | errorType=$errorType")
-            append(" | exceptionClass=${e::class.simpleName}")
-            if (isTimeout) {
-                append(" | isTimeout=true")
-                append(" | connectTimeoutMs=$CONNECT_TIMEOUT_MS")
-            }
-            if (isConnectivity) {
-                append(" | isConnectivity=true")
-            }
-        }
-
-        // Create a sanitized exception that doesn't expose URLs/hosts from the original message
-        val sanitizedException = Exception("Network error: $errorType", e.cause)
-        analytics.logException(sanitizedException, contextMessage)
-
-        // Also log as analytics event for tracking patterns
+        // Transport failures are operation outcomes; callers decide whether a propagated
+        // unexpected failure materially affects the user before reporting a Crashlytics issue.
         analytics.logEvent(
             NetworkAnalyticsEvent.NetworkRequestFailed(
                 endpoint = endpoint,
-                errorType = errorType,
-                isTimeout = isTimeout,
-                isConnectivity = isConnectivity,
+                errorType = failure.errorType,
+                isTimeout = failure.isTimeout,
+                isConnectivity = failure.isConnectivity,
             )
         )
 
-        return when (e) {
-            is IOException,
-            is ConnectTimeoutException,
-            is SocketTimeoutException -> handleNetworkException(e)
-
-            is SerializationException -> Err(
+        return when {
+            e is SerializationException -> Err(
                 AppError.ApiError(
                     code = 0,
                     message = "Failed to parse response: ${e.message}"
                 )
             )
 
+            e is IOException || e is ConnectTimeoutException || e is SocketTimeoutException ||
+                failure.isExpectedFailure -> handleNetworkException(e, failure)
+
             else -> Err(AppError.UnknownError(e))
         }
     }
 
-    private fun isConnectivityError(e: Exception): Boolean {
-        return e.message?.let { message ->
-            message.contains("unable to resolve host", ignoreCase = true) ||
-                message.contains("host not found", ignoreCase = true) ||
-                message.contains("network is unreachable", ignoreCase = true) ||
-                message.contains("connection refused", ignoreCase = true)
-        } == true
-    }
-
-    private fun classifyNetworkError(e: Exception): String {
-        return when (e) {
-            is ConnectTimeoutException -> "connect_timeout"
-            is SocketTimeoutException -> "socket_timeout"
-            is IOException -> {
-                val message = e.message?.lowercase() ?: ""
-                when {
-                    message.contains("unable to resolve host") -> "dns_resolution_failed"
-                    message.contains("host not found") -> "host_not_found"
-                    message.contains("network is unreachable") -> "network_unreachable"
-                    message.contains("connection refused") -> "connection_refused"
-                    message.contains("connection reset") -> "connection_reset"
-                    message.contains("broken pipe") -> "broken_pipe"
-                    message.contains("ssl") || message.contains("tls") -> "ssl_error"
-                    else -> "io_error"
-                }
-            }
-            else -> "unknown"
-        }
-    }
-
-    private fun handleNetworkException(e: Exception): AppResult<Nothing> {
+    private fun handleNetworkException(
+        e: Exception,
+        failure: NetworkFailureClassification,
+    ): AppResult<Nothing> {
         return Err(
             AppError.NetworkError(
                 throwable = e,
-                isConnectivity = isConnectivityError(e)
+                isConnectivity = failure.isConnectivity,
+                isTimeout = failure.isTimeout,
+                isExpectedFailure = failure.isExpectedFailure,
             )
         )
     }

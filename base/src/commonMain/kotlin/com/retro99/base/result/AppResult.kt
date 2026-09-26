@@ -30,7 +30,12 @@ inline fun <V, E> Result<V, E>.andThenAlways(action: (Result<V, E>) -> Result<V,
 }
 
 sealed class AppError(open val message: String?) {
-    data class NetworkError(val throwable: Throwable, val isConnectivity: Boolean = false) :
+    data class NetworkError(
+        val throwable: Throwable,
+        val isConnectivity: Boolean = false,
+        val isTimeout: Boolean = false,
+        val isExpectedFailure: Boolean = isConnectivity || isTimeout,
+    ) :
         AppError(throwable.message)
 
     data class ApiError(val code: Int, override val message: String? = null) : AppError(message)
@@ -48,6 +53,14 @@ sealed class AppError(open val message: String?) {
      * Resource not found error.
      */
     data class NotFoundError(override val message: String?) : AppError(message)
+
+    /** Expected transport and HTTP client errors use operation outcome telemetry, not Crashlytics. */
+    val shouldReportException: Boolean
+        get() = when (this) {
+            is NetworkError -> !isExpectedFailure
+            is ApiError -> code !in 400..599
+            else -> true
+        }
 
     /**
      * Converts this AppError to a Throwable for logging purposes.
@@ -142,7 +155,9 @@ inline infix fun <V, U> AppResult<V>.mapCatching(transform: (V) -> U): AppResult
  * @return The same AppError for chaining
  */
 fun AppError.log(analytics: Analytics, context: String): AppError {
-    analytics.logException(toThrowable(), context)
+    if (shouldReportException) {
+        analytics.logException(toThrowable(), context)
+    }
     return this
 }
 
