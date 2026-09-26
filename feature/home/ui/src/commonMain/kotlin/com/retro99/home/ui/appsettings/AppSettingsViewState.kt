@@ -1,5 +1,6 @@
 package com.retro99.home.ui.appsettings
 
+import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.user.api.UserProfile
 
 data class AppSettingsViewState(
@@ -22,3 +23,6 @@ data class AppSettingsViewState(
         get() = userProfiles.size > 1
 }
 
+internal fun AppSettingsViewState.withCurrentlyReading(
+    currentlyReading: CurrentlyReadingDomainModel?,
+): AppSettingsViewState = copy(hasCurrentlyReadingBook = currentlyReading != null)

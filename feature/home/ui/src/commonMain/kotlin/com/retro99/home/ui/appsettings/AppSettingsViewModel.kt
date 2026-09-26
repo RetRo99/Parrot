@@ -3,16 +3,19 @@ package com.retro99.home.ui.appsettings
 import androidx.lifecycle.viewModelScope
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.FileLogger
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.base.ui.sharing.FileSharer
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.reader.domain.usecase.ClearCurrentlyReadingUseCase
-import com.retro99.reader.domain.usecase.GetCurrentlyReadingUseCase
+import com.retro99.reader.domain.usecase.ObserveCurrentlyReadingUseCase
 import com.retro99.user.api.UserRegistry
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
@@ -23,7 +26,7 @@ class AppSettingsViewModel(
     @Provided private val fileSharer: FileSharer,
     @Provided private val preferences: Preferences,
     @Provided private val clearCurrentlyReadingUseCase: ClearCurrentlyReadingUseCase,
-    @Provided private val getCurrentlyReadingUseCase: GetCurrentlyReadingUseCase,
+    @Provided private val observeCurrentlyReadingUseCase: ObserveCurrentlyReadingUseCase,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<AppSettingsViewState, AppSettingsIntent>(
@@ -32,6 +35,7 @@ class AppSettingsViewModel(
 
     init {
         observeUserProfiles()
+        observeCurrentlyReading()
         observeBooleanPref(PreferencesKey.FileLoggingEnabled, defaultValue = false) { enabled ->
             updateState { it.copy(isLoggingEnabled = enabled) }
         }
@@ -44,6 +48,51 @@ class AppSettingsViewModel(
         observeBooleanPref(PreferencesKey.ShowContinueReading, defaultValue = true) { enabled ->
             updateState { it.copy(showContinueReading = enabled) }
         }
+    }
+
+    private fun observeCurrentlyReading() {
+        observeCurrentlyReadingUseCase()
+            .onStart {
+                analytics.logBreadcrumb(
+                    DiagnosticContext(
+                        screen = "app_settings",
+                        action = "observe_current_book",
+                        operation = "current_book_state",
+                        stage = "started",
+                        outcome = "started",
+                    ),
+                )
+            }
+            .onEach { currentlyReading ->
+                val hasCurrentlyReadingBook = currentlyReading != null
+                val stateChanged = viewState.value.hasCurrentlyReadingBook != hasCurrentlyReadingBook
+                updateState { it.withCurrentlyReading(currentlyReading) }
+                if (stateChanged) {
+                    analytics.logBreadcrumb(
+                        DiagnosticContext(
+                            screen = "app_settings",
+                            action = "observe_current_book",
+                            operation = "current_book_state",
+                            stage = "state_updated",
+                            outcome = if (hasCurrentlyReadingBook) "available" else "empty",
+                        ),
+                    )
+                }
+            }
+            .catch { error ->
+                analytics.logException(
+                    error,
+                    DiagnosticContext(
+                        screen = "app_settings",
+                        action = "observe_current_book",
+                        operation = "current_book_state",
+                        stage = "observe",
+                        outcome = "failed",
+                        reasonCode = "current_book_observation_failed",
+                    ),
+                )
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun observeBooleanPref(
@@ -231,4 +280,3 @@ class AppSettingsViewModel(
         updateState { it.copy(showCurrentBookClearedMessage = false) }
     }
 }
-
