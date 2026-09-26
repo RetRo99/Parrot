@@ -27,6 +27,12 @@ Run manifest: [manual-qa-run-report.md](manual-qa-run-report.md). All cases begi
 | 513 | Logging overhead | NOT RUN | NOT RUN | NOT RUN | No comparative timed/scroll/playback test. |
 | 514 | End-of-run cleanup | NOT RUN | N-A (setup) | NOT RUN | Firebase debug property not changed; final restoration audit pending. |
 
-## Screen groups B–M
+## B — App launch & onboarding
 
-No cases have started. Add a row per case and applicable variant (especially Back/dismiss/lifecycle variants) before and during each screen pass; do not mark a parent case PASS until all required variants pass with evidence.
+| Case | Variant / evidence | Functional | Analytics | Diagnostics | Notes / defect |
+|---:|---|---|---|---|---|
+| 1 | Cold start on first install; current installed app was already provisioned | BLOCKED | NOT RUN | NOT RUN | The Samsung already has `com.retro99.parrot` installed and was displaying `MainActivity`. Case 1 requires a clean first-install state with no permissions granted. Do not uninstall or clear app data without confirmation: current app/profile/fixture ownership is unknown. A disposable QA Android user/profile or explicit authorization to reset app data is required. No case-1 launch steps were performed; no PASS is claimed. [Precondition evidence](manual-qa-evidence/2026-09-26/case-001-first-install-blocked.txt). |
+
+## Screen groups C–M
+
+No cases in these groups have started. Execute in catalogue order after case 1 is dispositioned; add a row per case and applicable variant (especially Back/dismiss/lifecycle variants) before and during each screen pass. Do not mark a parent case PASS until all required variants pass with evidence.

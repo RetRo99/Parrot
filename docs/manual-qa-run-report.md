@@ -38,7 +38,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 
 ## Progress
 
-**Current screen group:** A — Samsung setup and reporting readiness (cases 495–514). Screen B has not started.
+**Current test:** Case 1 — App launch & onboarding; blocked before execution pending safe first-install fixture/reset authorization. Continue in numbered catalogue order.
 
 | Area | Status | Notes |
 |---|---|---|
@@ -52,7 +52,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 | Crashlytics delivery / symbolication / breadcrumbs (506–508) | BLOCKED | No authorized Firebase Console session, controlled corrupt-file fixture or release-device test. |
 | Privacy / duplicate / QA classification (509–511) | FAIL / BLOCKED | QA-BUG-0001 passes host tests/local debug output. Distinctive payload use is not yet executed; Crashlytics payload inspection is blocked. QA-BUG-0002 sanitized local exception retest passes. Source audit confirms duplicate login reports (QA-BUG-0004); startup confirms network exception flood (QA-BUG-0005). QA-BUG-0003 and production QA-traffic policy remain open. |
 | Offline telemetry / overhead / cleanup (512–514) | NOT RUN | These need an instrumented on-device pass. |
-| Screen groups B–M | NOT RUN | No screen pass has begun. |
+| Screen groups B–M | IN PROGRESS / NOT RUN | Case 1 is blocked before execution by the unavailable safe first-install fixture; no app screen has been signed off. |
 
 ## Blockers and prerequisites
 
@@ -61,6 +61,7 @@ Case evidence and sanitized excerpts will be stored under [`manual-qa-evidence/`
 3. Need a safe, explicitly allocated test profile/data set before destructive imports/deletions, low-storage tests or switching the active app build.
 4. Need run-specific continuous/logged evidence capture and complete device/settings baseline before executing screen cases.
 5. Bluetooth/headset fixtures are not confirmed available; those cases will be BLOCKED if reached without the accessory. Authors navigation is conditionally disabled per source documentation and must be confirmed against installed navigation before disposition.
+6. Case 1 needs a disposable first-install state. Do not erase the currently installed app/profile data without explicit authorization or a confirmed safe QA user/profile.
 
 ## User-approved verification scope adjustment
 
@@ -68,4 +69,4 @@ On 2026-09-26 the user reported having tested debug event behavior and stated th
 
 ## Final summary
 
-**IN PROGRESS — no screen signed off.** Setup cases 495–496 and local setup case 503 pass; case 503 is not Firebase delivery evidence. Ten Android host tests passed, and debug/release builds succeeded. QA-BUG-0005 is fixed, committed (`d1e18128`), installed/hash-matched, and post-commit retested successfully; the stale attempt 3 was invalid and excluded. Other setup requirements remain blocked, waived or not run. The user waived Firebase Analytics ingestion checks; Crashlytics delivery remains unverified.
+**IN PROGRESS — no screen signed off.** Per user direction, execution is proceeding from catalogue case 1 upward. Case 1 is blocked before execution because it requires first-install state and the current installed app/profile data is not confirmed disposable. Setup cases 495–496 and local setup case 503 are already evidenced as preparatory work; case 503 is not Firebase delivery evidence. Ten Android host tests passed, and debug/release builds succeeded. QA-BUG-0005 is fixed, committed (`d1e18128`), installed/hash-matched, and post-commit retested successfully; the stale attempt 3 was invalid and excluded. Other setup requirements remain blocked, waived or not run. The user waived Firebase Analytics ingestion checks; Crashlytics delivery remains unverified.

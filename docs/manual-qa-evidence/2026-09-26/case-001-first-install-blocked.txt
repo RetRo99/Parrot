@@ -1,0 +1,13 @@
+Case 1 precondition check — BLOCKED before execution
+Date: 2026-09-26, about 16:20 CEST (device time)
+Device: Samsung SM-S921B, serial RFCWC0SSVDM
+Installed build: `com.retro99.parrot` 0.4.5 (21), commit `d1e18128288d7342c211d226a9041387a0974796`, debug APK SHA-256 `b1f6d3ed57189df9cafb001a154c490526078687150331e479bd3680c080595e`.
+Precondition observation: package manager reports the app installed, and ActivityManager reports `com.retro99.parrot/.android.MainActivity` as the resumed activity. This is not a first-install/no-permission state.
+Safety disposition: no launch sequence was scored for case 1; no uninstall, app-data clear, profile change or permission change was performed. Existing app/profile/fixture ownership is not confirmed disposable. A safe clean-install fixture or user authorization to reset the app data is required.
+
+```text
+package: com.retro99.parrot
+version: 0.4.5 (21)
+resumed activity: com.retro99.parrot/.android.MainActivity
+case 1 result: BLOCKED before execution
+```
