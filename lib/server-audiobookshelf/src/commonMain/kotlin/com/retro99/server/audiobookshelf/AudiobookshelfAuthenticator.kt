@@ -2,9 +2,9 @@ package com.retro99.server.audiobookshelf
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
-import com.retro99.analytics.api.Analytics
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
+import com.retro99.network.implementation.classifyNetworkFailure
 import com.retro99.server.api.ServerAuthenticator
 import com.retro99.server.api.ServerCredentials
 import com.retro99.server.api.ServerType
@@ -20,12 +20,11 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import org.koin.core.annotation.Factory
-import org.koin.core.annotation.Provided
+import kotlin.coroutines.cancellation.CancellationException
 
 @Factory
 class AudiobookshelfAuthenticator(
     private val httpClient: HttpClient,
-    @Provided private val analytics: Analytics,
 ) : ServerAuthenticator {
 
     override val serverType: ServerType = ServerType.Audiobookshelf
@@ -55,8 +54,9 @@ class AudiobookshelfAuthenticator(
             } else {
                 Err(AppError.AuthError("Login failed: ${response.status}"))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            analytics.logException(e, "Audiobookshelf login failed")
             Err(mapException(e))
         }
     }
@@ -104,9 +104,15 @@ class AudiobookshelfAuthenticator(
     }
 
     private fun mapException(e: Exception): AppError {
+        val networkFailure = classifyNetworkFailure(e)
         return when {
             e.message?.contains("401") == true -> AppError.AuthError("Invalid credentials")
-            e.message?.contains("timeout", ignoreCase = true) == true -> AppError.NetworkError(e)
+            networkFailure.isExpectedFailure -> AppError.NetworkError(
+                throwable = e,
+                isConnectivity = networkFailure.isConnectivity,
+                isTimeout = networkFailure.isTimeout,
+                isExpectedFailure = true,
+            )
             else -> AppError.UnknownError(e)
         }
     }

@@ -3,9 +3,6 @@ package com.retro99.login.data
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.flatMap
-import com.github.michaelbull.result.onFailure
-import com.retro99.analytics.api.Analytics
-import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.base.result.AppError
 import com.retro99.base.result.CompletableResult
 import com.retro99.base.server.ServerType
@@ -20,7 +17,6 @@ import org.koin.core.annotation.Single
 internal class LoginDataRepository(
     @Provided private val authenticatorFactory: ServerAuthenticatorFactory,
     @Provided private val storytellerOAuthSessionLauncher: StorytellerOAuthSessionLauncher,
-    @Provided private val analytics: Analytics,
     @Provided private val serverRegistry: ServerRegistry,
 ) : LoginRepository {
 
@@ -59,14 +55,6 @@ internal class LoginDataRepository(
         return storytellerOAuthSessionLauncher.requestAppToken(serverUrl)
             .flatMap { appToken ->
                 authenticator.loginWithAppToken(serverUrl, appToken)
-            }
-            .onFailure { error ->
-                analytics.logEvent(
-                    AuthAnalyticsEvent.OAuthLoginStepFailed(
-                        step = "oauth_flow",
-                        errorType = error::class.simpleName ?: "AppError",
-                    )
-                )
             }
             .flatMap { credentials ->
                 val serverConfig = serverRegistry.addServer(

@@ -1,6 +1,6 @@
 package com.retro99.network.implementation
 
-internal data class NetworkFailureClassification(
+data class NetworkFailureClassification(
     val errorType: String,
     val isTimeout: Boolean,
     val isConnectivity: Boolean,
@@ -8,7 +8,7 @@ internal data class NetworkFailureClassification(
 )
 
 /** Classifies expected transport failures without placing throwable messages in telemetry. */
-internal fun classifyNetworkFailure(throwable: Throwable): NetworkFailureClassification {
+fun classifyNetworkFailure(throwable: Throwable): NetworkFailureClassification {
     val causes = generateSequence(throwable) { it.cause }.take(MAX_CAUSE_DEPTH).toList()
     val typeNames = causes.mapNotNull { it::class.simpleName }.toSet()
     val message = causes.firstNotNullOfOrNull { it.message?.lowercase() }.orEmpty()

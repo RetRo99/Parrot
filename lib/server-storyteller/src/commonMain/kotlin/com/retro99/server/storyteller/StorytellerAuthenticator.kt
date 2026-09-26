@@ -6,6 +6,7 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
+import com.retro99.network.implementation.classifyNetworkFailure
 import com.retro99.server.api.ServerAuthenticator
 import com.retro99.server.api.ServerCredentials
 import com.retro99.server.api.ServerType
@@ -25,6 +26,7 @@ import io.ktor.http.isSuccess
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.time.Clock
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -71,6 +73,8 @@ class StorytellerAuthenticator(
             } else {
                 Err(AppError.AuthError("Login failed: ${response.status}"))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Err(mapException(e))
         }
@@ -99,7 +103,6 @@ class StorytellerAuthenticator(
                     step = OAuthStep.AppTokenExchange,
                     errorType = "HttpStatus",
                     statusCode = tokenResponse.status.value,
-                    throwable = null,
                 )
                 return Err(AppError.AuthError("OAuth login failed: ${tokenResponse.status}"))
             }
@@ -112,7 +115,6 @@ class StorytellerAuthenticator(
                         step = OAuthStep.DecodeCallbackToken,
                         errorType = "MissingSubject",
                         statusCode = null,
-                        throwable = null,
                     )
                 }
             val sessionToken = tokenResponse.body<StorytellerTokenResponse>()
@@ -126,12 +128,13 @@ class StorytellerAuthenticator(
                     expiresAt = null,
                 )
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logOAuthFailure(
                 step = OAuthStep.AppTokenLogin,
                 errorType = e::class.simpleName ?: "Exception",
                 statusCode = null,
-                throwable = e,
             )
             Err(mapException(e))
         }
@@ -173,9 +176,15 @@ class StorytellerAuthenticator(
     }
 
     private fun mapException(e: Exception): AppError {
+        val networkFailure = classifyNetworkFailure(e)
         return when {
             e.message?.contains("401") == true -> AppError.AuthError("Invalid credentials")
-            e.message?.contains("timeout", ignoreCase = true) == true -> AppError.NetworkError(e)
+            networkFailure.isExpectedFailure -> AppError.NetworkError(
+                throwable = e,
+                isConnectivity = networkFailure.isConnectivity,
+                isTimeout = networkFailure.isTimeout,
+                isExpectedFailure = true,
+            )
             else -> AppError.UnknownError(e)
         }
     }
@@ -184,7 +193,6 @@ class StorytellerAuthenticator(
         step: OAuthStep,
         errorType: String,
         statusCode: Int?,
-        throwable: Throwable?,
     ) {
         analytics.logEvent(
             AuthAnalyticsEvent.OAuthLoginStepFailed(
@@ -193,19 +201,6 @@ class StorytellerAuthenticator(
                 statusCode = statusCode,
             )
         )
-        analytics.logException(
-            throwable ?: OAuthLoginFailureException(step, errorType, statusCode),
-            buildString {
-                append("StorytellerAuthenticator: OAuth login failed | step=")
-                append(step.analyticsName)
-                append(" | errorType=")
-                append(errorType)
-                statusCode?.let {
-                    append(" | statusCode=")
-                    append(it)
-                }
-            }
-        )
     }
 
     private enum class OAuthStep(val analyticsName: String) {
@@ -213,24 +208,6 @@ class StorytellerAuthenticator(
         DecodeCallbackToken("decode_callback_token"),
         AppTokenLogin("app_token_login"),
     }
-
-    private class OAuthLoginFailureException(
-        step: OAuthStep,
-        errorType: String,
-        statusCode: Int?,
-    ) : Exception(
-        buildString {
-            append("OAuth login failed at ")
-            append(step.analyticsName)
-            append(": ")
-            append(errorType)
-            statusCode?.let {
-                append(" (HTTP ")
-                append(it)
-                append(")")
-            }
-        }
-    )
 
     @OptIn(ExperimentalEncodingApi::class)
     private fun String.decodeJwtSubject(): String? {
@@ -247,4 +224,3 @@ class StorytellerAuthenticator(
         }.getOrNull()
     }
 }
-

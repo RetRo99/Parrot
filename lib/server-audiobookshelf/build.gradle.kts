@@ -28,7 +28,6 @@ kotlin {
             implementation(libs.datetime)
             implementation(libs.ktor.client.core)
             implementation(projects.base)
-            implementation(projects.lib.analytics.api)
             implementation(projects.lib.server.api)
             implementation(projects.lib.server.implementation)
             implementation(projects.lib.network.implementation)

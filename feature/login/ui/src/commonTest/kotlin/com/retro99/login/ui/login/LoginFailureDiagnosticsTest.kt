@@ -25,6 +25,23 @@ class LoginFailureDiagnosticsTest {
     }
 
     @Test
+    fun expectedNetworkFailureIsNotReported() {
+        val analytics = RecordingAnalytics()
+
+        reportUnexpectedLoginFailure(
+            analytics = analytics,
+            error = AppError.NetworkError(
+                throwable = IllegalStateException("private transport detail"),
+                isConnectivity = true,
+            ),
+            serverType = ServerType.Storyteller,
+            authMethod = "credentials",
+        )
+
+        assertEquals(0, analytics.exceptions.size)
+    }
+
+    @Test
     fun unexpectedFailureIsReportedOnceWithBoundedContext() {
         val analytics = RecordingAnalytics()
 
