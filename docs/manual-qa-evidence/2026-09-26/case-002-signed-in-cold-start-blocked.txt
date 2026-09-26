@@ -1,6 +1,5 @@
-Case 2 precondition check — BLOCKED before case execution
+Case 2 precondition check — HISTORICAL BLOCKED SNAPSHOT, SUPERSEDED
 Date: 2026-09-26, about 16:22 CEST (device time)
 Device: Samsung SM-S921B, serial RFCWC0SSVDM
 Installed app: `com.retro99.parrot` 0.4.5 (21), commit `d1e18128288d7342c211d226a9041387a0974796`.
-Blocker: case 2 requires a known signed-in server account before killing/relaunching the app. No controlled QA server credentials were provided or identified, and the current account/session state has not been verified. Do not infer signed-in status from `MainActivity`, use credentials from the existing app profile, or change account state without authorization.
-No case-2 sign-in, process-kill, relaunch or outcome checks were performed. Functional result is BLOCKED; Analytics and Diagnostics are NOT RUN. A controlled QA account/session is required.
+At the time of this checkpoint, no case-2 sign-in or relaunch had been performed. This historical state was superseded when the supplied demo login was entered only in Parrot UI and the Samsung case completed successfully. See [case-002-cold-start-signed-in-run.txt](case-002-cold-start-signed-in-run.txt) for the evidence-backed PASS result. The credential is not retained here.

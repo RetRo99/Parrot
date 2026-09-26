@@ -1,0 +1,24 @@
+Case 2 — Cold start when already signed in — PASS — 2026-09-26
+
+Device/build
+- Samsung serial `RFCWC0SSVDM`; model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), gesture navigation.
+- Package `com.retro99.parrot`, version 0.4.5 (21), debug; source commit `20c393188d51076ae52bd36d5244b83394cb23a7`.
+- APK SHA-256 `e5356c4f07d24c55cfbe227e6a7f672c7f07a7fcc945a4035226485640d2be69`; local and Samsung-pulled APK hashes match.
+
+Preconditions and steps
+1. Installed the hash-matched APK with `adb -s RFCWC0SSVDM install -r`; launched Parrot explicitly on the Samsung.
+2. Welcome appeared. Opened Get Started, confirmed Storyteller Login, and entered the supplied demo login only into Parrot's UI. The credential and account identifier are intentionally omitted from this report and all retained evidence.
+3. Submitted once. Local debug output recorded `login_attempted` at 21:44:48.931 and `login_succeeded` at 21:44:49.424; a `credentials_persisted` diagnostic breadcrumb followed at 21:44:49.425. `home_screen_viewed` was emitted exactly once with `source_screen=login`, `entry_point=login_success` at 21:44:49.695.
+4. Force-stopped only `com.retro99.parrot`, relaunched `MainActivity`, and waited for startup resolution. At 21:48:11.827 `app_launch_route_resolved` reported `screen=home`, `source_screen=splash`, `entry_point=app_launch`, `outcome=success`; one `home_screen_viewed` and matching visible-route breadcrumb followed at 21:48:12.197.
+5. On the relaunched process, counts were one startup route event, one Home exposure, zero Welcome/Login exposure events, and no fatal-exception marker. The accessibility hierarchy contained Books, Series, Statistics and Settings; Get Started and Sign In were absent. Home was the visible route; no Login/Welcome exposure or flash was observed.
+6. A Bitwarden save-password prompt appeared over Parrot after sign-in. It was not accepted; system Back dismissed the transient prompt without saving credentials or changing Bitwarden settings. No further unrelated-app interaction was performed.
+
+Results
+- Functional: PASS — the signed-in state survived force-stop and cold relaunch; Parrot resolved directly to Home/Books.
+- Analytics: PASS (local debug provider only) — login attempt/success and Home login-source exposure were observed; cold-start route and Home app-launch exposure each appeared once; no Welcome/Login exposure on relaunch. Firebase Analytics delivery is not claimed; ingestion is waived by the user.
+- Diagnostics: PASS (local debug breadcrumbs) — credential persistence, startup route selection and visible Home route were recorded. No failure was induced, so no Crashlytics non-fatal was expected or tested.
+- The successful-login route was used as case 2's precondition; case 22 remains NOT RUN as a full case because Server Management's logged-in card has not yet been verified.
+
+Evidence
+- `case-002-startup-prelogin.png` shows Welcome before Get Started; `case-002-login-pre-submit.png` shows the blank Login form before UI-only credential entry. No screenshot of the populated form or library was retained (credentials and book titles are excluded).
+- Sanitized PID-scoped local event and route counts are recorded above. Run used explicit serial `RFCWC0SSVDM`; other attached devices were not targeted.
