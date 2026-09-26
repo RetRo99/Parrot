@@ -16,6 +16,7 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun LoginNavigation(
     onLoginSuccess: () -> Unit,
+    onGuestModeSelected: () -> Unit,
     onBack: (() -> Unit)? = null,
     startAtLogin: Boolean = false,
     modifier: Modifier = Modifier,
@@ -32,7 +33,7 @@ fun LoginNavigation(
 
         LaunchedEffect(state.skipLoginComplete) {
             if (state.skipLoginComplete) {
-                onLoginSuccess()
+                onGuestModeSelected()
             }
         }
 

@@ -304,6 +304,19 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
  */
 sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
 
+    /** Records one actual Home root exposure, attributed to its bounded navigation source. */
+    data class HomeViewed(
+        val sourceScreen: String,
+        val entryPoint: String,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "home_screen_viewed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "home",
+            "source_screen" to sourceScreen,
+            "entry_point" to entryPoint,
+        )
+    }
+
     /** Records the route selected by the completed startup/authentication check. */
     data class AppLaunchRouteResolved(
         val destination: String,

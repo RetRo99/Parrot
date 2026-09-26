@@ -1,6 +1,7 @@
 package com.retro99.parrot.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
@@ -44,6 +45,9 @@ fun RootNavigation(
                         onLoginSuccess = {
                             intentDispatcher(RootNavigationIntent.OnLoginSuccess)
                         },
+                        onGuestModeSelected = {
+                            intentDispatcher(RootNavigationIntent.OnGuestModeSelected)
+                        },
                         onBack = if (!destination.initial) {
                             { intentDispatcher(RootNavigationIntent.OnBackFromLogin) }
                         } else {
@@ -54,6 +58,15 @@ fun RootNavigation(
                 }
 
                 entry<RootDestination.Home> {
+                    val homeEntry = state.homeEntry
+                    val isHomeCurrent = state.backStack.lastOrNull() == RootDestination.Home
+                    LaunchedEffect(homeEntry?.id, isHomeCurrent) {
+                        if (isHomeCurrent) {
+                            homeEntry?.let { entry ->
+                                intentDispatcher(RootNavigationIntent.OnHomeVisible(entry.id))
+                            }
+                        }
+                    }
                     HomeNavigation(
                         onNavigateToLogin = {
                             intentDispatcher(RootNavigationIntent.OnLoginClicked)
@@ -64,4 +77,3 @@ fun RootNavigation(
         )
     }
 }
-

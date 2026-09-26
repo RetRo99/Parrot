@@ -20,6 +20,9 @@ class RootNavigationViewModel(
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<RootNavigationState, RootNavigationIntent>(RootNavigationState()) {
 
+    private var nextHomeEntryId = 0L
+    private val homeExposureGate = HomeExposureGate()
+
     init {
         analytics.clearUserIdentity()
         checkAuthState()
@@ -28,6 +31,8 @@ class RootNavigationViewModel(
     override fun onIntent(intent: RootNavigationIntent) {
         when (intent) {
             RootNavigationIntent.OnLoginSuccess -> handleLoginSuccess()
+            RootNavigationIntent.OnGuestModeSelected -> handleGuestModeSelected()
+            is RootNavigationIntent.OnHomeVisible -> handleHomeVisible(intent.entryId)
             RootNavigationIntent.OnLogout -> handleLogout()
             RootNavigationIntent.OnLoginClicked -> handleLoginClicked()
             RootNavigationIntent.OnBackFromLogin -> handleBackFromLogin()
@@ -42,7 +47,15 @@ class RootNavigationViewModel(
 
     private fun handleBackFromLogin() {
         updateState { state ->
-            state.copy(backStack = state.backStack.dropLast(1))
+            val backStack = state.backStack.dropLast(1)
+            state.copy(
+                backStack = backStack,
+                homeEntry = if (backStack.lastOrNull() == RootDestination.Home) {
+                    createHomeEntry(sourceScreen = "login", entryPoint = "back_navigation")
+                } else {
+                    state.homeEntry
+                },
+            )
         }
     }
 
@@ -98,16 +111,73 @@ class RootNavigationViewModel(
                 ),
             )
             updateState { state ->
-                state.copy(backStack = listOf(destination))
+                state.copy(
+                    backStack = listOf(destination),
+                    homeEntry = if (resolution.isAuthenticated) {
+                        createHomeEntry(sourceScreen = "splash", entryPoint = "app_launch")
+                    } else {
+                        null
+                    },
+                )
             }
         }
     }
 
     private fun handleLoginSuccess() {
         updateState { state ->
-            state.copy(backStack = listOf(RootDestination.Home))
+            state.copy(
+                backStack = listOf(RootDestination.Home),
+                homeEntry = createHomeEntry(sourceScreen = "login", entryPoint = "login_success"),
+            )
         }
     }
+
+    private fun handleGuestModeSelected() {
+        updateState { state ->
+            state.copy(
+                backStack = listOf(RootDestination.Home),
+                homeEntry = createHomeEntry(
+                    sourceScreen = "welcome",
+                    entryPoint = "browse_without_account",
+                ),
+            )
+        }
+    }
+
+    private fun handleHomeVisible(entryId: Long) {
+        val state = viewState.value
+        val entry = state.homeEntry ?: return
+        if (state.backStack.lastOrNull() != RootDestination.Home ||
+            !homeExposureGate.shouldReport(entryId, entry.id)
+        ) {
+            return
+        }
+
+        analytics.logEvent(
+            NavigationAnalyticsEvent.HomeViewed(
+                sourceScreen = entry.sourceScreen,
+                entryPoint = entry.entryPoint,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "home",
+                sourceScreen = entry.sourceScreen,
+                entryPoint = entry.entryPoint,
+                action = "screen_view",
+                operation = "home_route",
+                stage = "visible",
+                outcome = "succeeded",
+            ),
+        )
+    }
+
+    private fun createHomeEntry(sourceScreen: String, entryPoint: String): RootHomeEntry =
+        RootHomeEntry(
+            id = ++nextHomeEntryId,
+            sourceScreen = sourceScreen,
+            entryPoint = entryPoint,
+        )
 
     private fun handleLogout() {
         analytics.logEvent(AuthAnalyticsEvent.LogoutClicked)

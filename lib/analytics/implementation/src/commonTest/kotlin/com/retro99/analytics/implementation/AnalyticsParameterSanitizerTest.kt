@@ -6,6 +6,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.AuthAnalyticsEvent
+import com.retro99.analytics.api.NavigationAnalyticsEvent
 
 class AnalyticsParameterSanitizerTest {
 
@@ -75,6 +76,25 @@ class AnalyticsParameterSanitizerTest {
                 "source_screen" to "splash",
                 "entry_point" to "app_launch",
                 "outcome" to "success",
+            ),
+            sanitized,
+        )
+    }
+
+    @Test
+    fun homeExposureRetainsOnlyBoundedSourceAndEntryPoint() {
+        val sanitized = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.HomeViewed(
+                sourceScreen = "welcome",
+                entryPoint = "browse_without_account",
+            ).parameters + ("profile_name" to "private profile"),
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "home",
+                "source_screen" to "welcome",
+                "entry_point" to "browse_without_account",
             ),
             sanitized,
         )
