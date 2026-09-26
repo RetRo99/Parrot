@@ -1,0 +1,33 @@
+Case 11/12 — Open last book on launch — source audit before implementation
+Date: 2026-09-27. No case 11 or 12 UI test has been performed in this audit.
+
+Device/build at audit start
+- Physical Samsung serial `RFCWC0SSVDM`; SM-S921B (Galaxy S24); Android 16/API 36; One UI 8.0, build `S921BXXSGDZG1`.
+- Installed package `com.retro99.parrot`, version 0.4.5 (21), target SDK 36, debug. Installed source commit `159fcb331ecd95ba9e154c5a510ae8bb6f008283`; local and pulled APK SHA-256 `44529a4d0508ccb2965e4cb3cec5b5fa6ac8d2f3d35590fb91522a62565b2c63`.
+- Source-audit worktree HEAD `724c6f7d`; tree was clean before this audit's documentation changes. Current activity at audit start was root Welcome, PID `7573`.
+- No account credentials entered and no Parrot data changed for this audit.
+
+Screen/action inventory and case mapping
+- App Settings → Reading → “Open last book on launch” switch: on/off and persistence are cases 11, 12, 424, 436, 719; failure/final persistence variants are case 719. `AppSettingsViewModel` persists `PreferencesKey.OpenLastBookOnLaunch` then logs `open_last_book_on_launch_toggled`; on source audit, no attempt/commit breadcrumb surrounds `putBoolean`.
+- Cold app start with preference enabled and a qualifying current-book record: cases 11, 518, 519, plus lifecycle/process recovery cases 461 and 607. Entry goes Splash → Home and then the startup reader replacement event selects Books/Reader.
+- Enabled preference with no current-book record: case 12. Expected route is normal Home/Books without an error or empty Reader.
+- Reader loading, close while loading, usable content, initialization error/retry and publication-open error: cases 138, 166, 474, 485, 595 and 612. The extension variants 518–519 are the target-unavailable/missing-file startup recoveries.
+- No dedicated startup sheet, dialog or menu exists in this route. Reader's close affordance and Back behavior remain cases 139–140; startup reader entry hides the Home bottom bar.
+
+Audited implementation paths
+- `HomeNavigationViewModel.init` invokes `checkOpenLastBookOnLaunch()`. If the preference is false it returns silently; if enabled with no current-reading model it also returns silently. If a model exists, `ContinueReadingLaunched(bookUuid)` is logged before `NavigateToReaderReplacing` is emitted.
+- `ContinueReadingLaunched` exposes only `book_uuid`; `AnalyticsParameterSanitizer.SAFE_STRING_KEYS` intentionally rejects this key. Thus current provider delivery has no useful dimensions. It does not represent a successful usable reader open.
+- `ReaderViewModel.initializeReader()` calls `error.log(...)` for initialization result failures. `openPublication()` logs `BookOpenFailed` and sets the Reader error state on publication service failure, but that branch does not invoke the unexpected-error reporter. `BookOpened` logs after `openPublication()` succeeds, but carries no source/entry-point dimension.
+- `ReaderViewModel.close()` updates `CurrentlyReading` only if the session duration reaches `MINIMUM_READING_DURATION_MS`; `onCleared()` does not persist the current-book reference. This motivates suspected QA-BUG-0026, not a confirmed runtime finding.
+
+Audit dispositions
+- **Confirmed instrumentation gap:** QA-BUG-0025 — telemetry is logged before actual content is usable, identifier-only parameters are sanitized away, no last-book terminal success/failure exists, and one publication failure boundary lacks exception reporting.
+- **Suspected functional gap:** QA-BUG-0026 — abrupt process termination may bypass the only currently-reading update. This is unconfirmed pending an on-device case-11 run.
+- Cross-app/cross-device synchronization was not inspected or tested.
+
+Next execution after a separately committed instrumentation change
+1. Enter Guest through Parrot UI if needed; use the tracked public-domain fixture `iosApp/iosApp/sample-books/PrideAndPrejudice.epub` without clearing app data.
+2. Through the app's Import flow, create one uniquely named device test copy; enable the last-book setting in App Settings. Verify setting state on-screen.
+3. Read for at least the documented one-minute threshold and establish that a local reading position was committed. Record whether Reader is closed normally or the process is killed; test these as distinct variants.
+4. Relaunch Parrot and verify Reader route, same fixture, visible saved passage, loading/failure state, and Back/close recovery. Collect fresh PID-scoped local Analytics, diagnostics and fatal markers. Debug logs do not establish Firebase delivery.
+5. Then execute case 12 separately by clearing only the current-book reference through the supported UI while leaving the preference enabled; verify normal Home startup. Do not mark PASS without evidence.
