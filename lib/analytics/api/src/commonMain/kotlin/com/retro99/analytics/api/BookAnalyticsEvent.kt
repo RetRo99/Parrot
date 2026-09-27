@@ -645,6 +645,19 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
  */
 sealed interface ServerManagementAnalyticsEvent : AnalyticsEvent {
 
+    /** Records one actual Server Management destination exposure. */
+    data class ScreenViewed(
+        val sourceScreen: String,
+        val entryPoint: String,
+    ) : ServerManagementAnalyticsEvent {
+        override val name: String = "server_management_screen_viewed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "server_management",
+            "source_screen" to sourceScreen,
+            "entry_point" to entryPoint,
+        )
+    }
+
     data object ServerAddAttempted : ServerManagementAnalyticsEvent {
         override val name: String = "server_add_attempted"
         override val parameters: Map<String, Any> = mapOf(

@@ -5,6 +5,7 @@ import co.touchlab.kermit.Logger
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
+import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.home.ui.deeplink.DeepLinkDestination
@@ -477,6 +478,27 @@ class HomeNavigationViewModel(
                 context,
             )
         }
+    }
+
+    /** Records an exposure only after the navigation owner reports this route as visible. */
+    fun reportServerManagementViewed(sourceScreen: String, entryPoint: String) {
+        analytics.logEvent(
+            ServerManagementAnalyticsEvent.ScreenViewed(
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "server_management",
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+                action = "screen_view",
+                operation = "server_management_route",
+                stage = "visible",
+                outcome = "succeeded",
+            ),
+        )
     }
 
     /**

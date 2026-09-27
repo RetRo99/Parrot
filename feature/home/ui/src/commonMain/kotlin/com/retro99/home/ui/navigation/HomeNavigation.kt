@@ -14,6 +14,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.entryProvider
 import com.retro99.books.ui.detail.BookDetailScreen
@@ -113,6 +116,19 @@ fun HomeNavigation(
     }
 
     val currentDestination = navigationState.currentDestination
+    var lastVisibleDestination by remember { mutableStateOf<HomeDestination?>(null) }
+    LaunchedEffect(currentDestination) {
+        if (currentDestination is HomeDestination.ServerManagement) {
+            val previousDestination = lastVisibleDestination
+                ?: navigationState.currentBackStack.dropLast(1).lastOrNull()
+            val exposure = serverManagementExposureContext(previousDestination)
+            viewModel.reportServerManagementViewed(
+                sourceScreen = exposure.sourceScreen,
+                entryPoint = exposure.entryPoint,
+            )
+        }
+        lastVisibleDestination = currentDestination
+    }
     val showBottomBar = (currentDestination as? BottomBarDestination)?.showBottomBar != false
     val isInReader = currentDestination is HomeDestination.Reader
     val currentlyReading = uiState.currentlyReading

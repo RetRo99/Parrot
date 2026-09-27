@@ -155,6 +155,25 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun serverManagementExposureRetainsOnlyBoundedSourceAndEntryPoint() {
+        val sanitized = sanitizeAnalyticsParameters(
+            ServerManagementAnalyticsEvent.ScreenViewed(
+                sourceScreen = "app_settings",
+                entryPoint = "servers_row",
+            ).parameters + ("server_url" to "https://private.example/account"),
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "server_management",
+                "source_screen" to "app_settings",
+                "entry_point" to "servers_row",
+            ),
+            sanitized,
+        )
+    }
+
+    @Test
     fun rootWelcomeBackRetainsBoundedExitOutcome() {
         val exited = sanitizeAnalyticsParameters(
             NavigationAnalyticsEvent.WelcomeRootBackCompleted(
