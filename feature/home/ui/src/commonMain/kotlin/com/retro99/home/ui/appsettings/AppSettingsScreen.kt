@@ -79,6 +79,7 @@ import resources.translations.app_settings_clear_logs_description
 import resources.translations.app_settings_clear_current_book
 import resources.translations.app_settings_clear_current_book_description
 import resources.translations.app_settings_current_book_cleared
+import resources.translations.app_settings_current_book_clear_failed
 import resources.translations.app_settings_enable_logging
 import resources.translations.app_settings_enable_logging_description
 import resources.translations.app_settings_logs_cleared
@@ -153,6 +154,7 @@ private fun AppSettingsScreenContent(
     val logsClearedMessage = stringResource(StringRes.app_settings_logs_cleared)
     val noLogsMessage = stringResource(StringRes.app_settings_no_logs)
     val currentBookClearedMessage = stringResource(StringRes.app_settings_current_book_cleared)
+    val currentBookClearFailedMessage = stringResource(StringRes.app_settings_current_book_clear_failed)
 
     LaunchedEffect(viewState.showLogsClearedMessage) {
         if (viewState.showLogsClearedMessage) {
@@ -172,6 +174,13 @@ private fun AppSettingsScreenContent(
         if (viewState.showCurrentBookClearedMessage) {
             snackbarHostState.showSnackbar(currentBookClearedMessage)
             intentDispatcher(AppSettingsIntent.OnCurrentBookClearedMessageShown)
+        }
+    }
+
+    LaunchedEffect(viewState.showCurrentBookClearFailedMessage) {
+        if (viewState.showCurrentBookClearFailedMessage) {
+            snackbarHostState.showSnackbar(currentBookClearFailedMessage)
+            intentDispatcher(AppSettingsIntent.OnCurrentBookClearFailedMessageShown)
         }
     }
 

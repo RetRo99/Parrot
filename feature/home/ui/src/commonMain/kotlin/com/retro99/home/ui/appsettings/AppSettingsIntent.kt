@@ -13,6 +13,7 @@ sealed interface AppSettingsIntent : BaseIntent {
     data object OnNoLogsMessageShown : AppSettingsIntent
     data object OnClearCurrentBookClicked : AppSettingsIntent
     data object OnCurrentBookClearedMessageShown : AppSettingsIntent
+    data object OnCurrentBookClearFailedMessageShown : AppSettingsIntent
     data class OnProfileSelected(val profileId: String) : AppSettingsIntent
     data object OnAddProfileClicked : AppSettingsIntent
     data class OnAddProfileConfirmed(val name: String) : AppSettingsIntent
@@ -26,4 +27,3 @@ sealed interface AppSettingsIntent : BaseIntent {
     data object OnDeleteProfileConfirmed : AppSettingsIntent
     data object OnDeleteProfileDismissed : AppSettingsIntent
 }
-

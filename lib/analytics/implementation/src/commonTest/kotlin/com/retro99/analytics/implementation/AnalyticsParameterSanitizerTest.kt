@@ -7,6 +7,7 @@ import kotlin.test.assertIs
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.analytics.api.NavigationAnalyticsEvent
+import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 
 class AnalyticsParameterSanitizerTest {
 
@@ -200,6 +201,55 @@ class AnalyticsParameterSanitizerTest {
                 "book_type" to "imported",
             ),
             completed,
+        )
+    }
+
+    @Test
+    fun currentBookClearEventsRetainAttemptFailureAndRetryDimensions() {
+        val attempted = sanitizeAnalyticsParameters(
+            AppSettingsAnalyticsEvent.CurrentBookClearAttempted(isRetry = true).parameters,
+        )
+        val failed = sanitizeAnalyticsParameters(
+            AppSettingsAnalyticsEvent.CurrentBookClearFailed(isRetry = true).parameters +
+                mapOf("book_uuid" to "private-book-id", "error_message" to "private failure"),
+        )
+        val succeeded = sanitizeAnalyticsParameters(
+            AppSettingsAnalyticsEvent.CurrentBookCleared(isRetry = true).parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "app_settings",
+                "action" to "clear_current_book",
+                "operation" to "clear_current_book",
+                "stage" to "started",
+                "outcome" to "started",
+                "is_retry" to true,
+            ),
+            attempted,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "app_settings",
+                "action" to "clear_current_book",
+                "operation" to "clear_current_book",
+                "stage" to "terminal",
+                "outcome" to "failed",
+                "reason_code" to "current_book_clear_failed",
+                "is_retry" to true,
+            ),
+            failed,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "app_settings",
+                "action" to "clear_current_book",
+                "operation" to "clear_current_book",
+                "stage" to "terminal",
+                "outcome" to "succeeded",
+                "is_retry" to true,
+            ),
+            succeeded,
         )
     }
 

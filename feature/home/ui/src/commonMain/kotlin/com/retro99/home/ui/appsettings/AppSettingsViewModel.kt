@@ -131,6 +131,7 @@ class AppSettingsViewModel(
             AppSettingsIntent.OnNoLogsMessageShown -> onNoLogsMessageShown()
             AppSettingsIntent.OnClearCurrentBookClicked -> clearCurrentBook()
             AppSettingsIntent.OnCurrentBookClearedMessageShown -> onCurrentBookClearedMessageShown()
+            AppSettingsIntent.OnCurrentBookClearFailedMessageShown -> onCurrentBookClearFailedMessageShown()
             is AppSettingsIntent.OnProfileSelected -> selectProfile(intent.profileId)
             AppSettingsIntent.OnAddProfileClicked -> showAddProfileDialog()
             is AppSettingsIntent.OnAddProfileConfirmed -> addProfile(intent.name)
@@ -266,17 +267,21 @@ class AppSettingsViewModel(
     }
 
     private fun clearCurrentBook() {
-        clearCurrentlyReadingUseCase()
-        analytics.logEvent(AppSettingsAnalyticsEvent.CurrentBookCleared)
-        updateState {
-            it.copy(
-                showCurrentBookClearedMessage = true,
-                hasCurrentlyReadingBook = false,
-            )
+        val isRetry = viewState.value.canRetryCurrentBookClear
+        val succeeded = executeCurrentBookClear(
+            analytics = analytics,
+            isRetry = isRetry,
+        ) {
+            clearCurrentlyReadingUseCase()
         }
+        updateState { it.withCurrentBookClearOutcome(succeeded) }
     }
 
     private fun onCurrentBookClearedMessageShown() {
         updateState { it.copy(showCurrentBookClearedMessage = false) }
+    }
+
+    private fun onCurrentBookClearFailedMessageShown() {
+        updateState { it.copy(showCurrentBookClearFailedMessage = false) }
     }
 }

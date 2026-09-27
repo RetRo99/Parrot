@@ -12,6 +12,8 @@ data class AppSettingsViewState(
     val showLogsClearedMessage: Boolean = false,
     val showNoLogsMessage: Boolean = false,
     val showCurrentBookClearedMessage: Boolean = false,
+    val showCurrentBookClearFailedMessage: Boolean = false,
+    val canRetryCurrentBookClear: Boolean = false,
     val userProfiles: List<UserProfile> = emptyList(),
     val activeProfile: UserProfile? = null,
     val showAddProfileDialog: Boolean = false,
@@ -26,3 +28,20 @@ data class AppSettingsViewState(
 internal fun AppSettingsViewState.withCurrentlyReading(
     currentlyReading: CurrentlyReadingDomainModel?,
 ): AppSettingsViewState = copy(hasCurrentlyReadingBook = currentlyReading != null)
+
+internal fun AppSettingsViewState.withCurrentBookClearOutcome(
+    succeeded: Boolean,
+): AppSettingsViewState = if (succeeded) {
+    copy(
+        showCurrentBookClearedMessage = true,
+        showCurrentBookClearFailedMessage = false,
+        hasCurrentlyReadingBook = false,
+        canRetryCurrentBookClear = false,
+    )
+} else {
+    copy(
+        showCurrentBookClearedMessage = false,
+        showCurrentBookClearFailedMessage = true,
+        canRetryCurrentBookClear = true,
+    )
+}
