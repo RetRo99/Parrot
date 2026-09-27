@@ -47,7 +47,7 @@ class UserRegistryImpl(
         // Load active profile
         val activeId = preferences.getStringOrNull(PreferencesKey.ActiveProfileId)
         _activeProfileId.value = activeId
-        logger.d { "Loaded active profile: $activeId" }
+        logger.d { "Loaded active profile state" }
     }
 
     // ==================== Profile Management ====================
@@ -74,20 +74,20 @@ class UserRegistryImpl(
         _profiles.update { it + (profile.id to profile) }
         persistProfiles()
 
-        logger.d { "Created profile: ${profile.name} (${profile.id})" }
+        logger.d { "Created profile" }
         profile
     }
 
     override suspend fun updateProfile(profile: UserProfile) = mutex.withLock {
         _profiles.update { it + (profile.id to profile) }
         persistProfiles()
-        logger.d { "Updated profile: ${profile.name}" }
+        logger.d { "Updated profile" }
     }
 
     override suspend fun deleteProfile(profileId: String) = mutex.withLock {
         val profile = _profiles.value[profileId]
         if (profile == null) {
-            logger.w { "Attempted to delete non-existent profile: $profileId" }
+            logger.w { "Attempted to delete a profile that is not registered" }
             return@withLock
         }
 
@@ -104,7 +104,7 @@ class UserRegistryImpl(
             persistActiveProfile()
         }
 
-        logger.d { "Deleted profile: ${profile.name} ($profileId)" }
+        logger.d { "Deleted profile" }
         // Note: Database file deletion should be handled by DatabaseProvider
     }
 
@@ -132,7 +132,7 @@ class UserRegistryImpl(
     override suspend fun setActiveProfile(profileId: String) = mutex.withLock {
         val profile = _profiles.value[profileId]
         if (profile == null) {
-            logger.w { "Attempted to set non-existent profile as active: $profileId" }
+            logger.w { "Attempted to activate a profile that is not registered" }
             return@withLock
         }
 
@@ -146,7 +146,7 @@ class UserRegistryImpl(
         _profiles.update { it + (profileId to updatedProfile) }
         persistProfiles()
 
-        logger.d { "Set active profile: ${profile.name}" }
+        logger.d { "Activated profile" }
     }
 
     override suspend fun clearActiveProfile() = mutex.withLock {
@@ -201,7 +201,7 @@ class UserRegistryImpl(
         userScopedKeys.forEach { key ->
             preferences.remove(PreferencesKey.UserScoped(userId, key.name))
         }
-        logger.d { "Cleared preferences for user: $userId" }
+        logger.d { "Cleared profile-scoped preferences" }
     }
 }
 
