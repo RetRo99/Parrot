@@ -90,7 +90,7 @@ class ReaderViewModel(
     @InjectedParam private val bookUuid: String,
     @InjectedParam private val bookType: BookType,
     @InjectedParam private val isLastBookOnLaunch: Boolean,
-    @InjectedParam private val onClose: () -> Unit,
+    @InjectedParam private val onClose: (ReaderCloseSource) -> Unit,
     @InjectedParam private val onSettingsClick: () -> Unit,
     @Provided private val initializeReaderUseCase: InitializeReaderUseCase,
     @Provided private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
@@ -1518,7 +1518,7 @@ class ReaderViewModel(
             .launchIn(viewModelScope)
     }
 
-    fun close() {
+    fun close(closeSource: ReaderCloseSource = ReaderCloseSource.CloseButton) {
         // Leaving the reader must never wait on persistence or the network. The toolbar
         // arrow is the only visible way out and blocking here made it look dead. The work
         // runs on a NonCancellable coroutine so it still completes after navigation clears
@@ -1595,7 +1595,7 @@ class ReaderViewModel(
             )
         }
 
-        onClose()
+        onClose(closeSource)
     }
 
     /** Toggles the active ReadAloud or TTS narration implementation. */

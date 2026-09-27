@@ -135,7 +135,7 @@ fun ReaderScreen(
     bookUuid: String,
     bookType: BookType,
     isLastBookOnLaunch: Boolean = false,
-    onClose: () -> Unit,
+    onClose: (ReaderCloseSource) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ReaderViewModel = koinViewModel {
@@ -146,7 +146,7 @@ fun ReaderScreen(
     val backHandlerState = rememberNavigationEventState(NavigationEventInfo.None)
     NavigationBackHandler(
         state = backHandlerState,
-        onBackCompleted = { viewModel.close() },
+        onBackCompleted = { viewModel.close(ReaderCloseSource.SystemBack) },
     )
 
     BaseScreen(
