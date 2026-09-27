@@ -38,11 +38,13 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
@@ -228,6 +230,7 @@ private fun AppSettingsScreenContent(
                 profiles = viewState.userProfiles,
                 activeProfile = viewState.activeProfile,
                 selectedProfileForMenu = viewState.selectedProfileForMenu,
+                isOperationInProgress = viewState.isProfileOperationInProgress,
                 onProfileSelected = { profileId ->
                     intentDispatcher(AppSettingsIntent.OnProfileSelected(profileId))
                 },
@@ -249,6 +252,15 @@ private fun AppSettingsScreenContent(
                 canDelete = viewState.canDeleteSelectedProfile,
             )
 
+            if (
+                viewState.isProfileOperationInProgress &&
+                !viewState.showAddProfileDialog &&
+                !viewState.showRenameProfileDialog &&
+                !viewState.showDeleteProfileDialog
+            ) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+
             if (viewState.showAddProfileDialog) {
                 AddProfileDialog(
                     onDismissRequest = {
@@ -259,6 +271,7 @@ private fun AppSettingsScreenContent(
                     },
                     onConfirm = { name -> intentDispatcher(AppSettingsIntent.OnAddProfileConfirmed(name)) },
                     showError = viewState.showProfileOperationFailedMessage,
+                    isOperationInProgress = viewState.isProfileOperationInProgress,
                 )
             }
 
@@ -273,6 +286,7 @@ private fun AppSettingsScreenContent(
                     },
                     onConfirm = { newName -> intentDispatcher(AppSettingsIntent.OnRenameProfileConfirmed(newName)) },
                     showError = viewState.showProfileOperationFailedMessage,
+                    isOperationInProgress = viewState.isProfileOperationInProgress,
                 )
             }
 
@@ -287,6 +301,7 @@ private fun AppSettingsScreenContent(
                     },
                     onConfirm = { intentDispatcher(AppSettingsIntent.OnDeleteProfileConfirmed) },
                     showError = viewState.showProfileOperationFailedMessage,
+                    isOperationInProgress = viewState.isProfileOperationInProgress,
                 )
             }
 
@@ -554,6 +569,7 @@ private fun ProfilesRow(
     profiles: List<UserProfile>,
     activeProfile: UserProfile?,
     selectedProfileForMenu: UserProfile?,
+    isOperationInProgress: Boolean,
     onProfileSelected: (String) -> Unit,
     onProfileLongPressed: (String, String) -> Unit,
     onAddProfileClicked: () -> Unit,
@@ -575,6 +591,7 @@ private fun ProfilesRow(
                 profile = profile,
                 isActive = profile.id == activeProfile?.id,
                 isMenuVisible = selectedProfileForMenu?.id == profile.id,
+                enabled = !isOperationInProgress,
                 onClick = { onProfileSelected(profile.id) },
                 onLongClick = { onProfileLongPressed(profile.id, "long_press") },
                 onEditClick = { onProfileLongPressed(profile.id, "edit_button") },
@@ -585,7 +602,7 @@ private fun ProfilesRow(
             )
         }
         item(key = "add_profile") {
-            AddProfileItem(onClick = onAddProfileClicked)
+            AddProfileItem(onClick = onAddProfileClicked, enabled = !isOperationInProgress)
         }
     }
 }
@@ -596,6 +613,7 @@ private fun ProfileItem(
     profile: UserProfile,
     isActive: Boolean,
     isMenuVisible: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onEditClick: () -> Unit,
@@ -610,6 +628,7 @@ private fun ProfileItem(
             modifier = modifier
                 .width(80.dp)
                 .combinedClickable(
+                    enabled = enabled,
                     onClick = onClick,
                     onLongClick = onLongClick,
                 ),
@@ -678,6 +697,7 @@ private fun ProfileItem(
         // management never depends on a hidden gesture.
         IconButton(
             onClick = onEditClick,
+            enabled = enabled,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .size(32.dp),
@@ -697,11 +717,13 @@ private fun ProfileItem(
             DropdownMenuItem(
                 text = { Text(stringResource(StringRes.action_rename)) },
                 onClick = onRenameClicked,
+                enabled = enabled,
             )
             if (canDelete) {
                 DropdownMenuItem(
                     text = { Text(stringResource(StringRes.action_delete)) },
                     onClick = onDeleteClicked,
+                    enabled = enabled,
                 )
             }
         }
@@ -711,12 +733,13 @@ private fun ProfileItem(
 @Composable
 private fun AddProfileItem(
     onClick: () -> Unit,
+    enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Card(
         modifier = modifier
             .width(80.dp)
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         ),
@@ -761,11 +784,12 @@ private fun AddProfileDialog(
     onCancel: () -> Unit,
     onConfirm: (String) -> Unit,
     showError: Boolean,
+    isOperationInProgress: Boolean,
 ) {
     var profileName by remember { mutableStateOf("") }
 
     AlertDialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = { if (!isOperationInProgress) onDismissRequest() },
         title = {
             Text(text = stringResource(StringRes.app_settings_profile_add_title))
         },
@@ -775,6 +799,7 @@ private fun AddProfileDialog(
                     value = profileName,
                     onValueChange = { profileName = it },
                     label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
+                    enabled = !isOperationInProgress,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -790,13 +815,17 @@ private fun AddProfileDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(profileName) },
-                enabled = profileName.isNotBlank(),
+                enabled = profileName.isNotBlank() && !isOperationInProgress,
             ) {
+                if (isOperationInProgress) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(stringResource(StringRes.app_settings_profile_add))
             }
         },
         dismissButton = {
-            TextButton(onClick = onCancel) {
+            TextButton(onClick = onCancel, enabled = !isOperationInProgress) {
                 Text(stringResource(StringRes.general_cancel))
             }
         },
@@ -810,11 +839,12 @@ private fun RenameProfileDialog(
     onCancel: () -> Unit,
     onConfirm: (String) -> Unit,
     showError: Boolean,
+    isOperationInProgress: Boolean,
 ) {
     var profileName by remember { mutableStateOf(currentName) }
 
     AlertDialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = { if (!isOperationInProgress) onDismissRequest() },
         title = {
             Text(text = stringResource(StringRes.app_settings_profile_rename_title))
         },
@@ -824,6 +854,7 @@ private fun RenameProfileDialog(
                     value = profileName,
                     onValueChange = { profileName = it },
                     label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
+                    enabled = !isOperationInProgress,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -839,13 +870,17 @@ private fun RenameProfileDialog(
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(profileName) },
-                enabled = profileName.isNotBlank(),
+                enabled = profileName.isNotBlank() && !isOperationInProgress,
             ) {
+                if (isOperationInProgress) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(stringResource(StringRes.action_rename))
             }
         },
         dismissButton = {
-            TextButton(onClick = onCancel) {
+            TextButton(onClick = onCancel, enabled = !isOperationInProgress) {
                 Text(stringResource(StringRes.general_cancel))
             }
         },
@@ -859,9 +894,10 @@ private fun DeleteProfileConfirmationDialog(
     onCancel: () -> Unit,
     onConfirm: () -> Unit,
     showError: Boolean,
+    isOperationInProgress: Boolean,
 ) {
     AlertDialog(
-        onDismissRequest = onDismissRequest,
+        onDismissRequest = { if (!isOperationInProgress) onDismissRequest() },
         title = {
             Text(text = stringResource(StringRes.app_settings_profile_delete_title))
         },
@@ -878,12 +914,16 @@ private fun DeleteProfileConfirmationDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(onClick = onConfirm, enabled = !isOperationInProgress) {
+                if (isOperationInProgress) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(stringResource(StringRes.action_delete))
             }
         },
         dismissButton = {
-            TextButton(onClick = onCancel) {
+            TextButton(onClick = onCancel, enabled = !isOperationInProgress) {
                 Text(stringResource(StringRes.general_cancel))
             }
         },

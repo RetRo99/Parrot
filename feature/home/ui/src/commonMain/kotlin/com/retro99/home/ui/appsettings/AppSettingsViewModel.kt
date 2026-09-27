@@ -35,6 +35,7 @@ class AppSettingsViewModel(
 ) {
 
     private val profileOperationRetryTracker = ProfileOperationRetryTracker()
+    private val profileOperationGate = ProfileOperationGate()
     private var addProfileRetryKey: String? = null
     private var renameProfileRetryKey: String? = null
     private var deleteProfileRetryKey: String? = null
@@ -156,7 +157,7 @@ class AppSettingsViewModel(
 
     private fun selectProfile(profileId: String) {
         if (viewState.value.activeProfile?.id == profileId) return
-        viewModelScope.launch {
+        launchProfileOperation {
             val succeeded = runProfileOperation(
                 operation = AppSettingsAnalyticsEvent.ProfileOperation.Switch,
                 retryKey = "switch:$profileId",
@@ -172,6 +173,7 @@ class AppSettingsViewModel(
     }
 
     private fun showAddProfileDialog() {
+        if (profileOperationGate.isInProgress || viewState.value.showAddProfileDialog) return
         addProfileRetryKey?.let(profileOperationRetryTracker::clear)
         addProfileRetryKey = profileOperationRetryTracker.newSessionKey(
             AppSettingsAnalyticsEvent.ProfileOperation.Create,
@@ -183,6 +185,7 @@ class AppSettingsViewModel(
     }
 
     private fun hideAddProfileDialog(entryPoint: String) {
+        if (profileOperationGate.isInProgress || !viewState.value.showAddProfileDialog) return
         addProfileRetryKey?.let(profileOperationRetryTracker::clear)
         addProfileRetryKey = null
         analytics.logEvent(
@@ -195,11 +198,11 @@ class AppSettingsViewModel(
     }
 
     private fun addProfile(name: String) {
-        if (name.isBlank()) return
+        if (name.isBlank() || !viewState.value.showAddProfileDialog) return
         val retryKey = addProfileRetryKey ?: profileOperationRetryTracker.newSessionKey(
             AppSettingsAnalyticsEvent.ProfileOperation.Create,
         ).also { addProfileRetryKey = it }
-        viewModelScope.launch {
+        launchProfileOperation {
             var createdProfileId: String? = null
             val created = runProfileOperation(
                 operation = AppSettingsAnalyticsEvent.ProfileOperation.Create,
@@ -237,6 +240,7 @@ class AppSettingsViewModel(
     }
 
     private fun onProfileLongPressed(profileId: String, entryPoint: String) {
+        if (profileOperationGate.isInProgress) return
         val profile = viewState.value.userProfiles.find { it.id == profileId }
         if (profile == null) return
         analytics.logEvent(AppSettingsAnalyticsEvent.ProfileMenuOpened(entryPoint))
@@ -244,11 +248,13 @@ class AppSettingsViewModel(
     }
 
     private fun dismissProfileMenu(entryPoint: String) {
+        if (profileOperationGate.isInProgress || viewState.value.selectedProfileForMenu == null) return
         analytics.logEvent(AppSettingsAnalyticsEvent.ProfileMenuDismissed(entryPoint))
         updateState { it.copy(selectedProfileForMenu = null) }
     }
 
     private fun showRenameProfileDialog() {
+        if (profileOperationGate.isInProgress || viewState.value.showRenameProfileDialog) return
         if (viewState.value.selectedProfileForMenu == null) return
         renameProfileRetryKey?.let(profileOperationRetryTracker::clear)
         renameProfileRetryKey = profileOperationRetryTracker.newSessionKey(
@@ -261,6 +267,7 @@ class AppSettingsViewModel(
     }
 
     private fun hideRenameProfileDialog(entryPoint: String) {
+        if (profileOperationGate.isInProgress || !viewState.value.showRenameProfileDialog) return
         renameProfileRetryKey?.let(profileOperationRetryTracker::clear)
         renameProfileRetryKey = null
         analytics.logEvent(
@@ -280,11 +287,11 @@ class AppSettingsViewModel(
 
     private fun renameProfile(newName: String) {
         val profile = viewState.value.selectedProfileForMenu ?: return
-        if (newName.isBlank()) return
+        if (newName.isBlank() || !viewState.value.showRenameProfileDialog) return
         val retryKey = renameProfileRetryKey ?: profileOperationRetryTracker.newSessionKey(
             AppSettingsAnalyticsEvent.ProfileOperation.Rename,
         ).also { renameProfileRetryKey = it }
-        viewModelScope.launch {
+        launchProfileOperation {
             val updatedProfile = profile.copy(name = newName)
             val succeeded = runProfileOperation(
                 operation = AppSettingsAnalyticsEvent.ProfileOperation.Rename,
@@ -312,6 +319,7 @@ class AppSettingsViewModel(
     }
 
     private fun showDeleteProfileDialog() {
+        if (profileOperationGate.isInProgress || viewState.value.showDeleteProfileDialog) return
         if (viewState.value.selectedProfileForMenu == null) return
         deleteProfileRetryKey?.let(profileOperationRetryTracker::clear)
         deleteProfileRetryKey = profileOperationRetryTracker.newSessionKey(
@@ -324,6 +332,7 @@ class AppSettingsViewModel(
     }
 
     private fun hideDeleteProfileDialog(entryPoint: String) {
+        if (profileOperationGate.isInProgress || !viewState.value.showDeleteProfileDialog) return
         deleteProfileRetryKey?.let(profileOperationRetryTracker::clear)
         deleteProfileRetryKey = null
         analytics.logEvent(
@@ -343,10 +352,11 @@ class AppSettingsViewModel(
 
     private fun deleteProfile() {
         val profileId = viewState.value.selectedProfileForMenu?.id ?: return
+        if (!viewState.value.showDeleteProfileDialog) return
         val retryKey = deleteProfileRetryKey ?: profileOperationRetryTracker.newSessionKey(
             AppSettingsAnalyticsEvent.ProfileOperation.Delete,
         ).also { deleteProfileRetryKey = it }
-        viewModelScope.launch {
+        launchProfileOperation {
             val succeeded = runProfileOperation(
                 operation = AppSettingsAnalyticsEvent.ProfileOperation.Delete,
                 retryKey = retryKey,
@@ -374,6 +384,19 @@ class AppSettingsViewModel(
 
     private fun onProfileOperationFailedMessageShown() {
         updateState { it.copy(showProfileOperationFailedMessage = false) }
+    }
+
+    private fun launchProfileOperation(block: suspend () -> Unit) {
+        if (!profileOperationGate.tryStart()) return
+        updateState { it.copy(isProfileOperationInProgress = true) }
+        viewModelScope.launch {
+            try {
+                block()
+            } finally {
+                profileOperationGate.finish()
+                updateState { it.copy(isProfileOperationInProgress = false) }
+            }
+        }
     }
 
     private suspend fun runProfileOperation(

@@ -8,6 +8,22 @@ import kotlinx.coroutines.CancellationException
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/** Main-thread guard that accepts only one profile mutation until its coroutine terminates. */
+internal class ProfileOperationGate {
+    var isInProgress: Boolean = false
+        private set
+
+    fun tryStart(): Boolean {
+        if (isInProgress) return false
+        isInProgress = true
+        return true
+    }
+
+    fun finish() {
+        isInProgress = false
+    }
+}
+
 /** Private retry history scoped to an operation session or target; keys never enter telemetry. */
 internal class ProfileOperationRetryTracker {
     private val failedOperationKeys = mutableSetOf<String>()

@@ -14,6 +14,20 @@ import kotlin.test.assertTrue
 
 class ProfileOperationTest {
     @Test
+    fun operationGateAcceptsOnlyOneMutationUntilTheAcceptedOneFinishes() {
+        val gate = ProfileOperationGate()
+
+        assertTrue(gate.tryStart())
+        assertFalse(gate.tryStart())
+        assertTrue(gate.isInProgress)
+
+        gate.finish()
+
+        assertFalse(gate.isInProgress)
+        assertTrue(gate.tryStart())
+    }
+
+    @Test
     fun retryAttributionIsScopedToTheSameTargetOrDialogSession() {
         val tracker = ProfileOperationRetryTracker()
         val failedSwitch = "switch:target_a"
