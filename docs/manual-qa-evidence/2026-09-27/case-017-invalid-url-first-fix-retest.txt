@@ -1,0 +1,22 @@
+Case 17 — Invalid URL validation, first instrumentation candidate; retest FAILED
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build: physical Samsung Galaxy S24 serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), candidate APK SHA-256 local/Samsung-pulled match `3b08fdf1adce4bc84b1df811279cc5e2071068f7ed506138ba9dcf3213300b95`, PID `6557`. Candidate source was the uncommitted working tree based on HEAD `33a702168e5845bb126ee40e2c399b353d4de7d7`; it was deliberately not committed because this retest exposed duplicate telemetry.
+
+Preconditions: Login reached from Settings → Servers → Add Server; Storyteller selected; URL initially `https://`; username/password empty. No credentials were entered or submitted.
+
+Steps and result:
+1. Replace `https://` using deletion followed by entry of `not a url`. The form displays the expected inline `Enter a valid http(s) URL`; Sign In is disabled. [Invalid field](case-017-invalid-url-fixed-entered.png).
+2. Tap disabled Sign In. Nothing submits; error remains, no spinner or crash. [Submit tap](case-017-invalid-url-candidate-submit.png).
+3. PID-scoped local DebugAnalyticsManager log shows two copies of the exact same bounded validation failure and two terminal breadcrumbs for this one replacement:
+
+```
+09-27 06:25:18.659 6557 D Analytics Event: login_validation_failed | Parameters: {screen=login, action=validate_form, operation=login_validation, stage=terminal, outcome=failed, server_type=storyteller, field=server_url, reason_code=invalid_url}
+09-27 06:25:18.659 6557 D Diagnostic breadcrumb: diagnostic_context screen=login action=validate_form operation=login_validation stage=terminal outcome=failed reason_code=invalid_url server_type=storyteller correlation_id=662e5dcf-3f8f-4adc-80f0-9b8d0caff0f1
+09-27 06:25:18.966 6557 D Analytics Event: login_validation_failed | Parameters: {screen=login, action=validate_form, operation=login_validation, stage=terminal, outcome=failed, server_type=storyteller, field=server_url, reason_code=invalid_url}
+09-27 06:25:18.966 6557 D Diagnostic breadcrumb: diagnostic_context screen=login action=validate_form operation=login_validation stage=terminal outcome=failed reason_code=invalid_url server_type=storyteller correlation_id=58e50a79-1967-40a7-bd70-22d27a7be01c
+```
+
+Filtered logs contain no `login_attempted`, `login_failed`, fatal exception or unexpected error; the disabled button made no login request. Event parameters contain no URL or credentials.
+
+Results: Functional **PASS**. Analytics **FAIL** (two validation failures instead of one per invalid editing sequence). Diagnostics **FAIL** (two failure breadcrumbs/correlation IDs for that single sequence). This is the existing QA-BUG-0036, not a new user-facing crash/validation bug. Root cause in the candidate is that `LoginValidationTelemetry` resets its dedupe marker whenever `urlError` becomes null; deleting the placeholder transiently reaches a blank/accepted state before the invalid replacement is typed. Do not commit this candidate. Correct dedupe to remain latched while the URL is blank/placeholder and reset only after a syntactically valid URL; then rerun host tests and Samsung case 17.
