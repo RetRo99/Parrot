@@ -1,0 +1,21 @@
+QA-BUG-0048 / shared case 740 Reader exit-attribution retest
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `12486`; source tree later committed as `9a782d9220f6f24b67fcde80143a8f721ed430b1` with no source changes between build and commit.
+- Debug APK SHA-256 `6945eaeef0857d68527beaf5084b557ade2e832e6a54b5c64337039f5d18ca8d`; pulled Samsung `base.apk` and local APK hashes match.
+- `:feature:reader:ui:testAndroidHostTest`: 1 test, 0 failures/errors. `:feature:home:ui:testAndroidHostTest`: 2 tests, 0 failures/errors. Analytics sanitizer: 20 tests, 0 failures/errors. `:androidApp:assembleDebug` succeeded.
+
+Steps and observations
+1. Installed the candidate with `adb install -r` (preserving Parrot data) and launched the app. The saved EPUB Reader rendered usable content at page 29/64.
+2. Pressed Android system Back once. Reader returned to Books. Reopening the same saved book restored page 29/64. Local debug output had exactly one `navigation_back_attempted` (`screen=reader`, `source_screen=reader`, `destination_screen=books`, `entry_point=system_back`, `outcome=started`) and exactly one `navigation_back` (`entry_point=system_back`, `outcome=succeeded`). Matching navigation-start and terminal diagnostic breadcrumbs shared a diagnostic-only correlation ID.
+3. Reopened the book, revealed the auto-hidden Reader controls, and tapped the accessible Close control. Reader returned to Books. Local debug output had exactly one attempt and one successful completion for this action, both attributed to `entry_point=close_button`, plus the matching breadcrumb pair.
+4. Across the two distinct exit actions there were exactly two attempts, two successful completions, and two matched start/terminal breadcrumb pairs; there were no duplicate Back events or unexpected non-fatal/fatal markers. Ordinary successful Back does not require Crashlytics reporting.
+
+Results
+- Shared case 740 / Reader / system Back: Functional **PASS**; Analytics **PASS (local DebugAnalyticsManager only; Firebase Analytics ingestion waived)**; diagnostics **PASS** for correctly attributed correlated breadcrumbs, no failure induced.
+- Shared case 740 / Reader / Close button: Functional **PASS**; Analytics **PASS (local only)**; diagnostics **PASS** for correctly attributed correlated breadcrumbs, no failure induced.
+- Same-book progress was observed restored at page 29/64 after the system-Back exit. No book title/content, username, URL, screenshot, raw UI hierarchy, or correlation ID value is retained.
+
+The initial misattribution remains in the earlier pre-fix evidence and case-results row. Fix commit: `9a782d9220f6f24b67fcde80143a8f721ed430b1` (`fix(reader): attribute system Back source [QA-BUG-0048, case 740]`). Crashlytics delivery is not exercised by this successful navigation run.
