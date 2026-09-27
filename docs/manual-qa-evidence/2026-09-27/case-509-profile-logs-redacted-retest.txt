@@ -1,0 +1,17 @@
+Case 509 / QA-BUG-0054 — Profile registry startup log redaction retest
+Run date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, build `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `23557`; local APK and Samsung-installed APK SHA-256 both `bebdd5542c81be20b8b6d58d8eb904d6f2e68e40ceda7b6bcc998c575376d9d5`.
+- Source includes QA-BUG-0054 commit `9e0f707b`, QA-BUG-0052 `2d436099`, and separate uncommitted QA-BUG-0049 playback candidate. No app data was cleared.
+- Build: `./gradlew :lib:user:implementation:compileAndroidMain :androidApp:assembleDebug --rerun-tasks`; BUILD SUCCESSFUL, 590 actionable tasks executed.
+
+Execution and sanitized observations
+- Installed the rebuilt APK over existing Parrot data, verified the package path's installed hash against the local APK hash, then force-stopped and relaunched Parrot to execute `UserRegistryImpl` preference loading.
+- PID-scoped filtering found exactly two `UserRegistry` records: aggregate profile-count logging and the stable `Loaded active profile state` message. No active-profile value or UUID pattern was present. Source changes also replace interpolated values in create/update/delete/activate/missing-profile/preference-cleanup templates with stable operation-only text.
+- The UI restored the saved Reader error surface. No profile mutation was performed during this isolated privacy retest. The app remained usable; zero PID-scoped exception-report markers and zero fatal crashes were observed.
+- No raw log line, profile display name, identifier, screenshot, or hierarchy is retained. This is local Android-log evidence, not Firebase/Crashlytics delivery evidence.
+
+Result
+- Diagnostics/privacy: PASS for startup-load logging; create/update/delete/activate and profile-preference-cleanup log paths remain NOT RUN pending a disposable profile fixture and the QA-BUG-0053 instrumentation commit. Case 509 remains incomplete for broader sensitive-payload and Firebase checks.
