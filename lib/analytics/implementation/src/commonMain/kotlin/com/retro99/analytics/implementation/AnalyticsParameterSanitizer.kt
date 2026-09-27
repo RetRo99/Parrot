@@ -195,6 +195,7 @@ private val SAFE_BOOLEAN_KEYS = setOf(
     "is_neural",
     "is_timeout",
     "is_connectivity",
+    "is_visible",
 )
 
 private val SAFE_LONG_KEYS = setOf(

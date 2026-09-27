@@ -342,7 +342,11 @@ private fun LoginScreenContent(
                 trailingIcon = {
                     PasswordVisibilityToggle(
                         isVisible = passwordVisible,
-                        onToggle = { passwordVisible = !passwordVisible },
+                        onToggle = {
+                            val newVisibility = !passwordVisible
+                            passwordVisible = newVisibility
+                            intentDispatcher(LoginIntent.OnPasswordVisibilityChanged(newVisibility))
+                        },
                     )
                 },
             )

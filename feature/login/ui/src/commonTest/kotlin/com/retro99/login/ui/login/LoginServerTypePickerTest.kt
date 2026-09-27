@@ -255,6 +255,26 @@ class LoginServerTypePickerTest {
         assertEquals(0, analytics.exceptions.size)
     }
 
+    @Test
+    fun passwordVisibilityChangeLogsOnlyBoundedVisibilityState() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(analytics)
+
+        viewModel.onIntent(LoginIntent.OnPasswordVisibilityChanged(isVisible = true))
+        viewModel.onIntent(LoginIntent.OnPasswordVisibilityChanged(isVisible = false))
+
+        assertEquals(
+            listOf("login_password_visibility_changed", "login_password_visibility_changed"),
+            analytics.events.map { it.name },
+        )
+        assertEquals(listOf(true, false), analytics.events.map { it.parameters["is_visible"] })
+        assertTrue(analytics.events.all { it.parameters["screen"] == "login" })
+        assertTrue(analytics.events.all { it.parameters["outcome"] == "succeeded" })
+        assertTrue(analytics.events.all { "password" !in it.parameters && "value" !in it.parameters })
+        assertEquals(0, analytics.breadcrumbs.size)
+        assertEquals(0, analytics.exceptions.size)
+    }
+
     private fun createViewModel(analytics: RecordingAnalytics) = LoginViewModel(
         loginUseCase = LoginUseCase(StubLoginRepository),
         analytics = analytics,

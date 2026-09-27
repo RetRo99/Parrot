@@ -692,6 +692,18 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun loginPasswordVisibilityEventKeepsOnlyBooleanVisibilityState() {
+        val sanitized = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginPasswordVisibilityChanged(isVisible = true).parameters,
+        )
+
+        assertEquals("login", sanitized["screen"])
+        assertEquals("toggle_password_visibility", sanitized["action"])
+        assertEquals(true, sanitized["is_visible"])
+        assertFalse(sanitized.containsKey("password"))
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(

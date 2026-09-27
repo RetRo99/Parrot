@@ -13,6 +13,7 @@ sealed interface LoginIntent : BaseIntent {
     data object OnUrlHelpOpenRequested : LoginIntent
     data object OnUrlHelpOpened : LoginIntent
     data class OnUrlHelpDismissed(val reason: UrlHelpDismissalReason) : LoginIntent
+    data class OnPasswordVisibilityChanged(val isVisible: Boolean) : LoginIntent
 }
 
 enum class ServerTypePickerDismissalReason(val reasonCode: String) {

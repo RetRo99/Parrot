@@ -109,6 +109,8 @@ class LoginViewModel(
             LoginIntent.OnUrlHelpOpenRequested -> beginUrlHelpAttempt()
             LoginIntent.OnUrlHelpOpened -> markUrlHelpOpened()
             is LoginIntent.OnUrlHelpDismissed -> dismissUrlHelp(intent.reason.reasonCode)
+            is LoginIntent.OnPasswordVisibilityChanged ->
+                analytics.logEvent(AuthAnalyticsEvent.LoginPasswordVisibilityChanged(intent.isVisible))
         }
     }
 

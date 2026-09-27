@@ -296,6 +296,20 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    data class LoginPasswordVisibilityChanged(
+        val isVisible: Boolean,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_password_visibility_changed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "toggle_password_visibility",
+            "operation" to "password_visibility_toggle",
+            "stage" to "terminal",
+            "outcome" to "succeeded",
+            "is_visible" to isVisible,
+        )
+    }
+
     data class LoginAttempted(
         val serverType: String,
         val authMethod: String,
