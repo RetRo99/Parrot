@@ -16,6 +16,7 @@ Source audit recorded before fixes
 - `HomeNavigation.kt` actual-visible destination reporting covers `HomeDestination.ServerManagement` only, not `HomeDestination.AppSettings`.
 - `AppSettingsViewModel.selectProfile` logs `ProfileSwitched` before the asynchronous `setActiveProfile` call. Create/rename/delete emit only success events after registry calls; their coroutine bodies do not catch exceptions, and no attempted/failure/cancelled outcomes or operation breadcrumbs are present.
 - `UserRegistryImpl.kt` Kermit templates interpolate profile display names and/or IDs on load/create/update/delete/activate. Runtime mutation was intentionally not performed before recording QA-BUG-0053/0054.
+- A separate suspected case-422 issue was recorded as QA-BUG-0055: deleting the active profile clears its active ID in source; actual Samsung post-delete behavior remains untested.
 
 Conclusion
 - Case 408 functional: PASS; Analytics: FAIL pre-fix; diagnostics: PARTIAL (generic App Settings observation breadcrumbs exist, but profile operation failure coverage is absent and no failure was induced).

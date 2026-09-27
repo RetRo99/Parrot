@@ -942,3 +942,20 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Affected files:** `lib/user/implementation/src/commonMain/kotlin/com/retro99/user/implementation/UserRegistryImpl.kt` and targeted source/log-sanitization checks.
 - **Fix reference / commit:** Pending. Replace value-bearing logs with stable messages and, if useful, counts only.
 - **Retest:** Pending a safe synthetic profile-only fixture and sanitized local-log inspection. No raw UI tree, screenshot, profile name, or identifier may be retained.
+
+## QA-BUG-0055 — Deleting the active profile may leave the app without an active profile
+
+- **Severity / user impact:** Medium, suspected; deleting the profile currently in use may reset user-scoped navigation/data to an implicit default instead of keeping the user in another existing profile.
+- **Status:** SUSPECTED BY SOURCE AUDIT ONLY. No profile has been deleted on the Samsung; confirm or close as a false positive with a disposable empty profile before fixing.
+- **Screen/test IDs:** Profiles cases 412 and 422; profile persistence/recovery cases 409 and 419–421.
+- **Device/build/commit:** Samsung serial `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; package `com.retro99.parrot` 0.4.5 (21), PID `1802`, APK SHA-256 `f3c4eb2c62bc21aec91c3c32f583227760d033b4591bd0ace804b15b8de58a65`, source `2d4360996a620f4cba2d25c25bbd3e7cdaaeba88` plus separate QA-BUG-0049 candidate.
+- **Preconditions:** At least two profiles exist; the profile selected for deletion is active. Use only a disposable profile with no servers/books.
+- **Exact reproduction / audit:** Profile long-press/edit → Delete → confirm. Source `AppSettingsViewModel.deleteProfile` calls `userRegistry.deleteProfile(profileId)` and does not select a remaining profile. `UserRegistryImpl.deleteProfile` removes the active profile and clears `ActiveProfileId` when IDs match; `HomeNavigation` resets navigation when the active profile changes. No device behavior is claimed yet.
+- **Expected:** The active profile's deletion either requires an explicit safe confirmation and switches to a remaining profile, or follows another documented safe policy without exposing unrelated/default data or crashing.
+- **Actual:** Source indicates the active ID becomes null while one or more profiles may remain. Product fallback behavior and user-visible state are unknown until Samsung execution.
+- **Frequency:** Potentially every confirmed deletion of the active profile when another profile remains.
+- **Evidence:** Source audit: `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/appsettings/AppSettingsViewModel.kt` `deleteProfile`; `lib/user/implementation/src/commonMain/kotlin/com/retro99/user/implementation/UserRegistryImpl.kt` `deleteProfile`; `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/navigation/HomeNavigationViewModel.kt` profile observer. Case-408 evidence records the source concern and that no profile mutation occurred.
+- **Root cause:** Deletion clears active ID; UI handler does not select an alternate profile.
+- **Affected files:** App Settings delete flow and UserRegistry active-profile lifecycle, if Samsung confirms.
+- **Fix reference / commit:** Pending confirmation. Do not alter behavior until case 422 on disposable data establishes the actual postcondition.
+- **Retest:** NOT RUN; blocked until QA-BUG-0053 instrumentation is committed and a disposable profile can be created without modifying the original profile.
