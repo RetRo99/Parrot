@@ -369,9 +369,7 @@ class HomeNavigationViewModel(
                 emitNavigationEvent(HomeNavigationEvent.NavigateTo(intent.destination))
             }
             is HomeNavigationIntent.SwitchTab -> handleTabSwitch(intent)
-            HomeNavigationIntent.GoBack -> {
-                emitNavigationEvent(HomeNavigationEvent.GoBack)
-            }
+            is HomeNavigationIntent.GoBack -> handleGoBack(intent)
 
             // Reader navigation with conflict check
             is HomeNavigationIntent.RequestOpenReader -> {
@@ -479,6 +477,89 @@ class HomeNavigationViewModel(
             )
         }
     }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun handleGoBack(intent: HomeNavigationIntent.GoBack) {
+        val sourceScreen = intent.sourceScreen
+        val destinationScreen = intent.destinationScreen
+        val entryPoint = intent.entryPoint
+        val context = if (sourceScreen != null && destinationScreen != null && entryPoint != null) {
+            HomeNavigationBackContext(
+                sourceScreen = sourceScreen,
+                destinationScreen = destinationScreen,
+                entryPoint = entryPoint,
+                correlationId = Uuid.random().toString(),
+            )
+        } else {
+            null
+        }
+
+        if (context != null) {
+            analytics.logEvent(
+                NavigationAnalyticsEvent.BackNavigationAttempted(
+                    sourceScreen = context.sourceScreen,
+                    destinationScreen = context.destinationScreen,
+                    entryPoint = context.entryPoint,
+                ),
+            )
+            analytics.logBreadcrumb(
+                backNavigationDiagnosticContext(
+                    context = context,
+                    stage = "navigation",
+                    outcome = "started",
+                ),
+            )
+        }
+        emitNavigationEvent(HomeNavigationEvent.GoBack(context))
+    }
+
+    /** Completes Back telemetry only after the navigation owner applies the requested pop. */
+    fun reportBackNavigationApplied(context: HomeNavigationBackContext, applied: Boolean) {
+        val outcome = if (applied) {
+            NavigationAnalyticsEvent.BackNavigationOutcome.Succeeded
+        } else {
+            NavigationAnalyticsEvent.BackNavigationOutcome.Failed
+        }
+        analytics.logEvent(
+            NavigationAnalyticsEvent.BackNavigationCompleted(
+                sourceScreen = context.sourceScreen,
+                destinationScreen = context.destinationScreen,
+                entryPoint = context.entryPoint,
+                outcome = outcome,
+            ),
+        )
+        val diagnosticContext = backNavigationDiagnosticContext(
+            context = context,
+            stage = "terminal",
+            outcome = outcome.value,
+            reasonCode = if (applied) null else "back_navigation_not_applied",
+        )
+        analytics.logBreadcrumb(diagnosticContext)
+        if (!applied) {
+            analytics.logException(
+                IllegalStateException("Back navigation did not apply the requested destination."),
+                diagnosticContext,
+            )
+        }
+    }
+
+    private fun backNavigationDiagnosticContext(
+        context: HomeNavigationBackContext,
+        stage: String,
+        outcome: String,
+        reasonCode: String? = null,
+    ) = DiagnosticContext(
+        screen = context.sourceScreen,
+        sourceScreen = context.sourceScreen,
+        destinationScreen = context.destinationScreen,
+        entryPoint = context.entryPoint,
+        action = "back",
+        operation = "navigation_back",
+        stage = stage,
+        outcome = outcome,
+        reasonCode = reasonCode,
+        correlationId = context.correlationId,
+    )
 
     /** Records an exposure only after the navigation owner reports this route as visible. */
     fun reportServerManagementViewed(sourceScreen: String, entryPoint: String) {

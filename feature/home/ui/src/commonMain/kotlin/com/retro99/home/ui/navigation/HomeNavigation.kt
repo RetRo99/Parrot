@@ -67,8 +67,11 @@ fun HomeNavigation(
                         applied = navigationState.currentTab == event.tab,
                     )
                 }
-                HomeNavigationEvent.GoBack -> {
-                    navigationState.goBack()
+                is HomeNavigationEvent.GoBack -> {
+                    val applied = navigationState.goBack()
+                    event.context?.let { context ->
+                        viewModel.reportBackNavigationApplied(context, applied)
+                    }
                 }
                 is HomeNavigationEvent.NavigateToReaderReplacing -> {
                     if (
@@ -135,6 +138,28 @@ fun HomeNavigation(
     val nowPlayingInfo = uiState.nowPlayingInfo
     val isAudioPlaying = uiState.isAudioPlaying
 
+    val requestBack: (String) -> Unit = { entryPoint ->
+        val source = navigationState.currentDestination
+        val currentStack = navigationState.currentBackStack
+        val destination = when {
+            currentStack.size > 1 -> currentStack[currentStack.lastIndex - 1]
+            navigationState.currentTab != navigationState.startTab ->
+                navigationState.backStacks[navigationState.startTab]?.lastOrNull()
+            else -> null
+        }
+        intentDispatcher(
+            if (source != null && destination != null) {
+                HomeNavigationIntent.GoBack(
+                    sourceScreen = source.analyticsScreenName(),
+                    destinationScreen = destination.analyticsScreenName(),
+                    entryPoint = entryPoint,
+                )
+            } else {
+                HomeNavigationIntent.GoBack()
+            },
+        )
+    }
+
     // Show mini-player when audio is playing and not in reader
     val showMiniPlayer = !isInReader && nowPlayingInfo != null
 
@@ -181,7 +206,7 @@ fun HomeNavigation(
         ) { paddingValues ->
             BottomSheetNavDisplay(
                 backStack = navigationState.currentBackStack,
-                onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                onBack = { requestBack("system_back") },
                 modifier = Modifier.padding(paddingValues),
                 entryProvider = entryProvider {
                     entry<HomeDestination.BooksList> {
@@ -250,7 +275,7 @@ fun HomeNavigation(
                                     )
                                 )
                             },
-                            onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                            onBack = { requestBack("toolbar_back") },
                         )
                     }
 
@@ -278,7 +303,7 @@ fun HomeNavigation(
                                     )
                                 )
                             },
-                            onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                            onBack = { requestBack("toolbar_back") },
                         )
                     }
 
@@ -287,7 +312,7 @@ fun HomeNavigation(
                             AudiobookPlayerScreen(
                                 serverId = destination.serverId,
                                 bookUuid = destination.bookUuid,
-                                onClose = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                                onClose = { requestBack("close_button") },
                             )
                         } else {
                             ReaderScreen(
@@ -295,7 +320,7 @@ fun HomeNavigation(
                                 bookUuid = destination.bookUuid,
                                 bookType = destination.bookType,
                                 isLastBookOnLaunch = destination.isLastBookOnLaunch,
-                                onClose = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                                onClose = { requestBack("close_button") },
                                 onSettingsClick = {
                                     intentDispatcher(
                                         HomeNavigationIntent.NavigateTo(HomeDestination.Settings)
@@ -307,7 +332,7 @@ fun HomeNavigation(
 
                     entry<HomeDestination.Settings> {
                         SettingsScreen(
-                            onClose = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                            onClose = { requestBack("close_button") },
                         )
                     }
 
@@ -339,20 +364,20 @@ fun HomeNavigation(
                     entry<HomeDestination.ServerManagement> {
                         ServerManagementScreen(
                             onNavigateToLogin = onNavigateToLogin,
-                            onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                            onBack = { requestBack("toolbar_back") },
                             modifier = Modifier,
                         )
                     }
 
                     entry<HomeDestination.SyncAndBackup> {
                         CloudAccountScreen(
-                            onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                            onBack = { requestBack("toolbar_back") },
                         )
                     }
 
                     entry<HomeDestination.Statistics> {
                         StatisticsScreen(
-                            onBack = { intentDispatcher(HomeNavigationIntent.GoBack) },
+                            onBack = { requestBack("toolbar_back") },
                             // Back arrow only makes sense when Statistics is pushed onto a stack;
                             // as a tab root it is the root of its own tab.
                             showBack = navigationState.currentBackStack.size > 1,

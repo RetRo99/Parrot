@@ -8,6 +8,7 @@ package com.retro99.analytics.api
 data class DiagnosticContext(
     val screen: String? = null,
     val sourceScreen: String? = null,
+    val destinationScreen: String? = null,
     val entryPoint: String? = null,
     val action: String? = null,
     val operation: String? = null,

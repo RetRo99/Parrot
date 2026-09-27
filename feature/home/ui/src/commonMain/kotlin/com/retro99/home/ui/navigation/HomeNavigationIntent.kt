@@ -18,7 +18,11 @@ sealed interface HomeNavigationIntent : BaseIntent {
     // Navigation intents
     data class NavigateTo(val destination: HomeDestination) : HomeNavigationIntent
     data class SwitchTab(val sourceTab: HomeTab, val tab: HomeTab) : HomeNavigationIntent
-    data object GoBack : HomeNavigationIntent
+    data class GoBack(
+        val sourceScreen: String? = null,
+        val destinationScreen: String? = null,
+        val entryPoint: String? = null,
+    ) : HomeNavigationIntent
 
     /**
      * Request to open a book. Will check for playback conflicts first.

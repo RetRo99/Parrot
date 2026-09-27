@@ -201,6 +201,42 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun nestedBackEventsRetainBoundedRouteAndTerminalOutcome() {
+        val attempted = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.BackNavigationAttempted(
+                sourceScreen = "server_management",
+                destinationScreen = "app_settings",
+                entryPoint = "toolbar_back",
+            ).parameters + ("server_id" to "private-id"),
+        )
+        val succeeded = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.BackNavigationCompleted(
+                sourceScreen = "server_management",
+                destinationScreen = "app_settings",
+                entryPoint = "toolbar_back",
+                outcome = NavigationAnalyticsEvent.BackNavigationOutcome.Succeeded,
+            ).parameters,
+        )
+        val failed = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.BackNavigationCompleted(
+                sourceScreen = "server_management",
+                destinationScreen = "app_settings",
+                entryPoint = "system_back",
+                outcome = NavigationAnalyticsEvent.BackNavigationOutcome.Failed,
+            ).parameters,
+        )
+
+        assertEquals("server_management", attempted["screen"])
+        assertEquals("app_settings", attempted["destination_screen"])
+        assertEquals("toolbar_back", attempted["entry_point"])
+        assertEquals("started", attempted["outcome"])
+        assertFalse(attempted.containsKey("server_id"))
+        assertEquals("succeeded", succeeded["outcome"])
+        assertEquals("system_back", failed["entry_point"])
+        assertEquals("failed", failed["outcome"])
+    }
+
+    @Test
     fun appVisibilityRetainsBoundedLifecycleState() {
         val background = sanitizeAnalyticsParameters(
             NavigationAnalyticsEvent.AppVisibilityChanged(
@@ -795,6 +831,9 @@ class DiagnosticPayloadSanitizerTest {
         val context = sanitizeDiagnosticContext(
             DiagnosticContext(
                 screen = "books_library",
+                sourceScreen = "books",
+                destinationScreen = "book_detail",
+                entryPoint = "toolbar_back",
                 action = "refresh",
                 operation = "load_books",
                 stage = "remote_fetch",
@@ -806,7 +845,8 @@ class DiagnosticPayloadSanitizerTest {
         )
 
         assertEquals(
-            "diagnostic_context screen=books_library action=refresh operation=load_books " +
+            "diagnostic_context screen=books_library source_screen=books destination_screen=book_detail " +
+                "entry_point=toolbar_back action=refresh operation=load_books " +
                 "stage=remote_fetch outcome=failed reason_code=connection_failed " +
                 "server_type=audiobookshelf correlation_id=8b64e753-439e-4428-93c8-b39252d30a19",
             context,

@@ -63,7 +63,9 @@ sealed interface HomeNavigationEvent {
     /**
      * Go back in the navigation stack.
      */
-    data object GoBack : HomeNavigationEvent
+    data class GoBack(
+        val context: HomeNavigationBackContext? = null,
+    ) : HomeNavigationEvent
 
     /**
      * Navigate to the reader screen, replacing any existing reader in the stack.
@@ -77,3 +79,11 @@ sealed interface HomeNavigationEvent {
         val isLastBookOnLaunch: Boolean = false,
     ) : HomeNavigationEvent
 }
+
+/** Non-sensitive context captured when a user requests Back navigation. */
+data class HomeNavigationBackContext(
+    val sourceScreen: String,
+    val destinationScreen: String,
+    val entryPoint: String,
+    val correlationId: String,
+)

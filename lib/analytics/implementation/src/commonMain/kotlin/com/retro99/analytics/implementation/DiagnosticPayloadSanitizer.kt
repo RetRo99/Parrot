@@ -22,6 +22,7 @@ internal fun sanitizeDiagnosticContext(context: DiagnosticContext): String? {
     val fields = buildList {
         context.screen?.let { add("screen" to it) }
         context.sourceScreen?.let { add("source_screen" to it) }
+        context.destinationScreen?.let { add("destination_screen" to it) }
         context.entryPoint?.let { add("entry_point" to it) }
         context.action?.let { add("action" to it) }
         context.operation?.let { add("operation" to it) }
@@ -43,7 +44,7 @@ internal fun sanitizeDiagnosticContext(context: DiagnosticContext): String? {
 private fun sanitizeStructuredDiagnosticMessage(message: String): String? {
     if (!message.startsWith("diagnostic_context ")) return null
     val allowedKeys = setOf(
-        "screen", "source_screen", "entry_point", "action", "operation", "stage", "outcome",
+        "screen", "source_screen", "destination_screen", "entry_point", "action", "operation", "stage", "outcome",
         "reason_code", "server_type", "media_type", "correlation_id",
     )
     val fields = message.removePrefix("diagnostic_context ").split(' ').mapNotNull { token ->

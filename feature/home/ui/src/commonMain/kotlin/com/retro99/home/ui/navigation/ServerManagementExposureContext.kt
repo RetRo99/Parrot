@@ -23,7 +23,7 @@ internal fun serverManagementExposureContext(
     )
 }
 
-private fun HomeDestination.analyticsScreenName(): String = when (this) {
+internal fun HomeDestination.analyticsScreenName(): String = when (this) {
     HomeDestination.BooksList -> "books"
     HomeDestination.SeriesList -> "series"
     is HomeDestination.BookDetail -> "book_detail"

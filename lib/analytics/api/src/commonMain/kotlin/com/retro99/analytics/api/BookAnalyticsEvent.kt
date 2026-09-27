@@ -426,6 +426,44 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
  */
 sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
 
+    data class BackNavigationAttempted(
+        val sourceScreen: String,
+        val destinationScreen: String,
+        val entryPoint: String,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "navigation_back_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to sourceScreen,
+            "source_screen" to sourceScreen,
+            "destination_screen" to destinationScreen,
+            "entry_point" to entryPoint,
+            "action" to "back",
+            "outcome" to "started",
+        )
+    }
+
+    data class BackNavigationCompleted(
+        val sourceScreen: String,
+        val destinationScreen: String,
+        val entryPoint: String,
+        val outcome: BackNavigationOutcome,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "navigation_back"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to sourceScreen,
+            "source_screen" to sourceScreen,
+            "destination_screen" to destinationScreen,
+            "entry_point" to entryPoint,
+            "action" to "back",
+            "outcome" to outcome.value,
+        )
+    }
+
+    enum class BackNavigationOutcome(val value: String) {
+        Succeeded("succeeded"),
+        Failed("failed"),
+    }
+
     enum class AppVisibility(val value: String) {
         Foreground("foreground"),
         Background("background"),
