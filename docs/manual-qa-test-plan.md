@@ -1026,3 +1026,9 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 757 | Empty Login validation via IME | On the empty Login form, focus Password and press the keyboard Done/Sign In action | Same field-level required errors and one bounded validation outcome/breadcrumb as button submit; no auth attempt/request/loading, duplicate event, or crash |
+
+## 40. Logged-out last-book launch recovery extension
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 758 | Last-book launch when its server is logged out | Enable Open Last Book on Launch and set a current book; log out that book's server, then relaunch Parrot. Exercise Retry and Back; reauthenticate through the reachable Server Management Login action and reopen the saved book | Do not claim the book opened until usable content is visible. Show an actionable reauthentication path or a safe Home/Books fallback; preserve the saved target. Emit one `last_book_launch_attempted` and one failed/skipped terminal outcome with bounded `server_not_authenticated` context. No Crashlytics issue for expected logged-out state; Retry/Back/re-login must not lose the target or create a startup loop. |

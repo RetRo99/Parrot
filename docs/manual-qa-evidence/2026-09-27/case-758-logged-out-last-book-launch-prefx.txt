@@ -1,0 +1,24 @@
+Case 758 / QA-BUG-0050 — Logged-out last-book restoration (pre-fix)
+Date/time: 2026-09-27, Samsung local CEST (UTC+0200); app relaunch observed at 14:26 CEST.
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `23017`.
+- Installed debug APK SHA-256 `1cf600c5f7ba9bc59d3c6ae5d48a1e1ddbe8cc773bdb528ba5e88bb96e326b8d`.
+- APK source tree was based on repository commit `f519d7609d48b3619364244c2270abb8234e4f44` plus uncommitted QA-BUG-0049 logout/playback changes; the exact tested code was not yet committed.
+
+Preconditions and steps actually performed
+1. The prior case-446 observation left the one Storyteller server logged out and the last ReadAloud item recorded as the current book. `Open Last Book on Launch` was enabled (confirmed by the emitted last-book attempt event, without retaining book identifiers).
+2. The active application was replaced in place with `adb install -r` of the same package/version debug APK; app data was preserved. The MainActivity was started explicitly. This is an APK-replacement/relaunch observation, not a force-stop or ordinary Recents swipe test.
+3. Startup selected Home, then attempted to restore the last Reader route. The visible Reader error view stated that its server was not found or authenticated; it offered Retry and a top navigation arrow, but no direct Login action. No screenshot, server identifier, book title/UUID, URL, account identity, or credential is retained.
+
+Observed, privacy-filtered local signals
+- One `last_book_launch_attempted` (`book_type=readaloud`, `entry_point=app_launch`) and one `last_book_launch_completed` (`outcome=failed`, `reason_code=reader_initialization_failed`).
+- One DebugAnalyticsManager `Exception occurred` record with bounded context `screen=reader`, `action=open_last_book`, `operation=reader_open`, `stage=terminal`, `outcome=failed`, `reason_code=reader_initialization_failed`, `media_type=readaloud`. The raw throwable/message is intentionally omitted.
+- No fatal crash. Debug provider only; this is not evidence of Firebase Crashlytics delivery. The expected-auth error was nevertheless sent to the configured diagnostic exception boundary by app code.
+
+Result
+- Case 758 functional recovery: **NOT RUN** at this checkpoint; the error state was observed, but Back-to-Home and saved-target recovery had not yet been exercised.
+- Analytics: **PASS** for one attempted → failed last-book outcome pair in local debug logging; Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: **FAIL** for ordinary logged-out authentication state being reported as an exception instead of an expected bounded failure breadcrumb. No Firebase issue-delivery claim is made.
+- `POST_NOTIFICATIONS` remained temporarily granted for the preceding playback test; restore its pre-test denied state after QA-BUG-0049 retest.
