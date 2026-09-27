@@ -1,0 +1,20 @@
+Case 442 / QA-BUG-0046 Server Management card-type label retest
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `5881`; built from the exact source tree later committed as `a092dbaa4de6c986e14d0f454310b4a9d3cb00fc`. No source changes occurred between build and commit.
+- Debug APK SHA-256 `6e2a5b64d004d81debfa484305acc86c8c254ad29f693c3c73cc6f63e63901dd`; pulled Samsung `base.apk` and local APK hashes match.
+- `:feature:settings:ui:compileAndroidMain` and `:androidApp:assembleDebug` succeeded. `feature:settings:ui` does not currently configure a common/host test source set; the card text change was therefore verified by the Samsung UI hierarchy instead of a fabricated unit test.
+
+Steps and observations
+1. Used `adb install -r` to preserve Parrot's existing local data and authenticated server. Launched Parrot, used system Back from the saved Reader to Home, then opened Settings → Servers.
+2. Server Management rendered the saved Storyteller card. The accessibility/UI hierarchy exposed the exact visible type label `Server type: Storyteller` at center y=426; the authenticated-state line was present at y=509. Logout and Remove actions remained accessible. The server name, username suffix, URL and raw UI hierarchy were not retained; no screenshot was captured.
+3. Repeated hierarchy inspection did not produce duplicate route events. This PID emitted exactly one bounded `server_management_screen_viewed` event (`source_screen=app_settings`, `entry_point=servers_row`) and one matching visible-route breadcrumb. These are local `DebugAnalyticsManager` logs only; Firebase Analytics ingestion is waived and not claimed. The static type label itself appropriately emitted no feature-use event.
+4. No crash/fatal marker or user-impacting failure occurred. Crashlytics is N-A for this successful static card inspection; this does not verify Crashlytics delivery.
+
+Results
+- `442/Storyteller-authenticated-card`: Functional **PASS** — name, separate type label and authenticated state are displayed; logout/remove remain accessible. Analytics **N-A** — static content inspection has no user action/outcome to measure. Diagnostics **PASS for healthy render/route breadcrumb**; no failure was induced.
+- `442/Audiobookshelf-card`: **BLOCKED** — this device has only the existing Storyteller server; no second Audiobookshelf account/fixture was available. The UI reads the same bounded `ServerType.displayName` for every card, but the missing type fixture is not claimed as executed.
+
+The original missing-type observation remains preserved in the bug ledger and earlier case-442 row. The exact source tree was committed as `a092dbaa4de6c986e14d0f454310b4a9d3cb00fc`. No username, URL, credential, screenshot or raw accessibility hierarchy is retained.

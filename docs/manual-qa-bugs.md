@@ -789,9 +789,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0046 — Server Management card does not show the server type
 
 - **Severity / user impact:** Low; users cannot distinguish a card's server implementation/type as required, especially when server names are identical or ambiguous.
-- **Status:** CONFIRMED on Samsung and by source audit; fix/retest pending.
+- **Status:** FIXED AND RETESTED ON SAMSUNG for the authenticated Storyteller variant; Audiobookshelf variant remains BLOCKED for lack of a second-server fixture. Implementation commit `a092dbaa4de6c986e14d0f454310b4a9d3cb00fc`.
 - **Screen/test IDs:** Cases 22, 442; server-card inspection and accessibility variants.
-- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), PID `18779`; APK SHA-256 `d86d8948dba8feb3cc28bb7e6e56b972513889b0d27a8d1a64c2533cf6e7f9ab`, built from source base `41380c91` plus the uncommitted QA-BUG-0039 candidate. Local and pulled APK hashes match.
+- **Device/build/commit:** Pre-fix discovery used Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), PID `18779`, APK SHA-256 `d86d8948dba8feb3cc28bb7e6e56b972513889b0d27a8d1a64c2533cf6e7f9ab`. Fix verification used PID `5881`, APK SHA-256 `6e2a5b64d004d81debfa484305acc86c8c254ad29f693c3c73cc6f63e63901dd`, exact source tree later committed as `a092dbaa4de6c986e14d0f454310b4a9d3cb00fc`; local and pulled APK hashes match.
 - **Preconditions:** At least one server card is visible in Server Management.
 - **Exact reproduction:** Open Settings → Servers and inspect the authenticated Storyteller card. The safe UI-tree audit confirmed the card and authenticated status without retaining the username or URL. Source inspection of `ServerManagementScreen.ServerListItem` shows `server.name`, `server.baseUrl`, and `authState.toDisplayString()` only; `server.type` is not rendered.
 - **Expected:** Each card displays a distinct, accessible server type (e.g. Storyteller or Audiobookshelf) as well as server name and connection state, without relying on the server name to imply its type.
@@ -800,9 +800,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** [Candidate device check and safe log excerpt](manual-qa-evidence/2026-09-27/server-management-visible-route-and-card-prefx.txt); source `ServerManagementScreen.kt`, `ServerListItem` and `toDisplayString` (lines 164–237). No raw UI tree, account identifier, URL, screenshot or credential was retained.
 - **Root cause:** The card composable never reads/renders `ServerUiModel.type`.
 - **Affected files:** `feature/settings/ui/src/commonMain/kotlin/com/retro99/settings/ui/servers/ServerManagementScreen.kt`, translations, and focused UI tests.
-- **Fix reference / commit:** Pending. Render a localized, accessible type label from the bounded `ServerType` enum; do not substitute the user-authored name or expose a raw URL.
-- **Retest:** NOT RUN. Verify Storyteller and Audiobookshelf type labels plus name and all auth-state labels; TalkBack semantics/large text and layout must remain usable. Keep the username/URL out of evidence.
-- **Discovery commit:** Pending documentation commit. Record its hash after commit; preserve the failing case-442 observation.
+- **Fix reference / commit:** `a092dbaa4de6c986e14d0f454310b4a9d3cb00fc` (`fix(settings): show server type on cards [QA-BUG-0046, case 442]`). Adds the localized resource `settings_server_type_label` and renders `server.type.displayName` as visible text; it does not infer type from the user-authored name or expose a URL.
+- **Retest:** Storyteller-authenticated card **PASS** on the hash-matched Samsung build; the exact source tree was committed after the run with no source changes. UI hierarchy confirmed `Server type: Storyteller`, authenticated-state text, and accessible Logout/Remove actions; route event/breadcrumb remained exactly once on the single actual exposure. Analytics N-A for the static label itself; no failure was induced, so Crashlytics is N-A. No username/URL, screenshot or raw hierarchy retained. Audiobookshelf card is **BLOCKED** because no second-server account/fixture is available; do not treat enum-backed rendering as execution evidence. Large-font/TalkBack variants remain unrun. [Case-442 retest](manual-qa-evidence/2026-09-27/case-442-server-type-card-retest.txt).
+- **Discovery / fix commits:** `909ba9c492936c06a914332b5439f3d820c80d84` records the original failing card observation; `a092dbaa4de6c986e14d0f454310b4a9d3cb00fc` contains the fix. Preserve the pre-fix observation.
 
 ## QA-BUG-0047 — Nested Server Management Back has no navigation outcome telemetry
 
