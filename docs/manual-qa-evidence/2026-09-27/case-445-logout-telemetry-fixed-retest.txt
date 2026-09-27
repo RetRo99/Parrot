@@ -1,0 +1,25 @@
+Case 445 / QA-BUG-0040 — Samsung logout outcome retest
+Date/time: 2026-09-27, Samsung local CEST (UTC+0200); logout at 12:41:10.
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `1746`.
+- Source commit `7ffeca90fffdb763009e19a8983691d204dde814`; installed APK SHA-256 `ccdc973f191804446bea71fe49f65a1d73b7f96ae2d0339385a57c11ff4839bf` (local and Samsung-pulled hashes match).
+- QA-BUG-0040 instrumentation/fix commit: `6fe70f4c74eac14a95962aad0ab70d9fc941fcca`.
+
+Execution and result
+1. Preconditions: after case 444, Server Management showed the original single Storyteller-type server in logged-in state.
+2. Tapped its accessible `Logout` action once (ADB accessibility target at center 808,442).
+3. Parrot remained on Server Management. A sanitized hierarchy check found one `Server type: Storyteller` card, one `Not logged in` state, and a visible `Log in` action; no logged-in status remained. No other server card was present. No crash or loading state was observed.
+
+Functional: **PASS** for the simple authenticated-card logout path in case 445. Active-download/playback case 446 and Remove cases remain separate/unrun.
+
+Analytics and diagnostics
+- Local `DebugAnalyticsManager` emitted exactly one `server_logout_attempted` (`operation=server_logout`, `stage=started`, `outcome=started`, `server_type=storyteller`, `is_retry=false`) followed by exactly one `server_logged_out` (`stage=terminal`, `outcome=succeeded`, same operation/type/retry state).
+- One diagnostic breadcrumb at `started/outcome=started` and one at `terminal/outcome=succeeded` shared the same diagnostic-only correlation ID. No server ID, server URL, account identifier, or credential was emitted in the captured event/breadcrumb excerpts.
+- Analytics: **PASS** for distinct attempt/success outcome in local debug logs. Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: **PASS** for the correlated mutation-start/terminal pair. No unexpected failure occurred; no Crashlytics non-fatal was expected for successful logout. Firebase Crashlytics delivery remains unverified.
+
+Environment note
+- During preparation, a Samsung software-update confirmation briefly became foreground. It was dismissed with system Back; neither `Schedule install` nor `Install now` was selected. No update was started or scheduled and no device setting was changed.
+- No screenshot, account identifier, server URL, raw hierarchy, or credential is retained.
