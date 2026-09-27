@@ -1,0 +1,28 @@
+Case 17 — Invalid server URL validation, corrected committed-build retest
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Installed package `com.retro99.parrot` 0.4.5 (21), debug, source commit `edebeb69c0f254888870b7209ad124b1ab5fd0c1` (`fix(analytics): report invalid login URL [QA-BUG-0036, case 17]`), PID `9237`.
+- APK SHA-256 `ad132c11b257d5ae8294d932319e38643b941ef772df0b9988297ce2024d2e85` for local `androidApp/build/outputs/apk/debug/androidApp-debug.apk` and Samsung-pulled `base.apk` (identical).
+- Host tests passed: `:feature:login:ui:testAndroidHostTest` (6 tests, 0 failures/errors; includes `invalidUrlValidationDeduplicatesAcrossBlankReplacementUntilAValidUrl`) and `:lib:analytics:implementation:testAndroidHostTest` (16 tests, 0 failures/errors; includes `loginValidationEventAllowsOnlyKnownFieldAndSafeReason`). `:androidApp:assembleDebug` succeeded.
+- Login reached through Settings → Servers → Add Server. Storyteller selected, URL initially `https://`, username/password empty. No credentials entered or submitted; no app data cleared.
+
+Steps and functional result
+1. Replace the URL placeholder `https://` with `not a url`. The URL field displays the inline error `Enter a valid http(s) URL`, and Sign In remains disabled. [Invalid URL and inline error](case-017-invalid-url-corrected-entered.png).
+2. Tap the disabled Sign In control. It is a no-op: the error remains, Login is usable, and there is no loading spinner, request or crash. [After disabled Sign In tap](case-017-invalid-url-corrected-disabled-submit.png).
+3. Restore URL to `https://`; username and password remain empty. This was cleanup only, not another case. The app remains on Login.
+
+PID-scoped local DebugAnalyticsManager evidence for the invalid edit and disabled-button tap
+```
+09-27 06:30:32.948 9237 D Analytics Event: login_validation_failed | Parameters: {screen=login, action=validate_form, operation=login_validation, stage=terminal, outcome=failed, server_type=storyteller, field=server_url, reason_code=invalid_url}
+09-27 06:30:32.948 9237 D Diagnostic breadcrumb: diagnostic_context screen=login action=validate_form operation=login_validation stage=terminal outcome=failed reason_code=invalid_url server_type=storyteller correlation_id=1b66670d-1c6e-42ad-bd4e-5faf3aa833f9
+```
+- Exactly one validation failure event and one diagnostic breadcrumb were emitted for the placeholder-to-invalid replacement; the subsequent disabled-button tap emitted no duplicate. The breadcrumb correlation ID is diagnostic-only and is absent from Analytics parameters.
+- No `login_attempted`, `login_failed`, auth result, URL/username/password payload, fatal or unexpected exception appeared in the PID-scoped query. No Crashlytics report is expected for ordinary validation.
+
+Results, separately by dimension
+- Functional: **PASS** — expected inline validation, submit remains disabled/no-op, no spinner/crash; blank form restored afterward.
+- Analytics: **PASS** for local DebugAnalyticsManager — one bounded `login_validation_failed` outcome with safe `server_type`, `field=server_url`, and `reason_code=invalid_url`; no sign-in attempt. Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: **PASS** — one bounded `login_validation` terminal breadcrumb; no unexpected failure to report. Crashlytics is N-A for expected validation; delivery remains unverified separately.
+- The initial pre-fix gap and the first candidate's duplicate-event failure remain preserved in their separate evidence files and QA-BUG-0036 history.
