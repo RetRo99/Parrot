@@ -31,8 +31,10 @@ class ServerManagementViewModel(
     override fun onIntent(intent: ServerManagementIntent) {
         when (intent) {
             is ServerManagementIntent.OnLoginClick -> onLoginClick(intent.serverId)
-            is ServerManagementIntent.OnLogoutClick -> onLogoutClick(intent.serverId)
-            is ServerManagementIntent.OnRemoveClick -> onRemoveClick(intent.serverId)
+            is ServerManagementIntent.OnLogoutClick -> onLogoutClick(intent.serverId, intent.serverType)
+            is ServerManagementIntent.OnRemoveClick -> onRemoveClick(intent.serverId, intent.serverType)
+            ServerManagementIntent.RetryFailedOperation -> retryFailedOperation()
+            ServerManagementIntent.DismissOperationFailure -> dismissOperationFailure()
             ServerManagementIntent.OnAddServerClick -> {
                 analytics.logEvent(ServerManagementAnalyticsEvent.ServerAddAttempted)
                 onNavigateToLogin()
@@ -69,19 +71,80 @@ class ServerManagementViewModel(
         onNavigateToLogin()
     }
 
-    private fun onLogoutClick(serverId: String) {
-        viewModelScope.launch {
-            val serverType = serverRegistry.getServer(serverId)?.type?.name ?: "unknown"
-            analytics.logEvent(ServerManagementAnalyticsEvent.ServerLoggedOut(serverType = serverType))
+    private var operationInProgress = false
+
+    private fun onLogoutClick(serverId: String, serverType: ServerType, isRetry: Boolean = false) {
+        runMutation(
+            serverId = serverId,
+            serverType = serverType,
+            operation = ServerManagementAnalyticsEvent.Operation.Logout,
+            isRetry = isRetry,
+        ) {
             serverRegistry.clearCredentials(serverId)
         }
     }
 
-    private fun onRemoveClick(serverId: String) {
-        viewModelScope.launch {
-            val serverType = serverRegistry.getServer(serverId)?.type?.name ?: "unknown"
-            analytics.logEvent(ServerManagementAnalyticsEvent.ServerRemoved(serverType = serverType))
+    private fun onRemoveClick(serverId: String, serverType: ServerType, isRetry: Boolean = false) {
+        runMutation(
+            serverId = serverId,
+            serverType = serverType,
+            operation = ServerManagementAnalyticsEvent.Operation.Remove,
+            isRetry = isRetry,
+        ) {
             serverRegistry.removeServer(serverId)
         }
+    }
+
+    private fun runMutation(
+        serverId: String,
+        serverType: ServerType,
+        operation: ServerManagementAnalyticsEvent.Operation,
+        isRetry: Boolean,
+        mutate: suspend () -> Unit,
+    ) {
+        if (operationInProgress) return
+        operationInProgress = true
+        updateState { it.copy(isOperationInProgress = true, operationFailure = null) }
+
+        viewModelScope.launch {
+            try {
+                val succeeded = runServerManagementOperation(
+                    analytics = analytics,
+                    operation = operation,
+                    serverType = serverType,
+                    isRetry = isRetry,
+                    mutate = mutate,
+                )
+                if (!succeeded) {
+                    updateState {
+                        it.copy(
+                            operationFailure = ServerManagementOperationFailure(
+                                serverId = serverId,
+                                serverType = serverType,
+                                operation = operation,
+                            ),
+                        )
+                    }
+                }
+            } finally {
+                operationInProgress = false
+                updateState { it.copy(isOperationInProgress = false) }
+            }
+        }
+    }
+
+    private fun retryFailedOperation() {
+        val failure = currentViewState().operationFailure ?: return
+        when (failure.operation) {
+            ServerManagementAnalyticsEvent.Operation.Logout ->
+                onLogoutClick(failure.serverId, failure.serverType, isRetry = true)
+
+            ServerManagementAnalyticsEvent.Operation.Remove ->
+                onRemoveClick(failure.serverId, failure.serverType, isRetry = true)
+        }
+    }
+
+    private fun dismissOperationFailure() {
+        updateState { it.copy(operationFailure = null) }
     }
 }

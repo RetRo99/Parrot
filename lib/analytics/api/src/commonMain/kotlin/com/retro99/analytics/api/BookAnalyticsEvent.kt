@@ -683,6 +683,32 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
  */
 sealed interface ServerManagementAnalyticsEvent : AnalyticsEvent {
 
+    enum class Operation(
+        val action: String,
+        val operation: String,
+        val attemptedEventName: String,
+        val failedEventName: String,
+        val cancelledEventName: String,
+        val failureReasonCode: String,
+    ) {
+        Logout(
+            action = "logout",
+            operation = "server_logout",
+            attemptedEventName = "server_logout_attempted",
+            failedEventName = "server_logout_failed",
+            cancelledEventName = "server_logout_cancelled",
+            failureReasonCode = "server_logout_failed",
+        ),
+        Remove(
+            action = "remove_server",
+            operation = "server_remove",
+            attemptedEventName = "server_remove_attempted",
+            failedEventName = "server_remove_failed",
+            cancelledEventName = "server_remove_cancelled",
+            failureReasonCode = "server_remove_failed",
+        ),
+    }
+
     /** Records one actual Server Management destination exposure. */
     data class ScreenViewed(
         val sourceScreen: String,
@@ -721,22 +747,98 @@ sealed interface ServerManagementAnalyticsEvent : AnalyticsEvent {
 
     data class ServerRemoved(
         val serverType: String,
+        val isRetry: Boolean = false,
     ) : ServerManagementAnalyticsEvent {
         override val name: String = "server_removed"
         override val parameters: Map<String, Any> = mapOf(
+            "screen" to "server_management",
+            "action" to Operation.Remove.action,
+            "operation" to Operation.Remove.operation,
+            "stage" to "terminal",
+            "outcome" to "succeeded",
             "server_type" to serverType,
+            "is_retry" to isRetry,
         )
     }
 
     data class ServerLoggedOut(
         val serverType: String,
+        val isRetry: Boolean = false,
     ) : ServerManagementAnalyticsEvent {
         override val name: String = "server_logged_out"
         override val parameters: Map<String, Any> = mapOf(
+            "screen" to "server_management",
+            "action" to Operation.Logout.action,
+            "operation" to Operation.Logout.operation,
+            "stage" to "terminal",
+            "outcome" to "succeeded",
             "server_type" to serverType,
+            "is_retry" to isRetry,
         )
     }
+
+    data class OperationAttempted(
+        val operation: Operation,
+        val serverType: String,
+        val isRetry: Boolean,
+    ) : ServerManagementAnalyticsEvent {
+        override val name: String = operation.attemptedEventName
+        override val parameters: Map<String, Any> = operationParameters(
+            operation = operation,
+            serverType = serverType,
+            stage = "started",
+            outcome = "started",
+            isRetry = isRetry,
+        )
+    }
+
+    data class OperationFailed(
+        val operation: Operation,
+        val serverType: String,
+        val isRetry: Boolean,
+    ) : ServerManagementAnalyticsEvent {
+        override val name: String = operation.failedEventName
+        override val parameters: Map<String, Any> = operationParameters(
+            operation = operation,
+            serverType = serverType,
+            stage = "terminal",
+            outcome = "failed",
+            isRetry = isRetry,
+        ) + ("reason_code" to operation.failureReasonCode)
+    }
+
+    data class OperationCancelled(
+        val operation: Operation,
+        val serverType: String,
+        val isRetry: Boolean,
+    ) : ServerManagementAnalyticsEvent {
+        override val name: String = operation.cancelledEventName
+        override val parameters: Map<String, Any> = operationParameters(
+            operation = operation,
+            serverType = serverType,
+            stage = "terminal",
+            outcome = "cancelled",
+            isRetry = isRetry,
+        ) + ("reason_code" to "operation_cancelled")
+    }
+
 }
+
+private fun operationParameters(
+    operation: ServerManagementAnalyticsEvent.Operation,
+    serverType: String,
+    stage: String,
+    outcome: String,
+    isRetry: Boolean,
+): Map<String, Any> = mapOf(
+    "screen" to "server_management",
+    "action" to operation.action,
+    "operation" to operation.operation,
+    "stage" to stage,
+    "outcome" to outcome,
+    "server_type" to serverType,
+    "is_retry" to isRetry,
+)
 
 /**
  * App settings related analytics events.

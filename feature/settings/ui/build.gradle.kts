@@ -15,6 +15,7 @@ kotlin {
         namespace = "com.retro99.feature.settings.ui"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+        withHostTest {}
     }
 
     iosArm64()
@@ -43,6 +44,10 @@ kotlin {
             implementation(projects.lib.analytics.api)
             implementation(projects.lib.server.api)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.coroutines.test)
+        }
     }
 }
-

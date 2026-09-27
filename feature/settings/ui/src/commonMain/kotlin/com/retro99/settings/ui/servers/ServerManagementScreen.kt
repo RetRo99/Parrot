@@ -26,9 +26,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -47,6 +52,8 @@ import resources.translations.settings_server_management_add
 import resources.translations.settings_server_management_empty
 import resources.translations.settings_server_management_empty_hint
 import resources.translations.settings_server_management_title
+import resources.translations.settings_server_operation_failed
+import resources.translations.settings_server_operation_retry
 import resources.translations.settings_server_logged_in_as
 import resources.translations.settings_server_login_failed
 import resources.translations.settings_server_not_logged_in
@@ -81,8 +88,30 @@ private fun ServerManagementScreenContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val failureMessage = stringResource(StringRes.settings_server_operation_failed)
+    val retryLabel = stringResource(StringRes.settings_server_operation_retry)
+
+    LaunchedEffect(viewState.operationFailure) {
+        if (viewState.operationFailure != null) {
+            val result = snackbarHostState.showSnackbar(
+                message = failureMessage,
+                actionLabel = retryLabel,
+                withDismissAction = true,
+            )
+            intentDispatcher(
+                if (result == SnackbarResult.ActionPerformed) {
+                    ServerManagementIntent.RetryFailedOperation
+                } else {
+                    ServerManagementIntent.DismissOperationFailure
+                },
+            )
+        }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(StringRes.settings_server_management_title)) },
@@ -149,11 +178,22 @@ private fun ServerManagementScreenContent(
                         ServerListItem(
                             serverWithStatus = serverWithStatus,
                             onLogoutClick = {
-                                intentDispatcher(ServerManagementIntent.OnLogoutClick(serverWithStatus.server.id))
+                                intentDispatcher(
+                                    ServerManagementIntent.OnLogoutClick(
+                                        serverId = serverWithStatus.server.id,
+                                        serverType = serverWithStatus.server.type,
+                                    ),
+                                )
                             },
                             onRemoveClick = {
-                                intentDispatcher(ServerManagementIntent.OnRemoveClick(serverWithStatus.server.id))
+                                intentDispatcher(
+                                    ServerManagementIntent.OnRemoveClick(
+                                        serverId = serverWithStatus.server.id,
+                                        serverType = serverWithStatus.server.type,
+                                    ),
+                                )
                             },
+                            actionsEnabled = !viewState.isOperationInProgress,
                         )
                     }
                 }
@@ -167,6 +207,7 @@ private fun ServerListItem(
     serverWithStatus: ServerWithStatusUiModel,
     onLogoutClick: () -> Unit,
     onRemoveClick: () -> Unit,
+    actionsEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val server = serverWithStatus.server
@@ -211,7 +252,7 @@ private fun ServerListItem(
             }
 
             if (authState is ServerAuthState.Authenticated) {
-                IconButton(onClick = onLogoutClick) {
+                IconButton(onClick = onLogoutClick, enabled = actionsEnabled) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
                         contentDescription = stringResource(StringRes.app_settings_logout),
@@ -219,7 +260,7 @@ private fun ServerListItem(
                 }
             }
 
-            IconButton(onClick = onRemoveClick) {
+            IconButton(onClick = onRemoveClick, enabled = actionsEnabled) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = stringResource(StringRes.action_delete),

@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.analytics.api.NavigationAnalyticsEvent
@@ -779,6 +780,29 @@ class AnalyticsParameterSanitizerTest {
             sanitized,
         )
         assertFalse("server_type" in event.parameters)
+    }
+
+    @Test
+    fun serverMutationAttemptFailureAndSuccessUseBoundedOutcomes() {
+        val operation = ServerManagementAnalyticsEvent.Operation.Logout
+        val events = listOf(
+            ServerManagementAnalyticsEvent.OperationAttempted(operation, "storyteller", isRetry = true),
+            ServerManagementAnalyticsEvent.OperationFailed(operation, "storyteller", isRetry = true),
+            ServerManagementAnalyticsEvent.ServerLoggedOut("storyteller", isRetry = true),
+        )
+
+        assertEquals(
+            listOf("server_logout_attempted", "server_logout_failed", "server_logged_out"),
+            events.map { it.name },
+        )
+        val sanitized = events.map { sanitizeAnalyticsParameters(it.parameters) }
+        assertEquals("started", sanitized[0]["outcome"])
+        assertEquals("failed", sanitized[1]["outcome"])
+        assertEquals("server_logout_failed", sanitized[1]["reason_code"])
+        assertEquals("succeeded", sanitized[2]["outcome"])
+        assertEquals(true, sanitized[2]["is_retry"])
+        assertTrue(sanitized.all { it["server_type"] == "storyteller" })
+        assertFalse(sanitized.any { "server_id" in it || "server_url" in it || "username" in it })
     }
 
     @Test
