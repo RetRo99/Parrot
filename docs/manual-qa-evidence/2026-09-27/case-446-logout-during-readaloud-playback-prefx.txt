@@ -1,0 +1,22 @@
+Case 446 / QA-BUG-0049 — Logout during active ReadAloud playback (pre-fix)
+Date/time: 2026-09-27, Samsung local CEST (UTC+0200); logout accepted at 13:57:56.
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `1746`.
+- Installed candidate APK SHA-256 `ccdc973f191804446bea71fe49f65a1d73b7f96ae2d0339385a57c11ff4839bf` (same local/Samsung-pulled hash). App code corresponds to fix commit `7ffeca90fffdb763009e19a8983691d204dde814`; repository HEAD at observation was `5feb2b674460c719283826087ea2d6ec1fc3d9bb` (documentation-only commits since app build).
+- QA-BUG-0040 logout instrumentation commit: `6fe70f4c74eac14a95962aad0ab70d9fc941fcca`.
+
+Preconditions and exact reproduction
+1. One Storyteller server was authenticated. From Books, selected a ReadAloud-format item and downloaded it. No title, author, server URL, account identifier, or book identifier is retained.
+2. Opened the cached item in Reader, revealed the ReadAloud controls and tapped Play. Local debug Analytics emitted `playback_started`; Android media-session state was `PLAYING`.
+3. Pressed system Back to leave Reader; playback remained `PLAYING`. Opened Settings → Servers and verified the same single server card was logged in.
+4. Tapped that card's `Logout` action once at 13:57:56 CEST.
+5. Server Management remained usable and showed the single Storyteller card as `Not logged in`, with its `Log in` action restored. No crash occurred. At 13:58:46 CEST—about 50 seconds after the logout event—Android media-session state was still `PLAYING` (not stopped, finished, or paused).
+
+Result
+- Functional case 446: **FAIL** for the active-ReadAloud-playback variant. Logout succeeded, but playback continued after the session was logged out. One server only, so the “other servers unaffected” variant is N-A.
+- Analytics: **PASS** for one `server_logout_attempted` → `server_logged_out` pair and the preceding `playback_started` event in local `DebugAnalyticsManager`. No playback-stop/pause outcome occurred. Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: **PARTIAL**. The logout emitted exactly one correlated started/succeeded breadcrumb pair; no playback-stop terminal breadcrumb or failure context was emitted because the audio session continued. No crash was observed. Firebase Crashlytics delivery is not claimed.
+- Notification permission was initially not granted (Android displayed Parrot's runtime notification-permission prompt when starting playback). It was temporarily granted for the playback exercise; it must be revoked after retest to restore the pre-test permission state.
+- No screenshots, raw UI hierarchy, credentials, account identifiers, server URL, book title, book UUID, or diagnostic correlation ID are retained.
