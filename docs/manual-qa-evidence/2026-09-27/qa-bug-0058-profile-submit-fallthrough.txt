@@ -1,0 +1,29 @@
+QA-BUG-0058 / QA-BUG-0059 — Samsung rapid profile-submit and preference restoration
+Date: 2026-09-27 (device local time; CEST, UTC+0200)
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, firmware `S921BXXSGDZG1`.
+- Package `com.retro99.parrot`, version 0.4.5 (21), debug APK, target SDK 36; PID `26130`.
+- APK SHA-256 `136454932c2a4a7a02e2e7a1fd1afa0ded9de9159f0b76a64ca8a5a80aeaf12e`. Candidate contains committed QA-BUG-0057 `c0d8545d` plus uncommitted QA-BUG-0056 guard/UI and QA-BUG-0049 changes.
+- App was installed over existing data; no app-data clear/uninstall. The original profile was not renamed or deleted. Synthetic disposable profile label, original profile label/ID, raw UI hierarchy, screenshots and raw logs were not retained.
+
+Rapid-submit reproduction
+- Starting state: App Settings/Profile visible, one existing profile active, Show Continue Reading enabled.
+- Opened Add Profile, entered a synthetic disposable name in Parrot only, hid the keyboard, and sent two confirmation taps to the dialog's Add button center (screen coordinate 769,1381) at a 1 ms interval.
+- The profile handler recorded one Create attempt at 21:11:08.797 and one `profile_created` success at .801, followed by the intended automatic Switch attempt at .802 and success at .805. There was no duplicate create, second create attempt or profile-ID/name parameter. The route returned to Books.
+- The later tap in the same tap burst reached the newly exposed Settings content and changed Show Continue Reading from enabled to disabled. This is the confirmed QA-BUG-0058 user-facing defect. The app-side Analytics event-name trace contained no Show Continue Reading toggle event, confirming the separate QA-BUG-0059 source/instrumentation gap.
+
+Cleanup and restoration
+- Immediately restored Show Continue Reading to enabled; its UI switch returned to the baseline enabled state. Open Last Book remained enabled.
+- Switched back to the original profile, verified it was active, and deleted only the inactive synthetic profile. PID-scoped local events showed exactly one `profile_deleted` attempt/success pair at 21:14:44.983–.987. Final App Settings showed the original profile active, one profile plus Add Profile, and Show Continue Reading enabled. No original profile label, ID or data was retained or changed.
+- Final observed profile operation counts for this run: `profile_created=1`, `profile_deleted=1`, `profile_switched=2` (auto-activate disposable + restore original), `profile_operation_attempted=4` (Create, its auto-Switch, restore Switch, Delete), `profile_operation_failed=0`, `profile_operation_cancelled=0`. No duplicate profile operation was emitted.
+- Zero fatal-crash markers and zero exception-report markers. No operation failure was induced; Crashlytics delivery is not assessed.
+
+Analytics/diagnostics qualification
+- The records above are from DebugAnalyticsManager's local log only; Firebase Analytics ingestion is waived and not claimed. No Show Continue Reading toggle event exists in the current code/trace. Crashlytics Console delivery remains unverified.
+- Build checks on the candidate: `:feature:home:ui:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug` PASS (596 actionable tasks; 53 executed). The build includes the QA-BUG-0056 guard candidate but was not committed at the time of this reproduction.
+
+Disposition
+- QA-BUG-0058 confirmed; fix and same-device repeat-tap retest pending.
+- QA-BUG-0059 confirmed by source audit and observed setting change without a typed event; instrumentation and case-425 retest pending.
+- Test data and the preference were restored. Current visible destination is App Settings; original profile is active. Do not use a raw tap-burst coordinate after dismissal for further tests until QA-BUG-0058 is fixed.
