@@ -1,0 +1,32 @@
+Case 461 — restoration-aware startup candidate; retained task after process kill
+Date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`, gesture navigation.
+- `com.retro99.parrot` 0.4.5 (21), debug candidate built from working-tree changes based on commit `ea98eeaa883c3d23a0519fd8958d28b8f81d16f2`; APK SHA-256 `c892a444a27585d98c6b772fece7d6827a5400d3686fbac4977c652b9ebdda12`; local and Samsung-pulled APK hashes matched.
+- Default local profile, imported *Pride and Prejudice*, saved page 29/64 (49%). No credentials or app-data reset.
+
+Candidate change under test
+- Auto-open decision now runs after saveable navigation state restores and skips replacement navigation if the current Reader destination matches the current-book target. A terminal `skipped/reader_route_restored` result was added for the matching route.
+
+Retained-task process-kill steps
+1. Candidate was launched from Recents after install and initially restored/opened *Pride and Prejudice* at page 29/64, 49%, with readable text. PID `25636` emitted one `book_opened` and one last-book success.
+2. Pressed Home, opened Recents, confirmed Parrot remained as a task, then ran `adb -s RFCWC0SSVDM shell am kill com.retro99.parrot`. `pidof` returned no process while Recents remained the resumed activity; the task card was not swiped away.
+3. Tapped Parrot's existing Recents task. New PID `26622` restored the Reader at page 29/64, 49%, with EPUB text visible. Screenshots: [before kill](case-461-route-guard-reader-before-kill.png) and [after retained-task restore](case-461-route-guard-after-retained-task-kill.png).
+
+PID-scoped local DebugAnalyticsManager excerpt
+```text
+09-27 03:42:15.566 26622 D ... Analytics Event: app_launch_route_resolved | {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}
+09-27 03:42:15.746 26622 D ... Analytics Event: last_book_launch_completed | {screen=reader, source_screen=home, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=terminal, outcome=skipped, reason_code=reader_route_restored, book_type=ebook}
+09-27 03:42:15.746 26622 D ... Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=splash entry_point=app_launch action=open_last_book operation=reader_open stage=terminal outcome=skipped reason_code=reader_route_restored media_type=ebook
+09-27 03:42:16.003 26622 D ... Analytics Event: book_opened | {book_type=EBOOK}
+09-27 03:42:16.005 26622 D ... Analytics Event: last_book_launch_completed | {screen=reader, source_screen=home, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=usable_content, outcome=succeeded, book_type=ebook}
+09-27 03:42:16.005 26622 D ... Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=home entry_point=app_launch action=open_last_book operation=reader_open stage=usable_content outcome=succeeded media_type=ebook
+```
+
+Results
+- Functional: PASS for this candidate retained-task kill/reopen: content remained usable at page 29/64 (49%); this retest follows the prior black-screen FAIL and does not erase it.
+- `book_opened` integrity: PASS for this run (one event for one rendered Reader session), unlike pre-fix PID `8228`, which logged twice.
+- Last-book terminal Analytics: FAIL: one restore generated two contradictory `last_book_launch_completed` terminal outcomes, `skipped/reader_route_restored` and `succeeded/usable_content`. This was registered as QA-BUG-0031 before the follow-up edit.
+- Diagnostics: FAIL for exactly-once terminal semantics for the same reason; route-restored skip and usable-content success breadcrumbs conflict. Local DebugAnalyticsManager evidence only; Firebase Analytics ingestion is waived and Crashlytics delivery remains unverified.
+- Host checks on this candidate passed: 2 restored-reader route tests, 12 sanitizer tests; `:androidApp:assembleDebug` succeeded. These are candidate results, not yet a committed fix sign-off.
