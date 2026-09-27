@@ -1,0 +1,14 @@
+Follow-up and reclassification for QA-BUG-0032 — 2026-09-27, Samsung CEST.
+
+The original observation and screenshot at about 04:24 (see `qa-bug-0032-settings-tab-no-op-observation.txt` and `case-014-pre-offline-statistics-state.png`) are preserved. Source review and a controlled stack check show the UI state was not a failed Settings switch:
+
+1. `HomeTab.Settings.startDestination` is `HomeDestination.AppSettings`.
+2. From the Settings hub, tapping its `Reading statistics` row dispatches `NavigateTo(HomeDestination.Statistics)`. `HomeNavigationStateHolder.navigateTo()` pushes that route on the *Settings tab's own* back stack.
+3. Switch to Books and then back to Settings. The selected tab is Settings and its preserved top route is Statistics, so the Statistics content is the correct restored destination. A system Back then returns to the Settings hub with the Settings tab still selected.
+
+Physical Samsung observations on source commit `13ead5d85f5db281805fb52dcc35a0706a1d6e98`, PID `20992`:
+- At 04:29:26, system Back from the restored Statistics subroute displayed the Settings hub (`Settings`, Profiles, Reading, Account).
+- At 04:30, the Settings hub's Reading statistics row opened Statistics while Settings remained selected. Screenshot: [Statistics pushed on Settings stack](qa-bug-0032-settings-stack-statistics-route.png).
+- At 04:31:28, selecting the main Statistics tab showed the Statistics root; selecting Settings restored its retained Statistics subroute; system Back returned to the Settings hub. Screenshot of the selected Settings tab with its valid retained Statistics route: [case 535 stack behavior](case-535-statistics-settings-retained-stack.png).
+
+Conclusion: QA-BUG-0032 is a false positive / expected independent-tab-back-stack behavior, not a functional defect. The three original `tab_switched(settings)` records at 04:24 came from reselecting the current Settings tab while Statistics was the Settings stack's top route. This does reveal a separate analytics contract gap: those reselects are called `tab_switched`, and the event does not include source tab, destination context or entry point (QA-BUG-0033). No application code was changed for QA-BUG-0032. Case 535's functional result for this exercised pair is PASS; full all-pairs coverage remains pending.
