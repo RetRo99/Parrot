@@ -21,6 +21,7 @@ data class AppSettingsViewState(
     val showRenameProfileDialog: Boolean = false,
     val showDeleteProfileDialog: Boolean = false,
     val showProfileOperationFailedMessage: Boolean = false,
+    val showDuplicateProfileNameError: Boolean = false,
     val isProfileOperationInProgress: Boolean = false,
 ) {
     val canDeleteSelectedProfile: Boolean

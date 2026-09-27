@@ -18,6 +18,7 @@ sealed interface AppSettingsIntent : BaseIntent {
     data object OnAddProfileClicked : AppSettingsIntent
     data class OnAddProfileConfirmed(val name: String) : AppSettingsIntent
     data class OnAddProfileDismissed(val entryPoint: String) : AppSettingsIntent
+    data object OnProfileNameEdited : AppSettingsIntent
     data class OnProfileLongPressed(val profileId: String, val entryPoint: String) : AppSettingsIntent
     data class OnProfileMenuDismissed(val entryPoint: String) : AppSettingsIntent
     data object OnRenameProfileClicked : AppSettingsIntent

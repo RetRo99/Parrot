@@ -146,6 +146,7 @@ class AppSettingsViewModel(
             AppSettingsIntent.OnAddProfileClicked -> showAddProfileDialog()
             is AppSettingsIntent.OnAddProfileConfirmed -> addProfile(intent.name)
             is AppSettingsIntent.OnAddProfileDismissed -> hideAddProfileDialog(intent.entryPoint)
+            AppSettingsIntent.OnProfileNameEdited -> onProfileNameEdited()
             is AppSettingsIntent.OnProfileLongPressed -> onProfileLongPressed(intent.profileId, intent.entryPoint)
             is AppSettingsIntent.OnProfileMenuDismissed -> dismissProfileMenu(intent.entryPoint)
             AppSettingsIntent.OnRenameProfileClicked -> showRenameProfileDialog()
@@ -184,7 +185,13 @@ class AppSettingsViewModel(
         analytics.logEvent(
             AppSettingsAnalyticsEvent.ProfileDialogOpened(AppSettingsAnalyticsEvent.ProfileOperation.Create),
         )
-        updateState { it.copy(showAddProfileDialog = true, showProfileOperationFailedMessage = false) }
+        updateState {
+            it.copy(
+                showAddProfileDialog = true,
+                showProfileOperationFailedMessage = false,
+                showDuplicateProfileNameError = false,
+            )
+        }
     }
 
     private fun hideAddProfileDialog(entryPoint: String) {
@@ -197,11 +204,21 @@ class AppSettingsViewModel(
                 entryPoint = entryPoint,
             ),
         )
-        updateState { it.copy(showAddProfileDialog = false, showProfileOperationFailedMessage = false) }
+        updateState {
+            it.copy(
+                showAddProfileDialog = false,
+                showProfileOperationFailedMessage = false,
+                showDuplicateProfileNameError = false,
+            )
+        }
     }
 
     private fun addProfile(name: String) {
         if (name.isBlank() || !viewState.value.showAddProfileDialog) return
+        if (isDuplicateProfileName(name, viewState.value.userProfiles)) {
+            rejectDuplicateProfileName(AppSettingsAnalyticsEvent.ProfileOperation.Create)
+            return
+        }
         val retryKey = addProfileRetryKey ?: profileOperationRetryTracker.newSessionKey(
             AppSettingsAnalyticsEvent.ProfileOperation.Create,
         ).also { addProfileRetryKey = it }
@@ -223,7 +240,11 @@ class AppSettingsViewModel(
             } else {
                 addProfileRetryKey = null
                 updateState {
-                    it.copy(showAddProfileDialog = false, showProfileOperationFailedMessage = false)
+                    it.copy(
+                        showAddProfileDialog = false,
+                        showProfileOperationFailedMessage = false,
+                        showDuplicateProfileNameError = false,
+                    )
                 }
                 createdProfileId?.let { profileId ->
                     val switched = runProfileOperation(
@@ -266,7 +287,13 @@ class AppSettingsViewModel(
         analytics.logEvent(
             AppSettingsAnalyticsEvent.ProfileDialogOpened(AppSettingsAnalyticsEvent.ProfileOperation.Rename),
         )
-        updateState { it.copy(showRenameProfileDialog = true, showProfileOperationFailedMessage = false) }
+        updateState {
+            it.copy(
+                showRenameProfileDialog = true,
+                showProfileOperationFailedMessage = false,
+                showDuplicateProfileNameError = false,
+            )
+        }
     }
 
     private fun hideRenameProfileDialog(entryPoint: String) {
@@ -284,6 +311,7 @@ class AppSettingsViewModel(
                 showRenameProfileDialog = false,
                 selectedProfileForMenu = null,
                 showProfileOperationFailedMessage = false,
+                showDuplicateProfileNameError = false,
             )
         }
     }
@@ -291,6 +319,16 @@ class AppSettingsViewModel(
     private fun renameProfile(newName: String) {
         val profile = viewState.value.selectedProfileForMenu ?: return
         if (newName.isBlank() || !viewState.value.showRenameProfileDialog) return
+        if (
+            isDuplicateProfileName(
+                candidate = newName,
+                profiles = viewState.value.userProfiles,
+                excludingProfileId = profile.id,
+            )
+        ) {
+            rejectDuplicateProfileName(AppSettingsAnalyticsEvent.ProfileOperation.Rename)
+            return
+        }
         val retryKey = renameProfileRetryKey ?: profileOperationRetryTracker.newSessionKey(
             AppSettingsAnalyticsEvent.ProfileOperation.Rename,
         ).also { renameProfileRetryKey = it }
@@ -313,6 +351,7 @@ class AppSettingsViewModel(
                         showRenameProfileDialog = false,
                         selectedProfileForMenu = null,
                         showProfileOperationFailedMessage = false,
+                        showDuplicateProfileNameError = false,
                     )
                 } else {
                     it.copy(showProfileOperationFailedMessage = true)
@@ -387,6 +426,21 @@ class AppSettingsViewModel(
 
     private fun onProfileOperationFailedMessageShown() {
         updateState { it.copy(showProfileOperationFailedMessage = false) }
+    }
+
+    private fun onProfileNameEdited() {
+        if (!viewState.value.showDuplicateProfileNameError) return
+        updateState { it.copy(showDuplicateProfileNameError = false) }
+    }
+
+    private fun rejectDuplicateProfileName(operation: AppSettingsAnalyticsEvent.ProfileOperation) {
+        reportDuplicateProfileNameRejected(analytics, operation)
+        updateState {
+            it.copy(
+                showProfileOperationFailedMessage = false,
+                showDuplicateProfileNameError = true,
+            )
+        }
     }
 
     private fun launchProfileOperation(block: suspend () -> Unit) {

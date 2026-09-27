@@ -4,6 +4,7 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AnalyticsEvent
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
+import com.retro99.user.api.UserProfile
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -17,6 +18,65 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class ProfileOperationTest {
+    @Test
+    fun duplicateProfileNameValidationEmitsOnlyBoundedValidationSignals() {
+        val analytics = ProfileRecordingAnalytics()
+
+        reportDuplicateProfileNameRejected(
+            analytics = analytics,
+            operation = AppSettingsAnalyticsEvent.ProfileOperation.Create,
+        )
+
+        assertEquals(listOf("profile_name_validation_failed"), analytics.events.map { it.name })
+        assertEquals(
+            mapOf(
+                "screen" to "app_settings",
+                "action" to "create_profile",
+                "operation" to "profile_create",
+                "stage" to "validation",
+                "outcome" to "rejected",
+                "reason_code" to "duplicate_name",
+            ),
+            analytics.events.single().parameters,
+        )
+        assertEquals(1, analytics.breadcrumbs.size)
+        assertEquals("app_settings", analytics.breadcrumbs.single().screen)
+        assertEquals("profile_create", analytics.breadcrumbs.single().operation)
+        assertEquals("validation", analytics.breadcrumbs.single().stage)
+        assertEquals("rejected", analytics.breadcrumbs.single().outcome)
+        assertEquals("duplicate_name", analytics.breadcrumbs.single().reasonCode)
+        assertTrue(analytics.exceptions.isEmpty())
+        assertFalse(analytics.events.any { "profile_name" in it.parameters || "profile_id" in it.parameters })
+    }
+
+    @Test
+    fun profileNameUniquenessNormalizesCaseAndSurroundingWhitespace() {
+        val profiles = listOf(
+            UserProfile(id = "profile-a", name = "Reader One", createdAt = 1L),
+            UserProfile(id = "profile-b", name = "Reader Two", createdAt = 2L),
+        )
+
+        assertTrue(isDuplicateProfileName("  reader one ", profiles))
+        assertTrue(isDuplicateProfileName("READER TWO", profiles))
+        assertFalse(isDuplicateProfileName(" reader one ", profiles, excludingProfileId = "profile-a"))
+        assertFalse(isDuplicateProfileName("   ", profiles))
+        assertFalse(isDuplicateProfileName("A New Reader", profiles))
+    }
+
+    @Test
+    fun existingNormalizedDuplicateNamesReceiveStableDistinctOrdinals() {
+        val profiles = listOf(
+            UserProfile(id = "profile-z", name = "  Reader One", createdAt = 1L),
+            UserProfile(id = "profile-b", name = "READER ONE ", createdAt = 1L),
+            UserProfile(id = "profile-unique", name = "Reader Two", createdAt = 2L),
+        )
+
+        assertEquals(
+            mapOf("profile-b" to 1, "profile-z" to 2),
+            duplicateProfileOrdinals(profiles),
+        )
+    }
+
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun profileTapShieldConsumesInputThroughTheRepeatTapWindow() = runTest {

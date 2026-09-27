@@ -619,6 +619,8 @@
     <string name="app_settings_profile_add_title" tools:ignore="MissingTranslation">Add profile</string>
     <string name="app_settings_profile_rename_title" tools:ignore="MissingTranslation">Rename profile</string>
     <string name="app_settings_profile_name_label" tools:ignore="MissingTranslation">Profile name</string>
+    <string name="app_settings_profile_name_already_exists" tools:ignore="MissingTranslation">A profile with this name already exists.</string>
+    <string name="app_settings_profile_duplicate_index" tools:ignore="MissingTranslation">Profile %1$d</string>
     <string name="app_settings_profile_delete_title" tools:ignore="MissingTranslation">Delete profile?</string>
     <string name="app_settings_profile_delete_message" tools:ignore="MissingTranslation">This profile and its reading history will be removed from this device.</string>
     <string name="app_settings_profile_active" tools:ignore="MissingTranslation">Active</string>

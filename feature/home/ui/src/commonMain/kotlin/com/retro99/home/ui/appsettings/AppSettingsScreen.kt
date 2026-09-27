@@ -97,6 +97,8 @@ import resources.translations.app_settings_profile_add
 import resources.translations.app_settings_profile_add_title
 import resources.translations.app_settings_profile_delete_message
 import resources.translations.app_settings_profile_delete_title
+import resources.translations.app_settings_profile_duplicate_index
+import resources.translations.app_settings_profile_name_already_exists
 import resources.translations.app_settings_profile_name_label
 import resources.translations.app_settings_profile_operation_failed
 import resources.translations.app_settings_profile_rename_title
@@ -270,7 +272,9 @@ private fun AppSettingsScreenContent(
                         intentDispatcher(AppSettingsIntent.OnAddProfileDismissed("cancel_button"))
                     },
                     onConfirm = { name -> intentDispatcher(AppSettingsIntent.OnAddProfileConfirmed(name)) },
+                    onNameChanged = { intentDispatcher(AppSettingsIntent.OnProfileNameEdited) },
                     showError = viewState.showProfileOperationFailedMessage,
+                    showDuplicateNameError = viewState.showDuplicateProfileNameError,
                     isOperationInProgress = viewState.isProfileOperationInProgress,
                 )
             }
@@ -285,7 +289,9 @@ private fun AppSettingsScreenContent(
                         intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed("cancel_button"))
                     },
                     onConfirm = { newName -> intentDispatcher(AppSettingsIntent.OnRenameProfileConfirmed(newName)) },
+                    onNameChanged = { intentDispatcher(AppSettingsIntent.OnProfileNameEdited) },
                     showError = viewState.showProfileOperationFailedMessage,
+                    showDuplicateNameError = viewState.showDuplicateProfileNameError,
                     isOperationInProgress = viewState.isProfileOperationInProgress,
                 )
             }
@@ -579,6 +585,8 @@ private fun ProfilesRow(
     canDelete: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val duplicateOrdinals = remember(profiles) { duplicateProfileOrdinals(profiles) }
+
     LazyRow(
         modifier = modifier
             .fillMaxWidth()
@@ -589,6 +597,7 @@ private fun ProfilesRow(
         items(profiles, key = { it.id }) { profile ->
             ProfileItem(
                 profile = profile,
+                duplicateOrdinal = duplicateOrdinals[profile.id],
                 isActive = profile.id == activeProfile?.id,
                 isMenuVisible = selectedProfileForMenu?.id == profile.id,
                 enabled = !isOperationInProgress,
@@ -611,6 +620,7 @@ private fun ProfilesRow(
 @Composable
 private fun ProfileItem(
     profile: UserProfile,
+    duplicateOrdinal: Int?,
     isActive: Boolean,
     isMenuVisible: Boolean,
     enabled: Boolean,
@@ -690,6 +700,20 @@ private fun ProfileItem(
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
+                duplicateOrdinal?.let { ordinal ->
+                    Text(
+                        text = stringResource(StringRes.app_settings_profile_duplicate_index, ordinal),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isActive) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
 
@@ -783,7 +807,9 @@ private fun AddProfileDialog(
     onDismissRequest: () -> Unit,
     onCancel: () -> Unit,
     onConfirm: (String) -> Unit,
+    onNameChanged: () -> Unit,
     showError: Boolean,
+    showDuplicateNameError: Boolean,
     isOperationInProgress: Boolean,
 ) {
     var profileName by remember { mutableStateOf("") }
@@ -797,7 +823,11 @@ private fun AddProfileDialog(
             Column {
                 OutlinedTextField(
                     value = profileName,
-                    onValueChange = { profileName = it },
+                    onValueChange = {
+                        profileName = it
+                        onNameChanged()
+                    },
+                    isError = showDuplicateNameError,
                     label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
                     enabled = !isOperationInProgress,
                     singleLine = true,
@@ -810,12 +840,19 @@ private fun AddProfileDialog(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+                if (showDuplicateNameError) {
+                    Text(
+                        text = stringResource(StringRes.app_settings_profile_name_already_exists),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(profileName) },
-                enabled = profileName.isNotBlank() && !isOperationInProgress,
+                enabled = profileName.isNotBlank() && !showDuplicateNameError && !isOperationInProgress,
             ) {
                 if (isOperationInProgress) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -838,7 +875,9 @@ private fun RenameProfileDialog(
     onDismissRequest: () -> Unit,
     onCancel: () -> Unit,
     onConfirm: (String) -> Unit,
+    onNameChanged: () -> Unit,
     showError: Boolean,
+    showDuplicateNameError: Boolean,
     isOperationInProgress: Boolean,
 ) {
     var profileName by remember { mutableStateOf(currentName) }
@@ -852,7 +891,11 @@ private fun RenameProfileDialog(
             Column {
                 OutlinedTextField(
                     value = profileName,
-                    onValueChange = { profileName = it },
+                    onValueChange = {
+                        profileName = it
+                        onNameChanged()
+                    },
+                    isError = showDuplicateNameError,
                     label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
                     enabled = !isOperationInProgress,
                     singleLine = true,
@@ -865,12 +908,19 @@ private fun RenameProfileDialog(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+                if (showDuplicateNameError) {
+                    Text(
+                        text = stringResource(StringRes.app_settings_profile_name_already_exists),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = { onConfirm(profileName) },
-                enabled = profileName.isNotBlank() && !isOperationInProgress,
+                enabled = profileName.isNotBlank() && !showDuplicateNameError && !isOperationInProgress,
             ) {
                 if (isOperationInProgress) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)

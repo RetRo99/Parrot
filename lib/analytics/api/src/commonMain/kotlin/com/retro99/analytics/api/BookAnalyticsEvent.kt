@@ -948,6 +948,22 @@ sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    enum class ProfileNameValidationReason(val reasonCode: String) {
+        DuplicateName("duplicate_name"),
+    }
+
+    data class ProfileNameValidationFailed(
+        val profileOperation: ProfileOperation,
+        val reason: ProfileNameValidationReason,
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "profile_name_validation_failed"
+        override val parameters: Map<String, Any> = profileOperationParameters(
+            profileOperation,
+            stage = "validation",
+            outcome = "rejected",
+        ) + ("reason_code" to reason.reasonCode)
+    }
+
     data class ProfileMenuOpened(
         val entryPoint: String,
     ) : AppSettingsAnalyticsEvent {

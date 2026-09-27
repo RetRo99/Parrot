@@ -882,6 +882,32 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun duplicateProfileNameValidationEventUsesOnlyBoundedOperationAndReason() {
+        val event = AppSettingsAnalyticsEvent.ProfileNameValidationFailed(
+            profileOperation = AppSettingsAnalyticsEvent.ProfileOperation.Rename,
+            reason = AppSettingsAnalyticsEvent.ProfileNameValidationReason.DuplicateName,
+        )
+
+        assertEquals("profile_name_validation_failed", event.name)
+        assertEquals(
+            mapOf(
+                "screen" to "app_settings",
+                "action" to "rename_profile",
+                "operation" to "profile_rename",
+                "stage" to "validation",
+                "outcome" to "rejected",
+                "reason_code" to "duplicate_name",
+            ),
+            sanitizeAnalyticsParameters(
+                event.parameters + mapOf(
+                    "profile_name" to "private name",
+                    "profile_id" to "private-profile-id",
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(
