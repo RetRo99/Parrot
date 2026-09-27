@@ -1,0 +1,28 @@
+Case 443 — Add Server navigation, pre-fix Analytics observation
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), source commit `e4d364256932ccdee158e3d1d08917eb5f9ba267`, PID `6531`.
+- APK SHA-256 `db800e023801ada7c7fd31347318f58c747ded9b002c0246ea729f3217615703`; local and Samsung-pulled APK hashes match.
+- Preconditions: Server Management opened from Settings; its empty state displayed `No servers configured`; no server/account was registered.
+
+Exact reproduction and observed outcome
+1. At 07:16:10 CEST, tap the **Add Server** button once.
+2. Login opens as expected. The subsequent field interaction was case 19 only; no credentials were submitted.
+3. Back out of Login. Server Management still displays `No servers configured`; screenshot: [empty server list after return](case-0038-empty-server-management-after-add-tap.png).
+
+PID-scoped local DebugAnalyticsManager excerpt:
+```
+09-27 07:16:10.201 6531 D Analytics Event: server_added | Parameters: {server_type=unknown}
+09-27 07:16:10.385 6531 D Analytics Event: login_screen_viewed | Parameters: {screen=login, source_screen=home, entry_point=add_server}
+09-27 07:16:10.385 6531 D Diagnostic breadcrumb: diagnostic_context screen=login source_screen=home entry_point=add_server action=screen_view operation=login_route stage=visible outcome=succeeded
+```
+
+Results, separated by dimension
+- Functional: **PASS** — Add Server navigated to Login; after leaving Login, the server list remained empty.
+- Analytics: **FAIL** — one `server_added` success-named event with `server_type=unknown` was emitted immediately on the Add Server tap, before login, validation, authentication or persistence. The Login screen exposure event followed after navigation. This is a false completed-add measurement, not a Firebase-delivery claim.
+- Diagnostics: **PASS for destination exposure only** — Login emitted a visible-route breadcrumb. No unexpected failure occurred; no Crashlytics issue is expected for this successful navigation.
+- Local logs do not establish Firebase Analytics ingestion. Firebase ingestion is waived. No credentials were entered and no server was created.
+
+Source audit found `ServerManagementViewModel.onIntent(OnAddServerClick)` emits `ServerManagementAnalyticsEvent.ServerAdded("unknown")` immediately before calling `onNavigateToLogin()`. The event name therefore describes success at the wrong operation boundary. See QA-BUG-0038; fix and Samsung retest pending at the time of this capture.
