@@ -1,0 +1,23 @@
+Server Management source-audit preflight — before its case-22 card verification
+Date: 2026-09-27.
+
+Build/device context for the upcoming device pass
+- Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), installed source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- Login case 21 completed successfully on this build and persisted the demo server through Parrot's UI. The current Server Management card has not yet been opened/verified; that device check remains pending.
+
+Source trace and findings (no destructive server action performed)
+- `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/navigation/HomeNavigation.kt` routes `HomeDestination.ServerManagement` to `ServerManagementScreen` and supplies `onBack`/`onNavigateToLogin` callbacks.
+- `ServerManagementScreen.kt` renders a loading spinner, an empty state, or cards. The card always exposes Remove; it exposes Logout only for `ServerAuthState.Authenticated`. There is no Login/Retry button for `NotAuthenticated`, `TokenExpired` or `AuthenticationFailed`, despite the `OnLoginClick` intent and test cases 444/448/449.
+- The Remove icon dispatches `OnRemoveClick` immediately. No confirmation dialog or cancel route exists, despite case 447's expected confirmation and case 726's cancellation variants.
+- `ServerManagementViewModel.observeServers()` sets `isLoading=false` only on a successful combined emission and has no catch/error state. `ServerManagementViewState` has only `isLoading` and `servers`.
+- Only `server_add_attempted` is emitted for Add Server after fix `107d017c`. There is no server-management screen-view event. `ServerLoggedOut` and `ServerRemoved` events are logged before their registry mutations. The `ServerAdded` event definition is currently unused; successful Login has a separate `login_succeeded` event.
+- `ServerManagementViewModel` launches logout/remove without catching operation exceptions or exposing a retryable error. In `ServerRegistryImpl`, `clearCredentials` mutates the in-memory credential map before writing preferences; `removeServer` mutates both in-memory maps before writing preferences. Neither operation rolls its maps back if persistence throws.
+
+Relevant catalogue mapping
+- Entry/back/state/card/add: cases 428, 440–443, 451, 484.
+- Logged-out/session-expired/login-failed recovery: cases 444, 448–449.
+- Logout/remove and safety: cases 445–447, 726, 728.
+- Multi-server/filter/failure: cases 450, 452, 727, 729; shared cases 740–749.
+
+This is a source audit, not device-test evidence. No card text, account identifier, credentials, or populated Login form is included. Findings are recorded as QA-BUG-0039 through QA-BUG-0045 before any related fix. Case 22 stays NOT RUN until screen instrumentation is corrected and the logged-in card is verified on the Samsung.

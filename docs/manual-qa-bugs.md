@@ -659,3 +659,129 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Fix reference / commit:** `107d017cdcc3d834e99dc983e20a7ed6002e319c` (`fix(analytics): report Add Server as attempt [QA-BUG-0038, case 443]`). The Add Server tap now emits typed `server_add_attempted` with bounded source/destination, action, stage and started outcome; it omits server type rather than guessing `unknown`. The actual Login route exposure continues to emit only when visible.
 - **Retest:** PASS on committed source `107d017c`, package 0.4.5 (21), Samsung PID `19860`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`; local and Samsung-pulled hashes match. One tap produced exactly one `server_add_attempted`, then one `login_screen_viewed` and visible-route breadcrumb; no `server_added`, `unknown` type, duplicate, credential, auth attempt or failure. Back returned to `No servers configured`. Analytics sanitizer tests 18/18 passed and debug assembly succeeded. Firebase ingestion is waived; local logs only are evidenced. Crashlytics N-A for expected navigation; delivery remains separately unverified. See fixed retest evidence above. Successful credential persistence is separately measured by existing `login_succeeded`; a credentials-success journey remains case 22 and has not been retested here.
 - **Discovery/fix/documentation commits:** Pre-fix bug record and evidence committed in `12370c0b597747653e5736250b536c59c6faad64`; focused source fix `107d017cdcc3d834e99dc983e20a7ed6002e319c`. Corrected-build result/evidence and commit bookkeeping are in the next QA documentation commit. Preserve the pre-fix observation after correction.
+
+## QA-BUG-0039 — Server Management has no actual screen-exposure event
+
+- **Severity / user impact:** Low; reporting cannot identify visits to Server Management or the source/entry path, so use and abandonment around server-account management are invisible.
+- **Status:** CONFIRMED by source audit; device exposure event check pending before fix/retest.
+- **Screen/test IDs:** Server Management entry/back and journey reconstruction; cases 428, 440–441, 443, 747, 749.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- **Preconditions:** Navigate from Settings/App Settings into `HomeDestination.ServerManagement`.
+- **Exact reproduction:** Source audit of `HomeNavigation.kt`, `ServerManagementScreen.kt`, `ServerManagementViewModel.kt` and `HomeNavigationViewModel.kt`; no Server Management destination-visible callback/event exists. The current PID's case-443 logs include an Add Server attempt and subsequent Login exposure, but no Server Management exposure event was implemented.
+- **Expected:** Emit one bounded screen-view event and matching visible breadcrumb only when Server Management actually becomes the visible destination; include stable source/entry attribution and avoid recomposition/tab duplicates. A button tap alone is not proof of exposure.
+- **Actual:** Server Management renders but has no exposure event or route breadcrumb. Its ViewModel logs only Add attempt, logout and remove events.
+- **Frequency:** Every visit is unmeasured by source; runtime count not yet sampled in a focused pre-fix visit.
+- **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); source locations listed above. Case-443 screenshots/logs retain the Add Server journey but do not claim a screen exposure.
+- **Root cause:** Screen exposure instrumentation was added for Welcome, Login and Home but not for nested Home destinations such as Server Management.
+- **Affected files:** `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/navigation/HomeNavigation.kt`, `HomeNavigationViewModel.kt`; typed navigation/server-management events and sanitizer tests.
+- **Fix reference / commit:** Pending. Add an actual-visible destination signal/event with bounded route attribution; dedupe by real exposure, not Compose recomposition.
+- **Retest:** NOT RUN. After commit, open Server Management from its reachable entry, return and reopen; require one matching screen exposure/breadcrumb per actual visible visit, no event on hidden composition/recomposition, and source attribution consistent with the route. Analytics verification is local DebugAnalyticsManager only under the user waiver; Crashlytics is N-A absent an induced failure.
+- **Discovery commit:** Pending documentation commit with this entry and source audit. Preserve this source-level finding after retest.
+
+## QA-BUG-0040 — Logout and remove are reported as successes before registry completion
+
+- **Severity / user impact:** Medium; a failed logout/removal can be counted as successful even while the server/credentials remain or state becomes inconsistent. There are no distinct accepted-attempt and failure outcomes.
+- **Status:** CONFIRMED by source audit; failure-path runtime behavior untested.
+- **Screen/test IDs:** Server Management logout/remove; cases 445–447, 726, 728–729; shared analytics integrity cases 748–749.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- **Preconditions:** A card action invokes `OnLogoutClick` or `OnRemoveClick`; the backing registry mutation may complete or throw.
+- **Exact reproduction:** Source audit: `onLogoutClick` logs `ServerLoggedOut` before `clearCredentials`; `onRemoveClick` logs `ServerRemoved` before `removeServer`. Both await registry work only afterward. No operation-attempt event, failure event, diagnostic breadcrumb or local error/retry state exists.
+- **Expected:** Record a bounded attempt at the accepted action; emit the existing success-named event only after state mutation/persistence completes. On unexpected failure, leave an honest recoverable UI state, emit one bounded failure outcome and operation breadcrumbs, and report one actionable non-fatal only if user experience is materially broken. Ordinary cancellation must not be reported as success or exception.
+- **Actual:** A failure after the current event call leaves a success-named event in logs; thrown registry errors are not handled in the ViewModel.
+- **Frequency:** Every logout/remove activation emits its success-named event before the corresponding suspend operation returns.
+- **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); `ServerManagementViewModel.kt` lines 72–85.
+- **Root cause:** Completion events are emitted at intent acceptance rather than at operation terminal boundaries; exceptions are not converted to recoverable operation state.
+- **Affected files:** `feature/settings/ui/src/commonMain/kotlin/com/retro99/settings/ui/servers/ServerManagementViewModel.kt`, `ServerManagementScreen.kt`, `ServerManagementViewState.kt`, typed events/sanitizer/tests.
+- **Fix reference / commit:** Pending. Separate attempted/succeeded/failed outcomes; move existing success events after registry completion, add bounded diagnostics and recoverable retry/error presentation, preserve cancellation.
+- **Retest:** NOT RUN. Host tests must assert event order/count and cancellation/failure classification. Samsung success path must emit exactly one attempt then one completion only after the card state changes. Controlled local persistence failure is unavailable on-device; report that runtime variant BLOCKED if no safe fixture is established. No raw server URL, username or exception message may be emitted.
+- **Discovery commit:** Pending documentation commit. Preserve this pre-fix source finding.
+
+## QA-BUG-0041 — Logged-out, expired and failed server cards have no Login/Retry action
+
+- **Severity / user impact:** Medium; users cannot reconnect an existing server from its NotAuthenticated/TokenExpired/AuthenticationFailed card even though the catalogue expects recovery.
+- **Status:** CONFIRMED by source audit; Samsung card-state verification pending.
+- **Screen/test IDs:** Cases 444, 448–449; recovery 729.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- **Preconditions:** A registered server card is NotAuthenticated, TokenExpired or AuthenticationFailed.
+- **Exact reproduction:** Source audit of `ServerManagementScreen.kt`: the card shows Logout only when `authState is Authenticated`; all cards show Remove. There is no Login or Retry button, and `ServerManagementIntent.OnLoginClick` has no UI dispatch call.
+- **Expected:** Each recoverable unauthenticated/expired/failed state offers an accessible Login/Retry action targeting that server and preserves truthful state until reauthentication completes.
+- **Actual:** No such action is rendered or dispatched; the intent handler is unreachable from this screen.
+- **Frequency:** All non-authenticated card states by current composition logic; device variants not yet inspected.
+- **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); `ServerManagementScreen.kt` lines 147–157 and 207–223.
+- **Root cause:** Card actions implement only Logout-for-authenticated and Remove; the declared login intent was not wired to UI.
+- **Affected files:** `ServerManagementScreen.kt`, `ServerManagementViewModel.kt`, translations/accessibility labels and tests.
+- **Fix reference / commit:** Pending. Add visible Login/Retry action for applicable auth states and route to the selected server's reauthentication flow without creating an accidental duplicate.
+- **Retest:** NOT RUN. After fix, exercise NotAuthenticated, TokenExpired and AuthenticationFailed variants when safely available; verify one login navigation, state preservation and a usable return/retry path. Session-expiry fixture may be blocked if no controlled fixture exists.
+- **Discovery commit:** Pending documentation commit; preserve pre-fix source finding.
+
+## QA-BUG-0042 — Remove Server deletes immediately without confirmation
+
+- **Severity / user impact:** Medium; an accidental tap can remove a server connection and associated credentials without the confirmation/cancel protection specified by the test plan.
+- **Status:** CONFIRMED by source audit; Samsung interaction not yet exercised.
+- **Screen/test IDs:** Cases 447 and 726; removal source isolation case 728.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- **Preconditions:** A Server Management card is rendered.
+- **Exact reproduction:** Source audit: tapping the card's Delete `IconButton` immediately dispatches `OnRemoveClick`; ViewModel immediately launches `serverRegistry.removeServer`. No dialog or pending-confirmation state exists.
+- **Expected:** Open a clearly identified destructive confirmation; Cancel/Back leaves server, credentials and books unchanged; only explicit confirmation starts removal.
+- **Actual:** The first tap starts removal immediately, so cases 726 cancellation and case-447 confirmation cannot be performed as specified.
+- **Frequency:** Every Delete icon activation.
+- **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); `ServerManagementScreen.kt` lines 153–155 and 216–223.
+- **Root cause:** Remove is wired directly to the operation intent with no confirmation UI.
+- **Affected files:** `ServerManagementScreen.kt`, `ServerManagementViewModel.kt`, `ServerManagementViewState.kt`, translations and tests.
+- **Fix reference / commit:** Pending. Add a confirmation with accessible server-type/name context that avoids sensitive URLs/usernames; dispatch removal only after confirmation and record cancellation separately.
+- **Retest:** NOT RUN. Verify dialog content, Cancel, outside/system Back where supported, explicit confirm, and no duplicate removal on rapid taps. Keep other server/local data intact.
+- **Discovery commit:** Pending documentation commit; preserve pre-fix source finding.
+
+## QA-BUG-0043 — Server registry logout/removal persistence failures can leave stale in-memory state
+
+- **Severity / user impact:** Medium; a local preference write failure can leave UI state mutated while persisted server/credential data remains stale, causing apparent logout/removal to reverse after restart or orphaned credentials.
+- **Status:** CONFIRMED in source mutation ordering; failure-path device behavior untested and may be blocked by missing safe write-fault fixture.
+- **Screen/test IDs:** Cases 445, 447, 729; shared persistence/recovery cases 741–743, 748–749.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- **Preconditions:** `ServerRegistry.clearCredentials` or `removeServer` mutates StateFlows and a subsequent preferences write throws.
+- **Exact reproduction:** Source audit: `clearCredentials` removes the credential from `_credentials` before `persistCredentials`; `removeServer` removes server and credentials from `_servers`/`_credentials` before `persistServers` and `persistCredentials`. Neither method uses the existing `persistStateMutation` rollback helper for these transitions.
+- **Expected:** On a failed local commit, restore coherent observable/persisted state or report a clearly recoverable partial outcome; never claim success or present a state that silently reverses after restart.
+- **Actual:** A thrown preference write can escape after in-memory state changed; exact persisted/in-memory state under a mid-operation write fault has not yet been executed.
+- **Frequency:** Conditional on logout/removal persistence failure.
+- **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); `ServerRegistryImpl.kt` lines 172–181 and 282–292; existing rollback helper is used for add/save paths but not these operations.
+- **Root cause:** Multi-map mutation and preference persistence are not guarded by rollback/compensation for logout/remove.
+- **Affected files:** `lib/server/implementation/src/commonMain/kotlin/com/retro99/server/implementation/ServerRegistryImpl.kt`, registry common tests, Server Management recovery UI/diagnostics.
+- **Fix reference / commit:** Pending. Add transaction/rollback behavior and targeted fault-injection unit tests; preserve cancellation and classify rollback failure distinctly.
+- **Retest:** Host fault-injection test NOT RUN; Samsung controlled write-failure variant BLOCKED until a safe app-scoped fixture is available. Normal logout/remove is not a substitute. Preserve the logged-in demo server until planned verification is complete.
+- **Discovery commit:** Pending documentation commit; preserve source-level finding and its unverified runtime scope.
+
+## QA-BUG-0044 — Server list observation failure has no terminal error or recovery state
+
+- **Severity / user impact:** Medium; if the combined registry/auth-state flow fails, the Server Management screen can remain on a spinner indefinitely or lose its observation coroutine with no retry guidance.
+- **Status:** CONFIRMED instrumentation/state-handling gap by source; runtime flow failure not induced.
+- **Screen/test IDs:** Cases 440, 451, 484, 729, 742, 748.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- **Preconditions:** Either upstream registry/auth-state flow throws before a successful emission.
+- **Exact reproduction:** Source audit: `observeServers()` combines both flows and uses `onEach { isLoading=false }` then `launchIn(viewModelScope)` with no `catch`; initial view state is `isLoading=true`, and has no error/retry field. `ServerManagementScreen` therefore has only spinner, empty, and card branches.
+- **Expected:** End loading on an upstream failure, distinguish failure from an empty list, show a usable retry/recovery action, log one bounded failure outcome/breadcrumb and report only unexpected user-impacting failures once.
+- **Actual:** No failure state or recovery branch exists. Runtime impact and whether the coroutine exception handler terminates the app have not been observed.
+- **Frequency:** Conditional on an upstream flow failure.
+- **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); `ServerManagementViewModel.kt` lines 43–65; `ServerManagementViewState.kt` fields 5–8; `ServerManagementScreen.kt` lines 117–160.
+- **Root cause:** Observation pipeline handles only successful emissions and conflates the initial loading state with no terminal failure state.
+- **Affected files:** `ServerManagementViewModel.kt`, `ServerManagementViewState.kt`, `ServerManagementScreen.kt`, translations and failure-path tests.
+- **Fix reference / commit:** Pending. Add explicit load-failure/retry state, safe exception classification, bounded diagnostics and a recovery test without treating ordinary cancellation as a fault.
+- **Retest:** Host injected-flow failure/retry test NOT RUN. A Samsung upstream-failure fixture may be unavailable; if so, mark device variant BLOCKED and retain the unit result separately.
+- **Discovery commit:** Pending documentation commit; preserve source-level finding.
+
+## QA-BUG-0045 — Successful Add Server has no server-added completion event
+
+- **Severity / user impact:** Low; after QA-BUG-0038 was corrected to an attempt event, metrics record Add Server navigation and `login_succeeded` separately but never emit the typed `server_added` completion, so abandoned and successfully registered additions cannot be counted as one operation.
+- **Status:** CONFIRMED by source audit; current case-21 successful server persistence did not emit a `server_added` event.
+- **Screen/test IDs:** Cases 22, 33, 443–444, 727, 749.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- **Preconditions:** Tap Add Server and complete authentication plus local server/credential persistence.
+- **Exact reproduction:** Source audit found `ServerAdded` only defined in the event API and no call site after commit `107d017c`; case-21 PID logs show `server_add_attempted` on the pre-auth navigation in case 443 and then Login success, but no server-added completion event.
+- **Expected:** Emit `server_added` with bounded actual server type only after a new server registration and credentials persist; do not emit it for failed/abandoned login or ordinary reauthentication. Existing `login_succeeded` remains the authentication outcome.
+- **Actual:** No server-add completion event is emitted at persistence success.
+- **Frequency:** Each successful newly-added server under the current source.
+- **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); `ServerManagementAnalyticsEvent.ServerAdded` is defined but unused; Login's success event is distinct.
+- **Root cause:** QA-BUG-0038's false early success event was replaced by an Add Server attempt, but no successful registration boundary was instrumented afterward.
+- **Affected files:** Login persistence/success boundary and entry-point context, analytics API/sanitizer/tests, Server Management results.
+- **Fix reference / commit:** Pending. Correlate Add Server entry to persisted new-server success (not simply every Login success); emit one bounded completion only after persistence and no credentials/URL/username.
+- **Retest:** NOT RUN. Use one successful Add Server flow and one abandoned/failed flow; require one attempt, completion only for the persisted new server, and no duplicate on recomposition. Firebase Analytics ingestion is waived; local DebugAnalyticsManager evidence only.
+- **Discovery commit:** Pending documentation commit; preserve source-level gap.
