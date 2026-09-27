@@ -26,6 +26,7 @@ fun LoginNavigation(
     onRootBack: (() -> Unit)? = null,
     startAtLogin: Boolean = false,
     existingServerId: String? = null,
+    isRetryOrigin: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: LoginNavigationViewModel = koinViewModel {
         parametersOf(startAtLogin, existingServerId != null)
@@ -89,6 +90,7 @@ fun LoginNavigation(
                         onSignInAttemptStarted = onLoginAttemptStarted,
                         onSignInFailure = onLoginFailure,
                         existingServerId = existingServerId,
+                        isRetryOrigin = isRetryOrigin,
                         onBackClick = {
                             if (state.backStack.size <= 1 && onBack != null) {
                                 onBack()

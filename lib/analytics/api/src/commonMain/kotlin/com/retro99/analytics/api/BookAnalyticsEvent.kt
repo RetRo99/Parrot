@@ -330,6 +330,7 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
         val serverType: String,
         val authMethod: String,
         val durationMs: Long,
+        val isRetry: Boolean = false,
     ) : AuthAnalyticsEvent {
         override val name: String = "login_succeeded"
         override val parameters: Map<String, Any> = mapOf(
@@ -337,6 +338,7 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
             "action" to "sign_in",
             "server_type" to serverType,
             "auth_method" to authMethod,
+            "is_retry" to isRetry,
             "outcome" to "succeeded",
             "duration_ms" to durationMs,
         )
@@ -347,6 +349,7 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
         val authMethod: String,
         val errorType: String,
         val durationMs: Long,
+        val isRetry: Boolean = false,
     ) : AuthAnalyticsEvent {
         override val name: String = "login_failed"
         override val parameters: Map<String, Any> = mapOf(
@@ -355,6 +358,7 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
             "server_type" to serverType,
             "auth_method" to authMethod,
             "error_type" to errorType,
+            "is_retry" to isRetry,
             "outcome" to "failed",
             "duration_ms" to durationMs,
         )
@@ -365,6 +369,7 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
         val authMethod: String,
         val reasonCode: String,
         val durationMs: Long,
+        val isRetry: Boolean = false,
     ) : AuthAnalyticsEvent {
         override val name: String = "login_cancelled"
         override val parameters: Map<String, Any> = mapOf(
@@ -373,6 +378,7 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
             "server_type" to serverType,
             "auth_method" to authMethod,
             "reason_code" to reasonCode,
+            "is_retry" to isRetry,
             "outcome" to "cancelled",
             "duration_ms" to durationMs,
         )
@@ -383,6 +389,7 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
         val authMethod: String,
         val reasonCode: String,
         val durationMs: Long,
+        val isRetry: Boolean = false,
     ) : AuthAnalyticsEvent {
         override val name: String = "login_abandoned"
         override val parameters: Map<String, Any> = mapOf(
@@ -391,6 +398,7 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
             "server_type" to serverType,
             "auth_method" to authMethod,
             "reason_code" to reasonCode,
+            "is_retry" to isRetry,
             "outcome" to "abandoned",
             "duration_ms" to durationMs,
         )
@@ -738,6 +746,7 @@ sealed interface ServerManagementAnalyticsEvent : AnalyticsEvent {
 
     data class ServerLoginAttempted(
         val serverType: String,
+        val isRetry: Boolean = false,
     ) : ServerManagementAnalyticsEvent {
         override val name: String = "server_login_attempted"
         override val parameters: Map<String, Any> = mapOf(
@@ -750,6 +759,7 @@ sealed interface ServerManagementAnalyticsEvent : AnalyticsEvent {
             "stage" to "navigation",
             "outcome" to "started",
             "server_type" to serverType,
+            "is_retry" to isRetry,
         )
     }
 

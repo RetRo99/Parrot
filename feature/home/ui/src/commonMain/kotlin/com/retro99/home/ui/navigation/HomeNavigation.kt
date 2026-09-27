@@ -37,7 +37,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun HomeNavigation(
-    onNavigateToLogin: (String?) -> Unit,
+    onNavigateToLogin: (String?, Boolean) -> Unit,
     failedExistingServerLoginIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
     viewModel: HomeNavigationViewModel = koinViewModel(),

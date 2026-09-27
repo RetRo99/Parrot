@@ -111,6 +111,7 @@ fun LoginScreen(
     onSignInFailure: (String, String, String) -> Unit = { _, _, _ -> },
     onBackClick: () -> Unit,
     existingServerId: String? = null,
+    isRetryOrigin: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = koinViewModel {
         parametersOf(
@@ -119,6 +120,7 @@ fun LoginScreen(
             onSignInFailure,
             onBackClick,
             existingServerId,
+            isRetryOrigin,
         )
     },
 ) {

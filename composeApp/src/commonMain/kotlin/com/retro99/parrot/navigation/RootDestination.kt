@@ -11,6 +11,7 @@ sealed interface RootDestination {
     data class Login(
         val initial: Boolean,
         val existingServerId: String? = null,
+        val isRetryOrigin: Boolean = false,
     ) : RootDestination
 
     @Serializable

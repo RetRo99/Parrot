@@ -32,12 +32,14 @@ class LoginViewModel(
     @InjectedParam private val onSignInFailure: (String, String, String) -> Unit = { _, _, _ -> },
     @InjectedParam private val onBackClick: () -> Unit,
     @InjectedParam private val existingServerId: String? = null,
+    @InjectedParam isRetryOrigin: Boolean = false,
 ) : BaseViewModel<LoginViewState, LoginIntent>(LoginViewState()) {
 
     val urlState = TextFieldState(initialText = if (existingServerId == null) "https://" else "")
     val usernameState = TextFieldState()
     val passwordState = TextFieldState()
     private var lastFailedLogin: Pair<String, String>? = null
+    private val retryAttribution = LoginRetryAttribution(isRetryOrigin)
     private val loginSubmissionGate = LoginSubmissionGate()
     private val activeLoginAttempts = mutableMapOf<String, LoginAttempt>()
     private var activeServerTypePicker: ServerTypePickerAttempt? = null
@@ -459,8 +461,12 @@ class LoginViewModel(
             authMethod = authMethod,
             startedAt = TimeSource.Monotonic.markNow(),
             correlationId = Uuid.random().toString(),
+            isRetry = retryAttribution.consume(
+                serverTypeId = serverType.identifier,
+                authMethod = authMethod,
+                lastFailedLogin = lastFailedLogin,
+            ),
         )
-        val isRetry = lastFailedLogin == (serverType.identifier to authMethod)
         activeLoginAttempts[attempt.correlationId] = attempt
         existingServerId?.let { serverId ->
             onSignInAttemptStarted(serverId, serverType.identifier, attempt.correlationId)
@@ -469,7 +475,7 @@ class LoginViewModel(
             AuthAnalyticsEvent.LoginAttempted(
                 serverType = serverType.identifier,
                 authMethod = authMethod,
-                isRetry = isRetry,
+                isRetry = attempt.isRetry,
             ),
         )
         analytics.logBreadcrumb(
@@ -496,6 +502,7 @@ class LoginViewModel(
                 serverType = attempt.serverType.identifier,
                 authMethod = attempt.authMethod,
                 durationMs = durationMs,
+                isRetry = attempt.isRetry,
             ),
         )
         analytics.logBreadcrumb(
@@ -528,6 +535,7 @@ class LoginViewModel(
                     authMethod = attempt.authMethod,
                     reasonCode = reasonCode,
                     durationMs = durationMs,
+                    isRetry = attempt.isRetry,
                 ),
             )
             analytics.logBreadcrumb(
@@ -550,6 +558,7 @@ class LoginViewModel(
                     authMethod = attempt.authMethod,
                     errorType = errorType,
                     durationMs = durationMs,
+                    isRetry = attempt.isRetry,
                 ),
             )
             analytics.logBreadcrumb(
@@ -583,6 +592,7 @@ class LoginViewModel(
                     authMethod = attempt.authMethod,
                     reasonCode = "left_login_screen",
                     durationMs = durationMs,
+                    isRetry = attempt.isRetry,
                 ),
             )
             analytics.logBreadcrumb(
@@ -608,6 +618,7 @@ class LoginViewModel(
         val authMethod: String,
         val startedAt: TimeMark,
         val correlationId: String,
+        val isRetry: Boolean,
     )
 
     private data class ServerTypePickerAttempt(

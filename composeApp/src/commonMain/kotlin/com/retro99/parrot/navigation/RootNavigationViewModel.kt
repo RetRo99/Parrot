@@ -34,7 +34,8 @@ class RootNavigationViewModel(
             RootNavigationIntent.OnGuestModeSelected -> handleGuestModeSelected()
             is RootNavigationIntent.OnHomeVisible -> handleHomeVisible(intent.entryId)
             RootNavigationIntent.OnLogout -> handleLogout()
-            is RootNavigationIntent.OnLoginClicked -> handleLoginClicked(intent.existingServerId)
+            is RootNavigationIntent.OnLoginClicked ->
+                handleLoginClicked(intent.existingServerId, intent.isRetry)
             RootNavigationIntent.OnExistingServerLoginSuccess -> handleExistingServerLoginSuccess()
             is RootNavigationIntent.OnExistingServerLoginAttemptStarted ->
                 handleExistingServerLoginAttemptStarted(intent)
@@ -44,12 +45,13 @@ class RootNavigationViewModel(
         }
     }
 
-    private fun handleLoginClicked(existingServerId: String?) {
+    private fun handleLoginClicked(existingServerId: String?, isRetry: Boolean) {
         updateState { state ->
             state.copy(
                 backStack = state.backStack + RootDestination.Login(
                     initial = false,
                     existingServerId = existingServerId,
+                    isRetryOrigin = isRetry,
                 ),
             )
         }

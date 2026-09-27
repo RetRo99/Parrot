@@ -81,6 +81,7 @@ fun RootNavigation(
                         onRootBack = if (destination.initial) onRootWelcomeBack else null,
                         startAtLogin = !destination.initial,
                         existingServerId = destination.existingServerId,
+                        isRetryOrigin = destination.isRetryOrigin,
                     )
                 }
 
@@ -95,8 +96,13 @@ fun RootNavigation(
                         }
                     }
                     HomeNavigation(
-                        onNavigateToLogin = { existingServerId ->
-                            intentDispatcher(RootNavigationIntent.OnLoginClicked(existingServerId))
+                        onNavigateToLogin = { existingServerId, isRetry ->
+                            intentDispatcher(
+                                RootNavigationIntent.OnLoginClicked(
+                                    existingServerId = existingServerId,
+                                    isRetry = isRetry,
+                                ),
+                            )
                         },
                         failedExistingServerLoginIds = state.failedExistingServerLoginIds,
                     )

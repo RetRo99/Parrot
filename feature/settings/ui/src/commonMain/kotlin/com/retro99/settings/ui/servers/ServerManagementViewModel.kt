@@ -22,7 +22,7 @@ import org.koin.core.annotation.Provided
 class ServerManagementViewModel(
     @Provided private val serverRegistry: ServerRegistry,
     @Provided private val analytics: Analytics,
-    @InjectedParam private val onNavigateToLogin: (String?) -> Unit,
+    @InjectedParam private val onNavigateToLogin: (String?, Boolean) -> Unit,
 ) : BaseViewModel<ServerManagementViewState, ServerManagementIntent>(ServerManagementViewState()) {
 
     init {
@@ -31,14 +31,15 @@ class ServerManagementViewModel(
 
     override fun onIntent(intent: ServerManagementIntent) {
         when (intent) {
-            is ServerManagementIntent.OnLoginClick -> onLoginClick(intent.serverId, intent.serverType)
+            is ServerManagementIntent.OnLoginClick ->
+                onLoginClick(intent.serverId, intent.serverType, intent.isRetry)
             is ServerManagementIntent.OnLogoutClick -> onLogoutClick(intent.serverId, intent.serverType)
             is ServerManagementIntent.OnRemoveClick -> onRemoveClick(intent.serverId, intent.serverType)
             ServerManagementIntent.RetryFailedOperation -> retryFailedOperation()
             ServerManagementIntent.DismissOperationFailure -> dismissOperationFailure()
             ServerManagementIntent.OnAddServerClick -> {
                 analytics.logEvent(ServerManagementAnalyticsEvent.ServerAddAttempted)
-                onNavigateToLogin(null)
+                onNavigateToLogin(null, false)
             }
         }
     }
@@ -68,8 +69,13 @@ class ServerManagementViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun onLoginClick(serverId: String, serverType: ServerType) {
-        analytics.logEvent(ServerManagementAnalyticsEvent.ServerLoginAttempted(serverType.identifier))
+    private fun onLoginClick(serverId: String, serverType: ServerType, isRetry: Boolean) {
+        analytics.logEvent(
+            ServerManagementAnalyticsEvent.ServerLoginAttempted(
+                serverType = serverType.identifier,
+                isRetry = isRetry,
+            ),
+        )
         analytics.logBreadcrumb(
             DiagnosticContext(
                 screen = "server_management",
@@ -83,7 +89,7 @@ class ServerManagementViewModel(
                 serverType = serverType.identifier,
             ),
         )
-        onNavigateToLogin(serverId)
+        onNavigateToLogin(serverId, isRetry)
     }
 
     private var operationInProgress = false

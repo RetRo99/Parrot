@@ -502,6 +502,7 @@ class AnalyticsParameterSanitizerTest {
                 serverType = "storyteller",
                 authMethod = "credentials",
                 durationMs = 1_250,
+                isRetry = true,
             ).parameters,
         )
         val failed = sanitizeAnalyticsParameters(
@@ -510,6 +511,7 @@ class AnalyticsParameterSanitizerTest {
                 authMethod = "credentials",
                 errorType = "network_unavailable",
                 durationMs = 250,
+                isRetry = true,
             ).parameters,
         )
         val cancelled = sanitizeAnalyticsParameters(
@@ -518,6 +520,7 @@ class AnalyticsParameterSanitizerTest {
                 authMethod = "oauth",
                 reasonCode = "oauth_cancelled",
                 durationMs = 4_000,
+                isRetry = true,
             ).parameters,
         )
         val abandoned = sanitizeAnalyticsParameters(
@@ -526,6 +529,7 @@ class AnalyticsParameterSanitizerTest {
                 authMethod = "oauth",
                 reasonCode = "left_login_screen",
                 durationMs = 2_500,
+                isRetry = true,
             ).parameters,
         )
 
@@ -550,6 +554,7 @@ class AnalyticsParameterSanitizerTest {
                 "action" to "sign_in",
                 "server_type" to "storyteller",
                 "auth_method" to "credentials",
+                "is_retry" to true,
                 "outcome" to "succeeded",
                 "duration_ms" to 1_250L,
             ),
@@ -562,6 +567,7 @@ class AnalyticsParameterSanitizerTest {
                 "server_type" to "audiobookshelf",
                 "auth_method" to "credentials",
                 "error_type" to "network_unavailable",
+                "is_retry" to true,
                 "outcome" to "failed",
                 "duration_ms" to 250L,
             ),
@@ -574,6 +580,7 @@ class AnalyticsParameterSanitizerTest {
                 "server_type" to "storyteller",
                 "auth_method" to "oauth",
                 "reason_code" to "oauth_cancelled",
+                "is_retry" to true,
                 "outcome" to "cancelled",
                 "duration_ms" to 4_000L,
             ),
@@ -586,6 +593,7 @@ class AnalyticsParameterSanitizerTest {
                 "server_type" to "storyteller",
                 "auth_method" to "oauth",
                 "reason_code" to "left_login_screen",
+                "is_retry" to true,
                 "outcome" to "abandoned",
                 "duration_ms" to 2_500L,
             ),
@@ -806,7 +814,7 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
-    fun existingServerLoginAttemptContainsOnlyBoundedNavigationAndServerType() {
+    fun existingServerLoginAttemptContainsBoundedNavigationRetryAndServerType() {
         val event = ServerManagementAnalyticsEvent.ServerLoginAttempted("storyteller")
         val sanitized = sanitizeAnalyticsParameters(event.parameters)
 
@@ -816,6 +824,19 @@ class AnalyticsParameterSanitizerTest {
         assertEquals("server_card_login", sanitized["entry_point"])
         assertEquals("started", sanitized["outcome"])
         assertEquals("storyteller", sanitized["server_type"])
+        assertEquals(false, sanitized["is_retry"])
+        assertFalse("server_id" in sanitized || "server_url" in sanitized)
+    }
+
+    @Test
+    fun existingServerRetryNavigationMarksRetryWithoutAddingIdentifiers() {
+        val event = ServerManagementAnalyticsEvent.ServerLoginAttempted(
+            serverType = "storyteller",
+            isRetry = true,
+        )
+        val sanitized = sanitizeAnalyticsParameters(event.parameters)
+
+        assertEquals(true, sanitized["is_retry"])
         assertFalse("server_id" in sanitized || "server_url" in sanitized)
     }
 

@@ -66,7 +66,7 @@ import resources.translations.settings_server_type_label
 
 @Composable
 fun ServerManagementScreen(
-    onNavigateToLogin: (String?) -> Unit,
+    onNavigateToLogin: (String?, Boolean) -> Unit,
     onBack: () -> Unit,
     failedLoginServerIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
@@ -193,6 +193,9 @@ private fun ServerManagementScreenContent(
                                     ServerManagementIntent.OnLoginClick(
                                         serverId = serverWithStatus.server.id,
                                         serverType = serverWithStatus.server.type,
+                                        isRetry = loginFailed ||
+                                            serverWithStatus.authState is ServerAuthState.TokenExpired ||
+                                            serverWithStatus.authState is ServerAuthState.AuthenticationFailed,
                                     ),
                                 )
                             },
