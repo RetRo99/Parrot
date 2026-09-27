@@ -1,0 +1,21 @@
+# Case 416 — long profile name on Samsung
+
+- Date/time: 2026-09-27, approximately 23:10–23:12 CEST
+- Device: Samsung SM-S921B, serial `RFCWC0SSVDM`; Android 16/API 36; One UI 8.0; portrait, gesture navigation
+- Package/build: `com.retro99.parrot` 0.4.5 (21), debug; PID `16401`; APK SHA-256 `75ae77c5b811ba23991fbe893ed26632897475260310fa87f742e14d82b3d1a0`; source fix `bf38383e48f798c8d66e662798b3e88f01e57b62`
+- Preconditions: App Settings / Profiles. The original profile and two disposable duplicate profiles were present; no real profile data or credentials were used.
+
+## Functional steps and observations
+
+1. Create one additional disposable profile using a unique 77-character synthetic name. Add completed, the new profile became active, and navigation returned to the Home tab root. Reopening Settings showed the profile tile.
+2. The fixed-width profile tile rendered the long label as a single line with an ellipsis; it did not overlap adjacent tiles or the edit control. Existing duplicate ordinal labels remained visible.
+3. Open the long profile's visible Edit affordance. Rename and Delete menu actions were visible and usable. Open Rename: the long value remained in the single-line field, and the dialog title, field, Cancel and Rename controls fit on screen. Cancel left the profile and active selection unchanged.
+4. Screenshots were inspected live but not saved because the temporary synthetic label was visible. No profile value or raw hierarchy is retained. Cleanup and restoration of the original profile follow after the pending ordered profile cases.
+
+## Analytics and diagnostics
+
+- Local debug Analytics showed one Create attempt and success, followed by one automatic Switch attempt and success (`is_retry=false`); opening Rename and cancelling emitted one dialog-open and one cancellation outcome. No create/rename identifiers or profile values were present in event parameters.
+- Matching bounded start/terminal operation breadcrumbs were observed for Create and Switch. The PID-scoped window contained no fatal or handled-exception marker; no unexpected failure was induced, so Crashlytics non-fatal delivery is not asserted.
+- DebugAnalyticsManager evidence is local-only; Firebase Analytics ingestion was waived and is not claimed.
+
+Case 416 is PASS for the executed portrait/standard-font variant. Large-font, TalkBack and horizontal profile-carousel reachability are not implied; horizontal scrolling is appended as case 766.

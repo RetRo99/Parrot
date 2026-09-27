@@ -1049,3 +1049,9 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 765 | Reject duplicate profile names on Add and Rename | With disposable profiles, attempt Add and Rename using an existing profile name, including case/leading-or-trailing-space variants; verify the existing active profile and other profiles remain unchanged | Keep the dialog usable with a clear duplicate-name validation message; perform no registry mutation or profile-operation attempt; emit one bounded `profile_name_validation_failed` event and diagnostic breadcrumb with `operation` and `reason_code=duplicate_name`; do not include names/IDs or report ordinary validation as Crashlytics failure |
+
+## 43. Profile carousel reachability
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 766 | Horizontally scroll the profile row | With enough disposable profiles that the Add Profile tile is outside the viewport, horizontally scroll the profile row to its end; inspect and activate the final tile/action, then return the row to its start | The row scrolls independently, every profile and Add Profile remain reachable, and swiping does not trigger a profile selection or unrelated vertical-screen action |
