@@ -15,7 +15,8 @@ import org.koin.core.annotation.Provided
 
 /**
  * Use case for getting a specific book by UUID from a specific server.
- * Requires serverId to query the correct server directly.
+ * Requires serverId to query the correct server directly. An unavailable authenticated
+ * repository is an expected authentication state, not an unexpected missing-book exception.
  */
 @Factory
 class GetBookByUuidUseCase(
@@ -30,7 +31,7 @@ class GetBookByUuidUseCase(
     operator fun invoke(serverId: String, uuid: String): Flow<AppResult<BookDomainModel>> = flow {
         val repository = repositoryProvider.getBooksRepository(serverId)
         if (repository == null) {
-            emit(Err(AppError.NotFoundError("Server not found or not authenticated: $serverId")))
+            emit(Err(AppError.AuthError("Server unavailable or not authenticated")))
             return@flow
         }
 

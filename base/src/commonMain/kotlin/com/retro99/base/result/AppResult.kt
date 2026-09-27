@@ -58,11 +58,12 @@ sealed class AppError(open val message: String?) {
      */
     data class NotFoundError(override val message: String?) : AppError(message)
 
-    /** Expected transport and HTTP client errors use operation outcome telemetry, not Crashlytics. */
+    /** Expected user/auth/transport failures use operation outcomes, not Crashlytics reports. */
     val shouldReportException: Boolean
         get() = when (this) {
             is NetworkError -> !isExpectedFailure
             is ApiError -> code !in 400..599
+            is AuthError -> false
             else -> true
         }
 

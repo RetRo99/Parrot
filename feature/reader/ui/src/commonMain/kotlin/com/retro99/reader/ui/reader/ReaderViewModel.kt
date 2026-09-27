@@ -600,6 +600,11 @@ class ReaderViewModel(
         stage: String,
         reasonCode: String,
     ) {
+        val resolvedReasonCode = if (error is AppError.AuthError && stage == "initialization") {
+            "server_not_authenticated"
+        } else {
+            reasonCode
+        }
         val context = DiagnosticContext(
             screen = "reader",
             sourceScreen = "home".takeIf { isLastBookOnLaunch },
@@ -608,14 +613,14 @@ class ReaderViewModel(
             operation = "reader_open",
             stage = stage,
             outcome = "failed",
-            reasonCode = reasonCode,
+            reasonCode = resolvedReasonCode,
             mediaType = bookType.name.lowercase(),
         )
         if (isLastBookOnLaunch) {
             reportLastBookLaunchOutcome(
                 outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Failed,
                 stage = "terminal",
-                reasonCode = reasonCode,
+                reasonCode = resolvedReasonCode,
                 error = error,
             )
         } else if (error.shouldReportException) {

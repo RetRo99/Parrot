@@ -13,6 +13,8 @@ kotlin {
         namespace = "com.retro99.base"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -29,6 +31,10 @@ kotlin {
             api(libs.kermit)
             implementation(projects.translations)
             implementation(projects.lib.analytics.api)
+        }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
         }
     }
 }
