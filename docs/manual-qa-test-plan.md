@@ -1055,3 +1055,10 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 766 | Horizontally scroll the profile row | With enough disposable profiles that the Add Profile tile is outside the viewport, horizontally scroll the profile row to its end; inspect and activate the final tile/action, then return the row to its start | The row scrolls independently, every profile and Add Profile remain reachable, and swiping does not trigger a profile selection or unrelated vertical-screen action |
+
+## 44. Reader settings exposure and recovery extensions
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 767 | Reader Settings dismissal from App Settings | Open Reader Settings from the App Settings row; separately close via the visible close affordance and system Back (also test outside/swipe dismissal if the sheet supports it) | Each dismissal returns to App Settings without changing Reader settings; screen exposure is emitted once per actual visible entry with `source_screen=app_settings` and `entry_point=reader_settings_row`; no duplicate exposure from recomposition |
+| 768 | Reader setting save failure and recovery | With a disposable profile, inject one local settings-database write failure; change a setting, inspect feedback/outcomes, restore writes and use Retry | Failed setting is not shown as committed; one failed outcome and bounded diagnostic context identify the operation; exactly one non-fatal is reported for an unexpected persistence failure; Retry is separately marked and persists the value; cancellation does not report an exception. BLOCKED without safe DB fault injection |

@@ -1,0 +1,20 @@
+# QA-BUG-0062 / case 420 — reader-setting save result handling (pre-fix source audit)
+
+- Audit date: 2026-09-28 (Samsung run, CEST)
+- Device: physical Samsung serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0.
+- Installed app: `com.retro99.parrot` 0.4.5 (21), debug; latest tested source is QA-BUG-0061 commit `c8fbbd961927a3231e64314399597e8c2157602b` plus separate uncommitted Home navigation, Reader playback and Server Management work. The current installed APK manifest/hash remains documented in `manual-qa-run-report.md`; no new APK was built for this audit.
+- Screen state at audit: Reader Settings surface opened from App Settings in disposable profile A after case 419. This was screen reconnaissance/source audit only; no profile comparison or induced save failure was performed. No profile labels/IDs, account data, book content, screenshot or raw hierarchy are retained.
+
+## Confirmed source path
+
+1. A user selects a Reader setting in `feature/settings/ui/src/commonMain/kotlin/com/retro99/settings/ui/SettingsViewModel.kt`, `updateReaderSetting` (currently lines 354–374).
+2. The method logs `ReaderAnalyticsEvent.SettingChanged` before attempting persistence, immediately puts the candidate into `readerSettings`, and creates the “Setting changed — Undo” state.
+3. It launches `saveReaderSettingsUseCase(newSettings.toDomainModel())` and discards the returned `CompletableResult`.
+4. `feature/reader/data/src/commonMain/kotlin/com/retro99/reader/data/ReaderDataRepository.kt`, `saveReaderSettings` (currently lines 60–66), logs an error and returns the same failure; the ViewModel neither rolls back nor exposes retry/failure feedback.
+5. The database executor also reports the caught database exception (`lib/database/implementation/src/commonMain/kotlin/com/retro99/database/implementation/DatabaseExecutorImpl.kt`, lines 21–30), so a DB failure can be submitted a second time by `ReaderDataRepository`.
+
+**Expected:** A setting is counted as changed only after a successful save. A failed save restores the last persisted value, gives clear recovery/retry feedback, emits a failed (not success) outcome, and reports one actionable non-fatal with bounded operation context. Retry is separately attributable; ordinary Back/Undo/picker cancellation is not reported as a crash.
+
+**Actual by source audit:** The candidate UI state and success-like `setting_changed` event are emitted before the save result is known; `Err` is ignored. The UI can show a value and Undo snackbar even if persistence failed, and a later reopen can silently restore the old value. One database exception can be reported twice by the database executor and ReaderDataRepository. No runtime persistence failure has been induced, so this is not a device-reproduction claim.
+
+**Current disposition:** Confirmed source-level user-experience and diagnostics defect; runtime failure/retry remains NOT RUN pending a safe DB fault-injection fixture. Profile isolation is not inferred from this source audit. No Analytics/Crashlytics Firebase delivery is claimed.
