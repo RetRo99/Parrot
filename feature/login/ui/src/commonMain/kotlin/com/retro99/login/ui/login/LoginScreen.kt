@@ -468,7 +468,14 @@ private fun UrlInfoTooltip(
             RichTooltip(
                 title = { Text(stringResource(StringRes.login_url_tooltip_title)) },
                 action = {
-                    TextButton(onClick = { scope.launch { tooltipState.dismiss() } }) {
+                    TextButton(
+                        onClick = {
+                            intentDispatcher(
+                                LoginIntent.OnUrlHelpDismissed(UrlHelpDismissalReason.GotIt),
+                            )
+                            tooltipState.dismiss()
+                        },
+                    ) {
                         Text(stringResource(StringRes.login_url_tooltip_dismiss))
                     }
                 },
