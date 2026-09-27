@@ -1,0 +1,12 @@
+Case 15 — server-type picker pre-fix observation
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build: physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; `com.retro99.parrot` 0.4.5 (21), debug source commit `c08658a278fcef1da884352edb44ffc298d6b08d`, APK SHA-256 `df2a162c85b7b7b32c7c7d58608733e957fc3d42d677d69fe402b2caa4a5c506`, PID `21574`; default profile, locale `en-GB`, network available, no credentials entered.
+
+Steps and actual behavior:
+1. From the local Reader's Book Detail, open Settings → Servers → Add Server. Login rendered with default `Storyteller`, URL placeholder `https://`, empty username/password, Sign In disabled.
+2. Tap Server Type. The menu visibly contains exactly `Storyteller` and `Audiobookshelf`; `Local` and `Parrot Cloud` are absent. Screenshot: [pre-fix open picker](case-015-server-type-picker-prefx-open.png).
+3. Tap `Audiobookshelf`. The menu closes and the form's selected server type changes to `Audiobookshelf`. No credentials were entered or submitted. Screenshot: [pre-fix selected type](case-015-server-type-picker-prefx-selected.png).
+4. PID-scoped local DebugAnalyticsManager records `login_screen_viewed(screen=login, source_screen=home, entry_point=add_server)` and its visible-screen diagnostic breadcrumb. There is no Analytics event or diagnostic breadcrumb for opening the picker or selecting `Audiobookshelf`; source audit confirmed `handleServerTypeSelected` only updates UI state/form validity and `LoginIntent` has no open/dismiss intent. Firebase Analytics ingestion is waived; the observed gap is in local event production itself.
+
+Outcome: the functional picker behavior is correct for this sample; the observability result FAILS. No unexpected user-experience failure occurred, so no Crashlytics report is expected. Full case 15 remains NOT RUN until instrumentation is fixed and all options are retested.
