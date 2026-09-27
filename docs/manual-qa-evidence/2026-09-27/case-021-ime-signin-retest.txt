@@ -1,0 +1,31 @@
+Case 21 — Sign in with the Samsung keyboard action (IME)
+Date: 2026-09-27, Samsung local CEST (UTC+0200); submit at 09:20:42.
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Installed package `com.retro99.parrot` 0.4.5 (21), source commit `107d017cdcc3d834e99dc983e20a7ed6002e319c`, PID `19860`.
+- APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`; local debug APK and Samsung-pulled installed `base.apk` hashes match.
+- Login host suite 9/9; Analytics sanitizer suite 18/18; `:androidApp:assembleDebug` succeeded on this source.
+
+Preconditions and steps
+1. Start from the clean Login form after case 20. Enter the supplied demo server/account only in Parrot's visible form; no credentials were copied to QA artifacts and the populated form was not inspected or captured.
+2. With Password focused and the Samsung keyboard visible, press the keyboard's Sign In/Done action via the Android Enter key once.
+3. The login request completed successfully and Parrot emitted a visible Home route. Android displayed a system credential-save prompt after authentication; choose **No** to avoid storing the credential outside Parrot. Wait for the Home/Books destination to appear. No populated-form screenshot was taken.
+
+PID-scoped local DebugAnalyticsManager excerpt:
+```
+09-27 09:20:42.845 19860 D Analytics Event: login_attempted | Parameters: {screen=login, action=sign_in, server_type=storyteller, auth_method=credentials, is_retry=false, outcome=started}
+09-27 09:20:42.845 19860 D Diagnostic breadcrumb: diagnostic_context screen=login action=sign_in operation=credentials_login stage=started outcome=started server_type=storyteller correlation_id=<diagnostic-only>
+09-27 09:20:43.281 19860 D Analytics Event: login_succeeded | Parameters: {screen=login, action=sign_in, server_type=storyteller, auth_method=credentials, outcome=succeeded, duration_ms=438}
+09-27 09:20:43.281 19860 D Diagnostic breadcrumb: diagnostic_context screen=login action=sign_in operation=credentials_login stage=credentials_persisted outcome=succeeded server_type=storyteller correlation_id=<same diagnostic-only ID>
+09-27 09:20:43.377 19860 D Analytics Event: home_screen_viewed | Parameters: {screen=home, source_screen=login, entry_point=login_success}
+09-27 09:20:43.377 19860 D Diagnostic breadcrumb: diagnostic_context screen=home source_screen=login entry_point=login_success action=screen_view operation=home_route stage=visible outcome=succeeded
+```
+
+Results
+- Functional: **PASS** — the keyboard action triggered credentials sign-in; Login completed and the Home/Books destination became visible. A later `wait_for_element(text=Books)` returned success after the system prompt was declined. The app's authenticated session/server persistence is the intended sign-in outcome; case 22 separately verifies the Server Management card.
+- Analytics: **PASS (local DebugAnalyticsManager only)** — one accepted `login_attempted`, one `login_succeeded` after persistence, then one `home_screen_viewed` with `login`/`login_success` attribution. No duplicate submit, validation or failure event was observed. Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: **PASS for the successful path** — correlated Login start and credentials-persisted success breadcrumbs, followed by the actual Home-visible breadcrumb. No unexpected error or fatal marker was observed; Crashlytics non-fatal delivery is not applicable to this successful path and was not tested.
+- No credential, username, or populated-form screenshot is retained. The system password-save prompt was declined; no credentials were saved to an external password manager. Firebase Analytics evidence is local-only; Crashlytics delivery remains separately unverified.
+
+This records the IME variant for case 21. Case 22 remains open until the newly logged-in server is verified in Server Management.
