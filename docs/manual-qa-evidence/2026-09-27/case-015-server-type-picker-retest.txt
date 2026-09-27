@@ -1,0 +1,49 @@
+Case 15 — Server type dropdown, committed instrumentation retest
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`, gesture navigation.
+- Installed `com.retro99.parrot` 0.4.5 (21), debug, source commit `d69be066b7b864d8c8d4c15a111132eaa17e1db9`; local and Samsung-pulled APK SHA-256 both `1b3f3480c7e33852d5b3e07e95e719051c776950098d932ac710677f322d0197`.
+- Login route reached from Settings → Servers → Add Server. PID `5883`; default profile; locale `en-GB`; airplane mode off, Wi-Fi on, active default Wi-Fi network 108. URL stayed at placeholder `https://`, username/password stayed empty, Sign In disabled. No credentials were entered or submitted.
+- Host checks passed on this source: `:lib:analytics:implementation:testAndroidHostTest`, `:feature:login:ui:testAndroidHostTest`; `:androidApp:assembleDebug` succeeded.
+
+Case 15 — options and selection
+1. Open Server Type. The menu contains exactly two choices: `Storyteller` and `Audiobookshelf`. `Local` and `Parrot Cloud` are not offered. Evidence: [committed menu](case-015-committed-menu-options.png).
+2. Select `Audiobookshelf`. The menu closes and Login's selected type changes. Evidence: [Audiobookshelf selected](case-015-committed-audiobookshelf-selected.png).
+3. Reopen and select `Storyteller`. The form returns to Storyteller. Evidence: [Storyteller selected](case-015-committed-storyteller-selected.png).
+4. The sign-in form remains intact and empty; no request or server registration occurs.
+
+Case 751 — dismissal variants
+5. Open the menu and tap outside. It closes, Login remains visible, selected type remains Storyteller, and no selection event is emitted. Evidence: [outside dismissal](case-751-committed-outside-dismissal.png).
+6. Open the menu and press system Back. It closes, Login remains visible, selected type remains Storyteller, and no selection event is emitted. Evidence: [system Back dismissal](case-751-committed-system-back-dismissal.png).
+
+Exact PID-scoped local event/diagnostic excerpt from the formal committed-build run
+```
+09-27 05:34:16.957 5883 D Analytics Event: login_server_type_picker_attempted | {screen=login, action=select_server_type, operation=server_type_picker, stage=menu_open, outcome=started, server_type=storyteller}
+09-27 05:34:16.958 5883 D Diagnostic breadcrumb: diagnostic_context screen=login action=select_server_type operation=server_type_picker stage=menu_open outcome=started server_type=storyteller correlation_id=5045d278-d311-4849-a816-7cd3ac4d9183
+09-27 05:34:33.287 5883 D Analytics Event: login_server_type_selected | {screen=login, action=select_server_type, operation=server_type_picker, stage=terminal, outcome=succeeded, previous_server_type=storyteller, server_type=audiobookshelf}
+09-27 05:34:33.287 5883 D Diagnostic breadcrumb: diagnostic_context screen=login action=select_server_type operation=server_type_picker stage=selection_applied outcome=succeeded server_type=audiobookshelf correlation_id=5045d278-d311-4849-a816-7cd3ac4d9183
+09-27 05:34:48.750 5883 D Analytics Event: login_server_type_picker_attempted | {screen=login, action=select_server_type, operation=server_type_picker, stage=menu_open, outcome=started, server_type=audiobookshelf}
+09-27 05:34:48.751 5883 D Diagnostic breadcrumb: diagnostic_context screen=login action=select_server_type operation=server_type_picker stage=menu_open outcome=started server_type=audiobookshelf correlation_id=95ec3cc7-a8e7-4af0-aa3a-5b9aa367a24d
+09-27 05:34:57.541 5883 D Analytics Event: login_server_type_selected | {screen=login, action=select_server_type, operation=server_type_picker, stage=terminal, outcome=succeeded, previous_server_type=audiobookshelf, server_type=storyteller}
+09-27 05:34:57.542 5883 D Diagnostic breadcrumb: diagnostic_context screen=login action=select_server_type operation=server_type_picker stage=selection_applied outcome=succeeded server_type=storyteller correlation_id=95ec3cc7-a8e7-4af0-aa3a-5b9aa367a24d
+09-27 05:35:13.534 5883 D Analytics Event: login_server_type_picker_attempted | {screen=login, action=select_server_type, operation=server_type_picker, stage=menu_open, outcome=started, server_type=storyteller}
+09-27 05:35:13.534 5883 D Diagnostic breadcrumb: diagnostic_context screen=login action=select_server_type operation=server_type_picker stage=menu_open outcome=started server_type=storyteller correlation_id=ac79fa4d-1206-40c5-aab9-bd7becaa35e1
+09-27 05:35:17.988 5883 D Analytics Event: login_server_type_picker_cancelled | {screen=login, action=select_server_type, operation=server_type_picker, stage=terminal, outcome=cancelled, server_type=storyteller, reason_code=dismiss_request}
+09-27 05:35:17.989 5883 D Diagnostic breadcrumb: diagnostic_context screen=login action=select_server_type operation=server_type_picker stage=dismissed outcome=cancelled reason_code=dismiss_request server_type=storyteller correlation_id=ac79fa4d-1206-40c5-aab9-bd7becaa35e1
+09-27 05:35:33.659 5883 D Analytics Event: login_server_type_picker_attempted | {screen=login, action=select_server_type, operation=server_type_picker, stage=menu_open, outcome=started, server_type=storyteller}
+09-27 05:35:33.659 5883 D Diagnostic breadcrumb: diagnostic_context screen=login action=select_server_type operation=server_type_picker stage=menu_open outcome=started server_type=storyteller correlation_id=0bad1f6b-c00a-4eac-a6f3-beda492e74ea
+09-27 05:35:38.116 5883 D Analytics Event: login_server_type_picker_cancelled | {screen=login, action=select_server_type, operation=server_type_picker, stage=terminal, outcome=cancelled, server_type=storyteller, reason_code=dismiss_request}
+09-27 05:35:38.117 5883 D Diagnostic breadcrumb: diagnostic_context screen=login action=select_server_type operation=server_type_picker stage=dismissed outcome=cancelled reason_code=dismiss_request server_type=storyteller correlation_id=0bad1f6b-c00a-4eac-a6f3-beda492e74ea
+```
+- Exactly four picker attempts, two successful selections and two cancellations appear in this formal sequence. Each operation has one matching diagnostic-only correlation ID across start/terminal breadcrumbs; IDs do not appear in Analytics. Material's exposed-menu dismiss callback does not identify the trigger, so both outside-tap and system-Back cancellations use `dismiss_request`.
+- Event parameters contain no URL, username, password or other free-form form values. No fatal/unexpected exception occurred. No Crashlytics issue was expected for valid selection or ordinary cancellation.
+
+Results, separately by dimension
+- Case 15 functional: **PASS** — exactly the two expected choices shown; both selected and updated form state without sign-in.
+- Case 15 Analytics: **PASS** for local DebugAnalyticsManager event semantics — two attempt/success pairs identify previous/current bounded server types. Firebase Analytics ingestion is waived and is not claimed.
+- Case 15 diagnostics: **PASS** — one started and one successful terminal breadcrumb per choice with matching diagnostic-only IDs; no unexpected failure occurred. Crashlytics is N-A for success; delivery remains unverified separately.
+- Case 751 outside-tap and system-Back functional variants: **PASS** — each closes the menu without changing selected type or leaving Login.
+- Case 751 Analytics: **PASS** locally — each emits attempt/cancellation and no false selection/success event. Cancellation reason is bounded `dismiss_request`; Firebase ingestion is waived.
+- Case 751 diagnostics: **PASS** — correlated started/cancelled breadcrumbs, no exception noise. Crashlytics is N-A for expected cancellation; delivery remains unverified.
+- No app data was cleared. No case-15 defect remains. Full Login-screen pass is still in progress; next ordered case is 16, URL help tooltip.
