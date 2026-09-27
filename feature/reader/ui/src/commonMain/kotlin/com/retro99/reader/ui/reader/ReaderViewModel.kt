@@ -180,6 +180,11 @@ class ReaderViewModel(
     /** Timestamp when the book was opened, used for calculating reading duration */
     private var bookOpenedTimestamp: Long = 0L
 
+    /** Checkpoints the auto-open target before process death can bypass the Reader close action. */
+    private var currentBookTargetCheckpoint: CurrentBookTargetCheckpoint? = null
+
+    private val currentBookTargetSaveState = CurrentBookTargetSaveState()
+
     /** Guards against Close and back both navigating away from the reader. */
     private var hasRequestedClose: Boolean = false
 
@@ -543,6 +548,7 @@ class ReaderViewModel(
                     tableOfContents = publication.tableOfContents,
                 )
             }
+            scheduleCurrentBookTargetCheckpoint()
             if (isLastBookOnLaunch) {
                 reportLastBookLaunchOutcome(
                     outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Succeeded,
@@ -1520,6 +1526,7 @@ class ReaderViewModel(
         // outbox holds the reading position even if the checkpoint below never runs.
         if (hasRequestedClose) return
         hasRequestedClose = true
+        currentBookTargetCheckpoint?.cancel()
         reportLastBookLaunchOutcome(
             outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Cancelled,
             stage = "terminal",
@@ -1571,17 +1578,12 @@ class ReaderViewModel(
             }
 
             // Update currently reading book if session was long enough (≥ 1 minute)
-            if (readingDurationMs >= MINIMUM_READING_DURATION_MS && currentState.bookTitle.isNotEmpty()) {
-                setCurrentlyReadingUseCase(
-                    CurrentlyReadingDomainModel(
-                        serverId = serverId,
-                        bookUuid = bookUuid,
-                        bookType = currentState.bookType,
-                        bookTitle = currentState.bookTitle,
-                        coverUrl = currentState.bookCoverUrl,
-                        totalProgression = currentState.currentPosition?.totalProgression,
-                    )
-                )
+            if (
+                readingDurationMs >= MINIMUM_READING_DURATION_MS &&
+                currentState.bookTitle.isNotEmpty() &&
+                !currentBookTargetSaveState.hasSucceeded
+            ) {
+                persistCurrentBookTarget(entryPoint = "reader_close")
             }
 
             syncNowUseCase(
@@ -1877,9 +1879,47 @@ class ReaderViewModel(
     }
 
     override fun onCleared() {
+        currentBookTargetCheckpoint?.cancel()
         routineSyncScheduler.close()
         super.onCleared()
         readerScope.close()
+    }
+
+    private fun scheduleCurrentBookTargetCheckpoint() {
+        if (hasRequestedClose || bookOpenedTimestamp <= 0L) return
+
+        currentBookTargetCheckpoint?.cancel()
+        currentBookTargetCheckpoint = CurrentBookTargetCheckpoint(
+            scope = viewModelScope,
+            delayMillis = MINIMUM_READING_DURATION_MS,
+            onCheckpointDue = {
+                if (!hasRequestedClose) {
+                    persistCurrentBookTarget(entryPoint = "reading_duration_threshold")
+                }
+            },
+        ).also(CurrentBookTargetCheckpoint::start)
+    }
+
+    private fun persistCurrentBookTarget(entryPoint: String): Boolean {
+        val currentState = viewState.value
+        if (bookOpenedTimestamp <= 0L || currentState.bookTitle.isEmpty()) return false
+
+        val succeeded = persistCurrentBookTarget(
+            analytics = analytics,
+            target = CurrentlyReadingDomainModel(
+                serverId = serverId,
+                bookUuid = bookUuid,
+                bookType = currentState.bookType,
+                bookTitle = currentState.bookTitle,
+                coverUrl = currentState.bookCoverUrl,
+                totalProgression = currentState.currentPosition?.totalProgression,
+            ),
+            entryPoint = entryPoint,
+            isRetry = currentBookTargetSaveState.isRetry,
+            persist = setCurrentlyReadingUseCase::invoke,
+        )
+        currentBookTargetSaveState.recordResult(succeeded)
+        return succeeded
     }
 
     private companion object {

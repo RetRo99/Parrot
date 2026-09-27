@@ -15,6 +15,61 @@ sealed interface AnalyticsEvent {
  */
 sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
 
+    data class CurrentBookTargetSaveAttempted(
+        val entryPoint: String,
+        val bookType: String,
+        val isRetry: Boolean,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "current_book_target_save_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader",
+            "action" to "save_current_book_target",
+            "operation" to "current_book_target_save",
+            "stage" to "started",
+            "outcome" to "started",
+            "entry_point" to entryPoint,
+            "book_type" to bookType,
+            "is_retry" to isRetry,
+        )
+    }
+
+    data class CurrentBookTargetSaveCompleted(
+        val entryPoint: String,
+        val bookType: String,
+        val isRetry: Boolean,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "current_book_target_save_completed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader",
+            "action" to "save_current_book_target",
+            "operation" to "current_book_target_save",
+            "stage" to "terminal",
+            "outcome" to "succeeded",
+            "entry_point" to entryPoint,
+            "book_type" to bookType,
+            "is_retry" to isRetry,
+        )
+    }
+
+    data class CurrentBookTargetSaveFailed(
+        val entryPoint: String,
+        val bookType: String,
+        val isRetry: Boolean,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "current_book_target_save_failed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader",
+            "action" to "save_current_book_target",
+            "operation" to "current_book_target_save",
+            "stage" to "terminal",
+            "outcome" to "failed",
+            "reason_code" to "current_book_target_save_failed",
+            "entry_point" to entryPoint,
+            "book_type" to bookType,
+            "is_retry" to isRetry,
+        )
+    }
+
     /**
      * Tracks when a book is opened - helps understand which books/types are popular.
      */
@@ -352,4 +407,3 @@ sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
         )
     }
 }
-

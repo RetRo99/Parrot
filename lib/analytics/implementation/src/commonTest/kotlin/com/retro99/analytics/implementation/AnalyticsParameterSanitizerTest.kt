@@ -8,6 +8,7 @@ import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
+import com.retro99.analytics.api.ReaderAnalyticsEvent
 
 class AnalyticsParameterSanitizerTest {
 
@@ -250,6 +251,72 @@ class AnalyticsParameterSanitizerTest {
                 "is_retry" to true,
             ),
             succeeded,
+        )
+    }
+
+    @Test
+    fun currentBookTargetEventsRetainSafeOperationDimensionsOnly() {
+        val attempted = sanitizeAnalyticsParameters(
+            ReaderAnalyticsEvent.CurrentBookTargetSaveAttempted(
+                entryPoint = "reading_duration_threshold",
+                bookType = "ebook",
+                isRetry = false,
+            ).parameters + mapOf("book_uuid" to "private-id", "book_title" to "private title"),
+        )
+        val failed = sanitizeAnalyticsParameters(
+            ReaderAnalyticsEvent.CurrentBookTargetSaveFailed(
+                entryPoint = "reader_close",
+                bookType = "ebook",
+                isRetry = true,
+            ).parameters + mapOf("error_message" to "private failure"),
+        )
+        val completed = sanitizeAnalyticsParameters(
+            ReaderAnalyticsEvent.CurrentBookTargetSaveCompleted(
+                entryPoint = "reading_duration_threshold",
+                bookType = "ebook",
+                isRetry = true,
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "reader",
+                "action" to "save_current_book_target",
+                "operation" to "current_book_target_save",
+                "stage" to "started",
+                "outcome" to "started",
+                "entry_point" to "reading_duration_threshold",
+                "book_type" to "ebook",
+                "is_retry" to false,
+            ),
+            attempted,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "reader",
+                "action" to "save_current_book_target",
+                "operation" to "current_book_target_save",
+                "stage" to "terminal",
+                "outcome" to "failed",
+                "reason_code" to "current_book_target_save_failed",
+                "entry_point" to "reader_close",
+                "book_type" to "ebook",
+                "is_retry" to true,
+            ),
+            failed,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "reader",
+                "action" to "save_current_book_target",
+                "operation" to "current_book_target_save",
+                "stage" to "terminal",
+                "outcome" to "succeeded",
+                "entry_point" to "reading_duration_threshold",
+                "book_type" to "ebook",
+                "is_retry" to true,
+            ),
+            completed,
         )
     }
 
