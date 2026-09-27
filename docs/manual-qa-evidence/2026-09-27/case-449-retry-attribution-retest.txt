@@ -1,0 +1,29 @@
+Case 449 / QA-BUG-0052 — Samsung retry attribution fix retest
+Run date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, build `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `1802`; APK SHA-256 on workstation and installed package both `f3c4eb2c62bc21aec91c3c32f583227760d033b4591bd0ace804b15b8de58a65`.
+- Candidate APK contains the exact source later committed as QA-BUG-0052 `2d436099`, plus separately uncommitted QA-BUG-0049 playback-stop changes. App data was preserved. Build command: `./gradlew :feature:login:ui:testAndroidHostTest :feature:settings:ui:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest :composeApp:testAndroidHostTest :androidApp:assembleDebug --rerun-tasks`; BUILD SUCCESSFUL, 602 actionable tasks executed.
+
+Functional execution
+1. After install, Back from the logged-out last-book Reader error returned to Books. Settings → Servers showed the retained Storyteller card as `Not logged in` with `Log in` (the QA-BUG-0051 in-memory marker was cleared by process restart).
+2. Opened ordinary `Log in`, entered synthetic rejected credentials only into Parrot, and tapped Sign In. The form displayed its rejection error and remained usable. System Back opened Android's password-save prompt; chose **No, thanks**. Server Management displayed `Login failed` + Retry.
+3. Tapped Retry. Before entering values, tapped Sign In once with required fields empty. Validation was shown; there was no authentication attempt event. Entered syntactically complete synthetic rejected values only into Parrot, hid the keyboard, and tapped Sign In. The rejection error appeared and the Login form remained usable.
+4. System Back and declining the password-save prompt returned to the same failed card. Tapped Retry once more and pressed system Back without submitting; this returned to the retained failure card and produced no login attempt/cancelled event.
+
+Sanitized local Analytics event evidence (DebugAnalyticsManager; Firebase delivery is not claimed)
+- `19:07:49.022` `server_login_attempted`: `server_type=storyteller`, `is_retry=false` for ordinary Log in.
+- `19:08:37.598` one required-fields `login_validation_failed`; no accepted attempt at that time.
+- `19:10:02.240` ordinary `login_attempted(is_retry=false)`; `19:10:02.438` `login_failed(is_retry=false)`.
+- `19:10:59.630` failed-card Retry route emitted `server_login_attempted(is_retry=true)`.
+- `19:11:17.660` empty-submit required-fields `login_validation_failed`; no login-attempt or cancellation event was emitted.
+- `19:12:06.308` bounded `retry_started` breadcrumb, then `19:12:06.309` accepted `login_attempted(is_retry=true)` and credentials-login start breadcrumb; `19:12:06.368` `login_failed(is_retry=true)` and `19:12:06.370` failure-state-retained breadcrumb.
+- `19:16:16.404` Retry route attempt followed by system Back before submit; no new `login_attempted` or `login_cancelled` event.
+- PID-scoped log review found zero exception-report markers and zero fatal crashes. Expected validation and rejected credentials did not generate exception reports. Firebase Analytics ingestion is waived; Crashlytics delivery is not established by local logs.
+
+Result
+- Functional: PASS for Login/Retry entry, validation-before-attempt, rejected-auth failure visibility, retained failed-card recovery, and Back cancellation without submit. No authentication success is claimed; this configured endpoint rejected the synthetic test values.
+- Analytics: PASS locally for distinct normal/retry route attempts and authentication attempt/terminal retry dimensions. Retry origin was consumed only by an accepted valid submit; validation and Back-before-submit did not create authentication attempts. Firebase ingestion remains waived.
+- Diagnostics: PASS locally for bounded route/retry/start/failure/recovery breadcrumbs and no exception/crash on expected validation/auth rejection. Firebase Crashlytics delivery remains unverified.
+- No username, password, server URL, account identifier, screenshot, raw UI hierarchy, or raw log dump is retained. Synthetic inputs existed transiently only in Parrot and were not saved by Android.
