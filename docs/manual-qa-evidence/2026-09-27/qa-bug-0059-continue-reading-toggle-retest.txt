@@ -1,0 +1,28 @@
+QA-BUG-0059 / case 425 — Show Continue Reading toggle Analytics retest
+Date: 2026-09-27 (device local time; CEST, UTC+0200)
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, firmware `S921BXXSGDZG1`.
+- Package `com.retro99.parrot`, version 0.4.5 (21), debug APK, target SDK 36; PID `14481`.
+- Source commit `9503b45e` adds the typed toggle event/emission; build also contains `63306140` (QA-BUG-0058), `7669f849` (QA-BUG-0056), `c0d8545d` (QA-BUG-0057), and separate QA-BUG-0049 working-tree changes.
+- Local and Samsung-installed APK SHA-256 matched: `319fba7efbd020c8b799ecb82f5af249e99b89119b3a4749ffe939ec626b1a7c`. Updated over existing data; no uninstall or data clear.
+
+Host/build verification
+- `:feature:home:ui:testAndroidHostTest` PASS.
+- `:lib:analytics:implementation:testAndroidHostTest` PASS; new schema test checks exact event name, both boolean states, and rejection of a private `profile_id` parameter.
+- `:androidApp:assembleDebug` PASS. Combined command completed successfully (596 actionable tasks; 76 executed).
+
+Samsung execution
+- Started with original profile active and Show Continue Reading enabled. Opened App Settings and tapped the preference off, then navigated to Books and returned to App Settings; toggled it back on.
+- UI state after the off action showed the switch unchecked. After the on action, Show Continue Reading was checked again; Open Last Book remained checked. The original setting value was restored.
+- PID-scoped local DebugAnalyticsManager output contained exactly two `show_continue_reading_toggled` events: `is_enabled=false` at `21:48:02.916` and `is_enabled=true` at `21:49:55.217`. No duplicate toggle event or profile/book identifier appeared. The first App Settings exposure was `source_screen=books`, `entry_point=bottom_navigation`; a later App Settings exposure came from navigation Back and had bounded `source_screen=statistics`, `entry_point=navigation_back`.
+- The Books screen had no Continue Reading shelf or accessible floating bubble even with the preference enabled before the test; no current-reading content fixture was available. Therefore the shelf/bubble hide-and-return visual subvariant is N-A, not PASS. The toggle behavior, persisted final state and event outcomes are directly verified.
+- Zero PID-scoped fatal-crash markers and zero exception-report markers. No failure was induced; Crashlytics delivery was not tested.
+
+Analytics/diagnostics qualification
+- Event evidence is local DebugAnalyticsManager output only. Firebase Analytics ingestion is waived and no Firebase-delivery claim is made. Crashlytics Console delivery remains unverified.
+- No profile/book title or identifier, screenshot, raw UI hierarchy, or raw log line was retained.
+
+Disposition
+- QA-BUG-0059: implementation/host schema PASS and Samsung toggle Analytics PASS; Firebase delivery remains waived/unverified.
+- Case 425: direct preference off/on and matching local events PASS. Shelf/floating-bubble visibility is N-A because no current-reading content was available, so that visual variant is not claimed as exercised.
