@@ -533,3 +533,21 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Fix reference / commit:** `13ead5d85f5db281805fb52dcc35a0706a1d6e98` (`fix(navigation): reuse restored Reader launch [QA-BUG-0029/0030/0031, case 461]`). The code preserves the ReaderViewModel's terminal owner when a matching saved Reader has `isLastBookOnLaunch=true`; a matching ordinary restored Reader with no pending launch outcome gets one explicit skipped terminal. No time-based event deduplication.
 - **Retest:** PASS on Samsung final-hash candidate APK `d3770e18814e974053ece48ba03e2058bb212762675ac7fe37178124731dba47`, PID `2107`: exactly one `last_book_launch_attempted`, one `book_opened`, one `last_book_launch_completed(outcome=succeeded, stage=usable_content)`, and a non-terminal route-restored breadcrumb followed by the success breadcrumb. EPUB text visible at page 29/64, 49%. Host route tests (2), Analytics sanitizer tests (12) and Android debug assembly passed. Firebase Analytics ingestion is waived; Crashlytics delivery remains unverified.
 - **Discovery/evidence commits:** intermediate QA-BUG-0031 observation `894706d1`; final fix/retest/evidence `13ead5d85f5db281805fb52dcc35a0706a1d6e98`.
+
+## QA-BUG-0032 — Settings tab is selected without leaving Statistics
+
+- **Severity / user impact:** Moderate recoverable navigation degradation; tapping Settings from Statistics changes selected-tab styling but leaves Statistics content visible, so the requested destination is silently unavailable from this transition and the selected state misrepresents the route.
+- **Status:** CONFIRMED on Samsung on 2026-09-27. Root cause and fix pending. This discovery pauses case 14 before airplane mode is enabled; device network state is unchanged.
+- **Screen/test IDs:** Main tab navigation, Statistics, Settings; case 535 (Statistics → Settings pair, partial variant), with context from cases 385 and 695.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; `com.retro99.parrot` 0.4.5 (21), debug source commit `13ead5d85f5db281805fb52dcc35a0706a1d6e98`, APK SHA-256 `d3770e18814e974053ece48ba03e2058bb212762675ac7fe37178124731dba47`, PID `20992`.
+- **Preconditions:** Statistics dashboard visible in the default profile, airplane mode off, app data and local library unchanged.
+- **Exact reproduction:** From Statistics, tap bottom-navigation `Settings` three times after waiting for each UI to settle (about 04:24:06, 04:24:20 and 04:24:32 CEST). After each, inspect the title/body and selected-tab styling.
+- **Expected:** Settings root/hub content becomes visible and the selected state corresponds to the destination.
+- **Actual:** Settings gear is selected while the title remains `Reading Statistics` and Statistics cards remain visible. Each attempt emitted `tab_switched {tab_name=settings}` without a visible route transition.
+- **Frequency:** Same mismatch observed after 3/3 tap attempts in this run; first observation recorded before source changes.
+- **Evidence:** [Pre-fix screenshot and PID-scoped local event excerpt](manual-qa-evidence/2026-09-27/qa-bug-0032-settings-tab-no-op-observation.txt), [screenshot](manual-qa-evidence/2026-09-27/case-014-pre-offline-statistics-state.png).
+- **Root cause:** Suspected tab-selection state is being updated independently of destination navigation; source audit pending. Do not count an attempt event as a successful navigation.
+- **Affected files:** Pending source audit; expected area is main-tab navigation and event reporting.
+- **Fix reference / commit:** None yet. Must identify why destination content fails to follow the selected tab, correct any attempt/success event semantics, add regression coverage and a bounded unexpected-failure diagnostic if the silent failure can recur.
+- **Retest:** NOT RUN after fix. Case 535 must be re-executed on the Samsung after a focused fix; verify Settings content, matching selected state, one attempt and one successful transition event, and actionable failure reporting at the boundary if an unexpected navigation failure remains possible. Firebase Analytics ingestion is waived; Crashlytics delivery is separately blocked/unverified.
+- **Discovery/documentation commit:** To be recorded by the next documentation commit.

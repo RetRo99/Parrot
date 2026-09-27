@@ -1,0 +1,25 @@
+QA-BUG-0032 — Settings tab selected while Statistics content remains
+Discovery: 2026-09-27, Samsung local CEST (UTC+0200), about 04:24.
+
+Device/build
+- Physical Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- `com.retro99.parrot` 0.4.5 (21), debug, source commit `13ead5d85f5db281805fb52dcc35a0706a1d6e98`, APK SHA-256 `d3770e18814e974053ece48ba03e2058bb212762675ac7fe37178124731dba47`.
+- Process PID `20992`; system locale `en-GB`; airplane mode off, Wi-Fi on. Imported local *Pride and Prejudice* retained; no app data changed.
+
+Precondition and reproduction
+1. From the Reader, close to Book Detail, then enter Statistics. The rendered Statistics dashboard showed `Reading Statistics`, Today/Week/Month/Total Time, Books Read, Total Sessions and streak cards.
+2. Tap the Settings item in the bottom navigation (accessible label `Settings`, observed coordinates near x=953,y=2196–2238) three times at approximately 04:24:06, 04:24:20 and 04:24:32.
+3. Inspect the resulting screen after each settled tap.
+
+Expected: Navigate to the Settings root/hub; Settings is selected and Settings content is visible.
+
+Actual: Settings gear becomes visibly selected, but the title and all body content remain the Statistics dashboard. The three tap attempts emitted three local `tab_switched {tab_name=settings}` events. No route/screen transition or visible Settings content followed. Screenshot: [mismatched selected tab and content](case-014-pre-offline-statistics-state.png).
+
+PID-scoped log excerpt:
+```text
+09-27 04:24:06.637 20992 D ... Analytics Event: tab_switched | Parameters: {tab_name=settings}
+09-27 04:24:20.333 20992 D ... Analytics Event: tab_switched | Parameters: {tab_name=settings}
+09-27 04:24:32.064 20992 D ... Analytics Event: tab_switched | Parameters: {tab_name=settings}
+```
+
+This is a confirmed user-visible tab/content mismatch and silent navigation failure on this build. Source root cause is not yet audited; do not infer the Settings feature itself is broken via every entry point. No network setting was changed and case 14's offline run has not started. Local DebugAnalyticsManager output is not Firebase Analytics delivery evidence. Firebase ingestion is waived; Crashlytics receipt is not verified.
