@@ -449,6 +449,7 @@ class AppSettingsViewModel(
 
     private fun setShowContinueReading(enabled: Boolean) {
         preferences.putBoolean(PreferencesKey.ShowContinueReading, enabled)
+        analytics.logEvent(AppSettingsAnalyticsEvent.ShowContinueReadingToggled(isEnabled = enabled))
         updateState { it.copy(showContinueReading = enabled) }
     }
 

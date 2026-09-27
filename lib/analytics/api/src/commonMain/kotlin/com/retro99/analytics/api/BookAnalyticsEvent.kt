@@ -1040,6 +1040,15 @@ sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    data class ShowContinueReadingToggled(
+        val isEnabled: Boolean,
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "show_continue_reading_toggled"
+        override val parameters: Map<String, Any> = mapOf(
+            "is_enabled" to isEnabled,
+        )
+    }
+
     data object LogsShared : AppSettingsAnalyticsEvent {
         override val name: String = "logs_shared"
     }

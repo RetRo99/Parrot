@@ -868,6 +868,20 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun showContinueReadingToggleEventRetainsOnlyCommittedBooleanState() {
+        val disabled = AppSettingsAnalyticsEvent.ShowContinueReadingToggled(isEnabled = false)
+        val enabled = AppSettingsAnalyticsEvent.ShowContinueReadingToggled(isEnabled = true)
+
+        assertEquals("show_continue_reading_toggled", disabled.name)
+        assertEquals(mapOf("is_enabled" to false), sanitizeAnalyticsParameters(disabled.parameters))
+        assertEquals(mapOf("is_enabled" to true), sanitizeAnalyticsParameters(enabled.parameters))
+        assertEquals(
+            mapOf("is_enabled" to true),
+            sanitizeAnalyticsParameters(enabled.parameters + ("profile_id" to "private-profile-id")),
+        )
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(
