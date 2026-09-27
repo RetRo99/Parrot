@@ -1,0 +1,34 @@
+Case 11 / Case 461 — last-book restoration after Recents swipe-away (QA-BUG-0026 retest)
+Date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Physical Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`, gesture navigation.
+- `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug; fix commit `b18cd671f5a54b504a1b39e6aa9e33918f25dfaa`; local/Samsung-pulled APK SHA-256 `2c5e6ec146c89fc8a4ebe8494a46949dd74104a18b38f4bc5556de25abf4b67b`.
+- Default local profile; “Open Last Book on Launch” and “Show Continue Reading” checked. The app was updated with `adb install -r`; no credentials were entered and no Parrot data was cleared.
+
+Preconditions and steps
+1. To repeat the failing condition, used the supported App Settings → Clear Current Book action on the installed fix build. The action showed “Current book cleared”; the imported local *Pride and Prejudice* and its saved position remained. Both reading preferences remained enabled.
+2. Opened the book from Books → Continue reading at page 28/64 (49%), advanced one page to page 29/64 and left the Reader open for more than 60 seconds. The qualifying Reader session's PID was `27259`; screenshot immediately before process removal: [`case-011-checkpoint-final-reader-before-kill.png`](case-011-checkpoint-final-reader-before-kill.png).
+3. At 03:02:06 CEST, a single threshold checkpoint persisted the current-book target. Then pressed Home, opened Recents, and swiped only Parrot's task card upward. At 03:03:26, `pidof com.retro99.parrot` returned no PID; Recents was the resumed activity. This is a user Recents swipe-away, not force-stop.
+4. Relaunched `com.retro99.parrot/.android.MainActivity` at about 03:03:32. New PID `31322` opened the Reader directly at *Pride and Prejudice*, page 29/64, 49%—the same saved location. Screenshot: [`case-011-checkpoint-final-relaunch.png`](case-011-checkpoint-final-relaunch.png).
+
+PID-scoped local DebugAnalyticsManager excerpt
+```text
+09-27 03:02:06.797 27259 D ... Analytics Event: current_book_target_save_attempted | {screen=reader, action=save_current_book_target, operation=current_book_target_save, stage=started, outcome=started, entry_point=reading_duration_threshold, book_type=ebook, is_retry=false}
+09-27 03:02:06.798 27259 D ... Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=started outcome=started media_type=ebook correlation_id=e3fa9863-b602-4907-aedf-ed5a345ae6ca
+09-27 03:02:06.815 27259 D ... Analytics Event: current_book_target_save_completed | {screen=reader, action=save_current_book_target, operation=current_book_target_save, stage=terminal, outcome=succeeded, entry_point=reading_duration_threshold, book_type=ebook, is_retry=false}
+09-27 03:02:06.815 27259 D ... Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=terminal outcome=succeeded media_type=ebook correlation_id=e3fa9863-b602-4907-aedf-ed5a345ae6ca
+09-27 03:03:32.022 31322 D ... Analytics Event: app_launch_route_resolved | {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}
+09-27 03:03:32.022 31322 D ... Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded reason_code=auth_state_check_completed
+09-27 03:03:32.060 31322 D ... Analytics Event: last_book_launch_attempted | {screen=home, source_screen=splash, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=navigation, outcome=started, book_type=ebook}
+09-27 03:03:32.060 31322 D ... Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=open_last_book operation=reader_open stage=navigation outcome=started media_type=ebook
+09-27 03:03:32.700 31322 D ... Analytics Event: last_book_launch_completed | {screen=reader, source_screen=home, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=usable_content, outcome=succeeded, book_type=ebook}
+09-27 03:03:32.701 31322 D ... Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=home entry_point=app_launch action=open_last_book operation=reader_open stage=usable_content outcome=succeeded media_type=ebook
+```
+
+Results
+- Case 11 functional: PASS on this tested Recents-swipe variant; the persisted target restored the Reader at the same 49% position. This retest follows the retained pre-fix FAIL in [the original run](case-011-recents-swipe-process-death.txt).
+- Case 11 Analytics: PASS for the local provider: exactly one target checkpoint attempt and success for the qualifying post-clear session, then one startup route, last-book attempt, and usable-content completion. The attempt/success events have bounded dimensions; Firebase Analytics ingestion was waived and is not claimed.
+- Case 11 diagnostics: PASS for correlated target-save start/success and startup route/usable-content breadcrumbs. The on-device persistence-failure branch was not induced; host tests cover one non-fatal report, cancellation propagation, and a distinctly marked retry. Crashlytics delivery remains blocked/unverified.
+- Case 461: PASS for this Recents-swipe-away-while-Reader-active variant. Background kill with task retained and force-stop variants remain NOT RUN; the parent case is not complete.
+- A separate Reader session on this PID before the supported clear-current precondition also reached its checkpoint. The quoted correlation ID and case result refer only to the post-clear session at 03:02:06; that earlier setup session is not counted as an additional retest attempt.

@@ -1,0 +1,29 @@
+Case 461 — kill Reader's background process while retaining its Recents task
+Date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Physical Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`, gesture navigation.
+- `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug, QA-BUG-0026 fix commit `b18cd671f5a54b504a1b39e6aa9e33918f25dfaa`; local/Samsung-pulled APK SHA-256 `2c5e6ec146c89fc8a4ebe8494a46949dd74104a18b38f4bc5556de25abf4b67b`.
+- Default local profile, local imported *Pride and Prejudice*, saved position page 29/64 (49%). No credentials or app-data reset.
+
+Preconditions and exact steps
+1. Opened the local EPUB in Reader at page 29/64 (49%). A 60-second current-book checkpoint succeeded at 03:13:10.719 CEST (PID `2412`, correlation ID `364ab324-d5d9-4499-93e7-0b1483c4dfbc`). Pre-kill screen: [`case-461-reader-before-background-kill.png`](case-461-reader-before-background-kill.png).
+2. Pressed Home, opened Samsung Recents, and confirmed the Parrot task card remained (`taskView desc="Parrot"`). `adb shell kill -9 2412` was rejected by the device shell (`Operation not permitted`), so used the Android-supported background process command `adb -s RFCWC0SSVDM shell am kill com.retro99.parrot`. `pidof` then returned no PID while Recents remained the resumed activity and Parrot's task card remained visible.
+3. Tapped the existing Parrot card in Recents. New process PID `8228` opened the Reader route; toolbar/title and 49% indicator appeared, but the reading-content surface was solid black. Screenshots: [immediate result](case-461-after-retained-task-kill.png), [after tapping the Reader surface](case-461-after-retained-task-tap.png), and [settled observation](case-461-after-retained-task-settled.png).
+4. The content remained black for at least 30 seconds. Tapping the surface restored the toolbar but not publication text. The local process stayed alive; no `FATAL EXCEPTION` or `Fatal signal` was found in the inspected PID/system log window.
+
+Local event excerpt (debug provider only)
+```text
+09-27 03:14:34.336 8228 D ... Analytics Event: last_book_launch_attempted | {screen=home, source_screen=splash, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=navigation, outcome=started, book_type=ebook}
+09-27 03:14:34.336 8228 D ... Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=open_last_book operation=reader_open stage=navigation outcome=started media_type=ebook
+09-27 03:14:34.885 8228 D ... Analytics Event: last_book_launch_completed | {screen=reader, source_screen=home, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=usable_content, outcome=succeeded, book_type=ebook}
+09-27 03:14:34.885 8228 D ... Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=home entry_point=app_launch action=open_last_book operation=reader_open stage=usable_content outcome=succeeded media_type=ebook
+```
+
+Results / defect
+- Functional: FAIL; a retained-task process death returns to a black Reader surface instead of usable book content or a recoverable error.
+- Analytics: FAIL; the startup operation reports `usable_content/succeeded` despite the persistent blank publication surface. Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: FAIL; no blank-render/stuck-reader diagnostic or non-fatal was observed. This is a local DebugAnalyticsManager audit, not proof of Firebase Crashlytics delivery.
+- This differs from QA-BUG-0026's swipe-away case: here the task remained in Recents and opening that task caused the Reader restoration path. The ordinary clear-task relaunch passed the QA-BUG-0026 retest.
+- Root cause is pending source audit; likely area is saved task/navigation restoration versus fresh Readium/WebView publication initialization. Do not claim this hypothesis as confirmed.
+- Exact experiment/result and screenshot evidence are retained so recovery attempts and any later fix can be added without overwriting this observation.

@@ -1,0 +1,27 @@
+Case 12 — Open last book on launch when no current-book target exists
+Date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`, gesture navigation.
+- `com.retro99.parrot` 0.4.5 (21), debug, fix commit `b18cd671f5a54b504a1b39e6aa9e33918f25dfaa`; installed/local/Samsung-pulled APK SHA-256 `2c5e6ec146c89fc8a4ebe8494a46949dd74104a18b38f4bc5556de25abf4b67b`.
+- Default local profile. Both “Open Last Book on Launch” and “Show Continue Reading” remained enabled. No credentials or app-data reset were used.
+
+Preconditions and steps
+1. In App Settings, tapped “Clear Current Book.” The success snackbar appeared and the current-book row disappeared; the imported book and saved library progress were retained.
+2. Pressed Home, opened Recents and swiped only Parrot's task card away. `pidof com.retro99.parrot` returned no process at 03:06:38.
+3. Relaunched `com.retro99.parrot/.android.MainActivity`. New PID `2412` resolved to Home/Books at 03:06:44. The local book card and saved 49% position remained; no Reader route, blank screen or error appeared. Screenshot: [`case-012-no-current-b18-retest.png`](case-012-no-current-b18-retest.png).
+
+PID-scoped local DebugAnalyticsManager excerpt
+```text
+09-27 03:06:44.719 2412 D ... Analytics Event: app_launch_route_resolved | {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}
+09-27 03:06:44.719 2412 D ... Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded reason_code=auth_state_check_completed
+09-27 03:06:44.756 2412 D ... Analytics Event: last_book_launch_completed | {screen=home, source_screen=splash, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=terminal, outcome=skipped, reason_code=no_current_book}
+09-27 03:06:44.756 2412 D ... Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=open_last_book operation=reader_open stage=terminal outcome=skipped reason_code=no_current_book
+09-27 03:06:45.011 2412 D ... Analytics Event: home_screen_viewed | {screen=home, source_screen=splash, entry_point=app_launch}
+```
+
+Results
+- Functional: PASS; normal Home Books route and library remain usable without opening Reader.
+- Analytics: PASS for local route-resolved, one `skipped/no_current_book` outcome and one Home exposure; Firebase ingestion is waived and not claimed.
+- Diagnostics: PASS for route-selected and no-current-book terminal breadcrumbs. No unexpected error was induced; Crashlytics delivery remains blocked/unverified.
+- This retest verifies the adjacent no-target fallback on the same final bug-fix build as case 11. It does not close case 461's remaining interruption variants.
