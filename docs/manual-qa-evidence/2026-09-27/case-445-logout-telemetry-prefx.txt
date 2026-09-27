@@ -1,0 +1,27 @@
+Case 445 / QA-BUG-0040 logout telemetry pre-fix Samsung observation
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `12486`, source commit `9a782d9220f6f24b67fcde80143a8f721ed430b1`.
+- Installed debug APK SHA-256 `6945eaeef0857d68527beaf5084b557ade2e832e6a54b5c64337039f5d18ca8d` (local/Samsung hashes matched in the preceding Reader retest; no install/source changes occurred before this action).
+
+Preconditions and action
+- Case 22/442 had left the sole registered remote server authenticated. Case 444 needs a logged-out server, so this case-445 Logout action was executed first solely to establish that required fixture; the out-of-order setup and reason are explicit in the results ledger.
+- Opened Settings → Servers and tapped the authenticated card's accessible Logout action once. No other server existed to compare; multi-server isolation is not claimed.
+- The card remained present with the same server type and changed to the visible `Not logged in` state. The Logout action disappeared; Remove remained available. Server Management stayed usable and no crash/fatal marker appeared.
+
+Pre-fix observability
+- At 10:38:47.347 CEST, app PID `12486` emitted exactly one local debug event:
+  ```
+  Analytics Event: server_logged_out
+  ```
+- There was no logout attempt event, bounded terminal outcome/context, or logout-specific start/stage/terminal diagnostic breadcrumb. The separate screen-exposure breadcrumb from entering Server Management is not logout-operation coverage.
+- Source `ServerManagementViewModel.onLogoutClick()` confirms `ServerLoggedOut` is logged before awaiting `serverRegistry.clearCredentials(serverId)`. The runtime action completed, but the event itself cannot prove completion and would be a false success if the mutation failed.
+- No persistence failure was induced. Crashlytics is N-A for this successful logout; a failed registry write/failure-recovery variant remains separately unverified (QA-BUG-0043).
+
+Results
+- Case 445 fixture-setup variant / sole Storyteller server: Functional **PASS** (card transitioned to Not logged in; screen remained usable). Analytics **FAIL** (one success-named event, emitted before operation completion; no distinct attempt/success separation). Diagnostics **FAIL** for absent operation breadcrumbs; no failure/non-fatal should be reported for ordinary successful logout.
+- The logged-out card is now the available precondition for case 444. Preserve case-22/442 authenticated-card evidence; do not claim other-server isolation from this single-server run.
+
+The source gap was already recorded in QA-BUG-0040 before this action. This artifact records its first Samsung success-path reproduction, before any fix. No account name, URL, credential, server ID or raw accessibility hierarchy is retained. Analytics logs are local-only; Firebase ingestion is waived and not claimed.
