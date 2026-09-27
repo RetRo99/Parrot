@@ -1,0 +1,31 @@
+Case 16 — Server URL help tooltip, corrected committed-build retest
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Installed `com.retro99.parrot` 0.4.5 (21), debug, source commit `0eaa3ec6a6945199bbd80d765e6efa9ef4aede0e` (`fix(analytics): report URL help dismissal [QA-BUG-0035, case 16]`), PID `28181`.
+- APK SHA-256: local `androidApp/build/outputs/apk/debug/androidApp-debug.apk` and Samsung-pulled `base.apk` both `75425b0b0d4fe71eecccfbb89aa12bfd9caf1023c63883d2100f2cba2c08a196`.
+- Host tests passed: `:lib:analytics:implementation:testAndroidHostTest` and `:feature:login:ui:testAndroidHostTest`; `:androidApp:assembleDebug` succeeded.
+- Login reached by Settings → Servers → Add Server. Storyteller selected; URL remained at the `https://` placeholder, username/password empty, Sign In disabled. No credentials entered or submitted; no app data cleared.
+
+Steps and functional result
+1. Tap accessible `URL info` next to Server URL. RichTooltip appears, headed `Server URL`, and explains the required full URL scheme with local IP/port and domain examples. [Tooltip open](case-016-url-tooltip-corrected-open.png).
+2. Tap `Got it` (device tap at `(300,808)`). The tooltip closes. Login remains visible; selected server type and all form fields are unchanged. [After Got it](case-016-url-tooltip-corrected-got-it-dismissed.png).
+
+PID-scoped local Analytics/diagnostic log
+```
+09-27 06:04:35.160 28181 D Analytics Event: login_url_help_attempted | Parameters: {screen=login, action=view_url_help, operation=url_help_tooltip, stage=started, outcome=started, server_type=storyteller}
+09-27 06:04:35.160 28181 D Diagnostic breadcrumb: diagnostic_context screen=login action=view_url_help operation=url_help_tooltip stage=started outcome=started server_type=storyteller correlation_id=472b7320-c938-4427-86a1-da370e5cbaf3
+09-27 06:04:35.165 28181 D Analytics Event: login_url_help_opened | Parameters: {screen=login, action=view_url_help, operation=url_help_tooltip, stage=visible, outcome=succeeded, server_type=storyteller}
+09-27 06:04:35.165 28181 D Diagnostic breadcrumb: diagnostic_context screen=login action=view_url_help operation=url_help_tooltip stage=visible outcome=succeeded server_type=storyteller correlation_id=472b7320-c938-4427-86a1-da370e5cbaf3
+09-27 06:04:57.508 28181 D Analytics Event: login_url_help_dismissed | Parameters: {screen=login, action=view_url_help, operation=url_help_tooltip, stage=terminal, outcome=cancelled, server_type=storyteller, reason_code=got_it}
+09-27 06:04:57.509 28181 D Diagnostic breadcrumb: diagnostic_context screen=login action=view_url_help operation=url_help_tooltip stage=dismissed outcome=cancelled reason_code=got_it server_type=storyteller correlation_id=472b7320-c938-4427-86a1-da370e5cbaf3
+```
+- Exactly one attempt, opened success and `got_it` cancellation event occurred in this operation. The diagnostic-only correlation ID matched across all three breadcrumbs and was not sent as an Analytics parameter.
+- No URL, username, password or free-form help content appeared in the event parameters. No auth success/failure event, fatal exception or unexpected UX failure occurred. Crashlytics reporting is N-A for normal help open/dismiss; delivery remains unverified separately.
+
+Results, separately by dimension
+- Functional: **PASS** — content shown and dismissed; form state unchanged.
+- Analytics: **PASS** for local DebugAnalyticsManager semantics — attempt, opened success and explicit cancellation outcomes logged. Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: **PASS** — correlated start/visible/dismissed breadcrumbs; no unexpected exception. Crashlytics is not expected for normal dismissal.
+- Case 752 outside-tap/system-Back variants are not part of this case-16 run and remain NOT RUN until their catalogue position.
