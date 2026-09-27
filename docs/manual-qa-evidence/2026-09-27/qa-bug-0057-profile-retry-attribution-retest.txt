@@ -1,0 +1,24 @@
+QA-BUG-0057 — Samsung installed-build smoke and host retry-attribution regression
+Date: 2026-09-27 (device local time; CEST, UTC+0200)
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, firmware `S921BXXSGDZG1`.
+- Package `com.retro99.parrot`, version 0.4.5 (21), debug APK, target SDK 36.
+- Source commit: `c0d8545d` (QA-BUG-0057 fix), with QA-BUG-0053 `b428b334`, QA-BUG-0052 `2d436099`, QA-BUG-0054 `9e0f707b`, and a separate, still-uncommitted QA-BUG-0049 playback-stop candidate.
+- Samsung PID `20327`. APK SHA-256 `f410e98f799d359b4353af45f86fa12c61dd952a439dc112fd6e615aa742d6df`; local build and installed APK hashes match. Updated over existing app data; no uninstall, clear-data or profile mutation.
+
+Host verification
+- `:feature:home:ui:testAndroidHostTest` PASS and `:androidApp:assembleDebug` PASS.
+- Regression tests cover failed target A followed by a retry of target A; target B as a first attempt; new create-dialog session as a first attempt; cancellation cleanup; successful retry clearing only its own key; and correlated attempt/failure/success telemetry without profile identifiers.
+- The controlled failing operation exists only in the unit test. No Samsung persistence failure was injected.
+
+Samsung execution
+- Relaunched Parrot from its existing saved Reader error route, used system Back to return to Books, entered App Settings through the Settings tab, opened Add Profile, and cancelled using the visible Cancel control.
+- Settings and Profiles remained visible after cancellation. No profile was created, renamed, switched or deleted. Raw UI hierarchy and screenshots were not retained.
+- PID-scoped DebugAnalyticsManager records: exactly one `app_settings_screen_viewed` with `source_screen=books`, `entry_point=bottom_navigation`; one matching `app_settings_route` visible/succeeded breadcrumb; one `profile_operation_dialog_opened` for Create followed by one `profile_operation_cancelled(entry_point=cancel_button)`.
+- Zero profile operation attempts, mutation-success events, exception markers or fatal-crash markers. No failure was induced, so this does not verify device retry event semantics or Crashlytics delivery.
+- DebugAnalyticsManager is local-only. Firebase Analytics ingestion is waived; no Firebase-delivery claim is made. Crashlytics Console delivery remains unverified.
+
+Disposition
+- QA-BUG-0057 implementation and host regression PASS; installed-build/screen continuity smoke PASS.
+- On-device failed-write → same-session retry outcome remains BLOCKED pending a disposable profile and controlled persistence-failure fixture. Do not modify the sole existing profile to force this variant.

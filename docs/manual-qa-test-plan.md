@@ -537,11 +537,11 @@ Ordinary cached-library browsing, sign-in handshakes, downloads, account control
 |---|---|---|---|
 | 408 | Profiles row renders | Open App Settings | Current profile and profile tiles visible |
 | 409 | Switch profile | Tap another profile | App switches: library, filters, reader settings and stats change per profile; nav stacks reset |
-| 410 | Long-press profile | Long-press a profile tile | Context menu with Rename and Delete |
+| 410 | Long-press profile | Long-press a profile tile | Context menu with Rename; Delete appears only when another profile will remain |
 | 411 | Rename profile | Rename and confirm | New name shown everywhere |
 | 412 | Delete profile | Delete and confirm | Profile and its data removed |
 | 413 | Add profile | Tap Add profile, enter a name, confirm | New profile created and becomes available |
-| 414 | Empty profile name | Submit a blank name | Validation, no profile created |
+| 414 | Empty profile name | Attempt to submit a blank name | Confirm is disabled/blank submission is ignored; no profile is created |
 | 415 | Duplicate profile names | Create two profiles with the same name | Allowed or rejected consistently — no confusion in switching |
 | 416 | Long profile name | Enter a very long name | Name truncates/wraps gracefully in tiles and menus |
 | 417 | Switch profile during playback | Switch while audio plays | Behaviour as designed (stop or continue) with no crash |
@@ -1032,3 +1032,13 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 758 | Last-book launch when its server is logged out | Enable Open Last Book on Launch and set a current book; log out that book's server, then relaunch Parrot. Exercise Retry and Back; reauthenticate through the reachable Server Management Login action and reopen the saved book | Do not claim the book opened until usable content is visible. Show an actionable reauthentication path or a safe Home/Books fallback; preserve the saved target. Emit one `last_book_launch_attempted` and one failed/skipped terminal outcome with bounded `server_not_authenticated` context. No Crashlytics issue for expected logged-out state; Retry/Back/re-login must not lose the target or create a startup loop. |
+
+## 41. Profile action-level dismissal and repeat extensions
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 759 | Visible profile edit affordance | In App Settings, activate the visible Edit affordance on a profile; compare with long-press | Both entry methods open the same profile action menu; Analytics distinguishes `edit_button` from `long_press`; no profile mutation occurs merely from opening the menu |
+| 760 | Add Profile cancellation paths | Open Add Profile; independently dismiss with Cancel, outside tap and system Back | Each presentation closes without creating/activating a profile; one dialog-open and one cancelled outcome per presentation, with `cancel_button` or bounded `dismiss_request`; no Crashlytics report |
+| 761 | Rename Profile cancellation paths | Open Rename; independently dismiss with Cancel, outside tap and system Back | Existing profile label and active state remain unchanged; one dialog-open and one cancelled outcome per presentation; no mutation attempt or Crashlytics report |
+| 762 | Delete Profile cancellation paths | With a disposable non-last profile selected, open Delete confirmation; cancel by button, outside tap and system Back | Profile and its local data remain; one dialog-open and one cancelled outcome per presentation; no delete attempt or Crashlytics report. BLOCKED without a disposable non-last profile |
+| 763 | Profile menu dismissal paths | Open a profile menu by long-press and Edit; dismiss each by outside tap and system Back | Menu closes without selecting Rename/Delete; one bounded menu-dismissal outcome per dismissal (`dismiss_request` for outside/System Back); no profile mutation |
