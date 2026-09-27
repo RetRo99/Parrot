@@ -649,6 +649,40 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun loginValidationEventAllowsOnlyKnownFieldAndSafeReason() {
+        val validation = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginValidationFailed(
+                serverType = "storyteller",
+                field = "server_url",
+                reasonCode = "invalid_url",
+            ).parameters + mapOf(
+                "url" to "not a url",
+                "server_url" to "https://private.example",
+                "username" to "private-user",
+                "custom_field" to "private_form_value",
+            ),
+        )
+        val unsafeField = sanitizeAnalyticsParameters(
+            mapOf("field" to "private_form_value", "screen" to "login"),
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "validate_form",
+                "operation" to "login_validation",
+                "stage" to "terminal",
+                "outcome" to "failed",
+                "server_type" to "storyteller",
+                "field" to "server_url",
+                "reason_code" to "invalid_url",
+            ),
+            validation,
+        )
+        assertEquals(mapOf("screen" to "login"), unsafeField)
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(

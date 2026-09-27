@@ -151,6 +151,69 @@ class LoginServerTypePickerTest {
         assertEquals(0, analytics.exceptions.size)
     }
 
+    @Test
+    fun invalidUrlValidationDeduplicatesAcrossBlankReplacementUntilAValidUrl() {
+        val analytics = RecordingAnalytics()
+        val telemetry = LoginValidationTelemetry(analytics)
+
+        telemetry.onUrlValidationChanged(
+            error = null,
+            hasValidServerUrl = false,
+            serverType = ServerType.Storyteller,
+        )
+        telemetry.onUrlValidationChanged(
+            LoginFieldError.InvalidUrl,
+            hasValidServerUrl = false,
+            serverType = ServerType.Storyteller,
+        )
+        telemetry.onUrlValidationChanged(
+            LoginFieldError.InvalidUrl,
+            hasValidServerUrl = false,
+            serverType = ServerType.Storyteller,
+        )
+        telemetry.onUrlValidationChanged(
+            error = null,
+            hasValidServerUrl = false,
+            serverType = ServerType.Storyteller,
+        )
+        telemetry.onUrlValidationChanged(
+            LoginFieldError.InvalidUrl,
+            hasValidServerUrl = false,
+            serverType = ServerType.Storyteller,
+        )
+        telemetry.onUrlValidationChanged(
+            error = null,
+            hasValidServerUrl = true,
+            serverType = ServerType.Storyteller,
+        )
+        telemetry.onUrlValidationChanged(
+            LoginFieldError.InvalidUrl,
+            hasValidServerUrl = false,
+            serverType = ServerType.Storyteller,
+        )
+
+        assertEquals(
+            listOf("login_validation_failed", "login_validation_failed"),
+            analytics.events.map { it.name },
+        )
+        assertTrue(analytics.events.all { it.parameters["screen"] == "login" })
+        assertTrue(analytics.events.all { it.parameters["field"] == "server_url" })
+        assertTrue(analytics.events.all { it.parameters["reason_code"] == "invalid_url" })
+        assertTrue(analytics.events.all { it.parameters["outcome"] == "failed" })
+        assertFalse(
+            analytics.events.any {
+                "url" in it.parameters || "server_url" in it.parameters || "username" in it.parameters
+            },
+        )
+        assertEquals(2, analytics.breadcrumbs.size)
+        assertTrue(analytics.breadcrumbs.all { it.operation == "login_validation" })
+        assertTrue(analytics.breadcrumbs.all { it.reasonCode == "invalid_url" })
+        assertTrue(analytics.breadcrumbs.all { it.outcome == "failed" })
+        assertTrue(analytics.breadcrumbs.all { !it.correlationId.isNullOrBlank() })
+        assertEquals(2, analytics.breadcrumbs.map { it.correlationId }.distinct().size)
+        assertEquals(0, analytics.exceptions.size)
+    }
+
     private fun createViewModel(analytics: RecordingAnalytics) = LoginViewModel(
         loginUseCase = LoginUseCase(StubLoginRepository),
         analytics = analytics,

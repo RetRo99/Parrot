@@ -38,6 +38,7 @@ class LoginViewModel(
     private val activeLoginAttempts = mutableMapOf<String, LoginAttempt>()
     private var activeServerTypePicker: ServerTypePickerAttempt? = null
     private var activeUrlHelpAttempt: UrlHelpAttempt? = null
+    private val validationTelemetry = LoginValidationTelemetry(analytics)
 
     init {
         observeTextFieldChanges()
@@ -65,9 +66,13 @@ class LoginViewModel(
         username: String,
         password: String,
     ) {
+        val urlError = validateUrl(url)
+        validationTelemetry.onUrlValidationChanged(
+            error = urlError,
+            hasValidServerUrl = isValidServerUrl(url),
+            serverType = viewState.value.selectedServerType,
+        )
         updateState { currentState ->
-            val urlError = validateUrl(url)
-
             val allFieldsNotEmpty =
                 url.isNotBlank() && username.isNotBlank() && password.isNotBlank()
             val noErrors = urlError == null

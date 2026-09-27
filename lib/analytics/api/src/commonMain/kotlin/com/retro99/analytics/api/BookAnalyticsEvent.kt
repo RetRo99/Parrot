@@ -278,6 +278,24 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    data class LoginValidationFailed(
+        val serverType: String,
+        val field: String,
+        val reasonCode: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_validation_failed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "validate_form",
+            "operation" to "login_validation",
+            "stage" to "terminal",
+            "outcome" to "failed",
+            "server_type" to serverType,
+            "field" to field,
+            "reason_code" to reasonCode,
+        )
+    }
+
     data class LoginAttempted(
         val serverType: String,
         val authMethod: String,

@@ -22,6 +22,9 @@ internal fun sanitizeAnalyticsParameters(parameters: Map<String, Any>): Map<Stri
             key in SAFE_SERVER_TYPE_KEYS && value is String && value in SAFE_SERVER_TYPES ->
                 put(key, value)
 
+            key == "field" && value is String && value in SAFE_VALIDATION_FIELDS ->
+                put(key, value)
+
             key in SAFE_STRING_KEYS && value is String && SAFE_DIMENSION.matches(value) ->
                 put(key, value)
 
@@ -163,6 +166,7 @@ private val SAFE_STRING_KEYS = setOf(
 
 private val SAFE_SERVER_TYPE_KEYS = setOf("server_type", "previous_server_type")
 private val SAFE_SERVER_TYPES = setOf("storyteller", "audiobookshelf", "parrot-cloud", "local", "unknown")
+private val SAFE_VALIDATION_FIELDS = setOf("server_url")
 
 private val SAFE_SETTING_NAMES = setOf(
     "theme", "font_size", "font_family", "font_weight", "text_normalization", "line_height",
