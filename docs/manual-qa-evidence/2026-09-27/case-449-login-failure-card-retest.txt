@@ -1,0 +1,38 @@
+Case 449 / QA-BUG-0051 — Failed credentials produce a persistent failed server-card state and Retry
+Date/time: 2026-09-27, Samsung local CEST (UTC+0200), login attempt 18:19:03; Retry navigation 18:21:12.
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `13499`.
+- Debug APK SHA-256 `f25c5343b968763c16a9f9cd50b2dc6f7a5c32ac83b4b33eabe312a39b9e8709`; local and installed `/data/app/.../base.apk` hashes matched.
+- Source base commit `1e85bed6126399308013b9aedacf21a4dd5f5b1a` plus uncommitted QA-BUG-0049 playback changes and QA-BUG-0051 fix candidate. Parrot app data was preserved.
+- Host checks: `:feature:login:ui:testAndroidHostTest`, `:feature:settings:ui:testAndroidHostTest`, `:composeApp:testAndroidHostTest` were up-to-date after the preceding `allTests` run completed the Login and Settings test suites; `:androidApp:assembleDebug` succeeded. A separate aggregate `:composeApp:allTests` invocation remains blocked at the known iOS link error `framework FirebaseCore not found`; it is not an Android test failure.
+
+Preconditions and exact actions
+1. After candidate installation/relaunch, system Back from the expected logged-out last-book recovery surface returned to Books. Opened Settings → Servers; the existing Storyteller card showed `Not logged in` and `Log in`.
+2. Opened the existing server's Login form. Entered deliberately invalid, synthetic QA-only text directly into Parrot (not real account credentials); the URL was prefilled. Tapped Sign In once.
+3. The operation ended promptly with the Login form still usable, a visible Login failed message, and no loading state. Pressed Android system Back. Android's password-save prompt appeared; selected **No, thanks**. No password was saved.
+4. Server Management then showed the card state `Login failed` with a `Retry` action, rather than reverting to `Not logged in`/`Log in`.
+5. Tapped Retry. The existing-server Login form opened. Pressed system Back without submitting again; Server Management still showed `Login failed` and `Retry`.
+
+Privacy-filtered local DebugAnalyticsManager evidence (not Firebase delivery)
+- 18:16:39.237 — one `server_login_attempted` navigation into Login.
+- 18:19:03.127 — one `login_attempted` (`auth_method=credentials`, `server_type=storyteller`, `is_retry=false`, `outcome=started`) and matching `credentials_login` start breadcrumb.
+- 18:19:03.321 — one `login_failed` (`outcome=failed`); 18:19:03.322 — one correlated terminal breadcrumb with `reason_code=auth_rejected`.
+- 18:19:03.323 — one `server_management` breadcrumb (`stage=failure_state_retained`, `outcome=failed`, `reason_code=login_failed`) with the same diagnostic correlation ID as the Login attempt.
+- 18:21:12.223 — one additional `server_login_attempted` from the card Retry action. No second authentication submit was made during this evidence run.
+- Zero app exception-report markers and zero fatal-crash markers in PID-scoped logcat. Expected authentication rejection did not create an exception report.
+- The local debug provider is not a Firebase sender. Analytics ingestion was waived; Crashlytics delivery is not established by this run.
+
+Results
+- Functional case 449 variant: **PASS** — failed Login state and Retry are visible after a rejected credentials attempt; Retry opens the correct existing-server form; backing out without submitting preserves the failed card state.
+- Analytics: **PASS locally** — one accepted auth attempt and one failed outcome, separate from the two card-level navigation attempts. The actual retry-submit dimension and successful-login clearing branch were not exercised in this run; QA-BUG-0052 covers retry attribution. No Firebase ingestion claim.
+- Diagnostics: **PASS locally** — correlated Login start/auth-rejection/failure-state-retained breadcrumbs; zero exception reports/crashes. Crashlytics delivery not verified.
+- QA-BUG-0051 retest is partial with respect to a subsequent successful reauthentication clearing the state: the configured endpoint rejected this test login, and no successful credential fixture was available for this run. No authenticated state, credentials, username, URL, response body, screenshot, raw hierarchy, or synthetic input is retained here.
+
+Exact rebuild/install retest (same QA-BUG-0051 code; 2026-09-27, 18:35–18:37 CEST)
+- Re-ran `./gradlew :feature:login:ui:testAndroidHostTest :feature:settings:ui:testAndroidHostTest :composeApp:testAndroidHostTest :androidApp:assembleDebug --rerun-tasks`: BUILD SUCCESSFUL, 599 actionable tasks executed. Installed that exact APK over existing Parrot data; local and device SHA-256 both `47b65964d36580f5e3decce808ccc89324c90b9fcd63092ccd980cae90ed8277`.
+- Device remained on the Reader's logged-out last-book error after reinstall. System Back → Books → Settings → Servers showed the existing Storyteller card as `Not logged in` with `Log in`. Repeated the synthetic rejected-credentials action only inside Parrot and pressed system Back; Android showed its password-save prompt, which was declined with **No, thanks**.
+- At 18:36:39.166, the UI showed `Login failed`; on return Server Management showed `Login failed` + `Retry`, not `Not logged in`. Tapping Retry opened the existing server Login form. System Back returned to the same failed card and Retry action.
+- PID `21467`. Privacy-filtered local DebugAnalyticsManager records: one `server_login_attempted` at 18:35:35.627; one `login_attempted` at 18:36:38.993 (`server_type=storyteller`, `auth_method=credentials`, `is_retry=false`, `outcome=started`); one `login_failed` at 18:36:39.166; one terminal `credentials_login` breadcrumb with `reason_code=auth_rejected` at 18:36:39.167; one correlated `failure_state_retained` breadcrumb with `reason_code=login_failed` at 18:36:39.168; one additional `server_login_attempted` on Retry at 18:37:31.381. Zero PID-scoped exception-report markers and zero fatal crashes.
+- Functional, local Analytics and local diagnostic outcomes match the earlier candidate run above. Analytics ingestion and Crashlytics delivery are not verified by these debug-provider logs. Successful reauthentication/state clearing and retry-submit attribution remain NOT RUN in this run. No input value or raw UI hierarchy is retained.

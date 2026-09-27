@@ -28,6 +28,8 @@ class LoginViewModel(
     @Provided private val loginUseCase: LoginUseCase,
     @Provided private val analytics: Analytics,
     @InjectedParam private val onSignInSuccess: () -> Unit,
+    @InjectedParam private val onSignInAttemptStarted: (String, String, String) -> Unit = { _, _, _ -> },
+    @InjectedParam private val onSignInFailure: (String, String, String) -> Unit = { _, _, _ -> },
     @InjectedParam private val onBackClick: () -> Unit,
     @InjectedParam private val existingServerId: String? = null,
 ) : BaseViewModel<LoginViewState, LoginIntent>(LoginViewState()) {
@@ -390,6 +392,13 @@ class LoginViewModel(
                         error = error,
                         attempt = attempt,
                     )
+                    propagateExistingServerLoginFailure(
+                        existingServerId = existingServerId,
+                        error = error,
+                        serverType = attempt.serverType,
+                        correlationId = attempt.correlationId,
+                        onFailure = onSignInFailure,
+                    )
                     updateAfterLoginFailure(error.message)
                 },
             )
@@ -430,6 +439,13 @@ class LoginViewModel(
                         error = error,
                         attempt = attempt,
                     )
+                    propagateExistingServerLoginFailure(
+                        existingServerId = existingServerId,
+                        error = error,
+                        serverType = attempt.serverType,
+                        correlationId = attempt.correlationId,
+                        onFailure = onSignInFailure,
+                    )
                     updateAfterLoginFailure(error.message)
                 },
             )
@@ -446,6 +462,9 @@ class LoginViewModel(
         )
         val isRetry = lastFailedLogin == (serverType.identifier to authMethod)
         activeLoginAttempts[attempt.correlationId] = attempt
+        existingServerId?.let { serverId ->
+            onSignInAttemptStarted(serverId, serverType.identifier, attempt.correlationId)
+        }
         analytics.logEvent(
             AuthAnalyticsEvent.LoginAttempted(
                 serverType = serverType.identifier,

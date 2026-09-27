@@ -91,6 +91,50 @@ class LoginFailureDiagnosticsTest {
         assertEquals("server_registration_rollback_failed", loginFailureDiagnosticReasonCode(error))
     }
 
+    @Test
+    fun existingServerAuthenticationFailureIsPropagatedWithBoundedContext() {
+        val propagated = mutableListOf<Triple<String, String, String>>()
+
+        propagateExistingServerLoginFailure(
+            existingServerId = "server-1",
+            error = AppError.AuthError("rejected"),
+            serverType = ServerType.Storyteller,
+            correlationId = "12345678-1234-1234-1234-123456789abc",
+        ) { serverId, serverType, correlationId ->
+            propagated += Triple(serverId, serverType, correlationId)
+        }
+
+        assertEquals(
+            listOf(Triple("server-1", "storyteller", "12345678-1234-1234-1234-123456789abc")),
+            propagated,
+        )
+    }
+
+    @Test
+    fun cancelledAndNewServerLoginFailuresDoNotPropagateCardFailureState() {
+        val propagated = mutableListOf<String>()
+        val onFailure: (String, String, String) -> Unit = { serverId, _, _ ->
+            propagated += serverId
+        }
+
+        propagateExistingServerLoginFailure(
+            existingServerId = "server-1",
+            error = AppError.AuthError("cancelled", isCancellation = true),
+            serverType = ServerType.Storyteller,
+            correlationId = "12345678-1234-1234-1234-123456789abc",
+            onFailure = onFailure,
+        )
+        propagateExistingServerLoginFailure(
+            existingServerId = null,
+            error = AppError.AuthError("rejected"),
+            serverType = ServerType.Storyteller,
+            correlationId = "12345678-1234-1234-1234-123456789abc",
+            onFailure = onFailure,
+        )
+
+        assertEquals(emptyList(), propagated)
+    }
+
     private class RecordingAnalytics : Analytics {
         val exceptions = mutableListOf<Pair<Throwable, DiagnosticContext>>()
 

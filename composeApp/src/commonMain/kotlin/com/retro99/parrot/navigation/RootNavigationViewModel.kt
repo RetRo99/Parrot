@@ -36,6 +36,10 @@ class RootNavigationViewModel(
             RootNavigationIntent.OnLogout -> handleLogout()
             is RootNavigationIntent.OnLoginClicked -> handleLoginClicked(intent.existingServerId)
             RootNavigationIntent.OnExistingServerLoginSuccess -> handleExistingServerLoginSuccess()
+            is RootNavigationIntent.OnExistingServerLoginAttemptStarted ->
+                handleExistingServerLoginAttemptStarted(intent)
+            is RootNavigationIntent.OnExistingServerLoginFailed ->
+                handleExistingServerLoginFailed(intent)
             RootNavigationIntent.OnBackFromLogin -> handleBackFromLogin()
         }
     }
@@ -62,6 +66,10 @@ class RootNavigationViewModel(
             }
             state.copy(
                 backStack = backStack,
+                failedExistingServerLoginIds = (state.backStack.lastOrNull() as? RootDestination.Login)
+                    ?.existingServerId
+                    ?.let { state.failedExistingServerLoginIds - it }
+                    ?: state.failedExistingServerLoginIds,
                 homeEntry = if (backStack.lastOrNull() == RootDestination.Home) {
                     createHomeEntry(sourceScreen = "login", entryPoint = "existing_server_login_success")
                 } else {
@@ -69,6 +77,73 @@ class RootNavigationViewModel(
                 },
             )
         }
+    }
+
+    private fun handleExistingServerLoginFailed(intent: RootNavigationIntent.OnExistingServerLoginFailed) {
+        var stateUpdated = false
+        updateState { state ->
+            val currentLogin = state.backStack.lastOrNull() as? RootDestination.Login
+            if (currentLogin?.existingServerId != intent.serverId ||
+                intent.serverId in state.failedExistingServerLoginIds
+            ) {
+                state
+            } else {
+                stateUpdated = true
+                state.copy(
+                    failedExistingServerLoginIds = state.failedExistingServerLoginIds + intent.serverId,
+                )
+            }
+        }
+        if (stateUpdated) {
+            analytics.logBreadcrumb(
+                DiagnosticContext(
+                    screen = "server_management",
+                    sourceScreen = "login",
+                    destinationScreen = "server_management",
+                    entryPoint = "server_card_login",
+                    action = "reauthenticate_server",
+                    operation = "existing_server_login",
+                    stage = "failure_state_retained",
+                    outcome = "failed",
+                    reasonCode = "login_failed",
+                    serverType = intent.serverType,
+                    correlationId = intent.correlationId,
+                ),
+            )
+        }
+    }
+
+    private fun handleExistingServerLoginAttemptStarted(
+        intent: RootNavigationIntent.OnExistingServerLoginAttemptStarted,
+    ) {
+        val state = viewState.value
+        val currentLogin = state.backStack.lastOrNull() as? RootDestination.Login
+        if (currentLogin?.existingServerId != intent.serverId ||
+            intent.serverId !in state.failedExistingServerLoginIds
+        ) {
+            return
+        }
+
+        updateState { current ->
+            current.copy(
+                failedExistingServerLoginIds = current.failedExistingServerLoginIds - intent.serverId,
+            )
+        }
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "server_management",
+                sourceScreen = "login",
+                destinationScreen = "login",
+                entryPoint = "server_card_login",
+                action = "reauthenticate_server",
+                operation = "existing_server_login",
+                stage = "retry_started",
+                outcome = "started",
+                reasonCode = "login_retry",
+                serverType = intent.serverType,
+                correlationId = intent.correlationId,
+            ),
+        )
     }
 
     private fun handleBackFromLogin() {

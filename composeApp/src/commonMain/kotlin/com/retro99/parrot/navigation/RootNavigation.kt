@@ -52,6 +52,24 @@ fun RootNavigation(
                                 },
                             )
                         },
+                        onLoginAttemptStarted = { serverId, serverType, correlationId ->
+                            intentDispatcher(
+                                RootNavigationIntent.OnExistingServerLoginAttemptStarted(
+                                    serverId = serverId,
+                                    serverType = serverType,
+                                    correlationId = correlationId,
+                                ),
+                            )
+                        },
+                        onLoginFailure = { serverId, serverType, correlationId ->
+                            intentDispatcher(
+                                RootNavigationIntent.OnExistingServerLoginFailed(
+                                    serverId = serverId,
+                                    serverType = serverType,
+                                    correlationId = correlationId,
+                                ),
+                            )
+                        },
                         onGuestModeSelected = {
                             intentDispatcher(RootNavigationIntent.OnGuestModeSelected)
                         },
@@ -80,6 +98,7 @@ fun RootNavigation(
                         onNavigateToLogin = { existingServerId ->
                             intentDispatcher(RootNavigationIntent.OnLoginClicked(existingServerId))
                         },
+                        failedExistingServerLoginIds = state.failedExistingServerLoginIds,
                     )
                 }
             },

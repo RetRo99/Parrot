@@ -1,0 +1,26 @@
+Case 449 / QA-BUG-0051 — Failed credentials do not appear as a failed server-card state (pre-fix)
+Date/time: 2026-09-27, Samsung local CEST (UTC+0200), 17:52.
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `4066`.
+- Installed candidate APK SHA-256 `accf448269e5b750544c669a082401d27fac579f46875c7fa418ca9365e6cd49` (QA-BUG-0050 fix plus uncommitted QA-BUG-0049 changes); app data preserved.
+- Test code based on commit `742167d891e044c7829a7ccb889f545d6e2f69b6` plus the QA-BUG-0049 candidate working-tree changes.
+
+Preconditions and exact actions
+1. Server Management contained one configured Storyteller server in `Not logged in` state.
+2. Opened that card's Log in action and entered the user-authorized disposable test credentials directly into Parrot's Login form. No credential, username, URL, or response body is retained here.
+3. Tapped the actual Sign In action. The current configured server rejected authentication; the Login form showed its failed state.
+4. Pressed system Back to return to Server Management. The card displayed `Not logged in` and `Log in`; it did not display the catalogued `Login failed` state or a Retry action.
+5. Android/Bitwarden displayed a password-save prompt; selected **No, thanks**. The credential was not saved to the password manager and was not copied into QA files.
+
+Privacy-filtered local DebugAnalyticsManager signals
+- Exactly one `login_attempted` (`auth_method=credentials`, `server_type=storyteller`, `outcome=started`) followed by one `login_failed` (`outcome=failed`).
+- Correlated `credentials_login` breadcrumbs recorded `started` then `failed`, with bounded `reason_code=auth_rejected`.
+- No exception report or fatal crash. This is local debug evidence only; Firebase Analytics/Crashlytics delivery is not claimed.
+
+Result
+- Functional case 449: **FAIL** — after the failed attempt and return to Server Management, the card remained `Not logged in` with `Log in`, rather than exposing the expected failed-login state with Retry.
+- Analytics: **PASS locally** for one credentials-login attempt/failure pair; no Firebase delivery claim.
+- Diagnostics: **PASS locally** for one bounded failure breadcrumb, with no exception report or crash; Crashlytics delivery not verified.
+- No screenshot, raw UI hierarchy, username, credential, server URL, response text, or account detail is retained.

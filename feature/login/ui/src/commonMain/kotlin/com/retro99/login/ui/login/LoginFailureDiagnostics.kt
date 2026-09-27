@@ -46,3 +46,16 @@ internal fun reportUnexpectedLoginFailure(
         ),
     )
 }
+
+/** Propagates a failed reauthentication to its server card, but not an ordinary cancellation. */
+internal fun propagateExistingServerLoginFailure(
+    existingServerId: String?,
+    error: AppError,
+    serverType: ServerType,
+    correlationId: String,
+    onFailure: (serverId: String, serverType: String, correlationId: String) -> Unit,
+) {
+    if (existingServerId == null || (error as? AppError.AuthError)?.isCancellation == true) return
+
+    onFailure(existingServerId, serverType.identifier, correlationId)
+}

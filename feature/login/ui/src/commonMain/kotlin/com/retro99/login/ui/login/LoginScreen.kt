@@ -107,11 +107,19 @@ import resources.translations.login_username_label
 @Composable
 fun LoginScreen(
     onSignInSuccess: () -> Unit,
+    onSignInAttemptStarted: (String, String, String) -> Unit = { _, _, _ -> },
+    onSignInFailure: (String, String, String) -> Unit = { _, _, _ -> },
     onBackClick: () -> Unit,
     existingServerId: String? = null,
     modifier: Modifier = Modifier,
     viewModel: LoginViewModel = koinViewModel {
-        parametersOf(onSignInSuccess, onBackClick, existingServerId)
+        parametersOf(
+            onSignInSuccess,
+            onSignInAttemptStarted,
+            onSignInFailure,
+            onBackClick,
+            existingServerId,
+        )
     },
 ) {
     BaseScreen(

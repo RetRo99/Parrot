@@ -68,6 +68,7 @@ import resources.translations.settings_server_type_label
 fun ServerManagementScreen(
     onNavigateToLogin: (String?) -> Unit,
     onBack: () -> Unit,
+    failedLoginServerIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
     viewModel: ServerManagementViewModel = koinViewModel { parametersOf(onNavigateToLogin) },
 ) {
@@ -78,6 +79,7 @@ fun ServerManagementScreen(
         ServerManagementScreenContent(
             viewState = viewState,
             intentDispatcher = intentDispatcher,
+            failedLoginServerIds = failedLoginServerIds,
             onBack = onBack,
             modifier = modifier,
         )
@@ -89,6 +91,7 @@ fun ServerManagementScreen(
 private fun ServerManagementScreenContent(
     viewState: ServerManagementViewState,
     intentDispatcher: IntentDispatcher<ServerManagementIntent>,
+    failedLoginServerIds: Set<String>,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -179,8 +182,12 @@ private fun ServerManagementScreenContent(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     items(viewState.servers, key = { it.server.id }) { serverWithStatus ->
+                        val loginFailed =
+                            serverWithStatus.server.id in failedLoginServerIds &&
+                                serverWithStatus.authState is ServerAuthState.NotAuthenticated
                         ServerListItem(
                             serverWithStatus = serverWithStatus,
+                            loginFailed = loginFailed,
                             onLoginClick = {
                                 intentDispatcher(
                                     ServerManagementIntent.OnLoginClick(
@@ -217,6 +224,7 @@ private fun ServerManagementScreenContent(
 @Composable
 private fun ServerListItem(
     serverWithStatus: ServerWithStatusUiModel,
+    loginFailed: Boolean,
     onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onRemoveClick: () -> Unit,
@@ -258,9 +266,17 @@ private fun ServerListItem(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = authState.toDisplayString(),
+                    text = if (loginFailed) {
+                        stringResource(StringRes.settings_server_login_failed)
+                    } else {
+                        authState.toDisplayString()
+                    },
                     style = MaterialTheme.typography.labelSmall,
-                    color = authState.toColor(),
+                    color = if (loginFailed) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        authState.toColor()
+                    },
                 )
             }
 
@@ -279,7 +295,7 @@ private fun ServerListItem(
                     Text(
                         text = stringResource(
                             if (authState is ServerAuthState.NotAuthenticated) {
-                                StringRes.settings_server_login_action
+                                if (loginFailed) StringRes.general_retry else StringRes.settings_server_login_action
                             } else {
                                 StringRes.general_retry
                             },

@@ -9,5 +9,15 @@ sealed interface RootNavigationIntent : BaseIntent {
     data object OnLogout : RootNavigationIntent
     data class OnLoginClicked(val existingServerId: String? = null) : RootNavigationIntent
     data object OnExistingServerLoginSuccess : RootNavigationIntent
+    data class OnExistingServerLoginAttemptStarted(
+        val serverId: String,
+        val serverType: String,
+        val correlationId: String,
+    ) : RootNavigationIntent
+    data class OnExistingServerLoginFailed(
+        val serverId: String,
+        val serverType: String,
+        val correlationId: String,
+    ) : RootNavigationIntent
     data object OnBackFromLogin : RootNavigationIntent
 }

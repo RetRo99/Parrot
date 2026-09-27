@@ -19,6 +19,8 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun LoginNavigation(
     onLoginSuccess: () -> Unit,
+    onLoginAttemptStarted: (String, String, String) -> Unit,
+    onLoginFailure: (String, String, String) -> Unit,
     onGuestModeSelected: () -> Unit,
     onBack: (() -> Unit)? = null,
     onRootBack: (() -> Unit)? = null,
@@ -84,6 +86,8 @@ fun LoginNavigation(
                 entry<LoginDestination.Login> {
                     LoginScreen(
                         onSignInSuccess = onLoginSuccess,
+                        onSignInAttemptStarted = onLoginAttemptStarted,
+                        onSignInFailure = onLoginFailure,
                         existingServerId = existingServerId,
                         onBackClick = {
                             if (state.backStack.size <= 1 && onBack != null) {

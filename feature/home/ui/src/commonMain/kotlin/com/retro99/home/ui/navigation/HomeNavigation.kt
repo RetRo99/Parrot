@@ -38,6 +38,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun HomeNavigation(
     onNavigateToLogin: (String?) -> Unit,
+    failedExistingServerLoginIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
     viewModel: HomeNavigationViewModel = koinViewModel(),
 ) {
@@ -365,6 +366,7 @@ fun HomeNavigation(
                     entry<HomeDestination.ServerManagement> {
                         ServerManagementScreen(
                             onNavigateToLogin = onNavigateToLogin,
+                            failedLoginServerIds = failedExistingServerLoginIds,
                             onBack = { requestBack("toolbar_back") },
                             modifier = Modifier,
                         )
