@@ -1,0 +1,19 @@
+# Case 766 — profile-carousel horizontal reachability on Samsung
+
+- Date: 2026-09-27, approximately 23:12–23:14 CEST
+- Device: Samsung SM-S921B, serial `RFCWC0SSVDM`; Android 16/API 36; One UI 8.0; portrait, gesture navigation
+- Package/build: `com.retro99.parrot` 0.4.5 (21), debug; PID `16401`; APK SHA-256 `75ae77c5b811ba23991fbe893ed26632897475260310fa87f742e14d82b3d1a0`; source `bf38383e48f798c8d66e662798b3e88f01e57b62`
+- Preconditions: App Settings / Profiles with the original profile plus three disposable profiles. Add Profile was outside the initial visible viewport. No real profile data or credentials were used.
+
+## Functional result
+
+1. Horizontally swipe the profile row from right to left. The trailing Add Profile tile becomes visible; existing duplicate ordinal markers remain distinct. The active marker moves with the same active profile, and the screen's vertical Settings content remains in place.
+2. Tap the newly visible Add Profile tile. Its dialog opens. Cancel it; no profile is created and the active profile remains unchanged.
+3. Swipe the row back to the start. The original profile tile returns to view, Add Profile moves outside the initial viewport again, and the same active profile remains selected. No unrelated setting or screen action is triggered.
+
+## Analytics and diagnostics
+
+- Profile-row scrolling emitted no profile-selection or mutation event (no per-scroll event expected). The deliberate Add affordance tap emitted one Add dialog-open event and one `profile_operation_cancelled(entry_point=cancel_button)`; no create attempt/success occurred. Firebase Analytics ingestion was waived and is not claimed.
+- The PID-scoped local log window contained no synthetic profile label, Analytics UUID, fatal marker or handled-exception marker. This was an ordinary gesture/cancel with no unexpected failure, so Crashlytics reporting is not applicable.
+
+Result: PASS for the tested row-scroll/Add-reachability variant. No screenshot, profile value or raw hierarchy is retained.
