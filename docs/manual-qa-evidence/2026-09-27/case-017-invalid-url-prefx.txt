@@ -1,0 +1,18 @@
+Case 17 — Invalid server URL validation, pre-fix instrumentation check
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build: physical Samsung Galaxy S24 serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`; `com.retro99.parrot` 0.4.5 (21), debug source commit `0eaa3ec6a6945199bbd80d765e6efa9ef4aede0e`, APK SHA-256 `75425b0b0d4fe71eecccfbb89aa12bfd9caf1023c63883d2100f2cba2c08a196` (local/Samsung-pulled match), PID `28181`.
+
+Preconditions: Login opened from Settings → Servers → Add Server; Storyteller selected; URL initially `https://`; username/password empty; no credentials entered or submitted.
+
+Steps and actual behavior:
+1. Replace the URL field with the exact invalid string `not a url`. The field is highlighted in the error color and displays `Enter a valid http(s) URL` inline. Evidence: [invalid value and inline error](case-017-invalid-url-entered.png).
+2. Attempt to tap Sign In. It is disabled because the URL is invalid (and the other fields are empty); the tap has no effect. The inline error remains, there is no loading spinner, and Login remains usable. Evidence: [after disabled-button tap](case-017-invalid-url-submit-attempt.png).
+3. PID-scoped `logcat` query for `login_validation*`, `login_attempted`, `login_failed`, Login `validate_form`/`sign_in` diagnostic breadcrumbs and fatal exceptions returned no matches after the reproduction. Process remained PID `28181`. No login/network operation was accepted because Sign In was disabled.
+
+Result by dimension:
+- Functional: **PASS** — inline validation is clear, invalid input cannot submit, no spinner or crash. The plan's literal submit step is not reachable: the Sign In control is disabled, and its tap is a no-op.
+- Analytics: **FAIL** — no bounded validation outcome event is emitted when the form enters the invalid-URL state. No `login_attempted`/`login_failed` is appropriate because no submit operation was accepted. Firebase Analytics ingestion is waived.
+- Diagnostics: **FAIL** — no diagnostic validation outcome breadcrumb is emitted for this ordinary invalid-form state. This is instrumentation coverage, not a Crashlytics-worthy user-experience failure; no non-fatal is expected.
+
+Source audit: `LoginViewModel.updateFormState` calculates and publishes `urlError` and disables submission, but does not report the validation outcome. `handleSignInClicked` is never reached. No URL value or credentials were included in telemetry/log output. QA-BUG-0036 records the gap before a source change; fixed-build retest is pending.
