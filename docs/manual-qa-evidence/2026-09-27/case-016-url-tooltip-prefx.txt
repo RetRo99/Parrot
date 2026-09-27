@@ -1,0 +1,13 @@
+Case 16 — Server URL help tooltip pre-fix observation
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build: physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; `com.retro99.parrot` 0.4.5 (21), debug source commit `d69be066b7b864d8c8d4c15a111132eaa17e1db9`, APK SHA-256 `1b3f3480c7e33852d5b3e07e95e719051c776950098d932ac710677f322d0197`, PID `5883`. Login was reached via Settings → Servers → Add Server; Storyteller selected, URL placeholder `https://`, username/password empty and Sign In disabled. No credentials were entered/submitted.
+
+Steps and functional result:
+1. Tap the help icon with content description `URL info` beside Server URL. The persistent RichTooltip appears above the form. Evidence: [tooltip open](case-016-url-tooltip-prefx-open.png); [closed form before opening](case-016-url-tooltip-prefx-closed.png).
+2. The tooltip title is `Server URL`; the help explains that the full URL must include `http://` or `https://`, and gives static local-IP/port and domain examples. The content is legible and specific to the selected Storyteller type; it contains no user-entered content.
+3. Tap `Got it` (device tap at `(300,808)`). The tooltip closes and the Login form remains unchanged. Evidence: [dismissed tooltip](case-016-url-tooltip-prefx-dismissed.png).
+
+Observability result: the tooltip open and button dismissal produced no Analytics event or diagnostic breadcrumb. Source audit confirms `UrlInfoTooltip` only uses local `TooltipState`/coroutine state and does not call `LoginViewModel`, Analytics or diagnostics. PID-scoped `logcat` contains the earlier `login_screen_viewed` and picker events, but no `login_url_help`, `url_tooltip`, or `login_url_info` event/breadcrumb. Local Analytics delivery is the applicable acceptance here; Firebase Analytics ingestion is waived. No UX failure occurred, so Crashlytics is not expected for normal tooltip use.
+
+Case 16 remains incomplete pending instrumentation and a hash-matched Samsung retest. Case 752's outside-tap/system-Back dismissal variants have not been executed yet.
