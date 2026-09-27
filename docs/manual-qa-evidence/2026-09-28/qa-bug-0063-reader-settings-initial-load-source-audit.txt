@@ -1,0 +1,16 @@
+# QA-BUG-0063 / case 769 — Reader Settings may accept edits before stored settings load
+
+- Audit date: 2026-09-28 (CEST)
+- Device: Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0.
+- Build/source: `com.retro99.parrot` 0.4.5 (21), source commit `c8fbbd961927a3231e64314399597e8c2157602b` plus separate uncommitted work; no new build or device setting change for this source audit.
+- Reproduction status: suspected from source; no delay/failure was injected and no rapid edit was performed.
+
+## Source observation
+
+`SettingsViewState` initializes `isLoading=false` and immediately contains default `ReaderSettingsUiModel` values. `SettingsViewModel.observeReaderSettings()` asynchronously collects the settings/custom-font flows, but does not mark loading before subscription or expose a ready state. `SettingsScreen` does not check `viewState.isLoading` and renders controls from the initial state. A setting intent before the first database emission builds a complete target model from these defaults and sends it to `saveReaderSettingsUseCase`; that could overwrite other stored settings instead of changing only the selected preference.
+
+**Expected:** Keep controls unavailable or hydrate the stored profile state before accepting a change. A user may never overwrite unobserved stored settings with a target derived from defaults.
+
+**Actual by source audit:** The initial state is interactive and has no loading/ready guard. Whether a device-speed edit can beat the database's initial Flow emission remains unverified.
+
+**Disposition:** SUSPECTED, not confirmed. Reproduce only with a safe delayed-initial-emission fixture, then fix if confirmed. No setting/profile data or private values retained.

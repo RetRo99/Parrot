@@ -1079,3 +1079,19 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Affected files:** Settings UI ViewModel/state/screen and Analytics event schema/provider allowlist; Reader data repository/database reporting boundary; targeted tests; catalogue/results/run report.
 - **Fix reference / commit:** Pending.
 - **Retest:** NOT RUN. Case 420 profile setting comparison is paused until screen instrumentation and the focused save-result fix are built, installed and committed. Fault-injected case 638 remains BLOCKED pending a safe local DB failure fixture.
+
+## QA-BUG-0063 — Reader Settings may accept changes before the active profile's saved settings load
+
+- **Severity / user impact:** Medium if reproduced; a fast first edit after opening Settings could be built from defaults and overwrite other stored Reader settings.
+- **Status:** SUSPECTED by source audit only; reproduction NOT RUN. No change has been made for this item.
+- **Screen/test IDs:** Reader Settings initialization; new extension case 769; related profile isolation case 420 and restart/persistence case 231.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; package `com.retro99.parrot` 0.4.5 (21); source commit `c8fbbd961927a3231e64314399597e8c2157602b` plus separate uncommitted changes. Source audit only; no device setting was changed for this item.
+- **Preconditions:** Open Reader Settings for a profile with non-default saved preferences; trigger a setting change before the initial settings Flow emits.
+- **Exact reproduction / audit:** `SettingsViewState` starts with `isLoading=false` and default `ReaderSettingsUiModel`; `SettingsViewModel.observeReaderSettings` hydrates asynchronously without changing readiness; `SettingsScreen` ignores `isLoading` and renders the controls. The target model is constructed from the visible state. No delayed-emission or device race has been reproduced.
+- **Expected:** Do not accept writes until stored settings for the active profile have been observed and controls reflect them.
+- **Actual by source audit:** No loading/ready gate prevents an early change from saving a defaults-derived full settings object. Actual occurrence/frequency remain unknown.
+- **Evidence:** [Source audit](manual-qa-evidence/2026-09-28/qa-bug-0063-reader-settings-initial-load-source-audit.txt); `SettingsViewState.kt`, `SettingsViewModel.observeReaderSettings`, and `SettingsScreen.kt`.
+- **Root cause:** Initial UI state is actionable before the asynchronous settings flow establishes the active profile's persisted value.
+- **Affected files:** Settings view state/ViewModel/screen and focused delayed-flow tests if confirmed.
+- **Fix reference / commit:** None; awaiting reproduction.
+- **Retest:** NOT RUN. Requires a deterministic delayed-initial-emission fixture; do not call fixed unless a controlled test demonstrates the guard.
