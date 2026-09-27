@@ -1,0 +1,51 @@
+Cases 535/536 — tab-switch Analytics fix and Samsung retest
+Date: 2026-09-27 (Samsung local CEST, UTC+0200).
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`, model SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`, gesture navigation.
+- Installed `com.retro99.parrot` 0.4.5 (21), debug source commit `c08658a278fcef1da884352edb44ffc298d6b08d`; APK SHA-256 `df2a162c85b7b7b32c7c7d58608733e957fc3d42d677d69fe402b2caa4a5c506` (local APK and Samsung-pulled `base.apk` match exactly).
+- Host checks: `:lib:analytics:implementation:testAndroidHostTest` passed, including tab attempt/success/failure/reselect sanitization; `:feature:home:ui:testAndroidHostTest` passed; `:androidApp:assembleDebug` passed.
+- PID `10613`; default profile; locale `en-GB`; airplane mode `0` (off), Wi-Fi `1` (on). Both Open Last Book and Show Continue Reading remained enabled. Local *Pride and Prejudice* remained saved at 49%. No app data or credentials changed.
+
+Samsung steps/results
+1. Installed with `adb install -r`, pulled the installed `base.apk`, and verified the SHA-256 match.
+2. Relaunched Parrot; the local Reader restored at page 29/64 (49%). Closed to Book Detail, then selected Settings from Books.
+3. Switched Settings → Statistics → Settings. Settings hub appeared on the return because its stack was at its root. UI title/body and selected tab agreed.
+4. From Settings, opened the `Reading statistics` row (pushing Statistics onto the Settings stack), switched to the Statistics tab and back to Settings. The Settings tab restored its retained Statistics route; system Back returned to the Settings hub. This confirms the earlier QA-BUG-0032 observation was expected independent-stack behavior, not a no-op.
+5. Reselected Settings once while already on Settings. The Settings hub remained stable; only the distinct `tab_reselected` event was logged, with no `tab_switch_attempted` or `tab_switched` for that reselect.
+
+PID-scoped local DebugAnalyticsManager excerpt (Analytics payloads contain no correlation ID; IDs appear only in diagnostic breadcrumbs):
+```text
+09-27 04:45:03.305 10613 Analytics Event: tab_switch_attempted | {screen=home, source_tab=books, destination_tab=settings, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=navigation, outcome=started}
+09-27 04:45:03.306 10613 Diagnostic breadcrumb: diagnostic_context screen=settings source_screen=books entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=navigation outcome=started correlation_id=5f8cd163-d3ae-4851-8d38-cf19ca9b8873
+09-27 04:45:03.307 10613 Analytics Event: tab_switched | {screen=home, source_tab=books, destination_tab=settings, tab_name=settings, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=terminal, outcome=succeeded}
+09-27 04:45:03.307 10613 Diagnostic breadcrumb: diagnostic_context screen=settings source_screen=books entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=terminal outcome=succeeded correlation_id=5f8cd163-d3ae-4851-8d38-cf19ca9b8873
+09-27 04:45:08.440 10613 Analytics Event: tab_switch_attempted | {screen=home, source_tab=settings, destination_tab=statistics, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=navigation, outcome=started}
+09-27 04:45:08.443 10613 Analytics Event: tab_switched | {screen=home, source_tab=settings, destination_tab=statistics, tab_name=statistics, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=terminal, outcome=succeeded}
+09-27 04:45:13.056 10613 Analytics Event: tab_switch_attempted | {screen=home, source_tab=statistics, destination_tab=settings, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=navigation, outcome=started}
+09-27 04:45:13.058 10613 Analytics Event: tab_switched | {screen=home, source_tab=statistics, destination_tab=settings, tab_name=settings, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=terminal, outcome=succeeded}
+09-27 04:45:25.086 10613 Analytics Event: tab_reselected | {screen=home, source_tab=settings, destination_tab=settings, tab_name=settings, entry_point=bottom_navigation, action=reselect_tab, operation=tab_navigation, stage=terminal, outcome=unchanged}
+09-27 04:45:47.853 10613 Analytics Event: tab_switch_attempted | {screen=home, source_tab=settings, destination_tab=statistics, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=navigation, outcome=started}
+09-27 04:45:47.854 10613 Analytics Event: tab_switched | {screen=home, source_tab=settings, destination_tab=statistics, tab_name=statistics, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=terminal, outcome=succeeded}
+09-27 04:45:52.385 10613 Analytics Event: tab_switch_attempted | {screen=home, source_tab=statistics, destination_tab=settings, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=navigation, outcome=started}
+09-27 04:45:52.385 10613 Diagnostic breadcrumb: diagnostic_context screen=settings source_screen=statistics entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=navigation outcome=started correlation_id=1ba11242-e8b1-482b-8998-cb92cc3b674a
+09-27 04:45:52.386 10613 Analytics Event: tab_switched | {screen=home, source_tab=statistics, destination_tab=settings, tab_name=settings, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=terminal, outcome=succeeded}
+09-27 04:45:52.387 10613 Diagnostic breadcrumb: diagnostic_context screen=settings source_screen=statistics entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=terminal outcome=succeeded correlation_id=1ba11242-e8b1-482b-8998-cb92cc3b674a
+09-27 04:50:09.242 10613 Analytics Event: tab_switch_attempted | {screen=home, source_tab=settings, destination_tab=books, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=navigation, outcome=started}
+09-27 04:50:09.242 10613 Diagnostic breadcrumb: diagnostic_context screen=books source_screen=settings entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=navigation outcome=started correlation_id=8555aa12-4b8c-4876-9d76-eefb63d0566a
+09-27 04:50:09.244 10613 Analytics Event: tab_switched | {screen=home, source_tab=settings, destination_tab=books, tab_name=books, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=terminal, outcome=succeeded}
+09-27 04:50:09.244 10613 Diagnostic breadcrumb: diagnostic_context screen=books source_screen=settings entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=terminal outcome=succeeded correlation_id=8555aa12-4b8c-4876-9d76-eefb63d0566a
+09-27 04:51:02.127 10613 Analytics Event: tab_switch_attempted | {screen=home, source_tab=books, destination_tab=settings, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=navigation, outcome=started}
+09-27 04:51:02.128 10613 Diagnostic breadcrumb: diagnostic_context screen=settings source_screen=books entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=navigation outcome=started correlation_id=9866be3b-0786-4c6a-b479-63c97bae7b2f
+09-27 04:51:02.131 10613 Analytics Event: tab_switched | {screen=home, source_tab=books, destination_tab=settings, tab_name=settings, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=terminal, outcome=succeeded}
+09-27 04:51:02.131 10613 Diagnostic breadcrumb: diagnostic_context screen=settings source_screen=books entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=terminal outcome=succeeded correlation_id=9866be3b-0786-4c6a-b479-63c97bae7b2f
+```
+
+The planned navigation sequence contained five tab switches, each with one attempt and one successful terminal event; two additional actual Settings↔Books switches while positioning/capturing final Reader evidence also completed successfully. The full PID-scoped log therefore contains seven actual switches (seven attempts and seven successful terminal events), all with `source_tab`, `destination_tab`, and `bottom_navigation` entry point. Each corresponding attempt/terminal breadcrumb pair shared one diagnostic-only correlation ID. The one reselect emitted `tab_reselected` only. No fatal marker or failed switch was observed.
+
+Separate results
+- Case 535 functional: PASS for exercised Books → Settings, Settings → Statistics and Statistics → Settings pairs, including retained-stack Statistics restoration and Back to Settings hub. Full all-ordered-pairs case remains NOT RUN.
+- Case 535 Analytics: PASS for the exercised transitions on the local debug provider; attempt vs success, source/destination, entry point and outcomes are separated. Firebase Analytics ingestion is waived and not claimed.
+- Case 536 functional/Analytics: PASS for the Settings reselect variant; selected content remained stable and a single distinct reselect event was emitted, not a switch attempt or success. Other root/nested reselect variants remain NOT RUN.
+- Diagnostics: PASS for matching started/succeeded breadcrumbs and per-operation correlation on these switches. Failure/non-fatal branch was not induced; Crashlytics delivery is not verified and is N-A for this normal successful run.
+- Screenshot evidence: [final-hash Reader restored at page 29/64](case-535-tab-analytics-final-reader.png), [Settings hub after tab switch](case-535-tab-analytics-final-settings-hub.png), [retained Statistics route on Settings tab](case-535-tab-analytics-final-retained-stats.png), and [reselect state](case-536-tab-reselect-final.png).
