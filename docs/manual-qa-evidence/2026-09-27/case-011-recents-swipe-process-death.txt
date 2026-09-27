@@ -1,0 +1,30 @@
+Case 11 / Case 461 — last-book launch after Recents swipe-away while Reader was active
+Date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`; SM-S921B (Galaxy S24); Android 16/API 36; One UI 8.0 build `S921BXXSGDZG1`; gesture navigation.
+- `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug; source commit `e54f99b854b694d5b62db5338320afd75acdef35`; local/Samsung-pulled APK SHA-256 `2302df8024779c5f1cbff4e588965f1c1ec2fec7f15bddfde6a19412b8ed778e`.
+- Active local profile “Default”. No credentials were entered and Parrot data was not cleared during this test.
+
+Preconditions and exact steps
+1. “Open Last Book on Launch” remained enabled. Case 426 had cleared the stored current-book reference at 02:21:59, while retaining the imported EPUB and its saved position. This deliberately established the “no current book” precondition before beginning a new qualifying read.
+2. At about 02:30, opened *Pride and Prejudice* from Books → Detail → “Continue reading.” Reader showed page 27/64 at 48%; screenshot: [`case-011-process-death-reader-before-kill.png`](case-011-process-death-reader-before-kill.png).
+3. Advanced one page. The Reader remained open for about 90 seconds (over the source's 60-second qualification threshold). Pressed Home, opened Samsung Recents, confirmed the Parrot Reader task card was present at page 28/64, 49%, then swiped only Parrot's task card upward. This was a user Recents swipe-away, not force-stop. At 02:32:32 `pidof com.retro99.parrot` returned no PID; the Recents hierarchy no longer contained the Parrot task.
+4. Relaunched `com.retro99.parrot/.android.MainActivity` at 02:32:46. New PID was `10521` (old Reader PID `28558`). The app opened Home/Books, not Reader. The library card still showed 49%; screenshot: [`case-011-after-recents-swipe-relaunch.png`](case-011-after-recents-swipe-relaunch.png).
+5. No unrelated system-screen/Recents screenshot is retained because that screen also displayed personal information in another app's task preview. The Reader screenshot, post-relaunch Parrot screenshot, exact UI hierarchy result, timestamps/PIDs and logs are retained here.
+
+PID-scoped local DebugAnalyticsManager excerpt after relaunch
+```text
+09-27 02:32:46.642 10521 D ... Analytics Event: app_launch_route_resolved | {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}
+09-27 02:32:46.642 10521 D ... Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded reason_code=auth_state_check_completed
+09-27 02:32:46.690 10521 D ... Analytics Event: last_book_launch_completed | {screen=home, source_screen=splash, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=terminal, outcome=skipped, reason_code=no_current_book}
+09-27 02:32:46.690 10521 D ... Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=open_last_book operation=reader_open stage=terminal outcome=skipped reason_code=no_current_book
+09-27 02:32:46.975 10521 D ... Analytics Event: home_screen_viewed | {screen=home, source_screen=splash, entry_point=app_launch}
+```
+
+Results
+- Case 11 functional: FAIL for the Recents swipe-away variant. The book's local position advanced and remained visible at 49%, but enabled Open Last Book did not resume Reader because the currently-reading target was absent.
+- Case 11 Analytics: PASS for local debug-provider behavior on this route: one startup route, explicit `skipped/no_current_book` terminal and one Home exposure. Firebase Analytics delivery is waived and not claimed.
+- Case 11 diagnostics: FAIL for detecting/reporting the lost auto-open target after a qualifying active reading session. The log only describes a normal no-current-book fallback; there is no persisted/interrupted-session context to distinguish it from case 12's expected no-book path. No Crashlytics event was expected from the ordinary OS task removal, and none was induced.
+- Case 461 Recents-swipe-away variant: PASS for safe fallback and local progress integrity: process PID changed, the library reopened at 49%, and no crash/fatal marker was observed. Case 461's other variants (background process kill while retaining the task and force-stop) remain NOT RUN; do not mark its parent complete.
+- This confirms QA-BUG-0026. The next step is to record the failure before changing code, then fix and rerun case 11 plus adjacent process-death variants.
