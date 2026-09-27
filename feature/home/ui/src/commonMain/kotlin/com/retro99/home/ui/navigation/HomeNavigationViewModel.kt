@@ -19,6 +19,8 @@ import com.retro99.reader.domain.usecase.GetCurrentlyReadingUseCase
 import com.retro99.reader.domain.usecase.ObserveCurrentlyReadingUseCase
 import com.retro99.reader.ui.playback.NowPlayingProvider
 import com.retro99.user.api.UserRegistry
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -365,10 +367,7 @@ class HomeNavigationViewModel(
             is HomeNavigationIntent.NavigateTo -> {
                 emitNavigationEvent(HomeNavigationEvent.NavigateTo(intent.destination))
             }
-            is HomeNavigationIntent.SwitchTab -> {
-                analytics.logEvent(NavigationAnalyticsEvent.TabSwitched(tabName = intent.tab.name.lowercase()))
-                emitNavigationEvent(HomeNavigationEvent.SwitchTab(intent.tab))
-            }
+            is HomeNavigationIntent.SwitchTab -> handleTabSwitch(intent)
             HomeNavigationIntent.GoBack -> {
                 emitNavigationEvent(HomeNavigationEvent.GoBack)
             }
@@ -396,6 +395,87 @@ class HomeNavigationViewModel(
             HomeNavigationIntent.PlaybackConflictDismiss -> {
                 dismissPlaybackConflictDialog()
             }
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun handleTabSwitch(intent: HomeNavigationIntent.SwitchTab) {
+        val sourceTab = intent.sourceTab.name.lowercase()
+        val destinationTab = intent.tab.name.lowercase()
+        if (intent.sourceTab == intent.tab) {
+            analytics.logEvent(
+                NavigationAnalyticsEvent.TabReselected(tabName = destinationTab),
+            )
+            return
+        }
+
+        val correlationId = Uuid.random().toString()
+        analytics.logEvent(
+            NavigationAnalyticsEvent.TabSwitchAttempted(
+                sourceTab = sourceTab,
+                destinationTab = destinationTab,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = destinationTab,
+                sourceScreen = sourceTab,
+                entryPoint = "bottom_navigation",
+                action = "switch_tab",
+                operation = "tab_navigation",
+                stage = "navigation",
+                outcome = "started",
+                correlationId = correlationId,
+            ),
+        )
+        emitNavigationEvent(
+            HomeNavigationEvent.SwitchTab(
+                sourceTab = intent.sourceTab,
+                tab = intent.tab,
+                correlationId = correlationId,
+            ),
+        )
+    }
+
+    /** Records the terminal tab outcome only after the navigation owner applies the selection. */
+    fun reportTabSwitchApplied(
+        sourceTab: HomeTab,
+        destinationTab: HomeTab,
+        correlationId: String,
+        applied: Boolean,
+    ) {
+        val source = sourceTab.name.lowercase()
+        val destination = destinationTab.name.lowercase()
+        val outcome = if (applied) {
+            NavigationAnalyticsEvent.TabSwitchOutcome.Succeeded
+        } else {
+            NavigationAnalyticsEvent.TabSwitchOutcome.Failed
+        }
+        analytics.logEvent(
+            NavigationAnalyticsEvent.TabSwitched(
+                sourceTab = source,
+                destinationTab = destination,
+                outcome = outcome,
+            ),
+        )
+
+        val context = DiagnosticContext(
+            screen = destination,
+            sourceScreen = source,
+            entryPoint = "bottom_navigation",
+            action = "switch_tab",
+            operation = "tab_navigation",
+            stage = "terminal",
+            outcome = outcome.value,
+            reasonCode = if (applied) null else "tab_selection_not_applied",
+            correlationId = correlationId,
+        )
+        analytics.logBreadcrumb(context)
+        if (!applied) {
+            analytics.logException(
+                IllegalStateException("Tab navigation did not select the requested destination."),
+                context,
+            )
         }
     }
 

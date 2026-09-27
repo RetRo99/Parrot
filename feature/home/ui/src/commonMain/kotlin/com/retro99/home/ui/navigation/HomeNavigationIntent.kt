@@ -17,7 +17,7 @@ sealed interface HomeNavigationIntent : BaseIntent {
 
     // Navigation intents
     data class NavigateTo(val destination: HomeDestination) : HomeNavigationIntent
-    data class SwitchTab(val tab: HomeTab) : HomeNavigationIntent
+    data class SwitchTab(val sourceTab: HomeTab, val tab: HomeTab) : HomeNavigationIntent
     data object GoBack : HomeNavigationIntent
 
     /**
@@ -59,4 +59,3 @@ sealed interface HomeNavigationIntent : BaseIntent {
      */
     data object PlaybackConflictDismiss : HomeNavigationIntent
 }
-

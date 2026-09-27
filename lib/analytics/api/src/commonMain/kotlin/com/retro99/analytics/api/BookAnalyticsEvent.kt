@@ -374,15 +374,67 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
         }
     }
 
-    /**
-     * Tracks when user switches between tabs - helps understand which sections are most used.
-     */
+    /** Records an accepted user request to switch to a different Home tab. */
+    data class TabSwitchAttempted(
+        val sourceTab: String,
+        val destinationTab: String,
+        val entryPoint: String = "bottom_navigation",
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "tab_switch_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "home",
+            "source_tab" to sourceTab,
+            "destination_tab" to destinationTab,
+            "entry_point" to entryPoint,
+            "action" to "switch_tab",
+            "operation" to "tab_navigation",
+            "stage" to "navigation",
+            "outcome" to "started",
+        )
+    }
+
+    enum class TabSwitchOutcome(val value: String) {
+        Succeeded("succeeded"),
+        Failed("failed"),
+    }
+
+    /** Records a tab change after the navigation owner has applied the selected destination. */
     data class TabSwitched(
-        val tabName: String,
+        val sourceTab: String,
+        val destinationTab: String,
+        val outcome: TabSwitchOutcome = TabSwitchOutcome.Succeeded,
+        val entryPoint: String = "bottom_navigation",
     ) : NavigationAnalyticsEvent {
         override val name: String = "tab_switched"
         override val parameters: Map<String, Any> = mapOf(
+            "screen" to "home",
+            "source_tab" to sourceTab,
+            "destination_tab" to destinationTab,
+            "tab_name" to destinationTab,
+            "entry_point" to entryPoint,
+            "action" to "switch_tab",
+            "operation" to "tab_navigation",
+            "stage" to "terminal",
+            "outcome" to outcome.value,
+        )
+    }
+
+    /** Reselecting the active tab is tracked separately and is not counted as a switch. */
+    data class TabReselected(
+        val tabName: String,
+        val entryPoint: String = "bottom_navigation",
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "tab_reselected"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "home",
+            "source_tab" to tabName,
+            "destination_tab" to tabName,
             "tab_name" to tabName,
+            "entry_point" to entryPoint,
+            "action" to "reselect_tab",
+            "operation" to "tab_navigation",
+            "stage" to "terminal",
+            "outcome" to "unchanged",
         )
     }
 

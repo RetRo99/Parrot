@@ -84,6 +84,57 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun tabNavigationDistinguishesAttemptSuccessFailureAndReselection() {
+        val attempted = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.TabSwitchAttempted(
+                sourceTab = "statistics",
+                destinationTab = "settings",
+            ).parameters + ("profile_name" to "private profile"),
+        )
+        val succeeded = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.TabSwitched(
+                sourceTab = "statistics",
+                destinationTab = "settings",
+            ).parameters,
+        )
+        val failed = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.TabSwitched(
+                sourceTab = "books",
+                destinationTab = "settings",
+                outcome = NavigationAnalyticsEvent.TabSwitchOutcome.Failed,
+            ).parameters,
+        )
+        val reselected = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.TabReselected(tabName = "settings").parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "home",
+                "source_tab" to "statistics",
+                "destination_tab" to "settings",
+                "entry_point" to "bottom_navigation",
+                "action" to "switch_tab",
+                "operation" to "tab_navigation",
+                "stage" to "navigation",
+                "outcome" to "started",
+            ),
+            attempted,
+        )
+        assertEquals("statistics", succeeded["source_tab"])
+        assertEquals("settings", succeeded["destination_tab"])
+        assertEquals("bottom_navigation", succeeded["entry_point"])
+        assertEquals("succeeded", succeeded["outcome"])
+        assertEquals("settings", succeeded["tab_name"])
+        assertEquals("failed", failed["outcome"])
+        assertEquals("books", failed["source_tab"])
+        assertEquals("settings", reselected["source_tab"])
+        assertEquals("settings", reselected["destination_tab"])
+        assertEquals("reselect_tab", reselected["action"])
+        assertEquals("unchanged", reselected["outcome"])
+    }
+
+    @Test
     fun homeExposureRetainsOnlyBoundedSourceAndEntryPoint() {
         val sanitized = sanitizeAnalyticsParameters(
             NavigationAnalyticsEvent.HomeViewed(

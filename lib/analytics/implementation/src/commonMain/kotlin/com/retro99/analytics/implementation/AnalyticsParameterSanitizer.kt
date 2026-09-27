@@ -149,6 +149,8 @@ private val SAFE_STRING_KEYS = setOf(
     "auth_method",
     "step",
     "tab_name",
+    "source_tab",
+    "destination_tab",
     "server_type",
     "period",
     "detail_type",

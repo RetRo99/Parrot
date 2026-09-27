@@ -57,6 +57,12 @@ fun HomeNavigation(
                 }
                 is HomeNavigationEvent.SwitchTab -> {
                     navigationState.switchTab(event.tab)
+                    viewModel.reportTabSwitchApplied(
+                        sourceTab = event.sourceTab,
+                        destinationTab = event.tab,
+                        correlationId = event.correlationId,
+                        applied = navigationState.currentTab == event.tab,
+                    )
                 }
                 HomeNavigationEvent.GoBack -> {
                     navigationState.goBack()
@@ -145,7 +151,12 @@ fun HomeNavigation(
                         HomeBottomNavigationBar(
                             currentTab = navigationState.currentTab,
                             onTabSelected = { tab ->
-                                intentDispatcher(HomeNavigationIntent.SwitchTab(tab))
+                                intentDispatcher(
+                                    HomeNavigationIntent.SwitchTab(
+                                        sourceTab = navigationState.currentTab,
+                                        tab = tab,
+                                    ),
+                                )
                             },
                         )
                     }

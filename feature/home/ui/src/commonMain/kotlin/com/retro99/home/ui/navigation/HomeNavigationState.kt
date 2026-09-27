@@ -54,7 +54,11 @@ sealed interface HomeNavigationEvent {
     /**
      * Switch to a different tab.
      */
-    data class SwitchTab(val tab: HomeTab) : HomeNavigationEvent
+    data class SwitchTab(
+        val sourceTab: HomeTab,
+        val tab: HomeTab,
+        val correlationId: String,
+    ) : HomeNavigationEvent
 
     /**
      * Go back in the navigation stack.
@@ -73,5 +77,3 @@ sealed interface HomeNavigationEvent {
         val isLastBookOnLaunch: Boolean = false,
     ) : HomeNavigationEvent
 }
-
-
