@@ -1,0 +1,27 @@
+Case 18 — Empty Login submit, corrected committed-build retest
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24 serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Installed `com.retro99.parrot` 0.4.5 (21), debug, source commit `24973eb08704eafac6920b969e2c41a0aed3bffc` (`fix(login): show required field errors [QA-BUG-0037, case 18]`), PID `22587`.
+- APK SHA-256 `99804cc1ef26d7f1deeb65de3ff359c90481c8034f99c7edadb08c8396e58450`; local `androidApp-debug.apk` and Samsung-pulled installed `base.apk` hashes are identical.
+- `:feature:login:ui:testAndroidHostTest`: 8 tests, 0 failures/errors. Includes empty-submit state/telemetry coverage and invalid-URL deduplication. `:lib:analytics:implementation:testAndroidHostTest`: 16 tests, 0 failures/errors. `:androidApp:assembleDebug` succeeded.
+- Login opened from Settings → Servers → Add Server. Storyteller selected; URL left at `https://`; username/password empty. No credentials entered and no app data cleared.
+
+Steps and functional result
+1. Observe fresh empty form. Sign In is enabled to permit a validation attempt; no field errors are shown before submit. [Before submit](case-018-empty-login-before-submit.png).
+2. Tap Sign In once. The screen remains on Login and displays all three field errors: `Server URL is required`, `Username is required`, and `Password is required`. No request, navigation, spinner, crash or loss of entered state. [Corrected field-level errors](case-018-empty-login-corrected-errors.png).
+3. No credentials were entered or submitted. Following the test, the Login route was reopened through Server Management → Add Server; URL is back to `https://`, credentials empty, no validation errors.
+
+PID-scoped local DebugAnalyticsManager output for the single empty submit (06:54:09 CEST)
+```
+09-27 06:54:09.188 22587 D Analytics Event: login_validation_failed | Parameters: {screen=login, action=validate_form, operation=login_validation, stage=terminal, outcome=failed, server_type=storyteller, field=required_fields, reason_code=required_fields_missing}
+09-27 06:54:09.189 22587 D Diagnostic breadcrumb: diagnostic_context screen=login action=validate_form operation=login_validation stage=terminal outcome=failed reason_code=required_fields_missing server_type=storyteller correlation_id=33f4ed63-1ab2-4a5e-99b6-156e1fc43466
+```
+- Exactly one bounded validation outcome and one diagnostic breadcrumb were emitted. The payload contains no field contents; the correlation ID is diagnostic-only. No `login_attempted`, `login_failed`, auth result, network request, raw URL/username/password, fatal or unexpected exception appears in the PID-scoped query.
+
+Results, separately by dimension
+- Functional: **PASS** — all three required-field errors appear on Sign In; no request/loading/navigation/crash.
+- Analytics: **PASS** for local DebugAnalyticsManager — one `login_validation_failed` event with bounded `field=required_fields`, `reason_code=required_fields_missing`, safe server type and no credentials. Firebase ingestion is waived and not claimed.
+- Diagnostics: **PASS** — one bounded `login_validation` terminal breadcrumb with correlation ID; ordinary validation does not produce a Crashlytics non-fatal (N-A). Crashlytics delivery remains unverified separately.
+- Regression case 17 and added case 757 IME variant are recorded in their own evidence files; no credentials were used.

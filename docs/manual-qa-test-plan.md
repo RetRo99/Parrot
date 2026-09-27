@@ -1020,3 +1020,9 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 756 | Welcome root system-Back usage and exit outcome | From fresh root Welcome, press system Back; verify app exits cleanly, relaunch, and inspect local event/breadcrumb sequence | The Welcome route is not removed from its only entry; activity exits cleanly and relaunch returns to usable Welcome. Emit one bounded `navigation_back` (`screen=welcome`, `source_screen=welcome`, `destination_screen=app_exit`, `entry_point=system_back`, `outcome=exited`) and start/completed diagnostic breadcrumbs; no Home exposure, blank screen, duplicate event, or Crashlytics exception for ordinary Back |
+
+## 39. Login required-field IME validation extension
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 757 | Empty Login validation via IME | On the empty Login form, focus Password and press the keyboard Done/Sign In action | Same field-level required errors and one bounded validation outcome/breadcrumb as button submit; no auth attempt/request/loading, duplicate event, or crash |

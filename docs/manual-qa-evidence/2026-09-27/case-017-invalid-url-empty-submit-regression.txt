@@ -1,0 +1,19 @@
+Case 17 — Invalid URL submit regression after required-field validation fix
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build: physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source commit `24973eb08704eafac6920b969e2c41a0aed3bffc`, APK SHA-256 `99804cc1ef26d7f1deeb65de3ff359c90481c8034f99c7edadb08c8396e58450` (local/Samsung hashes match), PID `22587`.
+
+Preconditions: fresh Login via Settings → Servers → Add Server; Storyteller selected; URL placeholder `https://`; username/password empty. No credentials entered.
+
+Steps/results:
+1. Replace URL with `not a url`. Inline `Enter a valid http(s) URL` appears. [Invalid URL before Sign In](case-017-invalid-url-empty-submit-fix-entered.png).
+2. Tap enabled Sign In once. The URL error remains; `Username is required` and `Password is required` appear. No request, auth attempt, loading spinner, route change, crash or loss of URL text. [After invalid-form submit](case-017-invalid-url-empty-submit-fix-tapped.png).
+3. URL and credentials remain non-sensitive test/empty values; route was later reset by leaving Login and reopening Add Server.
+
+PID-scoped local DebugAnalyticsManager output at 06:55:35 CEST:
+```
+09-27 06:55:35.551 22587 D Analytics Event: login_validation_failed | Parameters: {screen=login, action=validate_form, operation=login_validation, stage=terminal, outcome=failed, server_type=storyteller, field=server_url, reason_code=invalid_url}
+09-27 06:55:35.551 22587 D Diagnostic breadcrumb: diagnostic_context screen=login action=validate_form operation=login_validation stage=terminal outcome=failed reason_code=invalid_url server_type=storyteller correlation_id=d4e927d6-7732-4db9-8a8c-daea67581b82
+```
+- One bounded invalid-URL event and breadcrumb for the edit; submitting did not duplicate them or start sign-in. No `login_attempted`/`login_failed`, credentials, request, fatal or unexpected exception. Analytics is local-only evidence; Firebase ingestion waived. Crashlytics N-A for expected validation.
+- Functional: **PASS** against case 17 (inline invalid-URL error, no submission/loading/crash). Analytics: **PASS** for one bounded validation result. Diagnostics: **PASS**, one bounded breadcrumb, no unexpected failure.

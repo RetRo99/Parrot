@@ -1,0 +1,21 @@
+Case 757 — Empty Login required-field validation via Samsung keyboard IME
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build: physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source commit `24973eb08704eafac6920b969e2c41a0aed3bffc`, APK SHA-256 `99804cc1ef26d7f1deeb65de3ff359c90481c8034f99c7edadb08c8396e58450` (local/Samsung hashes match), PID `22587`.
+
+Preconditions: Login opened freshly via Settings → Servers → Add Server; Storyteller selected; URL `https://`; username/password empty.
+
+Steps and evidence:
+1. [Fresh empty form](case-757-empty-login-ime-before.png).
+2. Focus Password and show Samsung keyboard. [Password focused](case-757-empty-login-ime-focused.png).
+3. Press the keyboard's Done/Sign In action (`press_key enter`). The IME action invokes form validation; all three field errors are shown, with no auth request/loading/navigation. [Errors immediately after IME action](case-757-empty-login-ime-after.png), [errors after the keyboard is dismissed](case-757-empty-login-ime-errors-no-keyboard.png).
+4. `dumpsys input_method` after the action reports `mInputShown=false` and no served input connection. Process remains PID `22587`.
+
+PID-scoped local DebugAnalyticsManager output at 07:01:33 CEST:
+```
+09-27 07:01:33.313 22587 D Analytics Event: login_validation_failed | Parameters: {screen=login, action=validate_form, operation=login_validation, stage=terminal, outcome=failed, server_type=storyteller, field=required_fields, reason_code=required_fields_missing}
+09-27 07:01:33.314 22587 D Diagnostic breadcrumb: diagnostic_context screen=login action=validate_form operation=login_validation stage=terminal outcome=failed reason_code=required_fields_missing server_type=storyteller correlation_id=5d8ac9d0-c1f5-4398-89b3-8930b22c74b5
+```
+- Exactly one bounded validation event/breadcrumb; no `login_attempted`, `login_failed`, auth result, request, sensitive payload, fatal or unexpected exception. Firebase Analytics ingestion is waived; no ingestion claim. Crashlytics N-A for ordinary validation.
+- Functional: **PASS**. Analytics: **PASS** for local DebugAnalyticsManager. Diagnostics: **PASS** for the bounded expected-validation breadcrumb; Crashlytics N-A.
+- Form cleanup: left Login and reopened Add Server; URL restored to `https://`, username/password empty.
