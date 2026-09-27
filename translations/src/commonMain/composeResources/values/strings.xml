@@ -394,6 +394,7 @@
     <string name="app_settings_clear_current_book_description" tools:ignore="MissingTranslation">Remove the current reading progress shortcut</string>
     <string name="app_settings_current_book_cleared" tools:ignore="MissingTranslation">Current book cleared</string>
     <string name="app_settings_current_book_clear_failed" tools:ignore="MissingTranslation">Couldn’t clear the current book. Try again.</string>
+    <string name="app_settings_profile_operation_failed" tools:ignore="MissingTranslation">Couldn’t complete that profile action. Try again.</string>
     <string name="app_settings_show_continue_reading" tools:ignore="MissingTranslation">Show Continue Reading</string>
     <string name="app_settings_show_continue_reading_description" tools:ignore="MissingTranslation">Show a continue-reading card on the book list and a floating shortcut on other screens</string>
     <string name="settings_tts_enabled" tools:ignore="MissingTranslation">Text-to-Speech</string>

@@ -96,6 +96,7 @@ import resources.translations.app_settings_profile_add_title
 import resources.translations.app_settings_profile_delete_message
 import resources.translations.app_settings_profile_delete_title
 import resources.translations.app_settings_profile_name_label
+import resources.translations.app_settings_profile_operation_failed
 import resources.translations.app_settings_profile_rename_title
 import resources.translations.app_settings_reading_statistics
 import resources.translations.app_settings_reading_statistics_description
@@ -155,6 +156,7 @@ private fun AppSettingsScreenContent(
     val noLogsMessage = stringResource(StringRes.app_settings_no_logs)
     val currentBookClearedMessage = stringResource(StringRes.app_settings_current_book_cleared)
     val currentBookClearFailedMessage = stringResource(StringRes.app_settings_current_book_clear_failed)
+    val profileOperationFailedMessage = stringResource(StringRes.app_settings_profile_operation_failed)
 
     LaunchedEffect(viewState.showLogsClearedMessage) {
         if (viewState.showLogsClearedMessage) {
@@ -181,6 +183,21 @@ private fun AppSettingsScreenContent(
         if (viewState.showCurrentBookClearFailedMessage) {
             snackbarHostState.showSnackbar(currentBookClearFailedMessage)
             intentDispatcher(AppSettingsIntent.OnCurrentBookClearFailedMessageShown)
+        }
+    }
+
+    LaunchedEffect(
+        viewState.showProfileOperationFailedMessage,
+        viewState.showAddProfileDialog,
+        viewState.showRenameProfileDialog,
+        viewState.showDeleteProfileDialog,
+    ) {
+        val dialogVisible = viewState.showAddProfileDialog ||
+            viewState.showRenameProfileDialog ||
+            viewState.showDeleteProfileDialog
+        if (viewState.showProfileOperationFailedMessage && !dialogVisible) {
+            snackbarHostState.showSnackbar(profileOperationFailedMessage)
+            intentDispatcher(AppSettingsIntent.OnProfileOperationFailedMessageShown)
         }
     }
 
@@ -214,14 +231,14 @@ private fun AppSettingsScreenContent(
                 onProfileSelected = { profileId ->
                     intentDispatcher(AppSettingsIntent.OnProfileSelected(profileId))
                 },
-                onProfileLongPressed = { profileId ->
-                    intentDispatcher(AppSettingsIntent.OnProfileLongPressed(profileId))
+                onProfileLongPressed = { profileId, entryPoint ->
+                    intentDispatcher(AppSettingsIntent.OnProfileLongPressed(profileId, entryPoint))
                 },
                 onAddProfileClicked = {
                     intentDispatcher(AppSettingsIntent.OnAddProfileClicked)
                 },
                 onMenuDismissed = {
-                    intentDispatcher(AppSettingsIntent.OnProfileMenuDismissed)
+                    intentDispatcher(AppSettingsIntent.OnProfileMenuDismissed("dismiss_request"))
                 },
                 onRenameClicked = {
                     intentDispatcher(AppSettingsIntent.OnRenameProfileClicked)
@@ -234,24 +251,42 @@ private fun AppSettingsScreenContent(
 
             if (viewState.showAddProfileDialog) {
                 AddProfileDialog(
-                    onDismiss = { intentDispatcher(AppSettingsIntent.OnAddProfileDismissed) },
+                    onDismissRequest = {
+                        intentDispatcher(AppSettingsIntent.OnAddProfileDismissed("dismiss_request"))
+                    },
+                    onCancel = {
+                        intentDispatcher(AppSettingsIntent.OnAddProfileDismissed("cancel_button"))
+                    },
                     onConfirm = { name -> intentDispatcher(AppSettingsIntent.OnAddProfileConfirmed(name)) },
+                    showError = viewState.showProfileOperationFailedMessage,
                 )
             }
 
             if (viewState.showRenameProfileDialog && viewState.selectedProfileForMenu != null) {
                 RenameProfileDialog(
                     currentName = viewState.selectedProfileForMenu.name,
-                    onDismiss = { intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed) },
+                    onDismissRequest = {
+                        intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed("dismiss_request"))
+                    },
+                    onCancel = {
+                        intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed("cancel_button"))
+                    },
                     onConfirm = { newName -> intentDispatcher(AppSettingsIntent.OnRenameProfileConfirmed(newName)) },
+                    showError = viewState.showProfileOperationFailedMessage,
                 )
             }
 
             if (viewState.showDeleteProfileDialog && viewState.selectedProfileForMenu != null) {
                 DeleteProfileConfirmationDialog(
                     profileName = viewState.selectedProfileForMenu.name,
-                    onDismiss = { intentDispatcher(AppSettingsIntent.OnDeleteProfileDismissed) },
+                    onDismissRequest = {
+                        intentDispatcher(AppSettingsIntent.OnDeleteProfileDismissed("dismiss_request"))
+                    },
+                    onCancel = {
+                        intentDispatcher(AppSettingsIntent.OnDeleteProfileDismissed("cancel_button"))
+                    },
                     onConfirm = { intentDispatcher(AppSettingsIntent.OnDeleteProfileConfirmed) },
+                    showError = viewState.showProfileOperationFailedMessage,
                 )
             }
 
@@ -520,7 +555,7 @@ private fun ProfilesRow(
     activeProfile: UserProfile?,
     selectedProfileForMenu: UserProfile?,
     onProfileSelected: (String) -> Unit,
-    onProfileLongPressed: (String) -> Unit,
+    onProfileLongPressed: (String, String) -> Unit,
     onAddProfileClicked: () -> Unit,
     onMenuDismissed: () -> Unit,
     onRenameClicked: () -> Unit,
@@ -541,7 +576,8 @@ private fun ProfilesRow(
                 isActive = profile.id == activeProfile?.id,
                 isMenuVisible = selectedProfileForMenu?.id == profile.id,
                 onClick = { onProfileSelected(profile.id) },
-                onLongClick = { onProfileLongPressed(profile.id) },
+                onLongClick = { onProfileLongPressed(profile.id, "long_press") },
+                onEditClick = { onProfileLongPressed(profile.id, "edit_button") },
                 onMenuDismissed = onMenuDismissed,
                 onRenameClicked = onRenameClicked,
                 onDeleteClicked = onDeleteClicked,
@@ -562,6 +598,7 @@ private fun ProfileItem(
     isMenuVisible: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onEditClick: () -> Unit,
     onMenuDismissed: () -> Unit,
     onRenameClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
@@ -640,7 +677,7 @@ private fun ProfileItem(
         // Visible edit affordance: opens the same menu as long-press so profile
         // management never depends on a hidden gesture.
         IconButton(
-            onClick = onLongClick,
+            onClick = onEditClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .size(32.dp),
@@ -720,24 +757,35 @@ private fun AddProfileItem(
 
 @Composable
 private fun AddProfileDialog(
-    onDismiss: () -> Unit,
+    onDismissRequest: () -> Unit,
+    onCancel: () -> Unit,
     onConfirm: (String) -> Unit,
+    showError: Boolean,
 ) {
     var profileName by remember { mutableStateOf("") }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismissRequest,
         title = {
             Text(text = stringResource(StringRes.app_settings_profile_add_title))
         },
         text = {
-            OutlinedTextField(
-                value = profileName,
-                onValueChange = { profileName = it },
-                label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column {
+                OutlinedTextField(
+                    value = profileName,
+                    onValueChange = { profileName = it },
+                    label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (showError) {
+                    Text(
+                        text = stringResource(StringRes.app_settings_profile_operation_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
         },
         confirmButton = {
             TextButton(
@@ -748,7 +796,7 @@ private fun AddProfileDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onCancel) {
                 Text(stringResource(StringRes.general_cancel))
             }
         },
@@ -758,24 +806,35 @@ private fun AddProfileDialog(
 @Composable
 private fun RenameProfileDialog(
     currentName: String,
-    onDismiss: () -> Unit,
+    onDismissRequest: () -> Unit,
+    onCancel: () -> Unit,
     onConfirm: (String) -> Unit,
+    showError: Boolean,
 ) {
     var profileName by remember { mutableStateOf(currentName) }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismissRequest,
         title = {
             Text(text = stringResource(StringRes.app_settings_profile_rename_title))
         },
         text = {
-            OutlinedTextField(
-                value = profileName,
-                onValueChange = { profileName = it },
-                label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column {
+                OutlinedTextField(
+                    value = profileName,
+                    onValueChange = { profileName = it },
+                    label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (showError) {
+                    Text(
+                        text = stringResource(StringRes.app_settings_profile_operation_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
         },
         confirmButton = {
             TextButton(
@@ -786,7 +845,7 @@ private fun RenameProfileDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onCancel) {
                 Text(stringResource(StringRes.general_cancel))
             }
         },
@@ -796,16 +855,27 @@ private fun RenameProfileDialog(
 @Composable
 private fun DeleteProfileConfirmationDialog(
     profileName: String,
-    onDismiss: () -> Unit,
+    onDismissRequest: () -> Unit,
+    onCancel: () -> Unit,
     onConfirm: () -> Unit,
+    showError: Boolean,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismissRequest,
         title = {
             Text(text = stringResource(StringRes.app_settings_profile_delete_title))
         },
         text = {
-            Text(text = stringResource(StringRes.app_settings_profile_delete_message))
+            Column {
+                Text(text = stringResource(StringRes.app_settings_profile_delete_message))
+                if (showError) {
+                    Text(
+                        text = stringResource(StringRes.app_settings_profile_operation_failed),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
@@ -813,7 +883,7 @@ private fun DeleteProfileConfirmationDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onCancel) {
                 Text(stringResource(StringRes.general_cancel))
             }
         },

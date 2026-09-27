@@ -841,6 +841,33 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun profileEventsKeepBoundedRouteOutcomeAndRetryDimensionsOnly() {
+        val viewed = sanitizeAnalyticsParameters(
+            AppSettingsAnalyticsEvent.ScreenViewed(
+                sourceScreen = "books",
+                entryPoint = "bottom_navigation",
+            ).parameters,
+        )
+        val attempted = sanitizeAnalyticsParameters(
+            AppSettingsAnalyticsEvent.ProfileOperationAttempted(
+                profileOperation = AppSettingsAnalyticsEvent.ProfileOperation.Create,
+                isRetry = true,
+            ).parameters + mapOf(
+                "profile_name" to "private profile",
+                "profile_id" to "private-id",
+            ),
+        )
+
+        assertEquals("app_settings", viewed["screen"])
+        assertEquals("books", viewed["source_screen"])
+        assertEquals("bottom_navigation", viewed["entry_point"])
+        assertEquals("started", attempted["outcome"])
+        assertEquals("profile_create", attempted["operation"])
+        assertEquals(true, attempted["is_retry"])
+        assertFalse("profile_name" in attempted || "profile_id" in attempted)
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(

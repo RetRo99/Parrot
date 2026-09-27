@@ -17,13 +17,14 @@ sealed interface AppSettingsIntent : BaseIntent {
     data class OnProfileSelected(val profileId: String) : AppSettingsIntent
     data object OnAddProfileClicked : AppSettingsIntent
     data class OnAddProfileConfirmed(val name: String) : AppSettingsIntent
-    data object OnAddProfileDismissed : AppSettingsIntent
-    data class OnProfileLongPressed(val profileId: String) : AppSettingsIntent
-    data object OnProfileMenuDismissed : AppSettingsIntent
+    data class OnAddProfileDismissed(val entryPoint: String) : AppSettingsIntent
+    data class OnProfileLongPressed(val profileId: String, val entryPoint: String) : AppSettingsIntent
+    data class OnProfileMenuDismissed(val entryPoint: String) : AppSettingsIntent
     data object OnRenameProfileClicked : AppSettingsIntent
     data class OnRenameProfileConfirmed(val newName: String) : AppSettingsIntent
-    data object OnRenameProfileDismissed : AppSettingsIntent
+    data class OnRenameProfileDismissed(val entryPoint: String) : AppSettingsIntent
     data object OnDeleteProfileClicked : AppSettingsIntent
     data object OnDeleteProfileConfirmed : AppSettingsIntent
-    data object OnDeleteProfileDismissed : AppSettingsIntent
+    data class OnDeleteProfileDismissed(val entryPoint: String) : AppSettingsIntent
+    data object OnProfileOperationFailedMessageShown : AppSettingsIntent
 }

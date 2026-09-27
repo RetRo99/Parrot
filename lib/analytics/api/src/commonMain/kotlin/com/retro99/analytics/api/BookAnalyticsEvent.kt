@@ -872,30 +872,145 @@ private fun operationParameters(
  */
 sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
 
-    data class ProfileCreated(
-        val profileName: String,
+    /** Records an actual visible App Settings route exposure, not every recomposition. */
+    data class ScreenViewed(
+        val sourceScreen: String,
+        val entryPoint: String,
     ) : AppSettingsAnalyticsEvent {
+        override val name: String = "app_settings_screen_viewed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "app_settings",
+            "source_screen" to sourceScreen,
+            "entry_point" to entryPoint,
+        )
+    }
+
+    enum class ProfileOperation(
+        val action: String,
+        val operation: String,
+    ) {
+        Create("create_profile", "profile_create"),
+        Switch("switch_profile", "profile_switch"),
+        Rename("rename_profile", "profile_rename"),
+        Delete("delete_profile", "profile_delete"),
+    }
+
+    data class ProfileOperationAttempted(
+        val profileOperation: ProfileOperation,
+        val isRetry: Boolean,
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "profile_operation_attempted"
+        override val parameters: Map<String, Any> = profileOperationParameters(
+            profileOperation,
+            stage = "started",
+            outcome = "started",
+        ) + ("is_retry" to isRetry)
+    }
+
+    data class ProfileOperationFailed(
+        val profileOperation: ProfileOperation,
+        val isRetry: Boolean,
+        val reasonCode: String = "profile_operation_failed",
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "profile_operation_failed"
+        override val parameters: Map<String, Any> = profileOperationParameters(
+            profileOperation,
+            stage = "terminal",
+            outcome = "failed",
+        ) + mapOf("reason_code" to reasonCode, "is_retry" to isRetry)
+    }
+
+    data class ProfileOperationCancelled(
+        val profileOperation: ProfileOperation,
+        val entryPoint: String,
+        val isRetry: Boolean? = null,
+        val reasonCode: String = "user_cancelled",
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "profile_operation_cancelled"
+        override val parameters: Map<String, Any> = profileOperationParameters(
+            profileOperation,
+            stage = "terminal",
+            outcome = "cancelled",
+        ) + mapOf(
+            "entry_point" to entryPoint,
+            "reason_code" to reasonCode,
+        ) + (isRetry?.let { mapOf("is_retry" to it) } ?: emptyMap())
+    }
+
+    data class ProfileDialogOpened(
+        val profileOperation: ProfileOperation,
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "profile_operation_dialog_opened"
+        override val parameters: Map<String, Any> = profileOperationParameters(
+            profileOperation,
+            stage = "presented",
+            outcome = "shown",
+        )
+    }
+
+    data class ProfileMenuOpened(
+        val entryPoint: String,
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "profile_menu_opened"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "app_settings",
+            "action" to "manage_profile",
+            "operation" to "profile_menu",
+            "entry_point" to entryPoint,
+            "stage" to "presented",
+            "outcome" to "shown",
+        )
+    }
+
+    data class ProfileMenuDismissed(
+        val entryPoint: String,
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "profile_menu_dismissed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "app_settings",
+            "action" to "manage_profile",
+            "operation" to "profile_menu",
+            "entry_point" to entryPoint,
+            "stage" to "terminal",
+            "outcome" to "dismissed",
+            "reason_code" to "dismiss_request",
+        )
+    }
+
+    data class ProfileCreated(val isRetry: Boolean = false) : AppSettingsAnalyticsEvent {
         override val name: String = "profile_created"
-        override val parameters: Map<String, Any> = mapOf(
-            "profile_name" to profileName,
-        )
+        override val parameters: Map<String, Any> = profileOperationParameters(
+            ProfileOperation.Create,
+            stage = "terminal",
+            outcome = "succeeded",
+        ) + ("is_retry" to isRetry)
     }
 
-    data object ProfileDeleted : AppSettingsAnalyticsEvent {
+    data class ProfileDeleted(val isRetry: Boolean = false) : AppSettingsAnalyticsEvent {
         override val name: String = "profile_deleted"
+        override val parameters: Map<String, Any> = profileOperationParameters(
+            ProfileOperation.Delete,
+            stage = "terminal",
+            outcome = "succeeded",
+        ) + ("is_retry" to isRetry)
     }
 
-    data class ProfileSwitched(
-        val profileId: String,
-    ) : AppSettingsAnalyticsEvent {
+    data class ProfileSwitched(val isRetry: Boolean = false) : AppSettingsAnalyticsEvent {
         override val name: String = "profile_switched"
-        override val parameters: Map<String, Any> = mapOf(
-            "profile_id" to profileId,
-        )
+        override val parameters: Map<String, Any> = profileOperationParameters(
+            ProfileOperation.Switch,
+            stage = "terminal",
+            outcome = "succeeded",
+        ) + ("is_retry" to isRetry)
     }
 
-    data object ProfileRenamed : AppSettingsAnalyticsEvent {
+    data class ProfileRenamed(val isRetry: Boolean = false) : AppSettingsAnalyticsEvent {
         override val name: String = "profile_renamed"
+        override val parameters: Map<String, Any> = profileOperationParameters(
+            ProfileOperation.Rename,
+            stage = "terminal",
+            outcome = "succeeded",
+        ) + ("is_retry" to isRetry)
     }
 
     data class FileLoggingToggled(
@@ -973,6 +1088,20 @@ sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
             "outcome" to "failed",
             "reason_code" to "current_book_clear_failed",
             "is_retry" to isRetry,
+        )
+    }
+
+    companion object {
+        private fun profileOperationParameters(
+            operation: ProfileOperation,
+            stage: String,
+            outcome: String,
+        ): Map<String, Any> = mapOf(
+            "screen" to "app_settings",
+            "action" to operation.action,
+            "operation" to operation.operation,
+            "stage" to stage,
+            "outcome" to outcome,
         )
     }
 }

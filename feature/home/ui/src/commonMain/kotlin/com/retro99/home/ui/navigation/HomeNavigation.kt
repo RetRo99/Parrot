@@ -122,7 +122,8 @@ fun HomeNavigation(
 
     val currentDestination = navigationState.currentDestination
     var lastVisibleDestination by remember { mutableStateOf<HomeDestination?>(null) }
-    LaunchedEffect(currentDestination) {
+    var lastVisibleTab by remember { mutableStateOf(navigationState.currentTab) }
+    LaunchedEffect(currentDestination, navigationState.currentTab) {
         if (currentDestination is HomeDestination.ServerManagement) {
             val previousDestination = lastVisibleDestination
                 ?: navigationState.currentBackStack.dropLast(1).lastOrNull()
@@ -132,7 +133,21 @@ fun HomeNavigation(
                 entryPoint = exposure.entryPoint,
             )
         }
+        if (currentDestination is HomeDestination.AppSettings) {
+            val previousDestination = lastVisibleDestination
+                ?: navigationState.currentBackStack.dropLast(1).lastOrNull()
+            val entryPoint = when {
+                previousDestination == null -> "route_restore"
+                lastVisibleTab != navigationState.currentTab -> "bottom_navigation"
+                else -> "navigation_back"
+            }
+            viewModel.reportAppSettingsViewed(
+                sourceScreen = previousDestination?.analyticsScreenName() ?: "home",
+                entryPoint = entryPoint,
+            )
+        }
         lastVisibleDestination = currentDestination
+        lastVisibleTab = navigationState.currentTab
     }
     val showBottomBar = (currentDestination as? BottomBarDestination)?.showBottomBar != false
     val isInReader = currentDestination is HomeDestination.Reader

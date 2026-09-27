@@ -3,6 +3,7 @@ package com.retro99.home.ui.navigation
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
@@ -560,6 +561,27 @@ class HomeNavigationViewModel(
         reasonCode = reasonCode,
         correlationId = context.correlationId,
     )
+
+    /** Records an exposure only after the navigation owner reports this route as visible. */
+    fun reportAppSettingsViewed(sourceScreen: String, entryPoint: String) {
+        analytics.logEvent(
+            AppSettingsAnalyticsEvent.ScreenViewed(
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "app_settings",
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+                action = "screen_view",
+                operation = "app_settings_route",
+                stage = "visible",
+                outcome = "succeeded",
+            ),
+        )
+    }
 
     /** Records an exposure only after the navigation owner reports this route as visible. */
     fun reportServerManagementViewed(sourceScreen: String, entryPoint: String) {
