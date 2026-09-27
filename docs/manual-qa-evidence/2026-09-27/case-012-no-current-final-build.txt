@@ -1,0 +1,28 @@
+Case 12 — Open last book on launch with no current-book reference
+Date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Physical Samsung serial `RFCWC0SSVDM`; SM-S921B (Galaxy S24); Android 16/API 36; One UI 8.0 build `S921BXXSGDZG1`; gesture navigation.
+- Installed package `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug. APK SHA-256 `2302df8024779c5f1cbff4e588965f1c1ec2fec7f15bddfde6a19412b8ed778e`; Samsung-pulled and local APK hashes match. Source commit `e54f99b854b694d5b62db5338320afd75acdef35`.
+- Active local profile “Default”. No credentials were entered; no app data was cleared.
+
+Preconditions and steps
+1. “Open Last Book on Launch” and “Show Continue Reading” were enabled. Used App Settings → Clear Current Book to remove the stored current-reading reference; the book file/library entry was retained.
+2. The successful case-426 clear ran at about 02:14 CEST on an intermediate QA-BUG-0028 candidate. Installed the final QA-BUG-0028 APK with `adb install -r` at 02:18; local and Samsung-pulled APK hashes matched.
+3. Launched `com.retro99.parrot/.android.MainActivity` at 02:19:13 while no current-book reference was set. PID `28558`. The app resolved startup to Home, emitted a last-book terminal `skipped/no_current_book`, then emitted the Home Books exposure. It did not navigate into Reader or show an error/empty Reader.
+4. The Books tab remained usable and showed the imported book's library card (including its saved 48% progress); this library progress is distinct from the cleared automatic-launch target. Screenshot: [`case-012-no-current-final-build.png`](case-012-no-current-final-build.png). An earlier same-state probe on the intermediate APK is retained at [`case-012-no-current-update-restart.png`](case-012-no-current-update-restart.png).
+
+PID-scoped local DebugAnalyticsManager excerpt
+```text
+09-27 02:19:13.599 28558 D ... Analytics Event: app_launch_route_resolved | {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}
+09-27 02:19:13.600 28558 D ... Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded reason_code=auth_state_check_completed
+09-27 02:19:13.634 28558 D ... Analytics Event: last_book_launch_completed | {screen=home, source_screen=splash, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=terminal, outcome=skipped, reason_code=no_current_book}
+09-27 02:19:13.634 28558 D ... Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=open_last_book operation=reader_open stage=terminal outcome=skipped reason_code=no_current_book
+09-27 02:19:13.906 28558 D ... Analytics Event: home_screen_viewed | {screen=home, source_screen=splash, entry_point=app_launch}
+```
+
+Results
+- Functional: PASS for the no-current-book fallback on the installed final QA-BUG-0028 APK; normal Home Books appears and the app remains usable.
+- Analytics: PASS for local debug-provider event sequence (startup route, one `skipped/no_current_book` terminal, one Home exposure). Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: PASS for the bounded route-selected and no-current-book terminal breadcrumbs. No unexpected failure was induced; Crashlytics delivery was not exercised and remains separately blocked.
+- This does not complete case 11's planned user-controlled kill/relaunch or case 461's process-death-while-reading variant. Cross-app/device sync was not tested.

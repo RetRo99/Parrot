@@ -1,0 +1,26 @@
+Case 426 — Clear current book on the final QA-BUG-0028 Samsung build
+Date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- `com.retro99.parrot` 0.4.5 (21), debug; source commit `e54f99b854b694d5b62db5338320afd75acdef35`; installed/local/pulled APK SHA-256 `2302df8024779c5f1cbff4e588965f1c1ec2fec7f15bddfde6a19412b8ed778e`.
+- Local profile “Default”; the launch and continue-reading preferences remained enabled. No credentials or app-data reset were used.
+
+Execution and functional result
+1. Started from case 12's normal Home route with no current-book target. Opened the imported local *Pride and Prejudice* from its Continue reading action, remained in the Reader for more than 60 seconds, and used system Back to return to Detail. App Settings then exposed “Clear Current Book.” Reader screenshot before clearing: [`case-426-clear-instrumented-reader.png`](case-426-clear-instrumented-reader.png).
+2. Opened Settings and tapped “Clear Current Book.” The action is immediate, with no confirmation dialog. Accessibility/UI output immediately showed “Current book cleared”; the current-book row disappeared and both reading preferences stayed checked. Final post-clear screenshot: [`case-426-clear-current-final-build.png`](case-426-clear-current-final-build.png). Intermediate QA-BUG-0028 candidate screenshot is retained at [`case-426-clear-current-instrumented-success.png`](case-426-clear-current-instrumented-success.png).
+3. App process PID `28558`; operation occurred at 02:21:59 CEST. No persistence failure was injected.
+
+PID-scoped local DebugAnalyticsManager excerpt
+```text
+09-27 02:21:59.820 28558 D ... Analytics Event: current_book_clear_attempted | {screen=app_settings, action=clear_current_book, operation=clear_current_book, stage=started, outcome=started, is_retry=false}
+09-27 02:21:59.820 28558 D ... Diagnostic breadcrumb: diagnostic_context screen=app_settings action=clear_current_book operation=clear_current_book stage=started outcome=started correlation_id=c214926c-5be5-44c8-8c25-6e15ae930d95
+09-27 02:21:59.849 28558 D ... Analytics Event: current_book_cleared | {screen=app_settings, action=clear_current_book, operation=clear_current_book, stage=terminal, outcome=succeeded, is_retry=false}
+09-27 02:21:59.849 28558 D ... Diagnostic breadcrumb: diagnostic_context screen=app_settings action=clear_current_book operation=clear_current_book stage=terminal outcome=succeeded correlation_id=c214926c-5be5-44c8-8c25-6e15ae930d95
+```
+
+Results and limitations
+- Functional: PASS for current target removal; row disappears and preferences are unchanged. Confirmation/cancel variant: N-A because this action is immediate and presents a success snackbar.
+- Analytics: PASS for local attempt + exactly one success with bounded screen/action/stage/outcome/retry dimensions. Firebase Analytics ingestion remains waived/not claimed.
+- Diagnostics: PASS for correlated start/success breadcrumbs. A failure path was not safely inducible on the phone; host tests exercise one exception report, retained current-book state, retry success, privacy-bounded reason code and cancellation propagation. Crashlytics/Firebase delivery remains blocked/unverified.
+- The pre-fix missing attempt/failure instrumentation is recorded in [`case-426-clear-current-observation.txt`](case-426-clear-current-observation.txt); do not mistake its old FAIL observation for the post-fix result.
