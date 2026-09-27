@@ -48,6 +48,8 @@ fun HomeNavigation(
 
     // Handle navigation events from ViewModel
     LaunchedEffect(viewModel) {
+        // Inspect the restored back stack before optionally opening the current book.
+        viewModel.checkOpenLastBookOnLaunch(navigationState.currentDestination)
         viewModel.navigationEvents.collect { event ->
             when (event) {
                 is HomeNavigationEvent.NavigateTo -> {
@@ -60,16 +62,36 @@ fun HomeNavigation(
                     navigationState.goBack()
                 }
                 is HomeNavigationEvent.NavigateToReaderReplacing -> {
-                    navigationState.switchTab(event.tab)
-                    navigationState.navigateToReplacing(
-                        HomeDestination.Reader(
-                            serverId = event.serverId,
-                            bookUuid = event.bookUuid,
+                    if (
+                        event.isLastBookOnLaunch &&
+                        navigationState.currentDestination.isReaderFor(
+                            event.serverId,
+                            event.bookUuid,
+                            event.bookType,
+                        )
+                    ) {
+                        viewModel.reportLastBookRouteAlreadyRestored(
                             bookType = event.bookType,
-                            isLastBookOnLaunch = event.isLastBookOnLaunch,
-                        ),
-                        event.tab,
-                    )
+                            readerWillResolveOutcome = navigationState.currentDestination
+                                .isLastBookLaunchReaderFor(
+                                    event.serverId,
+                                    event.bookUuid,
+                                    event.bookType,
+                                ),
+                            attemptAlreadyRecorded = true,
+                        )
+                    } else {
+                        navigationState.switchTab(event.tab)
+                        navigationState.navigateToReplacing(
+                            HomeDestination.Reader(
+                                serverId = event.serverId,
+                                bookUuid = event.bookUuid,
+                                bookType = event.bookType,
+                                isLastBookOnLaunch = event.isLastBookOnLaunch,
+                            ),
+                            event.tab,
+                        )
+                    }
                 }
             }
             // Clear replay cache after consuming the event to prevent replay on recomposition

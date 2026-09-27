@@ -65,6 +65,7 @@ class HomeNavigationViewModel(
     private val _navigationEvents = MutableSharedFlow<HomeNavigationEvent>(replay = 1, extraBufferCapacity = 1)
 
     private val logger = Logger.withTag("HomeNavigationViewModel")
+    private var hasCheckedOpenLastBookOnLaunch = false
 
     /**
      * Navigation events that should be consumed by the composable to perform navigation.
@@ -96,7 +97,6 @@ class HomeNavigationViewModel(
         observeCurrentlyReading()
         observeBubblePosition()
         observeShowContinueReading()
-        checkOpenLastBookOnLaunch()
         observeNowPlaying()
     }
 
@@ -128,7 +128,11 @@ class HomeNavigationViewModel(
      * Checks if the "Open Last Book on Launch" setting is enabled and
      * emits a navigation event to open the reader if there's a currently reading book.
      */
-    private fun checkOpenLastBookOnLaunch() {
+    /** Runs after saveable navigation state is restored to avoid replacing an existing Reader. */
+    fun checkOpenLastBookOnLaunch(restoredDestination: HomeDestination?) {
+        if (hasCheckedOpenLastBookOnLaunch) return
+        hasCheckedOpenLastBookOnLaunch = true
+
         val isEnabled = preferences.getBoolean(
             PreferencesKey.OpenLastBookOnLaunch,
             defaultValue = false,
@@ -158,6 +162,24 @@ class HomeNavigationViewModel(
             )
             return
         }
+
+        val isMatchingRestoredReader = restoredDestination.isReaderFor(
+            serverId = currentlyReading.serverId,
+            bookUuid = currentlyReading.bookUuid,
+            bookType = currentlyReading.bookType,
+        )
+        if (isMatchingRestoredReader) {
+            reportLastBookRouteAlreadyRestored(
+                bookType = currentlyReading.bookType,
+                readerWillResolveOutcome = restoredDestination.isLastBookLaunchReaderFor(
+                    serverId = currentlyReading.serverId,
+                    bookUuid = currentlyReading.bookUuid,
+                    bookType = currentlyReading.bookType,
+                ),
+            )
+            return
+        }
+
         analytics.logEvent(
             NavigationAnalyticsEvent.LastBookLaunchAttempted(
                 bookType = currentlyReading.bookType.name.lowercase(),
@@ -185,6 +207,57 @@ class HomeNavigationViewModel(
                 isLastBookOnLaunch = true,
             )
         )
+    }
+
+    /** Records that a restored Reader route already satisfies the app-launch destination. */
+    fun reportLastBookRouteAlreadyRestored(
+        bookType: BookType,
+        readerWillResolveOutcome: Boolean,
+        attemptAlreadyRecorded: Boolean = false,
+    ) {
+        if (!attemptAlreadyRecorded) {
+            analytics.logEvent(
+                NavigationAnalyticsEvent.LastBookLaunchAttempted(
+                    bookType = bookType.name.lowercase(),
+                ),
+            )
+        }
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "home",
+                sourceScreen = "splash",
+                entryPoint = "app_launch",
+                action = "open_last_book",
+                operation = "reader_open",
+                stage = "route_restored",
+                outcome = "started",
+                reasonCode = "reader_route_restored",
+                mediaType = bookType.name.lowercase(),
+            ),
+        )
+        if (!readerWillResolveOutcome) {
+            analytics.logEvent(
+                NavigationAnalyticsEvent.LastBookLaunchCompleted(
+                    screen = "reader",
+                    outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Skipped,
+                    reasonCode = "reader_route_restored",
+                    bookType = bookType.name.lowercase(),
+                ),
+            )
+            analytics.logBreadcrumb(
+                DiagnosticContext(
+                    screen = "reader",
+                    sourceScreen = "home",
+                    entryPoint = "app_launch",
+                    action = "open_last_book",
+                    operation = "reader_open",
+                    stage = "terminal",
+                    outcome = "skipped",
+                    reasonCode = "reader_route_restored",
+                    mediaType = bookType.name.lowercase(),
+                ),
+            )
+        }
     }
 
     private fun observeBubblePosition() {

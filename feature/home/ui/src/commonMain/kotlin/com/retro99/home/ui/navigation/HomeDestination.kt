@@ -97,3 +97,25 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
             this is Statistics ||
             this is BookDetail
 }
+
+/** Returns whether this destination already restores the requested Reader route. */
+internal fun HomeDestination?.isReaderFor(
+    serverId: String,
+    bookUuid: String,
+    bookType: BookType,
+): Boolean {
+    val reader = this as? HomeDestination.Reader ?: return false
+    return reader.serverId == serverId &&
+        reader.bookUuid == bookUuid &&
+        reader.bookType == bookType
+}
+
+/** Returns whether the restored matching Reader owns the pending last-book outcome. */
+internal fun HomeDestination?.isLastBookLaunchReaderFor(
+    serverId: String,
+    bookUuid: String,
+    bookType: BookType,
+): Boolean {
+    val reader = this as? HomeDestination.Reader ?: return false
+    return reader.isLastBookOnLaunch && reader.isReaderFor(serverId, bookUuid, bookType)
+}

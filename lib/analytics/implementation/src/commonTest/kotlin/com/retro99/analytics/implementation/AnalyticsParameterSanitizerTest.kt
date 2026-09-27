@@ -175,6 +175,14 @@ class AnalyticsParameterSanitizerTest {
                 "file_path" to "/private/path.epub",
             ),
         )
+        val restored = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.LastBookLaunchCompleted(
+                screen = "reader",
+                outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Skipped,
+                reasonCode = "reader_route_restored",
+                bookType = "ebook",
+            ).parameters,
+        )
 
         assertEquals(
             mapOf(
@@ -202,6 +210,20 @@ class AnalyticsParameterSanitizerTest {
                 "book_type" to "imported",
             ),
             completed,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "reader",
+                "source_screen" to "home",
+                "entry_point" to "app_launch",
+                "action" to "open_last_book",
+                "operation" to "reader_open",
+                "stage" to "terminal",
+                "outcome" to "skipped",
+                "reason_code" to "reader_route_restored",
+                "book_type" to "ebook",
+            ),
+            restored,
         )
     }
 
