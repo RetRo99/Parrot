@@ -1,0 +1,32 @@
+# QA-BUG-0060 / cases 415 and 765 — Samsung committed-fix retest
+
+- Run date: 2026-09-27, approximately 22:54–22:58 CEST (device clock)
+- Device: physical Samsung SM-S921B, serial `RFCWC0SSVDM`; Android 16/API 36; One UI 8.0; portrait, gesture navigation
+- Package: `com.retro99.parrot` 0.4.5 (21), debug, target SDK 36
+- Fix source commit: `bf38383e48f798c8d66e662798b3e88f01e57b62`
+- APK SHA-256: `75ae77c5b811ba23991fbe893ed26632897475260310fa87f742e14d82b3d1a0`; local and installed package APK hashes matched
+- Process used for final retest: PID `16401`
+- Preconditions: App Settings / Profiles; two pre-existing disposable profiles shared a synthetic name; the original profile remained present but inactive. No credentials or real profile data were used.
+
+## Steps and observed functional results
+
+1. On the installed fix build, open Add Profile, enter the existing synthetic profile name exactly, dismiss the keyboard and confirm. The dialog remains open, shows the duplicate-name validation message, and does not create or activate a profile. Cancel closes the dialog.
+2. Open Rename on the other duplicate profile and submit the existing name exactly. The dialog remains open with the same validation message; no rename is committed. Cancel closes it.
+3. Repeat Add using a case-changed candidate with leading/trailing whitespace. Normalized collision is rejected; no profile mutation occurs.
+4. Repeat Rename using the same case/whitespace-normalized collision. It is rejected; no mutation occurs.
+5. The pre-existing duplicate cards display distinct, stable `Profile 1` / `Profile 2` markers. Switch to each card and back: the selected card's active marker follows the selection, navigation returns to the tab root, and the two markers remain distinct.
+6. After the collision attempts and switching checks, the two disposable duplicate profiles still existed, the original profile remained present, and one duplicate remained active. Cleanup/restoration is recorded separately before proceeding to the next case.
+
+## Local observability evidence
+
+- Four rejected submissions produced exactly four local `profile_name_validation_failed` events: two `profile_create` and two `profile_rename`, each with `stage=validation`, `outcome=rejected`, `reason_code=duplicate_name`.
+- The same four submissions produced four bounded `app_settings` validation breadcrumbs with matching operation/reason context.
+- Four dialog presentations and four ordinary Cancel dismissals were observed. No profile create/rename attempt or success event was emitted for rejected input. Two later explicit profile switches each emitted one attempt/success pair.
+- Event and diagnostic fields contained no synthetic profile name, profile UUID, credentials, or server data. The inspected PID capture had no fatal-exception or handled-exception marker.
+- This is local `DebugAnalyticsManager` evidence only; Firebase Analytics ingestion was waived and is not claimed. No unexpected failure was induced, so Crashlytics non-fatal delivery is not asserted.
+
+## Build checks
+
+`git diff --check` passed. `./gradlew :feature:home:ui:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug --rerun-tasks --console=plain` completed with `BUILD SUCCESSFUL`. XML results: Home UI 20 tests, Analytics implementation 33 tests; 0 failures, errors or skips. The APK assembled by that run was installed and hash-matched on the Samsung.
+
+No screenshot or raw UI hierarchy/log lines are retained; the UI text/positions and telemetry counts above are sanitized assertions from the live device.
