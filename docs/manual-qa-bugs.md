@@ -663,7 +663,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0039 — Server Management has no actual screen-exposure event
 
 - **Severity / user impact:** Low; reporting cannot identify visits to Server Management or the source/entry path, so use and abandonment around server-account management are invisible.
-- **Status:** FIX VERIFIED ON SAMSUNG CANDIDATE; source commit/bookkeeping pending.
+- **Status:** FIXED AND RETESTED ON SAMSUNG; implementation commit `dad9df1abeb1ef62a73bc29b71dc7dad559c01b0`.
 - **Screen/test IDs:** Server Management entry/back and journey reconstruction; cases 428, 440–441, 443, 747, 749.
 - **Device/build/commit:** Discovery audit used Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`. Candidate verification build/PID/hash are in the retest entry below.
 - **Preconditions:** Navigate from Settings/App Settings into `HomeDestination.ServerManagement`.
@@ -674,9 +674,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); source locations listed above. Case-443 screenshots/logs retain the Add Server journey but do not claim a screen exposure.
 - **Root cause:** Screen exposure instrumentation was added for Welcome, Login and Home but not for nested Home destinations such as Server Management.
 - **Affected files:** `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/navigation/HomeNavigation.kt`, `HomeNavigationViewModel.kt`; typed navigation/server-management events and sanitizer tests.
-- **Fix reference / commit:** Candidate change is in `HomeNavigation.kt`, `HomeNavigationViewModel.kt`, typed Analytics event and focused context/sanitizer tests; code commit pending.
+- **Fix reference / commit:** `dad9df1abeb1ef62a73bc29b71dc7dad559c01b0` (`fix(analytics): report Server Management exposure [QA-BUG-0039, case 440]`). Adds one actual-visible Server Management exposure event and matching breadcrumb with bounded source/entry attribution, guarded by destination changes rather than recomposition.
 - **Retest:** PASS on Samsung candidate APK SHA-256 `d86d8948dba8feb3cc28bb7e6e56b972513889b0d27a8d1a64c2533cf6e7f9ab`, PID `18779`. Opened Settings → Servers, returned by toolbar Back, then reopened. Exactly one `server_management_screen_viewed` and one matching visible-route breadcrumb appeared per actual visit (2 each total); repeated accessibility inspection produced no duplicates. Bounded context was `source_screen=app_settings`, `entry_point=servers_row`; no credentials or URL in event/log. Analytics evidence is local DebugAnalyticsManager only under the user waiver, not Firebase delivery. No failure was induced; Crashlytics is N-A for these successful route exposures and delivery remains unverified. [Candidate device evidence](manual-qa-evidence/2026-09-27/server-management-visible-route-and-card-prefx.txt).
-- **Discovery commit:** `41380c912945955438e18eb22568815de55997db` recorded this bug and the pre-fix source audit. Fix commit pending; record its hash in the next documentation commit. Preserve the source-level finding and initial absence after retest.
+- **Discovery / fix commits:** `41380c912945955438e18eb22568815de55997db` records the pre-fix source finding; `dad9df1abeb1ef62a73bc29b71dc7dad559c01b0` contains the fix. Preserve the source-level finding and initial absence after retest.
 
 ## QA-BUG-0040 — Logout and remove are reported as successes before registry completion
 
@@ -807,9 +807,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0047 — Nested Server Management Back has no navigation outcome telemetry
 
 - **Severity / user impact:** Low; Server Management exits are invisible to journey analytics and diagnostics, obscuring where users return or abandon the route.
-- **Status:** CONFIRMED on Samsung candidate and by source audit; fix/retest pending.
+- **Status:** FIXED AND RETESTED ON SAMSUNG; verified source commit `de8cfec65df74d569b34ae3d56a7495cf62c9800`.
 - **Screen/test IDs:** Case 441 toolbar Back; shared Back/navigation variants 740, 747–749.
-- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), PID `18779`; APK SHA-256 `d86d8948dba8feb3cc28bb7e6e56b972513889b0d27a8d1a64c2533cf6e7f9ab`, built from source base `41380c91` plus uncommitted QA-BUG-0039 candidate. Local and pulled APK hashes match.
+- **Device/build/commit:** Pre-fix discovery used Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), PID `18779`, APK SHA-256 `d86d8948dba8feb3cc28bb7e6e56b972513889b0d27a8d1a64c2533cf6e7f9ab`. The fixed Samsung build is PID `28758`, APK SHA-256 `b122bd7fe9dfe927885ca96f4f82838aea8e864543d31d4ecc1030944bb41ac0`, source commit `de8cfec65df74d569b34ae3d56a7495cf62c9800`; local and pulled hashes match.
 - **Preconditions:** Server Management is the visible destination, opened from App Settings.
 - **Exact reproduction:** Tap toolbar Back (content description `Back`). App Settings becomes visible, but the PID-scoped 09:46 log contains no `navigation_back`/destination event and no diagnostic breadcrumb for the completed Server Management → App Settings transition. The matching screen-view event only records entry.
 - **Expected:** On an accepted Back that actually changes the visible route, record one bounded navigation outcome with source `server_management`, destination `app_settings`, and entry point `toolbar_back`, plus a matching breadcrumb. Distinguish attempted from completed navigation where appropriate; do not emit a completion on a no-op or report ordinary Back to Crashlytics.
@@ -818,6 +818,24 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** [Candidate device check and safe log excerpt](manual-qa-evidence/2026-09-27/server-management-visible-route-and-card-prefx.txt); `HomeNavigationViewModel.onIntent(GoBack)` and `HomeNavigation.kt` Back application path. PID logs show only the two Server Management entry pairs and no Back outcome.
 - **Root cause:** Nested Home `GoBack` navigation has no analytics/diagnostic terminal callback; only the Welcome root has a typed `navigation_back` event.
 - **Affected files:** `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/navigation/HomeNavigationViewModel.kt`, `HomeNavigation.kt`, typed navigation Analytics API/sanitizer/tests.
-- **Fix reference / commit:** Pending. Add source/destination-aware Back attempt/completion only at the applied-navigation boundary, with toolbar/system/swipe entry classification and exactly-once semantics.
-- **Retest:** NOT RUN. Verify toolbar, system Back and supported swipe separately on Server Management; each actual transition emits the bounded outcome and breadcrumb once, no event on Back no-op, no duplicate on recomposition, and no Crashlytics non-fatal for ordinary Back. Firebase Analytics ingestion is waived; local logs only.
-- **Discovery commit:** Pending documentation commit. Record its hash after commit; preserve pre-fix case-441 evidence.
+- **Fix reference / commit:** `de8cfec65df74d569b34ae3d56a7495cf62c9800` (`fix(analytics): report applied nested Back outcomes [QA-BUG-0047, case 441]`). Nested Home Back now carries bounded source/destination/entry context, emits `navigation_back_attempted` and a correlated start breadcrumb, then records `navigation_back` and a terminal breadcrumb only after the navigation owner applies the pop. Failed application uses one contextual non-fatal.
+- **Retest:** PASS on Samsung candidate APK SHA-256 `b122bd7fe9dfe927885ca96f4f82838aea8e864543d31d4ecc1030944bb41ac0`, PID `28758`. Both toolbar Back and Android system Back returned to App Settings; each emitted exactly one bounded attempt and one successful completion with matching start/terminal breadcrumbs and route-specific entry point. Repeated UI-tree inspection did not duplicate events. No private values were logged; no failure was induced, and ordinary Back produced no Crashlytics report. Local DebugAnalyticsManager only; Firebase ingestion is waived. [Full logs/results](manual-qa-evidence/2026-09-27/server-management-back-retest-and-reader-back-prefx.txt).
+- **Discovery / fix commits:** `909ba9c492936c06a914332b5439f3d820c80d84` records the pre-fix failure; `de8cfec65df74d569b34ae3d56a7495cf62c9800` contains the fix. Preserve the initial case-441 observation above and candidate device evidence.
+
+## QA-BUG-0048 — Reader system Back is attributed as a close-button action
+
+- **Severity / user impact:** Low; Analytics and diagnostics misclassify how the Reader was exited, weakening source-specific navigation and abandonment reporting.
+- **Status:** CONFIRMED on Samsung candidate; fix/retest pending.
+- **Screen/test IDs:** Shared case 740/Reader/system-back; Reader exit/action mapping cases 138, 181, 290, 326, 740, 747–749.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), PID `28758`; APK SHA-256 `b122bd7fe9dfe927885ca96f4f82838aea8e864543d31d4ecc1030944bb41ac0`, source commit `de8cfec65df74d569b34ae3d56a7495cf62c9800` (QA-BUG-0047 fix; before QA-BUG-0048 fix). Local and Samsung-pulled hashes match.
+- **Preconditions:** A Reader route is visible and the user performs Android system Back.
+- **Exact reproduction:** Relaunch Parrot with its saved Reader route; after usable content appears, press Android system Back once. The Reader correctly returns to Books, but the generated `navigation_back_attempted`/`navigation_back` and diagnostic breadcrumbs use `entry_point=close_button`.
+- **Expected:** System Back must use `entry_point=system_back`; the Reader close control must use its own stable entry point (e.g. `close_button`). Each actual route transition emits one attempt/completion and correlated breadcrumbs with accurate source, destination and entry point.
+- **Actual:** Functional exit succeeds, but the route callback shared by the Reader's NavigationBackHandler and close action is tagged as `close_button` for both.
+- **Frequency:** Confirmed 1/1 on-device system Back; source path means every Reader system Back routed through `onClose` is misattributed.
+- **Evidence:** [Candidate device logs and action record](manual-qa-evidence/2026-09-27/server-management-back-retest-and-reader-back-prefx.txt); `feature/reader/ui/src/commonMain/kotlin/com/retro99/reader/ui/reader/ReaderScreen.kt` `NavigationBackHandler(onBackCompleted={ viewModel.close() })`; Home's Reader `onClose` callback is assigned a fixed `close_button` entry point.
+- **Root cause:** Reader system Back and explicit close both converge on the same no-argument `onClose` callback, losing the originating navigation action before the Home-level telemetry boundary.
+- **Affected files:** `feature/reader/ui/src/commonMain/kotlin/com/retro99/reader/ui/reader/ReaderScreen.kt`, `ReaderViewModel.kt`, Reader close intent/tests, and Home route callback/analytics context.
+- **Fix reference / commit:** Pending. Preserve separate system-Back and explicit-close sources through the ReaderViewModel callback without changing position-save or exit behavior.
+- **Retest:** NOT RUN. On Samsung, independently use Android system Back and the Reader close button; verify the same functional close/save behavior, one event pair each, and correct `system_back` versus `close_button` attribution in both Analytics and breadcrumbs. Firebase ingestion remains waived; no Crashlytics issue is expected for normal exits.
+- **Discovery commit:** Pending documentation commit. Record its hash after commit and before changing Reader callback code; preserve this pre-fix observation.

@@ -1,0 +1,37 @@
+Server Management Back candidate retest (QA-BUG-0047) and Reader Back attribution pre-fix (QA-BUG-0048)
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Installed package `com.retro99.parrot` 0.4.5 (21), PID `28758`; built from the source tree later committed as `de8cfec65df74d569b34ae3d56a7495cf62c9800`. No source changes occurred between build and commit.
+- Candidate debug APK SHA-256 `b122bd7fe9dfe927885ca96f4f82838aea8e864543d31d4ecc1030944bb41ac0`; installed Samsung `base.apk` and local APK hashes match.
+- `:feature:home:ui:testAndroidHostTest`: 2 tests, 0 failures/errors. Analytics sanitizer suite: 20 tests, 0 failures/errors. `:androidApp:assembleDebug` succeeded.
+
+Server Management Back steps and safe outcome logs
+1. Opened Settings → Servers; Server Management and its persisted authenticated card were visible. After the first Back, App Settings was visible; re-entered Servers and pressed Android system Back, returning to App Settings. No account or card fields were captured.
+2. Toolbar Back at 10:04:48.082–10:04:48.084 CEST emitted one attempt and one applied success, followed by matching start/terminal breadcrumbs:
+   ```
+   Analytics Event: navigation_back_attempted | Parameters: {screen=server_management, source_screen=server_management, destination_screen=app_settings, entry_point=toolbar_back, action=back, outcome=started}
+   Diagnostic breadcrumb: diagnostic_context screen=server_management source_screen=server_management destination_screen=app_settings entry_point=toolbar_back action=back operation=navigation_back stage=navigation outcome=started correlation_id=<diagnostic-only>
+   Analytics Event: navigation_back | Parameters: {screen=server_management, source_screen=server_management, destination_screen=app_settings, entry_point=toolbar_back, action=back, outcome=succeeded}
+   Diagnostic breadcrumb: diagnostic_context screen=server_management source_screen=server_management destination_screen=app_settings entry_point=toolbar_back action=back operation=navigation_back stage=terminal outcome=succeeded correlation_id=<same diagnostic-only ID>
+   ```
+3. System Back at 10:05:08.193–10:05:08.195 CEST emitted the same four signals once, attributed to `entry_point=system_back`, with its own diagnostic-only correlation ID. Both Back actions returned to App Settings; repeated UI-tree inspection produced no additional Back events.
+4. Across the two Server Management Back actions, the PID contains exactly two `navigation_back_attempted` events, two `navigation_back` completions with `outcome=succeeded`, and matching start/terminal breadcrumbs for each correlation ID. No failure/fatal marker appeared. Analytics is local DebugAnalyticsManager only; Firebase ingestion is waived/not claimed. Crashlytics is N-A for ordinary successful Back.
+
+Reader system-Back attribution finding
+- During post-install startup, the saved EPUB Reader became usable. Pressed Android system Back once; Reader closed correctly to Books.
+- The new Back event/breadcrumb incorrectly reported `entry_point=close_button` for this actual system-Back action:
+  ```
+  Analytics Event: navigation_back_attempted | Parameters: {screen=reader, source_screen=reader, destination_screen=books, entry_point=close_button, action=back, outcome=started}
+  Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader destination_screen=books entry_point=close_button action=back operation=navigation_back stage=navigation outcome=started correlation_id=<diagnostic-only>
+  Analytics Event: navigation_back | Parameters: {screen=reader, source_screen=reader, destination_screen=books, entry_point=close_button, action=back, outcome=succeeded}
+  ```
+- Functional Reader Back PASS; Analytics FAIL and diagnostics FAIL for inaccurate entry-point attribution. QA-BUG-0048 was recorded before its fix. No book title/content, Reader screenshot or personal data is retained.
+
+Case results
+- Case 441 toolbar Back retest: Functional **PASS**, Analytics **PASS (local only)**, Diagnostics **PASS** — the route returned to App Settings; exactly one attempted and one successful completion with correlated bounded breadcrumbs.
+- Case 740/ServerManagement/system-back: Functional **PASS**, Analytics **PASS (local only)**, Diagnostics **PASS** — actual system Back returned to App Settings with the same one attempt/one success and matching breadcrumbs.
+- Case 740/Reader/system-back attribution pre-fix: Functional **PASS**, Analytics **FAIL**, Diagnostics **FAIL** — actual system Back was falsely labeled `close_button`; QA-BUG-0048.
+
+This run verifies QA-BUG-0047 on the Samsung; the exact source tree is committed as `de8cfec65df74d569b34ae3d56a7495cf62c9800`. QA-BUG-0048 is a distinct source-classification defect and remains unmodified. No Firebase-delivery claim is made.
