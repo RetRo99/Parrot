@@ -1,0 +1,28 @@
+Case 758 / QA-BUG-0050 — Samsung diagnostic and safe-navigation retest
+Date: 2026-09-27, Samsung local CEST (UTC+0200); sequence completed by 14:56 CEST. Exact individual tap timestamps were not captured.
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `4066`.
+- Installed debug APK SHA-256 `accf448269e5b750544c669a082401d27fac579f46875c7fa418ca9365e6cd49`.
+- App code corresponds to commit `742167d891e044c7829a7ccb889f545d6e2f69b6` plus the still-uncommitted QA-BUG-0049 playback-stop candidate. APK data was upgraded in place; app data was not cleared.
+
+Preconditions/actions
+1. The only Storyteller server remained logged out, and the previously saved current ReadAloud target and Open Last Book on Launch state were retained.
+2. Installed the candidate with `adb install -r` and started MainActivity. The Reader displayed the bounded message “Server unavailable or not authenticated” with Retry and Close controls; it did not expose a direct Login button.
+3. Tapped Retry once. The same recoverable error remained visible.
+4. Pressed Android system Back once. The route returned to the Home Books destination. No explicit clear-current-book action was issued, but saved-target persistence was not independently verified.
+5. From Home, navigated through Settings → Servers → the existing server's Log in action. The Login form was reachable; the Username and Password fields were empty. Did not submit authentication because no usable disposable login fixture was present in Parrot after the server was explicitly logged out. Pressed system Back to return to Server Management. No credentials were guessed or written to QA files.
+
+Privacy-filtered local DebugAnalyticsManager signals
+- Startup: one `last_book_launch_attempted(stage=navigation, outcome=started)` followed by one `last_book_launch_completed(stage=terminal, outcome=failed, reason_code=server_not_authenticated)`.
+- Retry: one `last_book_launch_attempted(stage=retry, outcome=started)` followed by one `last_book_launch_completed(stage=terminal, outcome=failed, reason_code=server_not_authenticated)`.
+- Navigation: one `navigation_back_attempted` and one successful `navigation_back` (`source_screen=reader`, `destination_screen=books`, `entry_point=system_back`).
+- Diagnostics: operation-context breadcrumbs for startup/retry and terminal failures with bounded reason code; no `Exception occurred` record and no fatal crash in the app PID log.
+- This build uses the local-only DebugAnalyticsManager. Firebase Analytics delivery and Firebase Crashlytics delivery are **not claimed**. Analytics ingestion waiver applies; production Crashlytics verification remains outstanding.
+
+Results
+- Functional: **PARTIAL PASS** for recoverable error, Retry, system-Back return to Books, and reaching the existing-server Login form. Username/Password were blank, so authentication and saved-target persistence/reopen remain **NOT RUN/BLOCKED** pending an authorized disposable server fixture; this is not a full case-758 pass.
+- Analytics: **PASS locally** for exactly one startup attempt/failure pair, one retry attempt/failure pair, and one system-Back attempt/success pair. No Firebase delivery claim.
+- Diagnostics: **PASS locally** for a bounded `server_not_authenticated` terminal breadcrumb, with zero exception reports and zero fatal crashes. Crashlytics delivery not verified.
+- QA-BUG-0050 diagnostic fix commit: `742167d891e044c7829a7ccb889f545d6e2f69b6`. Full functional recovery remains open separately from this verified instrumentation correction.
