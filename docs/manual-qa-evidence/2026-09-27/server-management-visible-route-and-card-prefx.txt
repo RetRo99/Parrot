@@ -1,0 +1,32 @@
+Server Management candidate-build device check — cases 22, 440–442 and QA-BUG-0039
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Installed package `com.retro99.parrot` 0.4.5 (21), PID `18779`; source base `41380c91` plus the uncommitted QA-BUG-0039 screen-exposure candidate.
+- Candidate debug APK SHA-256 `d86d8948dba8feb3cc28bb7e6e56b972513889b0d27a8d1a64c2533cf6e7f9ab`. Samsung-pulled `base.apk` and local APK hashes match.
+- `:feature:home:ui:testAndroidHostTest`: 2 tests, 0 failures/errors. Analytics sanitizer suite: 19 tests, 0 failures/errors. `:androidApp:assembleDebug` succeeded.
+
+Actions and observations
+1. Launched Parrot with existing local data preserved. The saved Reader route appeared; Android system Back returned to Home without opening or advancing content.
+2. Opened the Settings tab, then the **Servers** row. The Server Management screen and saved Storyteller card rendered. The accessibility hierarchy showed the authenticated status prefix and Logout action; the username/status suffix and server URL were deliberately not read or retained. No screenshot or raw hierarchy was saved.
+3. On first actual destination exposure at 09:44:18.348, the candidate emitted exactly one bounded screen-view event and one matching diagnostic breadcrumb:
+   ```
+   Analytics Event: server_management_screen_viewed | Parameters: {screen=server_management, source_screen=app_settings, entry_point=servers_row}
+   Diagnostic breadcrumb: diagnostic_context screen=server_management source_screen=app_settings entry_point=servers_row action=screen_view operation=server_management_route stage=visible outcome=succeeded
+   ```
+4. Inspected the accessibility hierarchy more than once; no extra route event appeared. Tapped toolbar Back (content description `Back`); App Settings returned and Server Management was no longer visible.
+5. Re-entered through Servers at 09:46:18.972. Exactly one new screen-view event and matching breadcrumb appeared for this second actual exposure, with the same bounded source attribution. Across this PID, the two actual visible visits produced exactly two `server_management_screen_viewed` events and two matching breadcrumbs. No Firebase ingestion is inferred from these local logs.
+6. Back completed functionally, but the PID-scoped logs contain no `navigation_back` event or nested-exit breadcrumb for the 09:46 toolbar Back. This is recorded as QA-BUG-0047.
+7. The authenticated server card showed its name and authenticated status. Source inspection of `ServerManagementScreen.ServerListItem` confirms it renders `server.name`, `server.baseUrl`, and `authState.toDisplayString()` but never renders `server.type`. There was no separate server-type label in the visible card; the actual URL and username were intentionally not copied from the UI hierarchy. This is QA-BUG-0046 and case 442 FAIL.
+
+Results
+- Case 22 functional: **PASS** — the successful credential journey from case 21 reached Home; after an `adb install -r` update preserving Parrot data, Server Management showed the saved Storyteller server in its authenticated state. The Android credential-save prompt was declined during case 21. No credentials were copied into QA artifacts; Parrot's authenticated session remains persisted for this case.
+- Case 22 Analytics: **PASS (local DebugAnalyticsManager only)** — case-21 attempt/success/Home events plus the current candidate's actual Server Management view event are separately evidenced. Firebase Analytics ingestion is waived and not claimed.
+- Case 22 diagnostics: **PASS for successful Login and route exposure** — prior correlated Login-start/persisted-success/Home breadcrumbs plus the current screen-visible breadcrumb; no user-impacting failure was induced. Crashlytics delivery not exercised.
+- Case 440: **PASS on candidate** — opening Servers rendered the authenticated card and emitted one actual-visible screen event/breadcrumb. Re-entry produced one additional pair, not duplicates from UI inspection/recomposition.
+- Case 441: Functional **PASS** — toolbar Back returned to App Settings. Analytics **FAIL** and diagnostics **FAIL** — no nested Back event/breadcrumb. Preserve this pre-fix result for QA-BUG-0047; system Back/swipe/keyboard-first variants remain NOT RUN.
+- Case 442: Functional **FAIL** — name and authenticated state were present, but the required server-type label was not rendered. QA-BUG-0046; preserve this pre-fix result. No sensitive URL, username, credentials or screenshots are retained.
+- Crashlytics: no unexpected failure was induced; no non-fatal was expected for navigation/Card inspection. This is not evidence of Crashlytics delivery.
+
+This candidate run verifies QA-BUG-0039 locally on the Samsung but is not a committed-build signoff. The code candidate will be committed separately, and the post-commit source/hash will be recorded in the next documentation update. Cases 445–452 and the shared variants remain untested.

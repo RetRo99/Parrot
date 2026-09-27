@@ -663,9 +663,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0039 — Server Management has no actual screen-exposure event
 
 - **Severity / user impact:** Low; reporting cannot identify visits to Server Management or the source/entry path, so use and abandonment around server-account management are invisible.
-- **Status:** CONFIRMED by source audit; device exposure event check pending before fix/retest.
+- **Status:** FIX VERIFIED ON SAMSUNG CANDIDATE; source commit/bookkeeping pending.
 - **Screen/test IDs:** Server Management entry/back and journey reconstruction; cases 428, 440–441, 443, 747, 749.
-- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- **Device/build/commit:** Discovery audit used Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`. Candidate verification build/PID/hash are in the retest entry below.
 - **Preconditions:** Navigate from Settings/App Settings into `HomeDestination.ServerManagement`.
 - **Exact reproduction:** Source audit of `HomeNavigation.kt`, `ServerManagementScreen.kt`, `ServerManagementViewModel.kt` and `HomeNavigationViewModel.kt`; no Server Management destination-visible callback/event exists. The current PID's case-443 logs include an Add Server attempt and subsequent Login exposure, but no Server Management exposure event was implemented.
 - **Expected:** Emit one bounded screen-view event and matching visible breadcrumb only when Server Management actually becomes the visible destination; include stable source/entry attribution and avoid recomposition/tab duplicates. A button tap alone is not proof of exposure.
@@ -674,9 +674,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); source locations listed above. Case-443 screenshots/logs retain the Add Server journey but do not claim a screen exposure.
 - **Root cause:** Screen exposure instrumentation was added for Welcome, Login and Home but not for nested Home destinations such as Server Management.
 - **Affected files:** `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/navigation/HomeNavigation.kt`, `HomeNavigationViewModel.kt`; typed navigation/server-management events and sanitizer tests.
-- **Fix reference / commit:** Pending. Add an actual-visible destination signal/event with bounded route attribution; dedupe by real exposure, not Compose recomposition.
-- **Retest:** NOT RUN. After commit, open Server Management from its reachable entry, return and reopen; require one matching screen exposure/breadcrumb per actual visible visit, no event on hidden composition/recomposition, and source attribution consistent with the route. Analytics verification is local DebugAnalyticsManager only under the user waiver; Crashlytics is N-A absent an induced failure.
-- **Discovery commit:** Pending documentation commit with this entry and source audit. Preserve this source-level finding after retest.
+- **Fix reference / commit:** Candidate change is in `HomeNavigation.kt`, `HomeNavigationViewModel.kt`, typed Analytics event and focused context/sanitizer tests; code commit pending.
+- **Retest:** PASS on Samsung candidate APK SHA-256 `d86d8948dba8feb3cc28bb7e6e56b972513889b0d27a8d1a64c2533cf6e7f9ab`, PID `18779`. Opened Settings → Servers, returned by toolbar Back, then reopened. Exactly one `server_management_screen_viewed` and one matching visible-route breadcrumb appeared per actual visit (2 each total); repeated accessibility inspection produced no duplicates. Bounded context was `source_screen=app_settings`, `entry_point=servers_row`; no credentials or URL in event/log. Analytics evidence is local DebugAnalyticsManager only under the user waiver, not Firebase delivery. No failure was induced; Crashlytics is N-A for these successful route exposures and delivery remains unverified. [Candidate device evidence](manual-qa-evidence/2026-09-27/server-management-visible-route-and-card-prefx.txt).
+- **Discovery commit:** `41380c912945955438e18eb22568815de55997db` recorded this bug and the pre-fix source audit. Fix commit pending; record its hash in the next documentation commit. Preserve the source-level finding and initial absence after retest.
 
 ## QA-BUG-0040 — Logout and remove are reported as successes before registry completion
 
@@ -785,3 +785,39 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Fix reference / commit:** Pending. Correlate Add Server entry to persisted new-server success (not simply every Login success); emit one bounded completion only after persistence and no credentials/URL/username.
 - **Retest:** NOT RUN. Use one successful Add Server flow and one abandoned/failed flow; require one attempt, completion only for the persisted new server, and no duplicate on recomposition. Firebase Analytics ingestion is waived; local DebugAnalyticsManager evidence only.
 - **Discovery commit:** Pending documentation commit; preserve source-level gap.
+
+## QA-BUG-0046 — Server Management card does not show the server type
+
+- **Severity / user impact:** Low; users cannot distinguish a card's server implementation/type as required, especially when server names are identical or ambiguous.
+- **Status:** CONFIRMED on Samsung and by source audit; fix/retest pending.
+- **Screen/test IDs:** Cases 22, 442; server-card inspection and accessibility variants.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), PID `18779`; APK SHA-256 `d86d8948dba8feb3cc28bb7e6e56b972513889b0d27a8d1a64c2533cf6e7f9ab`, built from source base `41380c91` plus the uncommitted QA-BUG-0039 candidate. Local and pulled APK hashes match.
+- **Preconditions:** At least one server card is visible in Server Management.
+- **Exact reproduction:** Open Settings → Servers and inspect the authenticated Storyteller card. The safe UI-tree audit confirmed the card and authenticated status without retaining the username or URL. Source inspection of `ServerManagementScreen.ServerListItem` shows `server.name`, `server.baseUrl`, and `authState.toDisplayString()` only; `server.type` is not rendered.
+- **Expected:** Each card displays a distinct, accessible server type (e.g. Storyteller or Audiobookshelf) as well as server name and connection state, without relying on the server name to imply its type.
+- **Actual:** The card displays server name, base URL and auth state, but no separate server type. Case 442 fails its required server-name/type/connection-state inspection.
+- **Frequency:** Every card, independent of auth state.
+- **Evidence:** [Candidate device check and safe log excerpt](manual-qa-evidence/2026-09-27/server-management-visible-route-and-card-prefx.txt); source `ServerManagementScreen.kt`, `ServerListItem` and `toDisplayString` (lines 164–237). No raw UI tree, account identifier, URL, screenshot or credential was retained.
+- **Root cause:** The card composable never reads/renders `ServerUiModel.type`.
+- **Affected files:** `feature/settings/ui/src/commonMain/kotlin/com/retro99/settings/ui/servers/ServerManagementScreen.kt`, translations, and focused UI tests.
+- **Fix reference / commit:** Pending. Render a localized, accessible type label from the bounded `ServerType` enum; do not substitute the user-authored name or expose a raw URL.
+- **Retest:** NOT RUN. Verify Storyteller and Audiobookshelf type labels plus name and all auth-state labels; TalkBack semantics/large text and layout must remain usable. Keep the username/URL out of evidence.
+- **Discovery commit:** Pending documentation commit. Record its hash after commit; preserve the failing case-442 observation.
+
+## QA-BUG-0047 — Nested Server Management Back has no navigation outcome telemetry
+
+- **Severity / user impact:** Low; Server Management exits are invisible to journey analytics and diagnostics, obscuring where users return or abandon the route.
+- **Status:** CONFIRMED on Samsung candidate and by source audit; fix/retest pending.
+- **Screen/test IDs:** Case 441 toolbar Back; shared Back/navigation variants 740, 747–749.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), PID `18779`; APK SHA-256 `d86d8948dba8feb3cc28bb7e6e56b972513889b0d27a8d1a64c2533cf6e7f9ab`, built from source base `41380c91` plus uncommitted QA-BUG-0039 candidate. Local and pulled APK hashes match.
+- **Preconditions:** Server Management is the visible destination, opened from App Settings.
+- **Exact reproduction:** Tap toolbar Back (content description `Back`). App Settings becomes visible, but the PID-scoped 09:46 log contains no `navigation_back`/destination event and no diagnostic breadcrumb for the completed Server Management → App Settings transition. The matching screen-view event only records entry.
+- **Expected:** On an accepted Back that actually changes the visible route, record one bounded navigation outcome with source `server_management`, destination `app_settings`, and entry point `toolbar_back`, plus a matching breadcrumb. Distinguish attempted from completed navigation where appropriate; do not emit a completion on a no-op or report ordinary Back to Crashlytics.
+- **Actual:** Back is functionally applied, but no nested route-exit Analytics event or diagnostic breadcrumb is emitted. Existing `HomeNavigationViewModel` handles `GoBack` by emitting only `HomeNavigationEvent.GoBack`.
+- **Frequency:** Every Server Management toolbar Back under current instrumentation; system Back and swipe remain untested.
+- **Evidence:** [Candidate device check and safe log excerpt](manual-qa-evidence/2026-09-27/server-management-visible-route-and-card-prefx.txt); `HomeNavigationViewModel.onIntent(GoBack)` and `HomeNavigation.kt` Back application path. PID logs show only the two Server Management entry pairs and no Back outcome.
+- **Root cause:** Nested Home `GoBack` navigation has no analytics/diagnostic terminal callback; only the Welcome root has a typed `navigation_back` event.
+- **Affected files:** `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/navigation/HomeNavigationViewModel.kt`, `HomeNavigation.kt`, typed navigation Analytics API/sanitizer/tests.
+- **Fix reference / commit:** Pending. Add source/destination-aware Back attempt/completion only at the applied-navigation boundary, with toolbar/system/swipe entry classification and exactly-once semantics.
+- **Retest:** NOT RUN. Verify toolbar, system Back and supported swipe separately on Server Management; each actual transition emits the bounded outcome and breadcrumb once, no event on Back no-op, no duplicate on recomposition, and no Crashlytics non-fatal for ordinary Back. Firebase Analytics ingestion is waived; local logs only.
+- **Discovery commit:** Pending documentation commit. Record its hash after commit; preserve pre-fix case-441 evidence.
