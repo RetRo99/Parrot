@@ -384,6 +384,7 @@
     <string name="settings_server_management_add" tools:ignore="MissingTranslation">Add Server</string>
     <string name="settings_server_management_empty" tools:ignore="MissingTranslation">No servers configured</string>
     <string name="settings_server_management_empty_hint" tools:ignore="MissingTranslation">Tap + to add a server</string>
+    <string name="settings_server_type_label" tools:ignore="MissingTranslation">Server type: %1$s</string>
     <string name="books_filter_clear_quick_filters" tools:ignore="MissingTranslation">Clear</string>
     <string name="app_settings_clear_current_book" tools:ignore="MissingTranslation">Clear Current Book</string>
     <string name="app_settings_clear_current_book_description" tools:ignore="MissingTranslation">Remove the current reading progress shortcut</string>

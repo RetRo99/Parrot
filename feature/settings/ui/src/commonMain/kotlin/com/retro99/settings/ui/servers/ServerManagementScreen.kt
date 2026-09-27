@@ -51,6 +51,7 @@ import resources.translations.settings_server_logged_in_as
 import resources.translations.settings_server_login_failed
 import resources.translations.settings_server_not_logged_in
 import resources.translations.settings_server_session_expired
+import resources.translations.settings_server_type_label
 
 @Composable
 fun ServerManagementScreen(
@@ -191,6 +192,11 @@ private fun ServerListItem(
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
+                Text(
+                    text = stringResource(StringRes.settings_server_type_label, server.type.displayName),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Text(
                     text = server.baseUrl,
                     style = MaterialTheme.typography.bodySmall,
