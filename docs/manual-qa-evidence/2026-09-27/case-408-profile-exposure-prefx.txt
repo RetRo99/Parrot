@@ -1,0 +1,22 @@
+Case 408 — App Settings Profiles section, pre-instrumentation observation
+Run date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, build `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `1802`; local/installed APK SHA-256 `f3c4eb2c62bc21aec91c3c32f583227760d033b4591bd0ace804b15b8de58a65`.
+- Source at commit `2d4360996a620f4cba2d25c25bbd3e7cdaaeba88` plus separate uncommitted QA-BUG-0049 playback candidate.
+
+Action and outcome
+- From the Home bottom tabs, opened Settings. App Settings rendered a Profiles section, profile tiles and an Add profile affordance. No profile tile, Add, edit, long-press, dialog, or mutation action was invoked for this observation.
+- Functional result: PASS for case 408 section/tiles rendering. No profile display name or identifier was copied into evidence; no screenshot or raw hierarchy is retained.
+- PID-scoped DebugAnalyticsManager excerpt around the visible Settings route (safe fields only): at `19:07:10.910`, `tab_switch_attempted`; at `19:07:10.912`, `tab_switched`; App Settings `observe_current_book` breadcrumbs followed at `19:07:10.955` and `19:07:11.108`. No `app_settings_screen_viewed` or profile-section view event was present in the filtered event sequence. Zero exception-report markers and zero fatal crashes were present in that PID log review.
+- This is local debug-provider evidence only. Firebase Analytics ingestion is waived and not claimed; Crashlytics delivery is not inferred. No profile mutation failure was induced.
+
+Source audit recorded before fixes
+- `HomeNavigation.kt` actual-visible destination reporting covers `HomeDestination.ServerManagement` only, not `HomeDestination.AppSettings`.
+- `AppSettingsViewModel.selectProfile` logs `ProfileSwitched` before the asynchronous `setActiveProfile` call. Create/rename/delete emit only success events after registry calls; their coroutine bodies do not catch exceptions, and no attempted/failure/cancelled outcomes or operation breadcrumbs are present.
+- `UserRegistryImpl.kt` Kermit templates interpolate profile display names and/or IDs on load/create/update/delete/activate. Runtime mutation was intentionally not performed before recording QA-BUG-0053/0054.
+
+Conclusion
+- Case 408 functional: PASS; Analytics: FAIL pre-fix; diagnostics: PARTIAL (generic App Settings observation breadcrumbs exist, but profile operation failure coverage is absent and no failure was induced).
+- QA-BUG-0053 and QA-BUG-0054 were added to the bug register before implementation changes. No private profile name, ID, screenshot, raw UI hierarchy, username, credential, or URL is retained.
