@@ -166,7 +166,7 @@ private val SAFE_STRING_KEYS = setOf(
 
 private val SAFE_SERVER_TYPE_KEYS = setOf("server_type", "previous_server_type")
 private val SAFE_SERVER_TYPES = setOf("storyteller", "audiobookshelf", "parrot-cloud", "local", "unknown")
-private val SAFE_VALIDATION_FIELDS = setOf("server_url")
+private val SAFE_VALIDATION_FIELDS = setOf("server_url", "required_fields")
 
 private val SAFE_SETTING_NAMES = setOf(
     "theme", "font_size", "font_family", "font_weight", "text_normalization", "line_height",

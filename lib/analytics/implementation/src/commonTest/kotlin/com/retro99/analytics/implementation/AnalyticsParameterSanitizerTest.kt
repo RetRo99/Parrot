@@ -665,6 +665,13 @@ class AnalyticsParameterSanitizerTest {
         val unsafeField = sanitizeAnalyticsParameters(
             mapOf("field" to "private_form_value", "screen" to "login"),
         )
+        val requiredFields = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginValidationFailed(
+                serverType = "storyteller",
+                field = "required_fields",
+                reasonCode = "required_fields_missing",
+            ).parameters,
+        )
 
         assertEquals(
             mapOf(
@@ -680,6 +687,8 @@ class AnalyticsParameterSanitizerTest {
             validation,
         )
         assertEquals(mapOf("screen" to "login"), unsafeField)
+        assertEquals("required_fields", requiredFields["field"])
+        assertEquals("required_fields_missing", requiredFields["reason_code"])
     }
 
     @Test

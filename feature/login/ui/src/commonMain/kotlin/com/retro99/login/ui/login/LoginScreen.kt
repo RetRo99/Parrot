@@ -83,6 +83,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import resources.translations.general_back
 import resources.translations.login_error_invalid_url
+import resources.translations.login_error_required_password
+import resources.translations.login_error_required_url
+import resources.translations.login_error_required_username
 import resources.translations.login_hide_password
 import resources.translations.login_oauth_sign_in_button
 import resources.translations.login_oauth_waiting_message
@@ -122,6 +125,8 @@ fun LoginScreen(
             isLoading = viewState.isLoading,
             selectedServerType = viewState.selectedServerType,
             urlError = viewState.urlError,
+            usernameError = viewState.usernameError,
+            passwordError = viewState.passwordError,
             loginError = viewState.loginError,
             intentDispatcher = intentDispatcher,
             onBackClick = onBackClick,
@@ -143,6 +148,8 @@ private fun LoginScreenContent(
     isLoading: Boolean,
     selectedServerType: ServerType,
     urlError: LoginFieldError?,
+    usernameError: LoginFieldError?,
+    passwordError: LoginFieldError?,
     loginError: String?,
     intentDispatcher: IntentDispatcher<LoginIntent>,
     onBackClick: () -> Unit,
@@ -154,6 +161,19 @@ private fun LoginScreenContent(
     val urlErrorText = urlError?.let { error ->
         when (error) {
             LoginFieldError.InvalidUrl -> stringResource(StringRes.login_error_invalid_url)
+            LoginFieldError.Required -> stringResource(StringRes.login_error_required_url)
+        }
+    }
+    val usernameErrorText = usernameError?.let { error ->
+        when (error) {
+            LoginFieldError.Required -> stringResource(StringRes.login_error_required_username)
+            LoginFieldError.InvalidUrl -> null
+        }
+    }
+    val passwordErrorText = passwordError?.let { error ->
+        when (error) {
+            LoginFieldError.Required -> stringResource(StringRes.login_error_required_password)
+            LoginFieldError.InvalidUrl -> null
         }
     }
 
@@ -283,6 +303,8 @@ private fun LoginScreenContent(
                 state = usernameState,
                 label = { Text(stringResource(StringRes.login_username_label)) },
                 leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
+                isError = usernameError != null,
+                supportingText = usernameErrorText?.let { { Text(it) } },
                 modifier = Modifier.fillMaxWidth(),
                 lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions(
@@ -298,6 +320,8 @@ private fun LoginScreenContent(
                 state = passwordState,
                 label = { Text(stringResource(StringRes.login_password_label)) },
                 leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                isError = passwordError != null,
+                supportingText = passwordErrorText?.let { { Text(it) } },
                 modifier = Modifier.fillMaxWidth(),
                 textObfuscationMode = if (passwordVisible) {
                     TextObfuscationMode.Visible
@@ -311,7 +335,7 @@ private fun LoginScreenContent(
                 ),
                 onKeyboardAction = {
                     focusManager.clearFocus()
-                    if (isSignInEnabled) {
+                    if (!isLoading) {
                         intentDispatcher(LoginIntent.OnSignInClicked)
                     }
                 },
@@ -361,7 +385,7 @@ private fun LoginScreenContent(
             Button(
                 onClick = { intentDispatcher(LoginIntent.OnSignInClicked) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = isSignInEnabled,
+                enabled = !isLoading,
             ) {
                 if (isLoading && !isOAuthInProgress) {
                     CircularProgressIndicator(

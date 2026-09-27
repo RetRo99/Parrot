@@ -376,6 +376,9 @@
     <string name="reader_toc_chapter_number" tools:ignore="MissingTranslation">%1$d</string>
     <string name="reader_overflow_more" tools:ignore="MissingTranslation">More</string>
     <string name="login_error_invalid_url" tools:ignore="MissingTranslation">Enter a valid http(s) URL</string>
+    <string name="login_error_required_url" tools:ignore="MissingTranslation">Server URL is required</string>
+    <string name="login_error_required_username" tools:ignore="MissingTranslation">Username is required</string>
+    <string name="login_error_required_password" tools:ignore="MissingTranslation">Password is required</string>
     <string name="login_subtitle" tools:ignore="MissingTranslation">Connect to your library</string>
     <string name="settings_server_management_title" tools:ignore="MissingTranslation">Server Management</string>
     <string name="settings_server_management_add" tools:ignore="MissingTranslation">Add Server</string>

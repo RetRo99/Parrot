@@ -39,6 +39,7 @@ class LoginViewModel(
     private var activeServerTypePicker: ServerTypePickerAttempt? = null
     private var activeUrlHelpAttempt: UrlHelpAttempt? = null
     private val validationTelemetry = LoginValidationTelemetry(analytics)
+    private var hasAttemptedCredentialsSubmit = false
 
     init {
         observeTextFieldChanges()
@@ -66,7 +67,17 @@ class LoginViewModel(
         username: String,
         password: String,
     ) {
-        val urlError = validateUrl(url)
+        val urlError = validateUrl(url, showRequiredError = hasAttemptedCredentialsSubmit)
+        val usernameError = if (hasAttemptedCredentialsSubmit && username.isBlank()) {
+            LoginFieldError.Required
+        } else {
+            null
+        }
+        val passwordError = if (hasAttemptedCredentialsSubmit && password.isBlank()) {
+            LoginFieldError.Required
+        } else {
+            null
+        }
         validationTelemetry.onUrlValidationChanged(
             error = urlError,
             hasValidServerUrl = isValidServerUrl(url),
@@ -79,6 +90,8 @@ class LoginViewModel(
 
             currentState.copy(
                 urlError = urlError,
+                usernameError = usernameError,
+                passwordError = passwordError,
                 isSignInEnabled = allFieldsNotEmpty && noErrors && !currentState.isLoading,
                 isOAuthSignInEnabled = currentState.isOAuthVisible && isValidServerUrl(url) && !currentState.isLoading,
             )
@@ -242,9 +255,27 @@ class LoginViewModel(
     }
 
     private fun handleSignInClicked() {
-        if (!loginSubmissionGate.tryStart()) return
+        if (viewState.value.isLoading) return
         val url = urlState.text.toString().trim()
         val serverType = viewState.value.selectedServerType
+        val username = usernameState.text.toString()
+        val password = passwordState.text.toString()
+        hasAttemptedCredentialsSubmit = true
+        updateFormState(url, username, password)
+
+        val validationState = viewState.value
+        if (
+            validationState.urlError != null ||
+            validationState.usernameError != null ||
+            validationState.passwordError != null
+        ) {
+            if (validationState.urlError != LoginFieldError.InvalidUrl) {
+                validationTelemetry.onRequiredFieldsMissing(serverType)
+            }
+            return
+        }
+        if (!loginSubmissionGate.tryStart()) return
+
         val attempt = beginLoginAttempt(serverType, authMethod = "credentials")
 
         updateState {
@@ -258,9 +289,6 @@ class LoginViewModel(
         }
 
         viewModelScope.launch {
-            val username = usernameState.text.toString()
-            val password = passwordState.text.toString()
-
             performLoginSafely { loginUseCase(serverType, url, username, password) }.fold(
                 success = {
                     completeLogin(attempt)
@@ -503,10 +531,10 @@ class LoginViewModel(
         )
     }
 
-    private fun validateUrl(url: String): LoginFieldError? {
+    private fun validateUrl(url: String, showRequiredError: Boolean): LoginFieldError? {
         val trimmedUrl = url.trim()
         if (trimmedUrl.isBlank() || trimmedUrl == "https://" || trimmedUrl == "http://") {
-            return null
+            return if (showRequiredError) LoginFieldError.Required else null
         }
         return if (isValidServerUrl(trimmedUrl)) null else LoginFieldError.InvalidUrl
     }

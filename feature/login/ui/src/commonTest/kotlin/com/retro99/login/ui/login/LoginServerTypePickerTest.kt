@@ -214,6 +214,47 @@ class LoginServerTypePickerTest {
         assertEquals(0, analytics.exceptions.size)
     }
 
+    @Test
+    fun emptySignInShowsRequiredFieldErrorsAndReportsValidationWithoutAuthAttempt() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(analytics)
+
+        viewModel.onIntent(LoginIntent.OnSignInClicked)
+
+        val state = viewModel.currentViewState()
+        assertEquals(LoginFieldError.Required, state.urlError)
+        assertEquals(LoginFieldError.Required, state.usernameError)
+        assertEquals(LoginFieldError.Required, state.passwordError)
+        assertFalse(state.isSignInEnabled)
+        assertFalse(state.isLoading)
+        assertEquals(listOf("login_validation_failed"), analytics.events.map { it.name })
+        assertEquals("required_fields", analytics.events.single().parameters["field"])
+        assertEquals("required_fields_missing", analytics.events.single().parameters["reason_code"])
+        assertEquals("failed", analytics.events.single().parameters["outcome"])
+        assertEquals(1, analytics.breadcrumbs.size)
+        assertEquals("required_fields_missing", analytics.breadcrumbs.single().reasonCode)
+        assertEquals("login_validation", analytics.breadcrumbs.single().operation)
+        assertEquals("failed", analytics.breadcrumbs.single().outcome)
+        assertFalse(analytics.breadcrumbs.single().correlationId.isNullOrBlank())
+        assertEquals(0, analytics.exceptions.size)
+    }
+
+    @Test
+    fun requiredFieldsValidationTelemetryUsesBoundedDimensions() {
+        val analytics = RecordingAnalytics()
+        val telemetry = LoginValidationTelemetry(analytics)
+
+        telemetry.onRequiredFieldsMissing(ServerType.Storyteller)
+
+        assertEquals(1, analytics.events.size)
+        assertEquals("required_fields", analytics.events.single().parameters["field"])
+        assertEquals("required_fields_missing", analytics.events.single().parameters["reason_code"])
+        assertFalse(analytics.events.single().parameters.containsKey("username"))
+        assertFalse(analytics.events.single().parameters.containsKey("password"))
+        assertEquals(1, analytics.breadcrumbs.size)
+        assertEquals(0, analytics.exceptions.size)
+    }
+
     private fun createViewModel(analytics: RecordingAnalytics) = LoginViewModel(
         loginUseCase = LoginUseCase(StubLoginRepository),
         analytics = analytics,

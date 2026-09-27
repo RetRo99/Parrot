@@ -13,24 +13,29 @@ internal class LoginValidationTelemetry(
 ) {
     private var hasReportedInvalidUrl = false
 
-    @OptIn(ExperimentalUuidApi::class)
     fun onUrlValidationChanged(
         error: LoginFieldError?,
         hasValidServerUrl: Boolean,
         serverType: ServerType,
     ) {
         if (hasValidServerUrl) hasReportedInvalidUrl = false
-        if (error == null || hasReportedInvalidUrl) return
+        if (error != LoginFieldError.InvalidUrl || hasReportedInvalidUrl) return
         hasReportedInvalidUrl = true
 
-        val reasonCode = when (error) {
-            LoginFieldError.InvalidUrl -> "invalid_url"
-        }
+        report(serverType, field = "server_url", reasonCode = "invalid_url")
+    }
+
+    fun onRequiredFieldsMissing(serverType: ServerType) {
+        report(serverType, field = "required_fields", reasonCode = "required_fields_missing")
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun report(serverType: ServerType, field: String, reasonCode: String) {
         val correlationId = Uuid.random().toString()
         analytics.logEvent(
             AuthAnalyticsEvent.LoginValidationFailed(
                 serverType = serverType.identifier,
-                field = "server_url",
+                field = field,
                 reasonCode = reasonCode,
             ),
         )
