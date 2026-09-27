@@ -1,0 +1,26 @@
+Case 444 / QA-BUG-0041 logged-out card Login action Samsung observation
+QA-BUG-0040 candidate build state and retest blocker
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `28336`; candidate source tree later committed as `6fe70f4c74eac14a95962aad0ab70d9fc941fcca`.
+- Debug APK SHA-256 `98f42fdfedad993d2ae49f3149f0d12e0cf65008e818d06349e6e51fdb5e4e7f`; pulled Samsung `base.apk` and local APK hashes match.
+- `:feature:settings:ui:testAndroidHostTest`: 3 tests, 0 failures/errors. `:lib:analytics:implementation:testAndroidHostTest`: 21 tests, 0 failures/errors. `:feature:settings:ui:compileAndroidMain` and `:androidApp:assembleDebug` succeeded.
+
+Preconditions and steps
+1. Case 445 pre-fix fixture setup had left the sole remote Storyteller server in `Not logged in` state. The prior credential was cleared and is not retained; no second server exists.
+2. Updated the app via `adb install -r`, preserving app data. The saved Reader route returned, then system Back returned to Books. Opened Settings → Servers.
+3. The logged-out card rendered the localized server type and `Not logged in` status. The hierarchy had no Login/Retry control or other accessible recovery action; Remove remained visible. No Remove action was activated. Server Management stayed usable; no crash/fatal marker appeared.
+4. This is the Samsung confirmation of QA-BUG-0041. No Login action was available to exercise, so Analytics and diagnostics for a login/retry operation are N-A for this observation. No login attempt, failure, or crash was induced.
+
+QA-BUG-0040 candidate verification scope
+- Host operation tests on this source assert attempt-before-mutation, success-after-mutation, bounded logout/remove type and retry dimensions, one contextual failure/non-fatal, and cancellation event/breadcrumb with rethrow/no exception report.
+- Candidate APK installed and hash-matched; logged-out Server Management card still rendered without crash. The actual logout/remove mutation path could not be re-exercised because this fixture is already logged out and the existing-server Login action is the QA-BUG-0041 defect. Re-authentication would require repairing that path and entering credentials again only in Parrot UI. Accordingly QA-BUG-0040 Samsung operation retest is **BLOCKED**, not PASS.
+- The only relevant breadcrumb in the candidate PID was the route's `server_management` visible breadcrumb. No logout/remove attempt was made, so no operation event/breadcrumb was expected from this run.
+
+Case results
+- Case 444 / logged-out-card recovery action: Functional **FAIL** — no Login/Retry control is rendered or accessible, so existing server recovery cannot begin. Analytics **N-A** — no action could be attempted; the missing feature is QA-BUG-0041, not an executed operation. Diagnostics **N-A** — no recovery operation/failure was invoked; no Crashlytics report is expected merely from inspecting a healthy card.
+- Case 445 / QA-BUG-0040 candidate: Functional, Analytics, Diagnostics mutation-path retest **BLOCKED** — no authenticated precondition remains. Host test/build evidence does not substitute for Samsung execution.
+
+No server name, account identifier, URL, credential, raw hierarchy or screenshot is retained. The earlier case-445 pre-fix event observation is preserved separately at `case-445-logout-telemetry-prefx.txt`. Firebase Analytics ingestion is waived and not claimed; Crashlytics delivery is not exercised.
