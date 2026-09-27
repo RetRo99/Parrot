@@ -1,0 +1,24 @@
+Case 444 / QA-BUG-0041 candidate — logged-out card route and prefill
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `1746`.
+- Candidate APK SHA-256 `ccdc973f191804446bea71fe49f65a1d73b7f96ae2d0339385a57c11ff4839bf`; pulled Samsung `base.apk` and local APK hashes match.
+- Built from the working tree based on source commit `876c41af696baab364cc56138335c4d130b62547`; QA-BUG-0041 changes are not yet committed, pending the full on-device authentication retest.
+- Host checks: Login persistence 5/5, Login navigation 9/9, Server Management operation 3/3, Compose app 2/2, Analytics sanitizer 22/22; `:androidApp:assembleDebug` succeeded.
+
+Steps and observations
+1. Installed the hash-matched candidate without clearing app data. The saved Reader route restored; Android system Back returned to Books. Opened Settings → Servers. The sole remote Storyteller server showed `Not logged in` and a visible `Log in` text button.
+2. Tapped `Log in`. The Login screen opened for the existing server, with its saved server type and URL prefilled and disabled; username and password fields were blank. No account data was entered during this partial run. No screenshot or raw UI hierarchy was retained.
+3. Local debug output contained exactly one `server_login_attempted` event with bounded `screen=server_management`, `destination_screen=login`, `entry_point=server_card_login`, `action=reauthenticate_server`, `operation=existing_server_login`, `outcome=started`, and `server_type=storyteller`.
+4. The actual visible Login route emitted exactly one `login_screen_viewed` with `source_screen=server_management` and `entry_point=server_card_login`.
+5. Existing server configuration load emitted one `started` breadcrumb and one `prefilled/succeeded` breadcrumb with the same diagnostic-only correlation ID and `server_type=storyteller`. The saved URL, server ID, username, password, correlation ID value, and card hierarchy are not included here.
+
+Partial case result
+- Case 444 / logged-out card → existing Login route: Functional **PASS** for visible/actionable Login and correct existing-server form prefill; authentication and connected-card postcondition remain **NOT RUN**.
+- Analytics **PASS** for one card-navigation attempt and one actual Login exposure (local DebugAnalyticsManager only; Firebase Analytics ingestion waived).
+- Diagnostics **PASS** for correlated configuration-load start/success breadcrumbs; no failure was induced and Crashlytics is N-A for this successful navigation/prefill portion.
+- This partial candidate evidence does not supersede the preserved pre-fix case-444 failure or close QA-BUG-0041. Full credential submission, success/failure outcomes, preserved server identity, and return to the connected card remain pending.
+
+Evidence is limited to sanitized local event/breadcrumb excerpts and accessibility checks. No URL or credentials are retained. Firebase delivery is not claimed; no Crashlytics issue was expected or induced.
