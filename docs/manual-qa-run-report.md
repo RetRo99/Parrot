@@ -47,6 +47,8 @@ The immediately preceding progress paragraph is a historical snapshot. QA-BUG-00
 
 Case 416 then passed on the same installed build: a 77-character synthetic profile label truncated with an ellipsis in its tile; Edit, Rename/Delete menu actions and Rename-dialog controls remained reachable, and Cancel preserved the active profile. Case 766 also passed: horizontal scrolling revealed the trailing Add Profile tile, Add opened/cancelled without mutation, and reverse scrolling preserved the active profile and vertical screen position. Evidence: [case-416 run](manual-qa-evidence/2026-09-27/case-416-long-profile-name.txt) and [case-766 run](manual-qa-evidence/2026-09-27/case-766-profile-carousel-scroll.txt). Three disposable profiles remain temporarily; proceed with profile cases in catalogue order, record fixture blockers, then remove only the disposable profiles and restore/verify the original profile.
 
+On 2026-09-28, case 417 was BLOCKED after the active disposable profile's Books UI exposed no audio-capable control and no authenticated audiobook/ReadAloud playback fixture was available; the sole existing server/book fixture remains reserved for case 446. Case 418 was N-A by reachability audit: the Reader route sets `showBottomBar=false` and exposes no profile-switch control, so a user cannot switch profiles while remaining in Reader. Neither disposition is a PASS. Continue with case 419 (per-profile filters), then 420; per-profile statistics case 421 still needs populated reading data. [Case 417/418 evidence](manual-qa-evidence/2026-09-28/case-417-418-profile-media-switch-disposition.txt).
+
 ### Login screen action inventory (source-audited; screen not signed off)
 
 | Reachable action/state | Catalogue mapping | Current disposition |

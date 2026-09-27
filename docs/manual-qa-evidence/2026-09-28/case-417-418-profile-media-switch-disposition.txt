@@ -1,0 +1,19 @@
+# Cases 417–418 — profile switch while media is active: disposition
+
+- Date/time: 2026-09-28, approximately 00:04 CEST
+- Device/build: Samsung SM-S921B, serial `RFCWC0SSVDM`, Android 16/API 36, One UI 8.0; Parrot 0.4.5 (21), debug; PID `16401`; APK SHA-256 `75ae77c5b811ba23991fbe893ed26632897475260310fa87f742e14d82b3d1a0`; source `bf38383e48f798c8d66e662798b3e88f01e57b62`
+- Current profile is the disposable profile created for case 416. The original profile and other disposable profiles remain preserved; no account or profile values are retained here.
+
+## Case 417 — switch profile during playback
+
+**Functional: BLOCKED.** No authenticated audiobook/ReadAloud playback fixture is currently available in the disposable profile. The sampled Books hierarchy had no Play, Audiobook or ReadAloud capability marker, and no playback session was active. The sole existing server/book fixture remains reserved for the already-blocked Server Management case 446; its authorized login/audio setup is not currently usable. No logout, profile mutation or playback action was attempted for this case.
+
+**Analytics: BLOCKED** because no valid playback/profile-switch attempt could be started. **Diagnostics: BLOCKED** for the same missing runtime fixture; no failure was induced and Crashlytics is not applicable to this precondition blocker. Do not treat the absence of events as a pass.
+
+## Case 418 — switch profile while Reader is open
+
+**Functional: N-A (action unreachable from the Reader UI).** Source audit of the installed route shows `HomeDestination.Reader.showBottomBar=false`; profile selection is exposed in App Settings from Home navigation, and Reader controls provide no profile-switch action. Thus the user cannot select another profile while the Reader remains open through the reachable UI. Leaving Reader before switching is covered by profile-switch cases 409/419, not this scenario.
+
+**Analytics: N-A** (there is no reachable profile-switch attempt in this state); **Diagnostics: N-A** (no operation or failure boundary is entered). This is an availability disposition, not a functional PASS.
+
+No screenshot, raw hierarchy, book title, account data or profile identifier is retained. Firebase Analytics delivery was not tested; local debug logs do not prove Firebase delivery.
