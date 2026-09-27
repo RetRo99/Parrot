@@ -14,6 +14,42 @@ import kotlin.test.assertTrue
 
 class ProfileOperationTest {
     @Test
+    fun retryAttributionIsScopedToTheSameTargetOrDialogSession() {
+        val tracker = ProfileOperationRetryTracker()
+        val failedSwitch = "switch:target_a"
+        val differentSwitch = "switch:target_b"
+
+        assertFalse(tracker.isRetry(failedSwitch))
+        tracker.recordFailure(failedSwitch)
+
+        assertTrue(tracker.isRetry(failedSwitch))
+        assertFalse(tracker.isRetry(differentSwitch))
+
+        val firstCreateSession = tracker.newSessionKey(AppSettingsAnalyticsEvent.ProfileOperation.Create)
+        tracker.recordFailure(firstCreateSession)
+        val nextCreateSession = tracker.newSessionKey(AppSettingsAnalyticsEvent.ProfileOperation.Create)
+        assertTrue(tracker.isRetry(firstCreateSession))
+        assertFalse(tracker.isRetry(nextCreateSession))
+
+        tracker.clear(firstCreateSession)
+        assertFalse(tracker.isRetry(firstCreateSession))
+    }
+
+    @Test
+    fun successfulRetryClearsOnlyItsOwnRetryKey() {
+        val tracker = ProfileOperationRetryTracker()
+        val first = "switch:target_a"
+        val second = "switch:target_b"
+        tracker.recordFailure(first)
+        tracker.recordFailure(second)
+
+        tracker.recordSuccess(first)
+
+        assertFalse(tracker.isRetry(first))
+        assertTrue(tracker.isRetry(second))
+    }
+
+    @Test
     fun successfulOperationEmitsOneAttemptSuccessAndCorrelatedBreadcrumbs() = runTest {
         val analytics = ProfileRecordingAnalytics()
         var executed = false
@@ -100,15 +136,21 @@ class ProfileOperationTest {
     @Test
     fun retryAttemptAndTerminalOutcomeRetainRetryAttribution() = runTest {
         val analytics = ProfileRecordingAnalytics()
+        val retryTracker = ProfileOperationRetryTracker()
+        val retryKey = retryTracker.newSessionKey(AppSettingsAnalyticsEvent.ProfileOperation.Rename)
         var shouldFail = true
 
-        suspend fun submit(): Boolean = executeProfileOperation(
-            analytics = analytics,
-            operation = AppSettingsAnalyticsEvent.ProfileOperation.Rename,
-            isRetry = !shouldFail,
-            successEvent = { isRetry -> AppSettingsAnalyticsEvent.ProfileRenamed(isRetry) },
-        ) {
-            if (shouldFail) error("private test failure")
+        suspend fun submit(): Boolean {
+            val succeeded = executeProfileOperation(
+                analytics = analytics,
+                operation = AppSettingsAnalyticsEvent.ProfileOperation.Rename,
+                isRetry = retryTracker.isRetry(retryKey),
+                successEvent = { isRetry -> AppSettingsAnalyticsEvent.ProfileRenamed(isRetry) },
+            ) {
+                if (shouldFail) error("private test failure")
+            }
+            if (succeeded) retryTracker.recordSuccess(retryKey) else retryTracker.recordFailure(retryKey)
+            return succeeded
         }
 
         assertFalse(submit())

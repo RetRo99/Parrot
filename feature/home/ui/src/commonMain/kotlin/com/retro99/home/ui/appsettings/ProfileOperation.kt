@@ -8,6 +8,29 @@ import kotlinx.coroutines.CancellationException
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/** Private retry history scoped to an operation session or target; keys never enter telemetry. */
+internal class ProfileOperationRetryTracker {
+    private val failedOperationKeys = mutableSetOf<String>()
+    private var nextSessionId = 0L
+
+    fun newSessionKey(operation: AppSettingsAnalyticsEvent.ProfileOperation): String =
+        "${operation.operation}:session_${++nextSessionId}"
+
+    fun isRetry(key: String): Boolean = key in failedOperationKeys
+
+    fun recordFailure(key: String) {
+        failedOperationKeys += key
+    }
+
+    fun recordSuccess(key: String) {
+        failedOperationKeys -= key
+    }
+
+    fun clear(key: String) {
+        failedOperationKeys -= key
+    }
+}
+
 /** Runs one accepted profile mutation with one bounded attempt and terminal diagnostic. */
 @OptIn(ExperimentalUuidApi::class)
 internal suspend fun executeProfileOperation(
