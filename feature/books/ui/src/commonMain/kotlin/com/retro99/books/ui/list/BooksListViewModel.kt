@@ -188,13 +188,13 @@ class BooksListViewModel(
     }
 
     private fun updateSort(sortConfig: BookSortConfig) {
-        analytics.logEvent(BooksListAnalyticsEvent.SortChanged(sortConfig = sortConfig::class.simpleName ?: "unknown"))
+        analytics.logEvent(BooksListAnalyticsEvent.SortChanged(sortConfig = sortConfig.toAnalyticsValue()))
         updateState { it.copy(sortConfig = sortConfig) }
         saveFilterSortSettings()
     }
 
     private fun updateViewMode(viewMode: BookListViewMode) {
-        analytics.logEvent(BooksListAnalyticsEvent.ViewModeChanged(viewMode = viewMode::class.simpleName ?: "unknown"))
+        analytics.logEvent(BooksListAnalyticsEvent.ViewModeChanged(viewMode = viewMode.toAnalyticsValue()))
         updateState { it.copy(viewMode = viewMode) }
         saveFilterSortSettings()
     }

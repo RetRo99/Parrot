@@ -1,0 +1,29 @@
+# QA-BUG-0061 / case 419 — profile filter, sort and view-mode Analytics (pre-fix)
+
+- Date: 2026-09-28 (Samsung device time, CEST)
+- Device: physical Samsung serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0.
+- Installed app: `com.retro99.parrot` 0.4.5 (21), debug, PID `16401`; APK SHA-256 `75ae77c5b811ba23991fbe893ed26632897475260310fa87f742e14d82b3d1a0`. Repository HEAD at observation: `c66281ff`; installed artifact provenance and pre-existing unrelated worktree changes are described in the run report. No build change was made for this observation.
+- Fixture: two existing disposable local profiles A and B; no server, account, book or personal profile label/ID was used or retained. Both libraries were empty.
+
+## Steps and functional observations
+
+1. In profile A, open Books, open Filters, enable Favorites, and dismiss the sheet with Back. The list showed the filtered-empty state and the filter badge remained active.
+2. Choose Date Added sorting, then toggle its direction to Newest. The chip displayed Date Added Newest.
+3. Tap Grid using the visible toolbar control. The app remained on the Books screen. The empty library means the list/grid content layout itself cannot be visually distinguished in this run.
+4. Switch to profile B through App Settings. Before changing B, it showed the unfiltered-empty state and the default Title sort rather than A's Favorites/Date Added Newest settings.
+5. A direct tap on Grid while B was active was accepted; B is currently left with Grid selected for the continuing case-419 comparison. Its setting will be restored before disposable-profile cleanup.
+
+## Local debug Analytics trace
+
+PID-scoped `logcat` was parsed to retain only the bounded event name and listed fields; all other log content was discarded:
+
+| Device time | Event | Observed parameters |
+|---|---|---|
+| 00:08:50.407 | `quick_filter_toggled` | `filter=FAVORITES`, `is_enabled=true` |
+| 00:10:51.415 | `sort_changed` | `sort_config=BookSortConfig` |
+| 00:11:25.141 | `sort_changed` | `sort_config=BookSortConfig` |
+| 00:21:27.142 | `view_mode_changed` | `view_mode=BookListViewMode` |
+
+The second `sort_changed` corresponds to switching the Date Added direction. Source audit confirmed the ViewModel passes `sortConfig::class.simpleName` and `viewMode::class.simpleName`, so the values identify Kotlin types rather than the selected option/direction or layout. These local DebugAnalyticsManager lines do not prove Firebase delivery; the user waived Firebase Analytics ingestion verification. Expected filter/sort/layout changes do not require Crashlytics reporting; no unexpected failure was induced and no diagnostic failure report was expected.
+
+**Interim disposition:** filter/sort state isolation is a partial functional PASS; view-mode isolation remains unverified with the empty library. Analytics FAIL pending fix. Diagnostics N-A for this normal-interaction variant. Case 419 remains IN PROGRESS and is not signed off. No screenshot, raw hierarchy, book title, account data or profile identifier is retained.

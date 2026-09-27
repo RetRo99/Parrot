@@ -19,6 +19,12 @@ internal fun sanitizeAnalyticsParameters(parameters: Map<String, Any>): Map<Stri
             key == "value_bucket" && value is String && value in SAFE_SETTING_BUCKETS ->
                 put(key, value)
 
+            key == "sort_config" && value is String && value in SAFE_BOOK_SORT_CONFIGS ->
+                put(key, value)
+
+            key == "view_mode" && value is String && value in SAFE_BOOK_VIEW_MODES ->
+                put(key, value)
+
             key in SAFE_SERVER_TYPE_KEYS && value is String && value in SAFE_SERVER_TYPES ->
                 put(key, value)
 
@@ -160,8 +166,6 @@ private val SAFE_STRING_KEYS = setOf(
     "period",
     "detail_type",
     "filter",
-    "sort_config",
-    "view_mode",
 )
 
 private val SAFE_SERVER_TYPE_KEYS = setOf("server_type", "previous_server_type")
@@ -186,6 +190,21 @@ private val SAFE_SETTING_BUCKETS = setOf(
     "extra_large", "short", "normal", "long", "slower", "faster", "enabled", "disabled", "low",
     "mid", "high",
 )
+
+private val SAFE_BOOK_SORT_CONFIGS = setOf(
+    "title_ascending",
+    "title_descending",
+    "author_ascending",
+    "author_descending",
+    "rating_ascending",
+    "rating_descending",
+    "date_published_ascending",
+    "date_published_descending",
+    "date_added_ascending",
+    "date_added_descending",
+)
+
+private val SAFE_BOOK_VIEW_MODES = setOf("list", "grid")
 
 private val SAFE_BOOLEAN_KEYS = setOf(
     "is_enabled",

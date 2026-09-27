@@ -1,0 +1,42 @@
+# QA-BUG-0061 / case 419 — selected sort and layout Analytics (Samsung retest)
+
+- Date: 2026-09-28 (Samsung device time, CEST)
+- Device: physical Samsung serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0.
+- Installed app: `com.retro99.parrot` 0.4.5 (21), debug, PID `3552`; repository HEAD `c66281ff` plus the QA-BUG-0061 working-tree fix and separate pre-existing unrelated working-tree changes. Local APK and Samsung installed APK SHA-256 match: `17e8fe08e5c0209ccc5af2eb39357b9b4c378364ac7cc25d741b0a63d83a29b8`.
+- Build/checks: `:feature:books:ui:testAndroidHostTest`, `:lib:analytics:implementation:testAndroidHostTest`, and `:androidApp:assembleDebug` succeeded. Test XMLs report 2 Books UI tests and 34 Analytics implementation tests, all passing (36 total; zero failures/errors/skips).
+- Fixture: two disposable local profiles A/B with empty Books libraries. No server/account fixture, profile label/ID, book title, screenshot or raw hierarchy is retained. Build installed with `adb install -r`; app data was not cleared.
+
+## Functional case-419 comparison
+
+Post-update settings were changed and checked on the physical device. The filter/sort/view toolbar state was inspected in both profiles after switching back and forth:
+
+| Disposable profile | Observed independent state | Verification |
+|---|---|---|
+| A | Favorites active; Date Added Newest; List mode | Filter sheet showed Favorites checked; filtered-empty state and sort label were present. Screenshot inspection showed List highlighted. After changing B, returning to A still showed this state. |
+| B | In Progress active; Title Z→A; Grid mode | Filter sheet showed In Progress checked; filtered-empty state and sort label were present. Screenshot inspection showed Grid highlighted. After returning to A and switching again, B retained these values. |
+
+This is a PASS for per-profile filter/sort/view-mode preference isolation and state restoration. Since both libraries are empty, actual book ordering and card layout with content were not exercised; no content was fabricated or added. The visual indicator for List/Grid itself was present and distinct in the Samsung screenshots viewed during the run. Screenshots are not retained because the QA record stores only sanitized text evidence.
+
+## PID-scoped local debug Analytics
+
+The PID `3552` trace was parsed to output only approved event names/fields; all other log text was discarded:
+
+| Device time | Event | Parameters |
+|---|---|---|
+| 00:31:02.429 | `sort_changed` | `sort_config=date_added_ascending` |
+| 00:31:11.483 | `sort_changed` | `sort_config=date_added_descending` |
+| 00:31:16.074 | `view_mode_changed` | `view_mode=list` |
+| 00:31:16.142 | `view_mode_changed` | `view_mode=grid` |
+| 00:32:37.257 | `view_mode_changed` | `view_mode=list` |
+| 00:34:21.793 | `quick_filter_toggled` | `filter=IN_PROGRESS`, `is_enabled=true` |
+| 00:38:48.360 | `sort_changed` | `sort_config=title_descending` |
+
+Counts: 3 sort changes, 3 view-mode changes and 1 quick-filter toggle. The bounded values match actual selected choices; the old constant Kotlin type names did not appear. The filter event for Favorites and incorrect type-name sort/view events remain preserved in the linked pre-fix evidence. These logs are from local DebugAnalyticsManager only; Firebase Analytics ingestion is waived and is not claimed.
+
+The seven profile switches exercised during the comparison emitted exactly seven `profile_operation_attempted(profile_switch,started,is_retry=false)` events and seven `profile_switched(succeeded,is_retry=false)` terminal events. The PID log contained 14 matching safe start/terminal breadcrumbs (seven each) with no retained profile label/ID or correlation ID. No profile switch failed, cancelled or retried.
+
+## Diagnostics
+
+Normal filter/sort/layout changes do not warrant Crashlytics reports. PID `3552` contained zero fatal-exception, handled-exception or non-fatal report markers during the run. Profile switches retained one correlated start/terminal breadcrumb pair per operation; no unexpected failure was induced. Crashlytics delivery is unverified and no Firebase claim is made.
+
+**Result:** QA-BUG-0061 Analytics fix PASS on the hash-matched Samsung build. Case 419 functional preference isolation PASS for the executed filter/sort/view-mode variants. Continue with case 420; preserve the empty-library and content-order limitations above.

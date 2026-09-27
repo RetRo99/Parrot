@@ -1027,4 +1027,33 @@ class DiagnosticPayloadSanitizerTest {
         assertEquals(mapOf("setting_name" to "font_size"), invalidNumeric)
         assertEquals(emptyMap(), unknownSetting)
     }
+
+    @Test
+    fun bookListSortAndViewParametersRetainOnlyKnownEnumValues() {
+        val selectedValues = sanitizeAnalyticsParameters(
+            mapOf(
+                "sort_config" to "date_added_descending",
+                "view_mode" to "grid",
+            ),
+        )
+        val typeNames = sanitizeAnalyticsParameters(
+            mapOf(
+                "sort_config" to "BookSortConfig",
+                "view_mode" to "BookListViewMode",
+            ),
+        )
+        val unknownValues = sanitizeAnalyticsParameters(
+            mapOf(
+                "sort_config" to "private_value",
+                "view_mode" to "unknown_layout",
+            ),
+        )
+
+        assertEquals(
+            mapOf("sort_config" to "date_added_descending", "view_mode" to "grid"),
+            selectedValues,
+        )
+        assertEquals(emptyMap(), typeNames)
+        assertEquals(emptyMap(), unknownValues)
+    }
 }
