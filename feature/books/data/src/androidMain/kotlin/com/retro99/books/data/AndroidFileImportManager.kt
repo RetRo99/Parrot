@@ -50,7 +50,8 @@ class AndroidFileImportManager(
             val uuid = UUID.randomUUID().toString()
 
             // First, copy to temporary location to extract metadata
-            val tempFile = File(context.cacheDir, "$uuid.epub.tmp")
+            // Keep .epub as the final extension so Readium recognizes the staged file format.
+            val tempFile = File(context.cacheDir, "$uuid.tmp.epub")
             context.contentResolver.openInputStream(platformFile.uri)?.use { inputStream ->
                 FileOutputStream(tempFile).use { outputStream ->
                     inputStream.copyTo(outputStream, bufferSize = 8192)

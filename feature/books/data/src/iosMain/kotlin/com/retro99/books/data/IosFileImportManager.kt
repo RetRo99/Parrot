@@ -93,7 +93,8 @@ class IosFileImportManager(
             val fileManager = NSFileManager.defaultManager
 
             // First, copy to temporary location to extract metadata
-            val tempPath = "$ebooksDir/$uuid.epub.tmp"
+            // Keep .epub as the final extension so the metadata reader recognizes the format.
+            val tempPath = "$ebooksDir/$uuid.tmp.epub"
             val sourceUrl = platformFile.nsUrl
             val tempUrl = NSURL.fileURLWithPath(tempPath)
 
