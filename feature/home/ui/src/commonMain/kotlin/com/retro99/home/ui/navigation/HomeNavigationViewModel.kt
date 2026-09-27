@@ -6,6 +6,7 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
+import com.retro99.analytics.api.ReaderSettingsScreenViewed
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
@@ -577,6 +578,27 @@ class HomeNavigationViewModel(
                 entryPoint = entryPoint,
                 action = "screen_view",
                 operation = "app_settings_route",
+                stage = "visible",
+                outcome = "succeeded",
+            ),
+        )
+    }
+
+    /** Records an exposure only after the navigation owner reports Reader Settings as visible. */
+    fun reportReaderSettingsViewed(sourceScreen: String, entryPoint: String) {
+        analytics.logEvent(
+            ReaderSettingsScreenViewed(
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "reader_settings",
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+                action = "screen_view",
+                operation = "reader_settings_route",
                 stage = "visible",
                 outcome = "succeeded",
             ),

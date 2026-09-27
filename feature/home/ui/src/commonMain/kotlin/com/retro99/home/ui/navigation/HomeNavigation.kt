@@ -149,6 +149,15 @@ fun HomeNavigation(
                 entryPoint = entryPoint,
             )
         }
+        if (currentDestination is HomeDestination.Settings) {
+            val previousDestination = lastVisibleDestination
+                ?: navigationState.currentBackStack.dropLast(1).lastOrNull()
+            val exposure = readerSettingsExposureContext(previousDestination)
+            viewModel.reportReaderSettingsViewed(
+                sourceScreen = exposure.sourceScreen,
+                entryPoint = exposure.entryPoint,
+            )
+        }
         lastVisibleDestination = currentDestination
         lastVisibleTab = navigationState.currentTab
     }

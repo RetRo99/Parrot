@@ -10,6 +10,7 @@ import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.ReaderAnalyticsEvent
+import com.retro99.analytics.api.ReaderSettingsScreenViewed
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 
 class AnalyticsParameterSanitizerTest {
@@ -1055,5 +1056,24 @@ class DiagnosticPayloadSanitizerTest {
         )
         assertEquals(emptyMap(), typeNames)
         assertEquals(emptyMap(), unknownValues)
+    }
+
+    @Test
+    fun readerSettingsScreenExposureRetainsOnlyBoundedAttribution() {
+        val screen = sanitizeAnalyticsParameters(
+            ReaderSettingsScreenViewed(
+                sourceScreen = "app_settings",
+                entryPoint = "reader_settings_row",
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "reader_settings",
+                "source_screen" to "app_settings",
+                "entry_point" to "reader_settings_row",
+            ),
+            screen,
+        )
     }
 }
