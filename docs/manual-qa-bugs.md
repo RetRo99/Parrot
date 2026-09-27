@@ -959,3 +959,20 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Affected files:** App Settings delete flow and UserRegistry active-profile lifecycle, if Samsung confirms.
 - **Fix reference / commit:** Pending confirmation. Do not alter behavior until case 422 on disposable data establishes the actual postcondition.
 - **Retest:** NOT RUN; blocked until QA-BUG-0053 instrumentation is committed and a disposable profile can be created without modifying the original profile.
+
+## QA-BUG-0056 — Profile mutations can be submitted repeatedly while persistence is in flight
+
+- **Severity / user impact:** Medium, confirmed by source audit; rapid confirmation taps can launch concurrent create/rename/delete calls, duplicate profiles, race profile state, or emit multiple outcomes. Rapid profile selection can also race active-profile writes/navigation resets.
+- **Status:** CONFIRMED BY SOURCE AUDIT; not reproduced on-device yet. Guard and regression test pending.
+- **Screen/test IDs:** Profiles cases 409, 411–413; shared repeated-action case 743.
+- **Device/build/commit:** Samsung serial `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; installed Parrot 0.4.5 (21), PID `23557`, APK SHA-256 `bebdd5542c81be20b8b6d58d8eb904d6f2e68e40ceda7b6bcc998c575376d9d5`, source commits `2d436099` and `9e0f707b` plus separate uncommitted QA-BUG-0049 candidate. No mutation attempt was made in this audit.
+- **Preconditions:** Profile screen is visible; a create/rename/delete write or profile switch has not yet returned.
+- **Exact reproduction / audit:** Tap a profile operation's enabled confirm/action control repeatedly while its asynchronous `viewModelScope.launch` call is pending; likewise tap different profile tiles quickly. Source audit found no in-flight flag, duplicate-submit guard, or disabled controls in `AppSettingsViewModel`/`AppSettingsScreen` before the instrumentation fix. No Samsung reproduction is claimed.
+- **Expected:** At most one accepted operation is in flight; repeated taps do not cause duplicate writes, stale profile callbacks, multiple routes or false success events. Cancel/dismiss cannot be mislabeled while a committed mutation is still running.
+- **Actual:** Pre-fix handlers start a new coroutine for each intent and leave their controls enabled. Concurrent registry writes are therefore possible.
+- **Frequency:** Every operation while its persistence call remains pending; rapid-switch race depends on scheduling.
+- **Evidence:** [Case-743 profile repeated-submit source audit](manual-qa-evidence/2026-09-27/case-743-profile-repeated-submit-prefx.txt); `AppSettingsViewModel.kt` profile handlers and `AppSettingsScreen.kt` dialog/tile controls.
+- **Root cause:** No ViewModel/UI in-flight guard around suspend profile mutations.
+- **Affected files:** App Settings profile ViewModel/state/screen and host regression tests.
+- **Fix reference / commit:** Pending. Add a single in-flight profile-operation guard, prevent duplicate intents, disable relevant controls while pending, and preserve ordinary dialog dismissal only when no mutation has been accepted.
+- **Retest:** Pending host tests and Samsung rapid-tap verification on a disposable synthetic profile.

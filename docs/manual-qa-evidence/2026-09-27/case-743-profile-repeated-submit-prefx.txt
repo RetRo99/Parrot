@@ -1,0 +1,15 @@
+Case 743 / Profiles — repeated-submit pre-fix source audit
+Audit date: 2026-09-27. No profile action was invoked on the Samsung for this audit.
+
+Device/build context
+- Required physical Samsung: serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, build `S921BXXSGDZG1`.
+- Installed app context: `com.retro99.parrot` 0.4.5 (21), PID `23557`, APK SHA-256 `bebdd5542c81be20b8b6d58d8eb904d6f2e68e40ceda7b6bcc998c575376d9d5`; source commits `2d436099` and `9e0f707b` plus a separate uncommitted QA-BUG-0049 candidate.
+
+Source observations
+- Before the proposed in-flight guard, `AppSettingsViewModel.addProfile`, `renameProfile`, `deleteProfile`, and `selectProfile` each launch asynchronous registry operations directly from intents.
+- Add/Rename/Delete confirm buttons remain enabled after dispatch (except blank-name validation); profile tiles remain enabled while a profile write is pending. There is no accepted-operation lock, loading state, or duplicate-intent suppression.
+- Repeated taps can therefore start multiple coroutines before the first `UserRegistry` write completes. This establishes a source-confirmed exposure, not a device-observed duplicate or data-corruption incident.
+- No private profile label or identifier is retained; no mutation, screenshot, raw hierarchy, credential, or unrelated device setting was touched.
+
+Disposition
+- QA-BUG-0056 was recorded before its fix. The Samsung case-743 repeated-tap variant remains NOT RUN until instrumentation and the guard are committed and a disposable profile fixture is safely available.

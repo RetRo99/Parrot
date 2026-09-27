@@ -62,10 +62,10 @@ Case evidence and sanitized excerpts are stored under [`manual-qa-evidence/`](ma
 | Reachable action/state | Catalogue mapping | Current disposition |
 |---|---|---|
 | App Settings visible; Profiles section, active profile and horizontally scrollable profile tiles | 408, 740 | Case 408 UI presence PASS; pre-fix actual-visible App Settings event FAIL on local provider. QA-BUG-0053. |
-| Select current/other profile; navigation stack reset and state isolation | 409, 419–421 | NOT RUN after instrumentation; synthetic disposable profile fixture required. |
+| Select current/other profile; navigation stack reset and state isolation | 409, 419–421 | NOT RUN after instrumentation; synthetic disposable profile fixture required. QA-BUG-0056 records absent pre-fix in-flight gating for rapid switches. |
 | Long-press or edit affordance; profile menu Rename/Delete; dismiss outside/system Back | 410, 412, 740 | Source inventory: both long-press and visible edit button open same menu; dismiss/outside state has no operation telemetry. NOT RUN. |
-| Rename form, blank validation, confirm/cancel/Back, long-name layout | 411, 414, 416 | Confirm button disabled for blank name; success/failure/cancel outcomes not instrumented pre-fix (QA-BUG-0053). NOT RUN. |
-| Add-profile form, blank validation, confirm/cancel/Back; duplicate names | 413–415 | Blank Add button disabled; Add creates then activates profile; persistence exceptions are uncaught pre-fix (QA-BUG-0053). NOT RUN. |
+| Rename form, blank validation, confirm/cancel/Back, long-name layout | 411, 414, 416 | Confirm button disabled for blank name; success/failure/cancel outcomes not instrumented pre-fix (QA-BUG-0053). Rapid submit has no pre-fix guard (QA-BUG-0056). NOT RUN. |
+| Add-profile form, blank validation, confirm/cancel/Back; duplicate names | 413–415 | Blank Add button disabled; Add creates then activates profile; persistence exceptions are uncaught pre-fix (QA-BUG-0053). Rapid submit has no pre-fix guard (QA-BUG-0056). NOT RUN. |
 | Delete confirmation, cancel/Back, delete inactive/current profile, last-profile protection | 412, 422 | Delete menu entry hidden when only one profile exists. QA-BUG-0055 suspected by source audit: deleting the active profile clears active ID instead of choosing a remaining profile; confirm on disposable fixture before fixing. NOT RUN. |
 | Profile registry diagnostics and private-data logging | 509, 740–750 | QA-BUG-0054 source audit confirmed Kermit templates interpolate profile names/IDs; no runtime value retained. Fix and sanitized device retest pending. |
 
