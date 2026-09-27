@@ -1,0 +1,37 @@
+Case 14 — Offline cold-start and cached local usability
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build manifest
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`; portrait 1080×2340, gesture navigation.
+- Installed package `com.retro99.parrot` 0.4.5 (21), debug, source commit `c08658a278fcef1da884352edb44ffc298d6b08d`, APK SHA-256 `df2a162c85b7b7b32c7c7d58608733e957fc3d42d677d69fe402b2caa4a5c506` (verified local and Samsung-pulled hashes match).
+- Baseline before test: airplane mode `0`, Wi-Fi `1`, mobile data `1`, active default Wi-Fi network 107; locale `en-GB`; battery saver off. Cached local *Pride and Prejudice* was available at page 29/64 (49%); Open Last Book and Show Continue Reading both on. Default profile. No app data or credentials cleared/changed.
+
+Test definition and variants
+Current product behavior was reconciled before scoring: when `Open Last Book on Launch` is enabled, cold-start routes through Home and restores the cached local Reader; when disabled, it stops at cached Home/Books. Both are valid offline startup outcomes. The launch cases below use Android `am force-stop` (no data clear), enable airplane mode through `cmd connectivity`, then start the launcher activity with `monkey`.
+
+Variant A — offline cold start, Open Last Book enabled
+- At about 05:00 CEST, enabled airplane mode. Verified `settings airplane_mode_on=1` and `Active default network: none`; the status bar displayed the airplane icon. `wifi_on` read `3` during the airplane-mode transition, but no active network existed.
+- Force-stopped only Parrot and launched it. New Parrot PID `20337`; system network remained disconnected.
+- Actual: Parrot opened the local Reader with visible EPUB text at page 29/64, 49%; no server/login/error screen or crash. Evidence: [offline restored Reader screenshot](case-014-offline-cold-start-open-last-book.png).
+- Local PID-scoped startup events: `app_launch_route_resolved(screen=home, source_screen=splash, entry_point=app_launch, outcome=success)`, one `home_screen_viewed`, `last_book_launch_attempted`, one `book_opened`, and one `last_book_launch_completed(stage=usable_content,outcome=succeeded,book_type=ebook)`.
+- Bounded startup breadcrumbs: splash route-resolution `started`; Home route-selected `succeeded`; Home visible; open-last navigation `started`; Reader usable-content `succeeded`. A local target checkpoint also succeeded while offline. No app-process fatal exception was present in the captured PID logs. An Android `adservices` bind warning was observed; it did not affect app functionality and was not an app fatal.
+
+Variant B — offline cold start, Open Last Book temporarily disabled
+- From App Settings while offline, toggled Open Last Book off; UI showed unchecked. Airplane remained enabled and active default network remained `none`.
+- Force-stopped only Parrot and launched it. New PID `21574`.
+- Actual: Home/Books loaded from cache with the local Pride and Prejudice cover/card, Continue Reading shelf, 49% progress, and Downloaded state. Evidence: [offline Books screen](case-014-offline-cold-start-last-book-off.png).
+- Opened the cached local book Detail: title, Jane Austen, 1998, cover, 49% progress, Continue reading and Remove download actions rendered without a network error. Evidence: [offline Detail](case-014-offline-cached-book-detail.png).
+- Opened Continue reading; readable local EPUB text appeared at page 28/64, 49%. Evidence: [offline Reader](case-014-offline-cached-reader.png). The page was 28 during this sample because an earlier coordinate tap landed in the page-turn zone after the transient Reader chrome had auto-hidden; this was a test-operator mis-target, not an app defect. The original saved page 29 was restored before test cleanup and verified after closing/reopening.
+- PID-scoped local events: startup route resolved to Home and one Home exposure; no automatic last-book attempt/open on this startup. Subsequent explicit offline actions emitted `book_detail_viewed`, `read_button_clicked(book_type=ebook)` and `book_opened(book_type=EBOOK)`. Local `sync_run_completed` events also appeared while offline; they were not used to assert synchronization or cross-device behavior. No app fatal/ANR or user-facing offline failure was observed.
+- The Open Last Book toggle was returned to checked/on in App Settings before cleanup.
+
+Network and fixture cleanup
+- Airplane mode was disabled at about 05:04 CEST. Immediately after disabling, the active network was briefly `none`; after 5 seconds, Wi-Fi was enabled and validated. Final state: airplane mode `0`, Wi-Fi `1`, mobile data `1`, active default network 108 (Wi-Fi). Locale remained `en-GB`; battery saver remained off.
+- Reopened the local Reader and verified saved position page 29/64 (49%) after close/reopen. Evidence: [post-test page-position screenshot](case-014-position-restored-after-offline-test.png). Open Last Book and Show Continue Reading are on. App remains usable; no app data was cleared. No temporary network state remains.
+
+Results (separate dimensions)
+- Functional: **PASS** for both cold-start preference variants and local cached Books → Detail → Reader usability while the phone had no active network. Saved Reader position was returned to page 29/64 after test cleanup.
+- Analytics: **PASS** for local DebugAnalyticsManager event semantics: startup route/Home exposure; enabled last-book attempt and usable-content completion; disabled startup emits no automatic open; manually opening the local book emits explicit feature-use events. Firebase Analytics ingestion is waived by the user and is not claimed.
+- Diagnostics: **PASS** for startup route and enabled last-book attempt/success breadcrumb coverage; no unexpected failure was induced and no fatal marker appeared. Crashlytics non-fatal delivery is N-A for this successful test and remains unverified/blocked separately.
+- Evidence screenshots: `case-014-offline-cold-start-open-last-book.png`, `case-014-offline-cold-start-last-book-off.png`, `case-014-offline-cached-book-detail.png`, `case-014-offline-cached-reader.png`, `case-014-position-restored-after-offline-test.png`.
+- No defect found for case 14. The test does not pass or assert full offline series/detail coverage (case 346), offline mutations (347/465/466, deferred as scoped), full offline reading to end (344), streaming/audio (345), server behavior or sync propagation. Those remain separately catalogued.
