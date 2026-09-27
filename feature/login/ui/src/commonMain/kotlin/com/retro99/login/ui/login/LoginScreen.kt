@@ -196,7 +196,18 @@ private fun LoginScreenContent(
 
             ExposedDropdownMenuBox(
                 expanded = serverTypeExpanded,
-                onExpandedChange = { serverTypeExpanded = it },
+                onExpandedChange = { expanded ->
+                    if (expanded) {
+                        intentDispatcher(LoginIntent.OnServerTypePickerOpened)
+                    } else {
+                        intentDispatcher(
+                            LoginIntent.OnServerTypePickerDismissed(
+                                reason = ServerTypePickerDismissalReason.AnchorToggle,
+                            ),
+                        )
+                    }
+                    serverTypeExpanded = expanded
+                },
             ) {
                 OutlinedTextField(
                     value = selectedServerType.displayName,
@@ -213,7 +224,14 @@ private fun LoginScreenContent(
                 )
                 ExposedDropdownMenu(
                     expanded = serverTypeExpanded,
-                    onDismissRequest = { serverTypeExpanded = false },
+                    onDismissRequest = {
+                        intentDispatcher(
+                            LoginIntent.OnServerTypePickerDismissed(
+                                reason = ServerTypePickerDismissalReason.DismissRequest,
+                            ),
+                        )
+                        serverTypeExpanded = false
+                    },
                 ) {
                     ServerType.entries
                         .filter { serverType ->

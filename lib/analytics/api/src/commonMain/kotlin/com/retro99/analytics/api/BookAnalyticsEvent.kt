@@ -188,6 +188,52 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    data class ServerTypePickerAttempted(
+        val serverType: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_server_type_picker_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "select_server_type",
+            "operation" to "server_type_picker",
+            "stage" to "menu_open",
+            "outcome" to "started",
+            "server_type" to serverType,
+        )
+    }
+
+    data class ServerTypeSelected(
+        val previousServerType: String,
+        val serverType: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_server_type_selected"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "select_server_type",
+            "operation" to "server_type_picker",
+            "stage" to "terminal",
+            "outcome" to "succeeded",
+            "previous_server_type" to previousServerType,
+            "server_type" to serverType,
+        )
+    }
+
+    data class ServerTypePickerCancelled(
+        val serverType: String,
+        val reasonCode: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_server_type_picker_cancelled"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "select_server_type",
+            "operation" to "server_type_picker",
+            "stage" to "terminal",
+            "outcome" to "cancelled",
+            "server_type" to serverType,
+            "reason_code" to reasonCode,
+        )
+    }
+
     data class LoginAttempted(
         val serverType: String,
         val authMethod: String,

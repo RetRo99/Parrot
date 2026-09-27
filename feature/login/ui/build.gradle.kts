@@ -16,6 +16,7 @@ kotlin {
         namespace = "com.retro99.feature.login.ui"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+        withHostTest {}
     }
 
     iosArm64()
@@ -46,6 +47,7 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.kotlin.result)
             implementation(libs.coroutines.test)
+            implementation(projects.lib.preferences.api)
         }
     }
 }

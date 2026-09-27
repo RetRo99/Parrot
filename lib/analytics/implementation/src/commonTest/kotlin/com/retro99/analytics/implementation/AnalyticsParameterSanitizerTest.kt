@@ -537,6 +537,66 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun serverTypePickerEventsRetainBoundedAttemptSelectionAndCancellation() {
+        val attempted = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.ServerTypePickerAttempted("storyteller").parameters +
+                mapOf("server_url" to "https://private.example", "username" to "private-user"),
+        )
+        val selected = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.ServerTypeSelected(
+                previousServerType = "storyteller",
+                serverType = "audiobookshelf",
+            ).parameters,
+        )
+        val cancelled = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.ServerTypePickerCancelled(
+                serverType = "audiobookshelf",
+                reasonCode = "dismiss_request",
+            ).parameters,
+        )
+        val unsafeServerType = sanitizeAnalyticsParameters(
+            mapOf("server_type" to "private server name", "previous_server_type" to "custom-host"),
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "select_server_type",
+                "operation" to "server_type_picker",
+                "stage" to "menu_open",
+                "outcome" to "started",
+                "server_type" to "storyteller",
+            ),
+            attempted,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "select_server_type",
+                "operation" to "server_type_picker",
+                "stage" to "terminal",
+                "outcome" to "succeeded",
+                "previous_server_type" to "storyteller",
+                "server_type" to "audiobookshelf",
+            ),
+            selected,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "select_server_type",
+                "operation" to "server_type_picker",
+                "stage" to "terminal",
+                "outcome" to "cancelled",
+                "server_type" to "audiobookshelf",
+                "reason_code" to "dismiss_request",
+            ),
+            cancelled,
+        )
+        assertEquals(emptyMap(), unsafeServerType)
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(

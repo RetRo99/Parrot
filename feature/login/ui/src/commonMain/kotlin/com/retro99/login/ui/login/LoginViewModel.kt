@@ -36,6 +36,7 @@ class LoginViewModel(
     private var lastFailedLogin: Pair<String, String>? = null
     private val loginSubmissionGate = LoginSubmissionGate()
     private val activeLoginAttempts = mutableMapOf<String, LoginAttempt>()
+    private var activeServerTypePicker: ServerTypePickerAttempt? = null
 
     init {
         observeTextFieldChanges()
@@ -83,11 +84,38 @@ class LoginViewModel(
             LoginIntent.OnSignInClicked -> handleSignInClicked()
             LoginIntent.OnOAuthSignInClicked -> handleOAuthSignInClicked()
             LoginIntent.OnBackClicked -> onBackClick()
+            LoginIntent.OnServerTypePickerOpened -> beginServerTypePickerAttempt()
+            is LoginIntent.OnServerTypePickerDismissed -> cancelServerTypePicker(intent.reason.reasonCode)
             is LoginIntent.OnServerTypeSelected -> handleServerTypeSelected(intent.serverType)
         }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
+    private fun beginServerTypePickerAttempt() {
+        if (activeServerTypePicker != null) return
+        val serverType = viewState.value.selectedServerType
+        val attempt = ServerTypePickerAttempt(
+            correlationId = Uuid.random().toString(),
+        )
+        activeServerTypePicker = attempt
+        analytics.logEvent(AuthAnalyticsEvent.ServerTypePickerAttempted(serverType.identifier))
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "login",
+                action = "select_server_type",
+                operation = "server_type_picker",
+                stage = "menu_open",
+                outcome = "started",
+                serverType = serverType.identifier,
+                correlationId = attempt.correlationId,
+            ),
+        )
+    }
+
     private fun handleServerTypeSelected(serverType: ServerType) {
+        if (activeServerTypePicker == null) beginServerTypePickerAttempt()
+        val attempt = activeServerTypePicker ?: return
+        val previousServerType = viewState.value.selectedServerType
         updateState { currentState ->
             currentState.copy(selectedServerType = serverType)
         }
@@ -96,6 +124,48 @@ class LoginViewModel(
             username = usernameState.text.toString(),
             password = passwordState.text.toString(),
         )
+        analytics.logEvent(
+            AuthAnalyticsEvent.ServerTypeSelected(
+                previousServerType = previousServerType.identifier,
+                serverType = serverType.identifier,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "login",
+                action = "select_server_type",
+                operation = "server_type_picker",
+                stage = "selection_applied",
+                outcome = "succeeded",
+                serverType = serverType.identifier,
+                correlationId = attempt.correlationId,
+            ),
+        )
+        activeServerTypePicker = null
+    }
+
+    private fun cancelServerTypePicker(reasonCode: String) {
+        val attempt = activeServerTypePicker ?: return
+        val serverType = viewState.value.selectedServerType
+        analytics.logEvent(
+            AuthAnalyticsEvent.ServerTypePickerCancelled(
+                serverType = serverType.identifier,
+                reasonCode = reasonCode,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "login",
+                action = "select_server_type",
+                operation = "server_type_picker",
+                stage = "dismissed",
+                outcome = "cancelled",
+                reasonCode = reasonCode,
+                serverType = serverType.identifier,
+                correlationId = attempt.correlationId,
+            ),
+        )
+        activeServerTypePicker = null
     }
 
     private fun handleSignInClicked() {
@@ -318,6 +388,10 @@ class LoginViewModel(
         val serverType: ServerType,
         val authMethod: String,
         val startedAt: TimeMark,
+        val correlationId: String,
+    )
+
+    private data class ServerTypePickerAttempt(
         val correlationId: String,
     )
 
