@@ -1,0 +1,18 @@
+QA-BUG-0057 — Profile retry attribution source audit
+Audit date: 2026-09-27. Source-only finding; no operation was submitted and no profile data was changed.
+
+Device/build context
+- Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0.
+- Installed `com.retro99.parrot` 0.4.5 (21), PID `10798`, APK SHA-256 `9583b61421c46d930c1cf157529a3d0546d6a6a7b17c35c3f85aced299e6c6f3`; source commit `b428b334` plus the separate uncommitted QA-BUG-0049 candidate.
+
+Source finding
+- `AppSettingsViewModel` stores failed operations in `failedProfileOperations`, a `MutableSet<ProfileOperation>`.
+- `runProfileOperation` computes `isRetry` solely from whether the enum is in that set. On failure it adds the enum; it removes the enum only when an operation of that type succeeds.
+- Dialog cancellation (`hideAddProfileDialog`, `hideRenameProfileDialog`, `hideDeleteProfileDialog`) does not clear the associated failure marker.
+- Thus a failed Switch for one target can mark a later first Switch to another target as `is_retry=true`. A failed Add followed by cancelling and opening a new Add dialog can similarly classify a new profile-creation session as a retry.
+- No runtime failure, retry event, profile identifier or profile name was collected for this audit. This confirms incorrect source semantics, not a Samsung-observed misattribution.
+
+Expected fix
+- Use a private in-memory operation/session key; do not send profile IDs, labels or names to Analytics or diagnostics.
+- Preserve retry attribution only for a matching logical operation; clear markers on success and dialog cancellation.
+- Add regression coverage for a true same-session retry, a new session/nonmatching target, and cancellation cleanup.

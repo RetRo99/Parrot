@@ -912,7 +912,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0053 — Profile management operations lack correct attempt/outcome and failure instrumentation
 
 - **Severity / user impact:** Medium for observability; profile switching/creation/rename/delete can fail or partially complete without an outcome, recovery breadcrumb, user-visible error, or useful diagnostic report. The existing switch event is emitted before persistence and can count a no-op/failure as success.
-- **Status:** CONFIRMED BY SOURCE AUDIT; Samsung App Settings/Profile-section exposure also observed without an Analytics screen-view event. Profile mutation failure and cancellation variants have not yet been invoked on-device; fix and full action retest pending.
+- **Status:** FIXED IN SOURCE (`b428b334`); PARTIAL SAMSUNG RETEST. Visible-route exposure, profile menu/dialog presentation and ordinary dismissal variants passed. Profile mutation success/failure/retry variants remain NOT RUN, so the screen is not signed off.
 - **Screen/test IDs:** App Settings/Profile cases 408–422; operation instrumentation cases 534, 740–750 where applicable.
 - **Device/build/commit:** Samsung serial `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`); package `com.retro99.parrot` 0.4.5 (21), PID `1802`, APK SHA-256 `f3c4eb2c62bc21aec91c3c32f583227760d033b4591bd0ace804b15b8de58a65`; source `2d4360996a620f4cba2d25c25bbd3e7cdaaeba88` plus separate uncommitted QA-BUG-0049 candidate.
 - **Preconditions:** App Settings/Profile section visible; source flow uses `UserRegistry` preference persistence for profile mutations.
@@ -923,8 +923,8 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** [Case-408 profile exposure/source audit](manual-qa-evidence/2026-09-27/case-408-profile-exposure-prefx.txt); `HomeNavigation.kt` visible-destination effect; `AppSettingsViewModel.kt` profile handlers; `UserRegistry.kt` and `UserRegistryImpl.kt` persistence contract.
 - **Root cause:** Profile actions are implemented as direct `viewModelScope.launch` calls without the operation wrapper/recovery pattern used by current-book clearing; the Home visible-route observer handles Server Management but not App Settings.
 - **Affected files:** `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/navigation/HomeNavigation.kt`, `HomeNavigationViewModel.kt`, `appsettings/AppSettingsViewModel.kt`/view state/screen; typed App Settings Analytics events and provider tests.
-- **Fix reference / commit:** Pending. Add actual-visible App Settings exposure and bounded typed profile operation attempt/terminal events; correlate operation breadcrumbs; catch unexpected registry exceptions once and present a retryable UI outcome. Do not add private profile names/IDs to telemetry.
-- **Retest:** Pending. Firebase Analytics ingestion is waived; local provider event behavior is sufficient for event semantics but not Firebase delivery. Crashlytics Console delivery remains unverified.
+- **Fix reference / commit:** `b428b334` (`fix(settings): instrument profile operations [QA-BUG-0053]`). Adds actual-visible route exposure; bounded typed operation/dialog/menu events without profile names or IDs; attempt/success/failure/cancellation outcomes; correlated unexpected-failure breadcrumbs and one operation-boundary exception report; retryable visible failure state; and local regression tests. Ordinary user cancellation rethrows cancellation without a non-fatal.
+- **Retest:** Partial PASS on Samsung serial `RFCWC0SSVDM`: local-visible Settings entry emitted exactly one `app_settings_screen_viewed` and one route breadcrumb; Add and Rename opened/cancelled via button, system Back and outside tap; blank Add remained unsubmitted; Edit and long-press menus emitted distinct sources; menu outside/System-Back dismissal emitted bounded `dismiss_request`; zero profile mutation/attempt events, exception markers or fatal crashes. Host operation tests covered one attempt/terminal success, one unexpected failure/report, cancellation without non-fatal, retry attribution, and profile data exclusion. Samsung mutation-success/failure paths remain NOT RUN until the QA-BUG-0056 guard is committed and a disposable profile fixture is safely available. Exact device/build evidence: [case 408/759 retest](manual-qa-evidence/2026-09-27/case-408-759-profile-exposure-dismissal-retest.txt). Debug events are local-only; Firebase Analytics ingestion is waived and Crashlytics Console delivery remains unverified.
 
 ## QA-BUG-0054 — Profile names and identifiers are written to application logs
 
@@ -963,7 +963,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0056 — Profile mutations can be submitted repeatedly while persistence is in flight
 
 - **Severity / user impact:** Medium, confirmed by source audit; rapid confirmation taps can launch concurrent create/rename/delete calls, duplicate profiles, race profile state, or emit multiple outcomes. Rapid profile selection can also race active-profile writes/navigation resets.
-- **Status:** CONFIRMED BY SOURCE AUDIT; not reproduced on-device yet. Guard and regression test pending.
+- **Status:** CONFIRMED BY SOURCE AUDIT; not reproduced on-device. Independent guard, UI pending state and regression test remain uncommitted. The current Samsung APK intentionally predates this fix; do not run repeat-submit mutation tests until a matching guarded build is installed.
 - **Screen/test IDs:** Profiles cases 409, 411–413; shared repeated-action case 743.
 - **Device/build/commit:** Samsung serial `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; installed Parrot 0.4.5 (21), PID `23557`, APK SHA-256 `bebdd5542c81be20b8b6d58d8eb904d6f2e68e40ceda7b6bcc998c575376d9d5`, source commits `2d436099` and `9e0f707b` plus separate uncommitted QA-BUG-0049 candidate. No mutation attempt was made in this audit.
 - **Preconditions:** Profile screen is visible; a create/rename/delete write or profile switch has not yet returned.
@@ -974,5 +974,22 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** [Case-743 profile repeated-submit source audit](manual-qa-evidence/2026-09-27/case-743-profile-repeated-submit-prefx.txt); `AppSettingsViewModel.kt` profile handlers and `AppSettingsScreen.kt` dialog/tile controls.
 - **Root cause:** No ViewModel/UI in-flight guard around suspend profile mutations.
 - **Affected files:** App Settings profile ViewModel/state/screen and host regression tests.
-- **Fix reference / commit:** Pending. Add a single in-flight profile-operation guard, prevent duplicate intents, disable relevant controls while pending, and preserve ordinary dialog dismissal only when no mutation has been accepted.
-- **Retest:** Pending host tests and Samsung rapid-tap verification on a disposable synthetic profile.
+- **Fix reference / commit:** Pending. Add a single in-flight profile-operation guard, prevent duplicate intents, disable relevant controls while pending, and preserve ordinary dialog dismissal only when no mutation has been accepted. A prior uncommitted build candidate contained such a guard, but it was deliberately excluded from the QA-BUG-0053 instrumentation commit and is not the currently installed APK.
+- **Retest:** NOT RUN. Pending separate QA-BUG-0056 implementation commit, host tests, guarded APK install/hash check, and Samsung rapid-tap verification on a disposable synthetic profile.
+
+## QA-BUG-0057 — Profile retry attribution leaks across unrelated operations
+
+- **Severity / user impact:** Low for direct functionality, medium for telemetry correctness; distinct profile operations can be counted as retries even when the earlier failure belonged to another profile or another dialog session, distorting retry and completion rates.
+- **Status:** CONFIRMED BY SOURCE AUDIT; no Samsung operation failure was induced. Fix and retry-attribution regression test pending.
+- **Screen/test IDs:** Profiles cases 409, 411, 413; shared operation outcome/retry cases 743 and 749.
+- **Device/build/commit:** Samsung serial `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; installed Parrot 0.4.5 (21), PID `10798`, APK SHA-256 `9583b61421c46d930c1cf157529a3d0546d6a6a7b17c35c3f85aced299e6c6f3`, source commit `b428b334` plus separate uncommitted QA-BUG-0049 candidate. No profile mutation or failure was attempted.
+- **Preconditions:** A profile operation fails; before a matching logical operation is retried, the user opens a new dialog/chooses another profile and starts the same operation type.
+- **Exact reproduction / audit:** Source `AppSettingsViewModel.runProfileOperation` tracks failures in `failedProfileOperations`, a set keyed only by `ProfileOperation` enum. For example, after Switch fails for target A, a first Switch to target B reads `operation in failedProfileOperations` and emits `is_retry=true`; after an Add failure, dismissing and reopening Add leaves the Create enum in the set, so a new create session is also marked retry. No device reproduction is claimed because an operation failure was not induced.
+- **Expected:** Retry attribution follows the same logical target/dialog session, is cleared when that session is cancelled or succeeds, and never adds profile names/IDs to event parameters.
+- **Actual:** Retry is keyed only by operation type; target and session changes are ignored, and cancellation does not clear the set entry.
+- **Frequency:** After any failed operation, the next operation of the same type in that ViewModel is marked as a retry, regardless of target or session.
+- **Evidence:** [QA-BUG-0057 retry-attribution source audit](manual-qa-evidence/2026-09-27/qa-bug-0057-profile-retry-attribution-source-audit.txt); `feature/home/ui/src/commonMain/kotlin/com/retro99/home/ui/appsettings/AppSettingsViewModel.kt` (`failedProfileOperations` and `runProfileOperation`).
+- **Root cause:** Retry history is stored by operation enum rather than by a bounded in-memory logical attempt/session key.
+- **Affected files:** App Settings ViewModel/operation tests and associated QA evidence/results.
+- **Fix reference / commit:** Pending. Keep retry keys private and session/target scoped; clear them after success or dialog cancellation; keep Analytics dimensions bounded and free of profile identifiers.
+- **Retest:** NOT RUN. Requires host tests for same-session retry, new-session/nonmatching-target first attempt and cancellation cleanup; Samsung profile mutation testing remains gated by QA-BUG-0056 and disposable data.

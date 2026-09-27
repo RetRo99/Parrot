@@ -1,0 +1,29 @@
+Samsung QA — App Settings / Profiles visible route and non-mutating dismissal checks
+Date: 2026-09-27 (device local time; CEST, UTC+0200)
+
+Device/build
+- Physical device: Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, firmware `S921BXXSGDZG1`.
+- Package: `com.retro99.parrot`, version 0.4.5 (21), debug APK, target SDK 36.
+- Source: committed QA-BUG-0053 change `b428b334` plus separate, still-uncommitted QA-BUG-0049 playback-stop candidate. The checked-in APK and Samsung-installed APK SHA-256 both equal `9583b61421c46d930c1cf157529a3d0546d6a6a7b17c35c3f85aced299e6c6f3`.
+- Samsung process PID: `10798`. The pre-existing Parrot app data was preserved.
+
+Execution
+- Returned from the saved Reader error surface to Books and entered App Settings through the Settings bottom-navigation tab. The Profiles section, current-profile tile and Add Profile affordance were visible. The UI hierarchy was checked in memory only; no raw hierarchy, screenshot, profile label or ID was retained.
+- Opened Add Profile, attempted the blank Add action (the disabled action left the dialog open), then dismissed separate presentations with Cancel, Android system Back and outside tap. No profile was created or activated.
+- Opened the existing profile menu through the visible Edit affordance and by long-press. The single-profile menu exposed Rename and correctly omitted Delete while only one profile exists. Opened Rename and dismissed separate presentations with Cancel, system Back and outside tap; no text was changed.
+- Dismissed separate profile menus using system Back and outside tap. No mutation action was selected.
+- No create, switch, rename, delete, server, book or device-wide setting was changed.
+
+Observed local DebugAnalyticsManager records (Firebase ingestion is waived; this is not Firebase-delivery evidence)
+- `app_settings_screen_viewed`: exactly 1, `screen=app_settings`, `source_screen=books`, `entry_point=bottom_navigation`.
+- Matching App Settings visible-route diagnostic breadcrumb: exactly 1, `operation=app_settings_route`, `stage=visible`, `outcome=succeeded`.
+- Profile dialog events: 6 `profile_operation_dialog_opened` and 6 `profile_operation_cancelled`: three Add presentations (Cancel=`cancel_button`, system Back/outside=`dismiss_request`) and three Rename presentations (same variants). Each cancel followed its matching presentation; no profile-operation attempt or mutation event was emitted.
+- Profile menu events: 5 `profile_menu_opened` (Edit and long-press sources distinguished) and 2 `profile_menu_dismissed` (`entry_point=dismiss_request`) for outside/System Back dismissal.
+- Counts: `profile_operation_attempted=0`, `profile_operation_failed=0`, `profile_created=0`, `profile_switched=0`, `profile_renamed=0`, `profile_deleted=0`.
+- PID-scoped local log inspection found zero exception-report markers and zero fatal-crash markers. Ordinary dismissals did not produce a non-fatal. Crashlytics delivery is not verified.
+- The log excerpt parser returned only bounded event names/dimensions; it omitted free-form profile values. No Firebase Analytics delivery claim is made.
+
+Disposition
+- Case 408's actual-visible exposure event and route breadcrumb passed on the committed QA-BUG-0053 build.
+- Cases 410/759, 413 presentation/cancel variants, 414 blank-submit prevention, and 760/761/763 executed variants passed as described. Profile mutation-success/failure/retry paths remain NOT RUN. Case 762 and deletion cases 412/422 are BLOCKED until a disposable non-last profile exists. QA-BUG-0056 repeated-submit coverage remains NOT RUN; this installed APK intentionally predates its independent guard fix.
+- Host checks passed before install: `:feature:home:ui:testAndroidHostTest`, `:lib:analytics:implementation:testAndroidHostTest`, `:androidApp:assembleDebug` (596 actionable tasks; 56 executed).
