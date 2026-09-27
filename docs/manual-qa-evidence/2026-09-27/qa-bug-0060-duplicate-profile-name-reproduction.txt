@@ -1,0 +1,25 @@
+QA-BUG-0060 — Duplicate profile names on Samsung (pre-fix)
+Date: 2026-09-27 (device local time; CEST, UTC+0200)
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, firmware `S921BXXSGDZG1`.
+- `com.retro99.parrot` 0.4.5 (21), target SDK 36; PID `14481`.
+- Local and installed APK SHA-256: `319fba7efbd020c8b799ecb82f5af249e99b89119b3a4749ffe939ec626b1a7c`. Build source includes `9503b45e` and separate QA-BUG-0049/server-management changes.
+
+Reproduction
+- Started with the original profile active and only one profile present.
+- Created two disposable profiles in Parrot using the same synthetic display label. Both Create operations succeeded and each automatically activated the newly created profile.
+- The App Settings profile row showed both disposable cards with the same ellipsized label and same avatar presentation. The active card alone had the check/green background; the inactive duplicate had no distinguishing label or metadata. No screenshot or raw UI hierarchy was saved.
+- Tapped each duplicate card by its position in turn. Each tap successfully switched active profile and returned to the home-tab root; reopening App Settings showed the active marker move between the two otherwise indistinguishable cards. Both duplicate labels remained.
+- The original profile remained present and unmodified but is currently inactive. One disposable duplicate is currently active; both temporary duplicates are retained only until planned cleanup.
+
+Local observability
+- PID-scoped DebugAnalyticsManager output showed exactly two `profile_operation_attempted` → `profile_created` pairs and each Create's automatic Switch attempt/success pair, all `is_retry=false`. The two manual duplicate-to-duplicate switches each showed one Switch attempt/success pair (`is_retry=false`).
+- Matching diagnostic breadcrumb start/terminal pairs were present for each operation and carried diagnostic-only correlation IDs. No synthetic label appeared in breadcrumbs; no labels, profile IDs, correlation IDs, raw log lines, credentials, screenshots or hierarchy were retained.
+- Zero PID-scoped exception-report markers and zero fatal-crash markers. No failure was induced. Firebase Analytics ingestion is waived; local debug logs do not establish Firebase delivery, and Crashlytics delivery was not tested.
+
+Disposition
+- Case 415 functional result: FAIL — duplicate names are accepted and the inactive cards cannot be distinguished by displayed name/avatar. The successful position-based switches do not establish that a user can identify which profile's data will open.
+- Case 415 Analytics: PASS locally for the Create and Switch attempt/success traces with `is_retry=false`; no private profile dimensions observed. Firebase ingestion waived.
+- Case 415 diagnostics: PASS for correlated normal-operation breadcrumbs and zero unexpected failure markers; no failure-induced Crashlytics assertion.
+- QA-BUG-0060: confirmed, fix pending. Retest must verify duplicate-name rejection or safe, stable user-visible distinction. Clean up both disposable profiles and restore the original as active after all profile tests.

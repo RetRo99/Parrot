@@ -1043,3 +1043,9 @@ Each row below is a parameterized case: create a result row for **each reachable
 | 762 | Delete Profile cancellation paths | With a disposable non-last profile selected, open Delete confirmation; cancel by button, outside tap and system Back | Profile and its local data remain; one dialog-open and one cancelled outcome per presentation; no delete attempt or Crashlytics report. BLOCKED without a disposable non-last profile |
 | 763 | Profile menu dismissal paths | Open a profile menu by long-press and Edit; dismiss each by outside tap and system Back | Menu closes without selecting Rename/Delete; one bounded menu-dismissal outcome per dismissal (`dismiss_request` for outside/System Back); no profile mutation |
 | 764 | Profile confirmation taps do not reach exposed content | On a disposable profile, rapidly repeat Add/Rename/Delete confirmation while the operation can complete and dismiss its dialog; inspect unrelated controls beneath the dialog | At most one accepted mutation and terminal outcome; subsequent taps in the same rapid burst are consumed/ignored and cannot toggle a setting, open another route, or activate an underlying control. Restore the original profile and preferences |
+
+## 42. Profile-name collision validation
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 765 | Reject duplicate profile names on Add and Rename | With disposable profiles, attempt Add and Rename using an existing profile name, including case/leading-or-trailing-space variants; verify the existing active profile and other profiles remain unchanged | Keep the dialog usable with a clear duplicate-name validation message; perform no registry mutation or profile-operation attempt; emit one bounded `profile_name_validation_failed` event and diagnostic breadcrumb with `operation` and `reason_code=duplicate_name`; do not include names/IDs or report ordinary validation as Crashlytics failure |
