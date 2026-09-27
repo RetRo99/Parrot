@@ -1,0 +1,19 @@
+Case 461 — manual recovery after retained-task black Reader restoration
+Date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Related run: [retained-task process-kill reproduction](case-461-retained-task-process-kill.txt), same final QA-BUG-0026 build and process PID `8228`.
+
+Steps and result
+1. After the Recents-tap launch left the Reader publication surface black for >30 seconds, pressed system Back. It returned to Book Detail for *Pride and Prejudice* with “Continue reading (49%)”.
+2. Tapped “Continue reading (49%)”. The same process `8228` opened Reader again and rendered content at page 29/64, 49%. Screenshot: [`case-461-manual-recovery-content.png`](case-461-manual-recovery-content.png).
+3. Thus there is a manual recovery path (exit to Detail, then Continue reading); this does not change the initial retained-task restoration FAIL or make the blank screen self-recovering.
+
+Local debug Analytics observation for the same PID
+```text
+09-27 03:14:34.874 8228 D ... Analytics Event: book_opened | Parameters: {book_type=EBOOK}
+09-27 03:14:34.884 8228 D ... Analytics Event: book_opened | Parameters: {book_type=EBOOK}
+09-27 03:14:34.885 8228 D ... Analytics Event: last_book_launch_completed | {screen=reader, source_screen=home, entry_point=app_launch, action=open_last_book, operation=reader_open, stage=usable_content, outcome=succeeded, book_type=ebook}
+09-27 03:20:15.576 8228 D ... Analytics Event: book_opened | Parameters: {book_type=EBOOK}
+```
+
+The two `book_opened` records 10 ms apart occurred during one automatic retained-task startup and before one last-book terminal completion. The subsequent explicit Continue Reading recovery emitted one. The duplicate automatic-start observation is registered separately as QA-BUG-0030; source cause remains pending audit. Debug-provider output is local evidence only; Firebase Analytics ingestion is waived.
