@@ -1,0 +1,19 @@
+Case 18 — Empty Login form submit, pre-fix functional/instrumentation audit
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build: physical Samsung Galaxy S24 serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), committed source `edebeb69c0f254888870b7209ad124b1ab5fd0c1`, APK SHA-256 `ad132c11b257d5ae8294d932319e38643b941ef772df0b9988297ce2024d2e85`, PID `9237`.
+
+Preconditions: Login opened through Settings → Servers → Add Server. Storyteller selected. Server URL left at placeholder `https://`; username and password empty. No credentials entered; app data untouched.
+
+Steps and actual behavior:
+1. Observe the empty form. No URL/username/password field error is shown. The Sign In button and Continue in browser are disabled. [Empty form before submit](case-018-empty-login-before-submit.png).
+2. Tap the disabled Sign In button at its visible center. The tap has no effect; the same form remains, no field-level error appears, no loading state starts and no navigation occurs. [After tap](case-018-empty-login-after-submit.png).
+3. Process remained PID `9237`. PID-scoped logcat queried after the action (`06:41:45`–`06:43:14` local) contained no `login_validation_failed`, `login_attempted`, `login_failed`, Login validation/sign-in breadcrumb, fatal exception or relevant request log. No auth operation was accepted.
+
+Source audit: `LoginViewModel.updateFormState` computes `allFieldsNotEmpty` and sets `isSignInEnabled=false`; `LoginScreen` passes that value to `Button.enabled`. The button's `onClick` dispatches `OnSignInClicked`, but a disabled Compose Button cannot invoke it. No username/password required-error fields exist in `LoginViewState`; the only field error is `InvalidUrl`, and a blank/placeholder URL is intentionally not that error. The shared `loginError` is only shown for operation failures. The form therefore has no submit-validation route or missing-required-field telemetry.
+
+Results, separately by dimension
+- Functional: **FAIL** against case 18's expected field-level validation errors. Nothing is sent and there is no loading/crash; however, tapping the disabled button cannot reveal which required fields are missing.
+- Analytics: **FAIL** for required-field validation outcome coverage; no bounded validation event is produced for the user's empty-submit gesture. No login attempt/failure event is correct because no request was accepted. Firebase Analytics ingestion is waived.
+- Diagnostics: **FAIL** for a bounded expected-validation breadcrumb. This is ordinary input validation, not a Crashlytics non-fatal; Crashlytics N-A.
+- No credentials or free-form input entered; no unexpected exception or lost state. QA-BUG-0037 was recorded before implementation. Corrected retest pending.
