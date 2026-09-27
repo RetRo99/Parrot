@@ -11,6 +11,7 @@ import com.retro99.base.result.AppError
 import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.login.domain.usecase.LoginUseCase
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -28,9 +29,10 @@ class LoginViewModel(
     @Provided private val analytics: Analytics,
     @InjectedParam private val onSignInSuccess: () -> Unit,
     @InjectedParam private val onBackClick: () -> Unit,
+    @InjectedParam private val existingServerId: String? = null,
 ) : BaseViewModel<LoginViewState, LoginIntent>(LoginViewState()) {
 
-    val urlState = TextFieldState(initialText = "https://")
+    val urlState = TextFieldState(initialText = if (existingServerId == null) "https://" else "")
     val usernameState = TextFieldState()
     val passwordState = TextFieldState()
     private var lastFailedLogin: Pair<String, String>? = null
@@ -40,14 +42,91 @@ class LoginViewModel(
     private var activeUrlHelpAttempt: UrlHelpAttempt? = null
     private val validationTelemetry = LoginValidationTelemetry(analytics)
     private var hasAttemptedCredentialsSubmit = false
+    private var isExistingServerPrefillPending = existingServerId != null
 
     init {
         observeTextFieldChanges()
-        updateFormState(
-            url = urlState.text.toString(),
-            username = usernameState.text.toString(),
-            password = passwordState.text.toString(),
+        if (existingServerId == null) {
+            updateFormState(
+                url = urlState.text.toString(),
+                username = usernameState.text.toString(),
+                password = passwordState.text.toString(),
+            )
+        } else {
+            updateState { it.copy(isLoading = true) }
+            loadExistingServerConfig(existingServerId)
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun loadExistingServerConfig(serverId: String) {
+        val correlationId = Uuid.random().toString()
+        val context = DiagnosticContext(
+            screen = "login",
+            sourceScreen = "server_management",
+            entryPoint = "server_card_login",
+            action = "load_server_config",
+            operation = "existing_server_login",
+            serverType = "unknown",
+            correlationId = correlationId,
         )
+        analytics.logBreadcrumb(context.copy(stage = "started", outcome = "started"))
+        viewModelScope.launch {
+            try {
+                val server = loginUseCase.getServerConfig(serverId)
+                if (server == null) {
+                    isExistingServerPrefillPending = false
+                    analytics.logBreadcrumb(
+                        context.copy(
+                            stage = "read_server_config",
+                            outcome = "failed",
+                            reasonCode = "server_unavailable",
+                        ),
+                    )
+                    updateState {
+                        it.copy(isLoading = false, serverConfigurationUnavailable = true)
+                    }
+                    return@launch
+                }
+
+                urlState.edit { replace(0, length, server.baseUrl) }
+                updateState {
+                    it.copy(
+                        selectedServerType = server.type,
+                        isLoading = false,
+                        serverConfigurationUnavailable = false,
+                    )
+                }
+                isExistingServerPrefillPending = false
+                updateFormState(
+                    url = urlState.text.toString(),
+                    username = usernameState.text.toString(),
+                    password = passwordState.text.toString(),
+                )
+                analytics.logBreadcrumb(
+                    context.copy(
+                        stage = "prefilled",
+                        outcome = "succeeded",
+                        serverType = server.type.identifier,
+                    ),
+                )
+            } catch (cancellation: CancellationException) {
+                analytics.logBreadcrumb(context.copy(stage = "read_server_config", outcome = "cancelled"))
+                throw cancellation
+            } catch (failure: Exception) {
+                isExistingServerPrefillPending = false
+                val failureContext = context.copy(
+                    stage = "read_server_config",
+                    outcome = "failed",
+                    reasonCode = "server_config_load_failed",
+                )
+                analytics.logBreadcrumb(failureContext)
+                analytics.logException(failure, failureContext)
+                updateState {
+                    it.copy(isLoading = false, serverConfigurationUnavailable = true)
+                }
+            }
+        }
     }
 
     private fun observeTextFieldChanges() {
@@ -58,7 +137,9 @@ class LoginViewModel(
                 passwordState.text.toString(),
             )
         }.onEach { (url, username, password) ->
-            updateFormState(url, username, password)
+            if (!isExistingServerPrefillPending) {
+                updateFormState(url, username, password)
+            }
         }.launchIn(viewModelScope)
     }
 
@@ -257,7 +338,7 @@ class LoginViewModel(
     }
 
     private fun handleSignInClicked() {
-        if (viewState.value.isLoading) return
+        if (viewState.value.isLoading || viewState.value.serverConfigurationUnavailable) return
         val url = urlState.text.toString().trim()
         val serverType = viewState.value.selectedServerType
         val username = usernameState.text.toString()
@@ -291,7 +372,15 @@ class LoginViewModel(
         }
 
         viewModelScope.launch {
-            performLoginSafely { loginUseCase(serverType, url, username, password) }.fold(
+            performLoginSafely {
+                loginUseCase(
+                    serverType = serverType,
+                    serverUrl = url,
+                    username = username,
+                    password = password,
+                    existingServerId = existingServerId,
+                )
+            }.fold(
                 success = {
                     completeLogin(attempt)
                     onSignInSuccess()
@@ -308,6 +397,7 @@ class LoginViewModel(
     }
 
     private fun handleOAuthSignInClicked() {
+        if (viewState.value.isLoading || viewState.value.serverConfigurationUnavailable) return
         if (!loginSubmissionGate.tryStart()) return
         val url = urlState.text.toString().trim()
         val serverType = viewState.value.selectedServerType
@@ -324,7 +414,13 @@ class LoginViewModel(
         }
 
         viewModelScope.launch {
-            performLoginSafely { loginUseCase.withOAuth(serverType, url) }.fold(
+            performLoginSafely {
+                loginUseCase.withOAuth(
+                    serverType = serverType,
+                    serverUrl = url,
+                    existingServerId = existingServerId,
+                )
+            }.fold(
                 success = {
                     completeLogin(attempt)
                     onSignInSuccess()

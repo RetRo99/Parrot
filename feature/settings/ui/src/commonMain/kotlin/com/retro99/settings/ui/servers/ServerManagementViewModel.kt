@@ -2,6 +2,7 @@ package com.retro99.settings.ui.servers
 
 import androidx.lifecycle.viewModelScope
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.server.api.ServerAuthState
@@ -21,7 +22,7 @@ import org.koin.core.annotation.Provided
 class ServerManagementViewModel(
     @Provided private val serverRegistry: ServerRegistry,
     @Provided private val analytics: Analytics,
-    @InjectedParam private val onNavigateToLogin: () -> Unit,
+    @InjectedParam private val onNavigateToLogin: (String?) -> Unit,
 ) : BaseViewModel<ServerManagementViewState, ServerManagementIntent>(ServerManagementViewState()) {
 
     init {
@@ -30,14 +31,14 @@ class ServerManagementViewModel(
 
     override fun onIntent(intent: ServerManagementIntent) {
         when (intent) {
-            is ServerManagementIntent.OnLoginClick -> onLoginClick(intent.serverId)
+            is ServerManagementIntent.OnLoginClick -> onLoginClick(intent.serverId, intent.serverType)
             is ServerManagementIntent.OnLogoutClick -> onLogoutClick(intent.serverId, intent.serverType)
             is ServerManagementIntent.OnRemoveClick -> onRemoveClick(intent.serverId, intent.serverType)
             ServerManagementIntent.RetryFailedOperation -> retryFailedOperation()
             ServerManagementIntent.DismissOperationFailure -> dismissOperationFailure()
             ServerManagementIntent.OnAddServerClick -> {
                 analytics.logEvent(ServerManagementAnalyticsEvent.ServerAddAttempted)
-                onNavigateToLogin()
+                onNavigateToLogin(null)
             }
         }
     }
@@ -67,8 +68,22 @@ class ServerManagementViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun onLoginClick(serverId: String) {
-        onNavigateToLogin()
+    private fun onLoginClick(serverId: String, serverType: ServerType) {
+        analytics.logEvent(ServerManagementAnalyticsEvent.ServerLoginAttempted(serverType.identifier))
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "server_management",
+                sourceScreen = "server_management",
+                destinationScreen = "login",
+                entryPoint = "server_card_login",
+                action = "reauthenticate_server",
+                operation = "existing_server_login",
+                stage = "navigation",
+                outcome = "started",
+                serverType = serverType.identifier,
+            ),
+        )
+        onNavigateToLogin(serverId)
     }
 
     private var operationInProgress = false

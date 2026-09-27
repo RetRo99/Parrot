@@ -16,12 +16,12 @@ internal suspend fun persistLoginCredentials(
     addServer: suspend () -> ServerConfig,
     saveCredentials: suspend (ServerCredentials) -> Unit,
     removeServer: suspend (String) -> Unit,
+    existingServerId: String? = null,
 ): CompletableResult {
     var registeredServer: ServerConfig? = null
     return try {
-        val server = addServer()
-        registeredServer = server
-        saveCredentials(credentials.copy(serverId = server.id))
+        val serverId = existingServerId ?: addServer().also { registeredServer = it }.id
+        saveCredentials(credentials.copy(serverId = serverId))
         Ok(Unit)
     } catch (cancellation: CancellationException) {
         registeredServer?.let { server ->

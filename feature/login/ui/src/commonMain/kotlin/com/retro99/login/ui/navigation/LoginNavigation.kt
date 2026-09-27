@@ -23,8 +23,11 @@ fun LoginNavigation(
     onBack: (() -> Unit)? = null,
     onRootBack: (() -> Unit)? = null,
     startAtLogin: Boolean = false,
+    existingServerId: String? = null,
     modifier: Modifier = Modifier,
-    viewModel: LoginNavigationViewModel = koinViewModel { parametersOf(startAtLogin) },
+    viewModel: LoginNavigationViewModel = koinViewModel {
+        parametersOf(startAtLogin, existingServerId != null)
+    },
 ) {
     BaseScreen(viewModel = viewModel) { state, intentDispatcher ->
         val rootWelcomeBackState = rememberNavigationEventState(NavigationEventInfo.None)
@@ -81,6 +84,7 @@ fun LoginNavigation(
                 entry<LoginDestination.Login> {
                     LoginScreen(
                         onSignInSuccess = onLoginSuccess,
+                        existingServerId = existingServerId,
                         onBackClick = {
                             if (state.backStack.size <= 1 && onBack != null) {
                                 onBack()

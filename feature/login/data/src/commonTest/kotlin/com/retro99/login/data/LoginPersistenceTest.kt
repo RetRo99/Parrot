@@ -85,6 +85,32 @@ class LoginPersistenceTest {
         assertEquals("server-id", stored?.serverId)
     }
 
+    @Test
+    fun existingServerLoginSavesCredentialsWithoutAddingOrRemovingServer() = runTest {
+        var stored: ServerCredentials? = null
+        var addCalls = 0
+        val removedIds = mutableListOf<String>()
+
+        val result = persistLoginCredentials(
+            credentials = credentials(),
+            addServer = {
+                addCalls += 1
+                serverConfig()
+            },
+            saveCredentials = { stored = it },
+            removeServer = { removedIds += it },
+            existingServerId = "existing-server-id",
+        )
+
+        result.fold(
+            success = { assertEquals(Unit, it) },
+            failure = { error("Unexpected persistence failure: $it") },
+        )
+        assertEquals("existing-server-id", stored?.serverId)
+        assertEquals(0, addCalls)
+        assertEquals(emptyList(), removedIds)
+    }
+
     private fun credentials() = ServerCredentials(
         serverId = "",
         username = "demo",

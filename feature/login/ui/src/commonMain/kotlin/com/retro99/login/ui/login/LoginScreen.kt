@@ -91,6 +91,7 @@ import resources.translations.login_oauth_sign_in_button
 import resources.translations.login_oauth_waiting_message
 import resources.translations.login_password_label
 import resources.translations.login_server_type_label
+import resources.translations.login_server_unavailable
 import resources.translations.login_show_password
 import resources.translations.login_sign_in_button
 import resources.translations.login_sign_in_hint
@@ -107,8 +108,11 @@ import resources.translations.login_username_label
 fun LoginScreen(
     onSignInSuccess: () -> Unit,
     onBackClick: () -> Unit,
+    existingServerId: String? = null,
     modifier: Modifier = Modifier,
-    viewModel: LoginViewModel = koinViewModel { parametersOf(onSignInSuccess, onBackClick) },
+    viewModel: LoginViewModel = koinViewModel {
+        parametersOf(onSignInSuccess, onBackClick, existingServerId)
+    },
 ) {
     BaseScreen(
         modifier = modifier.imePadding(),
@@ -128,6 +132,8 @@ fun LoginScreen(
             usernameError = viewState.usernameError,
             passwordError = viewState.passwordError,
             loginError = viewState.loginError,
+            serverConfigurationUnavailable = viewState.serverConfigurationUnavailable,
+            isExistingServerLogin = existingServerId != null,
             intentDispatcher = intentDispatcher,
             onBackClick = onBackClick,
             modifier = modifier,
@@ -151,6 +157,8 @@ private fun LoginScreenContent(
     usernameError: LoginFieldError?,
     passwordError: LoginFieldError?,
     loginError: String?,
+    serverConfigurationUnavailable: Boolean,
+    isExistingServerLogin: Boolean,
     intentDispatcher: IntentDispatcher<LoginIntent>,
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -237,6 +245,7 @@ private fun LoginScreenContent(
                     value = selectedServerType.displayName,
                     onValueChange = {},
                     readOnly = true,
+                    enabled = !isExistingServerLogin,
                     label = { Text(stringResource(StringRes.login_server_type_label)) },
                     leadingIcon = { Icon(Icons.Filled.Dns, contentDescription = null) },
                     trailingIcon = {
@@ -277,6 +286,7 @@ private fun LoginScreenContent(
 
             OutlinedTextField(
                 state = urlState,
+                enabled = !isExistingServerLogin,
                 label = { Text(stringResource(StringRes.login_url_label)) },
                 leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
                 trailingIcon = {
@@ -352,7 +362,7 @@ private fun LoginScreenContent(
             )
 
             AnimatedVisibility(
-                visible = loginError != null,
+                visible = loginError != null || serverConfigurationUnavailable,
                 enter = fadeIn() + expandVertically(),
                 exit = fadeOut() + shrinkVertically(),
             ) {
@@ -375,7 +385,11 @@ private fun LoginScreenContent(
                                 modifier = Modifier.size(20.dp),
                             )
                             Text(
-                                text = loginError.orEmpty(),
+                                text = if (serverConfigurationUnavailable) {
+                                    stringResource(StringRes.login_server_unavailable)
+                                } else {
+                                    loginError.orEmpty()
+                                },
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 style = MaterialTheme.typography.bodySmall,
                             )

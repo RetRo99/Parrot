@@ -30,6 +30,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.server.api.ServerAuthState
+import com.retro99.server.api.ServerType
 import com.retro99.settings.ui.servers.model.ServerWithStatusUiModel
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
@@ -48,10 +50,12 @@ import org.koin.core.parameter.parametersOf
 import resources.translations.action_delete
 import resources.translations.app_settings_logout
 import resources.translations.general_back
+import resources.translations.general_retry
 import resources.translations.settings_server_management_add
 import resources.translations.settings_server_management_empty
 import resources.translations.settings_server_management_empty_hint
 import resources.translations.settings_server_management_title
+import resources.translations.settings_server_login_action
 import resources.translations.settings_server_operation_failed
 import resources.translations.settings_server_operation_retry
 import resources.translations.settings_server_logged_in_as
@@ -62,7 +66,7 @@ import resources.translations.settings_server_type_label
 
 @Composable
 fun ServerManagementScreen(
-    onNavigateToLogin: () -> Unit,
+    onNavigateToLogin: (String?) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ServerManagementViewModel = koinViewModel { parametersOf(onNavigateToLogin) },
@@ -177,6 +181,14 @@ private fun ServerManagementScreenContent(
                     items(viewState.servers, key = { it.server.id }) { serverWithStatus ->
                         ServerListItem(
                             serverWithStatus = serverWithStatus,
+                            onLoginClick = {
+                                intentDispatcher(
+                                    ServerManagementIntent.OnLoginClick(
+                                        serverId = serverWithStatus.server.id,
+                                        serverType = serverWithStatus.server.type,
+                                    ),
+                                )
+                            },
                             onLogoutClick = {
                                 intentDispatcher(
                                     ServerManagementIntent.OnLogoutClick(
@@ -205,6 +217,7 @@ private fun ServerManagementScreenContent(
 @Composable
 private fun ServerListItem(
     serverWithStatus: ServerWithStatusUiModel,
+    onLoginClick: () -> Unit,
     onLogoutClick: () -> Unit,
     onRemoveClick: () -> Unit,
     actionsEnabled: Boolean,
@@ -256,6 +269,21 @@ private fun ServerListItem(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Logout,
                         contentDescription = stringResource(StringRes.app_settings_logout),
+                    )
+                }
+            } else if (
+                server.type == ServerType.Storyteller ||
+                server.type == ServerType.Audiobookshelf
+            ) {
+                TextButton(onClick = onLoginClick, enabled = actionsEnabled) {
+                    Text(
+                        text = stringResource(
+                            if (authState is ServerAuthState.NotAuthenticated) {
+                                StringRes.settings_server_login_action
+                            } else {
+                                StringRes.general_retry
+                            },
+                        ),
                     )
                 }
             }

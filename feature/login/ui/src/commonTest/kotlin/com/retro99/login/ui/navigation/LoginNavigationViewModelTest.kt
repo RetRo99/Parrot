@@ -193,11 +193,33 @@ class LoginNavigationViewModelTest {
         assertEquals(listOf(LoginDestination.Welcome), viewModel.currentViewState().backStack)
     }
 
+    @Test
+    fun existingServerLoginExposureUsesServerManagementAttribution() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(
+            preferences = RecordingPreferences(),
+            analytics = analytics,
+            startAtLogin = true,
+            isExistingServerLogin = true,
+        )
+
+        viewModel.onDestinationVisible(LoginDestination.Login, source = null)
+
+        val viewed = analytics.events.single()
+        assertEquals("login_screen_viewed", viewed.name)
+        assertEquals("server_management", viewed.parameters["source_screen"])
+        assertEquals("server_card_login", viewed.parameters["entry_point"])
+        assertEquals("server_management", analytics.breadcrumbs.single().sourceScreen)
+        assertEquals("server_card_login", analytics.breadcrumbs.single().entryPoint)
+    }
+
     private fun createViewModel(
         preferences: RecordingPreferences,
         analytics: RecordingAnalytics,
+        startAtLogin: Boolean = false,
+        isExistingServerLogin: Boolean = false,
     ) = LoginNavigationViewModel(
-        startAtLogin = false,
+        startAtLogin = startAtLogin,
         buildConfig = object : BuildConfig {
             override val isDebug: Boolean = true
             override val versionName: String = "test"
@@ -205,6 +227,7 @@ class LoginNavigationViewModelTest {
         },
         skipLoginUseCase = SkipLoginUseCase(preferences),
         analytics = analytics,
+        isExistingServerLogin = isExistingServerLogin,
     )
 
     private class RecordingAnalytics : Analytics {

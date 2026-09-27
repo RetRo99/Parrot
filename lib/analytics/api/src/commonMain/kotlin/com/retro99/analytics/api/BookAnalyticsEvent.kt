@@ -736,6 +736,23 @@ sealed interface ServerManagementAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    data class ServerLoginAttempted(
+        val serverType: String,
+    ) : ServerManagementAnalyticsEvent {
+        override val name: String = "server_login_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "server_management",
+            "source_screen" to "server_management",
+            "destination_screen" to "login",
+            "entry_point" to "server_card_login",
+            "action" to "reauthenticate_server",
+            "operation" to "existing_server_login",
+            "stage" to "navigation",
+            "outcome" to "started",
+            "server_type" to serverType,
+        )
+    }
+
     data class ServerAdded(
         val serverType: String,
     ) : ServerManagementAnalyticsEvent {

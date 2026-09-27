@@ -1,0 +1,20 @@
+Case 444 / QA-BUG-0041 candidate — existing-server Login submission attempt
+Date/time: 2026-09-27 12:15:27 CEST (Samsung local time, UTC+0200).
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `1746`.
+- Candidate APK SHA-256 `ccdc973f191804446bea71fe49f65a1d73b7f96ae2d0339385a57c11ff4839bf` (Samsung-pulled and local APK hashes match).
+- Candidate app implementation is the uncommitted QA-BUG-0041 working tree based on source commit `876c41af696baab364cc56138335c4d130b62547`; documentation-only commit `446bf543489acf7dce5ef942388231dfefba8c58` records the preceding route/prefill partial retest.
+
+Execution and sanitized evidence
+1. From the existing-server Login form reached by tapping `Log in` on the logged-out card, the user entered sign-in values directly in Parrot. No values were read, copied, or retained in this artifact.
+2. Submitted the form once at approximately 12:15:27 CEST. Parrot remained on Login and displayed `Login failed`; the registered server remained unauthenticated. No crash was observed.
+3. Local `DebugAnalyticsManager` output showed one `login_attempted` (`screen=login`, `action=sign_in`, `server_type=storyteller`, `auth_method=credentials`, `is_retry=false`, `outcome=started`) followed by one `login_failed` (`error_type=auth_failure`, `outcome=failed`, `duration_ms=384`). No credential, username, URL, server ID, or raw form contents are included.
+4. Diagnostic output showed one `credentials_login` started breadcrumb followed by one terminal `authentication/failed` breadcrumb with bounded `reason_code=auth_rejected` and `server_type=storyteller`. Correlation ID value omitted. No Crashlytics non-fatal is expected for ordinary authentication rejection; no crash occurred.
+
+Result
+- Case 444 successful reauthentication/postcondition: **BLOCKED / NOT VERIFIED** for this attempt. A submission ran and was rejected, but credential correctness could not be established; successful login, same-server persistence, and return to a connected card remained unverified at that point. Do not classify this as a confirmed application defect based on this attempt alone.
+- Analytics: **PASS** for one attempted/failed event pair in local debug output. Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: **PASS** for correlated start and bounded authentication-rejection terminal breadcrumbs. No unexpected failure or crash was observed; Crashlytics delivery is not applicable to this expected rejection and remains unverified generally.
+- No screenshot, raw UI tree, credential, username, or server URL was retained.

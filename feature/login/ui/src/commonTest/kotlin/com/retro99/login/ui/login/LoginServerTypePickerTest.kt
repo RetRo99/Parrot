@@ -288,12 +288,16 @@ class LoginServerTypePickerTest {
             serverUrl: String,
             username: String,
             password: String,
+            existingServerId: String?,
         ): CompletableResult = error("Login is outside the picker test scope")
 
         override suspend fun loginWithOAuth(
             serverType: ServerType,
             serverUrl: String,
+            existingServerId: String?,
         ): CompletableResult = error("OAuth is outside the picker test scope")
+
+        override suspend fun getServerConfig(serverId: String) = null
     }
 
     private class RecordingAnalytics : Analytics {

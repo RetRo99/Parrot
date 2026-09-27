@@ -17,6 +17,7 @@ class LoginNavigationViewModel(
     @Provided private val buildConfig: BuildConfig,
     @Provided private val skipLoginUseCase: SkipLoginUseCase,
     @Provided private val analytics: Analytics,
+    private val isExistingServerLogin: Boolean = false,
 ) : BaseViewModel<LoginNavigationState, LoginNavigationIntent>(
     initialLoginNavigationState(startAtLogin, buildConfig),
 ) {
@@ -71,11 +72,13 @@ class LoginNavigationViewModel(
 
             LoginDestination.Login -> {
                 val sourceScreen = when {
+                    isExistingServerLogin -> "server_management"
                     resolvedSource == LoginDestination.Welcome -> "welcome"
                     startAtLogin -> "home"
                     else -> "login_navigation"
                 }
                 val entryPoint = when {
+                    isExistingServerLogin -> "server_card_login"
                     resolvedSource == LoginDestination.Welcome -> "get_started"
                     startAtLogin -> "add_server"
                     else -> "navigation"

@@ -25,7 +25,14 @@ internal class LoginDataRepository(
         serverUrl: String,
         username: String,
         password: String,
+        existingServerId: String?,
     ): CompletableResult {
+        val existingServerError = validateExistingServer(
+            serverId = existingServerId,
+            serverType = serverType,
+            serverUrl = serverUrl,
+        )
+        if (existingServerError != null) return Err(existingServerError)
         val authenticator = authenticatorFactory.create(serverType)
 
         return authenticator.login(serverUrl, username, password)
@@ -41,6 +48,7 @@ internal class LoginDataRepository(
                     },
                     saveCredentials = serverRegistry::saveCredentials,
                     removeServer = serverRegistry::removeServer,
+                    existingServerId = existingServerId,
                 )
             }
     }
@@ -48,10 +56,18 @@ internal class LoginDataRepository(
     override suspend fun loginWithOAuth(
         serverType: ServerType,
         serverUrl: String,
+        existingServerId: String?,
     ): CompletableResult {
         if (serverType != ServerType.Storyteller) {
             return Err(AppError.AuthError("OAuth login is only supported for Storyteller servers"))
         }
+
+        val existingServerError = validateExistingServer(
+            serverId = existingServerId,
+            serverType = serverType,
+            serverUrl = serverUrl,
+        )
+        if (existingServerError != null) return Err(existingServerError)
 
         val authenticator = authenticatorFactory.create(serverType)
 
@@ -71,7 +87,28 @@ internal class LoginDataRepository(
                     },
                     saveCredentials = serverRegistry::saveCredentials,
                     removeServer = serverRegistry::removeServer,
+                    existingServerId = existingServerId,
                 )
             }
+    }
+
+    override suspend fun getServerConfig(serverId: String) = serverRegistry.getServer(serverId)
+
+    private suspend fun validateExistingServer(
+        serverId: String?,
+        serverType: ServerType,
+        serverUrl: String,
+    ): AppError.AuthError? {
+        if (serverId == null) return null
+        val existingServer = serverRegistry.getServer(serverId)
+            ?: return AppError.AuthError("This server is no longer available. Return and try again.")
+        return if (
+            existingServer.type == serverType &&
+            existingServer.baseUrl.trimEnd('/') == serverUrl.trimEnd('/')
+        ) {
+            null
+        } else {
+            AppError.AuthError("This server has changed. Return and try again.")
+        }
     }
 }

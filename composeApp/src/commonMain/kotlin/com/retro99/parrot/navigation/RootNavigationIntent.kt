@@ -7,6 +7,7 @@ sealed interface RootNavigationIntent : BaseIntent {
     data object OnGuestModeSelected : RootNavigationIntent
     data class OnHomeVisible(val entryId: Long) : RootNavigationIntent
     data object OnLogout : RootNavigationIntent
-    data object OnLoginClicked : RootNavigationIntent
+    data class OnLoginClicked(val existingServerId: String? = null) : RootNavigationIntent
+    data object OnExistingServerLoginSuccess : RootNavigationIntent
     data object OnBackFromLogin : RootNavigationIntent
 }

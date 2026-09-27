@@ -34,14 +34,40 @@ class RootNavigationViewModel(
             RootNavigationIntent.OnGuestModeSelected -> handleGuestModeSelected()
             is RootNavigationIntent.OnHomeVisible -> handleHomeVisible(intent.entryId)
             RootNavigationIntent.OnLogout -> handleLogout()
-            RootNavigationIntent.OnLoginClicked -> handleLoginClicked()
+            is RootNavigationIntent.OnLoginClicked -> handleLoginClicked(intent.existingServerId)
+            RootNavigationIntent.OnExistingServerLoginSuccess -> handleExistingServerLoginSuccess()
             RootNavigationIntent.OnBackFromLogin -> handleBackFromLogin()
         }
     }
 
-    private fun handleLoginClicked() {
+    private fun handleLoginClicked(existingServerId: String?) {
         updateState { state ->
-            state.copy(backStack = state.backStack + RootDestination.Login(false))
+            state.copy(
+                backStack = state.backStack + RootDestination.Login(
+                    initial = false,
+                    existingServerId = existingServerId,
+                ),
+            )
+        }
+    }
+
+    private fun handleExistingServerLoginSuccess() {
+        updateState { state ->
+            val backStack = if (
+                state.backStack.size > 1 && state.backStack.lastOrNull() is RootDestination.Login
+            ) {
+                state.backStack.dropLast(1)
+            } else {
+                listOf(RootDestination.Home)
+            }
+            state.copy(
+                backStack = backStack,
+                homeEntry = if (backStack.lastOrNull() == RootDestination.Home) {
+                    createHomeEntry(sourceScreen = "login", entryPoint = "existing_server_login_success")
+                } else {
+                    state.homeEntry
+                },
+            )
         }
     }
 

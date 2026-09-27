@@ -1,0 +1,23 @@
+Case 444 / QA-BUG-0041 candidate — successful existing-server reauthentication
+Date/time: 2026-09-27, Samsung local CEST (UTC+0200); successful submit at 12:20:16.
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), process PID `1746`.
+- Candidate APK SHA-256 `ccdc973f191804446bea71fe49f65a1d73b7f96ae2d0339385a57c11ff4839bf`; local and Samsung-pulled APK hashes match.
+- Candidate implementation is the QA-BUG-0041 working tree based on source commit `876c41af696baab364cc56138335c4d130b62547`; preceding route/prefill documentation commit `446bf543489acf7dce5ef942388231dfefba8c58`.
+
+Execution and functional result
+1. Preconditions: one existing Storyteller server was registered and unauthenticated. Opened Settings → Servers, tapped its `Log in` action, and verified the existing-server Login form with saved server configuration prefilled and locked. Prior partial evidence: [route/prefill](case-444-existing-server-login-route-candidate.txt).
+2. The first submission returned `Login failed` / `auth_rejected`; because input validity could not be established, that attempt remains recorded as an inconclusive rejection in [separate evidence](case-444-existing-server-login-rejected-attempt.txt).
+3. After the user re-entered values directly in Parrot, submitted once at 12:20:16 CEST. Parrot emitted `login_succeeded` after 191 ms and returned to the same Server Management destination.
+4. After dismissing the Android password-manager update prompt with `No, thanks` (no password-manager update/save), a bounded accessibility check found the Server Management screen, exactly one `Server type: Storyteller` card and one logged-in status, with no `Not logged in`, Login form, or Login action. The pre-existing single server remained a single card; no duplicate was created. No account identifier, URL, screenshot, or raw hierarchy was retained.
+
+Functional: **PASS** for the Samsung `NotAuthenticated` → existing-server Login → authenticated-card variant. TokenExpired and AuthenticationFailed card variants remain **NOT RUN**.
+
+Analytics and diagnostics
+- Local debug Analytics showed two credential submissions in this session: the earlier inconclusive `login_attempted` → `login_failed` pair, followed by one retry `login_attempted` (`is_retry=true`) → `login_succeeded` pair. The successful attempt parameters were bounded to `screen=login`, `action=sign_in`, `server_type=storyteller`, `auth_method=credentials`, `outcome=succeeded`, `duration_ms=191`; no credentials, account identifier, URL, or server ID were logged. The separate card-navigation attempt and actual Login-route exposure are recorded in the prior route/prefill evidence.
+- Diagnostics showed the successful attempt's `credentials_login` started breadcrumb followed by `credentials_persisted/succeeded` using the same diagnostic-only correlation ID. Login-success navigation then produced a Home-route breadcrumb and an actual Server Management visible-route breadcrumb. Correlation ID values omitted.
+- Analytics: **PASS** for distinct attempt, retry and success semantics in local `DebugAnalyticsManager`. Firebase Analytics ingestion is waived and not claimed.
+- Diagnostics: **PASS** for correlated login persistence and visible-route breadcrumbs. No crash was observed. Ordinary authentication rejection was not reported as a Crashlytics non-fatal. Firebase Crashlytics delivery remains unverified generally.
+- The Android password-manager update prompt was observed after authentication and declined; no password-manager save/update was performed. No credential or account data is retained in this artifact.

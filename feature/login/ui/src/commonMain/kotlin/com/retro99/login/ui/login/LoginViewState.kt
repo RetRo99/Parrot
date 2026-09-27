@@ -7,6 +7,7 @@ data class LoginViewState(
     val isOAuthInProgress: Boolean = false,
     val isSignInEnabled: Boolean = false,
     val isOAuthSignInEnabled: Boolean = false,
+    val serverConfigurationUnavailable: Boolean = false,
     val selectedServerType: ServerType = ServerType.Storyteller,
     val urlError: LoginFieldError? = null,
     val loginError: String? = null,

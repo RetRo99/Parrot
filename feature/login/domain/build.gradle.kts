@@ -26,7 +26,7 @@ kotlin {
             implementation(projects.base)
             implementation(projects.feature.auth.domain)
             implementation(projects.lib.preferences.api)
+            api(projects.lib.server.api)
         }
     }
 }
-

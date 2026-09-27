@@ -806,6 +806,20 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun existingServerLoginAttemptContainsOnlyBoundedNavigationAndServerType() {
+        val event = ServerManagementAnalyticsEvent.ServerLoginAttempted("storyteller")
+        val sanitized = sanitizeAnalyticsParameters(event.parameters)
+
+        assertEquals("server_login_attempted", event.name)
+        assertEquals("server_management", sanitized["source_screen"])
+        assertEquals("login", sanitized["destination_screen"])
+        assertEquals("server_card_login", sanitized["entry_point"])
+        assertEquals("started", sanitized["outcome"])
+        assertEquals("storyteller", sanitized["server_type"])
+        assertFalse("server_id" in sanitized || "server_url" in sanitized)
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(
