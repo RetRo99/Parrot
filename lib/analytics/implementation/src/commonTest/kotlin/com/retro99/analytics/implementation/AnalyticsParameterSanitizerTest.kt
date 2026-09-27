@@ -9,6 +9,7 @@ import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.ReaderAnalyticsEvent
+import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 
 class AnalyticsParameterSanitizerTest {
 
@@ -701,6 +702,28 @@ class AnalyticsParameterSanitizerTest {
         assertEquals("toggle_password_visibility", sanitized["action"])
         assertEquals(true, sanitized["is_visible"])
         assertFalse(sanitized.containsKey("password"))
+    }
+
+    @Test
+    fun serverAddEventIsAnAttemptWithBoundedNavigationContextNotACompletedAddition() {
+        val event = ServerManagementAnalyticsEvent.ServerAddAttempted
+        val sanitized = sanitizeAnalyticsParameters(event.parameters)
+
+        assertEquals("server_add_attempted", event.name)
+        assertEquals(
+            mapOf(
+                "screen" to "server_management",
+                "source_screen" to "server_management",
+                "destination_screen" to "login",
+                "entry_point" to "add_server_button",
+                "action" to "add_server",
+                "operation" to "server_add",
+                "stage" to "navigation",
+                "outcome" to "started",
+            ),
+            sanitized,
+        )
+        assertFalse("server_type" in event.parameters)
     }
 
     @Test

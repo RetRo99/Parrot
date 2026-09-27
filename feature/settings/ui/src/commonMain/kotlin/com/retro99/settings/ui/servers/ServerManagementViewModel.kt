@@ -34,7 +34,7 @@ class ServerManagementViewModel(
             is ServerManagementIntent.OnLogoutClick -> onLogoutClick(intent.serverId)
             is ServerManagementIntent.OnRemoveClick -> onRemoveClick(intent.serverId)
             ServerManagementIntent.OnAddServerClick -> {
-                analytics.logEvent(ServerManagementAnalyticsEvent.ServerAdded(serverType = "unknown"))
+                analytics.logEvent(ServerManagementAnalyticsEvent.ServerAddAttempted)
                 onNavigateToLogin()
             }
         }
