@@ -597,6 +597,58 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun loginUrlHelpEventsRetainBoundedOperationAndDismissalDimensions() {
+        val attempted = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginUrlHelpAttempted("storyteller").parameters +
+                mapOf("url" to "https://private.example", "tooltip_text" to "private content"),
+        )
+        val opened = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginUrlHelpOpened("audiobookshelf").parameters,
+        )
+        val dismissed = sanitizeAnalyticsParameters(
+            AuthAnalyticsEvent.LoginUrlHelpDismissed(
+                serverType = "storyteller",
+                reasonCode = "got_it",
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "view_url_help",
+                "operation" to "url_help_tooltip",
+                "stage" to "started",
+                "outcome" to "started",
+                "server_type" to "storyteller",
+            ),
+            attempted,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "view_url_help",
+                "operation" to "url_help_tooltip",
+                "stage" to "visible",
+                "outcome" to "succeeded",
+                "server_type" to "audiobookshelf",
+            ),
+            opened,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "login",
+                "action" to "view_url_help",
+                "operation" to "url_help_tooltip",
+                "stage" to "terminal",
+                "outcome" to "cancelled",
+                "server_type" to "storyteller",
+                "reason_code" to "got_it",
+            ),
+            dismissed,
+        )
+    }
+
+    @Test
     fun rejectsFreeFormValuesAndUnexpectedTypesEvenForRegisteredKeys() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(

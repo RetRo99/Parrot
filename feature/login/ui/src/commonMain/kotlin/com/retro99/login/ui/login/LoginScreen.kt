@@ -55,10 +55,12 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,6 +75,8 @@ import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.translations.StringRes
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -255,7 +259,12 @@ private fun LoginScreenContent(
                 state = urlState,
                 label = { Text(stringResource(StringRes.login_url_label)) },
                 leadingIcon = { Icon(Icons.Filled.Link, contentDescription = null) },
-                trailingIcon = { UrlInfoTooltip(serverName = selectedServerType.displayName) },
+                trailingIcon = {
+                    UrlInfoTooltip(
+                        serverName = selectedServerType.displayName,
+                        intentDispatcher = intentDispatcher,
+                    )
+                },
                 isError = urlError != null,
                 supportingText = urlErrorText?.let { { Text(it) } },
                 modifier = Modifier.fillMaxWidth(),
@@ -440,9 +449,17 @@ private fun PasswordVisibilityToggle(
 @Composable
 private fun UrlInfoTooltip(
     serverName: String,
+    intentDispatcher: IntentDispatcher<LoginIntent>,
 ) {
     val tooltipState = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
+    LaunchedEffect(tooltipState) {
+        snapshotFlow { tooltipState.isVisible }
+            .distinctUntilChanged()
+            .collect { isVisible ->
+                if (isVisible) intentDispatcher(LoginIntent.OnUrlHelpOpened)
+            }
+    }
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(
             TooltipAnchorPosition.Above
@@ -460,15 +477,23 @@ private fun UrlInfoTooltip(
             }
         },
         state = tooltipState,
+        onDismissRequest = {
+            intentDispatcher(
+                LoginIntent.OnUrlHelpDismissed(UrlHelpDismissalReason.DismissRequest),
+            )
+            tooltipState.dismiss()
+        },
     ) {
         IconButton(
             onClick = {
-                scope.launch {
-                    if (tooltipState.isVisible) {
-                        tooltipState.dismiss()
-                    } else {
-                        tooltipState.show()
-                    }
+                if (tooltipState.isVisible) {
+                    intentDispatcher(
+                        LoginIntent.OnUrlHelpDismissed(UrlHelpDismissalReason.AnchorToggle),
+                    )
+                    tooltipState.dismiss()
+                } else {
+                    intentDispatcher(LoginIntent.OnUrlHelpOpenRequested)
+                    scope.launch { tooltipState.show() }
                 }
             }
         ) {

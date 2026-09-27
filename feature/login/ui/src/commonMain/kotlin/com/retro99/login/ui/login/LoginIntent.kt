@@ -10,9 +10,19 @@ sealed interface LoginIntent : BaseIntent {
     data object OnServerTypePickerOpened : LoginIntent
     data class OnServerTypePickerDismissed(val reason: ServerTypePickerDismissalReason) : LoginIntent
     data class OnServerTypeSelected(val serverType: ServerType) : LoginIntent
+    data object OnUrlHelpOpenRequested : LoginIntent
+    data object OnUrlHelpOpened : LoginIntent
+    data class OnUrlHelpDismissed(val reason: UrlHelpDismissalReason) : LoginIntent
 }
 
 enum class ServerTypePickerDismissalReason(val reasonCode: String) {
     AnchorToggle("anchor_toggle"),
     DismissRequest("dismiss_request"),
+}
+
+enum class UrlHelpDismissalReason(val reasonCode: String) {
+    GotIt("got_it"),
+    AnchorToggle("anchor_toggle"),
+    DismissRequest("dismiss_request"),
+    ScreenExit("screen_exit"),
 }

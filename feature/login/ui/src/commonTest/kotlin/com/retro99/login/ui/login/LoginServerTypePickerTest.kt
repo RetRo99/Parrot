@@ -12,6 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class LoginServerTypePickerTest {
 
@@ -97,6 +98,57 @@ class LoginServerTypePickerTest {
             listOf("started", "cancelled", "started", "succeeded"),
             analytics.events.map { it.parameters["outcome"] },
         )
+    }
+
+    @Test
+    fun urlHelpOpenAndDismissAreCorrelatedAndDoNotReportAuthSuccessOrFailure() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(analytics)
+
+        viewModel.onIntent(LoginIntent.OnUrlHelpOpenRequested)
+        viewModel.onIntent(LoginIntent.OnUrlHelpOpened)
+        viewModel.onIntent(LoginIntent.OnUrlHelpDismissed(UrlHelpDismissalReason.GotIt))
+        viewModel.onIntent(LoginIntent.OnUrlHelpDismissed(UrlHelpDismissalReason.GotIt))
+
+        assertEquals(
+            listOf("login_url_help_attempted", "login_url_help_opened", "login_url_help_dismissed"),
+            analytics.events.map { it.name },
+        )
+        assertEquals("started", analytics.events[0].parameters["outcome"])
+        assertEquals("succeeded", analytics.events[1].parameters["outcome"])
+        assertEquals("cancelled", analytics.events[2].parameters["outcome"])
+        assertEquals("got_it", analytics.events[2].parameters["reason_code"])
+        assertTrue(analytics.events.all { it.parameters["screen"] == "login" })
+        assertTrue(analytics.events.all { it.parameters["server_type"] == "storyteller" })
+        assertFalse(analytics.events.any { it.name.startsWith("login_succeeded") || it.name.startsWith("login_failed") })
+        assertEquals(3, analytics.breadcrumbs.size)
+        assertEquals(
+            listOf("started", "succeeded", "cancelled"),
+            analytics.breadcrumbs.map { it.outcome },
+        )
+        assertEquals(1, analytics.breadcrumbs.map { it.correlationId }.distinct().size)
+        assertEquals(0, analytics.exceptions.size)
+    }
+
+    @Test
+    fun visibilityWithoutButtonRequestStillCreatesACompleteHelpOperation() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(analytics)
+
+        viewModel.onIntent(LoginIntent.OnUrlHelpOpened)
+        viewModel.onIntent(LoginIntent.OnUrlHelpDismissed(UrlHelpDismissalReason.DismissRequest))
+
+        assertEquals(
+            listOf("login_url_help_attempted", "login_url_help_opened", "login_url_help_dismissed"),
+            analytics.events.map { it.name },
+        )
+        assertEquals("dismiss_request", analytics.events.last().parameters["reason_code"])
+        assertEquals(3, analytics.breadcrumbs.size)
+        assertEquals(
+            analytics.breadcrumbs.first().correlationId,
+            analytics.breadcrumbs.last().correlationId,
+        )
+        assertEquals(0, analytics.exceptions.size)
     }
 
     private fun createViewModel(analytics: RecordingAnalytics) = LoginViewModel(

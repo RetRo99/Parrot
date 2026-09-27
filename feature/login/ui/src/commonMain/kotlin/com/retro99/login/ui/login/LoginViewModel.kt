@@ -37,6 +37,7 @@ class LoginViewModel(
     private val loginSubmissionGate = LoginSubmissionGate()
     private val activeLoginAttempts = mutableMapOf<String, LoginAttempt>()
     private var activeServerTypePicker: ServerTypePickerAttempt? = null
+    private var activeUrlHelpAttempt: UrlHelpAttempt? = null
 
     init {
         observeTextFieldChanges()
@@ -87,6 +88,9 @@ class LoginViewModel(
             LoginIntent.OnServerTypePickerOpened -> beginServerTypePickerAttempt()
             is LoginIntent.OnServerTypePickerDismissed -> cancelServerTypePicker(intent.reason.reasonCode)
             is LoginIntent.OnServerTypeSelected -> handleServerTypeSelected(intent.serverType)
+            LoginIntent.OnUrlHelpOpenRequested -> beginUrlHelpAttempt()
+            LoginIntent.OnUrlHelpOpened -> markUrlHelpOpened()
+            is LoginIntent.OnUrlHelpDismissed -> dismissUrlHelp(intent.reason.reasonCode)
         }
     }
 
@@ -166,6 +170,70 @@ class LoginViewModel(
             ),
         )
         activeServerTypePicker = null
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun beginUrlHelpAttempt() {
+        if (activeUrlHelpAttempt != null) return
+        val attempt = UrlHelpAttempt(
+            serverType = viewState.value.selectedServerType,
+            correlationId = Uuid.random().toString(),
+        )
+        activeUrlHelpAttempt = attempt
+        analytics.logEvent(AuthAnalyticsEvent.LoginUrlHelpAttempted(attempt.serverType.identifier))
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "login",
+                action = "view_url_help",
+                operation = "url_help_tooltip",
+                stage = "started",
+                outcome = "started",
+                serverType = attempt.serverType.identifier,
+                correlationId = attempt.correlationId,
+            ),
+        )
+    }
+
+    private fun markUrlHelpOpened() {
+        if (activeUrlHelpAttempt == null) beginUrlHelpAttempt()
+        val attempt = activeUrlHelpAttempt ?: return
+        if (attempt.isOpened) return
+        activeUrlHelpAttempt = attempt.copy(isOpened = true)
+        analytics.logEvent(AuthAnalyticsEvent.LoginUrlHelpOpened(attempt.serverType.identifier))
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "login",
+                action = "view_url_help",
+                operation = "url_help_tooltip",
+                stage = "visible",
+                outcome = "succeeded",
+                serverType = attempt.serverType.identifier,
+                correlationId = attempt.correlationId,
+            ),
+        )
+    }
+
+    private fun dismissUrlHelp(reasonCode: String) {
+        val attempt = activeUrlHelpAttempt ?: return
+        analytics.logEvent(
+            AuthAnalyticsEvent.LoginUrlHelpDismissed(
+                serverType = attempt.serverType.identifier,
+                reasonCode = reasonCode,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "login",
+                action = "view_url_help",
+                operation = "url_help_tooltip",
+                stage = "dismissed",
+                outcome = "cancelled",
+                reasonCode = reasonCode,
+                serverType = attempt.serverType.identifier,
+                correlationId = attempt.correlationId,
+            ),
+        )
+        activeUrlHelpAttempt = null
     }
 
     private fun handleSignInClicked() {
@@ -381,6 +449,7 @@ class LoginViewModel(
             )
         }
         activeLoginAttempts.clear()
+        dismissUrlHelp(UrlHelpDismissalReason.ScreenExit.reasonCode)
         super.onCleared()
     }
 
@@ -393,6 +462,12 @@ class LoginViewModel(
 
     private data class ServerTypePickerAttempt(
         val correlationId: String,
+    )
+
+    private data class UrlHelpAttempt(
+        val serverType: ServerType,
+        val correlationId: String,
+        val isOpened: Boolean = false,
     )
 
     private fun loginErrorType(error: AppError): String = when (error) {

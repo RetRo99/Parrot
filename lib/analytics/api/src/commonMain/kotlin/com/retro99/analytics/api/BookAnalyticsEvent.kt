@@ -234,6 +234,50 @@ sealed interface AuthAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    data class LoginUrlHelpAttempted(
+        val serverType: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_url_help_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "view_url_help",
+            "operation" to "url_help_tooltip",
+            "stage" to "started",
+            "outcome" to "started",
+            "server_type" to serverType,
+        )
+    }
+
+    data class LoginUrlHelpOpened(
+        val serverType: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_url_help_opened"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "view_url_help",
+            "operation" to "url_help_tooltip",
+            "stage" to "visible",
+            "outcome" to "succeeded",
+            "server_type" to serverType,
+        )
+    }
+
+    data class LoginUrlHelpDismissed(
+        val serverType: String,
+        val reasonCode: String,
+    ) : AuthAnalyticsEvent {
+        override val name: String = "login_url_help_dismissed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "login",
+            "action" to "view_url_help",
+            "operation" to "url_help_tooltip",
+            "stage" to "terminal",
+            "outcome" to "cancelled",
+            "server_type" to serverType,
+            "reason_code" to reasonCode,
+        )
+    }
+
     data class LoginAttempted(
         val serverType: String,
         val authMethod: String,
