@@ -1,0 +1,28 @@
+Samsung Profiles cases 409–413, 762, and QA-BUG-0054 runtime redaction check
+Date: 2026-09-27 (device local time; CEST, UTC+0200)
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, firmware `S921BXXSGDZG1`.
+- Package `com.retro99.parrot`, version 0.4.5 (21), target SDK 36; PID `14481`.
+- Local APK and installed `base.apk` SHA-256 matched: `319fba7efbd020c8b799ecb82f5af249e99b89119b3a4749ffe939ec626b1a7c`.
+- APK source was built from `9503b45e` (QA-BUG-0059) with the committed QA-BUG-0058 `63306140`, QA-BUG-0056 `7669f849`, QA-BUG-0057 `c0d8545d`, plus separate uncommitted QA-BUG-0049 playback/server-management work. The current documentation HEAD is `7a8965ac`; later doc-only commits do not change the tested APK.
+- Existing app data was retained. One synthetic empty profile was created in Parrot, used, renamed, and deleted; the original profile was not renamed or deleted. The final screen shows one active profile and Add Profile, with the original profile active.
+
+Samsung actions and observations
+- **Case 413 (valid Add):** From the original profile, opened Add Profile, entered one synthetic test label, and confirmed. App returned to the home tabs; App Settings showed a second profile with the new profile active. No raw name was retained.
+- **Case 409 (switch):** Tapped the original tile; app returned to the home-tab root. Reopened App Settings and observed the original tile active. Tapped the synthetic tile; app again returned to the home-tab root. Reopened App Settings and observed that tile active. Later switched back to the original before deleting the synthetic profile. Three manual switches each produced one attempted/succeeded local event with `is_retry=false`. This verifies active-profile selection and return to the tab root, not per-profile library/filter/reader/statistics isolation or a populated pushed navigation stack.
+- **Case 411 (rename):** Opened the inactive synthetic profile's Edit menu, selected Rename, replaced the value with another synthetic label, and confirmed. The dialog closed, the renamed label was present on the profile tile, and the same synthetic profile remained active. Exactly one local Rename attempt/success pair was recorded (`is_retry=false`). The original profile remained active only after a subsequent explicit switch.
+- **Case 410 (multi-profile menu):** Long-press on a profile tile opened the context menu with Rename and Delete visible while two profiles existed. System Back dismissed the menu without selecting an action. (The earlier one-profile variant remains separately documented: Delete hidden.)
+- **Case 762 (Delete confirmation cancellation):** Opened Delete confirmation for the inactive synthetic profile and separately used Cancel, outside-tap, and system Back. Each dismissed the dialog; two profile tiles remained and the original active marker did not move. Local cancellation parameters were `cancel_button`, then `dismiss_request` for outside and system Back, matching the documented schema.
+- **Case 412 (non-active Delete):** With the original profile explicitly active, opened Delete for the inactive synthetic profile and confirmed. Dialog closed; App Settings showed one profile, its active marker remained on the original tile, and Add Profile remained available. No crash or error state appeared.
+- No library/book fixture was available, so the per-profile dataset, filters/sort, reader position/settings, playback, and statistics comparisons were not inferred from successful switching.
+
+Local observability/privacy checks
+- PID-scoped DebugAnalyticsManager records showed one Create attempt/success and its automatic Switch attempt/success; the manual Switch operations each had one attempt/success pair; Rename and non-active Delete each had one attempt/success pair; each confirmation dismissal had one cancellation outcome. The screen/menu route events were bounded. Firebase Analytics ingestion is waived; these are local-only observations.
+- PID-scoped registry-log scan covered 17 UserRegistry records over this run: zero UUID-like values and zero matches for either synthetic profile label. Raw log lines and profile values were not retained. This extends QA-BUG-0054 verification to create, activate/switch, rename, and delete runtime paths; no shared-file or Firebase/Crashlytics delivery claim is made.
+- Zero fatal-crash markers and zero exception-report markers. No unexpected operation failure was induced, so representative Crashlytics non-fatal delivery remains unverified.
+
+Disposition
+- Cases 409, 410 (multi-profile variant), 411, 412 (inactive profile), 413 (valid Add), and 762: exercised outcomes are PASS, with per-profile data isolation and unavailable content variants NOT RUN as described above.
+- QA-BUG-0054: runtime value-redaction check PASS for the exercised operations on the installed build; no raw profile name/ID retained.
+- QA-BUG-0055 active-profile deletion remains untested at this point; the original profile has never been deleted. A separate disposable active profile is required for case 422.
