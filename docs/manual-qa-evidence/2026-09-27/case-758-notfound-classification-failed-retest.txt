@@ -1,0 +1,25 @@
+Case 758 / QA-BUG-0050 — NotFound classification failed candidate retest
+Date/time: 2026-09-27, Samsung local CEST (UTC+0200); relaunch observed at 14:45 CEST.
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Package `com.retro99.parrot` 0.4.5 (21), PID `29946`.
+- Installed debug APK SHA-256 `6122d11c9333d40e8bb680eff69e3f1d1ad9530ef6c00eeeaf12b22de180f298`.
+- APK source tree was based on commit `ec3c43e8161d0ecc3cf1c464ca112c6636cbc3a8` plus uncommitted QA-BUG-0049 changes and the unsuccessful QA-BUG-0050 AuthError classification attempt.
+
+Preconditions and steps
+1. Preserve the logged-out server and saved last-book state from the case-758 pre-fix observation; do not clear app data.
+2. Install the candidate with `adb install -r` and start `com.retro99.parrot/.android.MainActivity`.
+3. Startup again attempts to open the saved Reader route. The visible not-authenticated Reader error remains with Retry and a top navigation arrow; no direct Login action is shown.
+
+Sanitized signals
+- Local events: one `last_book_launch_attempted`, one `book_open_failed`, and one `last_book_launch_completed(outcome=failed, reason_code=reader_initialization_failed)`.
+- One local `Exception occurred` record remains, with bounded last-book Reader context; no fatal crash.
+- The `server_not_authenticated` diagnostic reason was not applied. Follow-up source inspection established that `GetBookByUuidUseCase` returns `AppError.NotFoundError` for the unauthenticated-repository path, not `AuthError`; the candidate only excluded AuthError from reporting.
+- Debug provider only; no Firebase Analytics ingestion or Crashlytics delivery is claimed. No screenshot, raw hierarchy, throwable message, server/book ID, URL, account identity, or credential is retained.
+
+Result
+- Case 758 functional Back/re-login recovery: **NOT RUN**; the route remains visible and Back has not yet been exercised.
+- Analytics: **PASS** for one last-book attempt → failed outcome in local debug logging; Firebase Analytics ingestion is waived.
+- Diagnostics: **FAIL**; one exception report remains for the expected logged-out condition, and no bounded terminal breadcrumb was observed.
+- This is a failed fix attempt, not a verified fix. The candidate is uncommitted and must not be counted as a passing retest.
