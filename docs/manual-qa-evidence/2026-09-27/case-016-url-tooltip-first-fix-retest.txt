@@ -1,0 +1,20 @@
+Case 16 — URL-help tooltip first instrumentation candidate; retest FAILED
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build: physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; `com.retro99.parrot` 0.4.5 (21), debug source commit `3b2b5d3d5e80ee30e62551a4946891971ee355bc`, APK SHA-256 `792269343f30a51198367cc7a8a22419e325ce48daa0e7a38d432688010d3431` (local APK and Samsung-pulled package hash match), PID `25002`.
+
+Preconditions: opened blank Login from Settings → Servers → Add Server; Storyteller selected, URL `https://` placeholder, username/password empty, no credentials submitted.
+
+Steps and actual behavior:
+1. Tap `URL info`. The RichTooltip opens and shows the same URL scheme/IP/domain help seen in the pre-fix observation. [Candidate open screenshot](case-016-url-tooltip-fixed-open.png).
+2. Tap the visible `Got it` action at `(300,808)`. Tooltip closes, Login remains, selected server type and form remain unchanged. [Candidate dismissed screenshot](case-016-url-tooltip-fixed-got-it-dismissed.png).
+3. Inspect PID-scoped logs. Exactly one attempt and one opened Analytics event plus matching start/visible breadcrumbs appear, but no `login_url_help_dismissed` event or dismissed breadcrumb appears after `Got it`:
+
+```
+09-27 05:59:23.902 25002 D Analytics Event: login_url_help_attempted | {screen=login, action=view_url_help, operation=url_help_tooltip, stage=started, outcome=started, server_type=storyteller}
+09-27 05:59:23.902 25002 D Diagnostic breadcrumb: diagnostic_context screen=login action=view_url_help operation=url_help_tooltip stage=started outcome=started server_type=storyteller correlation_id=4b26ff09-c0fa-446b-b380-251c9d8be54b
+09-27 05:59:23.906 25002 D Analytics Event: login_url_help_opened | {screen=login, action=view_url_help, operation=url_help_tooltip, stage=visible, outcome=succeeded, server_type=storyteller}
+09-27 05:59:23.907 25002 D Diagnostic breadcrumb: diagnostic_context screen=login action=view_url_help operation=url_help_tooltip stage=visible outcome=succeeded server_type=storyteller correlation_id=4b26ff09-c0fa-446b-b380-251c9d8be54b
+```
+
+Result: functional dismissal PASS; Analytics and diagnostics FAIL for the missing terminal event/breadcrumb. No auth success/failure event, unexpected exception, or Crashlytics issue occurred. Source audit found the `Got it` `TextButton` still directly called `tooltipState.dismiss()` without dispatching `OnUrlHelpDismissed(GotIt)`. QA-BUG-0035 remains open; the candidate fix commit is incomplete and must not be described as fixed until a corrected Samsung retest passes.
