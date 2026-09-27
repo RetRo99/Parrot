@@ -1,0 +1,18 @@
+Case 449 / QA-BUG-0052 — Samsung pre-fix Retry attribution capture
+Run date: 2026-09-27, Samsung local time CEST (UTC+0200).
+
+Device/build
+- Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, build `S921BXXSGDZG1`.
+- Installed package `com.retro99.parrot` 0.4.5 (21), PID `21467`; local and installed APK SHA-256 `47b65964d36580f5e3decce808ccc89324c90b9fcd63092ccd980cae90ed8277`.
+- Source commit `7b6178ee` plus separate uncommitted QA-BUG-0049 playback-stop changes; QA-BUG-0051 was already committed. This is the pre-fix run for QA-BUG-0052.
+
+Execution and results
+- Starting UI was Server Management with the Storyteller card displaying `Login failed` and `Retry`. Tapping Retry opened the existing-server Login form.
+- Entered syntactically complete synthetic rejected values only into Parrot, hid the keyboard, and tapped the actual Sign In control. No form values or sensitive response contents are retained.
+- At 18:52:05.633 local time, DebugAnalyticsManager showed a bounded `retry_started` breadcrumb (`source_screen=server_management`, `destination_screen=login`, `entry_point=server_card_login`, `operation=existing_server_login`, `outcome=started`, `reason_code=login_retry`, `server_type=storyteller`). At 18:52:05.635 it showed the accepted `login_attempted` event with `server_type=storyteller`, `auth_method=credentials`, **`is_retry=false`**, `outcome=started`, followed by the matching credentials-login start breadcrumb.
+- At 18:52:05.740 the UI showed the expected rejected-login error and local logs showed one `login_failed`; at 18:52:05.741 a correlated authentication-failed breadcrumb carried `reason_code=auth_rejected`. At 18:52:05.742 the existing QA-BUG-0051 `failure_state_retained` breadcrumb recorded the recoverable card state. Zero PID-scoped exception-report markers and zero fatal crashes were present.
+- System Back invoked the Android password-save prompt; selected **No, thanks**. Samsung returned to Server Management and showed `Login failed` + Retry; no logged-out generic state or Login form remained.
+
+Conclusion
+- Functional Retry route and recovery remained usable. Analytics correctness FAILS: the breadcrumb identifies a failed-card Retry, but the accepted authentication attempt is classified as `is_retry=false`. Local debug records establish app-side event behavior only; Firebase Analytics ingestion is waived and not established. Crashlytics delivery is not inferred from local logs.
+- No username, password, server URL, account identifier, screenshot, raw hierarchy, or raw UI/log dump is retained. Synthetic rejected inputs existed only transiently in Parrot and were not saved by Android.
