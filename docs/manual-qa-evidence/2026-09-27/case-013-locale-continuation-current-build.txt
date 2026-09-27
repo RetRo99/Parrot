@@ -1,0 +1,26 @@
+Case 13 — Locale rendering continuation on the committed Reader-restoration build
+Date: 2026-09-27 (Samsung local CEST, UTC+0200).
+
+Device/build
+- Physical Samsung `RFCWC0SSVDM`, model SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 build `S921BXXSGDZG1`, gesture navigation.
+- Installed package `com.retro99.parrot` 0.4.5 (21), debug, source commit `13ead5d85f5db281805fb52dcc35a0706a1d6e98`; APK SHA-256 `d3770e18814e974053ece48ba03e2058bb212762675ac7fe37178124731dba47` (local and Samsung-pulled match).
+- Default profile, local imported *Pride and Prejudice*. No account credentials, server URL, cloud credentials, or app data were entered, added, or cleared.
+
+Locale change and cleanup
+1. Verified baseline `settings get system system_locales` and `cmd locale get-device-locale` were both `en-GB`.
+2. Through Samsung Settings > Language, added Español (España), set it as the default, and verified system locale `es-ES` (`system_locales=es-ES,en-GB`).
+3. Force-stopped Parrot and launched it from the launcher (PID `16455`). Inspected reachable screens and dialogs below.
+4. Restored English (United Kingdom) as the default, removed the temporary Español (España) language entry, and verified both locale commands returned exactly `en-GB`.
+5. Relaunched Parrot after cleanup (PID `20992`); Reader returned to *Pride and Prejudice*, page 29/64 (49%). No app data was cleared; original local book/profile and reader preferences remain.
+
+Functional observations under `es-ES`
+- Visible Parrot copy stayed English and sampled layouts showed no clipping/overflow on Books/Home (including the continue-reading card and import CTA), Book Detail, Series empty state, Statistics dashboard, Settings hub and lower Support rows, Server Management empty state, Storyteller Sign In form (entered via Add Server), Parrot Cloud sign-in/create-account forms, Reader, Reader Settings sheet/preview, TOC sheet/search, and Bookmarks empty state.
+- Evidence screenshots (all current build under Spanish unless noted): [Books](case-013-spanish-books-current-build.png), [Book Detail](case-013-spanish-book-detail-current-build.png), [Series empty state](case-013-spanish-series-current-build.png), [Statistics](case-013-spanish-statistics-current-build.png), [Settings hub](case-013-spanish-settings-hub-current-build.png), [Settings lower rows](case-013-spanish-settings-lower-current-build.png), [Server Management](case-013-spanish-server-management-current-build.png), [Storyteller Login](case-013-spanish-login-current-build.png), [URL information dialog](case-013-spanish-login-url-info.png), [Parrot Cloud sign-in](case-013-spanish-sync-backup-current-build.png), [Parrot Cloud account form](case-013-spanish-cloud-create-account.png), [Reader after force-stop](case-013-spanish-reader-after-force-stop.png), [Reader Settings](case-013-spanish-reader-settings-attempt.png), [TOC](case-013-spanish-reader-toc-current-build.png), [Bookmarks](case-013-spanish-bookmarks-current-build.png). [Post-cleanup English locale/Reader state](case-013-after-locale-restored.png).
+- System/Compose-generated bottom-sheet accessibility descriptions appeared localized as `Controlador de arrastre` and `Cerrar hoja`; these were not visible app copy. This run does not treat framework-provided accessibility action names as untranslated Parrot strings, but records the distinction for the accessibility locale audit.
+- Not visited: Welcome/onboarding, which is not reachable from the existing completed guest/profile state without resetting app onboarding data; additional nested surfaces are to be checked during their ordered screen passes. Do not infer the catalogue-wide “all UI strings” assertion from these samples.
+
+Separate result dimensions
+- Functional: PARTIAL / overall BLOCKED. All listed, reachable samples were English and legible; case 13 remains BLOCKED because Welcome is unavailable without an app-data/onboarding reset and not every nested route was visited. Earlier four-tab partial evidence is retained in `2026-09-26/case-013-locale-run.txt`.
+- Analytics: PASS for local startup/tab/feature signals on the tested debug provider (Firebase ingestion waived). PID `16455` at 04:04:30 emitted one `app_launch_route_resolved(outcome=success)` and route-resolution breadcrumbs; at 04:04:31 emitted one last-book attempt, one `book_opened`, one usable-content success. Later one `tab_switched` each for Series, Statistics and Settings plus `statistics_viewed` were observed; Login and Home-visible route breadcrumbs were observed; Books navigation and one subsequent `book_opened` were observed. After restoring English, PID `20992` emitted route success, one launch attempt, one `skipped/reader_route_restored` (the saved ordinary Reader route already satisfied auto-open), and one `book_opened`; there was one terminal outcome, not a duplicate.
+- Diagnostics: NOT RUN for induced experience failures; no such failure was induced by locale rendering. PID-scoped logs showed no fatal marker in the checked excerpt. This does not verify Crashlytics receipt/context; QA-BUG-0006 and Firebase delivery blockers remain separately tracked.
+- Local DebugAnalyticsManager output is not Firebase Analytics delivery evidence. No Crashlytics delivery claim is made.
