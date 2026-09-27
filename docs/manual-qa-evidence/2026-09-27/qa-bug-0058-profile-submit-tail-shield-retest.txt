@@ -1,0 +1,30 @@
+QA-BUG-0058 / QA-BUG-0056 — Samsung rapid Add confirmation after tap-shield fix
+Date: 2026-09-27 (device local time; CEST, UTC+0200)
+
+Device/build
+- Physical Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0, firmware `S921BXXSGDZG1`.
+- Package `com.retro99.parrot`, version 0.4.5 (21), debug APK, target SDK 36; PID `7916`.
+- Source commits: QA-BUG-0058 fix `63306140`, QA-BUG-0056 guard `7669f849`, QA-BUG-0057 retry attribution `c0d8545d`; separate QA-BUG-0049 playback-stop work was present in the working tree and excluded from the QA-BUG-0058 commit.
+- Local and Samsung-installed APK SHA-256 matched: `4b72393d8e0eabc532317c0f9ecc28f4a09e19ba868ca1d644ed43d53d641820`. The APK was installed over existing app data; no uninstall/data clear.
+
+Host verification
+- `:feature:home:ui:testAndroidHostTest` PASS, including the tap-shield lifecycle test: input remains shielded until the configured 250 ms repeat-tap window ends, then releases.
+- `:androidApp:assembleDebug` PASS for this APK. The test source was rerun once after adding the explicit coroutine-test opt-in; the APK bytes remained unchanged and matched the installed package.
+
+Samsung execution
+- Baseline App Settings showed one original profile active, Show Continue Reading enabled, and Open Last Book enabled.
+- Opened Add Profile, entered a synthetic disposable name only in Parrot, hid the keyboard, and sent two taps to Add at 1 ms interval (same gesture sequence that had exposed QA-BUG-0058 before the fix).
+- App returned to Books and the Add dialog was gone. Re-entered App Settings. Both preference switches remained enabled; no tail tap reached the newly exposed settings content.
+- PID-scoped local DebugAnalyticsManager records for the test showed exactly one `profile_operation_attempted` + `profile_created` pair (`is_retry=false`) and exactly one intended auto-Switch `profile_operation_attempted` + `profile_switched` pair (`is_retry=false`). There was no duplicate Create, duplicate Switch, failed/cancelled profile operation, or Show Continue Reading toggle event. This variant caused no preference change, so no toggle event was expected.
+- After waiting beyond the shield interval, profile controls were usable: switched back to the original profile and deleted the inactive synthetic profile. Final App Settings displayed one active profile plus Add Profile; both Show Continue Reading and Open Last Book remained enabled.
+- Across the exercised create/switch/cleanup operations, PID-scoped log inspection found zero exception-report markers and zero fatal-crash markers. No failure was induced; Crashlytics delivery was not tested.
+
+Analytics and diagnostics qualification
+- These Analytics observations are local DebugAnalyticsManager output only. Firebase Analytics ingestion is waived; no Firebase-delivery claim is made. Crashlytics Console delivery remains unverified.
+- No profile label/identifier, screenshot, raw UI hierarchy, credentials, or raw log lines were retained. The original profile and its data were preserved.
+
+Disposition
+- QA-BUG-0058: PASS for the exact Samsung rapid Add/two-tap reproduction after commit `63306140`.
+- QA-BUG-0056: repeated-Add duplicate-write subvariant PASS (one Create and one intended auto-Switch); slow-pending UI, rapid Rename/Delete, open/retry, and switch-race variants remain NOT RUN, so catalogue case 743 is not signed off.
+- Case 764: Add tail-tap variant PASS; rapid Rename/Delete confirmation variants remain NOT RUN.
+- QA-BUG-0059 remains open: dedicated Show Continue Reading Analytics instrumentation is absent and should be verified/fixed with an intentional on/off setting test.
