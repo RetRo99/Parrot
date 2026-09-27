@@ -18,12 +18,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.navigation3.runtime.entryProvider
 import com.retro99.books.ui.detail.BookDetailScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
+import com.retro99.home.ui.appsettings.ProfileOperationTapShieldHolder
 import com.retro99.home.ui.series.SeriesListScreen
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.ui.audiobook.AudiobookPlayerScreen
@@ -47,6 +49,7 @@ fun HomeNavigation(
 
     // UI state from ViewModel (currently reading, bubble position)
     val uiState by viewModel.viewState.collectAsState()
+    val isProfileOperationTapShielded by ProfileOperationTapShieldHolder.instance.isBlocking.collectAsState()
 
     // Intent dispatcher for navigation actions
     val intentDispatcher: (HomeNavigationIntent) -> Unit = { viewModel.onIntent(it) }
@@ -448,6 +451,20 @@ fun HomeNavigation(
                 state = dialogState,
                 onStopAndOpen = { intentDispatcher(HomeNavigationIntent.PlaybackConflictStopAndOpen) },
                 onDismiss = { intentDispatcher(HomeNavigationIntent.PlaybackConflictDismiss) },
+            )
+        }
+
+        if (isProfileOperationTapShielded) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(isProfileOperationTapShielded) {
+                        awaitPointerEventScope {
+                            while (isProfileOperationTapShielded) {
+                                awaitPointerEvent().changes.forEach { it.consume() }
+                            }
+                        }
+                    },
             )
         }
     }

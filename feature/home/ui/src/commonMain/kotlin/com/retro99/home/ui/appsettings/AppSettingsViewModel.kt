@@ -13,11 +13,13 @@ import com.retro99.preferences.api.PreferencesKey
 import com.retro99.reader.domain.usecase.ClearCurrentlyReadingUseCase
 import com.retro99.reader.domain.usecase.ObserveCurrentlyReadingUseCase
 import com.retro99.user.api.UserRegistry
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
 
@@ -36,6 +38,7 @@ class AppSettingsViewModel(
 
     private val profileOperationRetryTracker = ProfileOperationRetryTracker()
     private val profileOperationGate = ProfileOperationGate()
+    private val profileOperationTapShield = ProfileOperationTapShieldHolder.instance
     private var addProfileRetryKey: String? = null
     private var renameProfileRetryKey: String? = null
     private var deleteProfileRetryKey: String? = null
@@ -387,7 +390,9 @@ class AppSettingsViewModel(
     }
 
     private fun launchProfileOperation(block: suspend () -> Unit) {
+        if (profileOperationTapShield.isBlocking.value) return
         if (!profileOperationGate.tryStart()) return
+        profileOperationTapShield.block()
         updateState { it.copy(isProfileOperationInProgress = true) }
         viewModelScope.launch {
             try {
@@ -395,6 +400,9 @@ class AppSettingsViewModel(
             } finally {
                 profileOperationGate.finish()
                 updateState { it.copy(isProfileOperationInProgress = false) }
+                withContext(NonCancellable) {
+                    profileOperationTapShield.releaseAfterRepeatTapWindow()
+                }
             }
         }
     }

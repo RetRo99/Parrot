@@ -5,6 +5,10 @@ import com.retro99.analytics.api.AnalyticsEvent
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,6 +17,25 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class ProfileOperationTest {
+    @Test
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun profileTapShieldConsumesInputThroughTheRepeatTapWindow() = runTest {
+        val shield = ProfileOperationTapShield()
+        shield.block()
+
+        val release = launch { shield.releaseAfterRepeatTapWindow() }
+        assertTrue(shield.isBlocking.value)
+
+        advanceTimeBy(ProfileOperationTapShield.DEFAULT_REPEAT_TAP_WINDOW_MILLIS - 1)
+        runCurrent()
+        assertTrue(shield.isBlocking.value)
+
+        advanceTimeBy(1)
+        runCurrent()
+        release.join()
+        assertFalse(shield.isBlocking.value)
+    }
+
     @Test
     fun operationGateAcceptsOnlyOneMutationUntilTheAcceptedOneFinishes() {
         val gate = ProfileOperationGate()
