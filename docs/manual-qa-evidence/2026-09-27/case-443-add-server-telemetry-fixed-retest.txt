@@ -1,0 +1,29 @@
+Case 443 — Add Server navigation, committed-fix Samsung retest
+Date: 2026-09-27, Samsung local CEST (UTC+0200).
+
+Device/build
+- Physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Installed `com.retro99.parrot` 0.4.5 (21), source commit `107d017cdcc3d834e99dc983e20a7ed6002e319c` (`fix(analytics): report Add Server as attempt [QA-BUG-0038, case 443]`), PID `19860`.
+- APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`; local debug APK and Samsung-pulled installed `base.apk` hashes match.
+- Analytics sanitizer host test: 18 tests, 0 failures/errors (includes the `ServerAddAttempted` bounded-schema regression). Login UI host suite: 9 tests, 0 failures/errors. `:androidApp:assembleDebug` succeeded.
+
+Preconditions and steps
+1. Settings → Servers; confirm the Server Management empty state says `No servers configured`.
+2. Tap Add Server once. Login opens with the default Storyteller type and empty fields. [Stable visible Login](case-443-add-server-attempt-fixed-login-visible.png).
+3. Enter no data and submit nothing. Press system Back. The screen returns to `No servers configured`; no account/server was created. [Stable empty-list return](case-443-add-server-attempt-fixed-empty-list.png).
+
+PID-scoped local DebugAnalyticsManager output (07:32:24 CEST):
+```
+09-27 07:32:24.238 19860 D Analytics Event: server_add_attempted | Parameters: {screen=server_management, source_screen=server_management, destination_screen=login, entry_point=add_server_button, action=add_server, operation=server_add, stage=navigation, outcome=started}
+09-27 07:32:24.425 19860 D Analytics Event: login_screen_viewed | Parameters: {screen=login, source_screen=home, entry_point=add_server}
+09-27 07:32:24.425 19860 D Diagnostic breadcrumb: diagnostic_context screen=login source_screen=home entry_point=add_server action=screen_view operation=login_route stage=visible outcome=succeeded
+```
+- Exactly one bounded Add Server attempt appears before the destination exposure. No `server_added`, unknown server type, duplicate attempt, credentials, login attempt/result, exception or fatal marker was observed in the PID-scoped run. No crash or unexpected user-experience failure occurred.
+
+Results, separately by dimension
+- Functional: **PASS** — Add Server opens Login; Back returns to the unchanged empty server list.
+- Analytics: **PASS for this navigation/attempt variant** — exactly one `server_add_attempted` (`outcome=started`, source/destination/entry point bounded) followed by one actual `login_screen_viewed`. The false `server_added(server_type=unknown)` from the pre-fix run is absent. Firebase ingestion is waived; these are local DebugAnalyticsManager logs only.
+- Diagnostics: **PASS for destination visibility** — one Login visible-route breadcrumb; no exception is expected for ordinary navigation. Crashlytics delivery remains unverified.
+- Credentials/account data were not entered or created. No app data was cleared.
+
+QA-BUG-0038 pre-fix failure and history remain preserved at [the original observation](case-443-add-server-telemetry-prefx.txt). The focused fix commit is `107d017c`; its Samsung APK hash matches the installed build.
