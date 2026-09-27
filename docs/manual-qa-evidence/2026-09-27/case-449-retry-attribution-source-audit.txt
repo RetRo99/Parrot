@@ -1,0 +1,18 @@
+Case 449 / QA-BUG-0052 — Card Retry loses authentication retry attribution (source-only audit)
+Audit date: 2026-09-27 (Samsung local CEST, UTC+0200).
+
+Device/build context
+- Physical QA device: Samsung Galaxy S24, serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
+- Installed candidate: `com.retro99.parrot` 0.4.5 (21), PID `21467`, APK SHA-256 `47b65964d36580f5e3decce808ccc89324c90b9fcd63092ccd980cae90ed8277`.
+- Source commit `7b6178ee` plus the separate uncommitted QA-BUG-0049 playback-stop changes. No runtime retry-submit event was captured for this audit.
+
+Source trace (no user action or credentials)
+1. `ServerManagementScreen.ServerListItem` renders the Retry action for a failed logged-out server card. Its action dispatches `ServerManagementIntent.OnLoginClick(serverId, serverType)` exactly as the ordinary Log in action does; the intent does not carry retry origin.
+2. `ServerManagementViewModel.onLoginClick` logs the card-level `server_login_attempted` navigation event and calls `onNavigateToLogin(serverId)`.
+3. `RootNavigationViewModel.handleLoginClicked` pushes `RootDestination.Login(initial=false, existingServerId=serverId)` without retry metadata.
+4. The newly created `LoginViewModel` initializes its private `lastFailedLogin` marker to null. `beginLoginAttempt` computes `isRetry` only as `lastFailedLogin == (serverType.identifier to authMethod)`. Therefore the first accepted authentication submit from this new destination is classified `is_retry=false`, even when reached by the failed card's Retry control.
+
+Expected versus actual
+- Expected: preserve a bounded retry-origin Boolean through this navigation and set `login_attempted.is_retry=true` on the first accepted authentication submit; keep invalid-field validation, navigation-only taps and cancellation out of the authentication attempt count.
+- Actual by source: the retry and ordinary Log in buttons become indistinguishable before Login, and the recreated Login ViewModel has no failure marker. The exact runtime false dimension after a card Retry remains to be captured on Samsung before the fix.
+- No identifiers, URLs, account data, credentials, or dynamic content were used or retained in this audit. Firebase Analytics ingestion is waived; this source trace does not establish Analytics or Crashlytics delivery.
