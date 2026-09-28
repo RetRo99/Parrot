@@ -1,0 +1,18 @@
+# Case 433 — Share Logs with no logs (post-case-434 retest)
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`), gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `21569`; APK SHA-256 `310dda0fdc9201b2815e0d855afb94e677b15d496b192087f8d183723868936e`, matching local/device copies. No app data was cleared.
+- **Precondition:** Case 434 had just confirmed both active and rotated logs absent. File Logging and Only Log Crashes were OFF. No log contents were read/copied.
+
+Tapped Share Logs twice in total to capture the transient snackbar; both local attempts returned the no-log outcome. The immediate screenshot after the second tap visibly showed “No logs to share.” No system chooser opened. Metadata checks afterward still showed both `parrot_logs.txt` and `parrot_logs_old.txt` absent; the unavailable terminal breadcrumb did not recreate a file.
+
+PID-filtered local DebugAnalyticsManager output contained two `log_share_attempted` and two matching `log_share_unavailable(reason_code=no_logs, is_retry=false)` outcomes. Each operation had correlated start/unavailable breadcrumbs. No `log_share_sheet_launch_succeeded` was emitted for these attempts. Firebase Analytics ingestion is waived; local logs are not delivery proof. This is an ordinary expected empty state, not a Crashlytics failure.
+
+## Results
+
+- **Functional:** PASS — “No logs to share” displayed; chooser remained closed; both files remained absent.
+- **Analytics:** PASS locally for two attempts and two unavailable outcomes. Firebase ingestion waived.
+- **Diagnostics:** PASS locally for correlated unavailable outcomes; no exception/non-fatal expected for ordinary no-log state. Crashlytics delivery unverified.
+- **Catalogue order note:** This is the post-case-434 retest of the initially blocked case 433; the blocked observation remains preserved separately.
+- **Next ordered case:** 435, Version display.
