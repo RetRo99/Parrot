@@ -1,0 +1,9 @@
+# QA-BUG-0067 — DefaultUserInitializer profile-value log source audit
+
+- **Date:** 2026-09-28.
+- **Scope:** Static inspection only; no profile names/IDs were copied from the device or runtime logs.
+- **Source:** `lib/user/implementation/src/commonMain/kotlin/com/retro99/user/implementation/DefaultUserInitializer.kt`, `ensureDefaultUserExists`.
+
+The initializer currently formats log messages using the selected profile's `name`, profile `id`, and `getActiveProfileId()`. These values are interpolated on existing-profile recovery, default-profile creation, and the already-active startup path. Since local diagnostic logs can be shared, profile names and identifiers must not be included in the log payload.
+
+No runtime log was collected for this audit. In particular, the QA run did not retain or quote a real/disposable profile value. Expected remediation is stable operation-only logging. Functional recovery remains covered by case 422 and extension 772; Firebase Analytics is not applicable to this initializer log.
