@@ -1,0 +1,22 @@
+# QA-BUG-0065 — Statistics route exposure attribution retest
+
+- **Date:** 2026-09-28 (Samsung device reports CEST, UTC+0200).
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug; PID `2528`; installed APK SHA-256 `f08af30ff2015b574e9cc944d5bf116aece2c75db8f3724428168f8cf7a5c6ae`. Installed with `adb install -r`; app data was not cleared. Build tree was based on `4a2bcba24985f04de7971b17e8511cce9edad6f0` plus the Statistics exposure change and separately uncommitted Home playback, Reader playback and Server Management work. Focused source commit: `466967f93671b07c925a61852986975dcea8b775`.
+- **Host verification:** `:feature:home:ui:testAndroidHostTest`, `:feature:statistics:ui:testAndroidHostTest`, `:lib:analytics:implementation:testAndroidHostTest`, and `:androidApp:assembleDebug` completed successfully. Statistics exposure context tests: 4 passed; Statistics dashboard failure/retry regression: 1 passed; Analytics parameter sanitizer suite: 26 passed. No failures or errors.
+
+## Samsung route checks
+
+1. Opened App Settings, tapped the “Reading statistics” row, and verified the Statistics screen title and dashboard cards appeared.
+2. PID-scoped local debug output showed one exposure event: `statistics_viewed` with `{screen=statistics, source_screen=app_settings, entry_point=statistics_row}`.
+3. The same route transition emitted one `statistics_route` breadcrumb with `screen=statistics`, `source_screen=app_settings`, `entry_point=statistics_row`, `action=screen_view`, `stage=visible`, and `outcome=succeeded`.
+4. Navigated to Books using the bottom tab, then selected Statistics. PID-scoped local output showed one exposure event with `{screen=statistics, source_screen=books, entry_point=bottom_navigation}` and one matching route-visible breadcrumb.
+5. Inspected current-PID log output for fatal/handled-exception markers; none were present during these route checks. No screenshots, raw UI hierarchy, profile labels/IDs, book data, or credentials were retained.
+
+## Limits and disposition
+
+- **Samsung functional / Analytics / diagnostics:** PASS for App Settings row and Books bottom-tab entries only. The visible Statistics screen rendered after each transition.
+- **Host coverage:** PASS for App Settings row, tab transition, restored-route fallback, and navigation-back attribution; bounded parameters and profile-ID exclusion passed sanitizer regression.
+- **Not executed on Samsung:** route restore, Series bottom-tab source, Back return, and a deliberate recomposition/rotation duplicate check. These variants remain NOT RUN under case 770.
+- **Firebase Analytics:** ingestion waived; local `DebugAnalyticsManager` output is evidence of local event construction only, not Firebase delivery.
+- **Crashlytics:** no unexpected failure occurred; backend delivery was not tested.
