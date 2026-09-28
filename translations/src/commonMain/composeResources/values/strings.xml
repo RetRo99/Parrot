@@ -689,6 +689,7 @@
     <!-- UX redesign: statistics and login -->
     <string name="statistics_day_singular" tools:ignore="MissingTranslation">%1$d day</string>
     <string name="statistics_empty_hint" tools:ignore="MissingTranslation">No reading activity yet. Open a book and your time, sessions and streaks will appear here.</string>
+    <string name="statistics_load_failed" tools:ignore="MissingTranslation">Unable to load reading statistics. Try again.</string>
     <string name="login_sign_in_hint" tools:ignore="MissingTranslation">Enter the address of your server, then sign in with your username and password.</string>
 
     <!-- UX redesign: sleep timer & player labels -->

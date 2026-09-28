@@ -1,9 +1,11 @@
 package com.retro99.statistics.data
 
+import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.getOrElse
+import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.map
 import com.retro99.base.nowMillis
+import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.books.domain.model.BookType
@@ -50,26 +52,46 @@ internal class StatisticsDataRepository(
     }
 
     override fun getReadingStatistics(): Flow<AppResult<ReadingStatisticsDomainModel>> = flow {
+        suspend fun <T> valueOrEmitError(result: AppResult<T>): T? = when (
+            val outcome = result.fold(
+                success = { StatisticsQueryOutcome.Value(it) },
+                failure = { StatisticsQueryOutcome.Failure(it) },
+            )
+        ) {
+            is StatisticsQueryOutcome.Value -> outcome.value
+            is StatisticsQueryOutcome.Failure -> {
+                emit(Err(outcome.error))
+                null
+            }
+        }
+
         val now = nowMillis()
         val todayStart = getStartOfDay(now)
         val weekStart = todayStart - (DAYS_IN_WEEK * MS_PER_DAY)
         val monthStart = todayStart - (DAYS_IN_MONTH * MS_PER_DAY)
         val chartStart = todayStart - (DAYS_FOR_CHART * MS_PER_DAY)
 
-        val totalTime = localSource.getTotalReadingTimeMs().getOrElse { 0L }
-        val todayTime = localSource.getTotalReadingTimeMsInDateRange(todayStart, now)
-            .getOrElse { 0L }
-        val weekTime = localSource.getTotalReadingTimeMsInDateRange(weekStart, now)
-            .getOrElse { 0L }
-        val monthTime = localSource.getTotalReadingTimeMsInDateRange(monthStart, now)
-            .getOrElse { 0L }
-        val totalSessions = localSource.getSessionCountInDateRange(0, now).getOrElse { 0L }
-        val totalBooks = localSource.getDistinctBooksReadInDateRange(0, now).getOrElse { 0L }
-        val dailyReadingTime = localSource.getDailyReadingTime(chartStart).getOrElse { emptyList() }
-        val mostReadBooks = localSource.getMostReadBooks(0, now, TOP_BOOKS_LIMIT)
-            .getOrElse { emptyList() }
-        val readingTimeByType = localSource.getReadingTimeByBookType(0, now).getOrElse { emptyMap() }
-        val streak = calculateStreak(now)
+        val totalTime = valueOrEmitError(localSource.getTotalReadingTimeMs()) ?: return@flow
+        val todayTime = valueOrEmitError(
+            localSource.getTotalReadingTimeMsInDateRange(todayStart, now),
+        ) ?: return@flow
+        val weekTime = valueOrEmitError(
+            localSource.getTotalReadingTimeMsInDateRange(weekStart, now),
+        ) ?: return@flow
+        val monthTime = valueOrEmitError(
+            localSource.getTotalReadingTimeMsInDateRange(monthStart, now),
+        ) ?: return@flow
+        val totalSessions = valueOrEmitError(localSource.getSessionCountInDateRange(0, now))
+            ?: return@flow
+        val totalBooks = valueOrEmitError(localSource.getDistinctBooksReadInDateRange(0, now))
+            ?: return@flow
+        val dailyReadingTime = valueOrEmitError(localSource.getDailyReadingTime(chartStart))
+            ?: return@flow
+        val mostReadBooks = valueOrEmitError(localSource.getMostReadBooks(0, now, TOP_BOOKS_LIMIT))
+            ?: return@flow
+        val readingTimeByType = valueOrEmitError(localSource.getReadingTimeByBookType(0, now))
+            ?: return@flow
+        val streak = valueOrEmitError(calculateStreak(now)) ?: return@flow
 
         val statistics = ReadingStatisticsDomainModel(
             totalReadingTimeMs = totalTime,
@@ -144,17 +166,22 @@ internal class StatisticsDataRepository(
 
     override suspend fun getReadingStreak(): AppResult<ReadingStreakDomainModel> {
         val now = nowMillis()
-        return Ok(calculateStreak(now))
+        return calculateStreak(now)
     }
 
     override suspend fun clearAllSessions(): CompletableResult {
         return localSource.deleteAllSessions()
     }
 
-    private suspend fun calculateStreak(now: Long): ReadingStreakDomainModel {
+    private suspend fun calculateStreak(now: Long): AppResult<ReadingStreakDomainModel> {
         val yearAgo = now - (365 * MS_PER_DAY)
-        val readingDays = localSource.getReadingDays(yearAgo).getOrElse { emptyList() }
+        return localSource.getReadingDays(yearAgo).fold(
+            success = { Ok(calculateStreak(it, now)) },
+            failure = { Err(it) },
+        )
+    }
 
+    private fun calculateStreak(readingDays: List<Long>, now: Long): ReadingStreakDomainModel {
         if (readingDays.isEmpty()) {
             return ReadingStreakDomainModel(0, 0, null)
         }
@@ -222,3 +249,7 @@ internal class StatisticsDataRepository(
     }
 }
 
+private sealed interface StatisticsQueryOutcome<out T> {
+    data class Value<T>(val value: T) : StatisticsQueryOutcome<T>
+    data class Failure(val error: AppError) : StatisticsQueryOutcome<Nothing>
+}

@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -47,12 +48,14 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import resources.translations.general_back
+import resources.translations.general_retry
 import resources.translations.statistics_books_read
 import resources.translations.statistics_current_streak
 import resources.translations.statistics_day_singular
 import resources.translations.statistics_days
 import resources.translations.statistics_empty_hint
 import resources.translations.statistics_longest_streak
+import resources.translations.statistics_load_failed
 import resources.translations.statistics_month
 import resources.translations.statistics_title
 import resources.translations.statistics_today
@@ -72,7 +75,7 @@ fun StatisticsScreen(
         viewModel = viewModel,
     ) { viewState, intentDispatcher ->
         when {
-            viewState.isLoading -> LoadingScreen()
+            viewState.isLoading && viewState.statistics == null -> LoadingScreen()
             else -> StatisticsScreenContent(
                 viewState = viewState,
                 intentDispatcher = intentDispatcher,
@@ -109,30 +112,39 @@ private fun StatisticsScreenContent(
         modifier = modifier,
     ) { paddingValues ->
         PullToRefreshBox(
-            isRefreshing = false,
+            isRefreshing = viewState.isLoading && viewState.statistics != null,
             onRefresh = { intentDispatcher(StatisticsIntent.OnRefresh) },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            viewState.statistics?.let { stats ->
-                StatisticsContent(
-                    stats = stats,
-                    onPeriodClick = { period ->
-                        intentDispatcher(StatisticsIntent.OnPeriodClicked(period))
-                    },
-                    onCurrentStreakClick = {
-                        intentDispatcher(StatisticsIntent.OnCurrentStreakClicked)
-                    },
-                    onLongestStreakClick = {
-                        intentDispatcher(StatisticsIntent.OnLongestStreakClicked)
-                    },
-                    onBooksReadClick = {
-                        intentDispatcher(StatisticsIntent.OnBooksReadClicked)
-                    },
-                    onTotalSessionsClick = {
-                        intentDispatcher(StatisticsIntent.OnTotalSessionsClicked)
-                    },
+            when {
+                viewState.statistics != null -> {
+                    StatisticsContent(
+                        stats = viewState.statistics,
+                        hasLoadError = viewState.error != null,
+                        onRetry = { intentDispatcher(StatisticsIntent.OnRefresh) },
+                        onPeriodClick = { period ->
+                            intentDispatcher(StatisticsIntent.OnPeriodClicked(period))
+                        },
+                        onCurrentStreakClick = {
+                            intentDispatcher(StatisticsIntent.OnCurrentStreakClicked)
+                        },
+                        onLongestStreakClick = {
+                            intentDispatcher(StatisticsIntent.OnLongestStreakClicked)
+                        },
+                        onBooksReadClick = {
+                            intentDispatcher(StatisticsIntent.OnBooksReadClicked)
+                        },
+                        onTotalSessionsClick = {
+                            intentDispatcher(StatisticsIntent.OnTotalSessionsClicked)
+                        },
+                    )
+                }
+
+                viewState.error != null -> StatisticsLoadErrorContent(
+                    onRetry = { intentDispatcher(StatisticsIntent.OnRefresh) },
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
@@ -174,6 +186,8 @@ private fun StatisticsScreenContent(
 @Composable
 private fun StatisticsContent(
     stats: ReadingStatisticsUiModel,
+    hasLoadError: Boolean,
+    onRetry: () -> Unit,
     onPeriodClick: (StatisticsPeriod) -> Unit,
     onCurrentStreakClick: () -> Unit,
     onLongestStreakClick: () -> Unit,
@@ -186,6 +200,15 @@ private fun StatisticsContent(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
+        if (hasLoadError) {
+            item {
+                StatisticsLoadErrorContent(
+                    onRetry = onRetry,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+
         // Nothing recorded yet: say so instead of showing a wall of zeros.
         if (stats.totalSessions == 0L && stats.totalBooksRead == 0L) {
             item {
@@ -297,6 +320,27 @@ private fun StatisticsContent(
     }
 }
 
+@Composable
+private fun StatisticsLoadErrorContent(
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(StringRes.statistics_load_failed),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        TextButton(onClick = onRetry) {
+            Text(stringResource(StringRes.general_retry))
+        }
+    }
+}
+
 /** "1 day" instead of "1 days" when the streak is a single day. */
 private fun dayCountResource(count: Int): TextWrapper = TextWrapper.Resource(
     if (count == 1) StringRes.statistics_day_singular else StringRes.statistics_days,
@@ -353,4 +397,3 @@ private fun StatCard(
         }
     }
 }
-

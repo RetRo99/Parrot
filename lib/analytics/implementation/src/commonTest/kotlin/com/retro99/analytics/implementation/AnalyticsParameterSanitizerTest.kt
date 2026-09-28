@@ -12,6 +12,7 @@ import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.ReaderAnalyticsEvent
 import com.retro99.analytics.api.ReaderSettingsScreenViewed
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
+import com.retro99.analytics.api.StatisticsAnalyticsEvent
 
 class AnalyticsParameterSanitizerTest {
 
@@ -1128,5 +1129,51 @@ class DiagnosticPayloadSanitizerTest {
             failure,
         )
         assertFalse("setting_name" in privateSetting)
+    }
+
+    @Test
+    fun statisticsLoadOutcomesRetainAttemptRetryAndSafeFailureDimensions() {
+        val attempt = sanitizeAnalyticsParameters(
+            StatisticsAnalyticsEvent.StatisticsLoadAttempted(
+                action = "retry_statistics",
+                isRetry = true,
+            ).parameters + mapOf(
+                "profile_id" to "private-profile-id",
+            ),
+        )
+        val success = sanitizeAnalyticsParameters(
+            StatisticsAnalyticsEvent.StatisticsLoadSucceeded(
+                action = "retry_statistics",
+                isRetry = true,
+            ).parameters,
+        )
+        val failure = sanitizeAnalyticsParameters(
+            StatisticsAnalyticsEvent.StatisticsLoadFailed(
+                action = "retry_statistics",
+                isRetry = true,
+                reasonCode = "database_error",
+            ).parameters + mapOf(
+                "error_message" to "private database detail",
+                "book_title" to "private title",
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "statistics",
+                "action" to "retry_statistics",
+                "operation" to "statistics_load",
+                "stage" to "started",
+                "outcome" to "started",
+                "is_retry" to true,
+            ),
+            attempt,
+        )
+        assertEquals("succeeded", success["outcome"])
+        assertEquals("database_error", failure["reason_code"])
+        assertEquals(true, failure["is_retry"])
+        assertFalse("profile_id" in attempt)
+        assertFalse("error_message" in failure)
+        assertFalse("book_title" in failure)
     }
 }

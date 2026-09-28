@@ -1140,6 +1140,47 @@ sealed interface StatisticsAnalyticsEvent : AnalyticsEvent {
         override val name: String = "statistics_viewed"
     }
 
+    data class StatisticsLoadAttempted(
+        val action: String,
+        val isRetry: Boolean,
+    ) : StatisticsAnalyticsEvent {
+        override val name: String = "statistics_load_attempted"
+        override val parameters: Map<String, Any> = statisticsLoadParameters(
+            action = action,
+            stage = "started",
+            outcome = "started",
+            isRetry = isRetry,
+        )
+    }
+
+    data class StatisticsLoadSucceeded(
+        val action: String,
+        val isRetry: Boolean,
+    ) : StatisticsAnalyticsEvent {
+        override val name: String = "statistics_load_succeeded"
+        override val parameters: Map<String, Any> = statisticsLoadParameters(
+            action = action,
+            stage = "terminal",
+            outcome = "succeeded",
+            isRetry = isRetry,
+        )
+    }
+
+    data class StatisticsLoadFailed(
+        val action: String,
+        val isRetry: Boolean,
+        val reasonCode: String,
+    ) : StatisticsAnalyticsEvent {
+        override val name: String = "statistics_load_failed"
+        override val parameters: Map<String, Any> = statisticsLoadParameters(
+            action = action,
+            stage = "terminal",
+            outcome = "failed",
+            isRetry = isRetry,
+            reasonCode = reasonCode,
+        )
+    }
+
     data class StatisticsPeriodChanged(
         val period: String,
     ) : StatisticsAnalyticsEvent {
@@ -1157,6 +1198,22 @@ sealed interface StatisticsAnalyticsEvent : AnalyticsEvent {
             "detail_type" to detailType,
         )
     }
+}
+
+private fun statisticsLoadParameters(
+    action: String,
+    stage: String,
+    outcome: String,
+    isRetry: Boolean,
+    reasonCode: String? = null,
+): Map<String, Any> = buildMap {
+    put("screen", "statistics")
+    put("action", action)
+    put("operation", "statistics_load")
+    put("stage", stage)
+    put("outcome", outcome)
+    put("is_retry", isRetry)
+    reasonCode?.let { put("reason_code", it) }
 }
 
 /**

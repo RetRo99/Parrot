@@ -1,10 +1,14 @@
 package com.retro99.statistics.ui
 
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.StatisticsAnalyticsEvent
+import com.retro99.base.result.AppError
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.statistics.domain.model.StatisticsPeriod
@@ -15,13 +19,14 @@ import com.retro99.statistics.domain.usecase.GetRecentSessionsUseCase
 import com.retro99.statistics.ui.model.toBookUiModel
 import com.retro99.statistics.ui.model.toSessionUiModel
 import com.retro99.statistics.ui.model.toUiModel
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @KoinViewModel
 class StatisticsViewModel(
@@ -32,6 +37,10 @@ class StatisticsViewModel(
     @Provided private val getRecentSessionsUseCase: GetRecentSessionsUseCase,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<StatisticsViewState, StatisticsIntent>(StatisticsViewState()) {
+
+    private var statisticsLoadInProgress = false
+    private var statisticsLoadFailed = false
+    private var hasStatisticsLoadCompleted = false
 
     init {
         analytics.logEvent(StatisticsAnalyticsEvent.StatisticsViewed)
@@ -66,33 +75,89 @@ class StatisticsViewModel(
         }
     }
 
+    @OptIn(ExperimentalUuidApi::class)
     private fun loadStatistics() {
-        getReadingStatisticsUseCase()
-            .onStart {
-                updateState { it.copy(isLoading = true, error = null) }
+        if (statisticsLoadInProgress) return
+
+        val isRetry = statisticsLoadFailed
+        val action = when {
+            isRetry -> "retry_statistics"
+            hasStatisticsLoadCompleted -> "refresh_statistics"
+            else -> "load_statistics"
+        }
+        val request = StatisticsLoadRequest(
+            action = action,
+            isRetry = isRetry,
+            correlationId = Uuid.random().toString(),
+        )
+        statisticsLoadInProgress = true
+        analytics.logEvent(
+            StatisticsAnalyticsEvent.StatisticsLoadAttempted(
+                action = action,
+                isRetry = isRetry,
+            ),
+        )
+        analytics.logBreadcrumb(request.context(stage = "started", outcome = "started"))
+        updateState { it.copy(isLoading = true, error = null) }
+
+        viewModelScope.launch {
+            val result = try {
+                getReadingStatisticsUseCase().first()
+            } catch (cancellation: CancellationException) {
+                statisticsLoadInProgress = false
+                throw cancellation
+            } catch (throwable: Throwable) {
+                Err(AppError.UnknownError(throwable))
             }
-            .onEach { result ->
-                result
-                    .onSuccess { statistics ->
-                        updateState {
-                            it.copy(
-                                statistics = statistics.toUiModel(),
-                                isLoading = false,
-                                error = null,
-                            )
-                        }
+
+            result.fold(
+                success = { statistics ->
+                    statisticsLoadFailed = false
+                    updateState {
+                        it.copy(
+                            statistics = statistics.toUiModel(),
+                            isLoading = false,
+                            error = null,
+                        )
                     }
-                    .onFailure { error ->
-                        error.log(analytics, "StatisticsViewModel: Failed to load statistics")
-                        updateState {
-                            it.copy(
-                                isLoading = false,
-                                error = error,
-                            )
-                        }
+                    analytics.logEvent(
+                        StatisticsAnalyticsEvent.StatisticsLoadSucceeded(
+                            action = action,
+                            isRetry = isRetry,
+                        ),
+                    )
+                    analytics.logBreadcrumb(
+                        request.context(stage = "terminal", outcome = "succeeded"),
+                    )
+                },
+                failure = { error ->
+                    statisticsLoadFailed = true
+                    val reasonCode = error.statisticsReasonCode()
+                    val context = request.context(
+                        stage = "terminal",
+                        outcome = "failed",
+                        reasonCode = reasonCode,
+                    )
+                    analytics.logEvent(
+                        StatisticsAnalyticsEvent.StatisticsLoadFailed(
+                            action = action,
+                            isRetry = isRetry,
+                            reasonCode = reasonCode,
+                        ),
+                    )
+                    analytics.logBreadcrumb(context)
+                    error.log(analytics, context)
+                    updateState {
+                        it.copy(
+                            isLoading = false,
+                            error = error,
+                        )
                     }
-            }
-            .launchIn(viewModelScope)
+                },
+            )
+            statisticsLoadInProgress = false
+            hasStatisticsLoadCompleted = true
+        }
     }
 
     private fun loadBooksForPeriod(period: StatisticsPeriod) {
@@ -222,4 +287,30 @@ class StatisticsViewModel(
             )
         }
     }
+}
+
+private data class StatisticsLoadRequest(
+    val action: String,
+    val isRetry: Boolean,
+    val correlationId: String,
+) {
+    fun context(
+        stage: String,
+        outcome: String,
+        reasonCode: String? = null,
+    ) = DiagnosticContext(
+        screen = "statistics",
+        action = action,
+        operation = "statistics_load",
+        stage = stage,
+        outcome = outcome,
+        reasonCode = reasonCode,
+        correlationId = correlationId,
+    )
+}
+
+private fun AppError.statisticsReasonCode(): String = when (this) {
+    is AppError.DatabaseError -> "database_error"
+    is AppError.UnknownError -> "unexpected_error"
+    else -> "statistics_load_error"
 }
