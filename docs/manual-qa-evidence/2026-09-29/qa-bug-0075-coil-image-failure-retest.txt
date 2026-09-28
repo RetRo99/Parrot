@@ -18,6 +18,6 @@
 - **Diagnostics:** PASS for suppressing expected image/network errors in this Samsung run: zero image exception reports were observed on the same fixture/route. The policy's documented branch is directly unit-tested for Coil `HttpException`, nested HTTP failures, `kotlinx.io.IOException`, cancellation, unknown decode failures, and once-per-request de-duplication (7 common tests PASS). Crashlytics delivery and actual Firebase receipt remain unverified.
 - **Build checks:** `:base-ui:iosSimulatorArm64Test` and `:androidApp:assembleDebug` succeeded. No Android host-test task is exposed for `base-ui` with its current multiplatform Android library plugin.
 - **Cleanup:** Settings remained at original values (Open Last Book ON, Show Continue Reading ON, File Logging OFF, Only Log Crashes OFF). App log files were removed through the App Settings Clear Logs UI and verified absent before the final install; no app data was cleared.
-- **Commit:** QA-BUG-0075 fix commit pending.
+- **Fix commit:** `87029a420a6b55441a1e977d67755bb1378dfe3b` (`fix(images): filter expected image failures [QA-BUG-0075]`).
 
 Earlier pre-fix observation remains preserved in [the source/runtime audit](qa-bug-0075-coil-image-failure-source-runtime-audit.txt). This run did not retain image URLs, cache keys, personal book/profile text, or raw log output.
