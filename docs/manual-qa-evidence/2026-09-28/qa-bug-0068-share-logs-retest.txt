@@ -2,7 +2,7 @@
 
 - **Date:** 2026-09-28.
 - **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), gesture navigation (`navigation_mode=2`).
-- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `30017`; installed APK SHA-256 `c1c120b592b8a66ff86cd01a742fcd369fc63fac97678e53880969aacc07fcf1`. Built from source HEAD `cb71796a` plus the QA-BUG-0068 working-tree fix and unrelated pre-existing Home/Reader/Server changes. Installed with `adb install -r`; app data was not cleared.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `30017`; installed APK SHA-256 `c1c120b592b8a66ff86cd01a742fcd369fc63fac97678e53880969aacc07fcf1`. Built immediately before commit `9acf3381be57bc96f64e05ad5d610dcc71d7f3f6` from the identical QA-BUG-0068 source tree, alongside unrelated pre-existing Home/Reader/Server changes. Installed with `adb install -r`; app data was not cleared.
 - **Fixture/privacy:** The existing app log file was absent. A temporary 32-byte synthetic QA-only log with no user/profile/book data was created in the app's private files directory using `run-as`; the system chooser showed the filename only. No share target was selected and no file was sent to another app. The exact temporary file was removed afterward and confirmed absent. File Logging and Only Log Crashes preferences were left unchanged. No contact names, log text, paths, profile labels/IDs or raw hierarchy were retained.
 
 ## Non-empty log
