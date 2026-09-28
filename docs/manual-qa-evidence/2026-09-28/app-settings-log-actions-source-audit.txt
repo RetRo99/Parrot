@@ -1,0 +1,21 @@
+# App Settings diagnostics sharing and clearing — pre-fix source audit
+
+- **Date:** 2026-09-28.
+- **Device/build context:** Samsung serial `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; installed `com.retro99.parrot` 0.4.5 (21), debug, PID `11251`, APK SHA-256 `75e418871ec005041a2f01259c080662bf4009d76aca7bef3763fd34f8916fd3`.
+- **Method:** Read-only audit of the App Settings ViewModel, `FileLogger`/`FileSharer` contracts and Android/iOS implementations. No Share Logs or Clear Logs action was invoked; no file contents, paths, credentials or profile values were read or retained. No device filesystem failure was induced.
+
+## Share Logs — QA-BUG-0068
+
+`AppSettingsViewModel.shareLogs()` calls `getLogContents()`. Empty content is shown as “No logs to share”; otherwise it logs `LogsShared` before calling `shareFile(path, ...)`. The Android `getLogContents()` maps read exceptions to an empty string. `AndroidFileSharer.shareFile()` returns if the file is missing and catches all exceptions from URI creation/chooser launch without notifying the caller. `FileSharer.shareFile` returns `Unit`. Thus the caller cannot distinguish an empty log from a failed read, cannot know whether the chooser opened, and has no error/retry state for file/launch failures. `logs_shared` occurs before chooser invocation and cannot indicate delivery/recipient acceptance. The iOS share implementation also suppresses exceptions, so the common outcome contract needs an explicit result or surfaced error.
+
+**Disposition:** QA-BUG-0068 confirmed by source audit only. Normal share, cancel, and actual failure variants remain NOT RUN. No Firebase delivery assertion is made.
+
+## Clear Logs — QA-BUG-0069
+
+`AppSettingsViewModel.clearLogs()` always calls `fileLogger.clearLogs()`, then emits `LogsCleared` and shows the success snackbar. Android `clearLogs()` catches exceptions and ignores the Boolean result from `File.delete()`. The common API returns `Unit`, so the ViewModel cannot verify the postcondition. A failed deletion is therefore indistinguishable from a successful clear at the UI/Analytics boundary. The iOS implementation must also be reviewed against the corrected contract.
+
+**Disposition:** QA-BUG-0069 confirmed by source audit only. Normal clear, missing-file behavior and a controlled failure are NOT RUN. No log contents were inspected or removed.
+
+## Fix/test boundary
+
+The findings were recorded before code changes. Fix each independently, with narrow host coverage and bounded Analytics/diagnostic outcomes. A chooser-opening event must not claim delivery; ordinary share-sheet cancellation must not create a Crashlytics issue. Unexpected file-read, chooser-launch or deletion failures should not be silently presented as successful/empty outcomes. Samsung fault-injection variants stay BLOCKED without a safe fixture. App Settings case 423 onward is paused until instrumentation fixes are committed and the intended APK is built/installed.
