@@ -3,6 +3,7 @@
 - **Date/time:** 2026-09-28, Samsung device local time CEST (UTC+0200).
 - **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; gesture navigation.
 - **App/build:** `com.retro99.parrot` 0.4.5 (21), debug. Worktree based on commit `ef8eaf59ddc78ba2a4639eb9e225b83ac3d53d76` plus the QA-BUG-0062 patch pending commit at test time. APK SHA-256 `8ac931ab87b487f88951d39968cdce53c7df193c624b4b6f1f6d4b282279f3d1`; the installed APK was pulled after installation and matched this hash. Samsung app PID during the observed run: `29954`.
+- **Committed source identity:** The tested code tree is now commit `1a1c747aeec5f3ce1c310c592a8956ffd5e8e60f` (`fix(settings): handle reader preference save outcomes [QA-BUG-0062]`); the commit contains the exact source tree used to build the APK.
 - **Scope:** QA-BUG-0062's ordinary Reader Settings save/Undo path, plus host-simulated failure/retry regression coverage. This is not completion of profile-isolation case 420. No profile labels/IDs, account data, book content, screenshot, raw hierarchy, or credential data are retained.
 
 ## Samsung functional retest
@@ -25,5 +26,5 @@ The relevant local debug-log sequence at 02:02:39–02:02:40 CEST was one `reade
 
 - Samsung debug logs show only local `DebugAnalyticsManager` output; they do **not** prove Firebase Analytics delivery. Analytics ingestion is waived for this run. No Firebase Crashlytics delivery claim is made.
 - The normal save and Undo paths produced bounded attempt/success events and correlated diagnostic breadcrumbs. No failed/cancelled outcome or exception was expected or induced on the phone; app-PID log search found no `FATAL EXCEPTION`, handled-exception marker, or Reader Settings save-failure marker during this run.
-- The synthetic host failure/retry test verifies one exception at the Reader Settings boundary and no duplicate repository/database-executor report. A safe Samsung database-write fault fixture is unavailable, so case 768's on-device failure/retry variant remains **BLOCKED**; Crashlytics backend delivery remains unverified.
+- The synthetic host failure/retry test verifies one exception at the Reader Settings boundary. Source tracing confirms the save path suppresses the lower-layer repository/database-executor reports so the ViewModel owns contextual reporting. A safe Samsung database-write fault fixture is unavailable, so case 768's on-device failure/retry variant remains **BLOCKED**; Crashlytics backend delivery remains unverified.
 - Case 420's profile A/B Reader Settings isolation comparison remains **NOT RUN** pending the focused QA-BUG-0062 commit. No cross-app or cross-device synchronization was tested.
