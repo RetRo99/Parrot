@@ -1,0 +1,16 @@
+# Case 423 and targeted Reader Settings close variant
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), PID `9345`, debug APK SHA-256 `2f3554db7a8397129859b140de2ea896f21c3588d168661e048760b1c5714801`; source commit `c163e9fee9e18317c1314390d8e8939d6933ef8f` plus unrelated pre-existing changes. Installed APK hash matched the local build.
+- **Preconditions/state:** App Settings opened on the retained disposable QA profile. Reader settings were not changed. No app data was cleared; original profile, server/book fixture and logging preferences were not altered.
+
+## Case 423 — Reader Settings from App Settings
+
+Tapped the visible “Reader settings” row. A modal bottom sheet appeared over App Settings with the “Reader settings” title, Reading Basics section and Theme/Font Size/Font Family/Reading Mode controls, Typography/Layout/Progress sections and Preview content. The sheet included a visible Close affordance and drag handle. Functional result: PASS; no loading/error state appeared.
+
+PID-filtered local DebugAnalyticsManager output recorded exactly one `reader_settings_screen_viewed` event with `source_screen=app_settings` and `entry_point=reader_settings_row`, plus one visible `reader_settings_route` breadcrumb. No profile, book or server identifiers were included. Firebase Analytics delivery is not proven by local output; ingestion is waived. No failure was induced and no Crashlytics report was expected.
+
+## `767/ReaderSettings/close` — targeted dismissal variant
+
+To return to App Settings for the next ordered case, tapped the visible Close affordance. The sheet closed and App Settings returned. Local output recorded one `navigation_back_attempted` and one `navigation_back` success with `entry_point=close_button`, matching correlated start/terminal breadcrumbs, then one visible App Settings route event/breadcrumb. No Reader setting changed and no exception/fatal marker was observed. This is only the close-button variant; system Back, outside tap and swipe dismissal remain NOT RUN, so parent case 767 is not complete. Firebase ingestion is waived; Crashlytics backend delivery is unverified.
