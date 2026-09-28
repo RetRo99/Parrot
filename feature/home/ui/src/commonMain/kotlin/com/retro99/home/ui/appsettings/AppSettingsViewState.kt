@@ -11,6 +11,8 @@ data class AppSettingsViewState(
     val hasCurrentlyReadingBook: Boolean = false,
     val showLogsClearedMessage: Boolean = false,
     val showNoLogsMessage: Boolean = false,
+    val showLogShareFailedMessage: Boolean = false,
+    val canRetryLogShare: Boolean = false,
     val showCurrentBookClearedMessage: Boolean = false,
     val showCurrentBookClearFailedMessage: Boolean = false,
     val canRetryCurrentBookClear: Boolean = false,

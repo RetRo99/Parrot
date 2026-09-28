@@ -76,21 +76,20 @@ class IosFileLogger : FileLogger {
     }
 
     override fun getLogContents(): String {
+        val fileManager = NSFileManager.defaultManager
+        if (!fileManager.fileExistsAtPath(logFilePath)) return ""
         return try {
-            val fileManager = NSFileManager.defaultManager
-            if (fileManager.fileExistsAtPath(logFilePath)) {
-                readFileContents(logFilePath)
-            } else {
-                ""
-            }
-        } catch (e: Exception) {
-            ""
+            readFileContents(logFilePath)
+        } catch (error: Exception) {
+            throw IllegalStateException("Diagnostic logs could not be read", error)
         }
     }
 
     private fun readFileContents(path: String): String {
-        val data = NSData.dataWithContentsOfFile(path) ?: return ""
-        return NSString.create(data = data, encoding = NSUTF8StringEncoding)?.toString() ?: ""
+        val data = NSData.dataWithContentsOfFile(path)
+            ?: error("Diagnostic logs could not be read")
+        return NSString.create(data = data, encoding = NSUTF8StringEncoding)?.toString()
+            ?: error("Diagnostic logs could not be decoded")
     }
 
     private fun appendToLogFile(entry: String) {

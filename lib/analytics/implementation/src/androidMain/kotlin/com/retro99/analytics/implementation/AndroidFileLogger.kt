@@ -8,6 +8,7 @@ import com.retro99.analytics.api.FileLogger.Companion.MAX_LOG_SIZE_BYTES
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import java.io.File
+import java.io.IOException
 import kotlin.time.Clock
 
 /**
@@ -57,14 +58,11 @@ class AndroidFileLogger(
     }
 
     override fun getLogContents(): String {
+        if (!logFile.exists()) return ""
         return try {
-            if (logFile.exists()) {
-                logFile.readText()
-            } else {
-                ""
-            }
-        } catch (e: Exception) {
-            ""
+            logFile.readText()
+        } catch (error: Exception) {
+            throw IOException("Diagnostic logs could not be read", error)
         }
     }
 

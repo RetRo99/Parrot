@@ -1,0 +1,20 @@
+# QA-BUG-0068 Share Logs retest
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), gesture navigation (`navigation_mode=2`).
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `30017`; installed APK SHA-256 `c1c120b592b8a66ff86cd01a742fcd369fc63fac97678e53880969aacc07fcf1`. Built from source HEAD `cb71796a` plus the QA-BUG-0068 working-tree fix and unrelated pre-existing Home/Reader/Server changes. Installed with `adb install -r`; app data was not cleared.
+- **Fixture/privacy:** The existing app log file was absent. A temporary 32-byte synthetic QA-only log with no user/profile/book data was created in the app's private files directory using `run-as`; the system chooser showed the filename only. No share target was selected and no file was sent to another app. The exact temporary file was removed afterward and confirmed absent. File Logging and Only Log Crashes preferences were left unchanged. No contact names, log text, paths, profile labels/IDs or raw hierarchy were retained.
+
+## Non-empty log
+
+From App Settings → Support, tapped Share Logs. Android's `com.android.intentresolver/.ChooserActivityLauncher` became the foreground activity. System Back dismissed it and returned to Parrot's MainActivity/App Settings; no share recipient was chosen. The previewed attachment was `parrot_logs.txt` on the initial execution; the final hash-matched build again launched the chooser and returned correctly.
+
+PID-filtered local debug output on the final APK showed exactly one `log_share_attempted` and one `log_share_sheet_launch_succeeded`, plus a correlated start/terminal `share_logs` breadcrumb pair. The terminal event means the platform accepted the chooser-launch request; it does **not** claim that a recipient was chosen or the file delivered. The local DebugAnalyticsManager is not Firebase Analytics delivery evidence. Firebase ingestion is waived; no Crashlytics failure was induced or delivered.
+
+## Empty log
+
+After removing the synthetic fixture, Share Logs did not open a chooser. The first no-log interaction was not captured before its snackbar timed out; the action was repeated once and the live UI hierarchy showed “No logs to share.” Local output recorded two distinct `log_share_attempted` / `log_share_unavailable(reason_code=no_logs)` pairs for the two empty-log interactions, each with a correlated start/terminal breadcrumb pair and no exception. This is an ordinary unavailable outcome, not a Crashlytics failure.
+
+## Host fault-path coverage and limits
+
+`:feature:home:ui:testAndroidHostTest` passed (33 tests total, 0 failures/errors/skips), including all five `LogShareOperationTest` cases: empty file, successful chooser launch, log-read failure, chooser-launch exception, and cancellation without a non-fatal. `:androidApp:assembleDebug` passed. iOS Simulator Kotlin compilation passed for `:base-ui`, `:lib:analytics:implementation`, and `:feature:home:ui`; iOS runtime tests were not run. Samsung fault injection for unreadable/missing file and chooser launch failure was not performed; those variants remain BLOCKED without a safe device fixture. Closing the system chooser with Back returned to Parrot, but the current Android chooser/FileSharer contract does not report whether the user dismissed it or selected a recipient, so no cancellation/delivery event is claimed.

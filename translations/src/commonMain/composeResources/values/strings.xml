@@ -70,6 +70,7 @@
     <string name="app_settings_clear_logs_description">Delete all stored logs</string>
     <string name="app_settings_logs_cleared">Logs cleared</string>
     <string name="app_settings_no_logs">No logs to share</string>
+    <string name="app_settings_log_operation_failed" tools:ignore="MissingTranslation">Couldn’t complete the log operation.</string>
     <string name="app_settings_enable_logging">Enable File Logging</string>
     <string name="app_settings_enable_logging_description">Write logs to file for debugging</string>
     <string name="app_settings_log_crashes_only">Only Log Crashes</string>

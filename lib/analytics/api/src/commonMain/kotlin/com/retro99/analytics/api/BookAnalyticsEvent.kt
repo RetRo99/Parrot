@@ -1065,8 +1065,56 @@ sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
         )
     }
 
-    data object LogsShared : AppSettingsAnalyticsEvent {
-        override val name: String = "logs_shared"
+    data class LogShareAttempted(val isRetry: Boolean) : AppSettingsAnalyticsEvent {
+        override val name: String = "log_share_attempted"
+        override val parameters: Map<String, Any> = appSettingsLogOperationParameters(
+            action = "share_logs",
+            stage = "started",
+            outcome = "started",
+            isRetry = isRetry,
+        )
+    }
+
+    data class LogShareSheetLaunchSucceeded(val isRetry: Boolean) : AppSettingsAnalyticsEvent {
+        override val name: String = "log_share_sheet_launch_succeeded"
+        override val parameters: Map<String, Any> = appSettingsLogOperationParameters(
+            action = "share_logs",
+            stage = "terminal",
+            outcome = "succeeded",
+            isRetry = isRetry,
+        )
+    }
+
+    data class LogShareUnavailable(val reasonCode: String, val isRetry: Boolean) : AppSettingsAnalyticsEvent {
+        override val name: String = "log_share_unavailable"
+        override val parameters: Map<String, Any> = appSettingsLogOperationParameters(
+            action = "share_logs",
+            stage = "terminal",
+            outcome = "unavailable",
+            reasonCode = reasonCode,
+            isRetry = isRetry,
+        )
+    }
+
+    data class LogShareFailed(val reasonCode: String, val isRetry: Boolean) : AppSettingsAnalyticsEvent {
+        override val name: String = "log_share_failed"
+        override val parameters: Map<String, Any> = appSettingsLogOperationParameters(
+            action = "share_logs",
+            stage = "terminal",
+            outcome = "failed",
+            reasonCode = reasonCode,
+            isRetry = isRetry,
+        )
+    }
+
+    data class LogShareCancelled(val isRetry: Boolean) : AppSettingsAnalyticsEvent {
+        override val name: String = "log_share_cancelled"
+        override val parameters: Map<String, Any> = appSettingsLogOperationParameters(
+            action = "share_logs",
+            stage = "terminal",
+            outcome = "cancelled",
+            isRetry = isRetry,
+        )
     }
 
     data object LogsCleared : AppSettingsAnalyticsEvent {
@@ -1117,6 +1165,22 @@ sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
     }
 
     companion object {
+        private fun appSettingsLogOperationParameters(
+            action: String,
+            stage: String,
+            outcome: String,
+            reasonCode: String? = null,
+            isRetry: Boolean,
+        ): Map<String, Any> = buildMap {
+            put("screen", "app_settings")
+            put("action", action)
+            put("operation", action)
+            put("stage", stage)
+            put("outcome", outcome)
+            reasonCode?.let { put("reason_code", it) }
+            put("is_retry", isRetry)
+        }
+
         private fun profileOperationParameters(
             operation: ProfileOperation,
             stage: String,

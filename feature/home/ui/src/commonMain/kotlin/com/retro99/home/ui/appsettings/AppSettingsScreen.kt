@@ -49,6 +49,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -85,6 +86,7 @@ import resources.translations.app_settings_current_book_clear_failed
 import resources.translations.app_settings_enable_logging
 import resources.translations.app_settings_enable_logging_description
 import resources.translations.app_settings_logs_cleared
+import resources.translations.app_settings_log_operation_failed
 import resources.translations.app_settings_log_crashes_only
 import resources.translations.app_settings_log_crashes_only_description
 import resources.translations.app_settings_no_logs
@@ -119,6 +121,7 @@ import resources.translations.app_settings_show_continue_reading_description
 import resources.translations.app_settings_title
 import resources.translations.app_settings_version
 import resources.translations.general_cancel
+import resources.translations.general_retry
 
 @Composable
 fun AppSettingsScreen(
@@ -158,6 +161,8 @@ private fun AppSettingsScreenContent(
     val snackbarHostState = remember { SnackbarHostState() }
     val logsClearedMessage = stringResource(StringRes.app_settings_logs_cleared)
     val noLogsMessage = stringResource(StringRes.app_settings_no_logs)
+    val logOperationFailedMessage = stringResource(StringRes.app_settings_log_operation_failed)
+    val retryMessage = stringResource(StringRes.general_retry)
     val currentBookClearedMessage = stringResource(StringRes.app_settings_current_book_cleared)
     val currentBookClearFailedMessage = stringResource(StringRes.app_settings_current_book_clear_failed)
     val profileOperationFailedMessage = stringResource(StringRes.app_settings_profile_operation_failed)
@@ -173,6 +178,19 @@ private fun AppSettingsScreenContent(
         if (viewState.showNoLogsMessage) {
             snackbarHostState.showSnackbar(noLogsMessage)
             intentDispatcher(AppSettingsIntent.OnNoLogsMessageShown)
+        }
+    }
+
+    LaunchedEffect(viewState.showLogShareFailedMessage) {
+        if (viewState.showLogShareFailedMessage) {
+            val result = snackbarHostState.showSnackbar(
+                message = logOperationFailedMessage,
+                actionLabel = retryMessage,
+            )
+            intentDispatcher(AppSettingsIntent.OnShareLogsFailedMessageShown)
+            if (result == SnackbarResult.ActionPerformed) {
+                intentDispatcher(AppSettingsIntent.OnShareLogsClicked)
+            }
         }
     }
 

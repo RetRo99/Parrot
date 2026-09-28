@@ -136,6 +136,7 @@ class AppSettingsViewModel(
             is AppSettingsIntent.OnOpenLastBookToggled -> setOpenLastBookOnLaunch(intent.enabled)
             is AppSettingsIntent.OnShowContinueReadingToggled -> setShowContinueReading(intent.enabled)
             AppSettingsIntent.OnShareLogsClicked -> shareLogs()
+            AppSettingsIntent.OnShareLogsFailedMessageShown -> onLogShareFailedMessageShown()
             AppSettingsIntent.OnClearLogsClicked -> clearLogs()
             AppSettingsIntent.OnLogsClearedMessageShown -> onLogsClearedMessageShown()
             AppSettingsIntent.OnNoLogsMessageShown -> onNoLogsMessageShown()
@@ -526,18 +527,40 @@ class AppSettingsViewModel(
     }
 
     private fun shareLogs() {
-        val logContents = fileLogger.getLogContents()
-        if (logContents.isEmpty()) {
-            updateState { it.copy(showNoLogsMessage = true) }
-            return
-        }
-        analytics.logEvent(AppSettingsAnalyticsEvent.LogsShared)
-        val logFilePath = fileLogger.getLogFilePath()
-        fileSharer.shareFile(
-            filePath = logFilePath,
-            mimeType = "text/plain",
-            title = "Share App Logs",
+        val isRetry = viewState.value.canRetryLogShare
+        val outcome = executeLogShare(
+            analytics = analytics,
+            isRetry = isRetry,
+            readLogContents = fileLogger::getLogContents,
+            launchShareSheet = {
+                fileSharer.shareFile(
+                    filePath = fileLogger.getLogFilePath(),
+                    mimeType = "text/plain",
+                    title = "Share App Logs",
+                )
+            },
         )
+        updateState {
+            when (outcome) {
+                LogShareOutcome.NoLogs -> it.copy(
+                    showNoLogsMessage = true,
+                    showLogShareFailedMessage = false,
+                    canRetryLogShare = false,
+                )
+                LogShareOutcome.Opened -> it.copy(
+                    showLogShareFailedMessage = false,
+                    canRetryLogShare = false,
+                )
+                LogShareOutcome.Failed -> it.copy(
+                    showLogShareFailedMessage = true,
+                    canRetryLogShare = true,
+                )
+            }
+        }
+    }
+
+    private fun onLogShareFailedMessageShown() {
+        updateState { it.copy(showLogShareFailedMessage = false) }
     }
 
     private fun clearLogs() {

@@ -8,6 +8,7 @@ sealed interface AppSettingsIntent : BaseIntent {
     data class OnOpenLastBookToggled(val enabled: Boolean) : AppSettingsIntent
     data class OnShowContinueReadingToggled(val enabled: Boolean) : AppSettingsIntent
     data object OnShareLogsClicked : AppSettingsIntent
+    data object OnShareLogsFailedMessageShown : AppSettingsIntent
     data object OnClearLogsClicked : AppSettingsIntent
     data object OnLogsClearedMessageShown : AppSettingsIntent
     data object OnNoLogsMessageShown : AppSettingsIntent
