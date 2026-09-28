@@ -23,6 +23,7 @@ class ServerManagementViewModel(
     @Provided private val serverRegistry: ServerRegistry,
     @Provided private val analytics: Analytics,
     @InjectedParam private val onNavigateToLogin: (String?, Boolean) -> Unit,
+    @InjectedParam private val stopPlaybackForServer: (String, DiagnosticContext) -> Unit,
 ) : BaseViewModel<ServerManagementViewState, ServerManagementIntent>(ServerManagementViewState()) {
 
     init {
@@ -100,6 +101,9 @@ class ServerManagementViewModel(
             serverType = serverType,
             operation = ServerManagementAnalyticsEvent.Operation.Logout,
             isRetry = isRetry,
+            beforeMutation = { operationContext ->
+                stopPlaybackForServer(serverId, operationContext)
+            },
         ) {
             serverRegistry.clearCredentials(serverId)
         }
@@ -121,6 +125,7 @@ class ServerManagementViewModel(
         serverType: ServerType,
         operation: ServerManagementAnalyticsEvent.Operation,
         isRetry: Boolean,
+        beforeMutation: suspend (DiagnosticContext) -> Unit = {},
         mutate: suspend () -> Unit,
     ) {
         if (operationInProgress) return
@@ -134,6 +139,7 @@ class ServerManagementViewModel(
                     operation = operation,
                     serverType = serverType,
                     isRetry = isRetry,
+                    beforeMutation = beforeMutation,
                     mutate = mutate,
                 )
                 if (!succeeded) {

@@ -8,6 +8,7 @@ import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.analytics.api.ReaderSettingsScreenViewed
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
+import com.retro99.analytics.api.StatisticsAnalyticsEvent
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.home.ui.deeplink.DeepLinkDestination
@@ -21,6 +22,7 @@ import com.retro99.reader.domain.usecase.ClearCurrentlyReadingUseCase
 import com.retro99.reader.domain.usecase.GetCurrentlyReadingUseCase
 import com.retro99.reader.domain.usecase.ObserveCurrentlyReadingUseCase
 import com.retro99.reader.ui.playback.NowPlayingProvider
+import com.retro99.reader.ui.playback.stopForServer
 import com.retro99.user.api.UserRegistry
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -71,6 +73,32 @@ class HomeNavigationViewModel(
 
     private val logger = Logger.withTag("HomeNavigationViewModel")
     private var hasCheckedOpenLastBookOnLaunch = false
+
+    /** Stops an active media session only when it belongs to the server being logged out. */
+    fun stopPlaybackForServer(serverId: String, operationContext: DiagnosticContext) {
+        val stopped = try {
+            nowPlayingProvider.stopForServer(serverId) {
+                analytics.logBreadcrumb(
+                    operationContext.copy(stage = "playback_stop", outcome = "started"),
+                )
+            }
+        } catch (error: Exception) {
+            analytics.logBreadcrumb(
+                operationContext.copy(
+                    stage = "playback_stop",
+                    outcome = "failed",
+                    reasonCode = "playback_stop_failed",
+                ),
+            )
+            throw error
+        }
+
+        if (stopped) {
+            analytics.logBreadcrumb(
+                operationContext.copy(stage = "playback_stop", outcome = "succeeded"),
+            )
+        }
+    }
 
     /**
      * Navigation events that should be consumed by the composable to perform navigation.
@@ -735,4 +763,3 @@ class HomeNavigationViewModel(
         }
     }
 }
-import com.retro99.analytics.api.StatisticsAnalyticsEvent

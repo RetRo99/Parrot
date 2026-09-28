@@ -1,7 +1,6 @@
 package com.retro99.reader.ui.playback
 
 import com.retro99.books.domain.model.BookType
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -50,3 +49,15 @@ interface NowPlayingProvider {
     fun stop()
 }
 
+/** Stops playback only when the active media session belongs to [serverId]. */
+fun NowPlayingProvider.stopForServer(
+    serverId: String,
+    onStopping: () -> Unit = {},
+): Boolean {
+    val activeInfo = nowPlayingInfo.value ?: return false
+    if (activeInfo.serverId != serverId) return false
+
+    onStopping()
+    stop()
+    return true
+}

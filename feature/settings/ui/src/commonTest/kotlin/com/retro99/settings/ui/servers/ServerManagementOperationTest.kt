@@ -14,6 +14,67 @@ import kotlin.test.assertTrue
 
 class ServerManagementOperationTest {
     @Test
+    fun beforeMutationRunsAfterAttemptAndBeforeTheRegistryMutation() = runTest {
+        val analytics = RecordingAnalytics()
+        var preparationContext: DiagnosticContext? = null
+
+        val succeeded = runServerManagementOperation(
+            analytics = analytics,
+            operation = ServerManagementAnalyticsEvent.Operation.Logout,
+            serverType = ServerType.Storyteller,
+            isRetry = false,
+            beforeMutation = { context ->
+                preparationContext = context
+                analytics.order += "prepare"
+            },
+        ) {
+            analytics.order += "mutation"
+        }
+
+        assertTrue(succeeded)
+        assertEquals(
+            listOf(
+                "event:server_logout_attempted",
+                "breadcrumb:started:started",
+                "prepare",
+                "mutation",
+                "event:server_logged_out",
+                "breadcrumb:terminal:succeeded",
+            ),
+            analytics.order,
+        )
+        assertEquals("started", preparationContext?.outcome)
+        assertEquals("server_logout", preparationContext?.operation)
+        assertEquals(analytics.breadcrumbs.first().correlationId, preparationContext?.correlationId)
+    }
+
+    @Test
+    fun preparationFailureDoesNotMutateRegistryAndIsReportedOnce() = runTest {
+        val analytics = RecordingAnalytics()
+        var mutationRan = false
+
+        val succeeded = runServerManagementOperation(
+            analytics = analytics,
+            operation = ServerManagementAnalyticsEvent.Operation.Logout,
+            serverType = ServerType.Storyteller,
+            isRetry = false,
+            beforeMutation = {
+                throw IllegalStateException("playback shutdown failed")
+            },
+        ) {
+            mutationRan = true
+        }
+
+        assertFalse(succeeded)
+        assertFalse(mutationRan)
+        assertEquals(listOf("server_logout_attempted", "server_logout_failed"), analytics.events.map { it.name })
+        assertEquals(1, analytics.exceptions.size)
+        assertEquals("failed", analytics.exceptions.single().second.outcome)
+        assertEquals(2, analytics.breadcrumbs.size)
+        assertEquals("failed", analytics.breadcrumbs.last().outcome)
+    }
+
+    @Test
     fun successLogsAttemptBeforeMutationAndCompletionAfterMutation() = runTest {
         for (operation in ServerManagementAnalyticsEvent.Operation.entries) {
             val analytics = RecordingAnalytics()

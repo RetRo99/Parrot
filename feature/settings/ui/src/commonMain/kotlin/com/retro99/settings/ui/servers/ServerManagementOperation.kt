@@ -14,6 +14,7 @@ internal suspend fun runServerManagementOperation(
     operation: ServerManagementAnalyticsEvent.Operation,
     serverType: ServerType,
     isRetry: Boolean,
+    beforeMutation: suspend (DiagnosticContext) -> Unit = {},
     mutate: suspend () -> Unit,
 ): Boolean {
     val correlationId = Uuid.random().toString()
@@ -38,6 +39,7 @@ internal suspend fun runServerManagementOperation(
     analytics.logBreadcrumb(context(stage = "started", outcome = "started"))
 
     try {
+        beforeMutation(context(stage = "started", outcome = "started"))
         mutate()
     } catch (cancellation: CancellationException) {
         analytics.logEvent(

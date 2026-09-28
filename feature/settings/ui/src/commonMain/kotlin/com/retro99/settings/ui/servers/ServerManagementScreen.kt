@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.server.api.ServerAuthState
 import com.retro99.server.api.ServerType
 import com.retro99.settings.ui.servers.model.ServerWithStatusUiModel
@@ -68,9 +69,12 @@ import resources.translations.settings_server_type_label
 fun ServerManagementScreen(
     onNavigateToLogin: (String?, Boolean) -> Unit,
     onBack: () -> Unit,
+    stopPlaybackForServer: (String, DiagnosticContext) -> Unit,
     failedLoginServerIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
-    viewModel: ServerManagementViewModel = koinViewModel { parametersOf(onNavigateToLogin) },
+    viewModel: ServerManagementViewModel = koinViewModel {
+        parametersOf(onNavigateToLogin, stopPlaybackForServer)
+    },
 ) {
     BaseScreen(
         modifier = modifier,

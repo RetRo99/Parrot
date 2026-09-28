@@ -416,6 +416,7 @@ fun HomeNavigation(
                             onNavigateToLogin = onNavigateToLogin,
                             failedLoginServerIds = failedExistingServerLoginIds,
                             onBack = { requestBack("toolbar_back") },
+                            stopPlaybackForServer = viewModel::stopPlaybackForServer,
                             modifier = Modifier,
                         )
                     }
