@@ -44,8 +44,13 @@ class SupertonicOnnxSynthesizer(
     override fun availableVoices(): List<TtsVoice> {
         val isDownloaded = modelManager.isSupertonicModelDownloaded()
         val downloadSizeBytes = modelManager.supertonicDownloadSizeBytes()
+        val updateAvailable = modelManager.isSupertonicUpdateAvailable()
         return SUPERTONIC_VOICES.map { voice ->
-            voice.copy(isDownloaded = isDownloaded, downloadSizeBytes = downloadSizeBytes)
+            voice.copy(
+                isDownloaded = isDownloaded,
+                downloadSizeBytes = downloadSizeBytes,
+                updateAvailable = updateAvailable,
+            )
         }
     }
 
@@ -53,8 +58,22 @@ class SupertonicOnnxSynthesizer(
 
     override suspend fun prepareVoice(
         voiceId: String?,
+        updateToLatest: Boolean,
         onProgress: (TtsPreparationProgress) -> Unit,
-    ): Boolean = ensureLoaded(onProgress) != null
+    ): Boolean {
+        if (updateToLatest) {
+            val updated = modelManager.ensureSupertonicModel(onProgress, updateToLatest = true) != null
+            if (!updated) return false
+            loadMutex.withLock {
+                stop()
+                releaseEngine()
+            }
+        }
+        return ensureLoaded(onProgress) != null
+    }
+
+    override fun activeModelVersion(voiceId: String?): String? =
+        modelManager.activeSupertonicVersion()
 
     override suspend fun deleteNeuralVoicePackage(
         voicePackage: NeuralVoicePackage,

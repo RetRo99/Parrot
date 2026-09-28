@@ -23,7 +23,13 @@ class TtsAudioGenerator(
         pitch: Float,
     ): TtsSynthesisResult {
         val effectiveRate = TtsSpeechRate.coerce(rate)
-        val key = cache.key(voiceId.orEmpty(), effectiveRate, pitch, text)
+        val key = cache.key(
+            voiceId = voiceId.orEmpty(),
+            modelVersion = synthesizer.activeModelVersion(voiceId),
+            rate = effectiveRate,
+            pitch = pitch,
+            text = text,
+        )
         return withSynthesisLock(key) {
             cache.get(key)?.let { cachedFile ->
                 return@withSynthesisLock TtsSynthesisResult(

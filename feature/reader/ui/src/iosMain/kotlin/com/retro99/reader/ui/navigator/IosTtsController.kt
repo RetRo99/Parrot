@@ -43,6 +43,7 @@ class IosTtsController : TtsController {
 
     override suspend fun prepareVoice(
         voiceId: String?,
+        updateToLatest: Boolean,
         onProgress: (TtsPreparationProgress) -> Unit,
     ): Boolean = false
 

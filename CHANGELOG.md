@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Prompted voice pack updates: when a new model version is published, voice settings offers "Download now / Later" instead of silently re-downloading. Updates install side-by-side and only switch once fully verified — a failed update leaves the current version fully working — the previous version is kept until the next update succeeds, and unchanged files are reused without downloading.
+
 ### Changed
 - Replaced TTS voice pack preparation (archive download + on-device bzip2 extraction) with resumable, checksum-verified per-file downloads driven by a model manifest. Voice pack download sizes in the UI now come from the manifest instead of hardcoded constants.
 

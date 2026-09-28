@@ -276,6 +276,10 @@ class ReaderViewModel(
                 downloadNeuralVoicePackage(intent.voicePackage)
             }
 
+            is ReaderIntent.UpdateNeuralVoicePackage -> {
+                updateNeuralVoicePackage(intent.voicePackage)
+            }
+
             is ReaderIntent.DeleteNeuralVoicePackage -> {
                 deleteNeuralVoicePackage(intent.voicePackage)
             }
@@ -823,6 +827,14 @@ class ReaderViewModel(
         prepareTtsVoice(neuralVoice.id)
     }
 
+    private fun updateNeuralVoicePackage(voicePackage: NeuralVoicePackage) {
+        val voiceId = currentViewState().ttsVoices
+            .firstOrNull { voice -> voice.neuralVoicePackage == voicePackage }
+            ?.id
+            ?: return
+        prepareTtsVoice(voiceId, updateToLatest = true)
+    }
+
     private fun acceptSupertonicTermsAndDownload() {
         supertonicTermsStore.acceptCurrentTerms()
         updateState { state -> state.copy(hasAcceptedSupertonicTerms = true) }
@@ -840,6 +852,7 @@ class ReaderViewModel(
     private fun prepareTtsVoice(
         voiceId: String,
         onPrepared: (() -> Unit)? = null,
+        updateToLatest: Boolean = false,
     ) {
         val voicePackage = voiceId.neuralVoicePackage() ?: return
         if (
@@ -856,7 +869,7 @@ class ReaderViewModel(
         val initialProgress = currentViewState().ttsVoices
             .firstOrNull { voice -> voice.id == voiceId }
             ?.let { voice ->
-                if (voice.needsDownload) {
+                if (voice.needsDownload || updateToLatest) {
                     TtsPreparationProgress.Downloading(
                         downloadedBytes = 0L,
                         totalBytes = voice.downloadSizeBytes,
@@ -877,7 +890,7 @@ class ReaderViewModel(
                 )
             }
             try {
-                val isPrepared = ttsController.prepareVoice(voiceId) { progress ->
+                val isPrepared = ttsController.prepareVoice(voiceId, updateToLatest) { progress ->
                     updateState { state ->
                         state.copy(ttsVoicePreparationProgress = progress)
                     }

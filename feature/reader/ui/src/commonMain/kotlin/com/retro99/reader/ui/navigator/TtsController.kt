@@ -43,6 +43,7 @@ interface TtsController : NarrationController {
 
     suspend fun prepareVoice(
         voiceId: String?,
+        updateToLatest: Boolean = false,
         onProgress: (TtsPreparationProgress) -> Unit,
     ): Boolean
 

@@ -30,6 +30,7 @@ data class TtsVoice(
     val isNeural: Boolean = false,
     val downloadSizeBytes: Long? = null,
     val isDownloaded: Boolean = true,
+    val updateAvailable: Boolean = false,
 ) {
     val isHighQuality: Boolean
         get() = quality >= 400 || isNeural

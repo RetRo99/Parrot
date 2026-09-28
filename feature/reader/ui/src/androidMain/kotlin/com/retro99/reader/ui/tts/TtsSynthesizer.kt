@@ -28,8 +28,12 @@ interface TtsSynthesizer {
 
     suspend fun prepareVoice(
         voiceId: String?,
+        updateToLatest: Boolean = false,
         onProgress: (TtsPreparationProgress) -> Unit,
     ): Boolean = awaitReady()
+
+    /** Model version the audio cache key is scoped to, or null for stateless voices. */
+    fun activeModelVersion(voiceId: String?): String? = null
 
     suspend fun deleteNeuralVoicePackage(
         voicePackage: NeuralVoicePackage,

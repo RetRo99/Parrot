@@ -18,8 +18,13 @@ class TtsAudioCache(
         File(context.cacheDir, CACHE_DIR_NAME).apply { mkdirs() }
     }
 
-    fun key(voiceId: String, rate: Float, pitch: Float, text: String): String =
-        sha256("$voiceId|${rate.rounded()}|${pitch.rounded()}|$text")
+    fun key(
+        voiceId: String,
+        modelVersion: String?,
+        rate: Float,
+        pitch: Float,
+        text: String,
+    ): String = sha256("$voiceId|${modelVersion.orEmpty()}|${rate.rounded()}|${pitch.rounded()}|$text")
 
     fun fileFor(key: String): File = File(cacheDir, "$key$FILE_EXTENSION")
 

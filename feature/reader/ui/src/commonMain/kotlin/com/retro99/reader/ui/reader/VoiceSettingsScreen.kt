@@ -110,6 +110,11 @@ import resources.translations.reader_tts_neural_voice_pack_downloaded
 import resources.translations.reader_tts_neural_voice_pack_downloaded_compact
 import resources.translations.reader_tts_neural_voice_pack_not_downloaded
 import resources.translations.reader_tts_neural_voice_pack_not_downloaded_compact
+import resources.translations.reader_tts_update
+import resources.translations.reader_tts_update_available_message
+import resources.translations.reader_tts_update_available_title
+import resources.translations.reader_tts_update_later
+import resources.translations.reader_tts_update_now
 import resources.translations.reader_tts_neural_voices_description
 import resources.translations.reader_tts_normal
 import resources.translations.reader_tts_on_device
@@ -156,6 +161,7 @@ internal fun VoiceSettingsScreen(
     isPreviewPlaying: Boolean,
     onVoiceSelected: (String?) -> Unit,
     onDownloadNeuralVoicePackage: (NeuralVoicePackage) -> Unit,
+    onUpdateNeuralVoicePackage: (NeuralVoicePackage) -> Unit,
     onDeleteNeuralVoicePackage: (NeuralVoicePackage) -> Unit,
     onRetryVoicePreparation: (NeuralVoicePackage) -> Unit,
     onAcceptSupertonicTermsAndDownload: () -> Unit,
@@ -171,6 +177,7 @@ internal fun VoiceSettingsScreen(
     var isPitchControlExpanded by rememberSaveable { mutableStateOf(false) }
     var voicePackagePendingDeletion by remember { mutableStateOf<NeuralVoicePackage?>(null) }
     var showSupertonicTerms by remember { mutableStateOf(false) }
+    var dismissedUpdatePackage by remember { mutableStateOf<NeuralVoicePackage?>(null) }
     var showSupertonicLicense by remember { mutableStateOf(false) }
     var returnToTermsAfterLicense by remember { mutableStateOf(false) }
     var supertonicLicenseText by remember { mutableStateOf("") }
@@ -368,6 +375,8 @@ internal fun VoiceSettingsScreen(
                     NeuralVoicePackageStatus(
                         voicePackage = visibleVoicePackage,
                         voiceCount = visibleNeuralVoices.size,
+                        isUpdateAvailable = visibleNeuralVoices
+                            .isNeuralVoicePackageUpdateAvailable(visibleVoicePackage),
                         downloadSizeMb = visibleNeuralVoices
                             .mapNotNull { voice -> voice.downloadSizeBytes }
                             .firstOrNull()
@@ -390,6 +399,9 @@ internal fun VoiceSettingsScreen(
                         },
                         onRetryPreparation = {
                             onRetryVoicePreparation(visibleVoicePackage)
+                        },
+                        onUpdate = {
+                            onUpdateNeuralVoicePackage(visibleVoicePackage)
                         },
                         onManage = {
                             voicePackagePendingDeletion = visibleVoicePackage
@@ -530,6 +542,24 @@ internal fun VoiceSettingsScreen(
                     Text(stringResource(StringRes.general_cancel))
                 }
             },
+        )
+    }
+
+    val updateAvailablePackage = neuralVoices
+        .firstOrNull { voice -> voice.updateAvailable && voice.isDownloaded }
+        ?.neuralVoicePackage
+    if (
+        updateAvailablePackage != null &&
+        dismissedUpdatePackage != updateAvailablePackage &&
+        attentionVoicePackage == null
+    ) {
+        VoicePackUpdateDialog(
+            voicePackage = updateAvailablePackage,
+            onDownload = {
+                dismissedUpdatePackage = updateAvailablePackage
+                onUpdateNeuralVoicePackage(updateAvailablePackage)
+            },
+            onLater = { dismissedUpdatePackage = updateAvailablePackage },
         )
     }
 
@@ -801,6 +831,7 @@ private fun VoiceSourceSelector(
 private fun NeuralVoicePackageStatus(
     voicePackage: NeuralVoicePackage,
     voiceCount: Int,
+    isUpdateAvailable: Boolean,
     downloadSizeMb: Int?,
     isDownloaded: Boolean,
     isPreparing: Boolean,
@@ -811,6 +842,7 @@ private fun NeuralVoicePackageStatus(
     hasAcceptedTerms: Boolean,
     onDownload: () -> Unit,
     onRetryPreparation: () -> Unit,
+    onUpdate: () -> Unit,
     onManage: () -> Unit,
     onViewLicense: () -> Unit,
 ) {
@@ -889,8 +921,15 @@ private fun NeuralVoicePackageStatus(
                 modifier = Modifier.weight(1f),
             )
             when {
-                isDownloaded && !isPreparing && !isDeleting -> TextButton(onClick = onManage) {
-                    Text(stringResource(StringRes.reader_tts_manage))
+                isDownloaded && !isPreparing && !isDeleting -> {
+                    if (isUpdateAvailable) {
+                        Button(onClick = onUpdate) {
+                            Text(stringResource(StringRes.reader_tts_update))
+                        }
+                    }
+                    TextButton(onClick = onManage) {
+                        Text(stringResource(StringRes.reader_tts_manage))
+                    }
                 }
 
                 !isPreparing && !isDeleting -> Button(onClick = onDownload) {
@@ -915,6 +954,38 @@ private fun NeuralVoicePackageStatus(
             )
         }
     }
+}
+
+@Composable
+private fun VoicePackUpdateDialog(
+    voicePackage: NeuralVoicePackage,
+    onDownload: () -> Unit,
+    onLater: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onLater,
+        title = {
+            Text(stringResource(StringRes.reader_tts_update_available_title))
+        },
+        text = {
+            Text(
+                stringResource(
+                    StringRes.reader_tts_update_available_message,
+                    voicePackage.displayName(),
+                ),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onDownload) {
+                Text(stringResource(StringRes.reader_tts_update_now))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onLater) {
+                Text(stringResource(StringRes.reader_tts_update_later))
+            }
+        },
+    )
 }
 
 @Composable
@@ -1401,6 +1472,12 @@ internal fun List<TtsVoice>.isNeuralVoicePackageDownloaded(
 ): Boolean {
     val packageVoices = filter { voice -> voice.neuralVoicePackage == voicePackage }
     return packageVoices.isNotEmpty() && packageVoices.all { voice -> voice.isDownloaded }
+}
+
+internal fun List<TtsVoice>.isNeuralVoicePackageUpdateAvailable(
+    voicePackage: NeuralVoicePackage,
+): Boolean = any { voice ->
+    voice.neuralVoicePackage == voicePackage && voice.updateAvailable
 }
 
 internal fun List<TtsVoice>.toSystemVoiceGroups(): List<SystemVoiceGroup> =

@@ -38,7 +38,7 @@ UNPACKED_PAIRS=()
 for spec in "${MODELS[@]}"; do
   IFS='|' read -r model_id archive root_dir <<< "$spec"
   echo "Fetching upstream archive: $archive"
-  curl -fL --retry 3 -o "$WORK_DIR/$archive" "$UPSTREAM_BASE/$archive"
+  curl -fL --retry 5 --retry-all-errors --retry-delay 2 -o "$WORK_DIR/$archive" "$UPSTREAM_BASE/$archive"
   echo "Unpacking $archive"
   tar -xjf "$WORK_DIR/$archive" -C "$UNPACK_DIR"
   if [ ! -d "$UNPACK_DIR/$root_dir" ]; then

@@ -43,8 +43,13 @@ class SherpaOnnxSynthesizer(
     override fun availableVoices(): List<TtsVoice> {
         val isDownloaded = modelManager.isKokoroModelDownloaded()
         val downloadSizeBytes = modelManager.kokoroDownloadSizeBytes()
+        val updateAvailable = modelManager.isKokoroUpdateAvailable()
         return KOKORO_VOICES.map { voice ->
-            voice.copy(isDownloaded = isDownloaded, downloadSizeBytes = downloadSizeBytes)
+            voice.copy(
+                isDownloaded = isDownloaded,
+                downloadSizeBytes = downloadSizeBytes,
+                updateAvailable = updateAvailable,
+            )
         }
     }
 
@@ -52,8 +57,21 @@ class SherpaOnnxSynthesizer(
 
     override suspend fun prepareVoice(
         voiceId: String?,
+        updateToLatest: Boolean,
         onProgress: (TtsPreparationProgress) -> Unit,
-    ): Boolean = ensureLoaded(onProgress) != null
+    ): Boolean {
+        if (updateToLatest) {
+            val updated = modelManager.ensureKokoroModel(onProgress, updateToLatest = true) != null
+            if (!updated) return false
+            loadMutex.withLock {
+                stop()
+                releaseEngine()
+            }
+        }
+        return ensureLoaded(onProgress) != null
+    }
+
+    override fun activeModelVersion(voiceId: String?): String? = modelManager.activeKokoroVersion()
 
     override suspend fun deleteNeuralVoicePackage(
         voicePackage: NeuralVoicePackage,

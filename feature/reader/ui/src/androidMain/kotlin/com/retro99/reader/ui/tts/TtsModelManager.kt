@@ -1,12 +1,15 @@
 package com.retro99.reader.ui.tts
 
 import android.content.Context
+import android.system.ErrnoException
+import android.system.Os
 import android.util.Log
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.ReaderAnalyticsEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -40,11 +43,12 @@ data class SupertonicModelFiles(
 /**
  * Downloads TTS model assets described by [TtsModelManifest].
  *
- * Models are hosted as individual files (small data directories ship as zips), so
- * there is no CPU-bound archive extraction step: preparing a voice pack is a plain
- * resumable download with SHA-256 verification. Each file transfers to a `.part`
- * file that survives interruptions, so retries and app restarts resume where they
- * left off instead of re-downloading everything.
+ * Each model version installs into its own directory (`<modelId>/<version>/`) and a
+ * `.active` marker records which version the engines load from. Updates download
+ * side-by-side and the marker only moves once every file is verified, so a failed
+ * update never leaves the previous, working version unusable. The previous version is
+ * kept until the next update succeeds (unchanged files are hard-linked, so keeping it
+ * costs almost no extra space).
  */
 @Single
 class TtsModelManager(
@@ -52,35 +56,45 @@ class TtsModelManager(
     @Provided private val analytics: Analytics,
 ) {
 
-    fun isKokoroModelDownloaded(): Boolean = isModelDownloaded(KOKORO_MODEL_ID) { targetDir ->
-        isComplete(kokoroModelFiles(targetDir))
-    }
+    fun isKokoroModelDownloaded(): Boolean =
+        activeModelFiles(KOKORO_MODEL_ID, ::kokoroModelFiles, ::isComplete) != null
 
     fun isSupertonicModelDownloaded(): Boolean =
-        isModelDownloaded(SUPERTONIC_MODEL_ID) { targetDir ->
-            isComplete(supertonicModelFiles(targetDir))
-        }
+        activeModelFiles(SUPERTONIC_MODEL_ID, ::supertonicModelFiles, ::isComplete) != null
 
     fun kokoroDownloadSizeBytes(): Long? = manifestDownloadSizeBytes(KOKORO_MODEL_ID)
 
     fun supertonicDownloadSizeBytes(): Long? = manifestDownloadSizeBytes(SUPERTONIC_MODEL_ID)
 
+    fun activeKokoroVersion(): String? = activeVersion(KOKORO_MODEL_ID)
+
+    fun activeSupertonicVersion(): String? = activeVersion(SUPERTONIC_MODEL_ID)
+
+    fun isKokoroUpdateAvailable(): Boolean =
+        isUpdateAvailable(KOKORO_MODEL_ID, ::kokoroModelFiles, ::isComplete)
+
+    fun isSupertonicUpdateAvailable(): Boolean =
+        isUpdateAvailable(SUPERTONIC_MODEL_ID, ::supertonicModelFiles, ::isComplete)
+
     /**
-     * Fetches the manifest once so download sizes are known before the first download.
-     * No-op when a cached manifest already exists.
+     * Refreshes the cached manifest at most once per [MANIFEST_REFRESH_INTERVAL_MS] so
+     * update detection does not make a request per screen. No-op while the cache is fresh.
      */
-    suspend fun ensureManifestCached() {
+    suspend fun refreshManifestIfStale() {
         withContext(Dispatchers.IO) {
-            if (cachedManifest() == null) {
-                withTimeoutOrNull(MANIFEST_PREFETCH_TIMEOUT_MS) {
+            val cacheFile = manifestCacheFile
+            val cacheAgeMs = if (cacheFile.isFile) {
+                System.currentTimeMillis() - cacheFile.lastModified()
+            } else {
+                Long.MAX_VALUE
+            }
+            if (cacheAgeMs >= MANIFEST_REFRESH_INTERVAL_MS) {
+                withTimeoutOrNull(MANIFEST_FETCH_TIMEOUT_MS) {
                     fetchManifest()
                 }
             }
         }
     }
-
-    private fun manifestDownloadSizeBytes(modelId: String): Long? =
-        cachedManifest()?.model(modelId)?.totalBytes
 
     suspend fun deleteKokoroModel(): Boolean = deleteModel(KOKORO_MODEL_ID, ::kokoroLegacyPaths)
 
@@ -89,20 +103,24 @@ class TtsModelManager(
 
     suspend fun ensureKokoroModel(
         onProgress: ((TtsPreparationProgress) -> Unit)? = null,
+        updateToLatest: Boolean = false,
     ): KokoroModelFiles? = ensureModel(
         modelId = KOKORO_MODEL_ID,
         files = ::kokoroModelFiles,
         isComplete = ::isComplete,
         onProgress = onProgress,
+        updateToLatest = updateToLatest,
     )
 
     suspend fun ensureSupertonicModel(
         onProgress: ((TtsPreparationProgress) -> Unit)? = null,
+        updateToLatest: Boolean = false,
     ): SupertonicModelFiles? = ensureModel(
         modelId = SUPERTONIC_MODEL_ID,
         files = ::supertonicModelFiles,
         isComplete = ::isComplete,
         onProgress = onProgress,
+        updateToLatest = updateToLatest,
     )
 
     private suspend fun <T> ensureModel(
@@ -110,6 +128,7 @@ class TtsModelManager(
         files: (File) -> T,
         isComplete: (T) -> Boolean,
         onProgress: ((TtsPreparationProgress) -> Unit)?,
+        updateToLatest: Boolean,
     ): T? {
         val startedAt = System.currentTimeMillis()
         val result = loadModel(
@@ -117,6 +136,7 @@ class TtsModelManager(
             files = files,
             isComplete = isComplete,
             onProgress = onProgress,
+            updateToLatest = updateToLatest,
         )
         analytics.logEvent(
             ReaderAnalyticsEvent.TtsModelPrepared(
@@ -132,18 +152,38 @@ class TtsModelManager(
         files: (File) -> T,
         isComplete: (T) -> Boolean,
         onProgress: ((TtsPreparationProgress) -> Unit)?,
+        updateToLatest: Boolean,
     ): T? {
-        val targetDir = modelDir(modelId)
+        // The active version is authoritative: playback never waits for a newer
+        // manifest version, and updates are never installed implicitly.
+        val activeFiles = activeModelFiles(modelId, files, isComplete)
+        if (activeFiles != null && !updateToLatest) return activeFiles
+
         return withContext(Dispatchers.IO) {
             try {
                 val entry = loadManifestEntry(modelId)
                 if (entry == null) {
                     Log.w(TAG, "No manifest available for $modelId, using local files if complete")
-                } else if (!installIfMissing(entry, targetDir, onProgress)) {
+                    return@withContext activeFiles ?: adoptLocalModel(modelId, files, isComplete)
+                }
+                if (!entry.version.isSafeVersionName()) {
+                    throw IOException("Unsafe model version name: ${entry.version}")
+                }
+                if (activeFiles != null && activeVersion(modelId) == entry.version) {
+                    return@withContext activeFiles
+                }
+
+                val previousVersion = activeVersion(modelId)
+                if (!installVersion(entry, modelId, onProgress)) {
                     return@withContext null
                 }
-                val modelFiles = files(targetDir)
-                if (isComplete(modelFiles)) modelFiles else null
+                writeActiveVersion(modelId, entry.version)
+                deleteOutdatedVersions(
+                    modelId = modelId,
+                    keepVersions = listOfNotNull(previousVersion, entry.version),
+                )
+                val modelFiles = files(versionDir(modelId, entry.version))
+                modelFiles.takeIf(isComplete)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -153,22 +193,28 @@ class TtsModelManager(
         }
     }
 
-    private suspend fun installIfMissing(
+    /**
+     * Installs every manifest file for [entry] into its own version directory. Files
+     * already present are kept (interrupted installs resume), and files that are
+     * unchanged from the active version are reused without downloading. Never touches
+     * the active version's directory.
+     */
+    private suspend fun installVersion(
         entry: TtsModelManifestEntry,
-        targetDir: File,
+        modelId: String,
         onProgress: ((TtsPreparationProgress) -> Unit)?,
     ): Boolean {
-        val markerVersion = readMarker(targetDir)
-        if (markerVersion != null && markerVersion != entry.version) {
-            Log.i(TAG, "Upgrading ${entry.id} model: $markerVersion -> ${entry.version}")
-            targetDir.deleteRecursively()
-        }
+        val targetDir = versionDir(modelId, entry.version)
         targetDir.mkdirs()
 
-        if (entry.files.all { file -> isInstalled(file, targetDir) }) {
-            writeMarker(targetDir, entry.version)
-            return true
+        val sourceDir = activeVersion(modelId)?.let { version -> versionDir(modelId, version) }
+        if (sourceDir != null) {
+            for (file in entry.files) {
+                if (isInstalled(file, targetDir)) continue
+                reuseUnchangedFile(file, sourceDir, targetDir)
+            }
         }
+        if (entry.files.all { file -> isInstalled(file, targetDir) }) return true
 
         val missingFiles = entry.files.filterNot { file -> isInstalled(file, targetDir) }
         val remainingBytes = missingFiles.sumOf { file -> file.size }
@@ -182,7 +228,11 @@ class TtsModelManager(
             return false
         }
 
-        Log.i(TAG, "Downloading ${entry.id} model (${missingFiles.size} files, $remainingBytes bytes)")
+        Log.i(
+            TAG,
+            "Downloading ${entry.id} ${entry.version} " +
+                    "(${missingFiles.size} files, $remainingBytes bytes)",
+        )
         val reporter = ProgressReporter(entry.totalBytes, onProgress)
         var installedBytes = entry.files.sumOf { file ->
             if (isInstalled(file, targetDir)) file.size else 0L
@@ -203,9 +253,54 @@ class TtsModelManager(
                         "${System.currentTimeMillis() - startedAt}ms",
             )
         }
-        writeMarker(targetDir, entry.version)
         onProgress?.invoke(TtsPreparationProgress.Finalizing)
         return true
+    }
+
+    /**
+     * Reuses an unchanged file from the active version (same size and SHA-256) via a
+     * hard link so keeping the previous version after an update is nearly free.
+     * Zipped data directories are always re-downloaded: only their extraction matters.
+     */
+    private suspend fun reuseUnchangedFile(
+        file: TtsModelFile,
+        sourceDir: File,
+        targetDir: File,
+    ): Boolean {
+        if (file.extractTo != null) return false
+        val source = File(sourceDir, file.path)
+        if (!source.isFile || source.length() != file.size) return false
+        if (!sha256(source).equals(file.sha256, ignoreCase = true)) return false
+
+        val destination = File(targetDir, file.path)
+        destination.delete()
+        return try {
+            Os.link(source.absolutePath, destination.absolutePath)
+            true
+        } catch (error: ErrnoException) {
+            try {
+                source.copyTo(destination, overwrite = true)
+                true
+            } catch (copyError: Exception) {
+                destination.delete()
+                false
+            }
+        }
+    }
+
+    private fun <T> adoptLocalModel(
+        modelId: String,
+        files: (File) -> T,
+        isComplete: (T) -> Boolean,
+    ): T? {
+        val completeVersion = modelRoot(modelId)
+            .listFiles()
+            ?.filter { child -> child.isDirectory && child.name.isSafeVersionName() }
+            ?.sortedByDescending { child -> child.name }
+            ?.firstOrNull { child -> isComplete(files(child)) }
+            ?: return null
+        writeActiveVersion(modelId, completeVersion.name)
+        return files(completeVersion)
     }
 
     private suspend fun downloadFile(
@@ -228,6 +323,9 @@ class TtsModelManager(
                 lastError = error
                 Log.w(TAG, "Download attempt ${attempt + 1}/${MAX_DOWNLOAD_ATTEMPTS} " +
                         "failed for ${file.path}", error)
+                if (attempt < MAX_DOWNLOAD_ATTEMPTS - 1) {
+                    delay(RETRY_BACKOFF_MS * (attempt + 1))
+                }
             }
         }
         throw IOException("Failed to download ${file.path}", lastError)
@@ -397,40 +495,71 @@ class TtsModelManager(
         }
     }
 
-    private fun modelDir(modelId: String): File =
+    private fun <T> activeModelFiles(
+        modelId: String,
+        files: (File) -> T,
+        isComplete: (T) -> Boolean,
+    ): T? {
+        val activeDir = activeVersion(modelId)?.let { version -> versionDir(modelId, version) }
+            ?: return null
+        return files(activeDir).takeIf(isComplete)
+    }
+
+    private fun <T> isUpdateAvailable(
+        modelId: String,
+        files: (File) -> T,
+        isComplete: (T) -> Boolean,
+    ): Boolean {
+        val activeVersion = activeVersion(modelId) ?: return false
+        if (activeModelFiles(modelId, files, isComplete) == null) return false
+        val latestVersion = cachedManifest()?.model(modelId)?.version ?: return false
+        return latestVersion != activeVersion
+    }
+
+    private fun modelRoot(modelId: String): File =
         File(File(context.filesDir, MODELS_DIR_NAME), modelId)
 
-    private fun partialFile(targetDir: File, file: TtsModelFile): File =
-        File(targetDir, "${file.path}.part")
+    private fun versionDir(modelId: String, version: String): File =
+        File(modelRoot(modelId), version)
 
-    private fun markerFile(targetDir: File): File = File(targetDir, MARKER_FILE_NAME)
+    private fun activeMarker(modelId: String): File =
+        File(modelRoot(modelId), ACTIVE_MARKER_NAME)
 
-    private val manifestCacheFile: File
-        get() = File(File(context.filesDir, MODELS_DIR_NAME), MANIFEST_CACHE_FILE_NAME)
-
-    private fun readMarker(targetDir: File): String? =
-        markerFile(targetDir)
+    private fun activeVersion(modelId: String): String? =
+        activeMarker(modelId)
             .takeIf { marker -> marker.isFile }
             ?.readText()
             ?.trim()
             ?.takeIf { version -> version.isNotEmpty() }
 
-    private fun writeMarker(targetDir: File, version: String) {
-        markerFile(targetDir).writeText(version)
+    private fun writeActiveVersion(modelId: String, version: String) {
+        val marker = activeMarker(modelId)
+        marker.parentFile?.mkdirs()
+        marker.writeText(version)
     }
 
-    private fun isModelDownloaded(modelId: String, isComplete: (File) -> Boolean): Boolean {
-        val targetDir = modelDir(modelId)
-        if (!isComplete(targetDir)) return false
-        val expectedVersion = cachedManifest()?.model(modelId)?.version ?: return true
-        return readMarker(targetDir) == expectedVersion
+    private fun deleteOutdatedVersions(modelId: String, keepVersions: List<String>) {
+        modelRoot(modelId).listFiles()?.forEach { child ->
+            if (child.isDirectory && child.name !in keepVersions) {
+                child.deleteRecursively()
+            }
+        }
     }
+
+    private fun partialFile(targetDir: File, file: TtsModelFile): File =
+        File(targetDir, "${file.path}.part")
+
+    private val manifestCacheFile: File
+        get() = File(File(context.filesDir, MODELS_DIR_NAME), MANIFEST_CACHE_FILE_NAME)
+
+    private fun manifestDownloadSizeBytes(modelId: String): Long? =
+        cachedManifest()?.model(modelId)?.totalBytes
 
     private suspend fun deleteModel(
         modelId: String,
         legacyPaths: () -> List<File>,
     ): Boolean = withContext(Dispatchers.IO) {
-        val paths = listOf(modelDir(modelId)) + legacyPaths()
+        val paths = listOf(modelRoot(modelId)) + legacyPaths()
         try {
             var deleted = true
             paths.forEach { path ->
@@ -578,6 +707,11 @@ class TtsModelManager(
 
     private fun File.hasContent(): Boolean = isFile && length() > 0
 
+    private fun String.isSafeVersionName(): Boolean =
+        isNotEmpty() && all { character ->
+            character.isLetterOrDigit() || character == '.' || character == '_' || character == '-'
+        }
+
     private class ProgressReporter(
         private val totalBytes: Long,
         private val onProgress: ((TtsPreparationProgress) -> Unit)?,
@@ -603,14 +737,16 @@ class TtsModelManager(
         private const val SUPERTONIC_MODEL_ID = "supertonic"
         private const val MODELS_DIR_NAME = "tts-models"
         private const val MANIFEST_CACHE_FILE_NAME = "manifest.json"
-        private const val MARKER_FILE_NAME = ".version"
+        private const val ACTIVE_MARKER_NAME = ".active"
         private const val KOKORO_MIN_MODEL_BYTES = 100L * 1024L * 1024L
         private const val SUPERTONIC_MIN_DURATION_PREDICTOR_BYTES = 3L * 1024L * 1024L
         private const val SUPERTONIC_MIN_TEXT_ENCODER_BYTES = 30L * 1024L * 1024L
         private const val SUPERTONIC_MIN_VECTOR_ESTIMATOR_BYTES = 70L * 1024L * 1024L
         private const val SUPERTONIC_MIN_VOCODER_BYTES = 20L * 1024L * 1024L
         private const val MAX_DOWNLOAD_ATTEMPTS = 3
-        private const val MANIFEST_PREFETCH_TIMEOUT_MS = 5_000L
+        private const val RETRY_BACKOFF_MS = 1_500L
+        private const val MANIFEST_FETCH_TIMEOUT_MS = 5_000L
+        private const val MANIFEST_REFRESH_INTERVAL_MS = 24L * 60L * 60L * 1000L
         private const val CONNECT_TIMEOUT_MS = 30_000
         private const val READ_TIMEOUT_MS = 60_000
         private const val BUFFER_SIZE = 1 shl 16

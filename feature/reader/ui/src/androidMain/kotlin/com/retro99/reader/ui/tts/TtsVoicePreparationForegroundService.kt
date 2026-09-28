@@ -41,9 +41,10 @@ class TtsVoicePreparationForegroundService : Service() {
             ACTION_PREPARE -> {
                 val voiceId = intent.getStringExtra(EXTRA_VOICE_ID)
                     ?: return START_NOT_STICKY
+                val updateToLatest = intent.getBooleanExtra(EXTRA_UPDATE_TO_LATEST, false)
                 startInForeground()
                 if (preparationJob?.isActive != true) {
-                    startPreparation(voiceId)
+                    startPreparation(voiceId, updateToLatest)
                 }
             }
 
@@ -68,7 +69,7 @@ class TtsVoicePreparationForegroundService : Service() {
         )
     }
 
-    private fun startPreparation(voiceId: String) {
+    private fun startPreparation(voiceId: String, updateToLatest: Boolean) {
         val voicePackage = voiceId.neuralVoicePackage()
         if (voicePackage == null) {
             finishPreparation()
@@ -76,7 +77,7 @@ class TtsVoicePreparationForegroundService : Service() {
         }
         preparationJob = serviceScope.launch {
             try {
-                val prepared = synthesizer.prepareVoice(voiceId) { progress ->
+                val prepared = synthesizer.prepareVoice(voiceId, updateToLatest) { progress ->
                     stateHolder.updateProgress(voicePackage, progress)
                     updateNotification(progress)
                 }
@@ -198,11 +199,17 @@ class TtsVoicePreparationForegroundService : Service() {
         private const val ACTION_PREPARE = "com.retro99.reader.PREPARE_NEURAL_VOICES"
         private const val ACTION_CANCEL = "com.retro99.reader.CANCEL_NEURAL_VOICES"
         private const val EXTRA_VOICE_ID = "voice_id"
+        private const val EXTRA_UPDATE_TO_LATEST = "update_to_latest"
 
-        fun createStartIntent(context: Context, voiceId: String): Intent =
+        fun createStartIntent(
+            context: Context,
+            voiceId: String,
+            updateToLatest: Boolean = false,
+        ): Intent =
             Intent(context, TtsVoicePreparationForegroundService::class.java).apply {
                 action = ACTION_PREPARE
                 putExtra(EXTRA_VOICE_ID, voiceId)
+                putExtra(EXTRA_UPDATE_TO_LATEST, updateToLatest)
             }
 
         private fun createCancelIntent(context: Context): Intent =

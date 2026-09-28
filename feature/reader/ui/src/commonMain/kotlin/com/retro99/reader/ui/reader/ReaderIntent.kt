@@ -98,6 +98,11 @@ sealed interface ReaderIntent : BaseIntent {
         val voicePackage: NeuralVoicePackage,
     ) : ReaderIntent
 
+    /** Download the latest manifest version of an already-installed neural voice pack. */
+    data class UpdateNeuralVoicePackage(
+        val voicePackage: NeuralVoicePackage,
+    ) : ReaderIntent
+
     data class DeleteNeuralVoicePackage(
         val voicePackage: NeuralVoicePackage,
     ) : ReaderIntent

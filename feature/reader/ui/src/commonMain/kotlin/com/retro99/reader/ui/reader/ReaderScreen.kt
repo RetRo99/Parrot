@@ -220,6 +220,9 @@ private fun ReaderScreenContent(
             onDownloadNeuralVoicePackage = { voicePackage ->
                 intentDispatcher(ReaderIntent.DownloadNeuralVoicePackage(voicePackage))
             },
+            onUpdateNeuralVoicePackage = { voicePackage ->
+                intentDispatcher(ReaderIntent.UpdateNeuralVoicePackage(voicePackage))
+            },
             onDeleteNeuralVoicePackage = { voicePackage ->
                 intentDispatcher(ReaderIntent.DeleteNeuralVoicePackage(voicePackage))
             },

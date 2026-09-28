@@ -470,6 +470,11 @@
     <string name="reader_tts_kokoro_tab" tools:ignore="MissingTranslation">Kokoro</string>
     <string name="reader_tts_supertonic_tab" tools:ignore="MissingTranslation">Supertonic</string>
     <string name="reader_tts_high_quality" tools:ignore="MissingTranslation">High quality</string>
+    <string name="reader_tts_update" tools:ignore="MissingTranslation">Update</string>
+    <string name="reader_tts_update_available_title" tools:ignore="MissingTranslation">New voice pack available</string>
+    <string name="reader_tts_update_available_message" tools:ignore="MissingTranslation">A new version of %1$s is ready to download. Your current voices keep working until the update finishes.</string>
+    <string name="reader_tts_update_now" tools:ignore="MissingTranslation">Download now</string>
+    <string name="reader_tts_update_later" tools:ignore="MissingTranslation">Later</string>
     <string name="reader_tts_system_source" tools:ignore="MissingTranslation">System</string>
     <string name="app_settings_sync_backup" tools:ignore="MissingTranslation">Sync &amp; Backup</string>
     <string name="app_settings_sync_backup_description" tools:ignore="MissingTranslation">Keep reading data available across devices</string>

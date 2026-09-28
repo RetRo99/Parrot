@@ -35,6 +35,34 @@ class VoiceSettingsScreenTest {
     }
 
     @Test
+    fun `isNeuralVoicePackageUpdateAvailable only reports matching packages`() {
+        // Given
+        val kokoroWithUpdate = TtsVoice(
+            id = "kokoro:0",
+            name = "Heart (US female)",
+            locale = "en",
+            isNeural = true,
+            isDownloaded = true,
+            updateAvailable = true,
+        )
+        val kokoroCurrent = kokoroWithUpdate.copy(id = "kokoro:1", updateAvailable = false)
+        val supertonicWithUpdate = kokoroWithUpdate.copy(id = "supertonic:0", name = "F1")
+
+        // When / Then
+        assertTrue(
+            listOf(kokoroWithUpdate, kokoroCurrent)
+                .isNeuralVoicePackageUpdateAvailable(NeuralVoicePackage.KOKORO),
+        )
+        assertFalse(
+            listOf(kokoroCurrent).isNeuralVoicePackageUpdateAvailable(NeuralVoicePackage.KOKORO),
+        )
+        assertTrue(
+            listOf(kokoroCurrent, supertonicWithUpdate)
+                .isNeuralVoicePackageUpdateAvailable(NeuralVoicePackage.SUPERTONIC),
+        )
+    }
+
+    @Test
     fun `isNeuralVoicePackageDownloaded evaluates each neural package independently`() {
         // Given
         val downloadedNeuralVoice = TtsVoice(

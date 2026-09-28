@@ -29,15 +29,26 @@ class TtsSynthesizerRouter(
 
     override suspend fun prepareVoice(
         voiceId: String?,
+        updateToLatest: Boolean,
         onProgress: (TtsPreparationProgress) -> Unit,
     ): Boolean = when (voiceId.neuralVoicePackage()) {
-        NeuralVoicePackage.KOKORO -> kokoroSynthesizer.prepareVoice(voiceId, onProgress)
+        NeuralVoicePackage.KOKORO -> {
+            kokoroSynthesizer.prepareVoice(voiceId, updateToLatest, onProgress)
+        }
+
         NeuralVoicePackage.SUPERTONIC -> {
-            supertonicSynthesizer.prepareVoice(voiceId, onProgress)
+            supertonicSynthesizer.prepareVoice(voiceId, updateToLatest, onProgress)
         }
 
         null -> systemSynthesizer.awaitReady()
     }
+
+    override fun activeModelVersion(voiceId: String?): String? =
+        when (voiceId.neuralVoicePackage()) {
+            NeuralVoicePackage.KOKORO -> kokoroSynthesizer.activeModelVersion(voiceId)
+            NeuralVoicePackage.SUPERTONIC -> supertonicSynthesizer.activeModelVersion(voiceId)
+            null -> null
+        }
 
     override suspend fun deleteNeuralVoicePackage(
         voicePackage: NeuralVoicePackage,

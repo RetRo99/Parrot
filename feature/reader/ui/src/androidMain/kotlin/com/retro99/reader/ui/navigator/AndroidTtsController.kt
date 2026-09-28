@@ -144,7 +144,7 @@ class AndroidTtsController(
 
     override suspend fun availableVoices(): List<TtsVoice> {
         synthesizer.awaitReady()
-        modelManager.ensureManifestCached()
+        modelManager.refreshManifestIfStale()
         return synthesizer.availableVoices()
     }
 
@@ -210,11 +210,12 @@ class AndroidTtsController(
 
     override suspend fun prepareVoice(
         voiceId: String?,
+        updateToLatest: Boolean,
         onProgress: (TtsPreparationProgress) -> Unit,
     ): Boolean {
         val voicePackage = voiceId.neuralVoicePackage()
         if (voicePackage == null) {
-            return synthesizer.prepareVoice(voiceId, onProgress)
+            return synthesizer.prepareVoice(voiceId, onProgress = onProgress)
         }
         val neuralVoiceId = requireNotNull(voiceId)
 
@@ -227,14 +228,14 @@ class AndroidTtsController(
         val voice = synthesizer.availableVoices().firstOrNull { candidate ->
             candidate.id == neuralVoiceId
         }
-        if (voice?.needsDownload != true) {
-            return synthesizer.prepareVoice(neuralVoiceId, onProgress)
+        if (voice?.needsDownload != true && !updateToLatest) {
+            return synthesizer.prepareVoice(neuralVoiceId, onProgress = onProgress)
         }
 
         notificationPermissionHandler.ensurePermission()
         val initialProgress = TtsPreparationProgress.Downloading(
             downloadedBytes = 0L,
-            totalBytes = voice.downloadSizeBytes,
+            totalBytes = voice?.downloadSizeBytes,
         )
         val shouldStartService = preparationStateHolder.begin(voicePackage, initialProgress)
         if (shouldStartService) {
@@ -244,6 +245,7 @@ class AndroidTtsController(
                     TtsVoicePreparationForegroundService.createStartIntent(
                         context,
                         neuralVoiceId,
+                        updateToLatest,
                     ),
                 )
             } catch (error: Exception) {
