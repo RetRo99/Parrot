@@ -73,6 +73,7 @@ class HomeNavigationViewModel(
 
     private val logger = Logger.withTag("HomeNavigationViewModel")
     private var hasCheckedOpenLastBookOnLaunch = false
+    private var failedBubblePosition: BubblePositionModel? = null
 
     /** Stops an active media session only when it belongs to the server being logged out. */
     fun stopPlaybackForServer(serverId: String, operationContext: DiagnosticContext) {
@@ -301,9 +302,30 @@ class HomeNavigationViewModel(
             .launchIn(viewModelScope)
     }
 
+    private fun saveBubblePosition(position: BubblePositionModel, isRetry: Boolean): Boolean {
+        val succeeded = executeBubblePositionSave(
+            analytics = analytics,
+            side = position.toBubbleSide(),
+            isRetry = isRetry,
+            persist = { saveUserPreferenceUseCase(PreferencesKey.BubblePosition, position) },
+        )
+        if (succeeded) {
+            failedBubblePosition = null
+            updateState { it.copy(bubblePositionSaveFailureCount = 0) }
+        } else {
+            failedBubblePosition = position
+            updateState {
+                it.copy(bubblePositionSaveFailureCount = it.bubblePositionSaveFailureCount + 1)
+            }
+        }
+        return succeeded
+    }
+
     private fun saveBubblePosition(side: BubbleSide, yFraction: Float) {
-        val position = BubblePositionModel.fromBubbleSide(side, yFraction)
-        saveUserPreferenceUseCase(PreferencesKey.BubblePosition, position)
+        saveBubblePosition(
+            position = BubblePositionModel.fromBubbleSide(side, yFraction),
+            isRetry = false,
+        )
     }
 
     private fun observeShowContinueReading() {
@@ -390,6 +412,12 @@ class HomeNavigationViewModel(
         when (intent) {
             // UI state intents
             is HomeNavigationIntent.UpdateBubblePosition -> saveBubblePosition(intent.side, intent.yFraction)
+            HomeNavigationIntent.RetryBubblePositionSave -> {
+                failedBubblePosition?.let { saveBubblePosition(it, isRetry = true) }
+            }
+            HomeNavigationIntent.DismissBubblePositionSaveError -> {
+                failedBubblePosition = null
+            }
             HomeNavigationIntent.ClearCurrentlyReading -> {
                 clearCurrentlyReadingUseCase()
             }

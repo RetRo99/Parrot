@@ -31,6 +31,9 @@ internal fun sanitizeAnalyticsParameters(parameters: Map<String, Any>): Map<Stri
             key == "field" && value is String && value in SAFE_VALIDATION_FIELDS ->
                 put(key, value)
 
+            key == "bubble_side" && value is String && value in SAFE_BUBBLE_SIDES ->
+                put(key, value)
+
             key in SAFE_STRING_KEYS && value is String && SAFE_DIMENSION.matches(value) ->
                 put(key, value)
 
@@ -206,6 +209,7 @@ private val SAFE_BOOK_SORT_CONFIGS = setOf(
 )
 
 private val SAFE_BOOK_VIEW_MODES = setOf("list", "grid")
+private val SAFE_BUBBLE_SIDES = setOf("start", "end")
 
 private val SAFE_BOOLEAN_KEYS = setOf(
     "is_enabled",

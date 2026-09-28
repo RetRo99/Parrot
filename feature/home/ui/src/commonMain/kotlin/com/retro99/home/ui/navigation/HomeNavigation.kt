@@ -9,6 +9,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,8 +38,11 @@ import com.retro99.reader.ui.reader.ReaderCloseSource
 import com.retro99.settings.ui.SettingsScreen
 import com.retro99.settings.ui.servers.ServerManagementScreen
 import com.retro99.statistics.ui.StatisticsScreen
+import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import resources.translations.continue_reading_position_save_failed
+import resources.translations.general_retry
 
 @Composable
 fun HomeNavigation(
@@ -53,6 +60,25 @@ fun HomeNavigation(
 
     // Intent dispatcher for navigation actions
     val intentDispatcher: (HomeNavigationIntent) -> Unit = { viewModel.onIntent(it) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val bubblePositionSaveFailedMessage = stringResource(StringRes.continue_reading_position_save_failed)
+    val retryMessage = stringResource(StringRes.general_retry)
+
+    LaunchedEffect(uiState.bubblePositionSaveFailureCount) {
+        if (uiState.bubblePositionSaveFailureCount > 0) {
+            val result = snackbarHostState.showSnackbar(
+                message = bubblePositionSaveFailedMessage,
+                actionLabel = retryMessage,
+                withDismissAction = true,
+                duration = SnackbarDuration.Indefinite,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                intentDispatcher(HomeNavigationIntent.RetryBubblePositionSave)
+            } else {
+                intentDispatcher(HomeNavigationIntent.DismissBubblePositionSaveError)
+            }
+        }
+    }
 
     // Handle navigation events from ViewModel
     LaunchedEffect(viewModel) {
@@ -216,6 +242,7 @@ fun HomeNavigation(
     Box(modifier = modifier.fillMaxSize()) {
         Scaffold(
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 if (showBottomBar) {
                     Column {

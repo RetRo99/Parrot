@@ -654,6 +654,7 @@
     <string name="continue_reading_title" tools:ignore="MissingTranslation">Continue reading</string>
     <string name="continue_reading_more" tools:ignore="MissingTranslation">More options</string>
     <string name="continue_reading_clear" tools:ignore="MissingTranslation">Clear</string>
+    <string name="continue_reading_position_save_failed" tools:ignore="MissingTranslation">Bubble position could not be saved.</string>
 
     <!-- Playback conflict -->
     <string name="playback_conflict_title" tools:ignore="MissingTranslation">Stop listening?</string>

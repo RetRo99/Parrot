@@ -13,6 +13,8 @@ import com.retro99.books.domain.model.BookType
 sealed interface HomeNavigationIntent : BaseIntent {
     // UI state intents
     data class UpdateBubblePosition(val side: BubbleSide, val yFraction: Float) : HomeNavigationIntent
+    data object RetryBubblePositionSave : HomeNavigationIntent
+    data object DismissBubblePositionSaveError : HomeNavigationIntent
     data object ClearCurrentlyReading : HomeNavigationIntent
 
     // Navigation intents

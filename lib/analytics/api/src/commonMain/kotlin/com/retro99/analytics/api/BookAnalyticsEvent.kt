@@ -619,6 +619,52 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    /** Records one committed drag operation that attempts to persist the floating bubble position. */
+    data class BubblePositionSaveAttempted(
+        val bubbleSide: String,
+        val isRetry: Boolean,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "continue_reading_bubble_position_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "home",
+            "entry_point" to "floating_bubble",
+            "action" to "move_continue_reading_bubble",
+            "operation" to "bubble_position_save",
+            "stage" to "started",
+            "outcome" to "started",
+            "bubble_side" to bubbleSide,
+            "is_retry" to isRetry,
+        )
+    }
+
+    enum class BubblePositionSaveOutcome(val value: String) {
+        Succeeded("succeeded"),
+        Failed("failed"),
+        Cancelled("cancelled"),
+    }
+
+    /** Records the terminal result of one bubble-position save attempt. */
+    data class BubblePositionSaveCompleted(
+        val bubbleSide: String,
+        val outcome: BubblePositionSaveOutcome,
+        val isRetry: Boolean,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "continue_reading_bubble_position_completed"
+        override val parameters: Map<String, Any> = buildMap {
+            put("screen", "home")
+            put("entry_point", "floating_bubble")
+            put("action", "move_continue_reading_bubble")
+            put("operation", "bubble_position_save")
+            put("stage", "terminal")
+            put("outcome", outcome.value)
+            put("bubble_side", bubbleSide)
+            put("is_retry", isRetry)
+            if (outcome == BubblePositionSaveOutcome.Failed) {
+                put("reason_code", "preference_write_failed")
+            }
+        }
+    }
+
     /**
      * Tracks when user opens search - helps understand search feature usage.
      */

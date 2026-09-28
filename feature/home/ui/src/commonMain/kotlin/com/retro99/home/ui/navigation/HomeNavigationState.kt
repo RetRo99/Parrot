@@ -22,6 +22,7 @@ data class HomeUiState(
     val nowPlayingInfo: NowPlayingInfo? = null,
     val isAudioPlaying: Boolean = false,
     val playbackConflictDialog: PlaybackConflictDialogState? = null,
+    val bubblePositionSaveFailureCount: Int = 0,
 )
 
 /**

@@ -139,6 +139,43 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun bubblePositionEventsRetainOnlyTheBoundedSideAndOutcome() {
+        val attempted = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.BubblePositionSaveAttempted(
+                bubbleSide = "end",
+                isRetry = false,
+            ).parameters + mapOf(
+                "y_fraction" to 0.37f,
+                "profile_id" to "private-profile-id",
+            ),
+        )
+        val failed = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.BubblePositionSaveCompleted(
+                bubbleSide = "start",
+                outcome = NavigationAnalyticsEvent.BubblePositionSaveOutcome.Failed,
+                isRetry = true,
+            ).parameters + mapOf("book_title" to "private title"),
+        )
+        val unsafeSide = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.BubblePositionSaveAttempted(
+                bubbleSide = "private-side-value",
+                isRetry = false,
+            ).parameters,
+        )
+
+        assertEquals("end", attempted["bubble_side"])
+        assertEquals("started", attempted["outcome"])
+        assertFalse("y_fraction" in attempted)
+        assertFalse("profile_id" in attempted)
+        assertEquals("start", failed["bubble_side"])
+        assertEquals("failed", failed["outcome"])
+        assertEquals("preference_write_failed", failed["reason_code"])
+        assertEquals(true, failed["is_retry"])
+        assertFalse("book_title" in failed)
+        assertFalse("bubble_side" in unsafeSide)
+    }
+
+    @Test
     fun homeExposureRetainsOnlyBoundedSourceAndEntryPoint() {
         val sanitized = sanitizeAnalyticsParameters(
             NavigationAnalyticsEvent.HomeViewed(
