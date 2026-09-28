@@ -1,0 +1,19 @@
+# Case 428 — Servers row route test
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `30163`; installed APK SHA-256 `70fc583c081d3109ab91cd17277ae1c230256695e0422c2c0a772483bea0240e`; source commit `1884404a3660fffeced85756af0f693eea8a01e9` plus unrelated pre-existing changes. Local/device APK hashes matched. No app data was cleared.
+- **Preconditions/privacy:** App Settings hub was visible. Server Management showed its title, one existing logged-out server row, Log in/Delete affordances and Add Server affordance. Server name, endpoint/URL, server/account IDs and credentials are intentionally not retained. No server action was performed; preserved server/book fixture was unchanged.
+
+## Execution and result
+
+Tapped the Servers row. Server Management opened and rendered its existing server entry and actions. This verifies only the App Settings route into Server Management (case 428); login, delete, server-card contents beyond the bounded state above, and empty/multi-server variants remain for their ordered cases.
+
+PID-filtered local DebugAnalyticsManager output contained exactly one `server_management_screen_viewed(screen=server_management, source_screen=app_settings, entry_point=servers_row)` and one `server_management_route` visible breadcrumb. No failure was induced; no crash/fatal marker was observed. Firebase Analytics ingestion is waived; local logs are not delivery proof. Crashlytics delivery is unverified.
+
+Tapped the Server Management toolbar Back affordance. App Settings returned. The local event/breadcrumb sequence contained one `navigation_back_attempted` and one `navigation_back(outcome=succeeded, entry_point=toolbar_back, destination_screen=app_settings)` with a shared diagnostic-only correlation ID, then one App Settings visible-route breadcrumb. This is recorded as `441/ServerManagement/toolbar-back` and `740/ServerManagement/toolbar-back`; only this toolbar variant passed. System Back and lifecycle/dismissal variants remain untested.
+
+- **Case 428:** PASS for row-to-route navigation and route exposure.
+- **Case 441 toolbar Back variant:** PASS; other variants NOT RUN.
+- **Diagnostics:** PASS locally for route visibility and navigation; no failure induced, Crashlytics delivery unverified.
+- **Next ordered App Settings case:** 429.

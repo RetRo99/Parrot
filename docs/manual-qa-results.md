@@ -263,6 +263,14 @@ Case-level Analytics status is reported per row above; cases 1–5 have local-pr
 
 Only the Home/Books destination was observed as the guest target and local-import fixture for cases 3/5; no Home-group baseline case has started. Execute remaining groups in catalogue order; add a row per case and applicable variant (especially Back/dismiss/lifecycle variants) before and during each screen pass. Do not mark a parent case PASS until all required variants pass with evidence.
 
+### Ordered App Settings continuation — case 428 and server-route Back variants
+
+| Case / variant | Functional | Analytics | Diagnostics | Device/build/evidence |
+|---|---|---|---|---|
+| 428 — Servers row from App Settings | PASS: row opened Server Management, which rendered its title, existing logged-out server row and available actions. No login/delete action performed; server fixture unchanged. Server name/URL/identifiers omitted. | PASS locally: exactly one attributed `server_management_screen_viewed(source_screen=app_settings, entry_point=servers_row)`; Firebase ingestion waived. | PASS locally: one visible-route breadcrumb; no failure induced or fatal marker observed. Crashlytics delivery unverified. | Samsung `RFCWC0SSVDM`, PID `30163`, package 0.4.5 (21), APK SHA-256 `70fc583c081d3109ab91cd17277ae1c230256695e0422c2c0a772483bea0240e`; source commit `1884404a3660fffeced85756af0f693eea8a01e9` plus unrelated pre-existing changes. [Evidence](manual-qa-evidence/2026-09-28/case-428-server-management-route.txt). |
+| 441/ServerManagement/toolbar-back | PASS: toolbar Back returned to App Settings without changing server state. | PASS locally: one navigation attempt/success pair with toolbar source, destination and outcome; Firebase ingestion waived. | PASS locally: correlated navigation breadcrumbs and one App Settings visible-route breadcrumb; no failure or exception. Crashlytics delivery unverified. | Same Samsung build as case 428. System Back and other case-441 variants remain NOT RUN. [Evidence](manual-qa-evidence/2026-09-28/case-428-server-management-route.txt). |
+| 740/ServerManagement/toolbar-back | PASS for toolbar Back only. | PASS locally: attempt/success event pair; Firebase ingestion waived. | PASS locally: correlated start/terminal and destination-visible breadcrumbs; no failure/exception. Crashlytics delivery unverified. | Same execution as case 441. System Back and other dismissal/lifecycle variants remain NOT RUN; parent case 740 remains open. [Evidence](manual-qa-evidence/2026-09-28/case-428-server-management-route.txt). |
+
 ## Early observation outside current screen order
 
 | Case | Variant / evidence | Functional | Analytics | Diagnostics | Notes / defect |
