@@ -1273,7 +1273,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0074 — App Settings preference toggles lack operation diagnostics and write-failure recovery
 
 - **Severity / user impact:** Medium instrumentation/recovery gap. A failed local preference write may leave a setting unchanged without a setting-specific breadcrumb or clear retry feedback; the actual failure behavior has not been induced.
-- **Status:** FIXED in source and Samsung normal-path retest PASS; focused commit pending. Runtime preference-write failure was not reproduced on Samsung; host fault-injection/retry regression passes.
+- **Status:** FIXED in source and Samsung normal-path retest PASS. Runtime preference-write failure was not reproduced on Samsung; host fault-injection/retry regression passes.
 - **Screen/test IDs:** App Settings cases 424–425, 430–431, 436, 719 and 724; four direct toggles: Open Last Book, Show Continue Reading, File Logging, Only Log Crashes.
 - **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; package `com.retro99.parrot` 0.4.5 (21), PID `21569` before restart / `23213` after, installed APK SHA-256 `310dda0fdc9201b2815e0d855afb94e677b15d496b192087f8d183723868936e`. The installed APK predates repository HEAD `0119c90891ed39438eab48938e25b40abca20c43`.
 - **Preconditions:** Reach App Settings and change any of the four Boolean preferences. A thrown `Preferences.putBoolean` is the failure condition; safe Samsung failure injection is not available.
@@ -1303,3 +1303,39 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Affected files:** `base-ui/src/commonMain/kotlin/com/retro99/base/ui/compose/CoilImage.kt`, image failure reporting policy, `base-ui/build.gradle.kts` common test dependency, common policy tests, and QA evidence/results/run report.
 - **Fix reference / commit:** `87029a420a6b55441a1e977d67755bb1378dfe3b` (`fix(images): filter expected image failures [QA-BUG-0075]`). The fix suppresses cancellation, Coil `HttpException`, and `kotlinx.io.IOException` anywhere in the cause chain; it reports other errors once per image request with bounded fields and no free-form/cache-key context.
 - **Retest:** PASS: 7 iOS Simulator common tests (expected HTTP, nested HTTP, I/O, cancellation, unexpected decode errors, one-shot reporting, and expected-then-unexpected state); Android debug assembly PASS. Final Samsung debug APK `58ebc8fd43260cc20ea6f125c3c52d1ff1fe62dbe3023652fa8022a2867623aa` matched local and pulled device copies. Same retained unauthenticated current-book route reached the known failure prompt and safely returned to Books with no image exception report/fatal marker. Firebase Analytics ingestion is waived; local provider output is not Crashlytics delivery evidence. See [Samsung retest](manual-qa-evidence/2026-09-29/qa-bug-0075-coil-image-failure-retest.txt).
+
+## QA-BUG-0076 — Floating Continue Reading position writes can fail silently
+
+- **Title:** Bubble drag position has no write-failure reporting or recovery.
+- **Severity / user impact:** Medium, recoverable state loss. If local preference serialization/storage throws after a drag, the bubble may return to its old position after restart without telling the user or offering a retry; reading itself remains available.
+- **Status:** OPEN; source-confirmed instrumentation/recovery gap. Samsung and host failure injection not yet run.
+- **Screen/test IDs:** Home/navigation case 438; extensions 543, 748–749, 773 and 775.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), PID `16972`, debug APK SHA-256 `58ebc8fd43260cc20ea6f125c3c52d1ff1fe62dbe3023652fa8022a2867623aa`, source commit `87029a420a6b55441a1e977d67755bb1378dfe3b`; repository HEAD is docs-only `0d728e1df550b42355d329ede0e6b2b66de0affa`.
+- **Preconditions:** Bubble enabled, current-reading model available, and bubble-position preference observable. A thrown `Preferences.putString` during `saveUserPreferenceUseCase` is the failure condition; no safe Samsung fault fixture is currently available.
+- **Exact reproduction/source audit:** Drag the bubble and release. `DraggableFloatingBubble.onDragEnd` calls `UpdateBubblePosition`; `HomeNavigationViewModel.saveBubblePosition` serializes and synchronously writes the preference without try/catch, Analytics outcome, breadcrumb, non-fatal, or UI recovery. No preference-write exception has been induced on-device.
+- **Expected:** Each committed move produces bounded attempted and terminal outcomes with a correlation ID in diagnostics, side only as a bounded Analytics dimension, and no raw coordinates. On unexpected persistence failure, do not emit success, report one contextual non-fatal, preserve safe state, show an actionable retry, and allow a separately attributed retry. Gesture cancellation is ordinary cancellation and is not reported as a failure.
+- **Actual:** The view animates to the released position and invokes a synchronous preference write. A thrown write propagates without a bubble-specific boundary or user-facing feedback. Runtime failure remains unconfirmed.
+- **Frequency:** Every completed bubble drag; user impact only when serialization/storage fails.
+- **Evidence:** [Case-438 pre-fix source audit](manual-qa-evidence/2026-09-29/case-438-bubble-instrumentation-source-audit.txt); `DraggableFloatingBubble.kt` and `HomeNavigationViewModel.kt`.
+- **Root cause:** Position persistence was wired directly to the preference use case without an operation outcome/recovery wrapper.
+- **Affected files:** Pending implementation; expected Home navigation state/viewmodel/screen, typed navigation Analytics and sanitizer, focused host tests, test catalogue/results/run report.
+- **Fix reference / commit:** Pending.
+- **Retest:** NOT RUN. Samsung preference-write injection and Crashlytics delivery remain unverified.
+
+## QA-BUG-0077 — Continue Reading opens lack source-attributed attempt and terminal telemetry
+
+- **Title:** Floating/shelf Continue Reading navigation is not measured as a source-specific operation.
+- **Severity / user impact:** Low direct functionality impact; successful usage, abandonment, cancellation and failure rates for this entry point cannot be distinguished, and failure breadcrumbs cannot reconstruct its source.
+- **Status:** OPEN; source-confirmed Analytics/diagnostics coverage gap. Samsung tap and route outcomes not yet executed.
+- **Screen/test IDs:** Home/navigation cases 81, 438–439; extensions 542–545, 563, 565, 720, 747–749 and 774–775.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), PID `16972`, debug APK SHA-256 `58ebc8fd43260cc20ea6f125c3c52d1ff1fe62dbe3023652fa8022a2867623aa`, source commit `87029a420a6b55441a1e977d67755bb1378dfe3b`; repository HEAD is docs-only `0d728e1df550b42355d329ede0e6b2b66de0affa`.
+- **Preconditions:** A visible Continue Reading shelf or bubble and a current-reading target. A usable authenticated/cached content fixture is required to verify success; a controlled unavailable target can verify safe failure/recovery without changing the retained fixture.
+- **Exact reproduction/source audit:** Tap the bubble/shelf. Both dispatch the same `RequestOpenReader` as other sources; no bubble/shelf entry point is carried into navigation. A possible playback-conflict dialog has no source-attributed cancel result. Existing reader `book_opened`/`book_open_failed` events have no Continue Reading entry point; non-startup failure diagnostics lack source/correlation context. `ContinueReadingLaunched(bookUuid)` is defined but unused and the sanitizer drops `book_uuid`. No tap was performed during this source audit.
+- **Expected:** Emit one bounded attempt when a Continue Reading action is accepted, then one terminal succeeded only after usable Reader content, failed on a terminal open error, or cancelled on conflict-dialog dismissal/close before usable content. Retry is a separate attempt. Breadcrumbs carry a diagnostic-only correlation ID. Never include titles, book/profile IDs, URLs, content or free-form errors; expected auth/offline rejection and ordinary cancellation do not create Crashlytics issues.
+- **Actual:** No source-specific attempt, completion, cancellation or correlation record is emitted by the Continue Reading entry path. Existing reader success/failure signals cannot be attributed to this source.
+- **Frequency:** Every shelf or bubble open, with the gap on each attempt/outcome.
+- **Evidence:** [Case-438 pre-fix source audit](manual-qa-evidence/2026-09-29/case-438-bubble-instrumentation-source-audit.txt); `HomeNavigation.kt`, `HomeNavigationViewModel.kt`, and `ReaderViewModel.kt`.
+- **Root cause:** Continue Reading reuses the generic book-open route and the defined launch event has no call site; route source is not propagated to Reader.
+- **Affected files:** Pending implementation; expected Home navigation intent/state/routes, Reader event/context boundary, typed Analytics and sanitizer tests, catalogue/results/run report.
+- **Fix reference / commit:** Pending.
+- **Retest:** NOT RUN. Local debug Analytics is not Firebase ingestion evidence; Crashlytics delivery remains unverified.

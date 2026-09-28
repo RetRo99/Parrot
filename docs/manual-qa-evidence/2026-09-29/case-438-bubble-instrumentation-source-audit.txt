@@ -1,0 +1,21 @@
+# Case 438 — Floating Continue Reading bubble source audit (pre-fix)
+
+- **Audit time:** 2026-09-29 01:28 CEST.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), Android build `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation, portrait, font scale 1.0.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), PID `16972`; installed debug APK SHA-256 `58ebc8fd43260cc20ea6f125c3c52d1ff1fe62dbe3023652fa8022a2867623aa`, matching the local APK. The APK source tree is QA-BUG-0075 commit `87029a420a6b55441a1e977d67755bb1378dfe3b`; repository HEAD during this audit is documentation commit `0d728e1df550b42355d329ede0e6b2b66de0affa`.
+- **Fixture and privacy:** retained original active profile and current-reading reference; `Show Continue Reading=ON`; existing server is unauthenticated. The Books screen showed its continue-reading shelf; no title, profile label/ID, book UUID, URL, credentials, screenshot, or raw hierarchy was copied into this evidence. No fixture was edited and no app data cleared.
+- **Execution status:** source audit only; no case-438 gestures/taps have yet been performed. Current UI remains Books. The unauthenticated server route is a known prerequisite blocker for usable remote Reader content; it was not retried or modified.
+
+## Reachability and action map
+
+- Bubble is composed only when `currentlyReading`, loaded `bubblePosition`, and `showContinueReading` are present/enabled. It is excluded from Reader, BooksList, BookDetail, Statistics, App Settings, Server Management, Sync & Backup and Reader Settings; it is reachable on Series routes. Cases 425/439/543–545/563/720/740–745/748–749 cover adjacent visibility, stale-target, rotation, overlap, deletion, lifecycle, exit, accessibility and observability variants; new focused extensions are 773–775.
+- `DraggableFloatingBubble` starts at a normalized Y fraction, clamps both axes to container bounds, chooses START/END by release center, springs to the edge, and calls `onPositionChanged` on drag end. `detectDragGestures` consumes movement after drag recognition; click is provided by `ContinueReadingBubble`. Drag cancellation changes only transient `isDragging` state and does not invoke the persistence callback. Initial measurement is hidden until position is ready; no explicit visible loading/error state exists if the observer never emits.
+- `HomeNavigation` sends `UpdateBubblePosition`; `HomeNavigationViewModel.saveBubblePosition` synchronously serializes/writes the user-scoped preference. No attempt/success/failure/cancel Analytics, breadcrumb, exception boundary, or user-facing retry exists at this write boundary. A thrown preference write can therefore silently lose the new position on restart (not yet runtime-injected).
+- Bubble/shelf taps send the same `RequestOpenReader` intent as Book Detail. `handleRequestOpenReader` either shows a playback-conflict dialog or navigates. Conflict dismissal has no source-attributed cancellation signal. Existing `ReaderAnalyticsEvent.BookOpened` and `BookOpenFailed` are emitted at usable publication and initialization/publication failure respectively, but do not carry the Continue Reading source; non-startup reader-open diagnostics have no source route/correlation context. `NavigationAnalyticsEvent.ContinueReadingLaunched(bookUuid)` exists but has no call sites, and its `book_uuid` parameter is excluded by the Analytics allowlist. These are source-confirmed coverage gaps; no incorrect route or runtime exception was observed in this source-only audit.
+
+## Pre-fix findings recorded
+
+- **QA-BUG-0076:** bubble position preference write has no failure outcome, actionable recovery, or diagnostic report. Source-confirmed; device failure not induced.
+- **QA-BUG-0077:** floating Continue Reading opens have no source-attributed attempt/terminal funnel, and conflict cancellation is unreported. Source-confirmed; device tap not yet performed.
+
+The retest must preserve the unauthenticated server/book fixture, avoid Retry on that route, and avoid retaining any private content or raw device logs.
