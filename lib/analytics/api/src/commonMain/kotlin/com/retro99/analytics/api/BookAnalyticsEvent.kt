@@ -526,6 +526,19 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    /** Records one actual Sync & Backup destination exposure, not every recomposition. */
+    data class SyncAndBackupViewed(
+        val sourceScreen: String,
+        val entryPoint: String,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "sync_and_backup_screen_viewed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "sync_and_backup",
+            "source_screen" to sourceScreen,
+            "entry_point" to entryPoint,
+        )
+    }
+
     /** Records the route selected by the completed startup/authentication check. */
     data class AppLaunchRouteResolved(
         val destination: String,

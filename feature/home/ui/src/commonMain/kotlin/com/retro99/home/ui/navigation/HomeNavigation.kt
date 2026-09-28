@@ -136,6 +136,15 @@ fun HomeNavigation(
                 entryPoint = exposure.entryPoint,
             )
         }
+        if (currentDestination is HomeDestination.SyncAndBackup) {
+            val previousDestination = lastVisibleDestination
+                ?: navigationState.currentBackStack.dropLast(1).lastOrNull()
+            val exposure = syncAndBackupExposureContext(previousDestination)
+            viewModel.reportSyncAndBackupViewed(
+                sourceScreen = exposure.sourceScreen,
+                entryPoint = exposure.entryPoint,
+            )
+        }
         if (currentDestination is HomeDestination.AppSettings) {
             val previousDestination = lastVisibleDestination
                 ?: navigationState.currentBackStack.dropLast(1).lastOrNull()

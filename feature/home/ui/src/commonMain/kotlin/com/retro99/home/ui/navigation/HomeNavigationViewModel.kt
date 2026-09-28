@@ -647,6 +647,27 @@ class HomeNavigationViewModel(
         )
     }
 
+    /** Records an exposure only after the navigation owner reports Sync & Backup as visible. */
+    fun reportSyncAndBackupViewed(sourceScreen: String, entryPoint: String) {
+        analytics.logEvent(
+            NavigationAnalyticsEvent.SyncAndBackupViewed(
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "sync_and_backup",
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+                action = "screen_view",
+                operation = "sync_and_backup_route",
+                stage = "visible",
+                outcome = "succeeded",
+            ),
+        )
+    }
+
     /**
      * Handles the request to open a reader.
      * Checks if there's a playback conflict and shows dialog if needed.

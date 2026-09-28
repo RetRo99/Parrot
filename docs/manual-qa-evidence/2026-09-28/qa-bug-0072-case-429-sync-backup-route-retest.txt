@@ -1,0 +1,32 @@
+# QA-BUG-0072 — Case 429 Sync & Backup route instrumentation retest
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`), gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `21569`; APK SHA-256 `310dda0fdc9201b2815e0d855afb94e677b15d496b192087f8d183723868936e` (local and installed device hashes matched). Built from source HEAD `8f8206594e8cc6ba610816aba50f940dbdf33b61` plus the QA-BUG-0072 fix and unrelated pre-existing uncommitted changes. No app data was cleared.
+- **Privacy/state:** Signed-out Cloud Account form only. No email/password was typed, no Google/account action was activated, and no server/profile/book state changed. No profile labels, server names/URLs/IDs, account details, credentials, statistics, screenshots, raw hierarchy or local database content are retained.
+
+## Samsung execution
+
+After the update install, the unchanged Open Last Book preference first displayed the known “Server unavailable or not authenticated” route. Closed it without retrying; the app returned to Books and the retained filter/current-reading fixture remained intact. Opened App Settings, scrolled to Sync & Backup and tapped the row. Parrot Cloud rendered its signed-out form and remained stable. No account or form operation was attempted.
+
+Before opening this route on PID `21569`, the process log had no `sync_and_backup_screen_viewed` or `sync_and_backup_route` entry. For the single route exposure, PID-filtered local DebugAnalyticsManager output then contained exactly:
+
+```text
+Analytics Event: sync_and_backup_screen_viewed | Parameters: {screen=sync_and_backup, source_screen=app_settings, entry_point=sync_backup_row}
+Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=app_settings entry_point=sync_backup_row action=screen_view operation=sync_and_backup_route stage=visible outcome=succeeded
+```
+
+Counts for this PID: one screen-view event and one visible-route breadcrumb. No account/form data is present. Tapping toolbar Back returned to App Settings and emitted one `navigation_back_attempted` plus one `navigation_back(outcome=succeeded, entry_point=toolbar_back, destination_screen=app_settings)` with matching diagnostic start/terminal breadcrumbs, followed by the App Settings visible-route breadcrumb. No fatal/AndroidRuntime marker was found in the observed PID log. No unexpected failure was induced.
+
+Firebase Analytics ingestion is waived; these are local DebugAnalyticsManager logs, not Firebase delivery evidence. A successful route does not exercise Crashlytics; backend delivery remains unverified.
+
+## Verification and result
+
+- `:feature:home:ui:testAndroidHostTest`: PASS, 40 tests total, 0 failures/errors/skips; the 3 `SyncAndBackupExposureContextTest` cases passed.
+- `:feature:home:ui:compileKotlinIosSimulatorArm64`: PASS.
+- `:androidApp:assembleDebug`: PASS; installed update without clearing data; local/device APK hashes match.
+- **Case 429 functional:** PASS — App Settings row opened the signed-out Cloud Account form.
+- **Case 429 Analytics:** PASS locally — exactly one attributed screen exposure for one route entry; Firebase ingestion waived.
+- **Case 429 diagnostics:** PASS locally — exactly one bounded visible-route breadcrumb; no failure/crash induced. Crashlytics delivery unverified.
+- **`740/SyncAndBackup/toolbar-back`:** PASS for toolbar Back only. System Back and other dismissal/lifecycle variants remain NOT RUN; parent case 740 remains open.
+- **QA-BUG-0072:** fixed and Samsung-retested; focused commit pending at evidence capture. Case 429 is complete for its specified row-open route; next ordered App Settings case is 430.
