@@ -1,0 +1,24 @@
+# QA-BUG-0055 / case 422 — active-profile deletion post-fix retest
+
+- **Date/time:** 2026-09-28, Samsung log time around 05:12 CEST (UTC+0200).
+- **Device:** physical Samsung serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), portrait, gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, process PID `11251`, installed APK SHA-256 `75e418871ec005041a2f01259c080662bf4009d76aca7bef3763fd34f8916fd3`. Installed with `adb install -r`, without clearing data. The APK was built from QA-BUG-0067 commit `9789f5a1` plus the QA-BUG-0055 fix working tree (subsequently committed as `64806d33cdb67c633d44d25d530bd0539d97f4b6`) and unrelated uncommitted Home/Reader/Server changes. Device-pulled APK hash matched the local build.
+- **Host checks:** `:feature:home:ui:testAndroidHostTest` PASS, 28 tests; `:lib:user:implementation:testAndroidHostTest` PASS, 4 tests; zero failures/errors/skips. `:androidApp:assembleDebug` PASS.
+- **Preconditions:** Existing profiles and baseline data were left in place. A new, empty disposable profile was created in App Settings; it auto-activated, and its Books screen showed the empty-library state. No servers, books, or reading history were added to it.
+
+## Reproduction and observed result
+
+1. Confirmed that the newly created disposable profile was active in App Settings.
+2. Opened its Edit action → Delete → confirmed deletion.
+3. Parrot returned to the Books list; the list rendered its existing filtered-empty state.
+4. Reopened App Settings. The disposable profile was gone, exactly one profile had been removed, the preserved baseline profile remained present and was marked active, and the two pre-existing QA fixtures remained. No other profile was deleted or modified for this test.
+
+**Expected:** Before removing the active profile, activate a remaining profile; return to a usable database-backed destination; preserve all other profiles and their data; do not crash.
+
+**Actual:** PASS. The fallback was active before Books navigation completed, so the list loaded without `No active user profile` failure. No fatal dialog appeared. No app data clear or reinstall was performed. The deleted profile was created only for this test and was empty.
+
+## Analytics and diagnostics
+
+A PID-scoped parser limited to safe event/context fields reported exactly one delete `profile_operation_attempted` and one `profile_deleted` success. It found one `profile_delete` started breadcrumb and one terminal breadcrumb with matching correlation IDs; the terminal carried `reason_code=active_profile_fallback_activated`. The registry emitted one operation-only fallback log. There were zero PID fatal/AndroidRuntime exception markers. Correlation IDs and profile identities were not copied into this evidence. Local debug events are not Firebase delivery proof; Analytics ingestion is waived. Since no unexpected failure occurred, this run does not verify Crashlytics delivery.
+
+**Disposition:** Case 422 PASS post-fix (1/1). QA-BUG-0055 is fixed and retested in `64806d33cdb67c633d44d25d530bd0539d97f4b6`. Pre-fix crash evidence remains in `qa-bug-0055-case-422-active-profile-delete-prefx.txt`.

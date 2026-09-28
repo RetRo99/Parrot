@@ -1,0 +1,16 @@
+# QA-BUG-0067 — profile lifecycle log-redaction retest
+
+- **Date:** 2026-09-28.
+- **Device:** physical Samsung serial `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug; PID `11251`; APK SHA-256 `75e418871ec005041a2f01259c080662bf4009d76aca7bef3763fd34f8916fd3`. The build contains QA-BUG-0067 fix commit `9789f5a1`, QA-BUG-0055 working-tree changes later committed as `64806d33`, and unrelated uncommitted Home/Reader/Server changes. The package was update-installed without clearing data; local and device APK hashes matched.
+- **Host/build checks:** `DefaultUserInitializerLogMessagesTest` PASS (1); `DatabaseManagerLogMessagesTest` PASS (1); Android debug assembly PASS.
+
+## Executed variants
+
+On a valid-active-profile launch, the allowlisted PID-scoped output contained only stable startup/database messages: `Active profile already set`, `Active profile changed; switching database`, and `Opened database for active profile`. During the case-422 deletion retest, the registry emitted the stable `Activated a remaining profile before active-profile deletion` message. No profile name or ID appeared in these application messages.
+
+A local scanner summarized UUID-shaped token locations without outputting token values. The 14 UUID-shaped values under the application diagnostic logger tag were all keyed `correlation_id`; remaining matches were in platform WorkManager, Kotzilla, and SQLite tags. No profile IDs or raw log lines were retained. Correlation IDs remain diagnostic-only and were not sent as Analytics dimensions.
+
+**Unexecuted variant:** Case 772 specifically asks for startup recovery with a missing/invalid active-profile selection. That state was not induced because there is no safe fixture and altering persisted profile state directly is unsafe. The normal valid-active startup/database-switch paths passed; case 772 remains PARTIAL PASS, not a full pass.
+
+**Disposition:** QA-BUG-0067 log-template fix is committed as `9789f5a1f13846e680e50aa03682d03e284d884c`. Firebase Analytics and Crashlytics delivery are not applicable to this local log-privacy assertion. No real or disposable profile label/ID is stored in this evidence.
