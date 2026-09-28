@@ -39,6 +39,7 @@ class AppSettingsViewModel(
     private val profileOperationRetryTracker = ProfileOperationRetryTracker()
     private val profileOperationGate = ProfileOperationGate()
     private val profileOperationTapShield = ProfileOperationTapShieldHolder.instance
+    private val failedSettingToggleTargets = mutableMapOf<AppSettingsAnalyticsEvent.SettingToggle, Boolean>()
     private var addProfileRetryKey: String? = null
     private var renameProfileRetryKey: String? = null
     private var deleteProfileRetryKey: String? = null
@@ -504,27 +505,80 @@ class AppSettingsViewModel(
     }
 
     private fun setLoggingEnabled(enabled: Boolean) {
-        preferences.putBoolean(PreferencesKey.FileLoggingEnabled, enabled)
-        analytics.logEvent(AppSettingsAnalyticsEvent.FileLoggingToggled(isEnabled = enabled))
-        updateState { it.copy(isLoggingEnabled = enabled) }
+        runAppSettingToggle(
+            setting = AppSettingsAnalyticsEvent.SettingToggle.FileLogging,
+            enabled = enabled,
+            persist = { preferences.putBoolean(PreferencesKey.FileLoggingEnabled, enabled) },
+            successEvent = { isRetry ->
+                AppSettingsAnalyticsEvent.FileLoggingToggled(isEnabled = enabled, isRetry = isRetry)
+            },
+        ) {
+            updateState { it.copy(isLoggingEnabled = enabled) }
+        }
     }
 
     private fun setLogCrashesOnly(enabled: Boolean) {
-        preferences.putBoolean(PreferencesKey.FileLoggingCrashesOnly, enabled)
-        analytics.logEvent(AppSettingsAnalyticsEvent.CrashOnlyLoggingToggled(isEnabled = enabled))
-        updateState { it.copy(logCrashesOnly = enabled) }
+        runAppSettingToggle(
+            setting = AppSettingsAnalyticsEvent.SettingToggle.CrashOnlyLogging,
+            enabled = enabled,
+            persist = { preferences.putBoolean(PreferencesKey.FileLoggingCrashesOnly, enabled) },
+            successEvent = { isRetry ->
+                AppSettingsAnalyticsEvent.CrashOnlyLoggingToggled(isEnabled = enabled, isRetry = isRetry)
+            },
+        ) {
+            updateState { it.copy(logCrashesOnly = enabled) }
+        }
     }
 
     private fun setOpenLastBookOnLaunch(enabled: Boolean) {
-        preferences.putBoolean(PreferencesKey.OpenLastBookOnLaunch, enabled)
-        analytics.logEvent(AppSettingsAnalyticsEvent.OpenLastBookOnLaunchToggled(isEnabled = enabled))
-        updateState { it.copy(openLastBookOnLaunch = enabled) }
+        runAppSettingToggle(
+            setting = AppSettingsAnalyticsEvent.SettingToggle.OpenLastBookOnLaunch,
+            enabled = enabled,
+            persist = { preferences.putBoolean(PreferencesKey.OpenLastBookOnLaunch, enabled) },
+            successEvent = { isRetry ->
+                AppSettingsAnalyticsEvent.OpenLastBookOnLaunchToggled(isEnabled = enabled, isRetry = isRetry)
+            },
+        ) {
+            updateState { it.copy(openLastBookOnLaunch = enabled) }
+        }
     }
 
     private fun setShowContinueReading(enabled: Boolean) {
-        preferences.putBoolean(PreferencesKey.ShowContinueReading, enabled)
-        analytics.logEvent(AppSettingsAnalyticsEvent.ShowContinueReadingToggled(isEnabled = enabled))
-        updateState { it.copy(showContinueReading = enabled) }
+        runAppSettingToggle(
+            setting = AppSettingsAnalyticsEvent.SettingToggle.ShowContinueReading,
+            enabled = enabled,
+            persist = { preferences.putBoolean(PreferencesKey.ShowContinueReading, enabled) },
+            successEvent = { isRetry ->
+                AppSettingsAnalyticsEvent.ShowContinueReadingToggled(isEnabled = enabled, isRetry = isRetry)
+            },
+        ) {
+            updateState { it.copy(showContinueReading = enabled) }
+        }
+    }
+
+    private fun runAppSettingToggle(
+        setting: AppSettingsAnalyticsEvent.SettingToggle,
+        enabled: Boolean,
+        persist: () -> Unit,
+        successEvent: (isRetry: Boolean) -> AnalyticsEvent,
+        onSuccess: () -> Unit,
+    ) {
+        val isRetry = failedSettingToggleTargets[setting] == enabled
+        val succeeded = executeAppSettingToggle(
+            analytics = analytics,
+            setting = setting,
+            isEnabled = enabled,
+            isRetry = isRetry,
+            persist = persist,
+            successEvent = successEvent,
+        )
+        if (succeeded) {
+            failedSettingToggleTargets.remove(setting)
+            onSuccess()
+        } else {
+            failedSettingToggleTargets[setting] = enabled
+            updateState { it.withAppSettingSaveFailure() }
+        }
     }
 
     private fun shareLogs() {

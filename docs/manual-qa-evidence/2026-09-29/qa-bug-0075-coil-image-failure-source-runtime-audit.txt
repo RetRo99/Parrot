@@ -1,0 +1,12 @@
+# QA-BUG-0075 — Coil image errors are all reported as non-fatal exceptions
+
+- **Date:** 2026-09-29.
+- **Device/build:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; Parrot 0.4.5 (21), PID `4301`, APK SHA-256 `610e505a11d51c11ed64ff3c0a06aad12f8091b3c0c822d99625c3c32a5c0b7e` (QA-BUG-0074 candidate tree).
+- **Precondition:** An image request from shared `CoilImage` reaches `AsyncImagePainter.State.Error`, including ordinary HTTP/network rejection or cancellation.
+- **Runtime observation:** During the known unauthenticated saved-book startup/Books transition, the PID-scoped local provider logged two sanitized `HttpException` records from Coil's Ktor `NetworkFetcher`. No toggle persistence operation failed and Parrot did not crash. Raw log lines, URL, cache key, and book/profile data were not retained.
+- **Source audit:** `base-ui/src/commonMain/kotlin/com/retro99/base/ui/compose/CoilImage.kt:43-52` calls `analytics.logException` for every `AsyncImagePainter.State.Error`, regardless of whether the failure is an expected HTTP/network/cancellation outcome, a meaningful image decode error, or a repeated request. Crashlytics backend delivery is not verified.
+- **Expected:** Expected cancellation and ordinary HTTP/network failures do not create non-fatal exception noise. Unexpected, materially user-impacting image failures may produce a bounded diagnostic once, without URLs, cache keys, or other payloads.
+- **Actual:** Every image error reaches the exception-reporting API; runtime showed two occurrences for this run.
+- **Status:** OPEN, confirmed instrumentation gap; fix and regression tests pending.
+- **Frequency/impact:** Potentially once per failed image request across every screen using `CoilImage`; low direct functional impact, but noisy reports can obscure actionable issues and may create reporting volume.
+- **Next:** Add classification/policy tests, suppress expected request/cancellation failures, preserve appropriate bounded reporting for unexpected errors, and run focused host/build checks plus Samsung regression before proceeding to case 438.

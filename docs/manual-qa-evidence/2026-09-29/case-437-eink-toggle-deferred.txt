@@ -1,0 +1,7 @@
+# Case 437 — E-ink toggle animation
+
+- **Date:** 2026-09-29.
+- **Required device:** e-ink hardware.
+- **Available device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; not an e-ink display.
+- **Result:** DEFERRED by the test-plan hardware scope. No toggle-animation behavior was inferred or tested on Samsung. Analytics and diagnostics are N-A for this device-specific exclusion.
+- **Next ordered case:** 438, Floating Continue Reading bubble.

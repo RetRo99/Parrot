@@ -173,6 +173,7 @@ private val SAFE_SERVER_TYPES = setOf("storyteller", "audiobookshelf", "parrot-c
 private val SAFE_VALIDATION_FIELDS = setOf("server_url", "required_fields")
 
 private val SAFE_SETTING_NAMES = setOf(
+    "file_logging", "crash_only_logging", "open_last_book_on_launch", "show_continue_reading",
     "theme", "font_size", "font_family", "font_weight", "text_normalization", "line_height",
     "paragraph_spacing", "margin_horizontal", "margin_vertical", "text_align", "scroll_mode",
     "publisher_styles", "show_progress_bar", "chapter_progress_display_mode", "show_total_progress",

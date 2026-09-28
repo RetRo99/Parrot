@@ -1042,39 +1042,104 @@ sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
         ) + ("is_retry" to isRetry)
     }
 
+    enum class SettingToggle(
+        val settingName: String,
+        val operation: String,
+    ) {
+        FileLogging("file_logging", "file_logging"),
+        CrashOnlyLogging("crash_only_logging", "crash_only_logging"),
+        OpenLastBookOnLaunch("open_last_book_on_launch", "open_last_book_on_launch"),
+        ShowContinueReading("show_continue_reading", "show_continue_reading"),
+    }
+
+    data class SettingToggleAttempted(
+        val setting: SettingToggle,
+        val isEnabled: Boolean,
+        val isRetry: Boolean,
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "app_setting_toggle_attempted"
+        override val parameters: Map<String, Any> = settingToggleParameters(
+            setting = setting,
+            isEnabled = isEnabled,
+            stage = "started",
+            outcome = "started",
+            isRetry = isRetry,
+        )
+    }
+
+    data class SettingToggleFailed(
+        val setting: SettingToggle,
+        val isEnabled: Boolean,
+        val isRetry: Boolean,
+        val reasonCode: String = "preference_write_failed",
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "app_setting_toggle_failed"
+        override val parameters: Map<String, Any> = settingToggleParameters(
+            setting = setting,
+            isEnabled = isEnabled,
+            stage = "terminal",
+            outcome = "failed",
+            isRetry = isRetry,
+        ) + ("reason_code" to reasonCode)
+    }
+
+    data class SettingToggleCancelled(
+        val setting: SettingToggle,
+        val isEnabled: Boolean,
+        val isRetry: Boolean,
+        val reasonCode: String = "operation_cancelled",
+    ) : AppSettingsAnalyticsEvent {
+        override val name: String = "app_setting_toggle_cancelled"
+        override val parameters: Map<String, Any> = settingToggleParameters(
+            setting = setting,
+            isEnabled = isEnabled,
+            stage = "terminal",
+            outcome = "cancelled",
+            isRetry = isRetry,
+        ) + ("reason_code" to reasonCode)
+    }
+
     data class FileLoggingToggled(
         val isEnabled: Boolean,
+        val isRetry: Boolean = false,
     ) : AppSettingsAnalyticsEvent {
         override val name: String = "file_logging_toggled"
         override val parameters: Map<String, Any> = mapOf(
             "is_enabled" to isEnabled,
+            "is_retry" to isRetry,
         )
     }
 
     data class CrashOnlyLoggingToggled(
         val isEnabled: Boolean,
+        val isRetry: Boolean = false,
     ) : AppSettingsAnalyticsEvent {
         override val name: String = "crash_only_logging_toggled"
         override val parameters: Map<String, Any> = mapOf(
             "is_enabled" to isEnabled,
+            "is_retry" to isRetry,
         )
     }
 
     data class OpenLastBookOnLaunchToggled(
         val isEnabled: Boolean,
+        val isRetry: Boolean = false,
     ) : AppSettingsAnalyticsEvent {
         override val name: String = "open_last_book_on_launch_toggled"
         override val parameters: Map<String, Any> = mapOf(
             "is_enabled" to isEnabled,
+            "is_retry" to isRetry,
         )
     }
 
     data class ShowContinueReadingToggled(
         val isEnabled: Boolean,
+        val isRetry: Boolean = false,
     ) : AppSettingsAnalyticsEvent {
         override val name: String = "show_continue_reading_toggled"
         override val parameters: Map<String, Any> = mapOf(
             "is_enabled" to isEnabled,
+            "is_retry" to isRetry,
         )
     }
 
@@ -1241,6 +1306,23 @@ sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
             "operation" to operation.operation,
             "stage" to stage,
             "outcome" to outcome,
+        )
+
+        private fun settingToggleParameters(
+            setting: SettingToggle,
+            isEnabled: Boolean,
+            stage: String,
+            outcome: String,
+            isRetry: Boolean,
+        ): Map<String, Any> = mapOf(
+            "screen" to "app_settings",
+            "action" to "toggle_setting",
+            "operation" to setting.operation,
+            "setting_name" to setting.settingName,
+            "is_enabled" to isEnabled,
+            "stage" to stage,
+            "outcome" to outcome,
+            "is_retry" to isRetry,
         )
     }
 }

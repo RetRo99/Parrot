@@ -872,15 +872,62 @@ class AnalyticsParameterSanitizerTest {
     @Test
     fun showContinueReadingToggleEventRetainsOnlyCommittedBooleanState() {
         val disabled = AppSettingsAnalyticsEvent.ShowContinueReadingToggled(isEnabled = false)
-        val enabled = AppSettingsAnalyticsEvent.ShowContinueReadingToggled(isEnabled = true)
+        val enabled = AppSettingsAnalyticsEvent.ShowContinueReadingToggled(isEnabled = true, isRetry = true)
 
         assertEquals("show_continue_reading_toggled", disabled.name)
-        assertEquals(mapOf("is_enabled" to false), sanitizeAnalyticsParameters(disabled.parameters))
-        assertEquals(mapOf("is_enabled" to true), sanitizeAnalyticsParameters(enabled.parameters))
         assertEquals(
-            mapOf("is_enabled" to true),
+            mapOf("is_enabled" to false, "is_retry" to false),
+            sanitizeAnalyticsParameters(disabled.parameters),
+        )
+        assertEquals(
+            mapOf("is_enabled" to true, "is_retry" to true),
+            sanitizeAnalyticsParameters(enabled.parameters),
+        )
+        assertEquals(
+            mapOf("is_enabled" to true, "is_retry" to true),
             sanitizeAnalyticsParameters(enabled.parameters + ("profile_id" to "private-profile-id")),
         )
+    }
+
+    @Test
+    fun appSettingToggleAttemptFailureAndCancellationUseBoundedDimensions() {
+        val setting = AppSettingsAnalyticsEvent.SettingToggle.OpenLastBookOnLaunch
+        val attempted = sanitizeAnalyticsParameters(
+            AppSettingsAnalyticsEvent.SettingToggleAttempted(
+                setting = setting,
+                isEnabled = false,
+                isRetry = true,
+            ).parameters + mapOf("profile_id" to "private-profile-id"),
+        )
+        val failed = sanitizeAnalyticsParameters(
+            AppSettingsAnalyticsEvent.SettingToggleFailed(
+                setting = setting,
+                isEnabled = false,
+                isRetry = true,
+            ).parameters + mapOf("error_message" to "private storage path"),
+        )
+        val cancelled = sanitizeAnalyticsParameters(
+            AppSettingsAnalyticsEvent.SettingToggleCancelled(
+                setting = setting,
+                isEnabled = false,
+                isRetry = true,
+            ).parameters,
+        )
+
+        assertEquals("app_setting_toggle_attempted", AppSettingsAnalyticsEvent.SettingToggleAttempted(setting, false, true).name)
+        assertEquals("app_setting_toggle_failed", AppSettingsAnalyticsEvent.SettingToggleFailed(setting, false, true).name)
+        assertEquals("app_setting_toggle_cancelled", AppSettingsAnalyticsEvent.SettingToggleCancelled(setting, false, true).name)
+        assertEquals("open_last_book_on_launch", attempted["setting_name"])
+        assertEquals("open_last_book_on_launch", attempted["operation"])
+        assertEquals("started", attempted["outcome"])
+        assertEquals(false, attempted["is_enabled"])
+        assertEquals(true, attempted["is_retry"])
+        assertEquals("failed", failed["outcome"])
+        assertEquals("preference_write_failed", failed["reason_code"])
+        assertEquals(true, failed["is_retry"])
+        assertEquals("cancelled", cancelled["outcome"])
+        assertEquals("operation_cancelled", cancelled["reason_code"])
+        assertFalse("profile_id" in attempted || "error_message" in failed)
     }
 
     @Test

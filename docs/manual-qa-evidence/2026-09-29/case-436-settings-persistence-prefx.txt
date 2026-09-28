@@ -1,0 +1,26 @@
+# Case 436 — App Settings persistence/restart (pre-instrumentation fix)
+
+- **Date/time:** 2026-09-29, approximately 00:08–00:12 CEST.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `S921BXXSGDZG1`.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36; installed `base.apk` SHA-256 `310dda0fdc9201b2815e0d855afb94e677b15d496b192087f8d183723868936e`. This is the previously recorded QA-BUG-0072 fix tree (`85041fee0ab5b0431c5361429dedb3bdb6be2e27`) plus its recorded source base/unrelated code; repository HEAD during this run was `0119c90891ed39438eab48938e25b40abca20c43`, newer than the installed APK. Device-pulled APK hash was rechecked for this run.
+- **Data handling:** No app data clear/reinstall. The original active profile, server/book fixture, and current-book target were not changed. The existing Books filter was left intact. No profile labels/IDs, book data, screenshot, or raw hierarchy retained.
+- **Starting/final original settings:** Open Last Book ON; Show Continue Reading ON; File Logging OFF; Only Log Crashes OFF/disabled. Both `parrot_logs.txt` and `parrot_logs_old.txt` were absent at start and verified absent after cleanup.
+
+## Steps and actual results
+
+1. In App Settings, confirmed the two Reading switches were ON and File Logging was OFF (Only Log Crashes disabled).
+2. Changed Open Last Book OFF and Show Continue Reading OFF; enabled File Logging, then enabled Only Log Crashes. The visible states matched the requested values.
+3. PID-scoped local debug output recorded exactly one false event for each Reading switch, then one true event for File Logging and Only Log Crashes.
+4. Used `adb -s RFCWC0SSVDM shell am force-stop com.retro99.parrot`, verified PID `21569` was gone, then launched `.android.MainActivity` with `am start`. New PID `23213` opened the Books destination, not Reader; no saved-book authentication dialog appeared. The existing filtered-empty Books state remained, with the Continue Reading shelf absent while its setting was OFF.
+5. Reopened App Settings. Open Last Book and Show Continue Reading were OFF; File Logging and Only Log Crashes were ON. All four values persisted across the force-stop/relaunch.
+6. Restored the original preferences in dependency-safe order: Only Log Crashes OFF, File Logging OFF, then Open Last Book ON and Show Continue Reading ON. Rechecked all four visible states. No second restart was performed after restoring Open Last Book ON, to avoid entering the unauthenticated saved-book route.
+7. Rechecked the app-private active and rotated log paths: both remained absent. No crash, fatal marker, exception marker, or user-visible error occurred.
+
+## Results and instrumentation finding
+
+- **Functional:** PASS for persistence of all four App Settings switches across force-stop/relaunch; original values restored. This test does not include Reader Settings, which have separate cases.
+- **Analytics:** PASS locally: one false/true pair for each Reading toggle and one true/false pair for each logging toggle (eight toggle events total). App Settings emitted one actual-visible `app_settings_screen_viewed(source_screen=books, entry_point=bottom_navigation)` event. Firebase ingestion is waived and is not claimed.
+- **Diagnostics:** FAIL for the required toggle-operation context: the App Settings route and current-book observer breadcrumbs appeared, but the four toggle handlers emitted no matching operation breadcrumbs or contextual failure path. No preference-write error was induced, so no runtime lost state was observed. QA-BUG-0074 was recorded before remediation. Crashlytics delivery was not tested.
+- **Next:** Fix and commit QA-BUG-0074, then rebuild/update-install and rerun case 436 before proceeding to 437/438.
+
+Local observations were inspected in ADB logcat but raw output and private UI hierarchy were not retained. The four prior preferences were restored without clearing app data.

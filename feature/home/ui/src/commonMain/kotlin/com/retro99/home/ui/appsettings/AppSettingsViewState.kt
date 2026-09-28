@@ -8,6 +8,7 @@ data class AppSettingsViewState(
     val logCrashesOnly: Boolean = false,
     val openLastBookOnLaunch: Boolean = false,
     val showContinueReading: Boolean = true,
+    val appSettingSaveFailureCount: Int = 0,
     val hasCurrentlyReadingBook: Boolean = false,
     val showLogsClearedMessage: Boolean = false,
     val showLogsClearFailedMessage: Boolean = false,
@@ -66,3 +67,6 @@ internal fun AppSettingsViewState.withCurrentBookClearOutcome(
         canRetryCurrentBookClear = true,
     )
 }
+
+internal fun AppSettingsViewState.withAppSettingSaveFailure(): AppSettingsViewState =
+    copy(appSettingSaveFailureCount = appSettingSaveFailureCount + 1)

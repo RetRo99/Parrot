@@ -92,6 +92,7 @@ import resources.translations.app_settings_log_crashes_only_description
 import resources.translations.app_settings_no_logs
 import resources.translations.app_settings_open_last_book
 import resources.translations.app_settings_open_last_book_description
+import resources.translations.app_settings_preference_save_failed
 import resources.translations.app_settings_section_account
 import resources.translations.app_settings_section_profiles
 import resources.translations.app_settings_profile_active
@@ -166,6 +167,13 @@ private fun AppSettingsScreenContent(
     val currentBookClearedMessage = stringResource(StringRes.app_settings_current_book_cleared)
     val currentBookClearFailedMessage = stringResource(StringRes.app_settings_current_book_clear_failed)
     val profileOperationFailedMessage = stringResource(StringRes.app_settings_profile_operation_failed)
+    val preferenceSaveFailedMessage = stringResource(StringRes.app_settings_preference_save_failed)
+
+    LaunchedEffect(viewState.appSettingSaveFailureCount) {
+        if (viewState.appSettingSaveFailureCount > 0) {
+            snackbarHostState.showSnackbar(preferenceSaveFailedMessage)
+        }
+    }
 
     LaunchedEffect(viewState.showLogsClearedMessage) {
         if (viewState.showLogsClearedMessage) {
