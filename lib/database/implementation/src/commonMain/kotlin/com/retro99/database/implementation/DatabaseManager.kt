@@ -16,6 +16,11 @@ import kotlinx.coroutines.sync.withLock
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
+internal object DatabaseManagerLogMessages {
+    const val PROFILE_CHANGED = "Active profile changed; switching database"
+    const val DATABASE_OPENED = "Opened database for active profile"
+}
+
 /**
  * Manages database instances per user profile.
  * 
@@ -42,7 +47,7 @@ class DatabaseManager(
             .distinctUntilChanged()
             .onEach { userId ->
                 if (userId != currentUserId) {
-                    logger.d { "User changed from $currentUserId to $userId, switching database" }
+                    logger.d { DatabaseManagerLogMessages.PROFILE_CHANGED }
                     switchToUser(userId)
                 }
             }
@@ -65,7 +70,7 @@ class DatabaseManager(
             val driver = driverFactory.createDriver(userId)
             currentDriver = driver
             currentDatabase = AppDatabase(driver)
-            logger.d { "Opened database for user $userId" }
+            logger.d { DatabaseManagerLogMessages.DATABASE_OPENED }
         } else {
             logger.d { "No active user, database closed" }
         }
