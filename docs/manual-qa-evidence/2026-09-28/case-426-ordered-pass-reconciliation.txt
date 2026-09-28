@@ -1,0 +1,24 @@
+# Case 426 — ordered App Settings pass reconciliation
+
+- **Reconciled:** 2026-09-28.
+- **Required device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`), gesture navigation.
+- **Previously executed build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `2302df8024779c5f1cbff4e588965f1c1ec2fec7f15bddfde6a19412b8ed778e`, source commit `e54f99b854b694d5b62db5338320afd75acdef35`; installed/local/Samsung-pulled hashes matched. Samsung PID `28558` during clear.
+- **Current build at reconciliation:** `com.retro99.parrot` 0.4.5 (21), Samsung PID `30163`, APK SHA-256 `70fc583c081d3109ab91cd17277ae1c230256695e0422c2c0a772483bea0240e`, source commit includes QA-BUG-0071 `1884404a3660fffeced85756af0f693eea8a01e9` plus unrelated pre-existing changes. `CurrentBookClearOperation.kt` and `AppSettingsViewModel.clearCurrentBook()` have no changes after the tested QA-BUG-0028 implementation. The current APK was not used for a second clear.
+- **No sensitive fixture data:** No profile label, book title/identifier, server identifier, credential, screenshot, raw UI hierarchy, or app database was copied into this reconciliation record. App data was not cleared.
+
+## Existing Samsung execution accepted for case 426
+
+The physical Samsung run on 2026-09-27 is the case’s executed success-path evidence, not a new execution on the current APK. With a current-reading entry present, App Settings showed Clear Current Book. Tapping it immediately displayed success feedback, removed the row/current-reading shortcut, and left both reading preferences enabled. The implementation has no confirmation dialog or undo; therefore confirmation/cancellation is N-A for the actual shipped action (the catalogue’s assumed confirmation was reconciled against observed product behavior).
+
+PID-scoped local DebugAnalyticsManager output showed exactly one `current_book_clear_attempted` and one `current_book_cleared(outcome=succeeded, is_retry=false)`, plus matching started/succeeded breadcrumbs sharing one diagnostic-only correlation ID. No profile/book identifiers were included. Firebase Analytics ingestion is waived and not claimed. No failure was induced and no crash/non-fatal was expected on the successful path; Crashlytics delivery is unverified.
+
+The current retained profile again has a current-book target. Repeating this immediate destructive action would mutate preserved test state, with no undo. Because the clear operation and ViewModel boundary are unchanged since the already executed, hash-matched Samsung run, do not clear the retained target merely to duplicate evidence on the newer shelf-only build. The current build’s source path was audited; this is not a claim that case 426 was freshly executed on APK `70fc…0240e`.
+
+## Disposition and blocker
+
+- **Functional:** PASS for the executed success path, on the Samsung build listed above. Clear confirmation/cancel: N-A (no confirmation UI exists). Retry/failure recovery: NOT RUN on device.
+- **Analytics:** PASS locally for one attempt and one success terminal on the executed build. Firebase ingestion waived.
+- **Diagnostics:** PASS locally for correlated success breadcrumbs; **BLOCKED** for Samsung failure/non-fatal/retry verification because there is no safe preferences-write fault-injection fixture. Existing host tests cover thrown storage exception, one contextual report, retained state, retry success and ordinary cancellation propagation. Crashlytics delivery remains unverified.
+- **Next ordered case:** 427. This reconciliation does not sign off App Settings; other cases/variants remain open.
+
+Detailed Samsung logs and prior/fixed observations remain in [the QA-BUG-0028 retest](../2026-09-27/case-426-clear-current-instrumented-retest.txt), [the preserved pre-fix observation](../2026-09-27/case-426-clear-current-observation.txt), and the [QA-BUG-0027/0028 register entries](../../manual-qa-bugs.md#qa-bug-0027--app-settings-never-exposes-clear-current-book).
