@@ -399,14 +399,30 @@ class AppSettingsViewModel(
             AppSettingsAnalyticsEvent.ProfileOperation.Delete,
         ).also { deleteProfileRetryKey = it }
         launchProfileOperation {
+            var activeProfileFallbackApplied = false
             val succeeded = runProfileOperation(
                 operation = AppSettingsAnalyticsEvent.ProfileOperation.Delete,
                 retryKey = retryKey,
                 successEvent = { isRetry -> AppSettingsAnalyticsEvent.ProfileDeleted(isRetry) },
+                successReasonCode = {
+                    "active_profile_fallback_activated".takeIf { activeProfileFallbackApplied }
+                },
             ) {
+                val wasActiveProfile = userRegistry.getActiveProfileId() == profileId
                 userRegistry.deleteProfile(profileId)
                 check(userRegistry.getProfile(profileId) == null) {
                     "profile_deletion_not_applied"
+                }
+                if (wasActiveProfile) {
+                    val activeProfileId = userRegistry.getActiveProfileId()
+                    check(
+                        activeProfileId != null &&
+                            activeProfileId != profileId &&
+                            userRegistry.getProfile(activeProfileId) != null,
+                    ) {
+                        "active_profile_fallback_not_applied"
+                    }
+                    activeProfileFallbackApplied = true
                 }
             }
             if (succeeded) deleteProfileRetryKey = null
@@ -465,6 +481,7 @@ class AppSettingsViewModel(
         operation: AppSettingsAnalyticsEvent.ProfileOperation,
         retryKey: String,
         successEvent: (Boolean) -> AnalyticsEvent,
+        successReasonCode: (() -> String?)? = null,
         execute: suspend () -> Unit,
     ): Boolean {
         val isRetry = profileOperationRetryTracker.isRetry(retryKey)
@@ -473,6 +490,7 @@ class AppSettingsViewModel(
             operation = operation,
             isRetry = isRetry,
             successEvent = successEvent,
+            successReasonCode = successReasonCode,
             execute = execute,
         )
         if (succeeded) {

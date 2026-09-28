@@ -206,6 +206,25 @@ class ProfileOperationTest {
     }
 
     @Test
+    fun successfulRecoveryReasonIsIncludedInCorrelatedTerminalBreadcrumb() = runTest {
+        val analytics = ProfileRecordingAnalytics()
+
+        val succeeded = executeProfileOperation(
+            analytics = analytics,
+            operation = AppSettingsAnalyticsEvent.ProfileOperation.Delete,
+            isRetry = false,
+            successEvent = { isRetry -> AppSettingsAnalyticsEvent.ProfileDeleted(isRetry) },
+            successReasonCode = { "active_profile_fallback_activated" },
+        ) {}
+
+        assertTrue(succeeded)
+        assertEquals("succeeded", analytics.breadcrumbs.last().outcome)
+        assertEquals("active_profile_fallback_activated", analytics.breadcrumbs.last().reasonCode)
+        assertEquals(analytics.breadcrumbs.first().correlationId, analytics.breadcrumbs.last().correlationId)
+        assertTrue(analytics.exceptions.isEmpty())
+    }
+
+    @Test
     fun cancellationIsRecordedWithoutExceptionReportAndPropagates() = runTest {
         val analytics = ProfileRecordingAnalytics()
         val cancellation = CancellationException("cancelled")

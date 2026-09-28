@@ -54,6 +54,7 @@ internal suspend fun executeProfileOperation(
     operation: AppSettingsAnalyticsEvent.ProfileOperation,
     isRetry: Boolean,
     successEvent: (Boolean) -> AnalyticsEvent,
+    successReasonCode: (() -> String?)? = null,
     execute: suspend () -> Unit,
 ): Boolean {
     val correlationId = Uuid.random().toString()
@@ -96,6 +97,12 @@ internal suspend fun executeProfileOperation(
     }
 
     analytics.logEvent(successEvent(isRetry))
-    analytics.logBreadcrumb(context(stage = "terminal", outcome = "succeeded"))
+    analytics.logBreadcrumb(
+        context(
+            stage = "terminal",
+            outcome = "succeeded",
+            reasonCode = successReasonCode?.invoke(),
+        ),
+    )
     return true
 }

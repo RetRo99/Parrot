@@ -91,18 +91,35 @@ class UserRegistryImpl(
             return@withLock
         }
 
+        if (_activeProfileId.value == profileId) {
+            val fallbackProfile = _profiles.value.values
+                .asSequence()
+                .filterNot { it.id == profileId }
+                .maxWithOrNull(
+                    compareBy<UserProfile> { it.lastActiveAt ?: Long.MIN_VALUE }
+                        .thenBy { it.createdAt },
+                )
+            if (fallbackProfile == null) {
+                logger.w { "Attempted to delete the only active profile" }
+                return@withLock
+            }
+
+            val activatedFallback = fallbackProfile.copy(
+                lastActiveAt = Clock.System.now().toEpochMilliseconds(),
+            )
+            _profiles.update { it + (activatedFallback.id to activatedFallback) }
+            persistProfiles()
+            _activeProfileId.value = activatedFallback.id
+            persistActiveProfile()
+            logger.d { "Activated a remaining profile before active-profile deletion" }
+        }
+
         // Clear user-scoped preferences
         clearUserPreferences(profileId)
 
         // Remove profile from registry
         _profiles.update { it - profileId }
         persistProfiles()
-
-        // If this was active profile, clear active
-        if (_activeProfileId.value == profileId) {
-            _activeProfileId.value = null
-            persistActiveProfile()
-        }
 
         logger.d { "Deleted profile" }
         // Note: Database file deletion should be handled by DatabaseProvider
@@ -204,4 +221,3 @@ class UserRegistryImpl(
         logger.d { "Cleared profile-scoped preferences" }
     }
 }
-
