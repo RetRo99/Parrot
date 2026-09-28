@@ -139,6 +139,7 @@ class AppSettingsViewModel(
             AppSettingsIntent.OnShareLogsFailedMessageShown -> onLogShareFailedMessageShown()
             AppSettingsIntent.OnClearLogsClicked -> clearLogs()
             AppSettingsIntent.OnLogsClearedMessageShown -> onLogsClearedMessageShown()
+            AppSettingsIntent.OnLogsClearFailedMessageShown -> onLogsClearFailedMessageShown()
             AppSettingsIntent.OnNoLogsMessageShown -> onNoLogsMessageShown()
             AppSettingsIntent.OnClearCurrentBookClicked -> clearCurrentBook()
             AppSettingsIntent.OnCurrentBookClearedMessageShown -> onCurrentBookClearedMessageShown()
@@ -564,13 +565,20 @@ class AppSettingsViewModel(
     }
 
     private fun clearLogs() {
-        fileLogger.clearLogs()
-        analytics.logEvent(AppSettingsAnalyticsEvent.LogsCleared)
-        updateState { it.copy(showLogsClearedMessage = true) }
+        val succeeded = executeLogsClear(
+            analytics = analytics,
+            isRetry = viewState.value.canRetryLogsClear,
+            clear = fileLogger::clearLogs,
+        )
+        updateState { it.withLogsClearOutcome(succeeded) }
     }
 
     private fun onLogsClearedMessageShown() {
         updateState { it.copy(showLogsClearedMessage = false) }
+    }
+
+    private fun onLogsClearFailedMessageShown() {
+        updateState { it.copy(showLogsClearFailedMessage = false) }
     }
 
     private fun onNoLogsMessageShown() {

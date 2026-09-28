@@ -37,7 +37,8 @@ interface FileLogger {
     fun getLogFilePath(): String
 
     /**
-     * Clears the log file contents.
+     * Deletes the current and rotated log files, verifying that both are absent afterward.
+     * Missing files are an ordinary no-op; throws when deletion or verification fails.
      */
     fun clearLogs()
 
@@ -48,4 +49,3 @@ interface FileLogger {
      */
     fun getLogContents(): String
 }
-

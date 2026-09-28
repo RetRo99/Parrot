@@ -48,13 +48,12 @@ class AndroidFileLogger(
     override fun getLogFilePath(): String = logFile.absolutePath
 
     override fun clearLogs() {
-        try {
-            if (logFile.exists()) {
-                logFile.delete()
-            }
-        } catch (e: Exception) {
-            // Ignore errors when clearing logs
-        }
+        val backupFile = File(context.filesDir, BACKUP_LOG_FILE_NAME)
+        clearDiagnosticLogFiles(
+            paths = listOf(logFile.absolutePath, backupFile.absolutePath),
+            exists = { path -> File(path).exists() },
+            delete = { path -> File(path).delete() },
+        )
     }
 
     override fun getLogContents(): String {

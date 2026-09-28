@@ -41,6 +41,10 @@ internal fun sanitizeDiagnosticContext(context: DiagnosticContext): String? {
     return "diagnostic_context " + safeFields.joinToString(" ") { (key, value) -> "$key=$value" }
 }
 
+/** A successful clear must not recreate the log file with its own terminal breadcrumb. */
+internal fun shouldPersistDiagnosticBreadcrumbToFile(context: DiagnosticContext): Boolean =
+    context.action != "clear_logs"
+
 private fun sanitizeStructuredDiagnosticMessage(message: String): String? {
     if (!message.startsWith("diagnostic_context ")) return null
     val allowedKeys = setOf(

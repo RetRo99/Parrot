@@ -1,0 +1,18 @@
+# QA-BUG-0069 Clear Logs retest
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), gesture navigation (`navigation_mode=2`).
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `9345`; installed APK SHA-256 `2f3554db7a8397129859b140de2ea896f21c3588d168661e048760b1c5714801`. Built from HEAD `45283a66` plus the QA-BUG-0069 working-tree change and unrelated pre-existing Home/Reader/Server changes. Installed with `adb install -r`; app data was not cleared.
+- **Fixture/privacy:** Confirmed the two target log filenames were absent before fixture setup. Created two synthetic files in the app-private files directory: `parrot_logs.txt` (29 bytes) and `parrot_logs_old.txt` (30 bytes), each containing only a short QA-only synthetic marker; content was not read back or retained. No credentials, profile/book data, actual logs or other file paths were collected. Logging preferences were not changed.
+
+## Existing active and rotated logs
+
+From App Settings → Support, tapped Clear Logs. The live UI displayed “Logs cleared.” A filename/metadata-only check immediately afterward confirmed both active and rotated log files were absent. A second Clear Logs tap with both files already absent also displayed “Logs cleared”; both target files remained absent. This verifies normal deletion of the active+backup pair and the missing-file no-op branch on the installed Samsung build.
+
+PID-filtered local debug output recorded one `logs_clear_attempted` and one `logs_cleared` event for each tap, each with `action=clear_logs`, `outcome=started/succeeded`, `is_retry=false`; each had a matching correlated start/terminal breadcrumb pair. No exception or fatal marker was observed. Analytics visibility is local DebugAnalyticsManager output only; Firebase Analytics ingestion is waived, not verified. Crashlytics delivery is not claimed. The clear terminal breadcrumb is intentionally excluded from file persistence, so it does not recreate the successfully cleared log.
+
+## Host/build checks and limits
+
+`:feature:home:ui:testAndroidHostTest` and `:lib:analytics:implementation:testAndroidHostTest` passed: 14 reported suites, 82 tests, 0 failures/errors/skips. Focused tests cover active+rotated deletion, missing-file no-op, a false delete with the file still present, failed postcondition despite a claimed delete, exception redaction, retry classification, one contextual non-fatal, cancellation without a non-fatal, outcome state, and preventing a clear-success breadcrumb from recreating the log. `:androidApp:assembleDebug` passed. iOS Simulator Kotlin compilation passed for `base-ui`, Analytics implementation and Home UI; iOS runtime tests were not run.
+
+Samsung deletion-failure injection was not performed; that variant remains BLOCKED without a safe filesystem-failure fixture. No app data was cleared and the original profile, server/book fixture, other app-private files and settings preferences were not altered.

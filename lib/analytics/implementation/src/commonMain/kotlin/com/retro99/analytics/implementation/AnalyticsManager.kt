@@ -30,7 +30,7 @@ class AnalyticsManager(
     override fun logBreadcrumb(context: DiagnosticContext) {
         val breadcrumb = sanitizeDiagnosticContext(context) ?: return
         firebaseCrashlytics.log(breadcrumb)
-        if (shouldLogHandledExceptionsToFile()) {
+        if (shouldLogHandledExceptionsToFile() && shouldPersistDiagnosticBreadcrumbToFile(context)) {
             fileLogger.log("diagnostic", breadcrumb)
         }
     }

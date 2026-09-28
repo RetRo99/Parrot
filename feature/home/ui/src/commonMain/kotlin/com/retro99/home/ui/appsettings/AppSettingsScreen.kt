@@ -174,6 +174,19 @@ private fun AppSettingsScreenContent(
         }
     }
 
+    LaunchedEffect(viewState.showLogsClearFailedMessage) {
+        if (viewState.showLogsClearFailedMessage) {
+            val result = snackbarHostState.showSnackbar(
+                message = logOperationFailedMessage,
+                actionLabel = retryMessage,
+            )
+            intentDispatcher(AppSettingsIntent.OnLogsClearFailedMessageShown)
+            if (result == SnackbarResult.ActionPerformed) {
+                intentDispatcher(AppSettingsIntent.OnClearLogsClicked)
+            }
+        }
+    }
+
     LaunchedEffect(viewState.showNoLogsMessage) {
         if (viewState.showNoLogsMessage) {
             snackbarHostState.showSnackbar(noLogsMessage)

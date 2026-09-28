@@ -29,7 +29,7 @@ class DebugAnalyticsManager(
     override fun logBreadcrumb(context: DiagnosticContext) {
         val breadcrumb = sanitizeDiagnosticContext(context) ?: return
         logger.d { "Diagnostic breadcrumb: $breadcrumb" }
-        if (shouldLogHandledExceptionsToFile()) {
+        if (shouldLogHandledExceptionsToFile() && shouldPersistDiagnosticBreadcrumbToFile(context)) {
             fileLogger.log("diagnostic", breadcrumb)
         }
     }

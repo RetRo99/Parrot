@@ -10,6 +10,8 @@ data class AppSettingsViewState(
     val showContinueReading: Boolean = true,
     val hasCurrentlyReadingBook: Boolean = false,
     val showLogsClearedMessage: Boolean = false,
+    val showLogsClearFailedMessage: Boolean = false,
+    val canRetryLogsClear: Boolean = false,
     val showNoLogsMessage: Boolean = false,
     val showLogShareFailedMessage: Boolean = false,
     val canRetryLogShare: Boolean = false,
@@ -28,6 +30,20 @@ data class AppSettingsViewState(
 ) {
     val canDeleteSelectedProfile: Boolean
         get() = userProfiles.size > 1
+}
+
+internal fun AppSettingsViewState.withLogsClearOutcome(succeeded: Boolean): AppSettingsViewState = if (succeeded) {
+    copy(
+        showLogsClearedMessage = true,
+        showLogsClearFailedMessage = false,
+        canRetryLogsClear = false,
+    )
+} else {
+    copy(
+        showLogsClearedMessage = false,
+        showLogsClearFailedMessage = true,
+        canRetryLogsClear = true,
+    )
 }
 
 internal fun AppSettingsViewState.withCurrentlyReading(

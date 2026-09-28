@@ -65,14 +65,13 @@ class IosFileLogger : FileLogger {
     override fun getLogFilePath(): String = logFilePath
 
     override fun clearLogs() {
-        try {
-            val fileManager = NSFileManager.defaultManager
-            if (fileManager.fileExistsAtPath(logFilePath)) {
-                fileManager.removeItemAtPath(logFilePath, null)
-            }
-        } catch (e: Exception) {
-            // Ignore errors when clearing logs
-        }
+        val fileManager = NSFileManager.defaultManager
+        val backupPath = backupLogFilePath()
+        clearDiagnosticLogFiles(
+            paths = listOf(logFilePath, backupPath),
+            exists = { path -> fileManager.fileExistsAtPath(path) },
+            delete = { path -> fileManager.removeItemAtPath(path, null) },
+        )
     }
 
     override fun getLogContents(): String {
@@ -126,14 +125,7 @@ class IosFileLogger : FileLogger {
     private fun rotateLogFile() {
         try {
             val fileManager = NSFileManager.defaultManager
-            val paths = NSSearchPathForDirectoriesInDomains(
-                NSDocumentDirectory,
-                NSUserDomainMask,
-                true,
-            )
-            val documentsDir = paths.firstOrNull()?.toString() ?: ""
-            val backupPath = NSString.create(string = documentsDir)
-                .stringByAppendingPathComponent(BACKUP_LOG_FILE_NAME)
+            val backupPath = backupLogFilePath()
 
             if (fileManager.fileExistsAtPath(backupPath)) {
                 fileManager.removeItemAtPath(backupPath, null)
@@ -145,6 +137,9 @@ class IosFileLogger : FileLogger {
             fileManager.removeItemAtPath(logFilePath, null)
         }
     }
+
+    private fun backupLogFilePath(): String = NSString.create(string = logFilePath.substringBeforeLast('/'))
+        .stringByAppendingPathComponent(BACKUP_LOG_FILE_NAME)
 
     private fun getCurrentTimestamp(): String {
         val now = Clock.System.now()

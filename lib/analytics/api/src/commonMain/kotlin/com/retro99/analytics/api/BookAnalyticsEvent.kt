@@ -1117,8 +1117,45 @@ sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
         )
     }
 
-    data object LogsCleared : AppSettingsAnalyticsEvent {
+    data class LogsClearAttempted(val isRetry: Boolean) : AppSettingsAnalyticsEvent {
+        override val name: String = "logs_clear_attempted"
+        override val parameters: Map<String, Any> = appSettingsLogOperationParameters(
+            action = "clear_logs",
+            stage = "started",
+            outcome = "started",
+            isRetry = isRetry,
+        )
+    }
+
+    data class LogsCleared(val isRetry: Boolean) : AppSettingsAnalyticsEvent {
         override val name: String = "logs_cleared"
+        override val parameters: Map<String, Any> = appSettingsLogOperationParameters(
+            action = "clear_logs",
+            stage = "terminal",
+            outcome = "succeeded",
+            isRetry = isRetry,
+        )
+    }
+
+    data class LogsClearFailed(val isRetry: Boolean) : AppSettingsAnalyticsEvent {
+        override val name: String = "logs_clear_failed"
+        override val parameters: Map<String, Any> = appSettingsLogOperationParameters(
+            action = "clear_logs",
+            stage = "terminal",
+            outcome = "failed",
+            reasonCode = "logs_clear_failed",
+            isRetry = isRetry,
+        )
+    }
+
+    data class LogsClearCancelled(val isRetry: Boolean) : AppSettingsAnalyticsEvent {
+        override val name: String = "logs_clear_cancelled"
+        override val parameters: Map<String, Any> = appSettingsLogOperationParameters(
+            action = "clear_logs",
+            stage = "terminal",
+            outcome = "cancelled",
+            isRetry = isRetry,
+        )
     }
 
     data class CurrentBookCleared(
