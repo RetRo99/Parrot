@@ -1,0 +1,27 @@
+# QA-BUG-0066 — Statistics detail failure/recovery retest
+
+- **Date:** 2026-09-28 (Samsung device reports CEST, UTC+0200).
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0; portrait, gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug; PID `15709`; built APK SHA-256 `3d01dec69e98f5f2bcfef76faced86aee9284015e552b3499f6b324c0bbc675b`. The APK was update-installed with app data retained, pulled from the installed package, and its SHA-256 matched the build artifact. Source fix commit: `4f49c80c3d014211a1752b2af72c2ce23a724e2f`; the tested tree was based on docs commit `7f971968d9f47e51304c926001bc067fee8244c4` plus QA-BUG-0066 and separate uncommitted Home playback, Reader playback, and Server Management work. Those unrelated source edits were excluded from the focused fix commit.
+
+## Host verification
+
+- `./gradlew --rerun-tasks :feature:statistics:ui:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug` completed successfully (596 actionable tasks executed).
+- `StatisticsLoadFailureTest`: 3/3 passed during the forced full rerun; after adding a distinct system-Back cancellation regression, the focused rerun passed 4/4.
+- Analytics sanitizer tests: `AnalyticsParameterSanitizerTest` 26/26, common diagnostic sanitizer 12/12, Android diagnostic sanitizer 1/1. The latter three suites passed in the forced full rerun; the focused follow-up correctly reused their UP-TO-DATE results.
+- Injected database errors for period books, Books Read and Total Sessions kept their requested state present with retry feedback. Each failure emitted one attempt and one failure, one correlated started/terminal breadcrumb pair, and one contextual exception call; retry emitted a retry attempt and success and cleared the error. A suspended Total Sessions query dismissed by sheet dismissal or system Back emitted one `cancelled` terminal outcome and no exception; system Back invoked navigation once. Sanitizer coverage rejects book IDs and titles.
+
+## Samsung normal-path retest
+
+1. Update-installed the exact APK above without clearing data and opened Statistics using the Books bottom tab.
+2. Tapped Today and observed “Today's Reading” with “No books read in this period”; dismissed the sheet.
+3. Tapped Books Read and observed “No books read yet”; dismissed the sheet.
+4. Tapped Total Sessions and observed “0 total sessions” and “No reading sessions yet”; Android system Back closed the sheet and returned to the Statistics dashboard.
+5. PID-scoped local Analytics output showed a matching attempt/success event and correlated `statistics_detail_load` breadcrumb pair for every normal query. Today was tapped twice while settling the UI, so it produced two distinct, complete event/breadcrumb pairs; Books Read and Total Sessions each produced one. No current-PID fatal or handled-exception marker was observed. No profile labels/IDs, book/session data, screenshots, raw hierarchy, credentials, or URLs were retained.
+
+## Limitations and disposition
+
+- Functional PASS on Samsung is limited to normal empty-state detail rendering and sheet dismissal. The period/books/sessions injected-failure and retry UI cannot be induced on this phone without a safe local database-failure fixture; that Samsung variant is BLOCKED/NOT RUN, not PASS.
+- Host tests verify the failure, retry, correlated diagnostic context, and single exception-report call. They do not prove Firebase Crashlytics backend delivery.
+- Firebase Analytics ingestion is waived. Local `DebugAnalyticsManager` output proves only app-side event construction, not Firebase delivery.
+- Full Statistics card/detail/rotation/accessibility inventory remains incomplete under case 709. Case 421 profile comparison remains BLOCKED because no reading-history fixture exists.
