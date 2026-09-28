@@ -2,7 +2,7 @@
 
 - **Date:** 2026-09-28.
 - **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0.
-- **App/build:** `com.retro99.parrot` 0.4.5 (21), PID `30163`, installed debug APK SHA-256 `70fc583c081d3109ab91cd17277ae1c230256695e0422c2c0a772483bea0240e`; built from HEAD `f1c8e4d36c16fbc0b71ee2ed91f153e10076d44f` plus the QA-BUG-0071 fix and unrelated pre-existing Home/Reader/Server work. Installed with `adb install -r`; package version unchanged.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), PID `30163`, installed debug APK SHA-256 `70fc583c081d3109ab91cd17277ae1c230256695e0422c2c0a772483bea0240e`; built immediately before commit `1884404a3660fffeced85756af0f693eea8a01e9` from the identical QA-BUG-0071 code tree plus unrelated pre-existing Home/Reader/Server work. Installed with `adb install -r`; package version unchanged.
 - **Privacy/state:** Existing active profile, current-reading model, one active Books filter, profile/server/book data and app data were preserved. The case's original Show Continue Reading value was ON and was restored to ON. No title, ID, stats value, screenshot or raw UI hierarchy is retained.
 
 ## Samsung functional retest
