@@ -1,0 +1,19 @@
+# Case 432 — Share Logs with a nonempty app-generated log
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`), gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `21569`; APK SHA-256 `310dda0fdc9201b2815e0d855afb94e677b15d496b192087f8d183723868936e`, matching local/device copies. No app data was cleared.
+- **Precondition/privacy:** A 2,748-byte app-generated `parrot_logs.txt` existed from cases 430/431. File contents were not read/copied into evidence. No names or targets visible in the system chooser are retained; no email/account/server/profile/book identifier or credential is recorded.
+
+## Execution
+
+Tapped Share Logs from App Settings. Android's system Sharesheet opened and showed one text-file item (`parrot_logs.txt`); no recipient was selected. Pressed System Back. The chooser dismissed and Parrot returned to App Settings/MainActivity. No file was sent and the on-device log remained present at 2,748 bytes.
+
+PID-filtered local DebugAnalyticsManager output contained one `log_share_attempted` followed by one `log_share_sheet_launch_succeeded`, both `is_retry=false`, with matching diagnostic-only correlation context. Corresponding start and terminal-success breadcrumbs were present. After System Back, there was no `log_share_cancelled`, dismissal or abandonment event. This is the known QA-BUG-0070 platform/API limitation, not chooser launch failure. No share-failure event or fatal marker was observed during this interaction.
+
+## Results
+
+- **Functional:** PASS for opening the chooser with a nonempty log and returning by System Back without selecting/sending.
+- **Analytics:** PASS for one attempt and one chooser-launch-success outcome. Dismissal/abandonment Analytics remains FAIL/BLOCKED under QA-BUG-0070; do not interpret launch success as recipient acceptance or delivery. Firebase ingestion waived; local logs are not delivery proof.
+- **Diagnostics:** PASS locally for correlated start and chooser-launch success; System Back returned without a share-failure outcome. No crash was induced. Crashlytics delivery unverified.
+- **Next ordered case:** 433 Share Logs with no logs. Current log fixture exists; safe no-log precondition requires the later case-434 Clear Logs action. Case 433 must be recorded BLOCKED until that prerequisite is performed, then retested before case 435.
