@@ -1,0 +1,26 @@
+# QA-BUG-0071 — Case 425 filtered Books list pre-fix reproduction
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), PID `20688`, installed debug APK SHA-256 `2f3554db7a8397129859b140de2ea896f21c3588d168661e048760b1c5714801`; source baseline `f1c8e4d36c16fbc0b71ee2ed91f153e10076d44f` plus unrelated pre-existing Home/Reader/Server work. No app data was cleared.
+- **Privacy/state:** Retained active profile; one existing Books filter remained applied (visible filter-count badge only). A local currently-reading model was available, as shown by the floating Continue Reading bubble on Series when enabled. No book title, profile/server identifier, credential, stats value, screenshot or raw UI hierarchy is retained. The filter was not changed.
+
+## Exact reproduction and outcome
+
+1. In App Settings, Show Continue Reading was ON. Toggle OFF and observe the switch unchecked; local Analytics recorded one `show_continue_reading_toggled(is_enabled=false)`.
+2. Open Series. The floating Continue Reading bubble was absent.
+3. Return to App Settings and toggle ON; local Analytics recorded one `show_continue_reading_toggled(is_enabled=true)`.
+4. Open Books. The screen showed the standard “No Books Match Your Filters” empty state while the filter-count badge remained one. No Continue Reading shelf was rendered, although the current-reading model existed and was available to the bubble on another route.
+5. Open Series. The floating Continue Reading bubble was visible again. No current-reading, filter, profile or server data was modified.
+
+**Expected:** When the preference is enabled and a current-reading model exists, the Books shelf and eligible other-screen bubble are restored, including when the current library filter produces an empty result set.
+
+**Actual:** The bubble correctly hides/restores on Series, but the Books shelf remains omitted in the filtered-empty state even with the preference enabled.
+
+## Evidence/source audit
+
+PID-scoped local output contained exactly one false and one true `show_continue_reading_toggled` event with only the boolean parameter. DebugAnalyticsManager logs are local; Firebase ingestion is waived. No unexpected exception or fatal marker occurred; the UI gap was not reported as a Crashlytics exception.
+
+Source audit confirmed `HomeNavigation` passes the Continue Reading shelf as `headerContent`, but `BooksListScreenContent` takes the `filteredBooks.isEmpty() && !isLoading` branch and renders `EmptyBooksState` without invoking `headerContent`; the header is only emitted in the nonempty list/grid branches. This reproduces the missing shelf with an active filter and current-reading model, independent of network authentication.
+
+**Pre-fix result:** Confirmed on Samsung once, source-audited. Fix and retest pending. No fixture, filter, profile, server, book or app-data state was changed.

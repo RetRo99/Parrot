@@ -1,0 +1,23 @@
+# QA-BUG-0071 — Case 425 filtered Books shelf retest
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), PID `30163`, installed debug APK SHA-256 `70fc583c081d3109ab91cd17277ae1c230256695e0422c2c0a772483bea0240e`; built from HEAD `f1c8e4d36c16fbc0b71ee2ed91f153e10076d44f` plus the QA-BUG-0071 fix and unrelated pre-existing Home/Reader/Server work. Installed with `adb install -r`; package version unchanged.
+- **Privacy/state:** Existing active profile, current-reading model, one active Books filter, profile/server/book data and app data were preserved. The case's original Show Continue Reading value was ON and was restored to ON. No title, ID, stats value, screenshot or raw UI hierarchy is retained.
+
+## Samsung functional retest
+
+After update-install, the existing Open Last Book setting surfaced the already documented unauthenticated-server screen at startup; Close returned to Books, with no retry or fixture mutation. On Books, with the existing filter still yielding “No Books Match Your Filters,” the fixed build rendered the Continue Reading shelf above the empty-results message.
+
+Toggled Show Continue Reading OFF: the switch unchecked, the shelf was absent on Books, and the floating bubble was absent on Series. Toggled it ON: the switch checked, the shelf returned above the same filtered-empty Books state, and the floating bubble returned on Series. The visible filter count and empty-results content remained unchanged. The original ON preference was verified in App Settings afterward.
+
+PID-filtered local DebugAnalyticsManager output contained exactly one `show_continue_reading_toggled(is_enabled=false)` and one `show_continue_reading_toggled(is_enabled=true)`, with no profile/book/server identifiers. Firebase Analytics ingestion is waived; local logs are not delivery proof. No crash/fatal marker or unexpected exception was observed; ordinary preference changes do not require a Crashlytics non-fatal. Crashlytics delivery is unverified.
+
+## Checks
+
+- `:feature:books:ui:testAndroidHostTest`: PASS, 4 tests, 0 failures/errors/skips. Added regression tests verify the header is selected for an empty, non-loading state when header content is available, and not selected when unavailable/loading/nonempty.
+- `:androidApp:assembleDebug`: PASS.
+- `:feature:books:ui:compileKotlinIosSimulatorArm64`: PASS (compile only; no iOS runtime test).
+- Samsung installed package/version/hash verified as listed above; no app data was cleared.
+
+**Retest result:** QA-BUG-0071 fixed and retested PASS on the Samsung build. Case 425 functional, Analytics and diagnostic disposition is recorded separately in `manual-qa-results.md`. The pre-fix failure remains preserved in [the original reproduction](qa-bug-0071-case-425-filtered-shelf-prefx.txt).

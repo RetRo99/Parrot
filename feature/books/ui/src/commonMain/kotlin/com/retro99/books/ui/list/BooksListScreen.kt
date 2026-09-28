@@ -400,15 +400,26 @@ private fun BooksListScreenContent(
                 }
 
                 if (viewState.filteredBooks.isEmpty() && !viewState.isLoading) {
-                    EmptyBooksState(
-                        hasActiveFilters = viewState.filterState.hasActiveFilters || viewState.searchQuery.isNotBlank(),
-                        onImportBook = { filePickerLauncher.launch() },
-                        onResetFilters = {
-                            intentDispatcher(BooksListIntent.OnClearAllFilters)
-                            searchFieldState.edit { delete(0, length) }
-                        },
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if (
+                            shouldShowHeaderInEmptyBooksState(
+                                filteredBooksEmpty = viewState.filteredBooks.isEmpty(),
+                                isLoading = viewState.isLoading,
+                                hasHeaderContent = headerContent != null,
+                            )
+                        ) {
+                            headerContent?.invoke()
+                        }
+                        EmptyBooksState(
+                            hasActiveFilters = viewState.filterState.hasActiveFilters || viewState.searchQuery.isNotBlank(),
+                            onImportBook = { filePickerLauncher.launch() },
+                            onResetFilters = {
+                                intentDispatcher(BooksListIntent.OnClearAllFilters)
+                                searchFieldState.edit { delete(0, length) }
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 } else if (viewState.viewMode == BookListViewMode.GRID) {
                     BooksGrid(
                         viewState = viewState,
@@ -748,6 +759,12 @@ private fun EmptyBooksState(
         }
     }
 }
+
+internal fun shouldShowHeaderInEmptyBooksState(
+    filteredBooksEmpty: Boolean,
+    isLoading: Boolean,
+    hasHeaderContent: Boolean,
+): Boolean = filteredBooksEmpty && !isLoading && hasHeaderContent
 
 @Composable
 private fun ImportingDialog(

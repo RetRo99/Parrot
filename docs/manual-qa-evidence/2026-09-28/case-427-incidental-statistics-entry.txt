@@ -1,0 +1,10 @@
+# Incidental case 427 and Statistics toolbar-Back probe
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), PID `20688`, debug APK SHA-256 `2f3554db7a8397129859b140de2ea896f21c3588d168661e048760b1c5714801`; source baseline `f1c8e4d36c16fbc0b71ee2ed91f153e10076d44f` plus unrelated pre-existing work.
+- **Reason for incidental execution:** While navigating from App Settings for case 425, a text-target tap matched the “Books Read” description on the Reading Statistics row and opened Statistics. This incidental interaction was not an intentional start of the ordered Statistics pass.
+
+The Statistics screen rendered. Local logs showed one `statistics_viewed` with `source_screen=app_settings`, `entry_point=statistics_row`, a visible `statistics_route` breadcrumb, and a correlated `statistics_load` started/succeeded pair. The payload/evidence retains no statistics values or user content. No failure was induced; Firebase Analytics ingestion is waived and Crashlytics delivery is unverified.
+
+Tapped the Statistics toolbar Back affordance to return to App Settings. The route closed and the prior destination returned. Local logs showed one bounded `navigation_back_attempted` and `navigation_back` success (`entry_point=toolbar_back`, destination `app_settings`) with correlated start/terminal breadcrumbs, followed by one App Settings visible-route event/breadcrumb. This is one incidental entry/exit observation only; it does not sign off the Statistics screen or parent case 740.
