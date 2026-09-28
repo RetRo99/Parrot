@@ -1,0 +1,24 @@
+# QA-BUG-0055 / case 422 — active disposable profile deletion crash (pre-fix)
+
+- **Date/time:** 2026-09-28, Samsung log timestamp 04:22 CEST (UTC+0200).
+- **Device:** physical Samsung serial `RFCWC0SSVDM`, model SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), portrait/gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `15709`, APK SHA-256 `3d01dec69e98f5f2bcfef76faced86aee9284015e552b3499f6b324c0bbc675b`; build source based on commit `4f49c80c3d014211a1752b2af72c2ce23a724e2f` with separate uncommitted Home, Reader and Server Management changes. No data clear/reinstall was performed before this test.
+- **Preconditions:** Multiple profiles existed. A disposable, empty profile was active; at least one other profile remained. The preserved original profile remained inactive and was not selected for deletion.
+
+## Reproduction and observed result
+
+1. In App Settings, opened the active disposable profile's Edit menu.
+2. Chose Delete and confirmed the delete confirmation.
+3. Android displayed its Parrot fatal-error dialog (“Parrot closed because this app has a bug”).
+
+**Expected:** The disposable profile is deleted safely, another remaining profile becomes active (or a documented safe recovery is presented), Books opens without a crash, and the preserved original profile/data remain untouched.
+
+**Actual:** PID-scoped local output first showed exactly one bounded `profile_operation_attempted` (`action=delete_profile`, `operation=profile_delete`, `outcome=started`) and one `profile_deleted` terminal success, with matching `profile_delete` started/terminal breadcrumbs and correlation ID. No profile label or identifier was included. At 04:22:00.943 AndroidRuntime recorded a fatal main-thread exception while creating `BooksListViewModel` after navigation reset. The cause was `IllegalStateException: No active user profile. Cannot access database.` from `DatabaseManager.getDatabase`, reached through `FavoritesSqlDelightDao.observeAllFavorites` and `BooksListViewModel.observeFavorites`. The profile-delete operation had removed the active ID before the Books destination was composed. The process died; the remaining profiles were not deliberately changed, and no app data was cleared.
+
+## Source audit and disposition
+
+`AppSettingsViewModel.deleteProfile` invokes `userRegistry.deleteProfile(profileId)` and only checks that the deleted profile is absent. `UserRegistryImpl.deleteProfile` removes the active profile and persists a null active ID. `HomeNavigationViewModel` observes the profile change and resets navigation; Books immediately creates a database-backed favorites observer that requires an active profile. This confirms QA-BUG-0055; occurrence in this run was 1/1.
+
+Analytics has one bounded attempt and one premature success. Matching operation breadcrumbs exist for deletion, but no active-profile fallback/recovery breadcrumb. AndroidRuntime confirms a fatal crash. Firebase Analytics ingestion is waived; local debug logs do not prove delivery. Crashlytics backend receipt is unverified. No raw log, profile name/ID, screenshot, credential, or endpoint was retained.
+
+**Disposition:** Case 422 FAIL. QA-BUG-0055 confirmed, not yet fixed. Fix and test only with disposable profile data; do not clear Parrot data or modify/delete the preserved original. Retest must verify fallback, visible usable Books state, bounded telemetry/diagnostics and absence of fatal/handled exception markers.
