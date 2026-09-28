@@ -1,0 +1,23 @@
+# QA-BUG-0075 — Expected image-network error suppression retest
+
+- **Date/time:** 2026-09-29, approximately 01:09 CEST.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, PID `16972`. Debug APK SHA-256 `58ebc8fd43260cc20ea6f125c3c52d1ff1fe62dbe3023652fa8022a2867623aa`; the APK built locally and pulled from the Samsung had identical hashes. Source tree is commit `2fed51411d5a72765d1151e5f8d4359b086112c9` plus the uncommitted QA-BUG-0075 change; the installed source tree matches the tested candidate.
+- **Data handling:** `adb install -r`; no clear-data, uninstall, sign-out, server/book/profile changes, or credentials entered. Existing fixture and app settings preserved. Only UI Close was used on the already-known unauthenticated route prompt; Retry was not tapped.
+
+## Execution
+
+1. With the original Open Last Book ON and existing current-book/server fixture unchanged, launched `MainActivity` after update-install. The expected “Server unavailable or not authenticated” route prompt appeared. Tapped Close only.
+2. Parrot returned to the Books screen and remained interactive. The same saved/current-book route and unauthenticated-server condition that had produced two sanitized Coil `HttpException` reports in the pre-fix run was exercised again.
+3. PID-scoped local debug output for the final build contained no `Exception occurred`, `HttpException`, `shared_image` diagnostic, fatal marker, or fatal signal during the route attempt/return. No screenshot or raw log was retained.
+
+## Results
+
+- **Functional:** PASS for safe dismissal/recovery to Books; the pre-existing authenticated-content blocker remains unchanged and was not retried.
+- **Analytics:** N-A for the image-error reporting defect. Local debug output is not Firebase Analytics delivery evidence; Firebase ingestion is waived.
+- **Diagnostics:** PASS for suppressing expected image/network errors in this Samsung run: zero image exception reports were observed on the same fixture/route. The policy's documented branch is directly unit-tested for Coil `HttpException`, nested HTTP failures, `kotlinx.io.IOException`, cancellation, unknown decode failures, and once-per-request de-duplication (7 common tests PASS). Crashlytics delivery and actual Firebase receipt remain unverified.
+- **Build checks:** `:base-ui:iosSimulatorArm64Test` and `:androidApp:assembleDebug` succeeded. No Android host-test task is exposed for `base-ui` with its current multiplatform Android library plugin.
+- **Cleanup:** Settings remained at original values (Open Last Book ON, Show Continue Reading ON, File Logging OFF, Only Log Crashes OFF). App log files were removed through the App Settings Clear Logs UI and verified absent before the final install; no app data was cleared.
+- **Commit:** QA-BUG-0075 fix commit pending.
+
+Earlier pre-fix observation remains preserved in [the source/runtime audit](qa-bug-0075-coil-image-failure-source-runtime-audit.txt). This run did not retain image URLs, cache keys, personal book/profile text, or raw log output.

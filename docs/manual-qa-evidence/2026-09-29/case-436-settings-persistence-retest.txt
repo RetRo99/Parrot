@@ -2,7 +2,7 @@
 
 - **Date/time:** 2026-09-29, approximately 00:35–00:42 CEST.
 - **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `S921BXXSGDZG1`.
-- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36. Debug APK SHA-256 `610e505a11d51c11ed64ff3c0a06aad12f8091b3c0c822d99625c3c32a5c0b7e`; local APK and Samsung-pulled `base.apk` hashes matched. APK was built from repository HEAD `0119c90891ed39438eab48938e25b40abca20c43` plus the uncommitted QA-BUG-0074 fix; PID `4301` before restart and `5832` after.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36. Debug APK SHA-256 `610e505a11d51c11ed64ff3c0a06aad12f8091b3c0c822d99625c3c32a5c0b7e`; local APK and Samsung-pulled `base.apk` hashes matched. APK source tree is identical to QA-BUG-0074 commit `2fed51411d5a72765d1151e5f8d4359b086112c9` (built before commit); PID `4301` before restart and `5832` after.
 - **Data handling:** Installed with `adb install -r`; no app data clear/reinstall. Original active profile, server/book fixture, current-book target, and Books filter were preserved. No profile labels/IDs, book titles, URLs, screenshot, or raw hierarchy retained.
 - **Original/final App Settings:** Open Last Book ON; Show Continue Reading ON; File Logging OFF; Only Log Crashes OFF/disabled. Temporary app-generated diagnostic log was cleared through the App Settings UI; both active and rotated log paths were verified absent.
 
@@ -20,7 +20,7 @@
 - **Functional:** PASS for four-toggle persistence across force-stop/relaunch and restoration of original values.
 - **Analytics:** PASS locally: four setting-specific success events and four `app_setting_toggle_attempted` events for the changes, repeated for four restorations (eight attempt + eight success events total), all with `is_retry=false`. App Settings visible-route event was observed. Firebase ingestion is waived and not claimed.
 - **Diagnostics:** PASS for the normal toggle path: eight correlated start/success breadcrumb pairs, with no false failure/success or duplicate toggle events. Host fault-injection tests cover one contextual report, failed outcome, retry classification and eventual success; Samsung preference-write fault injection was unavailable, so device failure/recovery and Crashlytics delivery remain unverified.
-- **QA-BUG-0074:** Normal-path instrumentation retest passes; source fix and host tests pass. Commit hash bookkeeping is pending the focused commit.
+- **QA-BUG-0074:** Normal-path instrumentation retest passes; source fix and host tests pass. Fix commit: `2fed51411d5a72765d1151e5f8d4359b086112c9`.
 
 ## Additional instrumentation finding
 

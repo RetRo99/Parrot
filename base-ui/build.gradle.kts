@@ -43,6 +43,10 @@ kotlin {
             api(projects.translations)
             api(compose.materialIconsExtended)
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
 
