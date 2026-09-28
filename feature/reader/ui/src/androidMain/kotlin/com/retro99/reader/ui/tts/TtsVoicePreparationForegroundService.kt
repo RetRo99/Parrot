@@ -135,7 +135,6 @@ class TtsVoicePreparationForegroundService : Service() {
 
         val percentage = when (progress) {
             is TtsPreparationProgress.Downloading -> progress.percentage
-            is TtsPreparationProgress.Preparing -> progress.percentage
             TtsPreparationProgress.Finalizing -> null
         }
         if (percentage == null) {
@@ -164,13 +163,6 @@ class TtsVoicePreparationForegroundService : Service() {
                 )
             }
         }
-
-        is TtsPreparationProgress.Preparing -> getString(
-            TranslationsR.string.tts_voice_preparation_notification_preparing,
-            percentage,
-            preparedBytes.toMegabytes(),
-            totalBytes.toMegabytes(),
-        )
 
         TtsPreparationProgress.Finalizing -> getString(
             TranslationsR.string.tts_voice_preparation_notification_finalizing,

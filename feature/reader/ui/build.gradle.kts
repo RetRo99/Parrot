@@ -73,7 +73,6 @@ kotlin {
             implementation(projects.feature.reader.data)
             implementation(projects.lib.server.api)
             implementation(files("libs/sherpa-onnx-1.13.8.aar"))
-            implementation(libs.commons.compress)
         }
 
         commonTest.dependencies {

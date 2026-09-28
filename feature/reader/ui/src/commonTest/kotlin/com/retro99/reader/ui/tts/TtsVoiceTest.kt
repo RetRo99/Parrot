@@ -14,7 +14,6 @@ class TtsVoiceTest {
             name = "Heart",
             locale = "en",
             isNeural = true,
-            downloadSizeBytes = KOKORO_DOWNLOAD_SIZE_BYTES,
             isDownloaded = false,
         )
 
@@ -24,6 +23,40 @@ class TtsVoiceTest {
         // Then
         assertTrue(voice.needsDownload)
         assertFalse(downloadedVoice.needsDownload)
+    }
+
+    @Test
+    fun `needsDownload is independent of whether the download size is known`() {
+        // Given
+        val voiceWithKnownSize = TtsVoice(
+            id = "supertonic:0",
+            name = "F1",
+            locale = "en",
+            isNeural = true,
+            downloadSizeBytes = 145_000_000L,
+            isDownloaded = false,
+        )
+
+        // When
+        val voiceWithUnknownSize = voiceWithKnownSize.copy(downloadSizeBytes = null)
+
+        // Then
+        assertTrue(voiceWithKnownSize.needsDownload)
+        assertTrue(voiceWithUnknownSize.needsDownload)
+    }
+
+    @Test
+    fun `system voices never need download`() {
+        // Given
+        val systemVoice = TtsVoice(
+            id = "en-us",
+            name = "System voice",
+            locale = "en",
+            isNeural = false,
+        )
+
+        // Then
+        assertFalse(systemVoice.needsDownload)
     }
 
     @Test

@@ -1,7 +1,6 @@
 [versions]
 agp = "9.0.0"
 kotzilla = "1.4.2"
-compress = "1.27.1"
 compileSdk = "36"
 minSdk = "29"
 targetSdk = "36"
@@ -118,7 +117,6 @@ coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.re
 kotzilla-sdk-compose = { group = "io.kotzilla", name = "kotzilla-sdk-compose", version.ref = "kotzilla" }
 
 # Archiving (bzip2 model extraction)
-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "compress" }
 
 # Multiplatform Settings
 multiplatformSettings = { module = "com.russhwolf:multiplatform-settings", version.ref = "multiplatformSettings" }

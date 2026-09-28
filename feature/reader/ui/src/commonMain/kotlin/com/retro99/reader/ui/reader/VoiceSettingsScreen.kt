@@ -985,7 +985,6 @@ private fun SupertonicLicenseDialog(
 private fun TtsPreparationStatus(progress: TtsPreparationProgress?) {
     when (progress) {
         is TtsPreparationProgress.Downloading -> DownloadProgress(progress)
-        is TtsPreparationProgress.Preparing -> PreparationProgress(progress)
         TtsPreparationProgress.Finalizing, null -> FinalizingVoiceStatus()
     }
 }
@@ -1027,30 +1026,6 @@ private fun DownloadProgress(progress: TtsPreparationProgress.Downloading) {
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-    }
-}
-
-@Composable
-private fun PreparationProgress(progress: TtsPreparationProgress.Preparing) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 12.dp),
-    ) {
-        Text(
-            text = stringResource(
-                StringRes.reader_tts_preparing_progress,
-                progress.percentage,
-                progress.preparedBytes.toDownloadedMegabytes(),
-                progress.totalBytes.toNetworkMegabytes(),
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        LinearProgressIndicator(
-            progress = { progress.fraction },
-            modifier = Modifier.fillMaxWidth(),
-        )
     }
 }
 

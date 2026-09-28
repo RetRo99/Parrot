@@ -35,7 +35,7 @@ class TtsVoicePreparationStateHolderTest {
         // Given
         val classUnderTest = TtsVoicePreparationStateHolder()
         val initialProgress = TtsPreparationProgress.Downloading(0L, 100L)
-        val updatedProgress = TtsPreparationProgress.Preparing(60L, 100L)
+        val updatedProgress = TtsPreparationProgress.Downloading(60L, 100L)
         classUnderTest.begin(NeuralVoicePackage.KOKORO, initialProgress)
 
         // When

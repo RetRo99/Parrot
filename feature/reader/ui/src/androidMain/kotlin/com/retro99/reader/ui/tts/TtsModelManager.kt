@@ -9,14 +9,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
+import java.util.zip.ZipInputStream
 
 data class KokoroModelFiles(
     val model: File,
@@ -35,88 +37,83 @@ data class SupertonicModelFiles(
     val voiceStyle: File,
 )
 
+/**
+ * Downloads TTS model assets described by [TtsModelManifest].
+ *
+ * Models are hosted as individual files (small data directories ship as zips), so
+ * there is no CPU-bound archive extraction step: preparing a voice pack is a plain
+ * resumable download with SHA-256 verification. Each file transfers to a `.part`
+ * file that survives interruptions, so retries and app restarts resume where they
+ * left off instead of re-downloading everything.
+ */
 @Single
 class TtsModelManager(
     @Provided private val context: Context,
     @Provided private val analytics: Analytics,
 ) {
 
-    fun isKokoroModelDownloaded(): Boolean {
-        val targetDir = File(context.filesDir, KOKORO_MODEL.directory)
-        return isComplete(kokoroModelFiles(targetDir))
+    fun isKokoroModelDownloaded(): Boolean = isModelDownloaded(KOKORO_MODEL_ID) { targetDir ->
+        isComplete(kokoroModelFiles(targetDir))
     }
 
-    fun isSupertonicModelDownloaded(): Boolean {
-        val targetDir = File(context.filesDir, SUPERTONIC_MODEL.directory)
-        return isComplete(supertonicModelFiles(targetDir))
-    }
+    fun isSupertonicModelDownloaded(): Boolean =
+        isModelDownloaded(SUPERTONIC_MODEL_ID) { targetDir ->
+            isComplete(supertonicModelFiles(targetDir))
+        }
 
-    suspend fun deleteKokoroModel(): Boolean = deleteModel(KOKORO_MODEL)
+    fun kokoroDownloadSizeBytes(): Long? = manifestDownloadSizeBytes(KOKORO_MODEL_ID)
 
-    suspend fun deleteSupertonicModel(): Boolean = deleteModel(SUPERTONIC_MODEL)
+    fun supertonicDownloadSizeBytes(): Long? = manifestDownloadSizeBytes(SUPERTONIC_MODEL_ID)
 
-    private suspend fun deleteModel(specification: ModelSpecification): Boolean =
+    /**
+     * Fetches the manifest once so download sizes are known before the first download.
+     * No-op when a cached manifest already exists.
+     */
+    suspend fun ensureManifestCached() {
         withContext(Dispatchers.IO) {
-            val paths = listOf(
-                File(context.filesDir, specification.directory),
-                File(context.filesDir, "${specification.directory}.staging"),
-                File(context.cacheDir, specification.archiveName),
-                File(context.cacheDir, "${specification.archiveName}.part"),
-            )
-            try {
-                var deleted = true
-                paths.forEach { path ->
-                    if (path.exists() && !path.deleteRecursively()) {
-                        deleted = false
-                    }
+            if (cachedManifest() == null) {
+                withTimeoutOrNull(MANIFEST_PREFETCH_TIMEOUT_MS) {
+                    fetchManifest()
                 }
-                val hasRemainingFiles = paths.any { path -> path.exists() }
-                if (!deleted || hasRemainingFiles) {
-                    analytics.logException(
-                        IOException("Some ${specification.name} model files could not be deleted"),
-                        "Failed to delete ${specification.name} model",
-                    )
-                }
-                deleted && !hasRemainingFiles
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                analytics.logException(error, "Failed to delete ${specification.name} model")
-                false
             }
         }
+    }
+
+    private fun manifestDownloadSizeBytes(modelId: String): Long? =
+        cachedManifest()?.model(modelId)?.totalBytes
+
+    suspend fun deleteKokoroModel(): Boolean = deleteModel(KOKORO_MODEL_ID, ::kokoroLegacyPaths)
+
+    suspend fun deleteSupertonicModel(): Boolean =
+        deleteModel(SUPERTONIC_MODEL_ID, ::supertonicLegacyPaths)
 
     suspend fun ensureKokoroModel(
         onProgress: ((TtsPreparationProgress) -> Unit)? = null,
-    ): KokoroModelFiles? {
-        return ensureModel(
-            specification = KOKORO_MODEL,
-            files = ::kokoroModelFiles,
-            isComplete = ::isComplete,
-            onProgress = onProgress,
-        )
-    }
+    ): KokoroModelFiles? = ensureModel(
+        modelId = KOKORO_MODEL_ID,
+        files = ::kokoroModelFiles,
+        isComplete = ::isComplete,
+        onProgress = onProgress,
+    )
 
     suspend fun ensureSupertonicModel(
         onProgress: ((TtsPreparationProgress) -> Unit)? = null,
-    ): SupertonicModelFiles? {
-        return ensureModel(
-            specification = SUPERTONIC_MODEL,
-            files = ::supertonicModelFiles,
-            isComplete = ::isComplete,
-            onProgress = onProgress,
-        )
-    }
+    ): SupertonicModelFiles? = ensureModel(
+        modelId = SUPERTONIC_MODEL_ID,
+        files = ::supertonicModelFiles,
+        isComplete = ::isComplete,
+        onProgress = onProgress,
+    )
 
     private suspend fun <T> ensureModel(
-        specification: ModelSpecification,
+        modelId: String,
         files: (File) -> T,
         isComplete: (T) -> Boolean,
         onProgress: ((TtsPreparationProgress) -> Unit)?,
     ): T? {
         val startedAt = System.currentTimeMillis()
         val result = loadModel(
-            specification = specification,
+            modelId = modelId,
             files = files,
             isComplete = isComplete,
             onProgress = onProgress,
@@ -131,60 +128,416 @@ class TtsModelManager(
     }
 
     private suspend fun <T> loadModel(
-        specification: ModelSpecification,
+        modelId: String,
         files: (File) -> T,
         isComplete: (T) -> Boolean,
         onProgress: ((TtsPreparationProgress) -> Unit)?,
     ): T? {
-        val targetDir = File(context.filesDir, specification.directory)
-        val modelFiles = files(targetDir)
-        if (isComplete(modelFiles)) return modelFiles
-
+        val targetDir = modelDir(modelId)
         return withContext(Dispatchers.IO) {
-            val archive = File(context.cacheDir, specification.archiveName)
-            val stagingDir = File(context.filesDir, "${specification.directory}.staging")
             try {
-                if (!archive.exists() || archive.length() < specification.minimumArchiveBytes) {
-                    Log.i(TAG, "Downloading ${specification.name} model")
-                    downloadAtomically(
-                        destination = archive,
-                        url = specification.url,
-                        onProgress = onProgress,
-                    )
-                } else {
-                    Log.i(
-                        TAG,
-                        "Reusing cached ${specification.name} archive " +
-                                "(${archive.length()} bytes)",
-                    )
+                val entry = loadManifestEntry(modelId)
+                if (entry == null) {
+                    Log.w(TAG, "No manifest available for $modelId, using local files if complete")
+                } else if (!installIfMissing(entry, targetDir, onProgress)) {
+                    return@withContext null
                 }
-
-                stagingDir.deleteRecursively()
-                stagingDir.mkdirs()
-                Log.i(TAG, "Extracting ${specification.name} model")
-                extract(archive, stagingDir, onProgress)
-                Log.i(TAG, "Extraction finished")
-                onProgress?.invoke(TtsPreparationProgress.Finalizing)
-
-                targetDir.deleteRecursively()
-                targetDir.parentFile?.mkdirs()
-                if (!stagingDir.renameTo(targetDir)) {
-                    stagingDir.copyRecursively(targetDir, overwrite = true)
-                    stagingDir.deleteRecursively()
-                }
-                archive.delete()
+                val modelFiles = files(targetDir)
+                if (isComplete(modelFiles)) modelFiles else null
             } catch (error: CancellationException) {
-                archive.delete()
-                stagingDir.deleteRecursively()
                 throw error
             } catch (error: Exception) {
-                archive.delete()
-                stagingDir.deleteRecursively()
-                analytics.logException(error, "Failed to prepare ${specification.name} model")
-                return@withContext null
+                analytics.logException(error, "Failed to prepare $modelId model")
+                null
+            }
+        }
+    }
+
+    private suspend fun installIfMissing(
+        entry: TtsModelManifestEntry,
+        targetDir: File,
+        onProgress: ((TtsPreparationProgress) -> Unit)?,
+    ): Boolean {
+        val markerVersion = readMarker(targetDir)
+        if (markerVersion != null && markerVersion != entry.version) {
+            Log.i(TAG, "Upgrading ${entry.id} model: $markerVersion -> ${entry.version}")
+            targetDir.deleteRecursively()
+        }
+        targetDir.mkdirs()
+
+        if (entry.files.all { file -> isInstalled(file, targetDir) }) {
+            writeMarker(targetDir, entry.version)
+            return true
+        }
+
+        val missingFiles = entry.files.filterNot { file -> isInstalled(file, targetDir) }
+        val remainingBytes = missingFiles.sumOf { file -> file.size }
+        val usableSpace = context.filesDir.usableSpace
+        if (usableSpace in 0 until (remainingBytes + DISK_MARGIN_BYTES)) {
+            val error = IOException(
+                "Insufficient storage for ${entry.id} model: " +
+                        "$remainingBytes bytes needed, $usableSpace available",
+            )
+            analytics.logException(error, "Failed to prepare ${entry.id} model")
+            return false
+        }
+
+        Log.i(TAG, "Downloading ${entry.id} model (${missingFiles.size} files, $remainingBytes bytes)")
+        val reporter = ProgressReporter(entry.totalBytes, onProgress)
+        var installedBytes = entry.files.sumOf { file ->
+            if (isInstalled(file, targetDir)) file.size else 0L
+        }
+        reporter.report(installedBytes)
+        for (file in entry.files) {
+            if (isInstalled(file, targetDir)) continue
+            val baseBytes = installedBytes
+            val startedAt = System.currentTimeMillis()
+            downloadFile(file, targetDir) { downloaded ->
+                reporter.report(baseBytes + downloaded)
+            }
+            installedBytes += file.size
+            reporter.report(installedBytes)
+            Log.i(
+                TAG,
+                "Prepared ${file.path} (${file.size} bytes) in " +
+                        "${System.currentTimeMillis() - startedAt}ms",
+            )
+        }
+        writeMarker(targetDir, entry.version)
+        onProgress?.invoke(TtsPreparationProgress.Finalizing)
+        return true
+    }
+
+    private suspend fun downloadFile(
+        file: TtsModelFile,
+        targetDir: File,
+        onBytes: (Long) -> Unit,
+    ) {
+        val partial = partialFile(targetDir, file)
+        var lastError: Exception? = null
+        repeat(MAX_DOWNLOAD_ATTEMPTS) { attempt ->
+            try {
+                transfer(file, partial, onBytes)
+                verifyChecksum(partial, file.sha256)
+                install(file, targetDir, partial)
+                return
+            } catch (error: CancellationException) {
+                // Keep the partial file: the next attempt or app run resumes it.
+                throw error
+            } catch (error: Exception) {
+                lastError = error
+                Log.w(TAG, "Download attempt ${attempt + 1}/${MAX_DOWNLOAD_ATTEMPTS} " +
+                        "failed for ${file.path}", error)
+            }
+        }
+        throw IOException("Failed to download ${file.path}", lastError)
+    }
+
+    private suspend fun transfer(
+        file: TtsModelFile,
+        partial: File,
+        onBytes: (Long) -> Unit,
+    ) {
+        var offset = if (partial.isFile) partial.length() else 0L
+        when {
+            offset > file.size -> {
+                partial.delete()
+                offset = 0L
             }
 
-            if (isComplete(modelFiles)) modelFiles else null
+            offset == file.size && file.size > 0L -> {
+                onBytes(offset)
+                return
+            }
+        }
+
+        val connection = (URL(file.url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            instanceFollowRedirects = true
+            setRequestProperty("Accept-Encoding", "identity")
+            if (offset > 0L) {
+                setRequestProperty("Range", "bytes=$offset-")
+            }
+        }
+        try {
+            when (val responseCode = connection.responseCode) {
+                HttpURLConnection.HTTP_OK -> {
+                    // The server ignored the range request: restart from scratch.
+                    partial.delete()
+                    offset = 0L
+                }
+
+                HTTP_PARTIAL_CONTENT -> Unit
+
+                HTTP_RANGE_NOT_SATISFIABLE -> {
+                    partial.delete()
+                    throw IOException("Resume rejected for ${file.path}")
+                }
+
+                else -> {
+                    if (responseCode !in HTTP_SUCCESS_RANGE) {
+                        throw IOException(
+                            "Download failed for ${file.path} with HTTP $responseCode",
+                        )
+                    }
+                }
+            }
+            connection.inputStream.use { input ->
+                FileOutputStream(partial, offset > 0L).use { output ->
+                    val buffer = ByteArray(BUFFER_SIZE)
+                    var downloaded = offset
+                    onBytes(downloaded)
+                    while (true) {
+                        currentCoroutineContext().ensureActive()
+                        val read = input.read(buffer)
+                        if (read < 0) break
+                        output.write(buffer, 0, read)
+                        downloaded += read
+                        onBytes(downloaded)
+                    }
+                    if (downloaded != file.size) {
+                        throw IOException(
+                            "Incomplete download for ${file.path}: " +
+                                    "$downloaded of ${file.size} bytes",
+                        )
+                    }
+                }
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private suspend fun verifyChecksum(partial: File, expectedSha256: String) {
+        val actual = sha256(partial)
+        if (!actual.equals(expectedSha256, ignoreCase = true)) {
+            partial.delete()
+            throw IOException("Checksum mismatch for ${partial.name}")
+        }
+    }
+
+    private suspend fun install(file: TtsModelFile, targetDir: File, partial: File) {
+        val extractTo = file.extractTo
+        if (extractTo == null) {
+            val destination = File(targetDir, file.path)
+            destination.delete()
+            if (!partial.renameTo(destination)) {
+                partial.copyTo(destination, overwrite = true)
+                partial.delete()
+            }
+            return
+        }
+
+        // Extract to a staging directory and rename it into place so an interrupted
+        // extraction is never mistaken for an installed one.
+        val stagingDir = File(targetDir, "$extractTo.tmp")
+        stagingDir.deleteRecursively()
+        unzip(partial, stagingDir, stripPrefix = extractTo)
+        val outputDir = File(targetDir, extractTo)
+        outputDir.deleteRecursively()
+        if (!stagingDir.renameTo(outputDir)) {
+            stagingDir.copyRecursively(outputDir, overwrite = true)
+            stagingDir.deleteRecursively()
+        }
+        partial.delete()
+    }
+
+    private suspend fun unzip(archive: File, targetDir: File, stripPrefix: String) {
+        val canonicalTargetDir = targetDir.canonicalFile
+        val canonicalTargetPrefix = canonicalTargetDir.path + File.separator
+        val prefix = "$stripPrefix/"
+        ZipInputStream(archive.inputStream().buffered()).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                val name = entry.name.removePrefix("./")
+                when {
+                    name.startsWith(prefix) -> {
+                        val relativeName = name.substringAfter('/')
+                        if (relativeName.isNotEmpty()) {
+                            val output = File(canonicalTargetDir, relativeName).canonicalFile
+                            if (!output.path.startsWith(canonicalTargetPrefix)) {
+                                throw IOException(
+                                    "Archive entry escapes target directory: ${entry.name}",
+                                )
+                            }
+                            if (entry.isDirectory) {
+                                output.mkdirs()
+                            } else {
+                                output.parentFile?.mkdirs()
+                                output.outputStream().use { fileOutput ->
+                                    val buffer = ByteArray(BUFFER_SIZE)
+                                    while (true) {
+                                        currentCoroutineContext().ensureActive()
+                                        val read = zip.read(buffer)
+                                        if (read < 0) break
+                                        fileOutput.write(buffer, 0, read)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    name.isBlank() || name.trimEnd('/') == stripPrefix -> Unit
+
+                    else -> throw IOException("Unexpected archive entry: ${entry.name}")
+                }
+                entry = zip.nextEntry
+            }
+        }
+    }
+
+    private fun isInstalled(file: TtsModelFile, targetDir: File): Boolean {
+        val extractTo = file.extractTo
+        return if (extractTo != null) {
+            File(targetDir, extractTo).isDirectory
+        } else {
+            val destination = File(targetDir, file.path)
+            destination.isFile && destination.length() == file.size
+        }
+    }
+
+    private fun modelDir(modelId: String): File =
+        File(File(context.filesDir, MODELS_DIR_NAME), modelId)
+
+    private fun partialFile(targetDir: File, file: TtsModelFile): File =
+        File(targetDir, "${file.path}.part")
+
+    private fun markerFile(targetDir: File): File = File(targetDir, MARKER_FILE_NAME)
+
+    private val manifestCacheFile: File
+        get() = File(File(context.filesDir, MODELS_DIR_NAME), MANIFEST_CACHE_FILE_NAME)
+
+    private fun readMarker(targetDir: File): String? =
+        markerFile(targetDir)
+            .takeIf { marker -> marker.isFile }
+            ?.readText()
+            ?.trim()
+            ?.takeIf { version -> version.isNotEmpty() }
+
+    private fun writeMarker(targetDir: File, version: String) {
+        markerFile(targetDir).writeText(version)
+    }
+
+    private fun isModelDownloaded(modelId: String, isComplete: (File) -> Boolean): Boolean {
+        val targetDir = modelDir(modelId)
+        if (!isComplete(targetDir)) return false
+        val expectedVersion = cachedManifest()?.model(modelId)?.version ?: return true
+        return readMarker(targetDir) == expectedVersion
+    }
+
+    private suspend fun deleteModel(
+        modelId: String,
+        legacyPaths: () -> List<File>,
+    ): Boolean = withContext(Dispatchers.IO) {
+        val paths = listOf(modelDir(modelId)) + legacyPaths()
+        try {
+            var deleted = true
+            paths.forEach { path ->
+                if (path.exists() && !path.deleteRecursively()) {
+                    deleted = false
+                }
+            }
+            val hasRemainingFiles = paths.any { path -> path.exists() }
+            if (!deleted || hasRemainingFiles) {
+                analytics.logException(
+                    IOException("Some $modelId model files could not be deleted"),
+                    "Failed to delete $modelId model",
+                )
+            }
+            deleted && !hasRemainingFiles
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            analytics.logException(error, "Failed to delete $modelId model")
+            false
+        }
+    }
+
+    private fun kokoroLegacyPaths(): List<File> = listOf(
+        File(context.filesDir, "tts-models/kokoro-int8-en-v0_19"),
+        File(context.filesDir, "tts-models/kokoro-int8-en-v0_19.staging"),
+        File(context.cacheDir, "kokoro-int8-en-v0_19.tar.bz2"),
+        File(context.cacheDir, "kokoro-int8-en-v0_19.tar.bz2.part"),
+    )
+
+    private fun supertonicLegacyPaths(): List<File> = listOf(
+        File(context.filesDir, "tts-models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11"),
+        File(context.filesDir, "tts-models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11.staging"),
+        File(context.cacheDir, "sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2"),
+        File(context.cacheDir, "sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2.part"),
+    )
+
+    private fun loadManifestEntry(modelId: String): TtsModelManifestEntry? {
+        val manifest = fetchManifest() ?: return null
+        return manifest.model(modelId)
+    }
+
+    private fun fetchManifest(): TtsModelManifest? {
+        val connection = (URL(MANIFEST_URL).openConnection() as HttpURLConnection).apply {
+            connectTimeout = CONNECT_TIMEOUT_MS
+            readTimeout = READ_TIMEOUT_MS
+            instanceFollowRedirects = true
+        }
+        try {
+            if (connection.responseCode !in HTTP_SUCCESS_RANGE) {
+                Log.w(TAG, "Manifest fetch failed with HTTP ${connection.responseCode}")
+                return cachedManifest()
+            }
+            val body = connection.inputStream.bufferedReader().use { reader -> reader.readText() }
+            val manifest = TtsModelManifest.parse(body)
+            if (manifest == null) {
+                Log.w(TAG, "Manifest could not be parsed")
+                return cachedManifest()
+            }
+            manifestInMemory = manifest
+            cacheManifest(body)
+            return manifest
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            Log.w(TAG, "Manifest fetch failed", error)
+            return cachedManifest()
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    private fun cacheManifest(body: String) {
+        try {
+            val parent = manifestCacheFile.parentFile
+            parent?.mkdirs()
+            manifestCacheFile.writeText(body)
+        } catch (error: Exception) {
+            Log.w(TAG, "Failed to cache manifest", error)
+        }
+    }
+
+    private fun cachedManifest(): TtsModelManifest? {
+        manifestInMemory?.let { cached -> return cached }
+        val body = manifestCacheFile
+            .takeIf { cache -> cache.isFile }
+            ?.readText()
+            ?: return null
+        return TtsModelManifest.parse(body)?.also { manifest -> manifestInMemory = manifest }
+    }
+
+    @Volatile
+    private var manifestInMemory: TtsModelManifest? = null
+
+    private suspend fun sha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(BUFFER_SIZE)
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val read = input.read(buffer)
+                if (read < 0) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return digest.digest().joinToString(separator = "") { byte ->
+            "%02x".format(byte.toInt() and 0xFF)
         }
     }
 
@@ -225,193 +578,46 @@ class TtsModelManager(
 
     private fun File.hasContent(): Boolean = isFile && length() > 0
 
-    private suspend fun downloadAtomically(
-        destination: File,
-        url: String,
-        onProgress: ((TtsPreparationProgress) -> Unit)?,
+    private class ProgressReporter(
+        private val totalBytes: Long,
+        private val onProgress: ((TtsPreparationProgress) -> Unit)?,
     ) {
-        val partial = File(destination.parentFile, "${destination.name}.part")
-        partial.delete()
-        try {
-            download(partial, url, onProgress)
-            if (!partial.renameTo(destination)) {
-                partial.copyTo(destination, overwrite = true)
-                partial.delete()
+
+        private var lastPercentage = -1
+
+        fun report(downloadedBytes: Long) {
+            val clamped = downloadedBytes.coerceAtMost(totalBytes)
+            val percentage = ((clamped * 100) / totalBytes.coerceAtLeast(1L)).toInt()
+            if (percentage != lastPercentage) {
+                lastPercentage = percentage
+                onProgress?.invoke(TtsPreparationProgress.Downloading(clamped, totalBytes))
             }
-        } catch (error: Exception) {
-            partial.delete()
-            throw error
         }
     }
 
-    private suspend fun download(
-        destination: File,
-        url: String,
-        onProgress: ((TtsPreparationProgress) -> Unit)?,
-    ) {
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
-            instanceFollowRedirects = true
-        }
-        connection.connect()
-        try {
-            if (connection.responseCode !in HTTP_SUCCESS_RANGE) {
-                throw IOException("Model download failed with HTTP ${connection.responseCode}")
-            }
-            val total = connection.contentLengthLong.takeIf { length -> length > 0 } ?: -1L
-            connection.inputStream.use { input ->
-                destination.outputStream().use { output ->
-                    val buffer = ByteArray(BUFFER_SIZE)
-                    var downloaded = 0L
-                    var lastLoggedPercent = -1
-                    var lastReportedPercent = -1
-                    var lastReportedBytes = 0L
-                    while (true) {
-                        currentCoroutineContext().ensureActive()
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        output.write(buffer, 0, read)
-                        downloaded += read
-                        if (total > 0) {
-                            val percent = ((downloaded * 100) / total).toInt()
-                            if (percent != lastReportedPercent) {
-                                lastReportedPercent = percent
-                                onProgress?.invoke(
-                                    TtsPreparationProgress.Downloading(downloaded, total),
-                                )
-                            }
-                            if (percent != lastLoggedPercent && percent % 10 == 0) {
-                                lastLoggedPercent = percent
-                                Log.i(TAG, "Model download: $percent%")
-                            }
-                        } else if (downloaded - lastReportedBytes >= PROGRESS_INTERVAL_BYTES) {
-                            lastReportedBytes = downloaded
-                            onProgress?.invoke(
-                                TtsPreparationProgress.Downloading(downloaded, null),
-                            )
-                        }
-                    }
-                    if (total <= 0 && downloaded != lastReportedBytes) {
-                        onProgress?.invoke(
-                            TtsPreparationProgress.Downloading(downloaded, null),
-                        )
-                    }
-                    if (total > 0 && downloaded != total) {
-                        throw IOException("Incomplete model download: $downloaded of $total bytes")
-                    }
-                }
-            }
-        } finally {
-            connection.disconnect()
-        }
-    }
+    companion object {
+        const val MANIFEST_URL =
+            "https://github.com/RetRo99/tts-models/releases/latest/download/manifest.json"
 
-    private suspend fun extract(
-        archive: File,
-        targetDir: File,
-        onProgress: ((TtsPreparationProgress) -> Unit)?,
-    ) {
-        val canonicalTargetDir = targetDir.canonicalFile
-        val canonicalTargetPrefix = canonicalTargetDir.path + File.separator
-        val totalBytes = archive.length().coerceAtLeast(1L)
-        var lastReportedPercent = -1
-        onProgress?.invoke(
-            TtsPreparationProgress.Preparing(
-                preparedBytes = 0L,
-                totalBytes = totalBytes,
-            ),
-        )
-        archive.inputStream().use { fileInput ->
-            BZip2CompressorInputStream(fileInput).use { bzipInput ->
-                TarArchiveInputStream(bzipInput).use { tar ->
-                    val buffer = ByteArray(BUFFER_SIZE)
-                    var entry = tar.nextEntry
-                    while (entry != null) {
-                        val relativeName = entry.name.substringAfter('/', "")
-                        if (relativeName.isNotEmpty()) {
-                            val output = File(canonicalTargetDir, relativeName).canonicalFile
-                            if (!output.path.startsWith(canonicalTargetPrefix)) {
-                                throw IOException(
-                                    "Archive entry escapes target directory: ${entry.name}",
-                                )
-                            }
-                            if (entry.isDirectory) {
-                                output.mkdirs()
-                            } else if (entry.isFile) {
-                                output.parentFile?.mkdirs()
-                                output.outputStream().use { fileOutput ->
-                                    while (true) {
-                                        currentCoroutineContext().ensureActive()
-                                        val read = tar.read(buffer)
-                                        if (read < 0) break
-                                        fileOutput.write(buffer, 0, read)
-                                        val preparedBytes = bzipInput.compressedCount
-                                            .coerceAtMost(totalBytes)
-                                        val percent = (
-                                                (preparedBytes * 100) / totalBytes
-                                                ).toInt()
-                                        if (percent != lastReportedPercent) {
-                                            lastReportedPercent = percent
-                                            onProgress?.invoke(
-                                                TtsPreparationProgress.Preparing(
-                                                    preparedBytes = preparedBytes,
-                                                    totalBytes = totalBytes,
-                                                ),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        entry = tar.nextEntry
-                    }
-                }
-            }
-        }
-        onProgress?.invoke(
-            TtsPreparationProgress.Preparing(
-                preparedBytes = totalBytes,
-                totalBytes = totalBytes,
-            ),
-        )
-    }
-
-    private companion object {
-        val KOKORO_MODEL = ModelSpecification(
-            name = "Kokoro",
-            url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/" +
-                    "kokoro-int8-en-v0_19.tar.bz2",
-            directory = "tts-models/kokoro-int8-en-v0_19",
-            archiveName = "kokoro-int8-en-v0_19.tar.bz2",
-            minimumArchiveBytes = 100L * 1024L * 1024L,
-        )
-        val SUPERTONIC_MODEL = ModelSpecification(
-            name = "Supertonic 3",
-            url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/" +
-                    "sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2",
-            directory = "tts-models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11",
-            archiveName = "sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2",
-            minimumArchiveBytes = 120L * 1024L * 1024L,
-        )
-        const val KOKORO_MIN_MODEL_BYTES = 100L * 1024L * 1024L
-        const val SUPERTONIC_MIN_DURATION_PREDICTOR_BYTES = 3L * 1024L * 1024L
-        const val SUPERTONIC_MIN_TEXT_ENCODER_BYTES = 30L * 1024L * 1024L
-        const val SUPERTONIC_MIN_VECTOR_ESTIMATOR_BYTES = 70L * 1024L * 1024L
-        const val SUPERTONIC_MIN_VOCODER_BYTES = 20L * 1024L * 1024L
-        const val CONNECT_TIMEOUT_MS = 30_000
-        const val READ_TIMEOUT_MS = 60_000
-        const val BUFFER_SIZE = 1 shl 16
-        const val PROGRESS_INTERVAL_BYTES = 1_000_000L
-        const val TAG = "TtsModelManager"
-        val HTTP_SUCCESS_RANGE = 200..299
+        private const val KOKORO_MODEL_ID = "kokoro"
+        private const val SUPERTONIC_MODEL_ID = "supertonic"
+        private const val MODELS_DIR_NAME = "tts-models"
+        private const val MANIFEST_CACHE_FILE_NAME = "manifest.json"
+        private const val MARKER_FILE_NAME = ".version"
+        private const val KOKORO_MIN_MODEL_BYTES = 100L * 1024L * 1024L
+        private const val SUPERTONIC_MIN_DURATION_PREDICTOR_BYTES = 3L * 1024L * 1024L
+        private const val SUPERTONIC_MIN_TEXT_ENCODER_BYTES = 30L * 1024L * 1024L
+        private const val SUPERTONIC_MIN_VECTOR_ESTIMATOR_BYTES = 70L * 1024L * 1024L
+        private const val SUPERTONIC_MIN_VOCODER_BYTES = 20L * 1024L * 1024L
+        private const val MAX_DOWNLOAD_ATTEMPTS = 3
+        private const val MANIFEST_PREFETCH_TIMEOUT_MS = 5_000L
+        private const val CONNECT_TIMEOUT_MS = 30_000
+        private const val READ_TIMEOUT_MS = 60_000
+        private const val BUFFER_SIZE = 1 shl 16
+        private const val DISK_MARGIN_BYTES = 64L * 1024L * 1024L
+        private const val HTTP_PARTIAL_CONTENT = 206
+        private const val HTTP_RANGE_NOT_SATISFIABLE = 416
+        private const val TAG = "TtsModelManager"
+        private val HTTP_SUCCESS_RANGE = 200..299
     }
 }
-
-private data class ModelSpecification(
-    val name: String,
-    val url: String,
-    val directory: String,
-    val archiveName: String,
-    val minimumArchiveBytes: Long,
-)

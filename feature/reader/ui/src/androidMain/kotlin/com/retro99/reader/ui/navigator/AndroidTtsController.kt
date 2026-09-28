@@ -21,6 +21,7 @@ import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.reader.ui.tts.TtsVoicePreparationForegroundService
 import com.retro99.reader.ui.tts.TtsVoicePreparationState
 import com.retro99.reader.ui.tts.TtsVoicePreparationStateHolder
+import com.retro99.reader.ui.tts.TtsModelManager
 import com.retro99.reader.ui.tts.neuralVoicePackage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +54,7 @@ class AndroidTtsController(
     private val bookController: BookController,
     private val engine: TtsReadAloudEngine,
     private val synthesizer: TtsSynthesizer,
+    private val modelManager: TtsModelManager,
     private val notificationPermissionHandler: NotificationPermissionHandler,
     private val preparationStateHolder: TtsVoicePreparationStateHolder,
     private val previewPlayer: TtsPreviewPlayer,
@@ -142,6 +144,7 @@ class AndroidTtsController(
 
     override suspend fun availableVoices(): List<TtsVoice> {
         synthesizer.awaitReady()
+        modelManager.ensureManifestCached()
         return synthesizer.availableVoices()
     }
 

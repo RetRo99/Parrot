@@ -42,7 +42,10 @@ class SherpaOnnxSynthesizer(
 
     override fun availableVoices(): List<TtsVoice> {
         val isDownloaded = modelManager.isKokoroModelDownloaded()
-        return KOKORO_VOICES.map { voice -> voice.copy(isDownloaded = isDownloaded) }
+        val downloadSizeBytes = modelManager.kokoroDownloadSizeBytes()
+        return KOKORO_VOICES.map { voice ->
+            voice.copy(isDownloaded = isDownloaded, downloadSizeBytes = downloadSizeBytes)
+        }
     }
 
     override fun defaultVoice(): TtsVoice = availableVoices().first()
@@ -231,7 +234,6 @@ class SherpaOnnxSynthesizer(
                 latency = 500,
                 requiresNetwork = false,
                 isNeural = true,
-                downloadSizeBytes = KOKORO_DOWNLOAD_SIZE_BYTES,
                 isDownloaded = false,
             )
         }

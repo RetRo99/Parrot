@@ -43,7 +43,10 @@ class SupertonicOnnxSynthesizer(
 
     override fun availableVoices(): List<TtsVoice> {
         val isDownloaded = modelManager.isSupertonicModelDownloaded()
-        return SUPERTONIC_VOICES.map { voice -> voice.copy(isDownloaded = isDownloaded) }
+        val downloadSizeBytes = modelManager.supertonicDownloadSizeBytes()
+        return SUPERTONIC_VOICES.map { voice ->
+            voice.copy(isDownloaded = isDownloaded, downloadSizeBytes = downloadSizeBytes)
+        }
     }
 
     override fun defaultVoice(): TtsVoice = availableVoices().first()
@@ -247,7 +250,6 @@ internal val SUPERTONIC_VOICES: List<TtsVoice> = listOf(
         latency = 500,
         requiresNetwork = false,
         isNeural = true,
-        downloadSizeBytes = SUPERTONIC_DOWNLOAD_SIZE_BYTES,
         isDownloaded = false,
     )
 }

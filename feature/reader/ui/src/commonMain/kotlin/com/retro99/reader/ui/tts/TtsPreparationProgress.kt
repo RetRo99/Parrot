@@ -16,18 +16,6 @@ sealed interface TtsPreparationProgress {
             get() = fraction?.times(100)?.roundToInt()
     }
 
-    data class Preparing(
-        val preparedBytes: Long,
-        val totalBytes: Long,
-    ) : TtsPreparationProgress {
-
-        val fraction: Float
-            get() = totalBytes.toProgressFraction(preparedBytes) ?: 0f
-
-        val percentage: Int
-            get() = (fraction * 100).roundToInt()
-    }
-
     data object Finalizing : TtsPreparationProgress
 }
 

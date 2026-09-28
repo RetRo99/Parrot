@@ -42,24 +42,4 @@ class TtsPreparationProgressTest {
         assertNull(fraction)
         assertNull(percentage)
     }
-
-    @Test
-    fun `preparing calculates bounded progress from processed archive bytes`() {
-        // Given
-        val halfway = TtsPreparationProgress.Preparing(
-            preparedBytes = 50L,
-            totalBytes = 100L,
-        )
-        val pastEnd = halfway.copy(preparedBytes = 120L)
-
-        // When
-        val halfwayFraction = halfway.fraction
-        val halfwayPercentage = halfway.percentage
-
-        // Then
-        assertEquals(0.5f, halfwayFraction)
-        assertEquals(50, halfwayPercentage)
-        assertEquals(1f, pastEnd.fraction)
-        assertEquals(100, pastEnd.percentage)
-    }
 }

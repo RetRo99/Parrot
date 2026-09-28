@@ -42,7 +42,6 @@ class VoiceSettingsScreenTest {
             name = "Heart (US female)",
             locale = "en",
             isNeural = true,
-            downloadSizeBytes = 103_248_205L,
             isDownloaded = true,
         )
         val missingNeuralVoice = downloadedNeuralVoice.copy(isDownloaded = false)
