@@ -21,11 +21,13 @@ import com.retro99.statistics.domain.usecase.GetReadingStatisticsUseCase
 import com.retro99.statistics.domain.usecase.GetRecentSessionsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.Test
@@ -105,11 +107,147 @@ class StatisticsLoadFailureTest {
         }
     }
 
+    @Test
+    fun detailQueriesKeepSheetsRetryAndReportSeparateOutcomes() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val failure = AppError.DatabaseError(IllegalStateException("synthetic detail query failure"))
+            val repository = FakeStatisticsRepository(
+                statisticsResults = mutableListOf(Ok(emptyStatistics())),
+                periodBookResults = mutableListOf(Err(failure), Ok(emptyList())),
+                allBooksReadResults = mutableListOf(Err(failure), Ok(emptyList())),
+                allSessionsResults = mutableListOf(Err(failure), Ok(emptyList())),
+            )
+            val analytics = RecordingAnalytics()
+            val viewModel = createViewModel(repository, analytics)
+            advanceUntilIdle()
+
+            viewModel.onIntent(StatisticsIntent.OnPeriodClicked(com.retro99.statistics.domain.model.StatisticsPeriod.WEEK))
+            advanceUntilIdle()
+            assertIs<AppError.DatabaseError>(viewModel.currentViewState().detailState?.error)
+            assertFalse(viewModel.currentViewState().detailState?.isLoading ?: true)
+            assertEquals("statistics_detail_load_failed", analytics.events.last().name)
+            assertEquals("period_books", analytics.events.last().parameters["detail_type"])
+            assertEquals("database_error", analytics.events.last().parameters["reason_code"])
+            assertEquals("load_period_books", analytics.exceptionContexts.last().action)
+            assertEquals("statistics_detail_load", analytics.exceptionContexts.last().operation)
+
+            viewModel.onIntent(StatisticsIntent.OnRetryDetail)
+            advanceUntilIdle()
+            assertNull(viewModel.currentViewState().detailState?.error)
+            assertEquals("statistics_detail_load_attempted", analytics.events[analytics.events.lastIndex - 1].name)
+            assertEquals(true, analytics.events[analytics.events.lastIndex - 1].parameters["is_retry"])
+            assertEquals("statistics_detail_load_succeeded", analytics.events.last().name)
+
+            viewModel.onIntent(StatisticsIntent.OnBooksReadClicked)
+            advanceUntilIdle()
+            assertIs<AppError.DatabaseError>(viewModel.currentViewState().booksReadDetailState?.error)
+            assertEquals("books_read", analytics.events.last().parameters["detail_type"])
+            viewModel.onIntent(StatisticsIntent.OnRetryDetail)
+            advanceUntilIdle()
+            assertNull(viewModel.currentViewState().booksReadDetailState?.error)
+            assertEquals("statistics_detail_load_succeeded", analytics.events.last().name)
+
+            viewModel.onIntent(StatisticsIntent.OnTotalSessionsClicked)
+            advanceUntilIdle()
+            assertIs<AppError.DatabaseError>(viewModel.currentViewState().sessionsDetailState?.error)
+            assertEquals("recent_sessions", analytics.events.last().parameters["detail_type"])
+            viewModel.onIntent(StatisticsIntent.OnRetryDetail)
+            advanceUntilIdle()
+            assertNull(viewModel.currentViewState().sessionsDetailState?.error)
+            assertEquals("statistics_detail_load_succeeded", analytics.events.last().name)
+
+            val detailOutcomes = analytics.events.filter {
+                it.name.startsWith("statistics_detail_load_")
+            }
+            assertEquals(12, detailOutcomes.size)
+            assertEquals(3, analytics.exceptionContexts.count { it.operation == "statistics_detail_load" })
+            val detailBreadcrumbs = analytics.breadcrumbs.filter {
+                it.operation == "statistics_detail_load"
+            }
+            assertEquals(12, detailBreadcrumbs.size)
+            detailBreadcrumbs.chunked(2).forEach { pair ->
+                assertEquals("started", pair.first().stage)
+                assertEquals("terminal", pair.last().stage)
+                assertEquals(pair.first().correlationId, pair.last().correlationId)
+                assertTrue(pair.first().correlationId != null)
+            }
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun dismissingLoadingDetailRecordsCancellationWithoutException() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val repository = FakeStatisticsRepository(
+                statisticsResults = mutableListOf(Ok(emptyStatistics())),
+                suspendSessions = true,
+            )
+            val analytics = RecordingAnalytics()
+            val viewModel = createViewModel(repository, analytics)
+            advanceUntilIdle()
+
+            viewModel.onIntent(StatisticsIntent.OnTotalSessionsClicked)
+            runCurrent()
+            assertTrue(viewModel.currentViewState().sessionsDetailState?.isLoading == true)
+
+            viewModel.onIntent(StatisticsIntent.OnDismissDetail)
+            advanceUntilIdle()
+
+            assertNull(viewModel.currentViewState().sessionsDetailState)
+            val cancellations = analytics.events.filter {
+                it.name == "statistics_detail_load_cancelled"
+            }
+            assertEquals(1, cancellations.size)
+            assertEquals("detail_dismissed", cancellations.single().parameters["reason_code"])
+            assertEquals("cancelled", analytics.breadcrumbs.last().outcome)
+            assertEquals("detail_dismissed", analytics.breadcrumbs.last().reasonCode)
+            assertTrue(analytics.exceptionContexts.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun navigatingBackCancelsLoadingDetailAndInvokesBackOnce() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            var backCount = 0
+            val repository = FakeStatisticsRepository(
+                statisticsResults = mutableListOf(Ok(emptyStatistics())),
+                suspendSessions = true,
+            )
+            val analytics = RecordingAnalytics()
+            val viewModel = createViewModel(repository, analytics, onBack = { backCount++ })
+            advanceUntilIdle()
+
+            viewModel.onIntent(StatisticsIntent.OnTotalSessionsClicked)
+            runCurrent()
+            viewModel.onIntent(StatisticsIntent.OnBackClicked)
+            advanceUntilIdle()
+
+            assertEquals(1, backCount)
+            val cancellations = analytics.events.filter {
+                it.name == "statistics_detail_load_cancelled"
+            }
+            assertEquals(1, cancellations.size)
+            assertEquals("navigation_back", cancellations.single().parameters["reason_code"])
+            assertEquals("cancelled", analytics.breadcrumbs.last().outcome)
+            assertEquals("navigation_back", analytics.breadcrumbs.last().reasonCode)
+            assertTrue(analytics.exceptionContexts.isEmpty())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
     private fun createViewModel(
         repository: StatisticsRepository,
         analytics: Analytics,
+        onBack: () -> Unit = {},
     ) = StatisticsViewModel(
-        onBack = {},
+        onBack = onBack,
         getReadingStatisticsUseCase = GetReadingStatisticsUseCase(repository),
         getBooksForPeriodUseCase = GetBooksForPeriodUseCase(repository),
         getAllBooksReadUseCase = GetAllBooksReadUseCase(repository),
@@ -142,10 +280,18 @@ private class RecordingAnalytics : Analytics {
 
 private class FakeStatisticsRepository(
     private val statisticsResults: MutableList<AppResult<ReadingStatisticsDomainModel>>,
+    private val periodBookResults: MutableList<AppResult<List<BookReadingStatsDomainModel>>> =
+        mutableListOf(Ok(emptyList())),
+    private val allBooksReadResults: MutableList<AppResult<List<BookReadingStatsDomainModel>>> =
+        mutableListOf(Ok(emptyList())),
+    private val allSessionsResults: MutableList<AppResult<List<ReadingSessionDomainModel>>> =
+        mutableListOf(Ok(emptyList())),
+    private val suspendSessions: Boolean = false,
 ) : StatisticsRepository {
     override suspend fun saveReadingSession(session: ReadingSessionDomainModel): CompletableResult = Ok(Unit)
 
-    override suspend fun getAllSessions(): AppResult<List<ReadingSessionDomainModel>> = Ok(emptyList())
+    override suspend fun getAllSessions(): AppResult<List<ReadingSessionDomainModel>> =
+        if (suspendSessions) awaitCancellation() else allSessionsResults.removeAt(0)
 
     override suspend fun getSessionsByBook(bookUuid: String): AppResult<List<ReadingSessionDomainModel>> =
         Ok(emptyList())
@@ -165,13 +311,13 @@ private class FakeStatisticsRepository(
         Ok(emptyList())
 
     override suspend fun getMostReadBooks(limit: Int): AppResult<List<BookReadingStatsDomainModel>> =
-        Ok(emptyList())
+        allBooksReadResults.removeAt(0)
 
     override suspend fun getMostReadBooksInDateRange(
         startTime: Long,
         endTime: Long,
         limit: Int,
-    ): AppResult<List<BookReadingStatsDomainModel>> = Ok(emptyList())
+    ): AppResult<List<BookReadingStatsDomainModel>> = periodBookResults.removeAt(0)
 
     override suspend fun getReadingTimeByType(): AppResult<Map<BookType, Long>> = Ok(emptyMap())
 

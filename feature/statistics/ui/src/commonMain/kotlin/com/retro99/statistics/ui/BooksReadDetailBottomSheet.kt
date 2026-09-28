@@ -46,6 +46,7 @@ import resources.translations.statistics_detail_sessions
 fun BooksReadDetailBottomSheet(
     booksReadDetailState: BooksReadDetailState,
     onDismiss: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -77,6 +78,10 @@ fun BooksReadDetailBottomSheet(
                     ) {
                         CircularProgressIndicator()
                     }
+                }
+
+                booksReadDetailState.error != null || booksReadDetailState.isCancelled -> {
+                    StatisticsDetailLoadErrorContent(onRetry = onRetry)
                 }
 
                 booksReadDetailState.books.isEmpty() -> {
@@ -181,4 +186,3 @@ private fun getSessionsText(sessionCount: Long): String {
         stringResource(StringRes.statistics_detail_sessions, sessionCount)
     }
 }
-

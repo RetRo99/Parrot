@@ -11,6 +11,6 @@ sealed interface StatisticsIntent : BaseIntent {
     data object OnLongestStreakClicked : StatisticsIntent
     data object OnBooksReadClicked : StatisticsIntent
     data object OnTotalSessionsClicked : StatisticsIntent
+    data object OnRetryDetail : StatisticsIntent
     data object OnDismissDetail : StatisticsIntent
 }
-

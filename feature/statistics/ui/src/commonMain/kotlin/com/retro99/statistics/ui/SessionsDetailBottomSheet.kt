@@ -39,6 +39,7 @@ import resources.translations.statistics_sessions_total
 fun SessionsDetailBottomSheet(
     sessionsDetailState: SessionsDetailState,
     onDismiss: () -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -79,6 +80,10 @@ fun SessionsDetailBottomSheet(
                     ) {
                         CircularProgressIndicator()
                     }
+                }
+
+                sessionsDetailState.error != null || sessionsDetailState.isCancelled -> {
+                    StatisticsDetailLoadErrorContent(onRetry = onRetry)
                 }
 
                 sessionsDetailState.sessions.isEmpty() -> {
@@ -166,4 +171,3 @@ private fun SessionItem(
         )
     }
 }
-

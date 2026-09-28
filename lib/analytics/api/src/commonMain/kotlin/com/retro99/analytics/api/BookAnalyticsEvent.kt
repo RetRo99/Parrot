@@ -1206,6 +1206,78 @@ sealed interface StatisticsAnalyticsEvent : AnalyticsEvent {
             "detail_type" to detailType,
         )
     }
+
+    data class StatisticsDetailLoadAttempted(
+        val action: String,
+        val detailType: String,
+        val period: String? = null,
+        val isRetry: Boolean,
+    ) : StatisticsAnalyticsEvent {
+        override val name: String = "statistics_detail_load_attempted"
+        override val parameters: Map<String, Any> = statisticsDetailLoadParameters(
+            action = action,
+            detailType = detailType,
+            period = period,
+            stage = "started",
+            outcome = "started",
+            isRetry = isRetry,
+        )
+    }
+
+    data class StatisticsDetailLoadSucceeded(
+        val action: String,
+        val detailType: String,
+        val period: String? = null,
+        val isRetry: Boolean,
+    ) : StatisticsAnalyticsEvent {
+        override val name: String = "statistics_detail_load_succeeded"
+        override val parameters: Map<String, Any> = statisticsDetailLoadParameters(
+            action = action,
+            detailType = detailType,
+            period = period,
+            stage = "terminal",
+            outcome = "succeeded",
+            isRetry = isRetry,
+        )
+    }
+
+    data class StatisticsDetailLoadFailed(
+        val action: String,
+        val detailType: String,
+        val period: String? = null,
+        val isRetry: Boolean,
+        val reasonCode: String,
+    ) : StatisticsAnalyticsEvent {
+        override val name: String = "statistics_detail_load_failed"
+        override val parameters: Map<String, Any> = statisticsDetailLoadParameters(
+            action = action,
+            detailType = detailType,
+            period = period,
+            stage = "terminal",
+            outcome = "failed",
+            isRetry = isRetry,
+            reasonCode = reasonCode,
+        )
+    }
+
+    data class StatisticsDetailLoadCancelled(
+        val action: String,
+        val detailType: String,
+        val period: String? = null,
+        val isRetry: Boolean,
+        val reasonCode: String,
+    ) : StatisticsAnalyticsEvent {
+        override val name: String = "statistics_detail_load_cancelled"
+        override val parameters: Map<String, Any> = statisticsDetailLoadParameters(
+            action = action,
+            detailType = detailType,
+            period = period,
+            stage = "terminal",
+            outcome = "cancelled",
+            isRetry = isRetry,
+            reasonCode = reasonCode,
+        )
+    }
 }
 
 private fun statisticsLoadParameters(
@@ -1218,6 +1290,26 @@ private fun statisticsLoadParameters(
     put("screen", "statistics")
     put("action", action)
     put("operation", "statistics_load")
+    put("stage", stage)
+    put("outcome", outcome)
+    put("is_retry", isRetry)
+    reasonCode?.let { put("reason_code", it) }
+}
+
+private fun statisticsDetailLoadParameters(
+    action: String,
+    detailType: String,
+    period: String?,
+    stage: String,
+    outcome: String,
+    isRetry: Boolean,
+    reasonCode: String? = null,
+): Map<String, Any> = buildMap {
+    put("screen", "statistics")
+    put("action", action)
+    put("operation", "statistics_detail_load")
+    put("detail_type", detailType)
+    period?.let { put("period", it) }
     put("stage", stage)
     put("outcome", outcome)
     put("is_retry", isRetry)

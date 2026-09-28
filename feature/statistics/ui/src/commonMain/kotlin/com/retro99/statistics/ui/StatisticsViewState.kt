@@ -23,6 +23,8 @@ data class StatisticsDetailState(
     val period: StatisticsPeriod,
     val books: List<BookReadingStatsUiModel>,
     val isLoading: Boolean = false,
+    val error: AppError? = null,
+    val isCancelled: Boolean = false,
 )
 
 /**
@@ -39,6 +41,8 @@ data class StreakDetailState(
 data class BooksReadDetailState(
     val books: List<BookReadingStatsUiModel>,
     val isLoading: Boolean = false,
+    val error: AppError? = null,
+    val isCancelled: Boolean = false,
 )
 
 /**
@@ -48,6 +52,8 @@ data class SessionsDetailState(
     val sessions: List<ReadingSessionUiModel>,
     val totalSessions: Long,
     val isLoading: Boolean = false,
+    val error: AppError? = null,
+    val isCancelled: Boolean = false,
 )
 
 /**
@@ -57,4 +63,3 @@ enum class StreakType {
     CURRENT,
     LONGEST,
 }
-

@@ -1198,4 +1198,54 @@ class DiagnosticPayloadSanitizerTest {
         )
         assertFalse("profile_id" in parameters)
     }
+
+    @Test
+    fun statisticsDetailOutcomesDistinguishAttemptSuccessFailureAndCancellation() {
+        val attempt = sanitizeAnalyticsParameters(
+            StatisticsAnalyticsEvent.StatisticsDetailLoadAttempted(
+                action = "load_period_books",
+                detailType = "period_books",
+                period = "WEEK",
+                isRetry = false,
+            ).parameters + mapOf("book_uuid" to "private-book-id"),
+        )
+        val success = sanitizeAnalyticsParameters(
+            StatisticsAnalyticsEvent.StatisticsDetailLoadSucceeded(
+                action = "load_books_read",
+                detailType = "books_read",
+                isRetry = true,
+            ).parameters,
+        )
+        val failure = sanitizeAnalyticsParameters(
+            StatisticsAnalyticsEvent.StatisticsDetailLoadFailed(
+                action = "load_recent_sessions",
+                detailType = "recent_sessions",
+                isRetry = false,
+                reasonCode = "database_error",
+            ).parameters + mapOf("book_title" to "private title"),
+        )
+        val cancelled = sanitizeAnalyticsParameters(
+            StatisticsAnalyticsEvent.StatisticsDetailLoadCancelled(
+                action = "load_period_books",
+                detailType = "period_books",
+                period = "TODAY",
+                isRetry = true,
+                reasonCode = "detail_dismissed",
+            ).parameters,
+        )
+
+        assertEquals("started", attempt["outcome"])
+        assertEquals("statistics_detail_load", attempt["operation"])
+        assertEquals("WEEK", attempt["period"])
+        assertEquals(false, attempt["is_retry"])
+        assertFalse("book_uuid" in attempt)
+        assertEquals("succeeded", success["outcome"])
+        assertEquals(true, success["is_retry"])
+        assertEquals("failed", failure["outcome"])
+        assertEquals("database_error", failure["reason_code"])
+        assertFalse("book_title" in failure)
+        assertEquals("cancelled", cancelled["outcome"])
+        assertEquals("detail_dismissed", cancelled["reason_code"])
+        assertEquals(true, cancelled["is_retry"])
+    }
 }

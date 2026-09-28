@@ -3,8 +3,6 @@ package com.retro99.statistics.ui
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.fold
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.StatisticsAnalyticsEvent
@@ -20,6 +18,7 @@ import com.retro99.statistics.ui.model.toBookUiModel
 import com.retro99.statistics.ui.model.toSessionUiModel
 import com.retro99.statistics.ui.model.toUiModel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
@@ -41,6 +40,8 @@ class StatisticsViewModel(
     private var statisticsLoadInProgress = false
     private var statisticsLoadFailed = false
     private var hasStatisticsLoadCompleted = false
+    private var activeDetailRequest: StatisticsDetailLoadRequest? = null
+    private var detailLoadJob: Job? = null
 
     init {
         loadStatistics()
@@ -49,27 +50,49 @@ class StatisticsViewModel(
     override fun onIntent(intent: StatisticsIntent) {
         when (intent) {
             StatisticsIntent.OnRefresh -> loadStatistics()
-            StatisticsIntent.OnBackClicked -> onBack()
+            StatisticsIntent.OnBackClicked -> {
+                cancelActiveDetailRequest("navigation_back")
+                onBack()
+            }
             is StatisticsIntent.OnPeriodClicked -> {
-                analytics.logEvent(StatisticsAnalyticsEvent.StatisticsPeriodChanged(period = intent.period.name))
-                loadBooksForPeriod(intent.period)
+                if (activeDetailRequest == null) {
+                    analytics.logEvent(
+                        StatisticsAnalyticsEvent.StatisticsPeriodChanged(period = intent.period.name),
+                    )
+                    loadBooksForPeriod(intent.period)
+                }
             }
             StatisticsIntent.OnCurrentStreakClicked -> {
-                analytics.logEvent(StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "current_streak"))
-                showCurrentStreak()
+                if (viewState.value.statistics != null) {
+                    analytics.logEvent(
+                        StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "current_streak"),
+                    )
+                    showCurrentStreak()
+                }
             }
             StatisticsIntent.OnLongestStreakClicked -> {
-                analytics.logEvent(StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "longest_streak"))
-                showLongestStreak()
+                if (viewState.value.statistics != null) {
+                    analytics.logEvent(
+                        StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "longest_streak"),
+                    )
+                    showLongestStreak()
+                }
             }
             StatisticsIntent.OnBooksReadClicked -> {
-                analytics.logEvent(StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "books_read"))
-                showBooksRead()
+                if (activeDetailRequest == null) {
+                    analytics.logEvent(StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "books_read"))
+                    showBooksRead()
+                }
             }
             StatisticsIntent.OnTotalSessionsClicked -> {
-                analytics.logEvent(StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "recent_sessions"))
-                showRecentSessions()
+                if (activeDetailRequest == null) {
+                    analytics.logEvent(
+                        StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "recent_sessions"),
+                    )
+                    showRecentSessions()
+                }
             }
+            StatisticsIntent.OnRetryDetail -> retryDetailLoad()
             StatisticsIntent.OnDismissDetail -> dismissDetail()
         }
     }
@@ -159,36 +182,44 @@ class StatisticsViewModel(
         }
     }
 
-    private fun loadBooksForPeriod(period: StatisticsPeriod) {
-        // Show loading state immediately
-        updateState {
-            it.copy(
-                detailState = StatisticsDetailState(
-                    period = period,
-                    books = emptyList(),
-                    isLoading = true,
-                )
-            )
-        }
-
-        viewModelScope.launch {
-            getBooksForPeriodUseCase(period)
-                .onSuccess { books ->
-                    updateState {
-                        it.copy(
-                            detailState = StatisticsDetailState(
-                                period = period,
-                                books = books.map { book -> book.toBookUiModel() },
-                                isLoading = false,
-                            )
-                        )
-                    }
+    private fun loadBooksForPeriod(period: StatisticsPeriod, isRetry: Boolean = false) {
+        loadDetail(
+            detailType = "period_books",
+            action = "load_period_books",
+            period = period,
+            isRetry = isRetry,
+            query = { getBooksForPeriodUseCase(period) },
+            showLoading = {
+                updateState {
+                    it.copy(
+                        detailState = StatisticsDetailState(period, emptyList(), isLoading = true),
+                        streakDetailState = null,
+                        booksReadDetailState = null,
+                        sessionsDetailState = null,
+                    )
                 }
-                .onFailure { error ->
-                    error.log(analytics, "StatisticsViewModel: Failed to load books for period")
-                    updateState { it.copy(detailState = null) }
+            },
+            showSuccess = { books ->
+                updateState {
+                    it.copy(
+                        detailState = StatisticsDetailState(
+                            period = period,
+                            books = books.map { book -> book.toBookUiModel() },
+                        ),
+                    )
                 }
-        }
+            },
+            showFailure = { error ->
+                updateState {
+                    it.copy(detailState = it.detailState?.copy(isLoading = false, error = error))
+                }
+            },
+            showCancelled = {
+                updateState {
+                    it.copy(detailState = it.detailState?.copy(isLoading = false, isCancelled = true))
+                }
+            },
+        )
     }
 
     private fun showCurrentStreak() {
@@ -215,68 +246,211 @@ class StatisticsViewModel(
         }
     }
 
-    private fun showBooksRead() {
-        updateState {
-            it.copy(
-                booksReadDetailState = BooksReadDetailState(
-                    books = emptyList(),
-                    isLoading = true,
-                )
-            )
-        }
+    private fun showBooksRead(isRetry: Boolean = false) {
+        loadDetail(
+            detailType = "books_read",
+            action = "load_books_read",
+            isRetry = isRetry,
+            query = { getAllBooksReadUseCase() },
+            showLoading = {
+                updateState {
+                    it.copy(
+                        detailState = null,
+                        streakDetailState = null,
+                        booksReadDetailState = BooksReadDetailState(emptyList(), isLoading = true),
+                        sessionsDetailState = null,
+                    )
+                }
+            },
+            showSuccess = { books ->
+                updateState {
+                    it.copy(
+                        booksReadDetailState = BooksReadDetailState(
+                            books = books.map { book -> book.toBookUiModel() },
+                        ),
+                    )
+                }
+            },
+            showFailure = { error ->
+                updateState {
+                    it.copy(booksReadDetailState = it.booksReadDetailState?.copy(isLoading = false, error = error))
+                }
+            },
+            showCancelled = {
+                updateState {
+                    it.copy(booksReadDetailState = it.booksReadDetailState?.copy(isLoading = false, isCancelled = true))
+                }
+            },
+        )
+    }
 
-        viewModelScope.launch {
-            getAllBooksReadUseCase()
-                .onSuccess { books ->
-                    updateState {
-                        it.copy(
-                            booksReadDetailState = BooksReadDetailState(
-                                books = books.map { book -> book.toBookUiModel() },
-                                isLoading = false,
-                            )
-                        )
-                    }
+    private fun showRecentSessions(isRetry: Boolean = false) {
+        val totalSessions = viewState.value.statistics?.totalSessions ?: 0L
+        loadDetail(
+            detailType = "recent_sessions",
+            action = "load_recent_sessions",
+            isRetry = isRetry,
+            query = { getRecentSessionsUseCase() },
+            showLoading = {
+                updateState {
+                    it.copy(
+                        detailState = null,
+                        streakDetailState = null,
+                        booksReadDetailState = null,
+                        sessionsDetailState = SessionsDetailState(
+                            sessions = emptyList(),
+                            totalSessions = totalSessions,
+                            isLoading = true,
+                        ),
+                    )
                 }
-                .onFailure { error ->
-                    error.log(analytics, "StatisticsViewModel: Failed to load books read")
-                    updateState { it.copy(booksReadDetailState = null) }
+            },
+            showSuccess = { sessions ->
+                updateState {
+                    it.copy(
+                        sessionsDetailState = SessionsDetailState(
+                            sessions = sessions.map { session -> session.toSessionUiModel() },
+                            totalSessions = totalSessions,
+                        ),
+                    )
                 }
+            },
+            showFailure = { error ->
+                updateState {
+                    it.copy(sessionsDetailState = it.sessionsDetailState?.copy(isLoading = false, error = error))
+                }
+            },
+            showCancelled = {
+                updateState {
+                    it.copy(sessionsDetailState = it.sessionsDetailState?.copy(isLoading = false, isCancelled = true))
+                }
+            },
+        )
+    }
+
+    private fun retryDetailLoad() {
+        if (activeDetailRequest != null) return
+        val state = viewState.value
+        state.detailState?.takeIf { it.error != null || it.isCancelled }?.let {
+            loadBooksForPeriod(it.period, isRetry = true)
+            return
+        }
+        if (state.booksReadDetailState?.let { it.error != null || it.isCancelled } == true) {
+            showBooksRead(isRetry = true)
+            return
+        }
+        if (state.sessionsDetailState?.let { it.error != null || it.isCancelled } == true) {
+            showRecentSessions(isRetry = true)
         }
     }
 
-    private fun showRecentSessions() {
-        val totalSessions = viewState.value.statistics?.totalSessions ?: 0L
-        updateState {
-            it.copy(
-                sessionsDetailState = SessionsDetailState(
-                    sessions = emptyList(),
-                    totalSessions = totalSessions,
-                    isLoading = true,
-                )
+    @OptIn(ExperimentalUuidApi::class)
+    private fun <T> loadDetail(
+        detailType: String,
+        action: String,
+        period: StatisticsPeriod? = null,
+        isRetry: Boolean = false,
+        query: suspend () -> com.retro99.base.result.AppResult<T>,
+        showLoading: () -> Unit,
+        showSuccess: (T) -> Unit,
+        showFailure: (AppError) -> Unit,
+        showCancelled: () -> Unit,
+    ) {
+        if (activeDetailRequest != null) return
+        val request = StatisticsDetailLoadRequest(
+            detailType = detailType,
+            action = action,
+            period = period?.name,
+            isRetry = isRetry,
+            correlationId = Uuid.random().toString(),
+        )
+        activeDetailRequest = request
+        showLoading()
+        analytics.logEvent(
+            StatisticsAnalyticsEvent.StatisticsDetailLoadAttempted(
+                action = request.action,
+                detailType = request.detailType,
+                period = request.period,
+                isRetry = request.isRetry,
+            ),
+        )
+        analytics.logBreadcrumb(request.context(stage = "started", outcome = "started"))
+
+        detailLoadJob = viewModelScope.launch {
+            val result = try {
+                query()
+            } catch (cancellation: CancellationException) {
+                finishDetailCancellation(request, "query_cancelled", showCancelled)
+                throw cancellation
+            } catch (throwable: Exception) {
+                Err(AppError.UnknownError(throwable))
+            }
+
+            if (activeDetailRequest != request) return@launch
+            activeDetailRequest = null
+            detailLoadJob = null
+            result.fold(
+                success = { value ->
+                    showSuccess(value)
+                    analytics.logEvent(
+                        StatisticsAnalyticsEvent.StatisticsDetailLoadSucceeded(
+                            action = request.action,
+                            detailType = request.detailType,
+                            period = request.period,
+                            isRetry = request.isRetry,
+                        ),
+                    )
+                    analytics.logBreadcrumb(request.context(stage = "terminal", outcome = "succeeded"))
+                },
+                failure = { error ->
+                    val reasonCode = error.statisticsReasonCode()
+                    val context = request.context(
+                        stage = "terminal",
+                        outcome = "failed",
+                        reasonCode = reasonCode,
+                    )
+                    analytics.logEvent(
+                        StatisticsAnalyticsEvent.StatisticsDetailLoadFailed(
+                            action = request.action,
+                            detailType = request.detailType,
+                            period = request.period,
+                            isRetry = request.isRetry,
+                            reasonCode = reasonCode,
+                        ),
+                    )
+                    analytics.logBreadcrumb(context)
+                    error.log(analytics, context)
+                    showFailure(error)
+                },
             )
         }
+    }
 
-        viewModelScope.launch {
-            getRecentSessionsUseCase()
-                .onSuccess { sessions ->
-                    updateState {
-                        it.copy(
-                            sessionsDetailState = SessionsDetailState(
-                                sessions = sessions.map { session -> session.toSessionUiModel() },
-                                totalSessions = totalSessions,
-                                isLoading = false,
-                            )
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    error.log(analytics, "StatisticsViewModel: Failed to load recent sessions")
-                    updateState { it.copy(sessionsDetailState = null) }
-                }
-        }
+    private fun finishDetailCancellation(
+        request: StatisticsDetailLoadRequest,
+        reasonCode: String,
+        showCancelled: () -> Unit,
+    ) {
+        if (activeDetailRequest != request) return
+        activeDetailRequest = null
+        detailLoadJob = null
+        analytics.logEvent(
+            StatisticsAnalyticsEvent.StatisticsDetailLoadCancelled(
+                action = request.action,
+                detailType = request.detailType,
+                period = request.period,
+                isRetry = request.isRetry,
+                reasonCode = reasonCode,
+            ),
+        )
+        analytics.logBreadcrumb(
+            request.context(stage = "terminal", outcome = "cancelled", reasonCode = reasonCode),
+        )
+        showCancelled()
     }
 
     private fun dismissDetail() {
+        cancelActiveDetailRequest("detail_dismissed")
         updateState {
             it.copy(
                 detailState = null,
@@ -286,6 +460,47 @@ class StatisticsViewModel(
             )
         }
     }
+
+    private fun cancelActiveDetailRequest(reasonCode: String) {
+        val request = activeDetailRequest ?: return
+        activeDetailRequest = null
+        detailLoadJob?.cancel()
+        detailLoadJob = null
+        analytics.logEvent(
+            StatisticsAnalyticsEvent.StatisticsDetailLoadCancelled(
+                action = request.action,
+                detailType = request.detailType,
+                period = request.period,
+                isRetry = request.isRetry,
+                reasonCode = reasonCode,
+            ),
+        )
+        analytics.logBreadcrumb(
+            request.context(stage = "terminal", outcome = "cancelled", reasonCode = reasonCode),
+        )
+    }
+}
+
+private data class StatisticsDetailLoadRequest(
+    val detailType: String,
+    val action: String,
+    val period: String?,
+    val isRetry: Boolean,
+    val correlationId: String,
+) {
+    fun context(
+        stage: String,
+        outcome: String,
+        reasonCode: String? = null,
+    ) = DiagnosticContext(
+        screen = "statistics",
+        action = action,
+        operation = "statistics_detail_load",
+        stage = stage,
+        outcome = outcome,
+        reasonCode = reasonCode,
+        correlationId = correlationId,
+    )
 }
 
 private data class StatisticsLoadRequest(

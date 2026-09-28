@@ -154,6 +154,7 @@ private fun StatisticsScreenContent(
             StatisticsDetailBottomSheet(
                 detailState = detailState,
                 onDismiss = { intentDispatcher(StatisticsIntent.OnDismissDetail) },
+                onRetry = { intentDispatcher(StatisticsIntent.OnRetryDetail) },
             )
         }
 
@@ -170,6 +171,7 @@ private fun StatisticsScreenContent(
             BooksReadDetailBottomSheet(
                 booksReadDetailState = booksReadDetailState,
                 onDismiss = { intentDispatcher(StatisticsIntent.OnDismissDetail) },
+                onRetry = { intentDispatcher(StatisticsIntent.OnRetryDetail) },
             )
         }
 
@@ -178,6 +180,7 @@ private fun StatisticsScreenContent(
             SessionsDetailBottomSheet(
                 sessionsDetailState = sessionsDetailState,
                 onDismiss = { intentDispatcher(StatisticsIntent.OnDismissDetail) },
+                onRetry = { intentDispatcher(StatisticsIntent.OnRetryDetail) },
             )
         }
     }
