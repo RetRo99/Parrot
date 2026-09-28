@@ -1,6 +1,5 @@
 package com.retro99.reader.ui.tts
 
-import android.os.SystemClock
 import android.util.Log
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
@@ -90,7 +89,6 @@ class SherpaOnnxSynthesizer(
         rate: Float,
         pitch: Float,
         outputFile: File,
-        timeoutMs: Long,
     ): TtsSynthesisResult {
         if (ensureLoaded() == null) {
             return TtsSynthesisResult(
@@ -107,7 +105,6 @@ class SherpaOnnxSynthesizer(
             val speed = rate.coerceIn(MIN_SPEED, MAX_SPEED)
             val requestJob = currentCoroutineContext()[Job]
             val requestGeneration = cancellationGeneration.get()
-            val deadlineMs = SystemClock.elapsedRealtime() + timeoutMs.coerceAtLeast(1L)
 
             Log.i(TAG, "Kokoro synthesize start: sid=$speakerId speed=$speed chars=${text.length}")
             val startedAt = System.currentTimeMillis()
@@ -126,13 +123,6 @@ class SherpaOnnxSynthesizer(
                 return TtsSynthesisResult(
                     status = TtsSynthesisStatus.CANCELLED,
                     error = "Kokoro synthesis stopped",
-                )
-            }
-            if (SystemClock.elapsedRealtime() >= deadlineMs) {
-                outputFile.delete()
-                return TtsSynthesisResult(
-                    status = TtsSynthesisStatus.TIMEOUT,
-                    error = "Kokoro synthesis timed out",
                 )
             }
             val saved = withContext(Dispatchers.IO) {
@@ -205,6 +195,11 @@ class SherpaOnnxSynthesizer(
                 )
                 val tts = withContext(Dispatchers.IO) { OfflineTts(config = config) }
                 engine = tts
+                // Warm up the runtime so the first spoken sentence does not pay the
+                // one-time graph and kernel initialization costs.
+                withContext(Dispatchers.IO) {
+                    runCatching { tts.generate(WARMUP_TEXT, 0, 1f) }
+                }
                 Log.i(
                     TAG,
                     "Kokoro loaded: sampleRate=${tts.sampleRate()} " +
@@ -226,7 +221,8 @@ class SherpaOnnxSynthesizer(
     }
 
     private companion object {
-        const val NUM_THREADS = 2
+        val NUM_THREADS = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+        const val WARMUP_TEXT = "a"
         const val MIN_SPEED = TtsSpeechRate.MIN
         const val MAX_SPEED = TtsSpeechRate.MAX
         const val TAG = "SherpaOnnxTts"

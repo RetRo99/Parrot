@@ -45,7 +45,6 @@ interface TtsSynthesizer {
         rate: Float,
         pitch: Float,
         outputFile: File,
-        timeoutMs: Long = 20_000L,
     ): TtsSynthesisResult
 
     fun stop()

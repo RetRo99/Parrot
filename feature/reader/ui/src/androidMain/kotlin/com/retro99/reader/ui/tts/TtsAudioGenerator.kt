@@ -1,9 +1,11 @@
 package com.retro99.reader.ui.tts
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 
 @Single
@@ -30,37 +32,40 @@ class TtsAudioGenerator(
             pitch = pitch,
             text = text,
         )
-        return withSynthesisLock(key) {
-            cache.get(key)?.let { cachedFile ->
-                return@withSynthesisLock TtsSynthesisResult(
-                    status = TtsSynthesisStatus.SUCCESS,
-                    file = cachedFile,
-                    durationMs = cache.durationMs(cachedFile),
-                )
-            }
+        return withContext(Dispatchers.IO) {
+            withSynthesisLock(key) {
+                cache.get(key)?.let { cachedFile ->
+                    val durationMs = cache.durationMs(cachedFile)
+                    return@withSynthesisLock TtsSynthesisResult(
+                        status = TtsSynthesisStatus.SUCCESS,
+                        file = cachedFile,
+                        durationMs = durationMs,
+                    )
+                }
 
-            val outputFile = cache.fileFor(key)
-            val result = synthesisSemaphore.withPermit {
-                synthesizer.synthesize(
-                    text = text,
-                    voiceId = voiceId,
-                    rate = effectiveRate,
-                    pitch = pitch,
-                    outputFile = outputFile,
-                )
+                val outputFile = cache.fileFor(key)
+                val result = synthesisSemaphore.withPermit {
+                    synthesizer.synthesize(
+                        text = text,
+                        voiceId = voiceId,
+                        rate = effectiveRate,
+                        pitch = pitch,
+                        outputFile = outputFile,
+                    )
+                }
+                val resultFile = result.file
+                if (
+                    result.status == TtsSynthesisStatus.SUCCESS &&
+                    resultFile != null &&
+                    resultFile.exists()
+                ) {
+                    cache.onStored(resultFile)
+                    return@withSynthesisLock result.copy(
+                        durationMs = result.durationMs ?: cache.durationMs(resultFile),
+                    )
+                }
+                result
             }
-            val resultFile = result.file
-            if (
-                result.status == TtsSynthesisStatus.SUCCESS &&
-                resultFile != null &&
-                resultFile.exists()
-            ) {
-                cache.onStored(resultFile)
-                return@withSynthesisLock result.copy(
-                    durationMs = result.durationMs ?: cache.durationMs(resultFile),
-                )
-            }
-            result
         }
     }
 

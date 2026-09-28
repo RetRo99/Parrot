@@ -1,6 +1,5 @@
 package com.retro99.reader.ui.tts
 
-import android.os.SystemClock
 import android.util.Log
 import com.k2fsa.sherpa.onnx.GenerationConfig
 import com.k2fsa.sherpa.onnx.OfflineTts
@@ -92,7 +91,6 @@ class SupertonicOnnxSynthesizer(
         rate: Float,
         pitch: Float,
         outputFile: File,
-        timeoutMs: Long,
     ): TtsSynthesisResult {
         if (ensureLoaded() == null) {
             return TtsSynthesisResult(
@@ -115,7 +113,6 @@ class SupertonicOnnxSynthesizer(
             )
             val requestJob = currentCoroutineContext()[Job]
             val requestGeneration = cancellationGeneration.get()
-            val deadlineMs = SystemClock.elapsedRealtime() + timeoutMs.coerceAtLeast(1L)
 
             Log.i(
                 TAG,
@@ -137,13 +134,6 @@ class SupertonicOnnxSynthesizer(
                 return TtsSynthesisResult(
                     status = TtsSynthesisStatus.CANCELLED,
                     error = "Supertonic synthesis stopped",
-                )
-            }
-            if (SystemClock.elapsedRealtime() >= deadlineMs) {
-                outputFile.delete()
-                return TtsSynthesisResult(
-                    status = TtsSynthesisStatus.TIMEOUT,
-                    error = "Supertonic synthesis timed out",
                 )
             }
             val saved = withContext(Dispatchers.IO) {
@@ -219,6 +209,21 @@ class SupertonicOnnxSynthesizer(
                 )
                 val tts = withContext(Dispatchers.IO) { OfflineTts(config = config) }
                 engine = tts
+                // Warm up the runtime so the first spoken sentence does not pay the
+                // one-time graph and kernel initialization costs.
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        tts.generateWithConfig(
+                            WARMUP_TEXT,
+                            GenerationConfig(
+                                speed = 1f,
+                                sid = 0,
+                                numSteps = GENERATION_STEPS,
+                                extra = mapOf("lang" to DEFAULT_LANGUAGE),
+                            ),
+                        )
+                    }
+                }
                 Log.i(
                     TAG,
                     "Supertonic loaded: sampleRate=${tts.sampleRate()} " +
@@ -240,7 +245,8 @@ class SupertonicOnnxSynthesizer(
     }
 
     private companion object {
-        const val NUM_THREADS = 2
+        val NUM_THREADS = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+        const val WARMUP_TEXT = "a"
         const val GENERATION_STEPS = 8
         const val DEFAULT_LANGUAGE = "en"
         const val MIN_SPEED = TtsSpeechRate.MIN

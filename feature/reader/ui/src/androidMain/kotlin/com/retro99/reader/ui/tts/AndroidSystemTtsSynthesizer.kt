@@ -135,7 +135,6 @@ class AndroidSystemTtsSynthesizer(
         rate: Float,
         pitch: Float,
         outputFile: File,
-        timeoutMs: Long,
     ): TtsSynthesisResult {
         if (!awaitReady()) {
             return TtsSynthesisResult(
@@ -178,7 +177,7 @@ class AndroidSystemTtsSynthesizer(
             }
 
             try {
-                withTimeoutOrNull(timeoutMs) { deferred.await() } ?: run {
+                withTimeoutOrNull(CALLBACK_TIMEOUT_MS) { deferred.await() } ?: run {
                     stop()
                     TtsSynthesisResult(
                         status = TtsSynthesisStatus.TIMEOUT,
@@ -253,6 +252,7 @@ class AndroidSystemTtsSynthesizer(
     }
 
     private companion object {
+        const val CALLBACK_TIMEOUT_MS = 30_000L
         const val MIN_RATE = TtsSpeechRate.MIN
         const val MAX_RATE = TtsSpeechRate.MAX
         const val MIN_PITCH = 0.25f

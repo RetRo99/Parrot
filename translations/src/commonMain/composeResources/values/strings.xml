@@ -404,7 +404,7 @@
     <string name="settings_tts_enabled_description" tools:ignore="MissingTranslation">Read books aloud with on-device voices</string>
     <string name="reader_tts_voice" tools:ignore="MissingTranslation">Voice</string>
     <string name="reader_tts_preview_text" tools:ignore="MissingTranslation">Preview text</string>
-    <string name="reader_tts_preview_default" tools:ignore="MissingTranslation">This is a preview of the selected voice.</string>
+    <string name="reader_tts_preview_default" tools:ignore="MissingTranslation">At first light, Mara unlocked the small station, brushed rain from the ticket window, and set a kettle beside the timetable, while the town was still quiet and the hills beyond the river remained hidden in mist; she unfolded a map marked in blue pencil, traced the old bridge road toward the orchard, and waited for the first train, knowing that its passengers would bring news from places she had not seen in years.</string>
     <string name="reader_tts_speed" tools:ignore="MissingTranslation">Speed</string>
     <string name="reader_tts_pitch" tools:ignore="MissingTranslation">Pitch</string>
     <string name="reader_tts_system" tools:ignore="MissingTranslation">System</string>

@@ -68,7 +68,6 @@ class TtsSynthesizerRouter(
         rate: Float,
         pitch: Float,
         outputFile: File,
-        timeoutMs: Long,
     ): TtsSynthesisResult {
         val synthesizer = when (voiceId.neuralVoicePackage()) {
             NeuralVoicePackage.KOKORO -> kokoroSynthesizer
@@ -80,7 +79,7 @@ class TtsSynthesizerRouter(
             "TtsRouter",
             "synthesize voice=$voiceId engine=$engineName",
         )
-        return synthesizer.synthesize(text, voiceId, rate, pitch, outputFile, timeoutMs)
+        return synthesizer.synthesize(text, voiceId, rate, pitch, outputFile)
     }
 
     override fun stop() {
