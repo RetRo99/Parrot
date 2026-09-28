@@ -158,6 +158,8 @@ The pre-fix case 429 gap was recorded before remediation as QA-BUG-0072. The fix
 
 Before changing the setting, App Settings showed File Logging OFF and both `parrot_logs.txt` and its rotated backup were absent. Source audit confirmed the preference toggle is persisted before `file_logging_toggled(is_enabled)`; `DebugAnalyticsManager`/`AnalyticsManager` persist sanitized diagnostic breadcrumbs when logging is enabled and crash-only mode is OFF. The Android logger suppresses append/rotation exceptions, so QA-BUG-0073 is recorded as SUSPECTED with a safe-filesystem-fault-fixture blocker; no failure was induced. Case 430 normal-path test is next and will restore the original OFF preference while preserving its real sanitized log output for later share/clear cases. [Source audit](manual-qa-evidence/2026-09-28/qa-bug-0073-file-logger-write-failure-source-audit.txt).
 
+Case 430 normal-path execution is complete: toggled ON, opened the already-tested Statistics route to generate safe diagnostic breadcrumbs, observed the app-private active log appear and grow from absent to 613 bytes then 1,374 bytes, and restored File Logging OFF. The stored file content was never read/copied and is retained as the genuine app log fixture for cases 432/434. Local output showed one true and one false `file_logging_toggled`; Firebase ingestion waived. QA-BUG-0073's write/rotation failure variant remains suspected and blocked by lack of a safe fault fixture; this normal write does not verify it. [Case-430 evidence](manual-qa-evidence/2026-09-28/case-430-file-logging-enabled.txt). Next ordered case is 431.
+
 ### Login screen action inventory (source-audited; screen not signed off)
 
 | Reachable action/state | Catalogue mapping | Current disposition |

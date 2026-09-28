@@ -1,0 +1,22 @@
+# Case 430 — Enable File Logging
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`), gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `21569`; installed APK SHA-256 `310dda0fdc9201b2815e0d855afb94e677b15d496b192087f8d183723868936e`, matching local/device copies. App code corresponds to QA-BUG-0072 commit `85041fee0ab5b0431c5361429dedb3bdb6be2e27` plus unrelated pre-existing work; later commits were docs-only. No app data was cleared.
+- **Original state:** Enable File Logging OFF, Only Log Crashes disabled, no active/rotated app log file. Toggle was restored to OFF after verification; only the requested test-generated active `parrot_logs.txt` is retained for later cases 432/434.
+
+## Execution
+
+1. In App Settings, verified Enable File Logging was unchecked and `parrot_logs.txt`/`parrot_logs_old.txt` were absent (metadata-only inspection; no log content was read).
+2. Toggled Enable File Logging ON. App Settings displayed the checked state. PID-scoped local DebugAnalyticsManager output emitted `file_logging_toggled | {is_enabled=true}`.
+3. To generate a safe diagnostic write after enabling, opened Reading Statistics from App Settings and used its toolbar Back. This interaction emitted bounded visible-route/navigation breadcrumbs. The Statistics screen rendered and returned normally; no values were copied or retained.
+4. App-private file metadata then showed active `parrot_logs.txt` existed at 613 bytes after entry and 1,374 bytes after returning, versus absent before the toggle; no rotated backup was created. The file itself was not read or copied. This confirms enabled breadcrumbs were being appended without retaining their contents.
+5. Returned to App Settings and toggled Enable File Logging OFF. The switch was unchecked again; Only Log Crashes stayed unchanged/disabled. Local output emitted `file_logging_toggled | {is_enabled=false}`. The generated active log was intentionally preserved for planned sharing/clearing cases.
+
+## Results
+
+- **Functional:** PASS for the normal enable/write path; original OFF preference restored. App-generated log fixture remains on-device for cases 432/434; no server/profile/book/app-data state changed.
+- **Analytics:** PASS locally: one `file_logging_toggled(is_enabled=true)` and one `file_logging_toggled(is_enabled=false)` for enable and restoration. Firebase ingestion is waived; local DebugAnalyticsManager output is not delivery proof.
+- **Diagnostics:** PASS for normal writes: the file was absent before enabling and grew as navigation emitted diagnostic breadcrumbs; the route returned without a fatal/handled error marker. No write failure was induced; Crashlytics delivery is unverified.
+- **Blocked variant:** QA-BUG-0073 remains SUSPECTED; append/rotation failure verification is BLOCKED because no safe `filesDir` failure fixture exists. Do not infer failure-path correctness from this normal-path PASS.
+- **Next ordered case:** 431. Keep the sanitized on-device log fixture until its planned share and clear tests; do not clear it early.
