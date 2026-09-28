@@ -2,7 +2,7 @@
 
 - **Date:** 2026-09-28.
 - **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), gesture navigation (`navigation_mode=2`).
-- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `9345`; installed APK SHA-256 `2f3554db7a8397129859b140de2ea896f21c3588d168661e048760b1c5714801`. Built from HEAD `45283a66` plus the QA-BUG-0069 working-tree change and unrelated pre-existing Home/Reader/Server changes. Installed with `adb install -r`; app data was not cleared.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `9345`; installed APK SHA-256 `2f3554db7a8397129859b140de2ea896f21c3588d168661e048760b1c5714801`. Built immediately before commit `c163e9fee9e18317c1314390d8e8939d6933ef8f` from the identical QA-BUG-0069 source tree and unrelated pre-existing Home/Reader/Server changes. Installed with `adb install -r`; app data was not cleared.
 - **Fixture/privacy:** Confirmed the two target log filenames were absent before fixture setup. Created two synthetic files in the app-private files directory: `parrot_logs.txt` (29 bytes) and `parrot_logs_old.txt` (30 bytes), each containing only a short QA-only synthetic marker; content was not read back or retained. No credentials, profile/book data, actual logs or other file paths were collected. Logging preferences were not changed.
 
 ## Existing active and rotated logs
