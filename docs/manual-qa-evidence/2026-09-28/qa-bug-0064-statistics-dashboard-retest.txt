@@ -1,0 +1,33 @@
+# QA-BUG-0064 — Statistics dashboard aggregation recovery fix, host and Samsung retest
+
+- **Date:** 2026-09-28 (Samsung local time CEST, UTC+0200).
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0.
+- **Package/build:** `com.retro99.parrot` 0.4.5 (21), debug, Samsung PID `19402`. APK SHA-256 `861fb7147b556b803b29682575a579507544ee6edd05314570d9259a2892f81e`. Installed with `adb install -r`; no app data cleared. This build includes code from committed base `f96e7d62`, the uncommitted QA-BUG-0064 fix, and unrelated pre-existing worktree edits. No commit hash for the fix exists yet.
+- **Profile/data:** disposable profile B was active. No user-authored profile name/ID, book title, or session data is recorded. The profile had no reading history.
+
+## Host regression and build
+
+Command:
+
+```text
+./gradlew :feature:statistics:data:testAndroidHostTest :feature:statistics:ui:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug
+```
+
+Passed: 3 Statistics data tests (aggregate error propagation, streak-query error propagation, valid-empty results remain zero); 1 Statistics ViewModel failure/retry regression (failure is surfaced, one contextual exception, retry-specific attempt, success recovery); Analytics sanitizer suite (26 tests, including safe statistics load outcome dimensions); debug APK assembly. The diagnostics sanitizer suites also passed (10 common tests plus 1 Android test). The UI host test verifies that the same database error yields a retryable UI state and the subsequent success clears it; it does not induce a real Samsung DB failure.
+
+## Samsung functional smoke
+
+1. Update-installed the APK without clearing Parrot's data and launched the app.
+2. In Statistics, the fresh-profile hint and all expected empty-state totals rendered: Today/Week/Month/Total Time `0m`, Books Read/Sessions `0`, Current/Longest Streak `0 days`.
+3. Pulled down to refresh. The same valid empty data remained displayed; no false loading-stuck state or crash was observed.
+4. Visual screenshots were inspected but not retained. The screen remained on Statistics.
+
+## Samsung local telemetry/diagnostics
+
+- Initial dashboard read: `statistics_load_attempted` then `statistics_load_succeeded`; action `load_statistics`, outcome `started` then `succeeded`, `is_retry=false`.
+- Pull-to-refresh: `statistics_load_attempted` then `statistics_load_succeeded`; action `refresh_statistics`, outcome `started` then `succeeded`, `is_retry=false`.
+- Each operation had a start and terminal `statistics_load` diagnostic breadcrumb with matching correlation context; correlation IDs are omitted here.
+- Event parameters contained screen/action/operation/stage/outcome/retry only. No profile identifiers or reading payloads were observed.
+- The focused log query found no `FATAL EXCEPTION` or handled-exception marker for Parrot PID `19402` during these actions. An older `UiAutomation` fatal line from the prior day and another process was excluded as unrelated.
+
+**Retest result:** PASS for the valid-empty dashboard and pull-to-refresh on the Samsung; PASS for deterministic host query-failure/retry recovery. **Samsung DB fault/retry remains NOT RUN/BLOCKED** because no safe local DB failure fixture exists. Firebase Analytics ingestion is waived; local DebugAnalyticsManager output is not Firebase delivery evidence. Crashlytics backend delivery is unverified. QA-BUG-0064 should be marked fixed only after the focused source/test commit and subsequent documentation update.

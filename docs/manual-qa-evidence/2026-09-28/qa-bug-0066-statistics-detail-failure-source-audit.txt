@@ -1,0 +1,20 @@
+# QA-BUG-0066 — Statistics detail-query failures silently dismiss their sheets
+
+- **Date:** 2026-09-28 (device local time CEST, UTC+0200).
+- **Device/build:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), debug, PID `19402`; APK SHA-256 `861fb7147b556b803b29682575a579507544ee6edd05314570d9259a2892f81e`. Build was from committed base `f96e7d62` plus uncommitted QA-BUG-0064 changes and unrelated pre-existing worktree edits. The detail failure path was source-audited, not executed on this build.
+- **Status qualification:** confirmed by source audit; no detail database failure was induced. Runtime occurrence is unknown.
+
+## Preconditions / source reproduction
+
+On the Statistics screen, tap one of the Today/This Week/This Month/Total Time cards, Books Read, or Total Sessions. Configure the corresponding `GetBooksForPeriodUseCase`, `GetAllBooksReadUseCase`, or `GetRecentSessionsUseCase` to return `Err(DatabaseError(...))`.
+
+`StatisticsViewModel.loadBooksForPeriod`, `showBooksRead`, and `showRecentSessions` each set a loading detail state and start a query. Their failure handlers call `error.log(...)`, then set that detail state to `null`. The associated sheet disappears with no visible failure or retry action. The existing logging message is an unstructured string; there are no detail-query attempt/success/failure/cancellation Analytics outcomes or start/terminal operation breadcrumbs. The successful-empty state is therefore not visually distinct from an operation that vanishes after failing. Current and longest streak sheets are derived from the already loaded dashboard model and do not launch these separate queries.
+
+## Expected / actual
+
+- **Expected:** keep the requested detail visible with bounded failure feedback and a usable retry/reopen action; report the failure once with structured `screen`, `action`, `operation`, `stage`, `outcome`, `reason_code`, and correlation context; do not put book/session text or IDs into Analytics.
+- **Actual by source audit:** the detail sheet is silently removed on `Err`; only generic exception logging remains. No retry control, typed outcome event, or operation breadcrumbs exist for these detail loads.
+- **Severity / user impact:** Low; requested statistics detail is unavailable after a local read error, and recovery requires the user to tap again without explanation.
+- **Frequency:** unknown; no runtime fault was injected.
+
+The normal Samsung Statistics dashboard and pull-to-refresh smoke passed with genuine zero/empty data in disposable profile B. Logs showed one dashboard-load attempt/success and one refresh attempt/success with correlated breadcrumbs. That smoke does not exercise this separate detail failure path. No screenshot was retained, and no profile, book, or session identifier is recorded. Firebase Analytics ingestion is waived; local output does not prove backend delivery. Crashlytics delivery is unverified.
