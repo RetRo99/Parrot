@@ -1,0 +1,20 @@
+# Case 424 — Open Last Book on Launch setting
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `2f3554db7a8397129859b140de2ea896f21c3588d168661e048760b1c5714801`; source commit `c163e9fee9e18317c1314390d8e8939d6933ef8f` plus unrelated pre-existing changes. APK hash matched installed package.
+- **Preconditions/scope:** App Settings on the retained active profile; a saved ReadAloud current-book target exists, but its server is not authenticated. Authentication credentials/fixture were not available and the preserved server/book fixture was not modified. No app data was cleared.
+
+## Functional execution
+
+The toggle was initially ON. Tapped it OFF and observed it become unchecked. Force-stopped Parrot and cold-launched: startup resolved to the Books/Home route, with no `last_book_launch_attempted` event. Tapped the toggle ON and observed it checked. Force-stopped and cold-launched again: startup attempted the saved ReadAloud target, then displayed “Server unavailable or not authenticated” with Retry and Close. Close returned to Books. Reopened App Settings and confirmed the setting remained ON, restoring its original value. Other settings, profile state, server and book fixtures were not changed.
+
+The preference persistence and OFF-vs-ON launch behavior are verified. Successful opening at the saved reading position is **BLOCKED** because the saved target’s server is unauthenticated; no credentials or safe authenticated fixture were available. The observed recoverable authentication failure is not recorded as a product bug: the server explicitly rejected the operation as unauthenticated and the UI offered Retry/Close.
+
+## Analytics and diagnostics
+
+PID-filtered local DebugAnalyticsManager output showed exactly one `open_last_book_on_launch_toggled(is_enabled=false)` and one `... (is_enabled=true)`. The OFF cold launch resolved Home and produced no last-book attempt. The ON cold launch emitted one `last_book_launch_attempted` and one `last_book_launch_completed(outcome=failed, reason_code=server_not_authenticated, book_type=readaloud)`; matching bounded start and terminal diagnostic breadcrumbs were present. The normal successful-reader-content branch was not reached. No profile/book/server identifiers were retained. Firebase Analytics ingestion is waived and is not proven by these local logs. No unexpected exception or crash was induced; Crashlytics delivery is unverified.
+
+## Disposition
+
+Case 424: **PARTIAL PASS**. Functional preference/toggle behavior: PASS; successful last-book open: BLOCKED by the unauthenticated fixture. Analytics and diagnostics for the OFF path and bounded auth-failure path: PASS locally. The setting was restored to its original ON value. No retry was selected and no credential, app-data, profile, server or book state was changed.
