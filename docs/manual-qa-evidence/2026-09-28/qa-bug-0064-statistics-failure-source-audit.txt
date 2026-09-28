@@ -1,0 +1,30 @@
+# QA-BUG-0064 — Statistics query errors are collapsed into empty/zero data
+
+- **Date:** 2026-09-28 (device local time CEST, UTC+0200).
+- **Device/build:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), debug, PID `29954`, APK SHA-256 `8ac931ab87b487f88951d39968cdce53c7df193c624b4b6f1f6d4b282279f3d1`. Source code is `1a1c747aeec5f3ce1c310c592a8956ffd5e8e60f`; subsequent commits in this segment are documentation-only.
+- **Status qualification:** confirmed deterministic source-level failure path; no database error was induced on the Samsung. Runtime frequency is unknown.
+
+## Case 421 fixture assessment
+
+The Statistics screen was opened in two disposable profiles. Both rendered “No reading activity yet” with zero reading time, sessions, books read and streaks. This does **not** prove profile isolation: there was no reading history in profile A to leak into B. The only preserved server/book fixture remains reserved for the later authenticated playback/logout case and was not opened, modified, or used to create reading history. No second local reading-history fixture is available. Case 421 is therefore BLOCKED, not PASS. The screenshots were inspected on device but not retained; no actual profile labels/IDs or book data are stored.
+
+## Source audit and reproduction
+
+1. A `StatisticsLocalSource` statistics query returns `Err(DatabaseError(...))` (for example, total reading time, range time, session count, distinct books, daily time, most-read books, reading-type time, or reading-day query).
+2. `feature/statistics/data/.../StatisticsDataRepository.kt` calls `.getOrElse { 0L }` for numeric aggregates and `.getOrElse { emptyList()/emptyMap() }` for collections. `calculateStreak` likewise turns a failed reading-day query into an empty list.
+3. The repository consequently emits `Ok(ReadingStatisticsDomainModel(...zeros/empty collections...))` rather than propagating the database error.
+4. `StatisticsViewModel` accepts that as success. `StatisticsScreen` treats zero sessions and zero books as the genuine fresh-profile empty state and displays “No reading activity yet.” The normal UI therefore cannot distinguish a failed query from a genuinely empty profile.
+
+The same ViewModel has an `onFailure` branch that stores `error`, but it is bypassed for these local-source `Err` values. That branch is not rendered by `StatisticsScreen` when `statistics == null`, and current aggregate/period/detail operations have no structured attempt/success/failure/retry events or operation-correlated diagnostic breadcrumbs. The only observed feature event during normal empty-state viewing was `statistics_viewed`; the separate bottom-tab transition did carry source and destination, but the Statistics screen event itself did not. No failure was induced, so no Firebase or Crashlytics delivery is claimed.
+
+The route-entry event itself is also source-audited as incomplete: `StatisticsViewModel.init` emits the parameterless `StatisticsAnalyticsEvent.StatisticsViewed`, while the Home navigation visibility observer reports attributed exposure events for App Settings, Reader Settings and Server Management but not Statistics. The bottom-tab transition separately records its source and destination; entering Statistics from the App Settings row emitted `statistics_viewed` without a source/entry-point dimension or a Statistics route diagnostic breadcrumb. This is recorded independently as QA-BUG-0065.
+
+## Expected / actual
+
+- **Expected:** propagate a failed statistics query as an error, show a clear retryable failure state instead of zeros or the genuine-empty hint, and record one bounded operation outcome with useful diagnostic context.
+- **Actual by source audit:** a failed local query is indistinguishable from valid zero data; the UI can assert “no reading activity” despite existing history. No source-level failure outcome is emitted for this path.
+- **Severity / impact:** Medium. Reading statistics are materially misleading/unavailable on a database read failure, while the underlying reading data remains outside this screen and is not changed.
+
+## Limits
+
+No runtime fault-injection fixture is available. The planned host regression must fail a local query deterministically and assert an `Err` rather than an all-zero `Ok`, plus UI/ViewModel failure and retry outcomes. App-PID logs during the empty-state visits showed `statistics_viewed`; no fatal or exception marker was observed. Firebase Analytics ingestion is waived and Crashlytics backend delivery is unverified.

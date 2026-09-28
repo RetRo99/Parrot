@@ -1095,3 +1095,37 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Affected files:** Settings view state/ViewModel/screen and focused delayed-flow tests if confirmed.
 - **Fix reference / commit:** None; awaiting reproduction.
 - **Retest:** NOT RUN. Requires a deterministic delayed-initial-emission fixture; do not call fixed unless a controlled test demonstrates the guard.
+
+## QA-BUG-0064 — Statistics database read failures are rendered as genuine zero/empty data
+
+- **Severity / user impact:** Medium; if any local aggregation query fails, users can be told there is no reading activity and see zero totals/streaks despite saved history. Statistics become misleading or unavailable, though reading data is not modified.
+- **Status:** OPEN — confirmed by deterministic source audit. No Samsung database fault was induced; runtime frequency is unknown.
+- **Screen/test IDs:** Statistics 385–408, 421; failure/recovery and telemetry extensions 708–709.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), debug, PID `29954`, APK SHA-256 `8ac931ab87b487f88951d39968cdce53c7df193c624b4b6f1f6d4b282279f3d1`; source `1a1c747aeec5f3ce1c310c592a8956ffd5e8e60f`.
+- **Preconditions:** at least one statistics DAO/local-source read fails while the profile contains reading history; no such fixture/failure was available on the Samsung.
+- **Exact reproduction / audit:** inject an `Err(DatabaseError(...))` for an aggregate query in `StatisticsLocalSource`, then call `GetReadingStatisticsUseCase`. `StatisticsDataRepository.getReadingStatistics` converts numeric errors to `0L`, list errors to `emptyList()`, map errors to `emptyMap()`, then emits `Ok` with defaults; `calculateStreak` also defaults a failed reading-day query to an empty list. The ViewModel therefore treats the result as success, and the Screen displays its new-profile empty hint when session/book counts are zero.
+- **Expected:** query error remains an error, never a false zero/empty success; show bounded failure feedback and a usable retry/refresh path; emit attempt and terminal outcome analytics plus useful, correlated diagnostic context without profile/book payloads.
+- **Actual:** source audit proves error-to-default coercion makes database failure indistinguishable from genuine empty history. The existing ViewModel error branch is bypassed; no stats-load outcome events or operation-correlated failure breadcrumbs exist on this path.
+- **Frequency:** unknown; runtime failure was not induced.
+- **Evidence:** [Case 421 fixture assessment and source audit](manual-qa-evidence/2026-09-28/qa-bug-0064-statistics-failure-source-audit.txt); `feature/statistics/data/.../StatisticsDataRepository.kt`, `feature/statistics/ui/.../StatisticsViewModel.kt`, and `StatisticsScreen.kt`.
+- **Root cause:** aggregation code uses local-source `getOrElse` fallback values for query errors instead of propagating `AppError`; the UI uses the same zero values for a real empty profile.
+- **Affected files:** Statistics repository, ViewModel/view state/screen, typed Analytics event schema and sanitizer, focused regression tests, and QA evidence/results.
+- **Fix reference / commit:** Pending; record the focused code/test commit before any subsequent test.
+- **Retest:** NOT RUN. Case 421 remains BLOCKED for lack of reading history. Requires host fault injection and a Samsung normal-state regression/recovery check; Firebase Analytics ingestion is waived and Crashlytics delivery remains unverified.
+
+## QA-BUG-0065 — Statistics screen exposures lack source attribution and route breadcrumbs
+
+- **Severity / user impact:** Low; feature adoption cannot reliably distinguish bottom-tab entry from the App Settings row, and a route sequence is missing from production diagnostic breadcrumbs.
+- **Status:** OPEN — confirmed by source audit and local Samsung event observation. No user data is affected.
+- **Screen/test IDs:** Statistics 385–408, 421, 427, 505, 695, 709; navigation/observability cases 740–749.
+- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), debug, PID `29954`, APK SHA-256 `8ac931ab87b487f88951d39968cdce53c7df193c624b4b6f1f6d4b282279f3d1`; source `1a1c747aeec5f3ce1c310c592a8956ffd5e8e60f`.
+- **Preconditions:** enter Statistics from the bottom tab and from App Settings.
+- **Exact reproduction / audit:** `StatisticsViewModel.init` logs the parameterless `StatisticsAnalyticsEvent.StatisticsViewed`. In `HomeNavigation.kt`, the visible-route observer reports source/entry-point events and breadcrumbs for App Settings, Reader Settings and Server Management, but has no Statistics branch. On-device App Settings → Statistics emitted `statistics_viewed` with no source/entry-point and no Statistics route breadcrumb. Bottom navigation independently emitted a source/destination tab-switch event, but the screen-view event itself remains unattributed.
+- **Expected:** once per visible Statistics destination, emit a bounded screen exposure with source screen and entry point, plus a matching route-visible diagnostic breadcrumb; avoid emission on recomposition.
+- **Actual:** `statistics_viewed` contains no parameters; the Settings-row route has no destination/source attribution or Statistics exposure breadcrumb.
+- **Frequency:** deterministic by current source; observed on this build.
+- **Evidence:** [Case 421 fixture assessment and source audit](manual-qa-evidence/2026-09-28/qa-bug-0064-statistics-failure-source-audit.txt); `StatisticsViewModel.kt`, `StatisticsAnalyticsEvent` in `BookAnalyticsEvent.kt`, and visible-route observer in `HomeNavigation.kt`.
+- **Root cause:** Statistics view tracking is emitted from ViewModel construction rather than the navigation owner after the route becomes visible; the route is omitted from exposure instrumentation.
+- **Affected files:** Statistics event schema/ViewModel, Home navigation exposure observer, sanitizer and context tests, and QA evidence/results.
+- **Fix reference / commit:** Pending; to be committed separately from QA-BUG-0064.
+- **Retest:** PARTIAL pre-fix observation only: local debug events showed `statistics_viewed` and the separate bottom-tab source/destination transition. No Firebase delivery claim; ingestion waived. Case 421 remains BLOCKED for profile data comparison.
