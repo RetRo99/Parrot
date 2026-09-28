@@ -1076,4 +1076,57 @@ class DiagnosticPayloadSanitizerTest {
             screen,
         )
     }
+
+    @Test
+    fun readerSettingSaveOutcomesRetainOnlyBoundedOperationDimensions() {
+        val attempt = sanitizeAnalyticsParameters(
+            ReaderAnalyticsEvent.ReaderSettingSaveAttempted(
+                settingName = "theme",
+                isRetry = true,
+                isUndo = true,
+            ).parameters,
+        )
+        val failure = sanitizeAnalyticsParameters(
+            ReaderAnalyticsEvent.ReaderSettingSaveFailed(
+                settingName = "theme",
+                reasonCode = "database_error",
+                isRetry = true,
+                isUndo = true,
+            ).parameters,
+        )
+        val privateSetting = sanitizeAnalyticsParameters(
+            ReaderAnalyticsEvent.ReaderSettingSaveFailed(
+                settingName = "private_setting",
+                reasonCode = "database_error",
+                isRetry = false,
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "reader_settings",
+                "action" to "undo_setting_change",
+                "operation" to "reader_setting_undo",
+                "stage" to "started",
+                "outcome" to "started",
+                "setting_name" to "theme",
+                "is_retry" to true,
+            ),
+            attempt,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "reader_settings",
+                "action" to "undo_setting_change",
+                "operation" to "reader_setting_undo",
+                "stage" to "terminal",
+                "outcome" to "failed",
+                "reason_code" to "database_error",
+                "setting_name" to "theme",
+                "is_retry" to true,
+            ),
+            failure,
+        )
+        assertFalse("setting_name" in privateSetting)
+    }
 }

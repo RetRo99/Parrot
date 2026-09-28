@@ -17,6 +17,9 @@ sealed interface SettingsIntent : BaseIntent {
     data object OnFontsToggled : SettingsIntent
     data object OnUndoSettingsChange : SettingsIntent
     data object OnDismissSettingsUndo : SettingsIntent
+    data object OnRetrySettingsSave : SettingsIntent
+    data object OnDismissSettingsSaveFailure : SettingsIntent
+    data object OnCustomFontImportCancelled : SettingsIntent
 
     // Reader settings intents
     data class OnThemeChanged(val theme: ReaderThemeUiModel) : SettingsIntent

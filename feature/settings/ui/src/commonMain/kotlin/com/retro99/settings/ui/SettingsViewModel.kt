@@ -1,12 +1,15 @@
 package com.retro99.settings.ui
 
 import androidx.lifecycle.viewModelScope
+import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.BookAnalyticsEvent
+import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.ReaderAnalyticsEvent
 import com.retro99.base.result.AppError
+import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.reader.domain.usecase.GetCustomReaderFontsUseCase
 import com.retro99.reader.domain.usecase.GetReaderSettingsUseCase
@@ -19,8 +22,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @KoinViewModel
 class SettingsViewModel(
@@ -30,6 +38,13 @@ class SettingsViewModel(
     @Provided private val importCustomReaderFontUseCase: ImportCustomReaderFontUseCase,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<SettingsViewState, SettingsIntent>(SettingsViewState()) {
+
+    private val saveMutex = Mutex()
+    private var persistedReaderSettings = ReaderSettingsUiModel()
+    private var pendingSaveCount = 0
+    private var latestSaveRequestId = 0
+    private var nextFailureRequestId = 0
+    private var failedSaveRequest: ReaderSettingSaveRequest? = null
 
     init {
         observeReaderSettings()
@@ -41,6 +56,20 @@ class SettingsViewModel(
             is SettingsIntent.OnFontsToggled -> toggleFonts()
             SettingsIntent.OnUndoSettingsChange -> undoSettingsChange()
             SettingsIntent.OnDismissSettingsUndo -> dismissSettingsUndo()
+            SettingsIntent.OnRetrySettingsSave -> retryFailedSettingsSave()
+            SettingsIntent.OnDismissSettingsSaveFailure -> dismissSettingsSaveFailure()
+            SettingsIntent.OnCustomFontImportCancelled -> {
+                analytics.logEvent(ReaderAnalyticsEvent.CustomFontImportCancelled)
+                analytics.logBreadcrumb(
+                    DiagnosticContext(
+                        screen = "reader_settings",
+                        action = "import_custom_font",
+                        operation = "custom_font_import",
+                        stage = "terminal",
+                        outcome = "cancelled",
+                    ),
+                )
+            }
             is SettingsIntent.OnThemeChanged -> updateReaderSetting("theme", intent.theme.name) {
                 it.copy(theme = intent.theme)
             }
@@ -281,8 +310,13 @@ class SettingsViewModel(
 
     private fun toggleSection(section: SettingsSection) {
         val isCurrentlyExpanded = section in viewState.value.expandedSections
-        // Only track when expanding, not collapsing
-        if (!isCurrentlyExpanded) {
+        if (isCurrentlyExpanded) {
+            analytics.logEvent(
+                ReaderAnalyticsEvent.ReaderSettingsSectionCollapsed(
+                    sectionName = section.name.lowercase(),
+                ),
+            )
+        } else {
             analytics.logEvent(
                 ReaderAnalyticsEvent.SettingsSectionExpanded(
                     sectionName = section.name.lowercase(),
@@ -300,8 +334,10 @@ class SettingsViewModel(
     }
 
     private fun toggleFonts() {
+        val willExpand = !viewState.value.isFontsExpanded
+        analytics.logEvent(ReaderAnalyticsEvent.ReaderSettingsFontsToggled(willExpand))
         updateState { state ->
-            state.copy(isFontsExpanded = !state.isFontsExpanded)
+            state.copy(isFontsExpanded = willExpand)
         }
     }
 
@@ -317,9 +353,10 @@ class SettingsViewModel(
                 val uiModel = settings.toUiModel().copy(
                     fontFamily = settings.fontFamily.toUiModel(customFonts),
                 )
-                updateState {
-                    it.copy(
-                        readerSettings = uiModel,
+                persistedReaderSettings = uiModel
+                updateState { state ->
+                    state.copy(
+                        readerSettings = if (pendingSaveCount == 0) uiModel else state.readerSettings,
                         customFonts = uiCustomFonts,
                     )
                 }
@@ -356,37 +393,262 @@ class SettingsViewModel(
         newValue: String,
         update: (ReaderSettingsUiModel) -> ReaderSettingsUiModel,
     ) {
-        analytics.logEvent(ReaderAnalyticsEvent.SettingChanged(settingName, newValue))
-
         val currentSettings = viewState.value.readerSettings
         val newSettings = update(currentSettings)
+        if (newSettings == currentSettings) return
+
+        failedSaveRequest = null
+        val request = ReaderSettingSaveRequest(
+            settingName = settingName,
+            newValue = newValue,
+            target = newSettings,
+            rollback = currentSettings,
+            correlationId = newCorrelationId(),
+            requestId = ++latestSaveRequestId,
+        )
         updateState {
             it.copy(
                 readerSettings = newSettings,
-                undoReaderSettings = it.undoReaderSettings ?: currentSettings,
+                undoReaderSettings = null,
+                undoSettingName = null,
                 undoRequestId = it.undoRequestId + 1,
+                settingSaveFailureRequestId = null,
             )
         }
+        persistReaderSettings(request)
+    }
 
+    private fun persistReaderSettings(request: ReaderSettingSaveRequest) {
+        pendingSaveCount += 1
+        analytics.logEvent(
+            ReaderAnalyticsEvent.ReaderSettingSaveAttempted(
+                settingName = request.settingName,
+                isRetry = request.isRetry,
+                isUndo = request.isUndo,
+            ),
+        )
+        analytics.logBreadcrumb(request.diagnosticContext(stage = "started", outcome = "started"))
         viewModelScope.launch {
-            saveReaderSettingsUseCase(newSettings.toDomainModel())
+            val result = try {
+                saveMutex.withLock {
+                    saveReaderSettingsUseCase(request.target.toDomainModel())
+                }
+            } catch (cancelled: CancellationException) {
+                pendingSaveCount = (pendingSaveCount - 1).coerceAtLeast(0)
+                analytics.logEvent(
+                    ReaderAnalyticsEvent.ReaderSettingSaveCancelled(
+                        settingName = request.settingName,
+                        isRetry = request.isRetry,
+                        isUndo = request.isUndo,
+                    ),
+                )
+                analytics.logBreadcrumb(
+                    request.diagnosticContext(stage = "terminal", outcome = "cancelled"),
+                )
+                if (request.requestId == latestSaveRequestId && pendingSaveCount == 0) {
+                    updateState { state ->
+                        state.copy(
+                            readerSettings = persistedReaderSettings,
+                            undoReaderSettings = null,
+                            undoSettingName = null,
+                            settingSaveFailureRequestId = null,
+                        )
+                    }
+                }
+                throw cancelled
+            } catch (error: Exception) {
+                Err(AppError.UnknownError(error))
+            }
+
+            result.onSuccess {
+                handleReaderSettingsSaveSucceeded(request)
+            }.onFailure { error ->
+                handleReaderSettingsSaveFailed(request, error)
+            }
         }
+    }
+
+    private fun handleReaderSettingsSaveSucceeded(request: ReaderSettingSaveRequest) {
+        persistedReaderSettings = request.target
+        pendingSaveCount = (pendingSaveCount - 1).coerceAtLeast(0)
+        analytics.logEvent(
+            ReaderAnalyticsEvent.ReaderSettingSaveSucceeded(
+                settingName = request.settingName,
+                isRetry = request.isRetry,
+                isUndo = request.isUndo,
+            ),
+        )
+        if (request.isUndo) {
+            analytics.logEvent(ReaderAnalyticsEvent.ReaderSettingChangeUndone)
+        } else {
+            analytics.logEvent(
+                ReaderAnalyticsEvent.SettingChanged(
+                    settingName = request.settingName,
+                    newValue = request.newValue,
+                    isRetry = request.isRetry,
+                ),
+            )
+        }
+        analytics.logBreadcrumb(
+            request.diagnosticContext(
+                stage = "terminal",
+                outcome = if (request.isUndo) "reversed" else "succeeded",
+            ),
+        )
+
+        if (request.requestId == latestSaveRequestId && pendingSaveCount == 0) {
+            failedSaveRequest = null
+            updateState { state ->
+                state.copy(
+                    readerSettings = request.target,
+                    undoReaderSettings = request.rollback.takeUnless { request.isUndo },
+                    undoSettingName = request.settingName.takeUnless { request.isUndo },
+                    undoRequestId = if (request.isUndo) state.undoRequestId else state.undoRequestId + 1,
+                    settingSaveFailureRequestId = null,
+                )
+            }
+        }
+    }
+
+    private fun handleReaderSettingsSaveFailed(request: ReaderSettingSaveRequest, error: AppError) {
+        pendingSaveCount = (pendingSaveCount - 1).coerceAtLeast(0)
+        val reasonCode = error.toReaderSettingSaveReasonCode()
+        analytics.logEvent(
+            ReaderAnalyticsEvent.ReaderSettingSaveFailed(
+                settingName = request.settingName,
+                reasonCode = reasonCode,
+                isRetry = request.isRetry,
+                isUndo = request.isUndo,
+            ),
+        )
+        analytics.logBreadcrumb(
+            request.diagnosticContext(
+                stage = "terminal",
+                outcome = "failed",
+                reasonCode = reasonCode,
+            ),
+        )
+        error.log(
+            analytics,
+            request.diagnosticContext(
+                stage = "terminal",
+                outcome = "failed",
+                reasonCode = reasonCode,
+            ),
+        )
+
+        if (request.requestId == latestSaveRequestId && pendingSaveCount == 0) {
+            failedSaveRequest = request.copy(isRetry = false)
+            val failureRequestId = ++nextFailureRequestId
+            updateState { state ->
+                state.copy(
+                    readerSettings = persistedReaderSettings,
+                    undoReaderSettings = null,
+                    undoSettingName = null,
+                    undoRequestId = state.undoRequestId + 1,
+                    settingSaveFailureRequestId = failureRequestId,
+                )
+            }
+        }
+    }
+
+    private fun retryFailedSettingsSave() {
+        val failed = failedSaveRequest ?: return
+        failedSaveRequest = null
+        val retry = failed.copy(
+            requestId = ++latestSaveRequestId,
+            isRetry = true,
+        )
+        updateState { state ->
+            state.copy(
+                readerSettings = retry.target,
+                undoReaderSettings = null,
+                undoSettingName = null,
+                undoRequestId = state.undoRequestId + 1,
+                settingSaveFailureRequestId = null,
+            )
+        }
+        persistReaderSettings(retry)
+    }
+
+    private fun dismissSettingsSaveFailure() {
+        val failed = failedSaveRequest ?: return
+        failedSaveRequest = null
+        analytics.logEvent(ReaderAnalyticsEvent.ReaderSettingSaveAbandoned(failed.settingName))
+        analytics.logBreadcrumb(
+            failed.diagnosticContext(stage = "recovery", outcome = "abandoned"),
+        )
+        updateState { it.copy(settingSaveFailureRequestId = null) }
     }
 
     private fun undoSettingsChange() {
         val undoSettings = viewState.value.undoReaderSettings ?: return
+        val settingName = viewState.value.undoSettingName ?: return
+        val currentSettings = viewState.value.readerSettings
+        failedSaveRequest = null
+        val request = ReaderSettingSaveRequest(
+            settingName = settingName,
+            newValue = "reversed",
+            target = undoSettings,
+            rollback = currentSettings,
+            correlationId = newCorrelationId(),
+            requestId = ++latestSaveRequestId,
+            isUndo = true,
+        )
         updateState {
             it.copy(
                 readerSettings = undoSettings,
                 undoReaderSettings = null,
+                undoSettingName = null,
+                undoRequestId = it.undoRequestId + 1,
+                settingSaveFailureRequestId = null,
             )
         }
-        viewModelScope.launch {
-            saveReaderSettingsUseCase(undoSettings.toDomainModel())
-        }
+        persistReaderSettings(request)
     }
 
     private fun dismissSettingsUndo() {
-        updateState { it.copy(undoReaderSettings = null) }
+        updateState { it.copy(undoReaderSettings = null, undoSettingName = null) }
     }
+
+    private fun ReaderSettingSaveRequest.diagnosticContext(
+        stage: String,
+        outcome: String,
+        reasonCode: String? = null,
+    ) = DiagnosticContext(
+        screen = "reader_settings",
+        action = if (isUndo) "undo_setting_change" else "save_setting",
+        operation = if (isUndo) "reader_setting_undo" else "reader_setting_save",
+        stage = stage,
+        outcome = outcome,
+        reasonCode = reasonCode,
+        correlationId = correlationId,
+    )
+
+    private fun AppError.toReaderSettingSaveReasonCode(): String = when (this) {
+        is AppError.NetworkError -> when {
+            isTimeout -> "timeout"
+            isConnectivity -> "connectivity"
+            else -> "network_error"
+        }
+        is AppError.ApiError -> "api_error"
+        is AppError.DatabaseError -> "database_error"
+        is AppError.UnknownError -> "unknown_error"
+        is AppError.AuthError -> if (isCancellation) "cancelled" else "auth_error"
+        is AppError.NotFoundError -> "not_found"
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun newCorrelationId(): String = Uuid.random().toString()
+
+    private data class ReaderSettingSaveRequest(
+        val settingName: String,
+        val newValue: String,
+        val target: ReaderSettingsUiModel,
+        val rollback: ReaderSettingsUiModel,
+        val correlationId: String,
+        val requestId: Int,
+        val isRetry: Boolean = false,
+        val isUndo: Boolean = false,
+    )
 }

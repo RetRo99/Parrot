@@ -15,6 +15,131 @@ sealed interface AnalyticsEvent {
  */
 sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
 
+    data class ReaderSettingSaveAttempted(
+        val settingName: String,
+        val isRetry: Boolean,
+        val isUndo: Boolean = false,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_setting_save_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
+            "action" to if (isUndo) "undo_setting_change" else "save_setting",
+            "operation" to if (isUndo) "reader_setting_undo" else "reader_setting_save",
+            "stage" to "started",
+            "outcome" to "started",
+            "setting_name" to settingName,
+            "is_retry" to isRetry,
+        )
+    }
+
+    data class ReaderSettingSaveSucceeded(
+        val settingName: String,
+        val isRetry: Boolean,
+        val isUndo: Boolean = false,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_setting_save_succeeded"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
+            "action" to if (isUndo) "undo_setting_change" else "save_setting",
+            "operation" to if (isUndo) "reader_setting_undo" else "reader_setting_save",
+            "stage" to "terminal",
+            "outcome" to "succeeded",
+            "setting_name" to settingName,
+            "is_retry" to isRetry,
+        )
+    }
+
+    data class ReaderSettingSaveFailed(
+        val settingName: String,
+        val reasonCode: String,
+        val isRetry: Boolean,
+        val isUndo: Boolean = false,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_setting_save_failed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
+            "action" to if (isUndo) "undo_setting_change" else "save_setting",
+            "operation" to if (isUndo) "reader_setting_undo" else "reader_setting_save",
+            "stage" to "terminal",
+            "outcome" to "failed",
+            "reason_code" to reasonCode,
+            "setting_name" to settingName,
+            "is_retry" to isRetry,
+        )
+    }
+
+    data class ReaderSettingSaveCancelled(
+        val settingName: String,
+        val isRetry: Boolean,
+        val isUndo: Boolean = false,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_setting_save_cancelled"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
+            "action" to if (isUndo) "undo_setting_change" else "save_setting",
+            "operation" to if (isUndo) "reader_setting_undo" else "reader_setting_save",
+            "stage" to "terminal",
+            "outcome" to "cancelled",
+            "setting_name" to settingName,
+            "is_retry" to isRetry,
+        )
+    }
+
+    data class ReaderSettingSaveAbandoned(
+        val settingName: String,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_setting_save_abandoned"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
+            "action" to "save_setting",
+            "operation" to "reader_setting_save",
+            "stage" to "recovery",
+            "outcome" to "abandoned",
+            "setting_name" to settingName,
+        )
+    }
+
+    data object ReaderSettingChangeUndone : ReaderAnalyticsEvent {
+        override val name: String = "reader_setting_change_undone"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
+            "action" to "undo_setting_change",
+            "operation" to "reader_setting_undo",
+            "stage" to "terminal",
+            "outcome" to "reversed",
+        )
+    }
+
+    data class ReaderSettingsSectionCollapsed(
+        val sectionName: String,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_settings_section_collapsed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
+            "section_name" to sectionName,
+        )
+    }
+
+    data class ReaderSettingsFontsToggled(
+        val isExpanded: Boolean,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_settings_fonts_toggled"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
+            "is_enabled" to isExpanded,
+        )
+    }
+
+    data object CustomFontImportCancelled : ReaderAnalyticsEvent {
+        override val name: String = "reader_custom_font_import_cancelled"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
+            "operation" to "custom_font_import",
+            "stage" to "terminal",
+            "outcome" to "cancelled",
+        )
+    }
+
     data class CurrentBookTargetSaveAttempted(
         val entryPoint: String,
         val bookType: String,
@@ -161,11 +286,13 @@ sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
     data class SettingChanged(
         val settingName: String,
         val newValue: String,
+        val isRetry: Boolean = false,
     ) : ReaderAnalyticsEvent {
         override val name: String = "setting_changed"
         override val parameters: Map<String, Any> = mapOf(
             "setting_name" to settingName,
             "new_value" to newValue,
+            "is_retry" to isRetry,
         )
     }
 
@@ -178,6 +305,7 @@ sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
     ) : ReaderAnalyticsEvent {
         override val name: String = "settings_section_expanded"
         override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader_settings",
             "section_name" to sectionName,
         )
     }

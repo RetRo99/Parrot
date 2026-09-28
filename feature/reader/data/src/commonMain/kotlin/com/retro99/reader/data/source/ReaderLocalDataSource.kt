@@ -105,7 +105,7 @@ class ReaderLocalDataSource(
         settings: ReaderSettingsLocalModel,
     ): CompletableResult {
         migrateLegacyReaderSettings()
-        return databaseExecutor.executeDatabaseOperation {
+        return databaseExecutor.executeDatabaseOperation(reportException = false) {
             val changedSettings = ReaderSettingsJsonCodec.encodeDiff(
                 settings = settings,
                 stored = readerSettingsDatabase.getAll(),

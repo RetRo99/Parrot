@@ -60,9 +60,9 @@ internal class ReaderDataRepository(
     override suspend fun saveReaderSettings(
         settings: ReaderSettingsDomainModel,
     ): CompletableResult {
-        return localSource.saveReaderSettings(settings.toLocal()).onFailure { error ->
-            logError(error, "Failed to save reader settings")
-        }
+        // Reader Settings owns the user-facing operation boundary and reports one contextual
+        // diagnostic after observing this result. Do not report again at this repository layer.
+        return localSource.saveReaderSettings(settings.toLocal())
     }
 
     override fun getCustomFonts(): Flow<List<CustomReaderFontDomainModel>> {
@@ -151,4 +151,3 @@ internal class ReaderDataRepository(
         analytics.logException(throwable, message)
     }
 }
-

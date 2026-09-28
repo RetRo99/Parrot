@@ -1,0 +1,29 @@
+# QA-BUG-0062 — Reader Settings save and Undo retest
+
+- **Date/time:** 2026-09-28, Samsung device local time CEST (UTC+0200).
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug. Worktree based on commit `ef8eaf59ddc78ba2a4639eb9e225b83ac3d53d76` plus the QA-BUG-0062 patch pending commit at test time. APK SHA-256 `8ac931ab87b487f88951d39968cdce53c7df193c624b4b6f1f6d4b282279f3d1`; the installed APK was pulled after installation and matched this hash. Samsung app PID during the observed run: `29954`.
+- **Scope:** QA-BUG-0062's ordinary Reader Settings save/Undo path, plus host-simulated failure/retry regression coverage. This is not completion of profile-isolation case 420. No profile labels/IDs, account data, book content, screenshot, raw hierarchy, or credential data are retained.
+
+## Samsung functional retest
+
+1. Opened Reader Settings from App Settings.
+2. Changed the Theme selection; the selected option updated and the normal local save completed.
+3. Changed it again and activated the Undo snackbar action. The prior selection was restored in the UI and the Undo write completed.
+4. Selected System afterward to restore the temporary theme change. Its normal save completed.
+
+The relevant local debug-log sequence at 02:02:39–02:02:40 CEST was one `reader_setting_save_attempted` / `reader_setting_save_succeeded` pair, followed by one `reader_setting_save_attempted` for `action=undo_setting_change`, one successful Undo save, and `reader_setting_change_undone`. Start/terminal diagnostic breadcrumbs carried the same operation correlation value; correlation IDs are redacted here. At 02:03:40 CEST the final System-theme save also emitted one attempt/success pair. No failure was induced on-device.
+
+## Host regression checks and build
+
+- `:feature:settings:ui:testAndroidHostTest`: **2 tests passed**. The fake repository returns one `DatabaseError`; the ViewModel restores the persisted value, emits failure rather than `setting_changed`, reports one contextual exception, and a subsequent retry persists successfully with retry-specific attempt/success events. The Undo regression verifies that the most recent setting alone is reversed.
+- `:feature:home:ui:testAndroidHostTest`: **3 Reader Settings exposure-context tests passed**.
+- `:lib:analytics:implementation:testAndroidHostTest`: **26 AnalyticsParameterSanitizerTest + 9 DiagnosticPayloadSanitizerTest passed**, including bounded Reader Settings exposure/save-outcome payload checks.
+- `:androidApp:assembleDebug`: **PASS** in the combined Gradle run. A forced rerun of the Analytics implementation host tests also completed successfully.
+
+## Instrumentation and limitations
+
+- Samsung debug logs show only local `DebugAnalyticsManager` output; they do **not** prove Firebase Analytics delivery. Analytics ingestion is waived for this run. No Firebase Crashlytics delivery claim is made.
+- The normal save and Undo paths produced bounded attempt/success events and correlated diagnostic breadcrumbs. No failed/cancelled outcome or exception was expected or induced on the phone; app-PID log search found no `FATAL EXCEPTION`, handled-exception marker, or Reader Settings save-failure marker during this run.
+- The synthetic host failure/retry test verifies one exception at the Reader Settings boundary and no duplicate repository/database-executor report. A safe Samsung database-write fault fixture is unavailable, so case 768's on-device failure/retry variant remains **BLOCKED**; Crashlytics backend delivery remains unverified.
+- Case 420's profile A/B Reader Settings isolation comparison remains **NOT RUN** pending the focused QA-BUG-0062 commit. No cross-app or cross-device synchronization was tested.

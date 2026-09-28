@@ -103,6 +103,8 @@ import resources.translations.settings_audio_progress_bar
 import resources.translations.settings_audio_progress_bar_description
 import resources.translations.settings_custom_color
 import resources.translations.settings_changed
+import resources.translations.settings_retry
+import resources.translations.settings_save_failed
 import resources.translations.settings_chapter_progress
 import resources.translations.settings_chapter_progress_fixed
 import resources.translations.settings_chapter_progress_none
@@ -235,12 +237,16 @@ private fun SettingsScreenContent(
     val animationsEnabled = remember { !isEinkDisplay() }
     val undoMessage = stringResource(StringRes.settings_changed)
     val undoLabel = stringResource(StringRes.settings_undo)
+    val saveFailureMessage = stringResource(StringRes.settings_save_failed)
+    val retryLabel = stringResource(StringRes.settings_retry)
     val fontPickerLauncher = rememberFilePickerLauncher(
         type = PickerType.File(extensions = listOf("ttf", "otf", "woff", "woff2")),
         mode = PickerMode.Single,
     ) { file ->
-        file?.let {
-            intentDispatcher(SettingsIntent.OnCustomFontSelected(it))
+        if (file == null) {
+            intentDispatcher(SettingsIntent.OnCustomFontImportCancelled)
+        } else {
+            intentDispatcher(SettingsIntent.OnCustomFontSelected(file))
         }
     }
 
@@ -257,6 +263,23 @@ private fun SettingsScreenContent(
 
                 SnackbarResult.Dismissed ->
                     intentDispatcher(SettingsIntent.OnDismissSettingsUndo)
+            }
+        }
+    }
+
+    LaunchedEffect(viewState.settingSaveFailureRequestId) {
+        if (viewState.settingSaveFailureRequestId != null) {
+            val result = snackbarHostState.showSnackbar(
+                message = saveFailureMessage,
+                actionLabel = retryLabel,
+                duration = SnackbarDuration.Indefinite,
+            )
+            when (result) {
+                SnackbarResult.ActionPerformed ->
+                    intentDispatcher(SettingsIntent.OnRetrySettingsSave)
+
+                SnackbarResult.Dismissed ->
+                    intentDispatcher(SettingsIntent.OnDismissSettingsSaveFailure)
             }
         }
     }

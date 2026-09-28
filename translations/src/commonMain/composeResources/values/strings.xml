@@ -197,6 +197,8 @@
     <string name="settings_reader_preview">Preview</string>
     <string name="settings_reader_preview_sample">The old library settled into silence as the first page opened. Words found their rhythm, and the margins gave them room to breathe.\n\nBy the second paragraph, the page felt calmer. The story became easy to follow.</string>
     <string name="settings_changed">Setting changed</string>
+    <string name="settings_save_failed">Couldn’t save this setting. Try again.</string>
+    <string name="settings_retry">Retry</string>
     <string name="settings_undo">Undo</string>
 
     <!-- Settings Sections -->

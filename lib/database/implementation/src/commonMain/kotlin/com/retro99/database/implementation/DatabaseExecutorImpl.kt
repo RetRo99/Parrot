@@ -18,15 +18,19 @@ class DatabaseExecutorImpl(
     private val analytics: Analytics,
 ) : DatabaseExecutor {
 
-    override suspend fun <T> executeDatabaseOperation(operation: suspend () -> T): AppResult<T> =
+    override suspend fun <T> executeDatabaseOperation(
+        reportException: Boolean,
+        operation: suspend () -> T,
+    ): AppResult<T> =
         withContext(Dispatchers.IO) {
             try {
                 Ok(operation())
             } catch (e: Exception) {
                 ensureActive() // Check if coroutine is still active
 
-                // Log the exception
-                analytics.logException(e, "Error executing dao operation")
+                if (reportException) {
+                    analytics.logException(e, "Error executing dao operation")
+                }
 
                 when (e) {
                     is CancellationException -> throw e // Re-throw cancellation exceptions
