@@ -61,7 +61,6 @@ class StatisticsLoadFailureTest {
             assertIs<AppError.DatabaseError>(failedState.error)
             assertEquals(
                 listOf(
-                    "statistics_viewed",
                     "statistics_load_attempted",
                     "statistics_load_failed",
                 ),
@@ -85,7 +84,7 @@ class StatisticsLoadFailureTest {
             assertNull(recoveredState.error)
             assertEquals(
                 "statistics_load_attempted",
-                analytics.events[3].name,
+                analytics.events[2].name,
             )
             assertEquals(
                 mapOf(
@@ -96,9 +95,9 @@ class StatisticsLoadFailureTest {
                     "outcome" to "started",
                     "is_retry" to true,
                 ),
-                analytics.events[3].parameters,
+                analytics.events[2].parameters,
             )
-            assertEquals("statistics_load_succeeded", analytics.events[4].name)
+            assertEquals("statistics_load_succeeded", analytics.events[3].name)
             assertEquals("succeeded", analytics.breadcrumbs.last().outcome)
             assertEquals(1, analytics.exceptionContexts.size)
         } finally {

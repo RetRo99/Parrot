@@ -605,6 +605,27 @@ class HomeNavigationViewModel(
         )
     }
 
+    /** Records an exposure only after the navigation owner reports Statistics as visible. */
+    fun reportStatisticsViewed(sourceScreen: String, entryPoint: String) {
+        analytics.logEvent(
+            StatisticsAnalyticsEvent.StatisticsViewed(
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+            ),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "statistics",
+                sourceScreen = sourceScreen,
+                entryPoint = entryPoint,
+                action = "screen_view",
+                operation = "statistics_route",
+                stage = "visible",
+                outcome = "succeeded",
+            ),
+        )
+    }
+
     /** Records an exposure only after the navigation owner reports this route as visible. */
     fun reportServerManagementViewed(sourceScreen: String, entryPoint: String) {
         analytics.logEvent(
@@ -693,3 +714,4 @@ class HomeNavigationViewModel(
         }
     }
 }
+import com.retro99.analytics.api.StatisticsAnalyticsEvent

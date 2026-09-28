@@ -43,7 +43,6 @@ class StatisticsViewModel(
     private var hasStatisticsLoadCompleted = false
 
     init {
-        analytics.logEvent(StatisticsAnalyticsEvent.StatisticsViewed)
         loadStatistics()
     }
 

@@ -1136,8 +1136,16 @@ sealed interface AppSettingsAnalyticsEvent : AnalyticsEvent {
  */
 sealed interface StatisticsAnalyticsEvent : AnalyticsEvent {
 
-    data object StatisticsViewed : StatisticsAnalyticsEvent {
+    data class StatisticsViewed(
+        val sourceScreen: String,
+        val entryPoint: String,
+    ) : StatisticsAnalyticsEvent {
         override val name: String = "statistics_viewed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "statistics",
+            "source_screen" to sourceScreen,
+            "entry_point" to entryPoint,
+        )
     }
 
     data class StatisticsLoadAttempted(

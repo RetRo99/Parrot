@@ -1176,4 +1176,26 @@ class DiagnosticPayloadSanitizerTest {
         assertFalse("error_message" in failure)
         assertFalse("book_title" in failure)
     }
+
+    @Test
+    fun statisticsExposureRetainsBoundedRouteAttribution() {
+        val parameters = sanitizeAnalyticsParameters(
+            StatisticsAnalyticsEvent.StatisticsViewed(
+                sourceScreen = "app_settings",
+                entryPoint = "statistics_row",
+            ).parameters + mapOf(
+                "profile_id" to "private-profile-id",
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "statistics",
+                "source_screen" to "app_settings",
+                "entry_point" to "statistics_row",
+            ),
+            parameters,
+        )
+        assertFalse("profile_id" in parameters)
+    }
 }
