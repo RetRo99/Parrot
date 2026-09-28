@@ -1,0 +1,20 @@
+# Case 434 — Clear active app log
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`), gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `21569`; installed APK SHA-256 `310dda0fdc9201b2815e0d855afb94e677b15d496b192087f8d183723868936e`, matching local/device copies. No app data was cleared.
+- **Precondition:** File Logging OFF; one 2,748-byte app-generated `parrot_logs.txt` from cases 430/431 was present. Rotated backup was absent. No file contents were read or retained.
+
+## Execution
+
+Tapped Clear Logs in App Settings. The screen showed the “Logs cleared” snackbar. Metadata-only `run-as` listing then confirmed both `parrot_logs.txt` and `parrot_logs_old.txt` were absent. After the successful terminal breadcrumb, neither file was recreated. File Logging remained OFF and no app/account/server/profile/book state changed.
+
+PID-filtered local DebugAnalyticsManager output contained one `logs_clear_attempted(is_retry=false)` and one `logs_cleared(outcome=succeeded, is_retry=false)`, plus a correlated started/succeeded diagnostic breadcrumb pair. No failure was induced; no fatal marker was observed. Firebase Analytics ingestion is waived; local output does not prove delivery. Crashlytics delivery is unverified.
+
+## Results
+
+- **Functional:** PASS — snackbar shown and active/rotated logs verified absent.
+- **Analytics:** PASS locally for one attempt and one success outcome; Firebase ingestion waived.
+- **Diagnostics:** PASS locally for correlated start/success. The terminal breadcrumb did not recreate the cleared file. No error/crash induced; Crashlytics delivery unverified.
+- **QA-BUG-0069:** fixed behavior confirmed again on the current ordered build; failure injection remains BLOCKED without a safe filesystem fixture.
+- **Next:** Retest previously blocked case 433 against the verified no-log state before case 435.
