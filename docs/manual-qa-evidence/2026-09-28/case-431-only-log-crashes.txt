@@ -1,0 +1,23 @@
+# Case 431 — Only Log Crashes
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`), gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `21569`; APK SHA-256 `310dda0fdc9201b2815e0d855afb94e677b15d496b192087f8d183723868936e`, matching local/device copies. No app data was cleared.
+- **Original/final preferences:** Enable File Logging OFF and Only Log Crashes OFF. Both were restored to those settings; the active sanitized app-generated log file was retained. No crash, exception or failure was induced.
+
+## Execution
+
+1. Before testing, the app-generated `parrot_logs.txt` was present at 1,374 bytes from case 430. File Logging was OFF; Only Log Crashes was disabled.
+2. Enabled File Logging, then enabled Only Log Crashes. Both switches displayed checked. PID-filtered local output emitted one `file_logging_toggled(is_enabled=true)` and one `crash_only_logging_toggled(is_enabled=true)`.
+3. Opened Reading Statistics from App Settings and used toolbar Back. The screen rendered/returned normally. Despite the local diagnostic route breadcrumbs, the active log remained exactly 1,374 bytes, demonstrating that ordinary breadcrumbs were suppressed while crash-only mode was enabled. No crash was generated.
+4. Disabled Only Log Crashes while leaving File Logging ON. Opened Statistics and returned once more. The active log grew to 2,748 bytes, demonstrating normal breadcrumb writes resumed when crash-only mode was OFF.
+5. Disabled File Logging. Both settings returned to their original OFF state; the app-generated log remains for cases 432/434. Log contents were not read or copied.
+
+## Results
+
+- **Functional:** PASS for the normal suppression/resumption paths; both original OFF preferences restored.
+- **Analytics:** PASS locally: one `crash_only_logging_toggled(true)` and one `crash_only_logging_toggled(false)`; File Logging was also toggled true/false for the test. Firebase ingestion is waived; local DebugAnalyticsManager output is not delivery evidence.
+- **Diagnostics:** PASS for suppression of normal file breadcrumbs (size stable at 1,374 bytes across one Statistics entry/toolbar return) and resumption after disabling crash-only mode (size grew to 2,748 bytes across the next entry/return). No fatal/handled failure was induced; Crashlytics delivery is unverified.
+- **Out of scope for this case execution:** No fatal crash was deliberately generated to verify the uncaught-exception writer; do not infer crash-file behavior from the normal-breadcrumb test.
+- **QA-BUG-0073:** remains SUSPECTED/BLOCKED for append/rotation I/O failures; this test confirms only the normal write/suppression behavior.
+- **Next ordered case:** 432, Share Logs with logs present; do not choose a recipient or send the file.

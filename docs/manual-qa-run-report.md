@@ -160,6 +160,8 @@ Before changing the setting, App Settings showed File Logging OFF and both `parr
 
 Case 430 normal-path execution is complete: toggled ON, opened the already-tested Statistics route to generate safe diagnostic breadcrumbs, observed the app-private active log appear and grow from absent to 613 bytes then 1,374 bytes, and restored File Logging OFF. The stored file content was never read/copied and is retained as the genuine app log fixture for cases 432/434. Local output showed one true and one false `file_logging_toggled`; Firebase ingestion waived. QA-BUG-0073's write/rotation failure variant remains suspected and blocked by lack of a safe fault fixture; this normal write does not verify it. [Case-430 evidence](manual-qa-evidence/2026-09-28/case-430-file-logging-enabled.txt). Next ordered case is 431.
 
+Case 431 PASS for normal crash-only behavior on the same build: with File Logging ON, enabling Only Log Crashes kept the active file at 1,374 bytes across a Statistics route/back while local diagnostic breadcrumbs were emitted; turning crash-only OFF allowed the next route/back to grow it to 2,748 bytes. File Logging and Only Log Crashes were both restored OFF, and the app-generated log was preserved for case 432 (share) and case 434 (clear). Local output recorded the Boolean toggle events; Firebase ingestion is waived. No deliberate crash was induced, so fatal-crash file writing and Crashlytics delivery remain unverified. QA-BUG-0073 safe write-failure variant remains blocked. [Case-431 evidence](manual-qa-evidence/2026-09-28/case-431-only-log-crashes.txt). Next ordered case is 432.
+
 ### Login screen action inventory (source-audited; screen not signed off)
 
 | Reachable action/state | Catalogue mapping | Current disposition |
