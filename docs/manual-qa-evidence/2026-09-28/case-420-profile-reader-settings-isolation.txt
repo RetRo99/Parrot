@@ -1,0 +1,29 @@
+# Case 420 — per-profile Reader Settings isolation (Samsung)
+
+- **Date:** 2026-09-28 (device local time CEST, UTC+0200).
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation.
+- **Package/build:** `com.retro99.parrot` 0.4.5 (21), debug; PID `29954` during observation. APK SHA-256 `8ac931ab87b487f88951d39968cdce53c7df193c624b4b6f1f6d4b282279f3d1`; installed APK and local build hashes matched.
+- **Source:** `1a1c747aeec5f3ce1c310c592a8956ffd5e8e60f` (`fix(settings): handle reader preference save outcomes [QA-BUG-0062]`). The build included unrelated uncommitted work that was not staged into this commit; the settings code itself matches the committed fix.
+- **Privacy:** only disposable profiles A and B are identified here by test role. Actual profile labels/IDs and screenshots are not retained.
+
+## Functional execution
+
+1. In disposable profile A, Reader Settings opened from App Settings. The Theme was changed to Sepia and saved successfully. The observed settings were Sepia and font size 100%.
+2. Switched to profile B and opened the same route. Before editing B, the Theme was System and font size was 100%, confirming A's Sepia selection had not leaked.
+3. In B, selected Light and increased font size once, from 100% to 105%.
+4. Switched to A and reopened Reader Settings: Sepia and 100% remained selected.
+5. Switched back to B and reopened Reader Settings: Light and 105% remained selected.
+
+The final screenshots were visually inspected on the phone; they showed the selected Theme control and corresponding preview palette, and the exact displayed font-size values. Screenshots were not saved. No cold process restart was performed. Thus the **Theme and Font Size profile-switch isolation variant passes**; overall case 420 remains **PARTIAL PASS**, not a claim that every Reader setting or restart behavior was exercised.
+
+## Analytics and diagnostics
+
+- Local debug output showed `reader_settings_screen_viewed` on route entry with only `screen=reader_settings`, `source_screen=app_settings`, and `entry_point=reader_settings_row`.
+- A's Theme save emitted one attempted/succeeded pair (`setting_name=theme`). B's Light Theme save emitted one attempted/succeeded pair, followed by a `setting_changed` value bucket of `light`. B's Font Size increment emitted one attempted/succeeded pair (`setting_name=font_size`); no numeric size or profile identifier was present in the event.
+- Each observed operation had start/terminal diagnostic breadcrumbs with matching per-operation correlation context. Correlation IDs are redacted from this evidence. The focused log search found no app-PID `FATAL EXCEPTION` or handled-exception marker.
+- These are local `DebugAnalyticsManager` logs only. Firebase Analytics ingestion is waived; local logs do not establish Firebase delivery. No Crashlytics delivery was tested or claimed; ordinary successful saves do not warrant a Crashlytics report.
+
+## Limits / next work
+
+- Other Reader settings, cold process restart, Reader-entry route equivalence, failure/retry on the Samsung, and broader screen inventory remain separate/uncompleted coverage. The save failure/retry host regression and failure-fixture blocker are recorded under QA-BUG-0062 and case 768.
+- Case 421 remains blocked pending a safe local reading/statistics history fixture. Continue in catalogue order with case 421 assessment, then case 422 on a disposable active profile. Preserve the original profile and server/book fixture; no cross-app or cross-device synchronization was tested.
