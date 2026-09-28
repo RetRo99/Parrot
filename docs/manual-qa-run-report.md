@@ -168,6 +168,8 @@ Next ordered case 433 requires no logs, but the only active file was the sanitiz
 
 Case 433 was initially BLOCKED because the 2,748-byte fixture from case 432 was present; that observation remains preserved. After case 434 cleared the fixture through App Settings and both filenames were verified absent, case 433 was retested: two Share Logs taps produced the visible “No logs to share” message, no chooser, two local attempt/unavailable outcome pairs and correlated unavailable breadcrumbs; files remained absent. No app data changed. Case 433 now PASS; next ordered case is 435. [Initial blocker](manual-qa-evidence/2026-09-28/case-433-no-logs-precondition-blocked.txt); [post-clear retest](manual-qa-evidence/2026-09-28/case-433-share-logs-no-logs-retest.txt).
 
+Case 435 PASS: App Settings showed `Version 0.4.5 (21)`, matching Samsung package metadata (`versionName=0.4.5`, `versionCode=21`, target SDK 36) on PID `21569`; source binding uses `BuildConfig` name/code. Read-only inspection only. [Evidence](manual-qa-evidence/2026-09-28/case-435-version-display.txt). Next ordered case is 436.
+
 ### Login screen action inventory (source-audited; screen not signed off)
 
 | Reachable action/state | Catalogue mapping | Current disposition |

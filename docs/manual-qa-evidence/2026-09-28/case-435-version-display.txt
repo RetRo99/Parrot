@@ -1,0 +1,12 @@
+# Case 435 — Version display
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`S921BXXSGDZG1`), gesture navigation.
+- **App/package:** `com.retro99.parrot`, PID `21569`; installed version name `0.4.5`, version code `21`, target SDK 36. Installed APK SHA-256 `310dda0fdc9201b2815e0d855afb94e677b15d496b192087f8d183723868936e`; local/device hashes matched. No app data was cleared.
+
+App Settings displayed `Version 0.4.5 (21)`. Android package metadata reported `versionName=0.4.5` and `versionCode=21`, matching the row. Source binds `buildConfig.versionName` and `buildConfig.versionCode` into the displayed string. This was a read-only inspection; no setting or app data changed.
+
+- **Functional:** PASS — displayed name/code match installed package metadata.
+- **Analytics:** N-A — static version inspection does not submit an operation or feature action.
+- **Diagnostics:** N-A — no failure or unexpected UX outcome occurred; no Crashlytics report expected.
+- **Next ordered case:** 436, Settings persistence/restart.
