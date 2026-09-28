@@ -1,0 +1,22 @@
+# Case 427 — Reading Statistics row route retest
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `30163`; installed APK SHA-256 `70fc583c081d3109ab91cd17277ae1c230256695e0422c2c0a772483bea0240e`; source commit `1884404a3660fffeced85756af0f693eea8a01e9` plus unrelated pre-existing changes. Local/device APK hashes matched. No app data was cleared.
+- **Preconditions/privacy:** App Settings hub visible; no settings or user data changed. Statistics values, profile/book/server identifiers, credentials, screenshots, raw hierarchy and local database content are intentionally not retained.
+
+## Ordered execution
+
+Tapped the “Reading statistics” row. The Statistics screen opened with its title, summary cards and streak cards; values are intentionally omitted from this evidence. The loading state resolved to the rendered dashboard. No detail card or sheet was opened as part of case 427.
+
+PID-filtered local DebugAnalyticsManager output for this interaction showed one `statistics_viewed(screen=statistics, source_screen=app_settings, entry_point=statistics_row)`, one `statistics_load_attempted(action=load_statistics, is_retry=false)` and one `statistics_load_succeeded` terminal. A Statistics visible-route breadcrumb and correlated load-start/load-success breadcrumbs were present. No failure was induced, and no fatal/handled exception marker was observed. Firebase Analytics ingestion is waived; local logs do not prove delivery. Crashlytics delivery is unverified.
+
+Tapped the Statistics toolbar Back affordance to return to App Settings. The expected hub screen returned. Local output showed one `navigation_back_attempted` and one `navigation_back(outcome=succeeded, entry_point=toolbar_back, destination_screen=app_settings)` with correlated start/terminal breadcrumbs, followed by one App Settings visible-route breadcrumb. This is separately mapped as `740/Statistics/toolbar-back`; it is only one exit variant.
+
+## Result
+
+- **Case 427:** PASS for the App Settings row-to-Statistics route and successful dashboard load. This does not sign off Statistics content/details or the separate Statistics tab-root route.
+- **Analytics:** PASS locally for attributed exposure and load attempt/success. Firebase ingestion waived.
+- **Diagnostics:** PASS locally for route visibility and correlated load start/success. No failure was induced; Crashlytics delivery unverified.
+- **740/Statistics/toolbar-back:** PASS for this toolbar variant only; system Back and other applicable variants remain NOT RUN, and parent case 740 remains open.
+- **Next ordered App Settings case:** 428.
