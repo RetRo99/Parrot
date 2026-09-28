@@ -271,6 +271,12 @@ Only the Home/Books destination was observed as the guest target and local-impor
 | 441/ServerManagement/toolbar-back | PASS: toolbar Back returned to App Settings without changing server state. | PASS locally: one navigation attempt/success pair with toolbar source, destination and outcome; Firebase ingestion waived. | PASS locally: correlated navigation breadcrumbs and one App Settings visible-route breadcrumb; no failure or exception. Crashlytics delivery unverified. | Same Samsung build as case 428. System Back and other case-441 variants remain NOT RUN. [Evidence](manual-qa-evidence/2026-09-28/case-428-server-management-route.txt). |
 | 740/ServerManagement/toolbar-back | PASS for toolbar Back only. | PASS locally: attempt/success event pair; Firebase ingestion waived. | PASS locally: correlated start/terminal and destination-visible breadcrumbs; no failure/exception. Crashlytics delivery unverified. | Same execution as case 441. System Back and other dismissal/lifecycle variants remain NOT RUN; parent case 740 remains open. [Evidence](manual-qa-evidence/2026-09-28/case-428-server-management-route.txt). |
 
+### Ordered App Settings continuation — case 429 pre-fix instrumentation finding
+
+| Case | Functional | Analytics | Diagnostics | Device/build/evidence |
+|---|---|---|---|---|
+| 429 — Sync & Backup row | PASS: row opened the signed-out Cloud Account screen. No form input or account action; all app/server/profile/book state preserved. | FAIL: no route exposure event in the PID-filtered local log for this destination; Firebase ingestion waived. QA-BUG-0072 recorded before fix. | FAIL: no Cloud Account visible-route breadcrumb; no failure/crash induced. | Samsung `RFCWC0SSVDM`, PID `30163`, package 0.4.5 (21), APK SHA-256 `70fc583c081d3109ab91cd17277ae1c230256695e0422c2c0a772483bea0240e`, source commit `1884404a3660fffeced85756af0f693eea8a01e9` plus unrelated pre-existing work. Case 429 is incomplete and blocks case 430 until focused instrumentation fix/retest/commit. [Pre-fix evidence](manual-qa-evidence/2026-09-28/qa-bug-0072-case-429-sync-backup-route-prefx.txt). |
+
 ## Early observation outside current screen order
 
 | Case | Variant / evidence | Functional | Analytics | Diagnostics | Notes / defect |

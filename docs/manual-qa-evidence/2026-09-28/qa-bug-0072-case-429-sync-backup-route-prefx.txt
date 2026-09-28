@@ -1,0 +1,22 @@
+# QA-BUG-0072 — Case 429 Sync & Backup route has no exposure instrumentation (pre-fix)
+
+- **Date:** 2026-09-28.
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug, PID `30163`; installed APK SHA-256 `70fc583c081d3109ab91cd17277ae1c230256695e0422c2c0a772483bea0240e`; source commit `1884404a3660fffeced85756af0f693eea8a01e9` plus unrelated pre-existing work. Local/device APK hashes matched.
+- **Preconditions/privacy:** App Settings hub visible. Tapped the Sync & Backup row. Cloud Account opened in its signed-out form state; no text was entered, no account action was activated, and no profile/server/book/app data was changed. No email, password, account/profile/server identifier, URL, screenshot, raw hierarchy or form content is retained.
+
+## Reproduction and evidence
+
+1. From App Settings, tap Sync & Backup.
+2. Confirm the Cloud Account screen renders with the signed-out form and navigation affordance.
+3. Inspect PID-filtered local DebugAnalyticsManager output: no Cloud Account/sync-backup screen exposure event and no route-visible diagnostic breadcrumb were emitted for this destination exposure. No error/fatal marker was observed.
+
+Source audit confirms `HomeNavigation` routes `HomeDestination.SyncAndBackup` directly to `CloudAccountScreen` but has no visibility-report branch for this destination. `CloudAccountViewModel` has no Analytics/logging dependency or screen-exposure reporting. The Cloud Account UI module does not depend on the Analytics API. Thus the missing route signal is a confirmed instrumentation gap, not an assertion that the signed-out route failed functionally.
+
+## Expected / actual
+
+- **Expected:** One bounded screen-view event and one visible-route breadcrumb when Cloud Account becomes the actual visible destination, with `screen=sync_and_backup` (or a documented stable equivalent), `source_screen=app_settings`, `entry_point=sync_backup_row`; no account/email/form values. A route should not be logged from recomposition.
+- **Actual:** The screen opens, but neither signal is produced at the route boundary. The same gap affects route reconstruction and feature-entry measurement.
+- **Frequency:** Reproduced once on Samsung; confirmed by source audit.
+- **Firebase/Crashlytics:** DebugAnalyticsManager is local-only. Firebase Analytics ingestion is waived and unverified. No user-impacting operation failure was induced; Crashlytics delivery was not applicable/unverified.
+- **Disposition:** QA-BUG-0072 confirmed, fix pending. Case 429 functional route: PASS; Analytics: FAIL; diagnostics: FAIL. Do not begin case 430 until the focused instrumentation fix is verified, Samsung-retested and committed.
