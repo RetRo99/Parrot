@@ -1,0 +1,32 @@
+# Cases 440, 443 and 524 — final combined committed Server Management/Login build
+
+- **Run time:** 2026-09-29, approximately 04:36–04:38 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`navigation_mode=2`).
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, PID `25746`; final integrated debug APK SHA-256 `d1f5202462a20294aa5a8c3fd227266deace01e661dfb37c3973fea0b0fafe06` matches the Samsung-pulled installed `base.apk`. Source HEAD `88f44a5f0d502419413dcf95c7c63ad30c2a651f`; focused fixes: QA-BUG-0079 `8e16676916c7ad06d82bc4bd93ecfd67f172cf80`, QA-BUG-0080 `dd0e6fc721de08b68f59cd6d6a0bf6aa968610f1`, QA-BUG-0081 `fc01927575d688d2f2172174da11c10e92e3dcc8`.
+- **Build/tests:** `:androidApp:assembleDebug` up-to-date/successful for the final source tree; ComposeApp host tests 8/8, Login UI host tests 37/37, zero failures/errors/skips. No source changes occurred after these tests/build. Final artifact was update-installed with `adb install -r`; no app-data clear.
+- **Fixture/privacy:** existing active profile, current-reading target and logged-out server fixture preserved. No login credentials entered/submitted; no retry, delete, server mutation or profile mutation. User-authored profile/server/book values and IDs omitted.
+
+## Actions and functional outcomes
+
+1. Closed the existing unavailable/not-authenticated prompt with Close, opened Settings → Servers and confirmed Server Management/card.
+2. Tapped Add Server. Login opened. No credentials were entered.
+3. Pressed Android system Back. Login closed and Server Management/card returned.
+4. Tapped Add Server again and activated the accessible toolbar `Back` node. Login closed and Server Management/card returned.
+
+Functional PASS for case 443 Add Server navigation and case 524 system Back and toolbar Back variants. Server Management remained usable and the original fixture was unchanged.
+
+## Local DebugAnalyticsManager checks (not Firebase delivery)
+
+- `server_management_screen_viewed`: 3 actual visible exposures and 3 matching `server_management_route` visible breadcrumbs: first Settings-row entry, then each Back return. This is one per exposure, not three for one navigation.
+- `server_list_load_attempted/completed`: one normal initial load attempt/success pair; the retained screen did not restart its collector on the two Login returns.
+- `server_add_attempted`: 2; `login_screen_viewed`: 2. Both Login events and both `login_route` visible breadcrumbs reported `source_screen=server_management, entry_point=add_server_button`.
+- `server_added`: 0; no credentials/auth attempt or persistence was performed.
+- Login → Server Management Back: one attempted/successful `navigation_back` pair for `system_back` and one for `toolbar_back`. Each used source `login`, destination `server_management`; each had one correlated diagnostic start/terminal pair.
+- No fatal or unexpected-failure marker was observed. Ordinary Back generated no non-fatal.
+- Firebase Analytics ingestion is waived; local DebugAnalyticsManager output does not prove Firebase delivery. Crashlytics delivery was not exercised.
+
+## Disposition
+
+- Case 443 functional PASS; Analytics PASS locally for Add Server and Login route attribution; diagnostics PASS locally for actual visible Login route.
+- Case 524 system Back functional/Analytics/diagnostics PASS; case 524 toolbar Back functional/Analytics/diagnostics PASS, including exposed accessible `Back` action.
+- QA-BUG-0079, QA-BUG-0080 and QA-BUG-0081 are fixed in the listed focused commits and pass on the final combined source build. Earlier failures remain preserved in their separate evidence entries.
