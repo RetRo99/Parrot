@@ -138,7 +138,12 @@ internal fun VoicesSheet(
     val languages = remember(voices) { voices.voiceLanguages(systemGroups) }
     val selectedVoice = voices.firstOrNull { voice -> voice.id == selectedVoiceId }
     var languageCode by remember(selectedVoiceId) {
-        mutableStateOf(selectedVoice?.languageCode() ?: languages.firstOrNull()?.code ?: ENGLISH_CODE)
+        mutableStateOf(
+            selectedVoice?.languageCode()
+                ?: ENGLISH_CODE.takeIf { languages.any { language -> language.code == ENGLISH_CODE } }
+                ?: languages.firstOrNull()?.code
+                ?: ENGLISH_CODE,
+        )
     }
     var pendingTermsVoiceId by remember { mutableStateOf<String?>(null) }
     var packagePendingDeletion by remember { mutableStateOf<NeuralVoicePackage?>(null) }

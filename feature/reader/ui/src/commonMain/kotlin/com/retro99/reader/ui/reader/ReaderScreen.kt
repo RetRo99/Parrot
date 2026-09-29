@@ -531,6 +531,7 @@ internal fun AnimatedProgressBar(
     chapterReadingTimeInfo: ChapterReadingTimeInfo?,
     chapterInfo: ChapterInfo?,
     currentTime: String,
+    audioStatus: String? = null,
 ) {
     val isVisible = when (settings.showProgressBar) {
         true -> settings.progressBarPosition == position
@@ -554,6 +555,7 @@ internal fun AnimatedProgressBar(
             progressIndicatorMode = settings.progressIndicatorMode,
             currentTime = currentTime,
             showReadingTime = settings.showReadingTime,
+            audioStatus = audioStatus,
         )
     }
 }
@@ -806,6 +808,7 @@ private fun ReadingProgressBar(
     currentTime: String,
     showReadingTime: Boolean,
     modifier: Modifier = Modifier,
+    audioStatus: String? = null,
 ) {
     val totalProgress = totalProgression?.toFloat() ?: 0f
     val totalProgressPercent = (totalProgress * 100).toInt()
@@ -909,8 +912,14 @@ private fun ReadingProgressBar(
                         )
                     }
 
-                    // Show estimated reading time if enabled
-                    if (showReadingTime && chapterReadingTimeInfo != null) {
+                    // While listening, the audio position replaces the reading-time estimate.
+                    if (audioStatus != null) {
+                        Text(
+                            text = audioStatus,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Ember.colors.ink2,
+                        )
+                    } else if (showReadingTime && chapterReadingTimeInfo != null) {
                         val readingTimeText = if (chapterReadingTimeInfo.remainingMinutes < 1) {
                             stringResource(StringRes.reader_time_remaining_less_than_minute)
                         } else {

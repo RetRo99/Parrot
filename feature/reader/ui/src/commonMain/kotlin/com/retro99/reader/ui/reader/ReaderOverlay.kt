@@ -140,6 +140,7 @@ import resources.translations.reader_bookmark_rename_cancel
 import resources.translations.reader_bookmark_rename_confirm
 import resources.translations.reader_bookmark_rename_label
 import resources.translations.reader_bookmarks_empty_overlay
+import resources.translations.reader_audio_sentence_of
 import resources.translations.reader_overlay_audio
 import resources.translations.reader_overlay_open_player
 import resources.translations.reader_overlay_play
@@ -286,6 +287,11 @@ internal fun ReaderOverlayContent(
             isNarration = isNarration,
             title = chapterTitle.ifBlank { "$chapterNumber" },
             subtitle = subtitle,
+            stripLabel = if (isNarration) {
+                "$positionText / $totalText"
+            } else {
+                stringResource(StringRes.reader_audio_sentence_of, sentenceNumber, viewState.ttsSentenceCount)
+            },
             miniLabel = if (isNarration) {
                 stringResource(StringRes.reader_overlay_mini_narration, positionText, totalText)
             } else {
@@ -443,6 +449,7 @@ internal fun ReaderOverlayContent(
                     chapterReadingTimeInfo = viewState.chapterReadingTimeInfo,
                     chapterInfo = viewState.chapterInfo,
                     currentTime = progressBarTime,
+                    audioStatus = nowPlaying?.stripLabel,
                 )
             }
         }
@@ -537,6 +544,7 @@ internal fun ReaderOverlayContent(
                                     chapterReadingTimeInfo = viewState.chapterReadingTimeInfo,
                                     chapterInfo = viewState.chapterInfo,
                                     currentTime = progressBarTime,
+                                    audioStatus = nowPlaying?.stripLabel,
                                 )
                             }
                         }
@@ -750,6 +758,7 @@ internal data class NowPlayingUi(
     val title: String,
     val subtitle: String,
     val miniLabel: String,
+    val stripLabel: String,
     val progress: Float,
     val isPlaying: Boolean,
     val isLoading: Boolean,

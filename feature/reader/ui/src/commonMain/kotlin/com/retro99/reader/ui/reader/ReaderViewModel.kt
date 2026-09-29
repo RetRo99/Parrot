@@ -83,6 +83,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.koin.core.annotation.InjectedParam
@@ -310,9 +311,11 @@ class ReaderViewModel(
         when (intent) {
             ReaderIntent.ToggleBookSearch -> toggleBookSearch()
             is ReaderIntent.SearchBook -> searchBook(intent.query)
-            is ReaderIntent.GoToSearchResult -> goToSearchResult(intent.result)
+            is ReaderIntent.GoToSearchResult -> navigateKeepingAudio { goToSearchResult(intent.result) }
             is ReaderIntent.SeekToChapterProgress -> seekToChapterProgress(intent.progression)
-            is ReaderIntent.JumpToBookProgress -> jumpToBookProgress(intent.progression)
+            is ReaderIntent.JumpToBookProgress -> navigateKeepingAudio {
+                jumpToBookProgress(intent.progression)
+            }
             is ReaderIntent.StartListening -> startListening(intent.source)
             is ReaderIntent.SwitchListenSource -> switchListenSource(intent.source)
             ReaderIntent.ToggleListenSheet -> toggleListenSheet()
@@ -369,7 +372,9 @@ class ReaderViewModel(
             is ReaderIntent.SkipForward -> skipForward(intent.milliseconds)
             is ReaderIntent.SkipBackward -> skipBackward(intent.milliseconds)
             ReaderIntent.ToggleToc -> toggleToc()
-            is ReaderIntent.GoToChapter -> goToChapter(intent.href, intent.currentPosition)
+            is ReaderIntent.GoToChapter -> navigateKeepingAudio {
+                goToChapter(intent.href, intent.currentPosition)
+            }
             ReaderIntent.GoToNextChapter -> goToNextChapter()
             ReaderIntent.GoToPreviousChapter -> goToPreviousChapter()
             is ReaderIntent.GoToChapterAndPlay -> goToChapterAndPlay(intent.href, intent.currentPosition)
@@ -395,7 +400,7 @@ class ReaderViewModel(
             ReaderIntent.GoToNextBookmark -> goToNextBookmark()
             ReaderIntent.DismissNoMoreBookmarks -> dismissNoMoreBookmarks()
             is ReaderIntent.DeleteBookmark -> deleteBookmark(intent.id)
-            is ReaderIntent.GoToBookmark -> goToBookmark(intent.bookmark)
+            is ReaderIntent.GoToBookmark -> navigateKeepingAudio { goToBookmark(intent.bookmark) }
         }
     }
 
@@ -1898,6 +1903,33 @@ class ReaderViewModel(
         updateState { it.copy(isListening = false) }
     }
 
+    /**
+     * Runs a user-initiated jump (chapter, bookmark, search result, position). If audio is
+     * playing it is stopped first and restarted once the reader lands, so narration resumes at
+     * the synced timestamp for the new location and device voice at the first visible sentence.
+     */
+    private fun navigateKeepingAudio(navigate: () -> Unit) {
+        val state = viewState.value
+        if (!state.isListening || !state.isPlaying) {
+            navigate()
+            return
+        }
+        val before = state.currentPosition
+        viewModelScope.launch {
+            when (state.listenSource) {
+                ListenSource.NARRATION -> audioController.pauseAudio()
+                ListenSource.DEVICE_VOICE -> ttsController.stop()
+            }
+            navigate()
+            withTimeoutOrNull(JUMP_SETTLE_TIMEOUT_MS) {
+                bookController.currentLocator.first { locator ->
+                    locator.href != before?.href || locator.progression != before.progression
+                }
+            }
+            togglePlayback()
+        }
+    }
+
     private fun goToChapter(href: String, currentPosition: PositionUiModel?) {
         bookController.goToChapter(href)
         updateState {
@@ -2533,6 +2565,7 @@ class ReaderViewModel(
 
         /** Minimum reading duration to update "currently reading" book (1 minute) */
         private const val MINIMUM_READING_DURATION_MS = 60_000L
+        private const val JUMP_SETTLE_TIMEOUT_MS = 2_000L
 
         private const val SLEEP_TIMER_TICK_MS = 1_000L
 
