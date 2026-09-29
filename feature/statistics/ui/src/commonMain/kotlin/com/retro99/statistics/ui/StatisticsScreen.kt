@@ -250,6 +250,12 @@ private fun StatisticsContent(
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
             }
+            item {
+                ReadingRhythmCard(
+                    rhythm = overview.rhythm,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+            }
         }
     }
 }

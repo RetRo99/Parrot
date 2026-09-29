@@ -763,4 +763,17 @@
     <string name="statistics_legend_read" tools:ignore="MissingTranslation">Read</string>
     <string name="statistics_legend_today" tools:ignore="MissingTranslation">Today</string>
     <string name="statistics_heading" tools:ignore="MissingTranslation">Statistics</string>
+    <string name="statistics_rhythm_eyebrow" tools:ignore="MissingTranslation">When you read</string>
+    <string name="statistics_rhythm_headline" tools:ignore="MissingTranslation">You read most on %1$s, usually in the %2$s</string>
+    <string name="statistics_rhythm_subline" tools:ignore="MissingTranslation">Average reading time · last 90 days</string>
+    <string name="statistics_rhythm_not_enough" tools:ignore="MissingTranslation">Read on a few more days to see your rhythm.</string>
+    <string name="statistics_rhythm_time_of_day" tools:ignore="MissingTranslation">Time of day</string>
+    <string name="statistics_rhythm_morning" tools:ignore="MissingTranslation">Morning</string>
+    <string name="statistics_rhythm_afternoon" tools:ignore="MissingTranslation">Afternoon</string>
+    <string name="statistics_rhythm_evening" tools:ignore="MissingTranslation">Evening</string>
+    <string name="statistics_rhythm_night" tools:ignore="MissingTranslation">Night</string>
+    <string name="statistics_rhythm_weekday_description" tools:ignore="MissingTranslation">%1$s: %2$s on average</string>
+    <string name="statistics_rhythm_weekday_description_top" tools:ignore="MissingTranslation">%1$s: %2$s on average, most</string>
+    <string name="statistics_rhythm_time_description" tools:ignore="MissingTranslation">%1$s, %2$d percent of your reading</string>
+    <string name="statistics_rhythm_time_description_top" tools:ignore="MissingTranslation">%1$s, %2$d percent of your reading, most</string>
 </resources>
