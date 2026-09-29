@@ -3,6 +3,7 @@ package com.retro99.home.ui.appsettings
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -109,6 +111,7 @@ import resources.translations.settings_diagnostics_subtitle
 import resources.translations.settings_diagnostics_title
 import resources.translations.settings_open_last_book_subtitle
 import resources.translations.settings_profile_add
+import resources.translations.settings_profile_edit_button
 import resources.translations.settings_reader_settings_subtitle
 import resources.translations.settings_section_appearance
 import resources.translations.settings_section_help
@@ -191,11 +194,9 @@ private fun AppSettingsScreenContent(
     LaunchedEffect(
         viewState.showProfileOperationFailedMessage,
         viewState.showAddProfileDialog,
-        viewState.showRenameProfileDialog,
         viewState.showDeleteProfileDialog,
     ) {
         val dialogVisible = viewState.showAddProfileDialog ||
-            viewState.showRenameProfileDialog ||
             viewState.showDeleteProfileDialog
         if (viewState.showProfileOperationFailedMessage && !dialogVisible) {
             snackbarHostState.showSnackbar(profileOperationFailedMessage)
@@ -228,7 +229,6 @@ private fun AppSettingsScreenContent(
             if (
                 viewState.isProfileOperationInProgress &&
                 !viewState.showAddProfileDialog &&
-                !viewState.showRenameProfileDialog &&
                 !viewState.showDeleteProfileDialog
             ) {
                 LinearProgressIndicator(
@@ -393,20 +393,20 @@ private fun ProfileDialogs(
     }
 
     val selectedProfile = viewState.selectedProfileForMenu
-    if (viewState.showRenameProfileDialog && selectedProfile != null) {
-        RenameProfileDialog(
-            currentName = selectedProfile.name,
-            onDismissRequest = {
-                intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed("dismiss_request"))
-            },
-            onCancel = {
-                intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed("cancel_button"))
-            },
-            onConfirm = { newName -> intentDispatcher(AppSettingsIntent.OnRenameProfileConfirmed(newName)) },
-            onNameChanged = { intentDispatcher(AppSettingsIntent.OnProfileNameEdited) },
-            showError = viewState.showProfileOperationFailedMessage,
+    if (selectedProfile != null) {
+        ProfileEditSheet(
+            profile = selectedProfile,
+            canDelete = viewState.canDeleteSelectedProfile,
             showDuplicateNameError = viewState.showDuplicateProfileNameError,
-            isOperationInProgress = viewState.isProfileOperationInProgress,
+            isBusy = viewState.isProfileOperationInProgress,
+            onSave = { name, colorIndex ->
+                intentDispatcher(AppSettingsIntent.OnEditProfileSaved(name, colorIndex))
+            },
+            onNameChanged = { intentDispatcher(AppSettingsIntent.OnProfileNameEdited) },
+            onDelete = { intentDispatcher(AppSettingsIntent.OnDeleteProfileClicked) },
+            onDismiss = {
+                intentDispatcher(AppSettingsIntent.OnProfileMenuDismissed("dismiss_request"))
+            },
         )
     }
 
@@ -435,41 +435,86 @@ private fun ProfileCard(
         duplicateProfileOrdinals(viewState.userProfiles)
     }
     val enabled = !viewState.isProfileOperationInProgress
+    val activeProfileId = viewState.activeProfile?.id
 
     EmberGroupCard {
-        LazyRow(
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(viewState.userProfiles, key = { profile -> profile.id }) { profile ->
-                ProfileAvatar(
-                    profile = profile,
-                    duplicateOrdinal = duplicateOrdinals[profile.id],
-                    isActive = profile.id == viewState.activeProfile?.id,
-                    isMenuVisible = viewState.selectedProfileForMenu?.id == profile.id,
-                    enabled = enabled,
-                    canDelete = viewState.canDeleteSelectedProfile,
-                    onClick = { intentDispatcher(AppSettingsIntent.OnProfileSelected(profile.id)) },
-                    onLongClick = {
-                        intentDispatcher(AppSettingsIntent.OnProfileLongPressed(profile.id, "long_press"))
-                    },
-                    onEditClick = {
-                        intentDispatcher(AppSettingsIntent.OnProfileLongPressed(profile.id, "edit_button"))
-                    },
-                    onMenuDismissed = {
-                        intentDispatcher(AppSettingsIntent.OnProfileMenuDismissed("dismiss_request"))
-                    },
-                    onRenameClicked = { intentDispatcher(AppSettingsIntent.OnRenameProfileClicked) },
-                    onDeleteClicked = { intentDispatcher(AppSettingsIntent.OnDeleteProfileClicked) },
-                )
+        Box(modifier = Modifier.fillMaxWidth()) {
+            LazyRow(
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 116.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(viewState.userProfiles, key = { profile -> profile.id }) { profile ->
+                    val isActive = profile.id == activeProfileId
+                    ProfileAvatar(
+                        profile = profile,
+                        duplicateOrdinal = duplicateOrdinals[profile.id],
+                        isActive = isActive,
+                        enabled = enabled,
+                        onClick = {
+                            if (isActive) {
+                                intentDispatcher(AppSettingsIntent.OnProfileLongPressed(profile.id, "active_avatar"))
+                            } else {
+                                intentDispatcher(AppSettingsIntent.OnProfileSelected(profile.id))
+                            }
+                        },
+                        onLongClick = {
+                            intentDispatcher(AppSettingsIntent.OnProfileLongPressed(profile.id, "long_press"))
+                        },
+                    )
+                }
+                item(key = "add_profile") {
+                    AddProfileAvatar(
+                        enabled = enabled,
+                        onClick = { intentDispatcher(AppSettingsIntent.OnAddProfileClicked) },
+                    )
+                }
             }
-            item(key = "add_profile") {
-                AddProfileAvatar(
+
+            if (activeProfileId != null) {
+                EditProfileButton(
                     enabled = enabled,
-                    onClick = { intentDispatcher(AppSettingsIntent.OnAddProfileClicked) },
+                    onClick = {
+                        intentDispatcher(AppSettingsIntent.OnProfileLongPressed(activeProfileId, "edit_button"))
+                    },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 16.dp, end = 16.dp),
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun EditProfileButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = Ember.colors
+    val style = Ember.style
+
+    Row(
+        modifier = modifier
+            .height(40.dp)
+            .clip(CircleShape)
+            .border(style.border, colors.chipBorder, CircleShape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Edit,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = colors.accentText,
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = stringResource(StringRes.settings_profile_edit_button),
+            style = Ember.type.label.copy(fontSize = 14.sp),
+            color = colors.accentText,
+        )
     }
 }
 
@@ -479,130 +524,79 @@ private fun ProfileAvatar(
     profile: UserProfile,
     duplicateOrdinal: Int?,
     isActive: Boolean,
-    isMenuVisible: Boolean,
     enabled: Boolean,
-    canDelete: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onEditClick: () -> Unit,
-    onMenuDismissed: () -> Unit,
-    onRenameClicked: () -> Unit,
-    onDeleteClicked: () -> Unit,
 ) {
     val colors = Ember.colors
-    val style = Ember.style
     val activeLabel = stringResource(StringRes.app_settings_profile_active)
 
-    Box(modifier = Modifier.width(76.dp)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .combinedClickable(
-                    enabled = enabled,
-                    role = Role.Button,
-                    onClick = onClick,
-                    onLongClick = onLongClick,
+    Column(
+        modifier = Modifier
+            .width(76.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .combinedClickable(
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+                onLongClick = onLongClick,
+            )
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(modifier = Modifier.size(AVATAR_SIZE)) {
+            Box(
+                modifier = Modifier
+                    .size(AVATAR_SIZE)
+                    .clip(CircleShape)
+                    .background(profileAvatarColor(profile.avatarId)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = profile.name.firstOrNull()?.uppercase().orEmpty(),
+                    style = Ember.type.cardTitle.copy(fontSize = 22.sp),
+                    color = ProfileAvatarContentColor,
                 )
-                .padding(vertical = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(modifier = Modifier.size(AVATAR_SIZE)) {
+            }
+            if (isActive) {
                 Box(
                     modifier = Modifier
-                        .size(AVATAR_SIZE)
-                        .clip(CircleShape)
-                        .background(if (isActive) colors.accent else colors.track)
-                        .then(
-                            if (!isActive && style.isEink) {
-                                Modifier.border(style.border, colors.line, CircleShape)
-                            } else {
-                                Modifier
-                            },
-                        ),
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 2.dp, y = 2.dp)
+                        .size(22.dp)
+                        .border(2.dp, colors.surface, CircleShape)
+                        .padding(2.dp)
+                        .background(colors.accent, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = profile.name.firstOrNull()?.uppercase().orEmpty(),
-                        style = Ember.type.cardTitle.copy(fontSize = 22.sp),
-                        color = if (isActive) colors.onAccent else colors.ink2,
+                    Icon(
+                        imageVector = Icons.Outlined.Check,
+                        contentDescription = activeLabel,
+                        modifier = Modifier.size(12.dp),
+                        tint = colors.onAccent,
                     )
                 }
-                if (isActive) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .offset(x = 2.dp, y = 2.dp)
-                            .size(22.dp)
-                            .border(2.dp, colors.surface, CircleShape)
-                            .padding(2.dp)
-                            .background(colors.accent, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Check,
-                            contentDescription = activeLabel,
-                            modifier = Modifier.size(12.dp),
-                            tint = colors.onAccent,
-                        )
-                    }
-                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = profile.name,
+            style = Ember.type.meta.copy(
+                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+            ),
+            color = if (isActive) colors.ink else colors.ink2,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+        duplicateOrdinal?.let { ordinal ->
             Text(
-                text = profile.name,
-                style = Ember.type.meta.copy(
-                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                ),
-                color = if (isActive) colors.ink else colors.ink2,
+                text = stringResource(StringRes.app_settings_profile_duplicate_index, ordinal),
+                style = Ember.type.meta.copy(fontSize = 11.sp),
+                color = colors.ink2,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
             )
-            duplicateOrdinal?.let { ordinal ->
-                Text(
-                    text = stringResource(StringRes.app_settings_profile_duplicate_index, ordinal),
-                    style = Ember.type.meta.copy(fontSize = 11.sp),
-                    color = colors.ink2,
-                    maxLines = 1,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-
-        // Visible edit affordance: opens the same menu as long-press so profile
-        // management never depends on a hidden gesture.
-        IconButton(
-            onClick = onEditClick,
-            enabled = enabled,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .size(28.dp),
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = stringResource(StringRes.action_edit),
-                tint = colors.ink2,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-
-        DropdownMenu(
-            expanded = isMenuVisible,
-            onDismissRequest = onMenuDismissed,
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(StringRes.action_rename)) },
-                onClick = onRenameClicked,
-                enabled = enabled,
-            )
-            if (canDelete) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(StringRes.action_delete)) },
-                    onClick = onDeleteClicked,
-                    enabled = enabled,
-                )
-            }
         }
     }
 }

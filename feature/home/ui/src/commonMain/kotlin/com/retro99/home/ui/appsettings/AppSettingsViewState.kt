@@ -18,7 +18,6 @@ data class AppSettingsViewState(
     val activeProfile: UserProfile? = null,
     val showAddProfileDialog: Boolean = false,
     val selectedProfileForMenu: UserProfile? = null,
-    val showRenameProfileDialog: Boolean = false,
     val showDeleteProfileDialog: Boolean = false,
     val showProfileOperationFailedMessage: Boolean = false,
     val showDuplicateProfileNameError: Boolean = false,

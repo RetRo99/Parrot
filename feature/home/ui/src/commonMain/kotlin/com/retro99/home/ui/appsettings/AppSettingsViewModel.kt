@@ -158,9 +158,7 @@ class AppSettingsViewModel(
             AppSettingsIntent.OnProfileNameEdited -> onProfileNameEdited()
             is AppSettingsIntent.OnProfileLongPressed -> onProfileLongPressed(intent.profileId, intent.entryPoint)
             is AppSettingsIntent.OnProfileMenuDismissed -> dismissProfileMenu(intent.entryPoint)
-            AppSettingsIntent.OnRenameProfileClicked -> showRenameProfileDialog()
-            is AppSettingsIntent.OnRenameProfileConfirmed -> renameProfile(intent.newName)
-            is AppSettingsIntent.OnRenameProfileDismissed -> hideRenameProfileDialog(intent.entryPoint)
+            is AppSettingsIntent.OnEditProfileSaved -> saveProfileEdit(intent.name, intent.colorIndex)
             AppSettingsIntent.OnDeleteProfileClicked -> showDeleteProfileDialog()
             AppSettingsIntent.OnDeleteProfileConfirmed -> deleteProfile()
             is AppSettingsIntent.OnDeleteProfileDismissed -> hideDeleteProfileDialog(intent.entryPoint)
@@ -286,51 +284,14 @@ class AppSettingsViewModel(
         updateState { it.copy(selectedProfileForMenu = null) }
     }
 
-    private fun showRenameProfileDialog() {
-        if (profileOperationGate.isInProgress || viewState.value.showRenameProfileDialog) return
-        if (viewState.value.selectedProfileForMenu == null) return
-        renameProfileRetryKey?.let(profileOperationRetryTracker::clear)
-        renameProfileRetryKey = profileOperationRetryTracker.newSessionKey(
-            AppSettingsAnalyticsEvent.ProfileOperation.Rename,
-        )
-        analytics.logEvent(
-            AppSettingsAnalyticsEvent.ProfileDialogOpened(AppSettingsAnalyticsEvent.ProfileOperation.Rename),
-        )
-        updateState {
-            it.copy(
-                showRenameProfileDialog = true,
-                showProfileOperationFailedMessage = false,
-                showDuplicateProfileNameError = false,
-            )
-        }
-    }
-
-    private fun hideRenameProfileDialog(entryPoint: String) {
-        if (profileOperationGate.isInProgress || !viewState.value.showRenameProfileDialog) return
-        renameProfileRetryKey?.let(profileOperationRetryTracker::clear)
-        renameProfileRetryKey = null
-        analytics.logEvent(
-            AppSettingsAnalyticsEvent.ProfileOperationCancelled(
-                profileOperation = AppSettingsAnalyticsEvent.ProfileOperation.Rename,
-                entryPoint = entryPoint,
-            ),
-        )
-        updateState {
-            it.copy(
-                showRenameProfileDialog = false,
-                selectedProfileForMenu = null,
-                showProfileOperationFailedMessage = false,
-                showDuplicateProfileNameError = false,
-            )
-        }
-    }
-
-    private fun renameProfile(newName: String) {
+    /** Saves the name and colour from the Edit profile sheet in one update. */
+    private fun saveProfileEdit(newName: String, colorIndex: Int) {
         val profile = viewState.value.selectedProfileForMenu ?: return
-        if (newName.isBlank() || !viewState.value.showRenameProfileDialog) return
+        val trimmedName = newName.trim()
+        if (trimmedName.isBlank()) return
         if (
             isDuplicateProfileName(
-                candidate = newName,
+                candidate = trimmedName,
                 profiles = viewState.value.userProfiles,
                 excludingProfileId = profile.id,
             )
@@ -342,14 +303,15 @@ class AppSettingsViewModel(
             AppSettingsAnalyticsEvent.ProfileOperation.Rename,
         ).also { renameProfileRetryKey = it }
         launchProfileOperation {
-            val updatedProfile = profile.copy(name = newName)
+            val updatedProfile = profile.copy(name = trimmedName, avatarId = colorIndex)
             val succeeded = runProfileOperation(
                 operation = AppSettingsAnalyticsEvent.ProfileOperation.Rename,
                 retryKey = retryKey,
                 successEvent = { isRetry -> AppSettingsAnalyticsEvent.ProfileRenamed(isRetry) },
             ) {
                 userRegistry.updateProfile(updatedProfile)
-                check(userRegistry.getProfile(profile.id)?.name == updatedProfile.name) {
+                val stored = userRegistry.getProfile(profile.id)
+                check(stored?.name == updatedProfile.name && stored.avatarId == updatedProfile.avatarId) {
                     "profile_rename_not_applied"
                 }
             }
@@ -357,7 +319,6 @@ class AppSettingsViewModel(
             updateState {
                 if (succeeded) {
                     it.copy(
-                        showRenameProfileDialog = false,
                         selectedProfileForMenu = null,
                         showProfileOperationFailedMessage = false,
                         showDuplicateProfileNameError = false,
@@ -395,7 +356,6 @@ class AppSettingsViewModel(
         updateState {
             it.copy(
                 showDeleteProfileDialog = false,
-                selectedProfileForMenu = null,
                 showProfileOperationFailedMessage = false,
             )
         }

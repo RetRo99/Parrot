@@ -813,4 +813,16 @@
     <string name="diagnostics_clear_confirm_title" tools:ignore="MissingTranslation">Clear all logs?</string>
     <string name="diagnostics_clear_confirm_body" tools:ignore="MissingTranslation">This deletes every saved log file on this device. It can't be undone.</string>
     <string name="diagnostics_clear_confirm_action" tools:ignore="MissingTranslation">Clear logs</string>
+    <string name="settings_profile_edit_button" tools:ignore="MissingTranslation">Edit</string>
+    <string name="settings_profile_edit_title" tools:ignore="MissingTranslation">Edit profile</string>
+    <string name="settings_profile_edit_done" tools:ignore="MissingTranslation">Done</string>
+    <string name="settings_profile_edit_name" tools:ignore="MissingTranslation">Name</string>
+    <string name="settings_profile_edit_color" tools:ignore="MissingTranslation">Color</string>
+    <string name="settings_profile_color_copper" tools:ignore="MissingTranslation">Copper</string>
+    <string name="settings_profile_color_moss" tools:ignore="MissingTranslation">Moss</string>
+    <string name="settings_profile_color_brick" tools:ignore="MissingTranslation">Brick</string>
+    <string name="settings_profile_color_slate" tools:ignore="MissingTranslation">Slate</string>
+    <string name="settings_profile_color_plum" tools:ignore="MissingTranslation">Plum</string>
+    <string name="settings_profile_delete" tools:ignore="MissingTranslation">Delete profile</string>
+    <string name="settings_profile_delete_only_profile" tools:ignore="MissingTranslation">You can't delete your only profile</string>
 </resources>

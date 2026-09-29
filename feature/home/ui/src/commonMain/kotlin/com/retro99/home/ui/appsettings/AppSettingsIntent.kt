@@ -17,9 +17,7 @@ sealed interface AppSettingsIntent : BaseIntent {
     data object OnProfileNameEdited : AppSettingsIntent
     data class OnProfileLongPressed(val profileId: String, val entryPoint: String) : AppSettingsIntent
     data class OnProfileMenuDismissed(val entryPoint: String) : AppSettingsIntent
-    data object OnRenameProfileClicked : AppSettingsIntent
-    data class OnRenameProfileConfirmed(val newName: String) : AppSettingsIntent
-    data class OnRenameProfileDismissed(val entryPoint: String) : AppSettingsIntent
+    data class OnEditProfileSaved(val name: String, val colorIndex: Int) : AppSettingsIntent
     data object OnDeleteProfileClicked : AppSettingsIntent
     data object OnDeleteProfileConfirmed : AppSettingsIntent
     data class OnDeleteProfileDismissed(val entryPoint: String) : AppSettingsIntent
