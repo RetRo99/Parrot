@@ -1,0 +1,25 @@
+# Suspected Kotzilla CoreScheduler queue drops during Reader navigation
+
+- **Observed:** 2026-09-29, 16:28–16:32 CEST, Samsung `RFCWC0SSVDM`, process PID `12761`.
+- **Build:** `com.retro99.parrot` 0.4.5 (21), APK SHA-256 `efbd8a0d742141e298c311f74b82d221f41efe75ae7c67bb26131897b77a1143`, QA-BUG-0095 source commit `198629e6670c63bcc9f03a70fe748cc20c373ce3`.
+- **Observed path:** system Back from Reader to Books at approximately 16:28:05; Continue reading reopened Reader at approximately 16:29:35. The Reader rendered at Page 26/64 (48%). Navigation/position events appeared in local logs.
+
+## Evidence
+
+Android logcat contained repeated warnings:
+
+```text
+09-29 16:29:35.353 W/Kotzilla(12761): [CoreScheduler] Event queue full, dropping event
+09-29 16:29:35.354 W/Kotzilla(12761): [CoreScheduler] Event queue full, dropping event
+09-29 16:29:35.591 W/Kotzilla(12761): [CoreScheduler] Event queue full, dropping event
+```
+
+Counted from the retained logcat buffer: 1,283 matching warnings total across PIDs `25997` (7) and `12761` (1,276), from the first retained match at 15:49:39 to the last at 16:32:37. The concentrated navigation window included 3 at 16:28:05–16:28:06, 145 at 16:29:35, and 5 at 16:29:44. The buffer-wide total is not a controlled single-action frequency measurement.
+
+Source audit found Kotzilla's Koin analytics hook in `composeApp/src/commonMain/kotlin/com/retro99/parrot/di/KoinInit.kt` (`analytics()`), with the Kotzilla Compose SDK dependency in `composeApp/build.gradle.kts` and version catalog. This does not establish that Parrot's typed Analytics events or Firebase events were dropped; the warning may be limited to Kotzilla's own SDK event queue.
+
+## Classification and limits
+
+- No user-visible failure, Reader blank state, fatal exception, or confirmed loss of Parrot/Firebase analytics was observed in this navigation sequence.
+- Classified **SUSPECTED**, low-severity instrumentation/diagnostic reliability concern. Root cause, queue consumer, downstream impact, and relationship to user-facing telemetry are unverified. No fix or suppression was attempted.
+- Further investigation should use a Firebase/Kotzilla-enabled QA build with controlled event-count comparison and SDK diagnostics. Do not infer Firebase Analytics delivery or loss from this local warning alone.

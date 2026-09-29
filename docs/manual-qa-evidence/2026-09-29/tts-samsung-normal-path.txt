@@ -1,0 +1,48 @@
+# Samsung local TTS normal-path verification
+
+- **Run window:** 2026-09-29, approximately 15:33–15:57 CEST.
+- **Device:** ADB serial `RFCWC0SSVDM`, Samsung SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), 1080×2340 at 480 dpi, navigation mode `2`, font scale `1.0`.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), target SDK 36; installed APK SHA-256 `efbd8a0d742141e298c311f74b82d221f41efe75ae7c67bb26131897b77a1143`. QA-BUG-0095 source fix commit `198629e6` (`fix(reader): bound TTS startup outcomes [QA-BUG-0095, cases 780-781]`). The installed APK was pulled-hash checked against the local artifact. App data was preserved.
+- **Fixture/state:** retained permitted local EPUB; original reader position was Page 26/64 (48%). System voice selected. Before permission interaction, `POST_NOTIFICATIONS` was denied (`granted=false`, `USER_SET`, AppOp `ignore`); that baseline was recorded for restoration.
+
+## Executed steps and observations
+
+1. Installed the debug APK with `adb install -r`; no app-data clear. Reset the active Books filter temporarily to make the retained local book reachable, then opened it at Page 26/64 (48%).
+2. Enabled TTS from the Reader controls. The UI exposed Play and Voice settings. Later disabled TTS; local output contained one `tts_enabled_changed(is_enabled=true)` and one `false` event.
+3. Opened Voice settings, observed the System voice selected and available device-voice choices, then used its Back control to return to the Reader. One local `tts_voice_settings_opened` event was present.
+4. Started TTS while notification permission was denied. Android showed its notification-permission prompt; tapped **Don't allow** (a denial, not prompt cancellation). The first operation emitted one correlated `attempted` → `cancelled(reason_code=permission_denied)` pair. A second start while still denied emitted the same bounded pair. No exception/non-fatal was expected or observed for ordinary permission denial.
+5. Temporarily granted `POST_NOTIFICATIONS` with ADB for the normal playback check. A subsequent Reader-control operation emitted a matching `attempted` → `succeeded` pair (`action=controls`, `is_retry=false`, `media_type=ebook`, duration 1,899 ms). The player displayed Pause; the EPUB position advanced while TTS highlighting was visible. A content-minimized player UI crop is [here](tts-player-controls-only.png); progress changed from [Page 26/64, 48%](tts-page-progress-before.png) to [Page 28/64, 49%](tts-page-progress-during.png). The original full-page screenshots are not linked in this evidence record.
+6. Used Reader navigation and Voice Settings/Back; one `tts_voice_settings_opened` event was observed. Two foreground resume operations also produced bounded, correlated attempt/success pairs. A separate explicit pause/resume freeze-and-restart comparison was not completed, so case 255 remains partial.
+7. Returned the Reader to Page 26/64 (48%), disabled TTS, and restored the original Books `Readaloud` filter. The final Books state is [shown here](tts-filter-restored-samsung.png). App data and the retained EPUB were not deleted or modified.
+8. Restored notification permission to the captured baseline using `pm revoke`, clearing only `user-fixed`, and setting `user-set`; final state was again `granted=false`, `USER_SET|USER_SENSITIVE_WHEN_GRANTED|USER_SENSITIVE_WHEN_DENIED`, AppOp `ignore`. No Firebase Analytics debug property was set.
+
+## Sanitized local log observations
+
+`DebugAnalyticsManager` is local-only; these lines verify app-side emission, not Firebase delivery. Correlation IDs are redacted here; start/terminal records matched on-device.
+
+```text
+15:34:24 tts_enabled_changed {is_enabled=true}
+15:36:25 tts_playback_operation {tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+15:36:45 tts_playback_operation {tts_action=controls, tts_outcome=cancelled, reason_code=permission_denied, media_type=ebook}
+15:38:27 tts_playback_operation {tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+15:38:27 tts_playback_operation {tts_action=controls, tts_outcome=cancelled, reason_code=permission_denied, media_type=ebook}
+15:39:49 tts_playback_operation {tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+15:39:51 tts_playback_operation {tts_action=controls, tts_outcome=succeeded, duration_ms=1899, media_type=ebook}
+15:49:17 tts_voice_settings_opened
+15:53:17 tts_enabled_changed {is_enabled=false}
+```
+
+The matching diagnostic start/terminal breadcrumbs used bounded Reader context and one correlation ID per operation. Logcat showed no Reader fatal exception or TTS contextual non-fatal in this normal-path run. Crashlytics delivery/symbolication was not tested. Analytics ingestion remains waived.
+
+## Result boundaries
+
+- **PASS, executed variants during the 15:33–15:57 run:** normal local TTS start/success; permission-denied terminal classification; TTS enable/disable events; Voice Settings open and Back-to-Reader navigation; Reader position, Books filter, and notification-permission baseline were restored at the run endpoint. The later 16:29 event means TTS off-state restoration is not the final device state.
+- **PARTIAL:** play/pause control case; visible active Pause state and playback progress were observed, but an explicit pause-freeze/resume comparison was not verified.
+- **NOT RUN:** dismiss/cancel the Android permission prompt using Back/outside tap (the executed interaction was **Don't allow**); synthesis/player fault injection; failure → user Retry → success; pending-request stop/disable; Samsung 30-second timeout; process-death persistence.
+- **BLOCKED:** safe local TTS engine fault/delay fixture is unavailable for cases 780–781. Firebase-enabled build/Console access and a controlled failure are unavailable for Crashlytics delivery/symbolication.
+
+## Later device-state audit
+
+- At 16:29:44 CEST, after the 15:53:17 `tts_enabled_changed(is_enabled=false)` event above, PID `12761` emitted a later `tts_enabled_changed(is_enabled=true)`. The earlier note that TTS had been turned off was accurate at 15:53 but is not the final device state; TTS is presumed enabled after that later Reader interaction.
+- ADB confirmed `POST_NOTIFICATIONS` remained `granted=false` with AppOp `ignore`. The last Parrot UI observation before another app took the foreground showed Books with the `Readaloud` filter and Continue Reading at 48%; no later Reader UI inspection was completed.
+- During the subsequent audit, Parrot was no longer foreground. I did not bring Parrot forward or dismiss the other app, to avoid interrupting the phone's current user activity. TTS-off restoration and final Reader-position/filter re-verification are therefore **BLOCKED/incomplete**. No TTS setting change was made after discovering this.
