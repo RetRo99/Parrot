@@ -30,6 +30,8 @@ data class EmberColors(
     val coverBorder: Color,
     val error: Color,
     val onError: Color,
+    /** Text and check color on a selected chip, segment or radio row. */
+    val chipSelectedText: Color,
 )
 
 /** Per-mode style values that are not colors. */
@@ -70,6 +72,7 @@ val EmberNightColors = EmberColors(
     coverBorder = Color(0xFF4A3B2C),
     error = Color(0xFFFFB4AB),
     onError = Color(0xFF690005),
+    chipSelectedText = Color(0xFFF2C39A),
 )
 
 val EmberDayColors = EmberColors(
@@ -90,6 +93,7 @@ val EmberDayColors = EmberColors(
     coverBorder = Color.Transparent,
     error = Color(0xFFBA1A1A),
     onError = Color.White,
+    chipSelectedText = Color(0xFF9A4D1A),
 )
 
 val EmberEinkColors = EmberColors(
@@ -110,6 +114,7 @@ val EmberEinkColors = EmberColors(
     coverBorder = Color.Black,
     error = Color.Black,
     onError = Color.White,
+    chipSelectedText = Color.White,
 )
 
 val EmberNightStyle = EmberStyle(

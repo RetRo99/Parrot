@@ -90,6 +90,7 @@ import com.retro99.books.ui.components.BookFilterBottomSheet
 import com.retro99.books.ui.components.BookGridCard
 import com.retro99.books.ui.components.BookItemCard
 import com.retro99.books.ui.components.BookSearchBar
+import com.retro99.books.ui.components.ShelfHeader
 import com.retro99.books.ui.model.BookListViewMode
 import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookSortOption
@@ -310,6 +311,10 @@ private fun BooksListScreenContent(
     if (showFilterSheet) {
         BookFilterBottomSheet(
             filterState = viewState.filterState,
+            availableServerTypes = viewState.books
+                .mapNotNull { book -> book.serverType }
+                .plus(listOfNotNull(viewState.filterState.serverTypeFilter))
+                .distinct(),
             onFilterToggle = { filter ->
                 intentDispatcher(BooksListIntent.OnQuickFilterToggled(filter))
             },
@@ -318,9 +323,6 @@ private fun BooksListScreenContent(
             },
             onClearAllFilters = {
                 intentDispatcher(BooksListIntent.OnClearAllFilters)
-            },
-            onClearQuickFilters = {
-                intentDispatcher(BooksListIntent.OnClearQuickFilters)
             },
             onDismiss = { showFilterSheet = false },
         )
@@ -369,6 +371,7 @@ private fun BooksListScreenContent(
             }
 
             ShelfHeader(
+                bookCount = viewState.filteredBooks.size,
                 activeFilterCount = viewState.filterState.activeFilterCount,
                 onFiltersClicked = { showFilterSheet = true },
                 sortConfig = viewState.sortConfig,
@@ -505,238 +508,6 @@ private fun LibraryHeader(
     }
 }
 
-/** "On your shelf" heading with the sort, filter and list/cover controls. */
-@Composable
-private fun ShelfHeader(
-    activeFilterCount: Int,
-    onFiltersClicked: () -> Unit,
-    sortConfig: BookSortConfig,
-    onSortChanged: (BookSortConfig) -> Unit,
-    viewMode: BookListViewMode,
-    onViewModeChanged: (BookListViewMode) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = Ember.colors
-    val style = Ember.style
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(start = 24.dp, end = 14.dp, top = 12.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(
-            text = stringResource(StringRes.books_shelf_title),
-            style = Ember.type.section,
-            color = colors.ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-
-        SortChip(
-            sortConfig = sortConfig,
-            onSortChanged = onSortChanged,
-        )
-
-        val filterLabel = stringResource(StringRes.books_action_filter)
-        BadgedBox(
-            badge = {
-                if (activeFilterCount > 0) {
-                    Badge(
-                        containerColor = colors.accent,
-                        contentColor = colors.onAccent,
-                    ) {
-                        Text(text = activeFilterCount.toString())
-                    }
-                }
-            },
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(colors.chip)
-                    .border(style.border, colors.chipBorder, CircleShape)
-                    .clickable(onClick = onFiltersClicked)
-                    .semantics { contentDescription = filterLabel },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.FilterList,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = colors.ink,
-                )
-            }
-        }
-
-        ViewModeSegments(
-            viewMode = viewMode,
-            onViewModeChanged = onViewModeChanged,
-        )
-    }
-}
-
-@Composable
-private fun SortChip(
-    sortConfig: BookSortConfig,
-    onSortChanged: (BookSortConfig) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = Ember.colors
-    val style = Ember.style
-    var expanded by remember { mutableStateOf(false) }
-    val option = sortConfig.option
-    val ascending = sortConfig.direction == SortDirection.ASCENDING
-    val directionLabel = stringResource(
-        if (ascending) option.ascendingLabel else option.descendingLabel,
-    )
-    val sortLabel = stringResource(StringRes.books_action_sort)
-
-    Box(modifier = modifier) {
-        Row(
-            modifier = Modifier
-                .height(36.dp)
-                .clip(CircleShape)
-                .background(colors.chip)
-                .border(style.border, colors.chipBorder, CircleShape)
-                .clickable { expanded = true }
-                .semantics { contentDescription = "$sortLabel: $directionLabel" }
-                .padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.SwapVert,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = colors.ink,
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = directionLabel,
-                style = Ember.type.meta,
-                color = colors.ink,
-                maxLines = 1,
-            )
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            BookSortOption.entries.forEach { sortOption ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(sortOption.labelRes)) },
-                    trailingIcon = {
-                        if (sortOption == option) {
-                            Icon(
-                                imageVector = Icons.Outlined.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    },
-                    onClick = {
-                        if (sortOption == option) {
-                            onSortChanged(sortConfig.copy(direction = sortConfig.direction.toggle()))
-                        } else {
-                            onSortChanged(sortConfig.copy(option = sortOption))
-                        }
-                        expanded = false
-                    },
-                )
-            }
-
-            HorizontalDivider()
-
-            DropdownMenuItem(
-                text = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            imageVector = if (ascending) {
-                                Icons.Filled.ArrowUpward
-                            } else {
-                                Icons.Filled.ArrowDownward
-                            },
-                            contentDescription = directionLabel,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Text(text = directionLabel)
-                    }
-                },
-                onClick = {
-                    onSortChanged(sortConfig.copy(direction = sortConfig.direction.toggle()))
-                    expanded = false
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun ViewModeSegments(
-    viewMode: BookListViewMode,
-    onViewModeChanged: (BookListViewMode) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = Ember.colors
-    val style = Ember.style
-    val viewModeGroupDescription = stringResource(StringRes.books_action_view)
-
-    Row(
-        modifier = modifier
-            .clip(CircleShape)
-            .background(colors.chip)
-            .border(style.border, colors.chipBorder, CircleShape)
-            .padding(2.dp)
-            .semantics { contentDescription = viewModeGroupDescription },
-    ) {
-        SegmentButton(
-            icon = Icons.AutoMirrored.Outlined.ViewList,
-            label = stringResource(StringRes.books_view_list),
-            selected = viewMode == BookListViewMode.LIST,
-            onClick = { onViewModeChanged(BookListViewMode.LIST) },
-        )
-        SegmentButton(
-            icon = Icons.Outlined.GridView,
-            label = stringResource(StringRes.books_view_grid),
-            selected = viewMode == BookListViewMode.GRID,
-            onClick = { onViewModeChanged(BookListViewMode.GRID) },
-        )
-    }
-}
-
-@Composable
-private fun SegmentButton(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val colors = Ember.colors
-
-    Box(
-        modifier = Modifier
-            .size(width = 38.dp, height = 30.dp)
-            .clip(CircleShape)
-            .background(if (selected) colors.accent else Color.Transparent)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            modifier = Modifier.size(16.dp),
-            tint = if (selected) colors.onAccent else colors.ink2,
-        )
-    }
-}
-
 @Composable
 private fun BooksGrid(
     viewState: BooksListViewState,
@@ -866,37 +637,3 @@ private fun ImportingDialog(
         },
     )
 }
-
-private val BookSortOption.labelRes
-    get() = when (this) {
-        BookSortOption.TITLE -> StringRes.books_sort_title
-        BookSortOption.AUTHOR -> StringRes.books_sort_author
-        BookSortOption.RATING -> StringRes.books_sort_rating
-        BookSortOption.DATE_PUBLISHED -> StringRes.books_sort_date_published
-        BookSortOption.DATE_ADDED -> StringRes.books_sort_date_added
-    }
-
-private val BookSortOption.ascendingLabel
-    get() = when (this) {
-        BookSortOption.TITLE -> StringRes.books_sort_a_to_z
-        BookSortOption.AUTHOR -> StringRes.books_sort_a_to_z
-        BookSortOption.RATING -> StringRes.books_sort_lowest
-        BookSortOption.DATE_PUBLISHED -> StringRes.books_sort_oldest
-        BookSortOption.DATE_ADDED -> StringRes.books_sort_oldest
-    }
-
-private val BookSortOption.descendingLabel
-    get() = when (this) {
-        BookSortOption.TITLE -> StringRes.books_sort_z_to_a
-        BookSortOption.AUTHOR -> StringRes.books_sort_z_to_a
-        BookSortOption.RATING -> StringRes.books_sort_highest
-        BookSortOption.DATE_PUBLISHED -> StringRes.books_sort_newest
-        BookSortOption.DATE_ADDED -> StringRes.books_sort_newest
-    }
-
-private fun SortDirection.toggle(): SortDirection =
-    if (this == SortDirection.ASCENDING) {
-        SortDirection.DESCENDING
-    } else {
-        SortDirection.ASCENDING
-    }

@@ -8,6 +8,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -108,4 +123,72 @@ fun EmberCover(
         )
         content()
     }
+}
+
+/**
+ * Selectable pill chip. A selected chip shows a check icon in addition to its fill,
+ * so selection never relies on color alone. Use [role] [Role.RadioButton] for single
+ * select groups and [Role.Checkbox] for multi select groups.
+ */
+@Composable
+fun EmberChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    role: Role = Role.Checkbox,
+) {
+    val colors = Ember.colors
+    val style = Ember.style
+    val shape = CircleShape
+    val background = if (selected) colors.navActive else Color.Transparent
+    val outline = if (selected) colors.accent else colors.chipBorder
+    val content = if (selected) colors.chipSelectedText else colors.ink
+
+    Row(
+        modifier = modifier
+            .heightIn(min = 40.dp)
+            .clip(shape)
+            .background(background)
+            .border(style.border, outline, shape)
+            .selectable(selected = selected, role = role, onClick = onClick)
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (selected) {
+            Icon(
+                imageVector = Icons.Outlined.Check,
+                contentDescription = null,
+                modifier = Modifier.size(15.dp),
+                tint = content,
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        }
+        Text(
+            text = label,
+            style = Ember.type.meta.copy(
+                fontSize = 15.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            ),
+            color = content,
+            maxLines = 1,
+        )
+    }
+}
+
+/** Small caps section label used above chip groups and menu sections. */
+@Composable
+fun EmberSectionLabel(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text.uppercase(),
+        style = Ember.type.eyebrow.copy(
+            fontSize = if (Ember.style.isEink) 13.sp else 11.sp,
+            letterSpacing = 1.5.sp,
+        ),
+        color = Ember.colors.ink2,
+        modifier = modifier,
+    )
 }
