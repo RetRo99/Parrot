@@ -10,9 +10,9 @@ import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerType
 import com.retro99.settings.ui.servers.model.ServerWithStatusUiModel
 import com.retro99.settings.ui.servers.model.toUiModel
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
@@ -38,6 +38,7 @@ class ServerManagementViewModel(
             is ServerManagementIntent.OnRemoveClick -> onRemoveClick(intent.serverId, intent.serverType)
             ServerManagementIntent.RetryFailedOperation -> retryFailedOperation()
             ServerManagementIntent.DismissOperationFailure -> dismissOperationFailure()
+            ServerManagementIntent.RetryServerListLoad -> retryServerListLoad()
             ServerManagementIntent.OnAddServerClick -> {
                 analytics.logEvent(ServerManagementAnalyticsEvent.ServerAddAttempted)
                 onNavigateToLogin(null, false)
@@ -45,29 +46,59 @@ class ServerManagementViewModel(
         }
     }
 
-    private fun observeServers() {
-        combine(
-            serverRegistry.observeAllServers(),
-            serverRegistry.observeAllAuthStates(),
-        ) { servers, authStates ->
-            servers
-                .filter { server -> server.type != ServerType.Local }
-                .map { server ->
-                    ServerWithStatusUiModel(
-                        server = server.toUiModel(),
-                        authState = authStates[server.id] ?: ServerAuthState.NotAuthenticated(server.id),
-                    )
-                }
-        }
-            .onEach { serversWithStatus ->
-                updateState {
-                    it.copy(
-                        isLoading = false,
-                        servers = serversWithStatus,
-                    )
-                }
+    private fun observeServers(isRetry: Boolean = false) {
+        val source = flow {
+            combine(
+                serverRegistry.observeAllServers(),
+                serverRegistry.observeAllAuthStates(),
+            ) { servers, authStates ->
+                servers
+                    .filter { server -> server.type != ServerType.Local }
+                    .map { server ->
+                        ServerWithStatusUiModel(
+                            server = server.toUiModel(),
+                            authState = authStates[server.id] ?: ServerAuthState.NotAuthenticated(server.id),
+                        )
+                    }
             }
-            .launchIn(viewModelScope)
+                .collect { emit(it) }
+        }
+        updateState {
+            it.copy(
+                isLoading = true,
+                serverListLoadFailed = false,
+            )
+        }
+        viewModelScope.launch {
+            observeServerList(
+                analytics = analytics,
+                isRetry = isRetry,
+                source = source,
+                onValue = { serversWithStatus ->
+                    updateState {
+                        it.copy(
+                            isLoading = false,
+                            serverListLoadFailed = false,
+                            servers = serversWithStatus,
+                        )
+                    }
+                },
+                onFailure = {
+                    updateState {
+                        it.copy(
+                            isLoading = false,
+                            serverListLoadFailed = true,
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    private fun retryServerListLoad() {
+        val state = currentViewState()
+        if (!state.serverListLoadFailed || state.isLoading) return
+        observeServers(isRetry = true)
     }
 
     private fun onLoginClick(serverId: String, serverType: ServerType, isRetry: Boolean) {

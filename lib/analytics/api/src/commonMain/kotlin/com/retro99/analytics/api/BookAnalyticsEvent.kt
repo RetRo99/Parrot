@@ -894,6 +894,61 @@ sealed interface ServerManagementAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    data class ServerListLoadAttempted(
+        val isRetry: Boolean,
+    ) : ServerManagementAnalyticsEvent {
+        override val name: String = "server_list_load_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "server_management",
+            "action" to "load_server_list",
+            "operation" to "server_list_load",
+            "stage" to if (isRetry) "retry" else "started",
+            "outcome" to "started",
+            "is_retry" to isRetry,
+        )
+    }
+
+    enum class ServerListLoadOutcome(val value: String) {
+        Succeeded("succeeded"),
+        Failed("failed"),
+        Cancelled("cancelled"),
+    }
+
+    data class ServerListLoadCompleted(
+        val outcome: ServerListLoadOutcome,
+        val isRetry: Boolean,
+    ) : ServerManagementAnalyticsEvent {
+        override val name: String = "server_list_load_completed"
+        override val parameters: Map<String, Any> = buildMap {
+            put("screen", "server_management")
+            put("action", "load_server_list")
+            put("operation", "server_list_load")
+            put("stage", "terminal")
+            put("outcome", outcome.value)
+            put("is_retry", isRetry)
+            when (outcome) {
+                ServerListLoadOutcome.Failed -> put("reason_code", "server_list_load_failed")
+                ServerListLoadOutcome.Cancelled -> put("reason_code", "server_list_load_cancelled")
+                ServerListLoadOutcome.Succeeded -> Unit
+            }
+        }
+    }
+
+    data class ServerListObservationFailed(
+        val isRetry: Boolean,
+    ) : ServerManagementAnalyticsEvent {
+        override val name: String = "server_list_observation_failed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "server_management",
+            "action" to "observe_server_list",
+            "operation" to "server_list_observation",
+            "stage" to "terminal",
+            "outcome" to "failed",
+            "reason_code" to "server_list_observation_failed",
+            "is_retry" to isRetry,
+        )
+    }
+
     data class ServerAdded(
         val serverType: String,
     ) : ServerManagementAnalyticsEvent {

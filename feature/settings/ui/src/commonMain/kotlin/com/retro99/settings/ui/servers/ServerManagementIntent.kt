@@ -13,5 +13,6 @@ sealed interface ServerManagementIntent : BaseIntent {
     data class OnRemoveClick(val serverId: String, val serverType: ServerType) : ServerManagementIntent
     data object RetryFailedOperation : ServerManagementIntent
     data object DismissOperationFailure : ServerManagementIntent
+    data object RetryServerListLoad : ServerManagementIntent
     data object OnAddServerClick : ServerManagementIntent
 }

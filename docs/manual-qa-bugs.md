@@ -753,9 +753,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 ## QA-BUG-0044 — Server list observation failure has no terminal error or recovery state
 
 - **Severity / user impact:** Medium; if the combined registry/auth-state flow fails, the Server Management screen can remain on a spinner indefinitely or lose its observation coroutine with no retry guidance.
-- **Status:** CONFIRMED instrumentation/state-handling gap by source; runtime flow failure not induced.
-- **Screen/test IDs:** Cases 440, 451, 484, 729, 742, 748.
-- **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- **Status:** FIXED IN SOURCE; injected host failure/retry/cancellation coverage PASS. Samsung route validation is pending the committed candidate; safe device failure injection is BLOCKED.
+- **Screen/test IDs:** Cases 440, 451, 484, 729, 742, 748, 777.
+- **Pre-fix device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), source `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
 - **Preconditions:** Either upstream registry/auth-state flow throws before a successful emission.
 - **Exact reproduction:** Source audit: `observeServers()` combines both flows and uses `onEach { isLoading=false }` then `launchIn(viewModelScope)` with no `catch`; initial view state is `isLoading=true`, and has no error/retry field. `ServerManagementScreen` therefore has only spinner, empty, and card branches.
 - **Expected:** End loading on an upstream failure, distinguish failure from an empty list, show a usable retry/recovery action, log one bounded failure outcome/breadcrumb and report only unexpected user-impacting failures once.
@@ -763,9 +763,9 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Frequency:** Conditional on an upstream flow failure.
 - **Evidence:** [Source-audit/action map](manual-qa-evidence/2026-09-27/server-management-source-audit-prefx.txt); `ServerManagementViewModel.kt` lines 43–65; `ServerManagementViewState.kt` fields 5–8; `ServerManagementScreen.kt` lines 117–160.
 - **Root cause:** Observation pipeline handles only successful emissions and conflates the initial loading state with no terminal failure state.
-- **Affected files:** `ServerManagementViewModel.kt`, `ServerManagementViewState.kt`, `ServerManagementScreen.kt`, translations and failure-path tests.
-- **Fix reference / commit:** Pending. Add explicit load-failure/retry state, safe exception classification, bounded diagnostics and a recovery test without treating ordinary cancellation as a fault.
-- **Retest:** Host injected-flow failure/retry test NOT RUN. A Samsung upstream-failure fixture may be unavailable; if so, mark device variant BLOCKED and retain the unit result separately.
+- **Affected files:** `feature/settings/ui/src/commonMain/kotlin/com/retro99/settings/ui/servers/{ServerManagementViewModel.kt,ServerManagementViewState.kt,ServerManagementIntent.kt,ServerManagementScreen.kt,ServerListObservation.kt}`; server-list Analytics API and sanitizer tests; translations; `ServerListObservationTest.kt`.
+- **Fix reference / commit:** Focused fix commit pending. Adds terminal load success/failure/cancellation outcomes, source-observation failure context, a recoverable Retry UI, preserves previously loaded cards if a later observation fails, and reports one non-fatal at the UI boundary. Cancellation is rethrown without a non-fatal.
+- **Retest:** Host PASS: Server Management UI suite 13/13, Analytics sanitizer suite 50/50; Android debug assembly and iOS Simulator source compilation pass. Injected tests cover initial source failure and no-value completion, retry success, post-load stream failure, correlated breadcrumbs, single exception reporting, and cancellation-without-report. [Host evidence](manual-qa-evidence/2026-09-29/qa-bug-0044-server-list-recovery-host-tests.txt). Samsung normal route/load revalidation remains NOT RUN pending the committed candidate build. Safe Samsung failure injection is BLOCKED; do not claim device recovery or Crashlytics delivery. Firebase Analytics ingestion is waived.
 - **Discovery commit:** Pending documentation commit; preserve source-level finding.
 
 ## QA-BUG-0045 — Successful Add Server has no server-added completion event

@@ -13,6 +13,7 @@ data class ServerManagementOperationFailure(
 data class ServerManagementViewState(
     val isLoading: Boolean = true,
     val servers: List<ServerWithStatusUiModel> = emptyList(),
+    val serverListLoadFailed: Boolean = false,
     val isOperationInProgress: Boolean = false,
     val operationFailure: ServerManagementOperationFailure? = null,
 )

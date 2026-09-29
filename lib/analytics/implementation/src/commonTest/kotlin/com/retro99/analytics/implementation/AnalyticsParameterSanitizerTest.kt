@@ -923,6 +923,39 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun serverListLoadAndObservationEventsUseBoundedAttemptRetryAndFailureContext() {
+        val events = listOf(
+            ServerManagementAnalyticsEvent.ServerListLoadAttempted(isRetry = true),
+            ServerManagementAnalyticsEvent.ServerListLoadCompleted(
+                outcome = ServerManagementAnalyticsEvent.ServerListLoadOutcome.Failed,
+                isRetry = true,
+            ),
+            ServerManagementAnalyticsEvent.ServerListObservationFailed(isRetry = false),
+        )
+        val sanitized = events.map { event ->
+            sanitizeAnalyticsParameters(
+                event.parameters + mapOf(
+                    "server_id" to "private-id",
+                    "server_url" to "https://private.example/path",
+                    "error_message" to "private response text",
+                ),
+            )
+        }
+
+        assertEquals(
+            listOf("server_list_load_attempted", "server_list_load_completed", "server_list_observation_failed"),
+            events.map { it.name },
+        )
+        assertEquals("started", sanitized[0]["outcome"])
+        assertEquals(true, sanitized[0]["is_retry"])
+        assertEquals("failed", sanitized[1]["outcome"])
+        assertEquals("server_list_load_failed", sanitized[1]["reason_code"])
+        assertEquals("server_list_observation_failed", sanitized[2]["reason_code"])
+        assertTrue(sanitized.all { it["screen"] == "server_management" })
+        assertFalse(sanitized.any { "server_id" in it || "server_url" in it || "error_message" in it })
+    }
+
+    @Test
     fun existingServerLoginAttemptContainsBoundedNavigationRetryAndServerType() {
         val event = ServerManagementAnalyticsEvent.ServerLoginAttempted("storyteller")
         val sanitized = sanitizeAnalyticsParameters(event.parameters)

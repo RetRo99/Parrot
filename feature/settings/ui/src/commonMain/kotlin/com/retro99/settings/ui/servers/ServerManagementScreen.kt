@@ -56,6 +56,7 @@ import resources.translations.settings_server_management_add
 import resources.translations.settings_server_management_empty
 import resources.translations.settings_server_management_empty_hint
 import resources.translations.settings_server_management_title
+import resources.translations.settings_server_list_load_failed
 import resources.translations.settings_server_login_action
 import resources.translations.settings_server_operation_failed
 import resources.translations.settings_server_operation_retry
@@ -162,65 +163,90 @@ private fun ServerManagementScreenContent(
                 ) {
                     CircularProgressIndicator()
                 }
-            } else if (viewState.servers.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = stringResource(StringRes.settings_server_management_empty),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(StringRes.settings_server_management_empty_hint),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        )
-                    }
-                }
             } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(viewState.servers, key = { it.server.id }) { serverWithStatus ->
-                        val loginFailed =
-                            serverWithStatus.server.id in failedLoginServerIds &&
-                                serverWithStatus.authState is ServerAuthState.NotAuthenticated
-                        ServerListItem(
-                            serverWithStatus = serverWithStatus,
-                            loginFailed = loginFailed,
-                            onLoginClick = {
-                                intentDispatcher(
-                                    ServerManagementIntent.OnLoginClick(
-                                        serverId = serverWithStatus.server.id,
-                                        serverType = serverWithStatus.server.type,
-                                        isRetry = loginFailed ||
-                                            serverWithStatus.authState is ServerAuthState.TokenExpired ||
-                                            serverWithStatus.authState is ServerAuthState.AuthenticationFailed,
-                                    ),
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (viewState.serverListLoadFailed) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = stringResource(StringRes.settings_server_list_load_failed),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            TextButton(
+                                onClick = { intentDispatcher(ServerManagementIntent.RetryServerListLoad) },
+                            ) {
+                                Text(stringResource(StringRes.settings_server_operation_retry))
+                            }
+                        }
+                    }
+
+                    if (viewState.servers.isEmpty() && !viewState.serverListLoadFailed) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = stringResource(StringRes.settings_server_management_empty),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                            },
-                            onLogoutClick = {
-                                intentDispatcher(
-                                    ServerManagementIntent.OnLogoutClick(
-                                        serverId = serverWithStatus.server.id,
-                                        serverType = serverWithStatus.server.type,
-                                    ),
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = stringResource(StringRes.settings_server_management_empty_hint),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 )
-                            },
-                            onRemoveClick = {
-                                intentDispatcher(
-                                    ServerManagementIntent.OnRemoveClick(
-                                        serverId = serverWithStatus.server.id,
-                                        serverType = serverWithStatus.server.type,
-                                    ),
+                            }
+                        }
+                    } else if (viewState.servers.isNotEmpty()) {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            items(viewState.servers, key = { it.server.id }) { serverWithStatus ->
+                                val loginFailed =
+                                    serverWithStatus.server.id in failedLoginServerIds &&
+                                        serverWithStatus.authState is ServerAuthState.NotAuthenticated
+                                ServerListItem(
+                                    serverWithStatus = serverWithStatus,
+                                    loginFailed = loginFailed,
+                                    onLoginClick = {
+                                        intentDispatcher(
+                                            ServerManagementIntent.OnLoginClick(
+                                                serverId = serverWithStatus.server.id,
+                                                serverType = serverWithStatus.server.type,
+                                                isRetry = loginFailed ||
+                                                    serverWithStatus.authState is ServerAuthState.TokenExpired ||
+                                                    serverWithStatus.authState is ServerAuthState.AuthenticationFailed,
+                                            ),
+                                        )
+                                    },
+                                    onLogoutClick = {
+                                        intentDispatcher(
+                                            ServerManagementIntent.OnLogoutClick(
+                                                serverId = serverWithStatus.server.id,
+                                                serverType = serverWithStatus.server.type,
+                                            ),
+                                        )
+                                    },
+                                    onRemoveClick = {
+                                        intentDispatcher(
+                                            ServerManagementIntent.OnRemoveClick(
+                                                serverId = serverWithStatus.server.id,
+                                                serverType = serverWithStatus.server.type,
+                                            ),
+                                        )
+                                    },
+                                    actionsEnabled = !viewState.isOperationInProgress,
                                 )
-                            },
-                            actionsEnabled = !viewState.isOperationInProgress,
-                        )
+                            }
+                        }
                     }
                 }
             }

@@ -1,0 +1,20 @@
+# QA-BUG-0044 — Server Management list-load recovery host verification
+
+- **Run time:** 2026-09-29, approximately 03:15–03:31 CEST.
+- **Source base:** `4048cc968f7613a647c5c72ad8ae2ab063b9e13c` plus the focused QA-BUG-0044 working-tree changes; source fix commit is recorded after commit.
+- **Checks:** `:feature:settings:ui:testAndroidHostTest` (13 tests, 0 failures/errors/skips); `:lib:analytics:implementation:testAndroidHostTest` (50 tests, 0 failures/errors/skips); `:androidApp:assembleDebug` PASS; `:feature:settings:ui:compileKotlinIosSimulatorArm64` and `:lib:analytics:api:compileKotlinIosSimulatorArm64` PASS.
+
+## Injected host-flow variants
+
+1. A source that emits values updates the list and emits one load-attempt and one successful terminal outcome on its first value, not on subsequent updates.
+2. An exception or normal completion before the first value ends loading through the failure callback, emits a bounded failed completion and correlated breadcrumbs, and reports one non-fatal at the screen boundary.
+3. Retrying after that failure emits a new attempt with `is_retry=true`; a first usable value clears the failure state and records one success.
+4. An exception after a usable value preserves the loaded value, emits one observation-failure event/breadcrumb and reports one non-fatal.
+5. Cancellation before the first value records a cancelled terminal outcome, rethrows cancellation, does not call the failure UI callback, and does not report an exception.
+6. Sanitizer tests cover bounded attempt/retry/failure fields and omit server IDs, URLs and free-form error text.
+
+## Scope limits
+
+- These are injected host flows, not a Samsung failure-injection run. The Samsung remains on its retained server/profile fixture; safe registry/auth-flow failure injection is unavailable and is **BLOCKED**.
+- Firebase Analytics ingestion and Crashlytics backend delivery are not proven by host tests or DebugAnalyticsManager logs.
+- Samsung normal Server Management route/load validation is pending the committed candidate build; no server credentials or configuration were changed.
