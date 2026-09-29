@@ -55,6 +55,8 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
         val bookUuid: String,
         val bookType: BookType,
         val isLastBookOnLaunch: Boolean = false,
+        val readerOpenEntryPoint: String? = null,
+        val readerOpenCorrelationId: String? = null,
     ) : HomeDestination {
         @Transient
         override val showBottomBar: Boolean = false

@@ -11,6 +11,13 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onSuccess
 import com.retro99.base.nowMillis
 import com.retro99.base.ui.BaseViewModel
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ContinueReadingOpenOperation
+import com.retro99.analytics.api.NavigationAnalyticsEvent.ContinueReadingOpenOutcome
+import com.retro99.analytics.api.NavigationAnalyticsEvent.ContinueReadingOpenReasonCode
+import com.retro99.analytics.api.completeContinueReadingOpen
+import com.retro99.analytics.api.continueReadingOpenOperation as createContinueReadingOpenOperation
+import com.retro99.analytics.api.diagnosticContext
 import com.retro99.books.domain.model.BookType
 import com.retro99.books.domain.usecase.GetBookByUuidUseCase
 import com.retro99.reader.domain.ReaderSettingsRepository
@@ -28,6 +35,7 @@ import com.retro99.sync.domain.SyncTriggerReason
 import com.retro99.sync.domain.SyncUrgency
 import com.retro99.sync.domain.usecase.SyncNowUseCase
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -42,6 +50,8 @@ import java.io.File
 class AudiobookPlayerViewModel(
     @InjectedParam private val serverId: String,
     @InjectedParam private val bookUuid: String,
+    @InjectedParam private val readerOpenEntryPoint: String?,
+    @InjectedParam private val readerOpenCorrelationId: String?,
     @InjectedParam private val onClose: () -> Unit,
     @Provided private val mediaPlaybackController: MediaPlaybackController,
     @Provided private val foregroundServiceController: ForegroundServiceController,
@@ -51,6 +61,7 @@ class AudiobookPlayerViewModel(
     @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val getReadingProgressWithConflictUseCase: GetReadingProgressWithConflictUseCase,
     @Provided private val getBookByUuidUseCase: GetBookByUuidUseCase,
+    @Provided private val analytics: Analytics,
 ) : BaseViewModel<AudiobookPlayerViewState, AudiobookPlayerIntent>(
     AudiobookPlayerViewState(bookUuid = bookUuid)
 ) {
@@ -60,6 +71,12 @@ class AudiobookPlayerViewModel(
     private var positionUpdateJob: Job? = null
     private var hasRestoredPosition = false
     private var pendingAudioFiles: List<File> = emptyList()
+    private var continueReadingOpenOperation: ContinueReadingOpenOperation? = createContinueReadingOpenOperation(
+        entryPoint = readerOpenEntryPoint,
+        mediaType = BookType.AUDIOBOOK.value,
+        correlationId = readerOpenCorrelationId,
+    )
+    private var continueReadingOpenResolved = false
     private val routineSyncScheduler = RoutineSyncScheduler(
         scope = viewModelScope,
         nowMillis = ::nowMillis,
@@ -81,21 +98,67 @@ class AudiobookPlayerViewModel(
 
     private fun loadBookInfoAndAudioFiles() {
         viewModelScope.launch {
-            val bookResult = getBookByUuidUseCase(serverId, bookUuid).first()
-            val book = bookResult.getOrElse { null }
-            updateState {
-                it.copy(
-                    bookTitle = book?.title ?: "",
-                    bookCoverUrl = book?.coverUrl,
+            try {
+                val bookResult = getBookByUuidUseCase(serverId, bookUuid).first()
+                val book = bookResult.getOrElse { null }
+                updateState {
+                    it.copy(
+                        bookTitle = book?.title ?: "",
+                        bookCoverUrl = book?.coverUrl,
+                    )
+                }
+
+                loadAudioFiles()
+
+                if (viewState.value.trackCount > 0 && viewState.value.error == null) {
+                    completeContinueReadingOpen(ContinueReadingOpenOutcome.Succeeded)
+                } else {
+                    completeContinueReadingOpen(
+                        outcome = ContinueReadingOpenOutcome.Failed,
+                        reasonCode = ContinueReadingOpenReasonCode.AudioContentUnavailable,
+                    )
+                }
+
+                if (mediaPlaybackController.isBookLoaded(bookUuid)) {
+                    reconnectToExistingPlayback()
+                }
+            } catch (cancellation: CancellationException) {
+                completeContinueReadingOpen(
+                    outcome = ContinueReadingOpenOutcome.Cancelled,
+                    reasonCode = ContinueReadingOpenReasonCode.ReaderOpenCancelled,
                 )
-            }
-
-            loadAudioFiles()
-
-            if (mediaPlaybackController.isBookLoaded(bookUuid)) {
-                reconnectToExistingPlayback()
+                throw cancellation
+            } catch (error: Exception) {
+                val operation = continueReadingOpenOperation
+                if (operation == null) throw error
+                completeContinueReadingOpen(
+                    outcome = ContinueReadingOpenOutcome.Failed,
+                    reasonCode = ContinueReadingOpenReasonCode.AudioContentUnavailable,
+                )
+                if (operation != null) {
+                    analytics.logException(
+                        error,
+                        operation.diagnosticContext(
+                            screen = "reader",
+                            stage = "initialization",
+                            outcome = "failed",
+                            reasonCode = ContinueReadingOpenReasonCode.AudioContentUnavailable.value,
+                        ),
+                    )
+                }
+                updateState { it.copy(error = "Unable to open audiobook", isLoading = false) }
             }
         }
+    }
+
+    private fun completeContinueReadingOpen(
+        outcome: ContinueReadingOpenOutcome,
+        reasonCode: ContinueReadingOpenReasonCode? = null,
+    ) {
+        val operation = continueReadingOpenOperation ?: return
+        if (continueReadingOpenResolved) return
+        analytics.completeContinueReadingOpen(operation, outcome, reasonCode)
+        continueReadingOpenResolved = true
     }
 
     private fun reconnectToExistingPlayback() {
@@ -497,6 +560,10 @@ class AudiobookPlayerViewModel(
     }
 
     fun close() {
+        completeContinueReadingOpen(
+            outcome = ContinueReadingOpenOutcome.Cancelled,
+            reasonCode = ContinueReadingOpenReasonCode.ClosedBeforeContent,
+        )
         val p = player
         val isPlaybackActive = p != null && p.isPlaying
         val finalProgress = p?.let(::buildProgress)

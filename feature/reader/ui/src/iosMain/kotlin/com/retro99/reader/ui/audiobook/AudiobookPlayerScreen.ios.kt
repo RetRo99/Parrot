@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 actual fun AudiobookPlayerScreen(
     serverId: String,
     bookUuid: String,
+    readerOpenEntryPoint: String?,
+    readerOpenCorrelationId: String?,
     onClose: () -> Unit,
 ) {
 }

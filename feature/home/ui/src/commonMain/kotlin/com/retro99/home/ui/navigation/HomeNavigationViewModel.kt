@@ -4,11 +4,18 @@ import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
+import com.retro99.analytics.api.ContinueReadingEntryPoint
+import com.retro99.analytics.api.ContinueReadingMediaType
+import com.retro99.analytics.api.ContinueReadingOpenOperation
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
+import com.retro99.analytics.api.NavigationAnalyticsEvent.ContinueReadingOpenOutcome
+import com.retro99.analytics.api.NavigationAnalyticsEvent.ContinueReadingOpenReasonCode
 import com.retro99.analytics.api.ReaderSettingsScreenViewed
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 import com.retro99.analytics.api.StatisticsAnalyticsEvent
+import com.retro99.analytics.api.beginContinueReadingOpen
+import com.retro99.analytics.api.completeContinueReadingOpen
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.home.ui.deeplink.DeepLinkDestination
@@ -729,6 +736,7 @@ class HomeNavigationViewModel(
      * Checks if there's a playback conflict and shows dialog if needed.
      */
     private fun handleRequestOpenReader(intent: HomeNavigationIntent.RequestOpenReader) {
+        val continueReadingOpenOperation = beginContinueReadingOpen(intent.continueReadingEntryPoint, intent.bookType)
         val currentlyPlaying = nowPlayingProvider.nowPlayingInfo.value
 
         // Check if there's a different book currently playing
@@ -742,12 +750,18 @@ class HomeNavigationViewModel(
                         targetServerId = intent.serverId,
                         targetBookUuid = intent.bookUuid,
                         targetBookType = intent.bookType,
+                        continueReadingOpenOperation = continueReadingOpenOperation,
                     )
                 )
             }
         } else {
             // No conflict, navigate directly
-            navigateToReader(intent.serverId, intent.bookUuid, intent.bookType)
+            navigateToReader(
+                intent.serverId,
+                intent.bookUuid,
+                intent.bookType,
+                continueReadingOpenOperation = continueReadingOpenOperation,
+            )
         }
     }
 
@@ -760,29 +774,50 @@ class HomeNavigationViewModel(
         // Stop current playback
         nowPlayingProvider.stop()
 
-        // Dismiss dialog and navigate
-        dismissPlaybackConflictDialog()
+        // Confirm the source-attributed attempt instead of recording conflict cancellation.
+        updateState { it.copy(playbackConflictDialog = null) }
         navigateToReader(
             dialogState.targetServerId,
             dialogState.targetBookUuid,
             dialogState.targetBookType,
+            continueReadingOpenOperation = dialogState.continueReadingOpenOperation,
         )
     }
 
     private fun dismissPlaybackConflictDialog() {
+        viewState.value.playbackConflictDialog?.continueReadingOpenOperation?.let { operation ->
+            analytics.completeContinueReadingOpen(
+                operation = operation,
+                outcome = ContinueReadingOpenOutcome.Cancelled,
+                reasonCode = ContinueReadingOpenReasonCode.PlaybackConflictDismissed,
+            )
+        }
         updateState { it.copy(playbackConflictDialog = null) }
     }
 
-    private fun navigateToReader(serverId: String, bookUuid: String, bookType: BookType) {
+    private fun navigateToReader(
+        serverId: String,
+        bookUuid: String,
+        bookType: BookType,
+        continueReadingOpenOperation: ContinueReadingOpenOperation? = null,
+    ) {
         emitNavigationEvent(
             HomeNavigationEvent.NavigateTo(
                 HomeDestination.Reader(
                     serverId = serverId,
                     bookUuid = bookUuid,
                     bookType = bookType,
+                    readerOpenEntryPoint = continueReadingOpenOperation?.entryPoint?.value,
+                    readerOpenCorrelationId = continueReadingOpenOperation?.correlationId,
                 )
             )
         )
+    }
+
+    private fun beginContinueReadingOpen(entryPointValue: String?, bookType: BookType): ContinueReadingOpenOperation? {
+        val entryPoint = ContinueReadingEntryPoint.values().firstOrNull { it.value == entryPointValue } ?: return null
+        val mediaType = ContinueReadingMediaType.values().firstOrNull { it.value == bookType.value } ?: return null
+        return analytics.beginContinueReadingOpen(entryPoint, mediaType)
     }
 
     private fun emitNavigationEvent(event: HomeNavigationEvent) {

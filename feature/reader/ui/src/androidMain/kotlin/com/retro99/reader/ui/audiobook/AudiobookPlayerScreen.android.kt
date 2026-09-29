@@ -13,10 +13,12 @@ import org.koin.core.parameter.parametersOf
 actual fun AudiobookPlayerScreen(
     serverId: String,
     bookUuid: String,
+    readerOpenEntryPoint: String?,
+    readerOpenCorrelationId: String?,
     onClose: () -> Unit,
 ) {
     val viewModel: AudiobookPlayerViewModel = koinViewModel {
-        parametersOf(serverId, bookUuid, onClose)
+        parametersOf(serverId, bookUuid, readerOpenEntryPoint, readerOpenCorrelationId, onClose)
     }
     val state by viewModel.viewState.collectAsState()
 

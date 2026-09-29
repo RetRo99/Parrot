@@ -6,5 +6,7 @@ import androidx.compose.runtime.Composable
 expect fun AudiobookPlayerScreen(
     serverId: String,
     bookUuid: String,
+    readerOpenEntryPoint: String? = null,
+    readerOpenCorrelationId: String? = null,
     onClose: () -> Unit,
 )

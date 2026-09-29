@@ -38,6 +38,7 @@ sealed interface HomeNavigationIntent : BaseIntent {
         val bookUuid: String,
         val bookType: BookType,
         val bookTitle: String? = null,
+        val continueReadingEntryPoint: String? = null,
     ) : HomeNavigationIntent
 
     /**

@@ -1,5 +1,6 @@
 package com.retro99.home.ui.navigation
 
+import com.retro99.analytics.api.ContinueReadingOpenOperation
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.ui.playback.NowPlayingInfo
 
@@ -40,6 +41,7 @@ data class PlaybackConflictDialogState(
     val targetBookUuid: String,
     /** Type of the target book */
     val targetBookType: BookType,
+    val continueReadingOpenOperation: ContinueReadingOpenOperation? = null,
 )
 
 /**

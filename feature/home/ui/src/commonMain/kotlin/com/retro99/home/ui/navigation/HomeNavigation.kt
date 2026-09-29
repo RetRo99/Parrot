@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.navigation3.runtime.entryProvider
+import com.retro99.analytics.api.ContinueReadingEntryPoint
 import com.retro99.books.ui.detail.BookDetailScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
@@ -310,6 +311,7 @@ fun HomeNavigation(
                                                         bookUuid = book.bookUuid,
                                                         bookType = book.bookType,
                                                         bookTitle = book.bookTitle,
+                                                        continueReadingEntryPoint = ContinueReadingEntryPoint.Shelf.value,
                                                     )
                                                 )
                                             },
@@ -389,6 +391,8 @@ fun HomeNavigation(
                             AudiobookPlayerScreen(
                                 serverId = destination.serverId,
                                 bookUuid = destination.bookUuid,
+                                readerOpenEntryPoint = destination.readerOpenEntryPoint,
+                                readerOpenCorrelationId = destination.readerOpenCorrelationId,
                                 onClose = { requestBack("close_button") },
                             )
                         } else {
@@ -397,6 +401,8 @@ fun HomeNavigation(
                                 bookUuid = destination.bookUuid,
                                 bookType = destination.bookType,
                                 isLastBookOnLaunch = destination.isLastBookOnLaunch,
+                                readerOpenEntryPoint = destination.readerOpenEntryPoint,
+                                readerOpenCorrelationId = destination.readerOpenCorrelationId,
                                 onClose = { closeSource -> requestBack(closeSource.entryPoint) },
                                 onSettingsClick = {
                                     intentDispatcher(
@@ -496,6 +502,7 @@ fun HomeNavigation(
                                 bookUuid = currentlyReading.bookUuid,
                                 bookType = currentlyReading.bookType,
                                 bookTitle = currentlyReading.bookTitle,
+                                continueReadingEntryPoint = ContinueReadingEntryPoint.FloatingBubble.value,
                             )
                         )
                     },

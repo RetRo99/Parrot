@@ -665,6 +665,63 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
         }
     }
 
+    data class ContinueReadingOpenAttempted(
+        val entryPoint: ContinueReadingEntryPoint,
+        val mediaType: String,
+        val isRetry: Boolean,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "continue_reading_open_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "home",
+            "source_screen" to "home",
+            "entry_point" to entryPoint.value,
+            "action" to "open_continue_reading",
+            "operation" to "continue_reading_open",
+            "stage" to if (isRetry) "retry" else "started",
+            "outcome" to "started",
+            "media_type" to mediaType,
+            "is_retry" to isRetry,
+        )
+    }
+
+    enum class ContinueReadingOpenOutcome(val value: String) {
+        Succeeded("succeeded"),
+        Failed("failed"),
+        Cancelled("cancelled"),
+    }
+
+    enum class ContinueReadingOpenReasonCode(val value: String) {
+        ServerNotAuthenticated("server_not_authenticated"),
+        NetworkUnavailable("network_unavailable"),
+        RequestTimeout("request_timeout"),
+        ReaderInitializationFailed("reader_initialization_failed"),
+        PublicationOpenFailed("publication_open_failed"),
+        AudioContentUnavailable("audio_content_unavailable"),
+        PlaybackConflictDismissed("playback_conflict_dismissed"),
+        ClosedBeforeContent("closed_before_content"),
+        ReaderOpenCancelled("reader_open_cancelled"),
+    }
+
+    data class ContinueReadingOpenCompleted(
+        val entryPoint: ContinueReadingEntryPoint,
+        val mediaType: String,
+        val outcome: ContinueReadingOpenOutcome,
+        val reasonCode: ContinueReadingOpenReasonCode? = null,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "continue_reading_open_completed"
+        override val parameters: Map<String, Any> = buildMap {
+            put("screen", if (outcome == ContinueReadingOpenOutcome.Cancelled) "home" else "reader")
+            put("source_screen", "home")
+            put("entry_point", entryPoint.value)
+            put("action", "open_continue_reading")
+            put("operation", "continue_reading_open")
+            put("stage", "terminal")
+            put("outcome", outcome.value)
+            put("media_type", mediaType)
+            reasonCode?.let { put("reason_code", it.value) }
+        }
+    }
+
     /**
      * Tracks when user opens search - helps understand search feature usage.
      */

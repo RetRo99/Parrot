@@ -176,6 +176,48 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun continueReadingOpenEventsRetainBoundedSourceAndMediaOnly() {
+        val attempted = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.ContinueReadingOpenAttempted(
+                entryPoint = com.retro99.analytics.api.ContinueReadingEntryPoint.FloatingBubble,
+                mediaType = "readaloud",
+                isRetry = false,
+            ).parameters + mapOf(
+                "book_uuid" to "private-book-id",
+                "book_title" to "private title",
+                "profile_id" to "private-profile-id",
+            ),
+        )
+        val completed = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.ContinueReadingOpenCompleted(
+                entryPoint = com.retro99.analytics.api.ContinueReadingEntryPoint.Shelf,
+                mediaType = "audiobook",
+                outcome = NavigationAnalyticsEvent.ContinueReadingOpenOutcome.Failed,
+                reasonCode = NavigationAnalyticsEvent.ContinueReadingOpenReasonCode.ServerNotAuthenticated,
+            ).parameters,
+        )
+        val unsafeMedia = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.ContinueReadingOpenAttempted(
+                entryPoint = com.retro99.analytics.api.ContinueReadingEntryPoint.Shelf,
+                mediaType = "private_type",
+                isRetry = false,
+            ).parameters,
+        )
+
+        assertEquals("floating_bubble", attempted["entry_point"])
+        assertEquals("readaloud", attempted["media_type"])
+        assertEquals("started", attempted["outcome"])
+        assertFalse("book_uuid" in attempted)
+        assertFalse("book_title" in attempted)
+        assertFalse("profile_id" in attempted)
+        assertEquals("continue_reading_shelf", completed["entry_point"])
+        assertEquals("audiobook", completed["media_type"])
+        assertEquals("failed", completed["outcome"])
+        assertEquals("server_not_authenticated", completed["reason_code"])
+        assertFalse("media_type" in unsafeMedia)
+    }
+
+    @Test
     fun homeExposureRetainsOnlyBoundedSourceAndEntryPoint() {
         val sanitized = sanitizeAnalyticsParameters(
             NavigationAnalyticsEvent.HomeViewed(

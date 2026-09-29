@@ -4,9 +4,16 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ContinueReadingOpenOperation
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
+import com.retro99.analytics.api.NavigationAnalyticsEvent.ContinueReadingOpenOutcome
+import com.retro99.analytics.api.NavigationAnalyticsEvent.ContinueReadingOpenReasonCode
 import com.retro99.analytics.api.ReaderAnalyticsEvent
+import com.retro99.analytics.api.beginContinueReadingOpen
+import com.retro99.analytics.api.completeContinueReadingOpen
+import com.retro99.analytics.api.continueReadingOpenOperation as createContinueReadingOpenOperation
+import com.retro99.analytics.api.diagnosticContext
 import com.retro99.base.formatCurrentTime
 import com.retro99.base.now
 import com.retro99.base.nowMillis
@@ -92,6 +99,8 @@ class ReaderViewModel(
     @InjectedParam private val isLastBookOnLaunch: Boolean,
     @InjectedParam private val onClose: (ReaderCloseSource) -> Unit,
     @InjectedParam private val onSettingsClick: () -> Unit,
+    @InjectedParam private val readerOpenEntryPoint: String?,
+    @InjectedParam private val readerOpenCorrelationId: String?,
     @Provided private val initializeReaderUseCase: InitializeReaderUseCase,
     @Provided private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
     @Provided private val getReaderSettingsUseCase: GetReaderSettingsUseCase,
@@ -115,6 +124,13 @@ class ReaderViewModel(
         hasAcceptedSupertonicTerms = supertonicTermsStore.hasAcceptedCurrentTerms(),
     )
 ) {
+
+    private var continueReadingOpenOperation = createContinueReadingOpenOperation(
+        entryPoint = readerOpenEntryPoint,
+        mediaType = bookType.value,
+        correlationId = readerOpenCorrelationId,
+    )
+    private var continueReadingOpenResolved = false
 
     private val readerScope: Scope by lazy {
         getKoin().getOrCreateScope<ReaderScope>(bookUuid).apply {
@@ -345,6 +361,7 @@ class ReaderViewModel(
 
     private fun retry() {
         updateState { it.copy(error = null) }
+        beginContinueReadingOpenRetry()
         if (isLastBookOnLaunch) {
             lastBookLaunchOutcomeGate.beginAttempt()
             analytics.logEvent(
@@ -493,13 +510,16 @@ class ReaderViewModel(
                     openPublication(data)
                 }
                 .onFailure { error ->
-                    analytics.logEvent(
-                        ReaderAnalyticsEvent.BookOpenFailed(
-                            bookUuid = bookUuid,
-                            bookType = bookType.name,
-                            errorMessage = error.message ?: "Unknown reader initialization error",
-                        ),
-                    )
+                    completeContinueReadingOpenFailure(error, stage = "initialization")
+                    if (!isContinueReadingCancellation(error)) {
+                        analytics.logEvent(
+                            ReaderAnalyticsEvent.BookOpenFailed(
+                                bookUuid = bookUuid,
+                                bookType = bookType.name,
+                                errorMessage = error.message ?: "Unknown reader initialization error",
+                            ),
+                        )
+                    }
                     reportReaderOpenFailure(
                         error = error,
                         stage = "initialization",
@@ -552,6 +572,7 @@ class ReaderViewModel(
                     tableOfContents = publication.tableOfContents,
                 )
             }
+            completeContinueReadingOpen(outcome = ContinueReadingOpenOutcome.Succeeded)
             scheduleCurrentBookTargetCheckpoint()
             if (isLastBookOnLaunch) {
                 reportLastBookLaunchOutcome(
@@ -583,13 +604,16 @@ class ReaderViewModel(
                 initTts()
             }
         }.onFailure { error ->
-            analytics.logEvent(
-                ReaderAnalyticsEvent.BookOpenFailed(
-                    bookUuid = data.bookUuid,
-                    bookType = bookType.name,
-                    errorMessage = error.message ?: "Unknown publication error",
+            completeContinueReadingOpenFailure(error, stage = "publication")
+            if (!isContinueReadingCancellation(error)) {
+                analytics.logEvent(
+                    ReaderAnalyticsEvent.BookOpenFailed(
+                        bookUuid = data.bookUuid,
+                        bookType = bookType.name,
+                        errorMessage = error.message ?: "Unknown publication error",
+                    )
                 )
-            )
+            }
             reportReaderOpenFailure(
                 error = error,
                 stage = "publication",
@@ -604,21 +628,28 @@ class ReaderViewModel(
         stage: String,
         reasonCode: String,
     ) {
-        val resolvedReasonCode = if (error is AppError.AuthError && stage == "initialization") {
-            "server_not_authenticated"
-        } else {
-            reasonCode
+        val isContinueReadingCancellation = isContinueReadingCancellation(error)
+        val resolvedReasonCode = when {
+            isContinueReadingCancellation -> ContinueReadingOpenReasonCode.ReaderOpenCancelled.value
+            error is AppError.AuthError && stage == "initialization" -> "server_not_authenticated"
+            else -> reasonCode
         }
         val context = DiagnosticContext(
             screen = "reader",
-            sourceScreen = "home".takeIf { isLastBookOnLaunch },
-            entryPoint = "app_launch".takeIf { isLastBookOnLaunch },
-            action = if (isLastBookOnLaunch) "open_last_book" else "open_book",
-            operation = "reader_open",
+            sourceScreen = "home".takeIf { isLastBookOnLaunch || continueReadingOpenOperation != null },
+            entryPoint = continueReadingOpenOperation?.entryPoint?.value
+                ?: "app_launch".takeIf { isLastBookOnLaunch },
+            action = when {
+                continueReadingOpenOperation != null -> "open_continue_reading"
+                isLastBookOnLaunch -> "open_last_book"
+                else -> "open_book"
+            },
+            operation = if (continueReadingOpenOperation != null) "continue_reading_open" else "reader_open",
             stage = stage,
-            outcome = "failed",
+            outcome = if (isContinueReadingCancellation) "cancelled" else "failed",
             reasonCode = resolvedReasonCode,
             mediaType = bookType.name.lowercase(),
+            correlationId = continueReadingOpenOperation?.correlationId,
         )
         if (isLastBookOnLaunch) {
             reportLastBookLaunchOutcome(
@@ -632,6 +663,56 @@ class ReaderViewModel(
         } else {
             analytics.logBreadcrumb(context)
         }
+    }
+
+    private fun isContinueReadingCancellation(error: AppError): Boolean =
+        continueReadingOpenOperation != null && error is AppError.AuthError && error.isCancellation
+
+    private fun beginContinueReadingOpenRetry() {
+        val previous = continueReadingOpenOperation ?: return
+        continueReadingOpenOperation = analytics.beginContinueReadingOpen(
+            entryPoint = previous.entryPoint,
+            mediaType = previous.mediaType,
+            isRetry = true,
+        )
+        continueReadingOpenResolved = false
+    }
+
+    private fun completeContinueReadingOpenFailure(error: AppError, stage: String) {
+        val outcome = if (error is AppError.AuthError && error.isCancellation) {
+            ContinueReadingOpenOutcome.Cancelled
+        } else {
+            ContinueReadingOpenOutcome.Failed
+        }
+        completeContinueReadingOpen(
+            outcome = outcome,
+            reasonCode = continueReadingOpenFailureReason(error, stage),
+        )
+    }
+
+    private fun completeContinueReadingOpen(
+        outcome: ContinueReadingOpenOutcome,
+        reasonCode: ContinueReadingOpenReasonCode? = null,
+    ) {
+        val operation = continueReadingOpenOperation ?: return
+        if (continueReadingOpenResolved) return
+        analytics.completeContinueReadingOpen(operation, outcome, reasonCode)
+        continueReadingOpenResolved = true
+    }
+
+    private fun continueReadingOpenFailureReason(
+        error: AppError,
+        stage: String,
+    ): ContinueReadingOpenReasonCode = when {
+        error is AppError.AuthError && error.isCancellation -> ContinueReadingOpenReasonCode.ReaderOpenCancelled
+        error is AppError.AuthError && stage == "initialization" -> ContinueReadingOpenReasonCode.ServerNotAuthenticated
+        error is AppError.AuthError -> ContinueReadingOpenReasonCode.PublicationOpenFailed
+        error is AppError.NetworkError && error.isConnectivity -> ContinueReadingOpenReasonCode.NetworkUnavailable
+        error is AppError.NetworkError && error.isTimeout -> ContinueReadingOpenReasonCode.RequestTimeout
+        error is AppError.NetworkError && stage == "initialization" -> ContinueReadingOpenReasonCode.ReaderInitializationFailed
+        error is AppError.NetworkError -> ContinueReadingOpenReasonCode.PublicationOpenFailed
+        stage == "initialization" -> ContinueReadingOpenReasonCode.ReaderInitializationFailed
+        else -> ContinueReadingOpenReasonCode.PublicationOpenFailed
     }
 
     private fun reportLastBookLaunchOutcome(
@@ -1544,6 +1625,10 @@ class ReaderViewModel(
         // outbox holds the reading position even if the checkpoint below never runs.
         if (hasRequestedClose) return
         hasRequestedClose = true
+        completeContinueReadingOpen(
+            outcome = ContinueReadingOpenOutcome.Cancelled,
+            reasonCode = ContinueReadingOpenReasonCode.ClosedBeforeContent,
+        )
         currentBookTargetCheckpoint?.cancel()
         reportLastBookLaunchOutcome(
             outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Cancelled,
