@@ -37,6 +37,7 @@ kotlin {
     sourceSets {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.core.ktx)
             implementation(libs.firebase.crashlytics.android)
             implementation(libs.firebase.analytics.android)
             implementation(libs.firebase.common)

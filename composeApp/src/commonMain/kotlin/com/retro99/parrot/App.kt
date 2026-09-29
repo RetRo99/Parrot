@@ -10,8 +10,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.retro99.base.ui.compose.EmberMode
 import com.retro99.base.ui.compose.ParrotTheme
 import com.retro99.base.ui.compose.ThemeMode
+import com.retro99.base.ui.compose.colors
 import com.retro99.base.ui.compose.resolveEmberMode
 import com.retro99.parrot.navigation.RootNavigation
 import com.retro99.preferences.api.Preferences
@@ -29,6 +31,10 @@ fun App(onRootWelcomeBack: (() -> Unit)? = null) {
         themeMode = ThemeMode.fromKey(storedThemeMode),
         isSystemDark = isSystemInDarkTheme(),
         isEinkDevice = platform.isEink,
+    )
+    SetNavigationBarAppearance(
+        isLight = emberMode != EmberMode.Night,
+        backgroundColor = emberMode.colors().bg,
     )
 
     ParrotTheme(mode = emberMode) {
