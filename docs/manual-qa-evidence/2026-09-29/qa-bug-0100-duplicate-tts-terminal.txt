@@ -1,0 +1,30 @@
+# QA-BUG-0100 — duplicate successful TTS terminal telemetry
+
+- **Observed:** 2026-09-29, approximately 21:53 CEST.
+- **Device/build:** Physical Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`); `com.retro99.parrot` 0.4.5 (21), target SDK 36, APK SHA-256 `9db68a1b394fb352c806eea94fe48e80535a628f3ef2548c5e46a04c078ea6fb`, source fix commit `da244a00bf5731bf5350343d94f4448a720e9b6b`; PID `18361`.
+- **Screen/test IDs:** Reader local System TTS playback; case 417 (switch profile during active playback); related case 781 (TTS operation telemetry).
+- **Preconditions:** Active disposable profile QA-A with the repository's local `Pride and Prejudice` EPUB open at page 3/36. Profile TTS setting had been off and was enabled for the test. Voice settings visibly showed selected `System voice`. Captured notification permission baseline was `POST_NOTIFICATIONS granted=false`, AppOp `ignore`; Android's permission prompt was allowed temporarily to establish playback. Restoration is required after the active case.
+- **Exact reproduction:** Open Reader, tap the speaker/Read aloud menu, select Read aloud once. The local TTS controller produced one playback attempt and one successful engine-start terminal result. Inspect PID-scoped DebugAnalyticsManager logcat for the same operation correlation.
+- **Expected:** One user-triggered playback attempt emits exactly one `tts_playback_operation` attempt and one matching terminal event, with one start and one terminal diagnostic breadcrumb.
+- **Actual:** One `attempted` event was followed by two byte-identical `succeeded` Analytics events and two duplicate terminal breadcrumbs, all sharing one correlation ID. The Reader briefly exposed the Pause control; Android's media audio accounting showed one short playback segment.
+- **Frequency:** Confirmed once during one deliberate successful playback action; no second controlled success attempt yet.
+- **Evidence:** [Pre-switch Samsung screenshot showing Reader Pause state](case-417-tts-playing-before-switch.png); [voice screen showing System voice selected](case-417-voice-settings.png). Sanitized local output:
+
+```text
+21:51:51.887 Analytics Event: tts_playback_operation {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+21:51:51.887 Diagnostic breadcrumb: screen=reader action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=ece47fbb-98b9-440c-97d2-37d89a350ec8
+21:52:21.954 Analytics Event: tts_playback_operation {operation=tts_playback, tts_action=controls, tts_outcome=cancelled, is_retry=false, media_type=ebook, duration_ms=30065, tts_reason_code=permission_denied}
+21:52:21.955 Diagnostic breadcrumb: screen=reader action=start_tts_playback operation=tts_playback stage=terminal outcome=cancelled reason_code=permission_denied media_type=ebook correlation_id=ece47fbb-98b9-440c-97d2-37d89a350ec8
+21:53:25.661 Analytics Event: tts_playback_operation {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+21:53:25.662 Diagnostic breadcrumb: screen=reader action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=34047953-bedc-458e-97ad-039ea1b8f115
+21:53:27.746 Analytics Event: tts_playback_operation {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=2085}
+21:53:27.746 Diagnostic breadcrumb: screen=reader action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=34047953-bedc-458e-97ad-039ea1b8f115
+21:53:27.747 Analytics Event: tts_playback_operation {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=2085}
+21:53:27.747 Diagnostic breadcrumb: screen=reader action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=34047953-bedc-458e-97ad-039ea1b8f115
+```
+
+  The permission prompt capture is [here](case-417-play-permission-dialog.png). After the temporary grant, `TtsRouter` confirmed `voice=null engine=SYSTEM`; Samsung media accounting recorded a single approximately 4.6s audio segment. The denied attempt was classified as ordinary `cancelled(reason_code=permission_denied)` without an exception. `DebugAnalyticsManager` is local-only; this is not Firebase Analytics ingestion evidence.
+- **Root cause:** Confirmed at the reporting boundary: the Android controller's `finishPlaybackSucceeded` emits one `Succeeded` object for this attempt, while a ReaderViewModel playback-operation collector maps each received object to both one analytics event and one breadcrumb. Runtime therefore had duplicate active collectors or equivalent duplicate delivery. Exact owner/lifecycle source of the extra collector remains under investigation; do not narrow it to a specific lifecycle cause until confirmed.
+- **Affected files / investigation points:** `feature/reader/ui/src/commonMain/kotlin/com/retro99/reader/ui/reader/ReaderViewModel.kt` (`observeTtsPlaybackOperations`, per-instance observer guard); `feature/reader/ui/src/androidMain/kotlin/com/retro99/reader/ui/navigator/AndroidTtsController.kt` (`finishPlaybackSucceeded`, single emission); `feature/reader/ui/src/commonMain/kotlin/com/retro99/reader/ui/reader/ReaderScreen.kt` / Koin navigation ViewModel ownership.
+- **Fix reference / commit:** None at discovery time. Recorded before product-code changes.
+- **Retest:** NOT RUN. Case 417 is paused before profile switching. Fix, automated checks, and a Samsung retest must confirm one attempt/one terminal event and breadcrumb before case 417 resumes. Functional, Analytics, and diagnostics results remain separate. No unexpected exception/fatal was induced; Crashlytics delivery/symbolication remains unverified.
