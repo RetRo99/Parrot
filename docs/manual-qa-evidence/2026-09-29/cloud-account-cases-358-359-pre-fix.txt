@@ -1,0 +1,26 @@
+# Cloud Account cases 358–359 Samsung pre-fix run
+
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `e30ad041567e2e043bed08e5fc6662634abd86c3a13b717a057373212e8a3c3e`, source commit `9cd6ff56ee48f8297e0cd2ebc095a3313d205f3d`; installed with `adb install -r`, preserving app data.
+- **Privacy/fixture:** Existing Default profile and original server/book fixture left unchanged. The prior unauthenticated-server prompt was closed without Retry. No email/password or other account credentials were entered; form fields remained empty.
+
+## Case 358 — Toolbar Back
+
+- **Steps:** From signed-out Sync & Backup, activate toolbar content-description “Back.”
+- **Expected/actual:** Returned to App Settings; screen stayed usable and the Sync & Backup row remained visible. No account state changed.
+- **Analytics:** Local DebugAnalyticsManager logged exactly one `navigation_back_attempted` and one `navigation_back` success, `source_screen=sync_and_backup`, `destination_screen=app_settings`, `entry_point=toolbar_back`, `outcome=succeeded`; the destination emitted one `app_settings_screen_viewed` with `entry_point=navigation_back`.
+- **Diagnostics:** One navigation start and matching terminal breadcrumb shared a diagnostic-only correlation ID, followed by one visible App Settings route breadcrumb. No exception expected for normal Back.
+- **Evidence:** [Returned App Settings screenshot](cloud-account-back-settings.png); local log timestamps 06:53:51.456–06:53:51.508 CEST.
+- **Result:** PASS for toolbar Back. System Back, gesture and IME-visible variants remain mapped to cases 730/740 and are not claimed here.
+
+## Case 359 — Switch to Create account
+
+- **Precondition:** Re-entered Settings → Sync & Backup; signed-out Sign in form was empty.
+- **Steps:** Tap “New to Parrot Cloud? Create an account.”
+- **Expected/actual:** Create account label and terms checkbox appeared and submit remained disabled without consent, but the explanatory helper still said: “Enter your email and password, then sign in. New here? Create an account below.” This is contradictory in the active create mode.
+- **Analytics:** Exactly one local `cloud_account_mode_changed` with `mode=create_account`; no Firebase ingestion claim.
+- **Diagnostics:** N-A for this normal UI mode change; no unexpected failure occurred. The event contained no form value.
+- **Evidence:** [Pre-fix Create account screenshot](cloud-account-create-mode.png); local event at 06:54:34.188 CEST.
+- **Defect:** QA-BUG-0087, confirmed and entered in the bug register before source edits. Functional result FAIL pending fix and Samsung retest. No form text, consent, account operation or credential submission was performed.
+
+`DebugAnalyticsManager` output is local only. Firebase Analytics ingestion is waived for this run; Crashlytics delivery is not proven by these observations. Cross-app/cross-device sync was not tested.

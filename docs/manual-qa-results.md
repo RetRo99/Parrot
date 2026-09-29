@@ -340,13 +340,13 @@ Only the Home/Books destination was observed as the guest target and local-impor
 
 The earlier post-fix rows above record the first fix-candidate pass (PID `17458`, APK SHA-256 `a1e9242cec415479bbfe7891d4d94c4700836c1496593d57a4bd48e8b93f5c00`); final rebuilt-candidate evidence is recorded separately above. [First candidate evidence](manual-qa-evidence/2026-09-29/case-439-profile-current-book-rebind-candidate1.txt).
 
-### L — Cloud Account and same-device backup (ordered pass not started)
+### L — Cloud Account and same-device backup (ordered pass in progress)
 
 | Case | Variant | Functional | Analytics | Diagnostics | Notes / evidence |
 |---:|---|---|---|---|---|
 | 357 | Settings route and visible Cloud Account screen | PASS (Settings → Sync & Backup opened signed-out form; session restoration settled signed out) | PASS locally: one `sync_and_backup_screen_viewed` attributed to `app_settings/sync_backup_row`; Firebase ingestion waived | PASS locally: visible route breadcrumb plus correlated restore-session attempt/success; Crashlytics not applicable | Samsung `RFCWC0SSVDM`, 0.4.5 (21), source `9cd6ff56`, APK SHA-256 `e30ad041…e8a3c3e`. Original unauthenticated-server prompt was closed without Retry. [Evidence](manual-qa-evidence/2026-09-29/cloud-account-oauth-back-cancel-retest.txt). |
-| 358 | Back to App Settings | NOT RUN | NOT RUN | NOT RUN | Toolbar, system and supported gesture/IME variants map to 730/740. |
-| 359 | Sign in / Create account switch | NOT RUN | NOT RUN | NOT RUN | |
+| 358 | Back to App Settings | PASS (toolbar Back returned to the existing App Settings screen) | PASS locally: one `navigation_back_attempted` and one successful `navigation_back`, attributed `toolbar_back`; Firebase ingestion waived | PASS locally: correlated start/terminal navigation breadcrumbs and one App Settings visible route breadcrumb; no failure to report | Samsung `RFCWC0SSVDM`, package 0.4.5 (21), source `9cd6ff56`, APK SHA-256 `e30ad041…e8a3c3e`. System/gesture and IME variants remain under 730/740. [Evidence](manual-qa-evidence/2026-09-29/cloud-account-back-settings.png) and local logs at 06:53:51 CEST. |
+| 359 | Sign in / Create account switch | FAIL: Create-account fields/checkbox/label appeared, but helper copy still tells the user to sign in and create an account below | PASS locally: exactly one `cloud_account_mode_changed(mode=create_account)`; Firebase ingestion waived | N-A for normal mode change; no unexpected failure. UI copy defect QA-BUG-0087 recorded before fix. | Samsung `RFCWC0SSVDM`, source `9cd6ff56`, APK SHA-256 `e30ad041…e8a3c3e`; no input or credentials entered. [Pre-fix screenshot](manual-qa-evidence/2026-09-29/cloud-account-create-mode.png). |
 | 360 | Email validation | NOT RUN | NOT RUN | NOT RUN | |
 | 361 | Password mask / visibility | NOT RUN | NOT RUN | NOT RUN | Use synthetic local-only input; never submit/store it. |
 | 362 | Terms-of-service checkbox gating | NOT RUN | NOT RUN | NOT RUN | |
