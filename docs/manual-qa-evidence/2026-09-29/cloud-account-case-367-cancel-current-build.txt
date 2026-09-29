@@ -1,0 +1,29 @@
+# Cloud Account case 367 — current-build app-side Google cancellation
+
+- **Date/time:** 2026-09-29, 08:23–08:24 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`settings get secure navigation_mode` = `2`).
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `a2a6f5a3d399ee8b8f5ad19358b4daa6ddba6832b1d7be02d219dcc3409bdaa4`, source code `51b5f8a028aa858cda91ed31dfa0b5e51eb502c0`, installed 2026-09-29 07:42:17 CEST with app data preserved; PID `25275`. Repository HEAD during run `459244918cb9e546777ef4da62aa6eef780d4fbf`.
+- **Preconditions/privacy:** Signed-out Sign in form; empty email/password. No cloud account credentials or provider authorization used. Retained Default profile and unauthenticated server/book fixture unchanged. No `adb reverse`, endpoint, app configuration, or production setting changed.
+
+## Steps and observations
+
+1. Cleared logcat. Confirmed the signed-out Sign in form and empty fields.
+2. Tapped Continue with Google. Samsung Browser opened the debug-configured host `127.0.0.1` and showed its unreachable-page error. No email/password, Google account, or authorization was provided.
+3. Pressed system Back in Samsung Browser. The app returned to its signed-out Sign in form with empty fields, enabled Google action, and disabled email Sign in action. [Clean returned form](cloud-account-case-367-cancel-current-build.png).
+
+- **Functional:** PASS for app-side system-Back cancellation: Parrot returned usable and no partial authenticated state appeared. Provider-page cancel/success remain BLOCKED; the provider authorization page did not load. This run does not pass case 366.
+- **Analytics:** PASS locally. Exactly one `cloud_account_operation_attempted` for `cloud_authentication/auth_method=google/entry_point=google_button`, followed by one `cloud_account_operation_cancelled` with `reason_code=oauth_cancelled`. No auth-failure terminal. Firebase ingestion is waived; local DebugAnalyticsManager output is not delivery proof.
+- **Diagnostics:** PASS locally. Attempt and OAuth-start plus terminal cancellation breadcrumbs shared the same diagnostic-only correlation ID. No Crashlytics non-fatal or fatal/exception marker was observed for expected cancellation. Crashlytics delivery is not claimed.
+
+  ```text
+  09-29 08:23:13.008 25275 25275 D čič : Analytics Event: cloud_account_operation_attempted | Parameters: {screen=sync_and_backup, action=authenticate_account, operation=cloud_authentication, entry_point=google_button, stage=started, outcome=started, is_retry=false, auth_method=google, mode=sign_in}
+  09-29 08:23:13.008 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=google_button action=authenticate_account operation=cloud_authentication stage=started outcome=started correlation_id=dbd506d6-563c-4359-91cf-51a6b450b04f
+  09-29 08:23:13.010 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=authenticate_account operation=cloud_authentication stage=oauth_start outcome=started correlation_id=dbd506d6-563c-4359-91cf-51a6b450b04f
+  09-29 08:23:33.291 25275 25275 D čič : Analytics Event: cloud_account_operation_cancelled | Parameters: {screen=sync_and_backup, action=authenticate_account, operation=cloud_authentication, entry_point=google_button, stage=terminal, outcome=cancelled, is_retry=false, auth_method=google, mode=sign_in, reason_code=oauth_cancelled, duration_ms=20282}
+  09-29 08:23:33.292 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=google_button action=authenticate_account operation=cloud_authentication stage=terminal outcome=cancelled reason_code=oauth_cancelled correlation_id=dbd506d6-563c-4359-91cf-51a6b450b04f
+  ```
+
+- **Blocker:** QA-BUG-0086 still prevents the external provider page from loading on this debug build. The host-side health probe timed out and no reverse mapping was present in the earlier preserved endpoint audit; do not switch endpoints without authorization.
+- **Prior observation:** The earlier timeout attempt and separate `9cd6ff56` app-side cancellation run are retained in [prior OAuth evidence](cloud-account-oauth-back-cancel-retest.txt); the timeout is not reclassified as cancellation.
+
+No credentials, Firebase delivery, provider-page callback or cross-device sync is claimed.
