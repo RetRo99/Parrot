@@ -80,6 +80,10 @@ data class ReaderViewState(
     val ttsPreviewingVoiceId: String? = null,
     val isTtsPreviewPlaying: Boolean = false,
     val isVoiceSettingsVisible: Boolean = false,
+    /** Voice to select once its pack finishes downloading. */
+    val pendingTtsVoiceId: String? = null,
+    /** Language of the open book as a BCP 47 tag, when the publication declares one. */
+    val bookLanguage: String? = null,
     val isListening: Boolean = false,
     // Source the user chose while a book has both; null means the book's default source.
     val activeSource: ListenSource? = null,

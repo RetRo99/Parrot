@@ -987,19 +987,70 @@
     <string name="reader_audio_status_not_downloaded" tools:ignore="MissingTranslation">Not downloaded</string>
     <string name="reader_audio_status_on_phone" tools:ignore="MissingTranslation">On this phone</string>
     <string name="reader_voices_title" tools:ignore="MissingTranslation">Voices</string>
-    <string name="reader_voices_natural_header" tools:ignore="MissingTranslation">Natural voices · download once</string>
+    <string name="reader_voices_in_use" tools:ignore="MissingTranslation">In use: %1$s</string>
+    <string name="reader_voices_natural_header" tools:ignore="MissingTranslation">Natural voices</string>
+    <string name="reader_voices_natural_intro" tools:ignore="MissingTranslation">Each pack is one download that unlocks all its voices. They work offline.</string>
+    <string name="reader_voices_natural_english_only" tools:ignore="MissingTranslation">English only for now — they’ll read this %1$s book with English pronunciation. Each pack is one download for all its voices.</string>
     <string name="reader_voices_phone_header" tools:ignore="MissingTranslation">On this phone</string>
-    <string name="reader_voices_licence" tools:ignore="MissingTranslation">Voice licence terms</string>
+    <string name="reader_voices_phone_filter_note" tools:ignore="MissingTranslation">Filtered to %1$s · filter applies here only</string>
     <string name="reader_voices_language" tools:ignore="MissingTranslation">Language</string>
-    <string name="reader_voices_natural_plain" tools:ignore="MissingTranslation">Natural</string>
-    <string name="reader_voices_natural_downloaded" tools:ignore="MissingTranslation">Natural · %1$d MB · downloaded</string>
-    <string name="reader_voices_natural_downloading" tools:ignore="MissingTranslation">Natural · %1$d MB · downloading %2$d%%</string>
-    <string name="reader_voices_natural_downloading_unknown" tools:ignore="MissingTranslation">Natural · %1$d MB · downloading…</string>
-    <string name="reader_voices_natural_update" tools:ignore="MissingTranslation">Natural · %1$d MB · update available</string>
-    <string name="reader_voices_natural_not_downloaded" tools:ignore="MissingTranslation">Natural · %1$d MB · not downloaded</string>
-    <string name="reader_voices_failed" tools:ignore="MissingTranslation">Download failed — check your connection</string>
-    <string name="reader_voices_system_description" tools:ignore="MissingTranslation">Uses your phone’s text-to-speech</string>
+    <string name="reader_voices_default_group" tools:ignore="MissingTranslation">Default</string>
+    <string name="reader_voices_region_other" tools:ignore="MissingTranslation">Other</string>
+    <string name="reader_voices_system_description" tools:ignore="MissingTranslation">Follows your phone’s text-to-speech settings</string>
+    <string name="reader_voices_voice_numbered" tools:ignore="MissingTranslation">Voice %1$d</string>
+    <string name="reader_voices_offline" tools:ignore="MissingTranslation">Offline</string>
+    <string name="reader_voices_needs_internet" tools:ignore="MissingTranslation">Needs internet</string>
+    <string name="reader_voices_high_quality" tools:ignore="MissingTranslation">High quality</string>
+    <string name="reader_voices_best_quality" tools:ignore="MissingTranslation">Best quality</string>
+    <string name="reader_voices_in_use_caption" tools:ignore="MissingTranslation">In use</string>
+    <string name="reader_voices_pack_kokoro" tools:ignore="MissingTranslation">Kokoro</string>
+    <string name="reader_voices_pack_supertonic" tools:ignore="MissingTranslation">Supertonic 3</string>
+    <string name="reader_voices_pack_meta" tools:ignore="MissingTranslation">%1$d voices · %2$d MB · %3$s</string>
+    <string name="reader_voices_pack_meta_no_size" tools:ignore="MissingTranslation">%1$d voices · %2$s</string>
+    <string name="reader_voices_pack_language_english" tools:ignore="MissingTranslation">English</string>
+    <string name="reader_voices_ai_generated" tools:ignore="MissingTranslation">AI-generated speech · Runs on this device</string>
+    <string name="reader_voices_terms_not_accepted" tools:ignore="MissingTranslation">Model terms not accepted yet</string>
+    <string name="reader_voices_terms_accepted" tools:ignore="MissingTranslation">Model terms accepted</string>
+    <string name="reader_voices_download_pack" tools:ignore="MissingTranslation">Download · %1$d MB</string>
+    <string name="reader_voices_download_pack_no_size" tools:ignore="MissingTranslation">Download</string>
+    <string name="reader_voices_review_terms" tools:ignore="MissingTranslation">Review terms &amp; download</string>
+    <string name="reader_voices_licence_link" tools:ignore="MissingTranslation">Licence</string>
+    <string name="reader_voices_downloading" tools:ignore="MissingTranslation">Downloading %1$d%% · %2$d of %3$d MB</string>
+    <string name="reader_voices_downloading_unknown" tools:ignore="MissingTranslation">Downloading…</string>
+    <string name="reader_voices_finishing" tools:ignore="MissingTranslation">Finishing neural voice setup…</string>
+    <string name="reader_voices_finishing_eink" tools:ignore="MissingTranslation">Finishing neural voice setup… (this can take a minute)</string>
+    <string name="reader_voices_downloaded" tools:ignore="MissingTranslation">✓ Downloaded · works offline</string>
+    <string name="reader_voices_delete_pack" tools:ignore="MissingTranslation">Delete pack</string>
+    <string name="reader_voices_update_available" tools:ignore="MissingTranslation">Update available · %1$d MB · voices keep working</string>
+    <string name="reader_voices_update_available_no_size" tools:ignore="MissingTranslation">Update available · voices keep working</string>
+    <string name="reader_voices_failed_message" tools:ignore="MissingTranslation">Download stopped — check your connection. Retry continues from where it left off.</string>
+    <string name="reader_voices_deleting" tools:ignore="MissingTranslation">Deleting pack…</string>
+    <string name="reader_voices_show_all" tools:ignore="MissingTranslation">Show all %1$d voices</string>
+    <string name="reader_voices_show_fewer" tools:ignore="MissingTranslation">Show fewer voices</string>
     <string name="reader_voices_preview_voice" tools:ignore="MissingTranslation">Preview %1$s</string>
-    <string name="reader_voices_delete_voice" tools:ignore="MissingTranslation">Delete %1$s</string>
-    <string name="reader_voices_download_voice" tools:ignore="MissingTranslation">Download %1$s</string>
+    <string name="reader_voices_preview_after_download" tools:ignore="MissingTranslation">Preview available after download</string>
+    <string name="reader_voices_will_use_after_download" tools:ignore="MissingTranslation">Will be used when the download finishes</string>
+    <string name="reader_voices_pack_description" tools:ignore="MissingTranslation">%1$s voice pack, %2$s, %3$s</string>
+    <string name="reader_voices_state_not_downloaded" tools:ignore="MissingTranslation">not downloaded</string>
+    <string name="reader_voices_state_downloading" tools:ignore="MissingTranslation">downloading</string>
+    <string name="reader_voices_state_downloaded" tools:ignore="MissingTranslation">downloaded</string>
+    <string name="reader_voices_state_update" tools:ignore="MissingTranslation">update available</string>
+    <string name="reader_voices_state_failed" tools:ignore="MissingTranslation">download stopped</string>
+    <string name="reader_voices_state_deleting" tools:ignore="MissingTranslation">deleting</string>
+    <string name="reader_voices_terms_sheet_title" tools:ignore="MissingTranslation">%1$s terms</string>
+    <string name="reader_voices_terms_sheet_intro" tools:ignore="MissingTranslation">Accept the OpenRAIL-M model terms to download this %1$d MB pack. The short version:</string>
+    <string name="reader_voices_terms_sheet_intro_no_size" tools:ignore="MissingTranslation">Accept the OpenRAIL-M model terms to download this pack. The short version:</string>
+    <string name="reader_voices_terms_bullet_ai" tools:ignore="MissingTranslation">The speech is generated by an AI model, and the app labels it as AI-generated.</string>
+    <string name="reader_voices_terms_bullet_device" tools:ignore="MissingTranslation">It runs entirely on this device — your book text isn’t sent anywhere.</string>
+    <string name="reader_voices_terms_bullet_use" tools:ignore="MissingTranslation">The licence limits how the model and its output may be used, for example to spread harmful false information or impersonate people without their consent.</string>
+    <string name="reader_voices_terms_read_full" tools:ignore="MissingTranslation">Read the full licence</string>
+    <string name="reader_voices_terms_checkbox" tools:ignore="MissingTranslation">I have read and accept the model terms</string>
+    <string name="reader_voices_terms_not_now" tools:ignore="MissingTranslation">Not now</string>
+    <string name="reader_voices_terms_accept" tools:ignore="MissingTranslation">Accept &amp; download</string>
+    <string name="reader_voices_terms_footnote" tools:ignore="MissingTranslation">The download button stays disabled until the box is ticked. The summary is not the licence — the full text applies.</string>
+    <string name="reader_voices_delete_title" tools:ignore="MissingTranslation">Delete the %1$s pack?</string>
+    <string name="reader_voices_delete_message" tools:ignore="MissingTranslation">This removes all %1$d %2$s voices and frees %3$d MB.</string>
+    <string name="reader_voices_delete_message_no_size" tools:ignore="MissingTranslation">This removes all %1$d %2$s voices.</string>
+    <string name="reader_voices_delete_using" tools:ignore="MissingTranslation">You’re using %1$s, so reading switches to your phone’s voice.</string>
+    <string name="reader_voices_delete_again" tools:ignore="MissingTranslation">You can download the pack again later.</string>
 </resources>

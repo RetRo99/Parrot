@@ -59,6 +59,9 @@ actual class EpubPublication(
     actual val hasMediaOverlays: Boolean
         get() = publication.hasMediaOverlays()
 
+    actual val language: String?
+        get() = publication.metadata.language?.code
+
     /**
      * The table of contents for this publication.
      * Converts Readium's Link-based TOC to a flat list with level information.

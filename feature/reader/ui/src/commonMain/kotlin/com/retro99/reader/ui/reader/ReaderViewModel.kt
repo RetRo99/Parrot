@@ -316,7 +316,7 @@ class ReaderViewModel(
             is ReaderIntent.JumpToBookProgress -> navigateKeepingAudio {
                 jumpToBookProgress(intent.progression)
             }
-            is ReaderIntent.StartListening -> startListening(intent.source)
+            is ReaderIntent.StartListening -> startListening(intent.source, intent.autoPlay)
             is ReaderIntent.SwitchListenSource -> switchListenSource(intent.source)
             ReaderIntent.ToggleListenSheet -> toggleListenSheet()
             ReaderIntent.StopListening -> stopListening()
@@ -645,6 +645,7 @@ class ReaderViewModel(
                     error = null,
                     currentAudioPositionMs = position?.audioTimestampMs ?: 0L,
                     tableOfContents = publication.tableOfContents,
+                    bookLanguage = publication.language,
                 )
             }
             completeContinueReadingOpen(outcome = ContinueReadingOpenOutcome.Succeeded)
@@ -1003,6 +1004,7 @@ class ReaderViewModel(
         }
         if (selectedVoice?.needsDownload == true) {
             // Picking a voice that is not downloaded fetches its package, then selects it.
+            updateState { state -> state.copy(pendingTtsVoiceId = selectedVoice.id) }
             prepareTtsVoice(selectedVoice.id, onPrepared = { selectTtsVoice(selectedVoice.id) })
             return
         }
@@ -1025,6 +1027,7 @@ class ReaderViewModel(
         updateState { state ->
             state.copy(
                 selectedTtsVoiceId = voiceId,
+                pendingTtsVoiceId = null,
                 failedTtsVoicePackage = null,
                 failedTtsVoicePackageDeletion = null,
                 ttsPreviewingVoiceId = null,
@@ -1048,6 +1051,9 @@ class ReaderViewModel(
     }
 
     private fun cancelTtsVoicePreparation() {
+        updateState { state ->
+            state.copy(pendingTtsVoiceId = null, failedTtsVoicePackage = null)
+        }
         ttsPreparationJob?.cancel()
     }
 
@@ -1085,7 +1091,12 @@ class ReaderViewModel(
             .firstOrNull { voice -> voice.neuralVoicePackage == voicePackage }
             ?.id
             ?: return
-        prepareTtsVoice(voiceId)
+        val pendingVoiceId = currentViewState().pendingTtsVoiceId
+            ?.takeIf { pending -> pending.neuralVoicePackage() == voicePackage }
+        prepareTtsVoice(
+            voiceId,
+            onPrepared = pendingVoiceId?.let { pending -> { selectTtsVoice(pending) } },
+        )
     }
 
     private fun prepareTtsVoice(
@@ -1177,6 +1188,7 @@ class ReaderViewModel(
             updateState { state ->
                 state.copy(
                     deletingTtsVoicePackage = voicePackage,
+                    pendingTtsVoiceId = null,
                     failedTtsVoicePackageDeletion = null,
                 )
             }
@@ -1820,12 +1832,14 @@ class ReaderViewModel(
         )
     }
 
-    private fun startListening(source: ListenSource) {
+    private fun startListening(source: ListenSource, autoPlay: Boolean) {
         when (source) {
             ListenSource.NARRATION -> {
                 if (!viewState.value.isReadAloud) return
                 updateState { it.copy(isListening = true) }
-                if (!viewState.value.isPlaying) activeNarrationController?.togglePlayback()
+                if (autoPlay && !viewState.value.isPlaying) {
+                    activeNarrationController?.togglePlayback()
+                }
             }
 
             ListenSource.DEVICE_VOICE -> {
@@ -1835,7 +1849,9 @@ class ReaderViewModel(
                     setTtsEnabled(true)
                 }
                 updateState { it.copy(isListening = true) }
-                if (!viewState.value.isPlaying) activeNarrationController?.togglePlayback()
+                if (autoPlay && !viewState.value.isPlaying) {
+                    activeNarrationController?.togglePlayback()
+                }
             }
         }
     }

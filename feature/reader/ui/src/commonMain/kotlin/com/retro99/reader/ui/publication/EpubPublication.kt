@@ -36,6 +36,11 @@ expect class EpubPublication {
     val hasMediaOverlays: Boolean
 
     /**
+     * The publication's primary language as a BCP 47 tag (e.g. "sq"), or null when unknown.
+     */
+    val language: String?
+
+    /**
      * The table of contents for this publication.
      * Returns a flat list of TOC entries with level information for indentation.
      */

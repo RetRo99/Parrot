@@ -44,11 +44,13 @@ class SupertonicOnnxSynthesizer(
         val isDownloaded = modelManager.isSupertonicModelDownloaded()
         val downloadSizeBytes = modelManager.supertonicDownloadSizeBytes()
         val updateAvailable = modelManager.isSupertonicUpdateAvailable()
+        val updateSizeBytes = modelManager.supertonicUpdateSizeBytes()
         return SUPERTONIC_VOICES.map { voice ->
             voice.copy(
                 isDownloaded = isDownloaded,
                 downloadSizeBytes = downloadSizeBytes,
                 updateAvailable = updateAvailable,
+                updateSizeBytes = updateSizeBytes,
             )
         }
     }

@@ -43,11 +43,13 @@ class SherpaOnnxSynthesizer(
         val isDownloaded = modelManager.isKokoroModelDownloaded()
         val downloadSizeBytes = modelManager.kokoroDownloadSizeBytes()
         val updateAvailable = modelManager.isKokoroUpdateAvailable()
+        val updateSizeBytes = modelManager.kokoroUpdateSizeBytes()
         return KOKORO_VOICES.map { voice ->
             voice.copy(
                 isDownloaded = isDownloaded,
                 downloadSizeBytes = downloadSizeBytes,
                 updateAvailable = updateAvailable,
+                updateSizeBytes = updateSizeBytes,
             )
         }
     }

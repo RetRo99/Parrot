@@ -24,6 +24,9 @@ actual class EpubPublication(
     actual val hasMediaOverlays: Boolean
         get() = bridge.hasMediaOverlays()
 
+    /** The Swift bridge does not expose the language yet; the sheet falls back to the phone's. */
+    actual val language: String? = null
+
     /**
      * The table of contents for this publication.
      * Delegates to the Swift bridge to get the TOC from Readium.

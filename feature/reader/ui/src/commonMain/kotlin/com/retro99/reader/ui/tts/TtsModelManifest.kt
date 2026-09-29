@@ -33,6 +33,8 @@ data class TtsModelManifestEntry(
     val id: String,
     val version: String,
     val files: List<TtsModelFile>,
+    /** Optional size of the incremental download from the previous version. */
+    val updateSizeBytes: Long? = null,
 ) {
     val totalBytes: Long
         get() = files.sumOf { file -> file.size }

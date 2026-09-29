@@ -31,6 +31,10 @@ data class TtsVoice(
     val downloadSizeBytes: Long? = null,
     val isDownloaded: Boolean = true,
     val updateAvailable: Boolean = false,
+    /** Download size of the pending update, when the manifest publishes one. */
+    val updateSizeBytes: Long? = null,
+    /** Display name of the region (e.g. "United States"); blank when the voice has none. */
+    val regionLabel: String = "",
 ) {
     val isHighQuality: Boolean
         get() = quality >= 400 || isNeural

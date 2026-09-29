@@ -494,10 +494,20 @@ internal fun ReaderOverlayContent(
                     onContents = { intentDispatcher(ReaderIntent.ToggleToc) },
                     onSearch = { intentDispatcher(ReaderIntent.ToggleBookSearch) },
                     onListen = {
+                        val source = viewState.listenSource
+                        val canStartListening = when (source) {
+                            ListenSource.NARRATION -> viewState.isReadAloud
+                            ListenSource.DEVICE_VOICE -> viewState.isTtsReadAloud
+                        }
                         when {
+                            // Card showing but nothing playing: dismiss it, as if never tapped.
+                            nowPlaying != null && !viewState.isPlaying ->
+                                intentDispatcher(ReaderIntent.StopListening)
+                            // Audio is playing: open the full sheet.
                             nowPlaying != null -> openAudioSheet()
-                            viewState.isReadAloud && viewState.listenSource == ListenSource.NARRATION ->
-                                intentDispatcher(ReaderIntent.StartListening(ListenSource.NARRATION))
+                            // Show the compact now-playing card without starting audio; tapping it opens the sheet.
+                            canStartListening ->
+                                intentDispatcher(ReaderIntent.StartListening(source, autoPlay = false))
                             else -> openAudioSheet()
                         }
                     },
@@ -670,6 +680,8 @@ internal fun ReaderOverlayContent(
         VoicesSheet(
             voices = viewState.ttsVoices,
             selectedVoiceId = viewState.selectedTtsVoiceId,
+            pendingVoiceId = viewState.pendingTtsVoiceId,
+            bookLanguage = viewState.bookLanguage,
             preparingVoicePackage = viewState.preparingTtsVoicePackage,
             preparationProgress = viewState.ttsVoicePreparationProgress,
             failedVoicePackage = viewState.failedTtsVoicePackage,
@@ -679,10 +691,14 @@ internal fun ReaderOverlayContent(
             isPreviewPlaying = viewState.isTtsPreviewPlaying,
             isEink = isEink,
             onVoiceSelected = { voiceId -> intentDispatcher(ReaderIntent.SelectTtsVoice(voiceId)) },
+            onDownloadPackage = { pack -> intentDispatcher(ReaderIntent.DownloadNeuralVoicePackage(pack)) },
             onUpdatePackage = { pack -> intentDispatcher(ReaderIntent.UpdateNeuralVoicePackage(pack)) },
             onDeletePackage = { pack -> intentDispatcher(ReaderIntent.DeleteNeuralVoicePackage(pack)) },
             onRetryPackage = { pack -> intentDispatcher(ReaderIntent.RetryTtsVoicePreparation(pack)) },
             onCancelPreparation = { intentDispatcher(ReaderIntent.CancelTtsVoicePreparation) },
+            onAcceptTermsAndDownload = {
+                intentDispatcher(ReaderIntent.AcceptSupertonicTermsAndDownload)
+            },
             onAcceptTermsAndSelect = { voiceId ->
                 intentDispatcher(ReaderIntent.AcceptSupertonicTermsAndSelect(voiceId))
             },
@@ -798,7 +814,8 @@ internal fun ReaderReadingPanel(
                 NowPlayingCard(
                     nowPlaying = nowPlaying,
                     isEink = isEink,
-                    onOpen = onListen,
+                    // Tapping the card always opens the sheet, unlike the Audio tile which toggles.
+                    onOpen = onListenLongPress,
                     onPlayPause = onPlayPause,
                     onPreviousChapter = onPreviousChapter,
                     onNextChapter = onNextChapter,

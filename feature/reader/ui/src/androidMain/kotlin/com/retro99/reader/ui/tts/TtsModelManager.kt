@@ -66,6 +66,10 @@ class TtsModelManager(
 
     fun supertonicDownloadSizeBytes(): Long? = manifestDownloadSizeBytes(SUPERTONIC_MODEL_ID)
 
+    fun kokoroUpdateSizeBytes(): Long? = manifestUpdateSizeBytes(KOKORO_MODEL_ID)
+
+    fun supertonicUpdateSizeBytes(): Long? = manifestUpdateSizeBytes(SUPERTONIC_MODEL_ID)
+
     fun activeKokoroVersion(): String? = activeVersion(KOKORO_MODEL_ID)
 
     fun activeSupertonicVersion(): String? = activeVersion(SUPERTONIC_MODEL_ID)
@@ -554,6 +558,9 @@ class TtsModelManager(
 
     private fun manifestDownloadSizeBytes(modelId: String): Long? =
         cachedManifest()?.model(modelId)?.totalBytes
+
+    private fun manifestUpdateSizeBytes(modelId: String): Long? =
+        cachedManifest()?.model(modelId)?.updateSizeBytes
 
     private suspend fun deleteModel(
         modelId: String,

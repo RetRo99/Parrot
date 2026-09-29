@@ -18,7 +18,11 @@ sealed interface ReaderIntent : BaseIntent {
     /** Jumps to a fraction (0..1) of the whole book from the Contents sheet. */
     data class JumpToBookProgress(val progression: Double) : ReaderIntent
 
-    data class StartListening(val source: ListenSource) : ReaderIntent
+    /** Shows the now-playing card for [source]; starts playback only when [autoPlay] is set. */
+    data class StartListening(
+        val source: ListenSource,
+        val autoPlay: Boolean = true,
+    ) : ReaderIntent
 
     /** Switches between narration and device voice on books that have both. */
     data class SwitchListenSource(val source: ListenSource) : ReaderIntent

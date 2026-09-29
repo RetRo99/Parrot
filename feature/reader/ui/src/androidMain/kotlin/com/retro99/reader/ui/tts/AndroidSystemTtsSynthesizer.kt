@@ -107,6 +107,7 @@ class AndroidSystemTtsSynthesizer(
                     quality = voice.quality,
                     latency = voice.latency,
                     requiresNetwork = voice.isNetworkConnectionRequired,
+                    regionLabel = locale?.displayCountry.orEmpty(),
                 )
             }
             .sortedWith(
@@ -126,6 +127,7 @@ class AndroidSystemTtsSynthesizer(
             quality = voice.quality,
             latency = voice.latency,
             requiresNetwork = voice.isNetworkConnectionRequired,
+            regionLabel = voice.locale?.displayCountry.orEmpty(),
         )
     }
 

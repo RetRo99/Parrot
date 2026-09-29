@@ -15,49 +15,12 @@ import com.retro99.reader.ui.tts.NeuralVoicePackage
 import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
-import resources.translations.general_cancel
 import resources.translations.general_close
-import resources.translations.reader_tts_agree_and_download
 import resources.translations.reader_tts_kokoro_pack_name
 import resources.translations.reader_tts_model_license_loading
 import resources.translations.reader_tts_model_license_title
 import resources.translations.reader_tts_supertonic_pack_name
-import resources.translations.reader_tts_supertonic_terms_message
-import resources.translations.reader_tts_supertonic_terms_title
-import resources.translations.reader_tts_view_full_license
 import kotlin.math.roundToInt
-
-@Composable
-internal fun SupertonicTermsDialog(
-    onDismiss: () -> Unit,
-    onViewLicense: () -> Unit,
-    onAccept: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(stringResource(StringRes.reader_tts_supertonic_terms_title))
-        },
-        text = {
-            Column {
-                Text(stringResource(StringRes.reader_tts_supertonic_terms_message))
-                TextButton(onClick = onViewLicense) {
-                    Text(stringResource(StringRes.reader_tts_view_full_license))
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onAccept) {
-                Text(stringResource(StringRes.reader_tts_agree_and_download))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
-    )
-}
 
 @Composable
 internal fun SupertonicLicenseDialog(

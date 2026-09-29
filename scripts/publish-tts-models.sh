@@ -52,6 +52,7 @@ echo "Repacking models and generating manifest.json"
 python3 - "$REPO" "$TAG" "$STAGE_DIR" "$MANIFEST" "${UNPACKED_PAIRS[@]}" <<'PY'
 import hashlib
 import json
+import os
 import shutil
 import sys
 import zipfile
@@ -129,11 +130,17 @@ for pair in pairs:
         })
         print(f"  {model_id}/{path_name}: {staged.stat().st_size} bytes")
 
-    models.append({
+    entry = {
         "id": model_id,
         "version": tag.removeprefix("models-"),
         "files": files,
-    })
+    }
+    # Optional: size of the incremental download from the previous version,
+    # e.g. UPDATE_SIZE_BYTES_KOKORO=18000000. Shown in the app's "Update available" line.
+    update_size = os.environ.get(f"UPDATE_SIZE_BYTES_{model_id.upper().replace('-', '_')}")
+    if update_size:
+        entry["updateSizeBytes"] = int(update_size)
+    models.append(entry)
 
 manifest = {"schemaVersion": 1, "models": models}
 Path(manifest_path).write_text(json.dumps(manifest, indent=2) + "\n")
