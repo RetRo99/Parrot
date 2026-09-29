@@ -231,6 +231,7 @@ class CloudAccountViewModel(
                     }
                     updateFormState(emailState.text.toString(), passwordState.text.toString())
                 }
+                is CloudAccountOperationExecution.Cancelled -> Unit
             }
         }
     }
@@ -318,6 +319,7 @@ class CloudAccountViewModel(
                     retryTracker.recordFailure(operation)
                     showError(execution.error)
                 }
+                is CloudAccountOperationExecution.Cancelled -> Unit
             }
         }
     }
@@ -341,6 +343,9 @@ class CloudAccountViewModel(
                 isRetry = retryTracker.isRetry(operation),
                 authMethod = "google",
                 mode = "sign_in",
+                expectedCancellationReasonCode = { error ->
+                    if (error is CloudAccountException.OAuthCancelled) "oauth_cancelled" else null
+                },
                 reportUnexpectedFailure = { error ->
                     error is CloudAccountException.LocalStatePersistence || error is IllegalStateException
                 },
@@ -369,6 +374,19 @@ class CloudAccountViewModel(
                 is CloudAccountOperationExecution.Threw -> {
                     retryTracker.recordFailure(operation)
                     showError(execution.error)
+                }
+                is CloudAccountOperationExecution.Cancelled -> {
+                    updateState {
+                        it.copy(
+                            authState = CloudAuthState.SignedOut,
+                            isLoading = false,
+                            isSubmitEnabled = false,
+                            error = null,
+                            showVerificationMessage = false,
+                            showLinkConfirmation = false,
+                        )
+                    }
+                    updateFormState(emailState.text.toString(), passwordState.text.toString())
                 }
             }
         }
@@ -428,6 +446,9 @@ class CloudAccountViewModel(
                         it.copy(storageUsage = execution.value, isLoadingStorageUsage = false, storageUsageError = null)
                     }
                 }
+                is CloudAccountOperationExecution.Cancelled -> {
+                    updateState { it.copy(isLoadingStorageUsage = false) }
+                }
                 is CloudAccountOperationExecution.Threw -> {
                     updateState {
                         it.copy(
@@ -481,6 +502,7 @@ class CloudAccountViewModel(
                     retryTracker.recordFailure(operation)
                     showError(execution.error)
                 }
+                is CloudAccountOperationExecution.Cancelled -> Unit
             }
         }
     }
@@ -549,6 +571,7 @@ class CloudAccountViewModel(
             is CloudAccountOperationExecution.Threw -> retryTracker.recordFailure(
                 CloudAccountOperation.LinkConflictCleanup,
             )
+            is CloudAccountOperationExecution.Cancelled -> Unit
         }
         updateState {
             it.copy(
@@ -614,6 +637,10 @@ class CloudAccountViewModel(
                 is CloudAccountOperationExecution.Threw -> {
                     retryTracker.recordFailure(operation)
                     showError(execution.error)
+                }
+                is CloudAccountOperationExecution.Cancelled -> {
+                    updateState { it.copy(isLoading = false) }
+                    updateFormState(emailState.text.toString(), passwordState.text.toString())
                 }
             }
         }
@@ -684,6 +711,9 @@ class CloudAccountViewModel(
                     retryTracker.recordFailure(operation)
                     showError(execution.error)
                 }
+                is CloudAccountOperationExecution.Cancelled -> {
+                    updateState { it.copy(isLoading = false) }
+                }
             }
         }
     }
@@ -744,6 +774,9 @@ class CloudAccountViewModel(
                         is SyncResult.Failed,
                         -> showError(CloudAccountError.Generic)
                     }
+                }
+                is CloudAccountOperationExecution.Cancelled -> {
+                    updateState { it.copy(isLoading = false) }
                 }
             }
         }
@@ -827,6 +860,9 @@ class CloudAccountViewModel(
                     retryTracker.recordFailure(operation)
                     updateState { it.copy(isUpdatingAutoBackup = false) }
                     showError(execution.error)
+                }
+                is CloudAccountOperationExecution.Cancelled -> {
+                    updateState { it.copy(isUpdatingAutoBackup = false) }
                 }
             }
         }
@@ -944,6 +980,7 @@ private fun Exception.cloudAuthenticationFailureReason(): String = when (this) {
     } else {
         "local_state_persistence_failed"
     }
+    is CloudAccountException.OAuthFailure -> reason.analyticsCode
     else -> "authentication_failed"
 }
 

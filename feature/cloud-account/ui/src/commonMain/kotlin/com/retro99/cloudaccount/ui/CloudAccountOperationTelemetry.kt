@@ -23,6 +23,7 @@ internal sealed interface CloudAccountOperationExecution<out T> {
 
     data class Threw(val error: Exception) : CloudAccountOperationExecution<Nothing>
 
+    data class Cancelled(val reasonCode: String) : CloudAccountOperationExecution<Nothing>
 }
 
 /** Emits one attempt and one terminal outcome; correlation IDs stay in diagnostics only. */
@@ -38,6 +39,7 @@ internal class CloudAccountOperationTelemetry(
         mode: String? = null,
         isEnabled: Boolean? = null,
         cancellationReasonCode: String = "operation_cancelled",
+        expectedCancellationReasonCode: (Exception) -> String? = { null },
         reportUnexpectedFailure: (Exception) -> Boolean = { false },
         failureReasonCode: (Exception) -> String = { "operation_failed" },
         classify: (T) -> CloudAccountOperationOutcome = { CloudAccountOperationOutcome.Succeeded() },
@@ -81,6 +83,28 @@ internal class CloudAccountOperationTelemetry(
             )
             throw cancellation
         } catch (error: Exception) {
+            val cancellationReason = expectedCancellationReasonCode(error)
+            if (cancellationReason != null) {
+                analytics.logEvent(
+                    CloudAccountAnalyticsEvent.OperationCancelled(
+                        operation = operation,
+                        entryPoint = entryPoint,
+                        isRetry = isRetry,
+                        durationMs = startedAt.elapsedNow().inWholeMilliseconds,
+                        authMethod = authMethod,
+                        mode = mode,
+                        isEnabled = isEnabled,
+                        reasonCode = cancellationReason,
+                    ),
+                )
+                trace.record(
+                    stage = "terminal",
+                    outcome = "cancelled",
+                    entryPoint = entryPoint,
+                    reasonCode = cancellationReason,
+                )
+                return CloudAccountOperationExecution.Cancelled(cancellationReason)
+            }
             val reasonCode = failureReasonCode(error)
             val failureContext = trace.context(
                 stage = "terminal",

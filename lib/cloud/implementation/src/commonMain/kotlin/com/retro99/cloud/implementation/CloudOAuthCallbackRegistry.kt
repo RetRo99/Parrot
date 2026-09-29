@@ -26,7 +26,7 @@ object CloudOAuthCallbackRegistry {
             openBrowser()
             withTimeoutOrNull(CALLBACK_TIMEOUT_MS) {
                 deferred.await()
-            } ?: throw CloudOAuthException("Google sign-in timed out")
+            } ?: throw CloudOAuthException(CloudOAuthException.Reason.TimedOut)
         } finally {
             mutex.withLock {
                 if (pendingCode === deferred) {
@@ -52,22 +52,27 @@ object CloudOAuthCallbackRegistry {
             }
             .toMap()
         val code = parameters["code"]
-        val error = parameters["error_description"] ?: parameters["error"]
+        val error = parameters["error"]
         val deferred = pendingCode ?: return true
 
         if (code.isNullOrBlank()) {
-            deferred.completeExceptionally(
-                CloudOAuthException(error ?: "Google sign-in was cancelled"),
-            )
+            val reason = when (error?.lowercase()) {
+                null, "access_denied", "user_cancelled", "user_canceled", "cancelled" ->
+                    CloudOAuthException.Reason.Cancelled
+                else -> CloudOAuthException.Reason.ProviderFailure
+            }
+            deferred.completeExceptionally(CloudOAuthException(reason))
         } else {
             deferred.complete(code)
         }
         return true
     }
 
+    /** `message` is intentionally ignored so caller/provider text cannot escape into diagnostics. */
+    @Suppress("UNUSED_PARAMETER")
     fun cancelPending(message: String): Boolean {
-        return pendingCode?.completeExceptionally(CloudOAuthException(message)) == true
+        return pendingCode?.completeExceptionally(
+            CloudOAuthException(CloudOAuthException.Reason.Cancelled),
+        ) == true
     }
 }
-
-private class CloudOAuthException(message: String) : Exception(message)

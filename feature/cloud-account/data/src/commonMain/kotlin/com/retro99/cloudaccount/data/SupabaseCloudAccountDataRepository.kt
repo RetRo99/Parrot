@@ -1,9 +1,11 @@
 package com.retro99.cloudaccount.data
 
 import com.retro99.cloud.implementation.CloudOAuthCallbackRegistry
+import com.retro99.cloud.implementation.CloudOAuthException
 import com.retro99.cloud.implementation.CloudOAuthUrlLauncher
 import com.retro99.cloud.implementation.SupabaseClientProvider
 import com.retro99.cloudaccount.domain.CloudAccountException
+import com.retro99.cloudaccount.domain.OAuthFailureReason
 import com.retro99.cloudaccount.domain.CloudAccountRepository
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.cloudaccount.domain.model.CloudAccount
@@ -94,8 +96,18 @@ class SupabaseCloudAccountDataRepository(
             provider = Google,
             redirectUrl = clientProvider.redirectUrl,
         )
-        val code = CloudOAuthCallbackRegistry.awaitCode {
-            oauthUrlLauncher.open(oauthUrl)
+        val code = try {
+            CloudOAuthCallbackRegistry.awaitCode {
+                oauthUrlLauncher.open(oauthUrl)
+            }
+        } catch (exception: CloudOAuthException) {
+            throw when (exception.reason) {
+                CloudOAuthException.Reason.Cancelled -> CloudAccountException.OAuthCancelled()
+                CloudOAuthException.Reason.TimedOut ->
+                    CloudAccountException.OAuthFailure(OAuthFailureReason.TimedOut)
+                CloudOAuthException.Reason.ProviderFailure ->
+                    CloudAccountException.OAuthFailure(OAuthFailureReason.ProviderFailure)
+            }
         }
         auth.exchangeCodeForSession(code)
         val account = auth.currentUserOrNull()?.toCloudAccount()

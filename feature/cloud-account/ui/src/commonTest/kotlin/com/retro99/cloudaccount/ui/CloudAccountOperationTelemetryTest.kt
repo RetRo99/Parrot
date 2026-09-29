@@ -6,6 +6,7 @@ import com.retro99.analytics.api.CloudAccountAnalyticsEvent
 import com.retro99.analytics.api.CloudAccountOperation
 import com.retro99.analytics.api.CloudAccountObservation
 import com.retro99.analytics.api.DiagnosticContext
+import com.retro99.cloudaccount.domain.CloudAccountException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -114,6 +115,32 @@ class CloudAccountOperationTelemetryTest {
         assertEquals("operation_cancelled", analytics.events.last().parameters["reason_code"])
         assertEquals("cancelled", analytics.breadcrumbs.last().outcome)
         assertEquals(0, analytics.exceptions.size)
+    }
+
+    @Test
+    fun typedOAuthCancellationEmitsCancelledOutcomeWithoutThrowingOrReporting() = runTest {
+        val analytics = RecordingAnalytics()
+        val execution = CloudAccountOperationTelemetry(analytics).execute(
+            operation = CloudAccountOperation.Authentication,
+            entryPoint = "google_button",
+            isRetry = false,
+            authMethod = "google",
+            mode = "sign_in",
+            expectedCancellationReasonCode = { error ->
+                if (error is CloudAccountException.OAuthCancelled) "oauth_cancelled" else null
+            },
+        ) {
+            throw CloudAccountException.OAuthCancelled()
+        }
+
+        assertEquals(CloudAccountOperationExecution.Cancelled("oauth_cancelled"), execution)
+        assertEquals(
+            listOf("cloud_account_operation_attempted", "cloud_account_operation_cancelled"),
+            analytics.events.map { it.name },
+        )
+        assertEquals("cancelled", analytics.breadcrumbs.last().outcome)
+        assertEquals("oauth_cancelled", analytics.breadcrumbs.last().reasonCode)
+        assertTrue(analytics.exceptions.isEmpty())
     }
 
     @Test
