@@ -1,0 +1,26 @@
+# Case 438 — Floating Continue Reading bubble: Samsung normal-path run
+
+- **Run time:** 2026-09-29, 01:44–01:52 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation, portrait, 1080×2340, font scale 1.0.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36. APK SHA-256 `a461b3dfa4531ac4ea1b556fc2e8205f5d67cc80a637d1d798be41456779fe24`; local and Samsung-pulled APK hashes match. APK was built from QA-BUG-0076 fix commit `cbb08da20c9da3bb5562d0954171053d018bd7fa` and installed with `adb install -r`, no data clear.
+- **Fixture/privacy:** original profile/current-reading/server fixture preserved. Existing server remains unauthenticated. `Open Last Book` and `Show Continue Reading` remained enabled. On launch, the known “Server unavailable or not authenticated” prompt was closed; **Retry was not tapped**. Series list was empty, but the current-reading bubble was reachable. No titles, book/profile IDs, URLs, screenshots, raw UI hierarchy, or raw logs are retained here.
+
+## Functional interaction
+
+1. On Series, the bubble initially appeared near the right edge at screen point (991,1582). A drag across the midpoint to the left side and release snapped the bubble to the left edge (about x=90, y=1065). This is functional PASS for drag, edge snap, and normalized position update.
+2. Force-stopped and relaunched Parrot without clearing data. Closed the known startup authentication prompt without Retry, returned to Series, and observed the bubble restored at the left edge (about x=90, y=1065). Position persistence across process restart PASS.
+3. Restored the bubble near its initial right-side location (about x=991, y=1588; initial observed y=1582, within 6 px). No other preference/profile/server/book data was changed.
+4. A short 13 px vertical swipe was below the drag recognition threshold and was interpreted as a bubble tap; the Reader route opened to the existing unauthenticated-server prompt. Closed with Close only. The tap-to-route behavior is observed, but usable Reader content and successful open are BLOCKED by the retained fixture. No Retry, authentication, fixture mutation, or data clear.
+
+## Instrumentation evidence
+
+- For the successful drag operation, local `DebugAnalyticsManager` output showed one `continue_reading_bubble_position_attempted` and one `continue_reading_bubble_position_completed` with `outcome=succeeded`, `bubble_side=start`, `is_retry=false`.
+- Matching start/terminal `bubble_position_save` diagnostic breadcrumbs shared the same correlation ID. The ID is intentionally omitted from this retained evidence. Subsequent restoration drag attempts also showed matching attempt/success outcomes; PID-filtered summary after restart counted two attempts, two completions, four operation breadcrumbs, zero `FATAL EXCEPTION` / `Exception occurred` markers.
+- Firebase Analytics delivery is not claimed; Analytics ingestion is waived. No failure injection occurred, so Crashlytics exception delivery is not exercised.
+- During the pre-QA-BUG-0077 tap on PID `28046`, PID-filtered local output contained zero `continue_reading_open` and zero `continue_reading_launched` events. This confirmed the source-attribution gap before its fix; the expected auth prompt did not crash. No raw log lines were retained.
+
+## Current result
+
+- Drag/snap/persist subvariant: functional PASS; local Analytics PASS; normal-path diagnostics PASS.
+- Bubble tap: navigation reached the Reader route, but successful usable-content open is BLOCKED by the unauthenticated fixture. Source-attributed Analytics/diagnostics FAIL pre-fix (QA-BUG-0077); retest after that fix is required.
+- Bubble-position failure/retry (QA-BUG-0076 failure branch): Samsung fault injection BLOCKED; host fault-injection/retry regression tests PASS.
