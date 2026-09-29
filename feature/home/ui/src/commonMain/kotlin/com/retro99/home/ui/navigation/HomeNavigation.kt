@@ -136,14 +136,15 @@ fun HomeNavigation(
                     }
                 }
                 is HomeNavigationEvent.NavigateToReaderReplacing -> {
-                    if (
-                        event.isLastBookOnLaunch &&
-                        navigationState.currentDestination.isReaderFor(
-                            event.serverId,
-                            event.bookUuid,
-                            event.bookType,
-                        )
-                    ) {
+                    val isReaderAlreadyOpen = navigationState.currentDestination.isReaderFor(
+                        event.serverId,
+                        event.bookUuid,
+                        event.bookType,
+                    )
+                    if (isReaderAlreadyOpen && !event.isLastBookOnLaunch) {
+                        // Playback started from this very reader (e.g. Listen); replacing it would
+                        // rebuild the screen and lose its state, so keep the open one.
+                    } else if (isReaderAlreadyOpen) {
                         viewModel.reportLastBookRouteAlreadyRestored(
                             bookType = event.bookType,
                             readerWillResolveOutcome = navigationState.currentDestination
