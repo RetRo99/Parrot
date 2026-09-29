@@ -1,0 +1,21 @@
+# QA-BUG-0098 — Reader-originated settings save diagnostic gap
+
+- **Review date:** 2026-09-29.
+- **Source under audit:** repository HEAD `8b921a5a5ff4f4564f5bbb9ff44490dfa6ea7721`, which includes QA-BUG-0062 commit `1a1c747aeec5f3ce1c310c592a8956ffd5e8e60f`.
+- **Device status:** Physical Samsung `RFCWC0SSVDM` is absent from ADB; installed build/current state are unknown. This is source evidence, not a Samsung reproduction. No device setting, profile, fixture, or permission was changed.
+
+## Confirmed source path
+
+1. A Reader UI setting change reaches `ReaderViewModel.saveReaderSettingsUpdate()` in `feature/reader/ui/src/commonMain/kotlin/com/retro99/reader/ui/reader/ReaderViewModel.kt`. The method reads stored settings, computes a changed model, and calls `saveReaderSettingsUseCase(updatedSettings)`.
+2. The returned `CompletableResult` is discarded by the Reader caller. This includes the `Err(AppError.DatabaseError(...))` result produced for a caught DAO exception.
+3. `ReaderLocalDataSource.saveReaderSettings()` in `feature/reader/data/src/commonMain/kotlin/com/retro99/reader/data/source/ReaderLocalDataSource.kt` calls `databaseExecutor.executeDatabaseOperation(reportException = false)`. `DatabaseExecutorImpl` converts ordinary DB exceptions into `Err(DatabaseError)` but skips its exception report when that flag is false.
+4. `ReaderDataRepository.saveReaderSettings()` in `feature/reader/data/src/commonMain/kotlin/com/retro99/reader/data/ReaderDataRepository.kt` returns the local result without logging. That is intentional for the SettingsViewModel-owned flow, which observes the result and reports with its own bounded Reader Settings context, but it leaves this second ReaderViewModel caller uncovered.
+
+## Disposition before fix
+
+- **Confirmed:** The Reader caller has no report or failure breadcrumb for a returned unexpected save error under this shared suppression configuration. A setting may be visible optimistically in Reader while its stored value remains old; this source-level consequence was not reproduced on a device.
+- **Not confirmed at runtime:** No fault injection, real database failure, user-visible state loss, or frequency was observed. Ordinary coroutine cancellation remains propagated by the database executor and must not be reported as a Crashlytics failure.
+- **Expected regression:** Inject a returned `AppError.DatabaseError` into the Reader caller's save path; verify one bounded `screen=reader`, `action=save_reader_setting`, `operation=reader_settings_save`, terminal failure breadcrumb and exactly one contextual non-fatal. Verify a successful result emits no failure report and thrown cancellation propagates without a report. Keep raw throwable text and all book/profile/settings values out of diagnostic dimensions.
+- **Prior coverage boundary:** QA-BUG-0062 host and Samsung evidence exercised the SettingsViewModel-owned save/Undo path, not this ReaderViewModel caller. It does not establish Reader-caller failure coverage.
+
+No case-417 or other Samsung test was started. The matching catalogue addition is case 784; on-device DB fault injection remains NOT RUN/BLOCKED until the phone and a safe fixture are available.

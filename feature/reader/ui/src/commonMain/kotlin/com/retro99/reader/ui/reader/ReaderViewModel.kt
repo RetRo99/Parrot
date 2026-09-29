@@ -2119,10 +2119,12 @@ class ReaderViewModel(
     ) {
         readerSettingsSaveMutex.withLock {
             val currentSettings = getReaderSettingsUseCase().first()
-            val updatedSettings = update(currentSettings)
-            if (updatedSettings != currentSettings) {
-                saveReaderSettingsUseCase(updatedSettings)
-            }
+            persistReaderSettingsUpdateFromReader(
+                currentSettings = currentSettings,
+                update = update,
+                saveSettings = { settings -> saveReaderSettingsUseCase(settings) },
+                analytics = analytics,
+            )
         }
     }
 
