@@ -164,7 +164,7 @@ Run the baseline and extension IDs together for each screen. Shared lifecycle/ac
 | I | Audiobook, mini player, media service | 290–326 | 660–674 |
 | J | Statistics | 385–407 | 695–709 |
 | K | App settings, profiles, servers | 408–452 | 710–729 |
-| L | Cloud account and single-device backup | 357–384, with sync deferrals | 730–739, 778 |
+| L | Cloud account and single-device backup | 357–384, with sync deferrals | 730–739, 778–779 |
 | M | Cross-cutting lifecycle/polish/reporting | 453–494, with sync deferrals | 740–750; repeat shared checks throughout B–L |
 
 ## Evidence and reporting

@@ -1,0 +1,19 @@
+# Cloud Account auth persistence failure source audit
+
+- **Audit date:** 2026-09-29.
+- **Device/build context:** required Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, build `BP4A.251205.006.S921BXXSGDZG1`; last verified package `com.retro99.parrot` 0.4.5 (21), APK SHA-256 `d1f5202462a20294aa5a8c3fd227266deace01e661dfb37c3973fea0b0fafe06`, app source through `88f44a5f0d502419413dcf95c7c63ad30c2a651f`; docs/source audit HEAD `4983f9d086dc44ecfea901738b41bab8bf21ebf9`. No auth fixture, failure injection, credential submission or device mutation used.
+- **Cases:** 363–364, 739, 779; shared 742–743 and 748–749.
+- **Inspected:** `SignInCloudAccountUseCase.completeSignIn()`, `RegisterCloudAccountUseCase.invoke()`, `SupabaseCloudAccountDataRepository.signIn/register/signOut`, `SupabaseClientProvider.observeActiveSessionState/withProfileSession`, `CloudAccountViewModel.submit/showError/handleAuthState`, and `LinkCloudAccountUseCase`.
+
+## Reproduction path
+
+1. Email sign-in or registration returns a `CloudAccount`; `SupabaseCloudAccountDataRepository` has already established/published its local Supabase session.
+2. `SignInCloudAccountUseCase` or `RegisterCloudAccountUseCase` next calls `PendingCloudAuthenticationRepository.save()` as required local completion state.
+3. If that local preference/database write throws, the use case propagates it. Before the fix there is no compensating repository sign-out or pending-record clear in either catch path.
+4. The ViewModel catches the error and shows generic error state; while its `isLoading` flag was true, the auth observer could first update `authState=SignedIn`. `showError` then sets `showLinkConfirmation` when signed in with no `profileLink`. `LinkCloudAccountUseCase` requires the pending-auth record and rejects if it is absent.
+
+This establishes a deterministic source path. A host fault-injection test must verify that the session is rolled back and the pending record cleared. No physical-device reproduction is claimed; safe Samsung injection needs an authorized disposable cloud account plus a local persistence fault fixture.
+
+## Safety boundary
+
+Never retain or emit email, password, OAuth code/token, account/profile ID, raw exception text or server URL. Expected auth rejection and user cancellation remain ordinary outcomes, not Crashlytics exceptions. The rollback itself must rethrow `CancellationException` and must not silently claim successful auth completion.

@@ -383,6 +383,7 @@ The earlier post-fix rows above record the first fix-candidate pass (PID `17458`
 | 738 | Delete-account cancellation | BLOCKED | BLOCKED | BLOCKED | No signed-in disposable cloud account; no dialog opened. |
 | 739 | Cloud operation failures and recovery | BLOCKED | BLOCKED | BLOCKED | Cloud credentials and safe auth/storage/backup/restore fault fixtures unavailable. |
 | 778 | Action event schema/privacy source audit | NOT RUN | FAIL by source audit: no Cloud Account operation Analytics events | FAIL by source audit: no operation breadcrumbs/contextual exception reporting; cancellation has no terminal telemetry | QA-BUG-0082 recorded before fix. Source-only finding [evidence](manual-qa-evidence/2026-09-29/cloud-account-instrumentation-source-audit.txt); no runtime result implied. |
+| 779 | Post-auth pending-record persistence failure rollback | NOT RUN | NOT RUN | NOT RUN | QA-BUG-0084 is confirmed by source path only; host fault-injection retest pending. Samsung failure fixture is BLOCKED without authorized disposable cloud credentials and safe local-write failure injection. [Source audit](manual-qa-evidence/2026-09-29/cloud-account-persistence-failure-source-audit.txt). |
 
 ## Early observation outside current screen order
 
