@@ -309,6 +309,7 @@ class ReaderViewModel(
             is ReaderIntent.SearchBook -> searchBook(intent.query)
             is ReaderIntent.GoToSearchResult -> goToSearchResult(intent.result)
             is ReaderIntent.SeekToChapterProgress -> seekToChapterProgress(intent.progression)
+            is ReaderIntent.JumpToBookProgress -> jumpToBookProgress(intent.progression)
             is ReaderIntent.StartListening -> startListening(intent.source)
             ReaderIntent.ToggleListenSheet -> toggleListenSheet()
             ReaderIntent.StopListening -> stopListening()
@@ -1684,6 +1685,7 @@ class ReaderViewModel(
             analytics.logEvent(ReaderAnalyticsEvent.TocOpened(bookUuid = bookUuid))
         }
         updateState { it.copy(isTocVisible = willBeVisible) }
+        if (willBeVisible) loadChapterTicks()
     }
 
     private fun toggleBookSearch() {
@@ -1761,6 +1763,23 @@ class ReaderViewModel(
         )
         bookSearchJob?.cancel()
         updateState { it.copy(isBookSearchVisible = false, isBookSearchLoading = false) }
+    }
+
+    private fun jumpToBookProgress(progression: Double) {
+        val previous = viewState.value.currentPosition
+        viewModelScope.launch {
+            if (bookController.goToTotalProgression(progression)) {
+                updateState { it.copy(isTocVisible = false, previousTocPosition = previous) }
+            }
+        }
+    }
+
+    private fun loadChapterTicks() {
+        if (viewState.value.chapterTickProgressions.isNotEmpty()) return
+        viewModelScope.launch {
+            val ticks = bookController.chapterStartProgressions()
+            if (ticks.isNotEmpty()) updateState { it.copy(chapterTickProgressions = ticks) }
+        }
     }
 
     private fun seekToChapterProgress(progression: Double) {

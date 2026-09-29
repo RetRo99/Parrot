@@ -43,6 +43,8 @@ import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.services.locateProgression
+import org.readium.r2.shared.publication.services.positionsByReadingOrder
 import org.readium.r2.shared.publication.services.search.search
 import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.mediatype.MediaType
@@ -194,6 +196,22 @@ class AndroidBookController internal constructor() : BookController {
         if (hasMediaOverlays) {
             enableSentenceTapDetection()
         }
+    }
+
+    override suspend fun chapterStartProgressions(): List<Double> {
+        val currentPublication = publication ?: return emptyList()
+        val positions = currentPublication.positionsByReadingOrder()
+        return positions.map { chapterPositions ->
+            chapterPositions.firstOrNull()?.locations?.totalProgression ?: 0.0
+        }
+    }
+
+    override suspend fun goToTotalProgression(progression: Double): Boolean {
+        val currentPublication = publication ?: return false
+        val locator = currentPublication.locateProgression(progression.coerceIn(0.0, 1.0))
+            ?: return false
+        withNavigator { navigator -> navigator.go(locator) }
+        return true
     }
 
     @OptIn(ExperimentalReadiumApi::class)

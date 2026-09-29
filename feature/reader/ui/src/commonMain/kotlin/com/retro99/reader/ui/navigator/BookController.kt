@@ -170,6 +170,15 @@ interface BookController : AutoCloseable {
      */
     suspend fun getChapterSentences(): List<TtsSentence> = emptyList()
 
+    /**
+     * Start of each reading-order item as a fraction (0..1) of the whole book, used to draw
+     * chapter ticks on the jump slider. Empty when the platform cannot compute it.
+     */
+    suspend fun chapterStartProgressions(): List<Double> = emptyList()
+
+    /** Navigates to a fraction (0..1) of the whole book. Returns false when unsupported. */
+    suspend fun goToTotalProgression(progression: Double): Boolean = false
+
     /** Searches publication text and returns location-aware results. */
     suspend fun search(query: String): List<ReaderSearchResult> = emptyList()
 }

@@ -951,4 +951,9 @@
     <string name="reader_overlay_now_playing_device_voice" tools:ignore="MissingTranslation">Device voice, chapter %1$d, %2$s</string>
     <string name="reader_overlay_mini_narration" tools:ignore="MissingTranslation">Narration · %1$s / %2$s</string>
     <string name="reader_overlay_mini_device_voice" tools:ignore="MissingTranslation">Device voice · %1$s</string>
+    <string name="reader_jump_title" tools:ignore="MissingTranslation">Jump to position</string>
+    <string name="reader_jump_location" tools:ignore="MissingTranslation">Chapter %1$d · %2$d%%</string>
+    <string name="reader_jump_go" tools:ignore="MissingTranslation">Go</string>
+    <string name="reader_jump_minus" tools:ignore="MissingTranslation">− %1$d%%</string>
+    <string name="reader_jump_plus" tools:ignore="MissingTranslation">+ %1$d%%</string>
 </resources>

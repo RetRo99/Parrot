@@ -37,6 +37,8 @@ data class ReaderViewState(
     // Table of contents
     val tableOfContents: List<TocItemUiModel> = emptyList(),
     val isTocVisible: Boolean = false,
+    // Start of each chapter as a fraction of the whole book, for the jump slider ticks.
+    val chapterTickProgressions: List<Double> = emptyList(),
     // TOC navigation undo - stores the position before navigating to a chapter
     val previousTocPosition: PositionUiModel? = null,
     // Current chapter info (page position and word count) based on actual viewport display

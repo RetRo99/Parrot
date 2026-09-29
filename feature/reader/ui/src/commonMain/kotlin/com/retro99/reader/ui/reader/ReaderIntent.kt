@@ -15,6 +15,9 @@ sealed interface ReaderIntent : BaseIntent {
 
     data class SeekToChapterProgress(val progression: Double) : ReaderIntent
 
+    /** Jumps to a fraction (0..1) of the whole book from the Contents sheet. */
+    data class JumpToBookProgress(val progression: Double) : ReaderIntent
+
     data class StartListening(val source: ListenSource) : ReaderIntent
 
     data object ToggleListenSheet : ReaderIntent

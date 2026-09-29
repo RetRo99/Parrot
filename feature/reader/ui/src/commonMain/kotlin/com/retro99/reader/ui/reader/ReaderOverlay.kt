@@ -566,6 +566,11 @@ internal fun ReaderOverlayContent(
             currentPage = viewState.chapterInfo?.currentPage,
             currentChapterPages = viewState.chapterInfo?.totalPages,
             bookmarks = viewState.bookmarks,
+            bookProgress = currentPosition?.totalProgression,
+            chapterTicks = viewState.chapterTickProgressions,
+            currentChapterNumber = chapterNumber,
+            isEink = isEink,
+            onJump = { progress -> intentDispatcher(ReaderIntent.JumpToBookProgress(progress)) },
             onChapterClick = { chapter ->
                 intentDispatcher(ReaderIntent.GoToChapter(chapter.href, currentPosition))
             },
@@ -1021,6 +1026,11 @@ internal fun ReaderContentsSheet(
     currentPage: Int?,
     currentChapterPages: Int?,
     bookmarks: List<BookmarkUiModel>,
+    bookProgress: Double?,
+    chapterTicks: List<Double>,
+    currentChapterNumber: Int,
+    isEink: Boolean,
+    onJump: (Double) -> Unit,
     onChapterClick: (TocItemUiModel) -> Unit,
     onBookmarkClick: (BookmarkUiModel) -> Unit,
     onBookmarkDelete: (String) -> Unit,
@@ -1041,6 +1051,13 @@ internal fun ReaderContentsSheet(
                 SheetTitle(
                     title = stringResource(StringRes.reader_overlay_contents),
                     onDismiss = onDismiss,
+                )
+                JumpToPositionCard(
+                    currentProgress = bookProgress ?: 0.0,
+                    chapterTicks = chapterTicks,
+                    fallbackChapterNumber = currentChapterNumber,
+                    isEink = isEink,
+                    onGo = onJump,
                 )
                 SegmentedContentsTabs(
                     selectedTab = selectedTab,
