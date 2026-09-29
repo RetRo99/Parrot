@@ -1,0 +1,30 @@
+# Cases 440–443, 441/740 Back, and 524 — Server Management candidate pass
+
+- **Run time:** 2026-09-29, approximately 03:45–03:55 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, PID `30618`, debug candidate APK SHA-256 `211d99f43ff504c5aa650c08d3cfea3889bf694ec2ac4966d9f9591d0274bb80`; local APK and Samsung-pulled installed `base.apk` hashes match. Source/fix commit `c94f53e38bfaea08a5b4a4863ebe4dd09fb93622`.
+- **Fixture/privacy:** used the existing active profile and retained, logged-out server card. No credentials were entered; Add Server was opened then exited without submission. No server/profile/book state or app data was changed. Server name, endpoint, profile labels/IDs and raw UI/log output are deliberately omitted.
+
+## Functional outcomes
+
+- **Case 440:** Settings → Servers displayed the Server Management title and existing server card. Four actual visible Server Management exposures were observed across this run (three Settings-row entries and the return from Login); screen event and visible-route breadcrumb counts matched at four.
+- **Case 441 / 740 toolbar Back:** tapped the Server Management Back affordance; App Settings was visible afterward.
+- **Case 441 / 740 system Back:** re-entered Server Management and sent system Back; App Settings was visible afterward.
+- **Case 442, logged-out Storyteller-card variant:** the card showed a distinct server-type label, logged-out state, and Log in/Delete actions. No card action was activated. The historical authenticated-card pass and Audiobookshelf-fixture blocker remain separate.
+- **Case 443:** Add Server opened Login; system Back returned to the same Server Management card. No sign-in or server registration occurred.
+- **Case 524, Add Server Login system Back:** functional return to Server Management passed; navigation telemetry failure below was recorded before any fix.
+
+## Local DebugAnalyticsManager evidence (not Firebase delivery)
+
+- Three Server Management list ViewModel starts each emitted one `server_list_load_attempted` and one `server_list_load_completed(outcome=succeeded, is_retry=false)`. The fourth visible exposure was a return from Login with the existing Server Management ViewModel retained.
+- Four `server_management_screen_viewed(source_screen=app_settings, entry_point=servers_row)` events and four matching `server_management_route` visible breadcrumbs were observed.
+- Server Management toolbar Back and system Back each emitted one attempted/success navigation outcome with the correct source, destination and entry point, plus correlated start/terminal breadcrumbs.
+- Case 443 emitted one correctly attributed `server_add_attempted`, no `server_added`, and one actual Login exposure. However, `login_screen_viewed` and its `login_route` breadcrumb both reported `source_screen=home, entry_point=add_server` although the actual source was Server Management. This is confirmed QA-BUG-0079.
+- Case 524's Login system Back returned to Server Management, but the process logs had no `navigation_back_attempted`, `navigation_back` outcome or navigation Back breadcrumb for `source_screen=login, destination_screen=server_management`. Source audit found `RootNavigationViewModel.handleBackFromLogin()` only pops the root stack. This is confirmed QA-BUG-0080.
+- No fatal marker or unexpected failure was induced. Firebase Analytics ingestion is waived; local logs do not prove Firebase delivery. Crashlytics delivery was not exercised.
+
+## Result disposition
+
+- Functional PASS for the executed case 440, case 441 toolbar/system Back, case 442 logged-out-card inspection, case 443 Add Server/Back, and case 524 Login Back variants.
+- Analytics/diagnostics FAIL for Login source attribution (case 443, QA-BUG-0079) and Login Back outcome reporting (case 524, QA-BUG-0080). Both defects were recorded before source changes.
+- Server list failure injection for case 777 remains BLOCKED on Samsung; this run only verifies the normal emitted-list success path.
