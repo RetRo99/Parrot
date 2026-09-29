@@ -71,6 +71,23 @@ internal class ReadingSessionDatabaseImpl(
         return dao.getReadingDays(sinceTimestamp)
     }
 
+    override suspend fun getSessionsAfterId(
+        afterId: Long,
+        limit: Int,
+    ): List<ReadingSessionEntity> {
+        return dao.getSessionsAfterId(afterId, limit)
+    }
+
+    override suspend fun getSessionByNaturalKey(
+        bookUuid: String,
+        bookType: String,
+        startTime: Long,
+        endTime: Long,
+        durationMs: Long,
+    ): ReadingSessionEntity? {
+        return dao.getSessionByNaturalKey(bookUuid, bookType, startTime, endTime, durationMs)
+    }
+
     override suspend fun deleteSession(id: Long) {
         dao.deleteSession(id)
     }

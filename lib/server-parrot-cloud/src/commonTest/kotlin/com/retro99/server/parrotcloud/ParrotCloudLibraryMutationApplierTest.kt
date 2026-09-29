@@ -60,6 +60,50 @@ class ParrotCloudLibraryMutationApplierTest {
         assertEquals(13L, database.upserted.single().remoteRevision)
     }
 
+    @Test
+    fun acceptedSessionMutationNeedsNoLocalBookMetadataUpdate() = runTest {
+        val database = RecordingLibraryBooksDatabase()
+        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
+
+        applier.onAccepted(
+            entry = entry(payload = "{}").copy(
+                entityType = SyncOutboxEntry.ENTITY_TYPE_READING_SESSION,
+            ),
+            response = SyncMutationResponse(
+                mutationId = "mutation-1",
+                status = "accepted",
+                cloudBookId = null,
+                revision = 1L,
+                payload = null,
+                reason = null,
+            ),
+        )
+
+        assertEquals(emptyList(), database.upserted)
+    }
+
+    @Test
+    fun conflictSessionMutationDoesNotTouchLibraryState() = runTest {
+        val database = RecordingLibraryBooksDatabase()
+        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
+
+        applier.onConflict(
+            entry = entry("{}").copy(
+                entityType = SyncOutboxEntry.ENTITY_TYPE_READING_SESSION,
+            ),
+            response = SyncMutationResponse(
+                mutationId = "mutation-1",
+                status = "conflict",
+                cloudBookId = null,
+                revision = 1L,
+                payload = """{"title":"remote title"}""",
+                reason = "stale revision",
+            ),
+        )
+
+        assertEquals(emptyList(), database.upserted)
+    }
+
     private fun entry(payload: String) = SyncOutboxEntry(
         mutationId = "mutation-1",
         cloudUserId = "account",

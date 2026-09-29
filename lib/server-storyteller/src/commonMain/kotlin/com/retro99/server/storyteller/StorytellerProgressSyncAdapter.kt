@@ -96,6 +96,7 @@ class StorytellerProgressSyncAdapter(
                 SyncOutboxEntry.ENTITY_TYPE_BOOKMARK,
                 SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
                 SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS,
+                SyncOutboxEntry.ENTITY_TYPE_READING_SESSION,
             ),
         )
         val codec = ProgressOutboxCodec { entry ->

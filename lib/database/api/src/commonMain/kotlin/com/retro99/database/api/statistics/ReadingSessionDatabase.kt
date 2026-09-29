@@ -82,6 +82,24 @@ interface ReadingSessionDatabase : DataClearable {
     suspend fun getReadingDays(sinceTimestamp: Long): List<Long>
 
     /**
+     * Gets reading sessions with a local id greater than [afterId], ordered by id ascending.
+     * Used to sweep new sessions into cloud sync without a schema marker column.
+     */
+    suspend fun getSessionsAfterId(afterId: Long, limit: Int): List<ReadingSessionEntity>
+
+    /**
+     * Finds a reading session by its natural identity (book, type and time window).
+     * Used to deduplicate sessions applied from cloud sync.
+     */
+    suspend fun getSessionByNaturalKey(
+        bookUuid: String,
+        bookType: String,
+        startTime: Long,
+        endTime: Long,
+        durationMs: Long,
+    ): ReadingSessionEntity?
+
+    /**
      * Deletes a reading session by ID.
      */
     suspend fun deleteSession(id: Long)

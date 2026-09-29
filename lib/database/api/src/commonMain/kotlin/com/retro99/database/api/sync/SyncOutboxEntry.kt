@@ -24,6 +24,7 @@ data class SyncOutboxEntry(
         const val ENTITY_TYPE_LIBRARY_BOOK = "library_book"
         const val ENTITY_TYPE_READER_SETTINGS = "reader_settings"
         const val ENTITY_TYPE_READING_POSITION = "reading_position"
+        const val ENTITY_TYPE_READING_SESSION = "reading_session"
 
         const val OPERATION_UPSERT = "upsert"
         const val OPERATION_DELETE = "delete"

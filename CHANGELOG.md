@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Reading statistics now sync to Parrot Cloud. Reading sessions are uploaded automatically for signed-in Parrot Cloud accounts — including the full local history on the first sync — and merged on other devices, where time, sessions, books read and streaks are computed from them as before. Sessions are treated as an append-only ledger and are removed with the Parrot Cloud account.
 - Prompted voice pack updates: when a new model version is published, voice settings offers "Download now / Later" instead of silently re-downloading. Updates install side-by-side and only switch once fully verified — a failed update leaves the current version fully working — the previous version is kept until the next update succeeds, and unchanged files are reused without downloading.
 
 ### Changed

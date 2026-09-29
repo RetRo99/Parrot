@@ -4,6 +4,7 @@ import com.retro99.database.api.statistics.BookReadingStatsEntity
 import com.retro99.database.api.statistics.DailyReadingTimeEntity
 import com.retro99.database.api.statistics.ReadingSessionEntity
 import com.retro99.database.implementation.DatabaseManager
+import com.retro99.database.implementation.Reading_session
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -179,6 +180,28 @@ internal class ReadingSessionSqlDelightDao(
         }
     }
 
+    suspend fun getSessionsAfterId(afterId: Long, limit: Int): List<ReadingSessionEntity> {
+        return withContext(Dispatchers.IO) {
+            queries.getSessionsAfterId(afterId, limit.toLong()).executeAsList().map { row ->
+                row.toEntity()
+            }
+        }
+    }
+
+    suspend fun getSessionByNaturalKey(
+        bookUuid: String,
+        bookType: String,
+        startTime: Long,
+        endTime: Long,
+        durationMs: Long,
+    ): ReadingSessionEntity? {
+        return withContext(Dispatchers.IO) {
+            queries.getSessionByNaturalKey(bookUuid, bookType, startTime, endTime, durationMs)
+                .executeAsOneOrNull()
+                ?.toEntity()
+        }
+    }
+
     suspend fun deleteSession(id: Long) {
         withContext(Dispatchers.IO) {
             queries.deleteSession(id)
@@ -190,5 +213,21 @@ internal class ReadingSessionSqlDelightDao(
             queries.deleteAllSessions()
         }
     }
+}
+
+private fun Reading_session.toEntity(): ReadingSessionEntity {
+    return ReadingSessionSqlDelightEntity(
+        id = id,
+        bookUuid = book_uuid,
+        bookTitle = book_title,
+        bookType = book_type,
+        startTime = start_time,
+        endTime = end_time,
+        durationMs = duration_ms,
+        pagesRead = pages_read?.toInt(),
+        startProgression = start_progression,
+        endProgression = end_progression,
+        readingSpeedWpm = reading_speed_wpm?.toInt(),
+    )
 }
 

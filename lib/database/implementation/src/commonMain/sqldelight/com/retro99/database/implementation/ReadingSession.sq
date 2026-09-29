@@ -90,6 +90,19 @@ FROM reading_session
 WHERE start_time >= ?
 ORDER BY day_number DESC;
 
+-- Get sessions inserted after a local id marker (for sync sweeps)
+getSessionsAfterId:
+SELECT * FROM reading_session
+WHERE id > ?
+ORDER BY id ASC
+LIMIT ?;
+
+-- Natural identity lookup used to deduplicate synchronized sessions
+getSessionByNaturalKey:
+SELECT * FROM reading_session
+WHERE book_uuid = ? AND book_type = ? AND start_time = ? AND end_time = ? AND duration_ms = ?
+LIMIT 1;
+
 deleteSession:
 DELETE FROM reading_session WHERE id = ?;
 

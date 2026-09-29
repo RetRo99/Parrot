@@ -27,6 +27,9 @@ class ParrotCloudLibraryMutationApplier(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     ) {
+        // Reading sessions are append-only ledger rows: acceptance needs no
+        // local metadata update, the outbox entry is simply acknowledged.
+        if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_SESSION) return
         val payload = json.decodeFromString<ParrotCloudBookPayload>(entry.payload)
         libraryBookSyncApplier.applyAccepted(
             entry = entry,
@@ -39,6 +42,7 @@ class ParrotCloudLibraryMutationApplier(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     ) {
+        if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_SESSION) return
         response.payload?.let { payload ->
             val book = json.decodeFromString<ParrotCloudBookPayload>(payload)
             libraryBookSyncApplier.applyRemote(

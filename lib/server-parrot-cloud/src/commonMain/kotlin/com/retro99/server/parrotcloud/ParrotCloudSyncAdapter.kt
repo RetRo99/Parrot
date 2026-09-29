@@ -53,6 +53,8 @@ class ParrotCloudSyncAdapter(
     @Provided private val libraryMutationApplier: ParrotCloudLibraryMutationApplier,
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
     @Provided private val bookFileChangeApplier: ParrotCloudBookFileChangeApplier,
+    @Provided private val readingSessionSyncService: ParrotCloudReadingSessionSyncService,
+    @Provided private val readingSessionChangeApplier: ParrotCloudReadingSessionChangeApplier,
 ) : SyncPass {
     private val outboxCapability = SyncOutboxCapability(
         unsupportedEntityTypes = setOf(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS),
@@ -77,6 +79,9 @@ class ParrotCloudSyncAdapter(
         reportPhase: SyncPhaseReporter,
     ): SyncResult {
         duplicatePositionRepair.repair()
+        // Backfill-style sweep: enqueue every local reading session recorded
+        // since the last sweep before the pass drains the outbox.
+        readingSessionSyncService.enqueueNewSessions(cloudUserId)
         return syncBoundedPass.execute(
             destinationId = PARROT_CLOUD_SERVER_ID,
             remoteAccountId = cloudUserId,
@@ -90,7 +95,7 @@ class ParrotCloudSyncAdapter(
             },
             pushProgressEntries = ::pushProgressMutations,
             pushLibraryMutationEntries = { entries, cursor ->
-                pushLibraryMutations(entries, cursor ?: "0")
+                pushLibraryMutations(cloudUserId, entries, cursor ?: "0")
             },
             fetchAndApply = { cursor, limit, reportApplying ->
                 syncPageAdapter.fetchPage(
@@ -226,17 +231,36 @@ class ParrotCloudSyncAdapter(
     }
 
     private suspend fun pushLibraryMutations(
+        cloudUserId: String,
         entries: List<SyncOutboxEntry>,
         cursor: String,
     ): Int {
         if (entries.isEmpty()) return 0
-        val summary = libraryMutationSyncEngine.push(
-            entries = entries,
-            transport = libraryMutationTransport,
-            cursor = cursor,
-            applier = libraryMutationApplier,
-        )
-        return summary.acknowledgedCount + summary.conflictCount
+        // Drain more than one batch per pass so a large reading-session
+        // backfill does not trickle out at one batch per sync request.
+        var pushedCount = 0
+        var chunk = entries.filterLibraryMutationChannelEntries()
+        val attemptedMutationIds = mutableSetOf<String>()
+        var chunkCount = 0
+        while (chunk.isNotEmpty() && chunkCount < MAX_LIBRARY_PUSH_CHUNKS) {
+            val freshChunk = chunk.filter { entry -> attemptedMutationIds.add(entry.mutationId) }
+            if (freshChunk.isEmpty()) break
+            val summary = libraryMutationSyncEngine.push(
+                entries = freshChunk,
+                transport = libraryMutationTransport,
+                cursor = cursor,
+                applier = libraryMutationApplier,
+            )
+            pushedCount += summary.acknowledgedCount + summary.conflictCount
+            chunkCount++
+            if (chunkCount >= MAX_LIBRARY_PUSH_CHUNKS) break
+            chunk = syncOutboxPreflight.selectEligible(
+                remoteAccountId = cloudUserId,
+                maxEntries = SYNC_BATCH_SIZE,
+                capability = outboxCapability,
+            ).filterLibraryMutationChannelEntries()
+        }
+        return pushedCount
     }
 
     private suspend fun applyRemoteProgress(
@@ -264,11 +288,13 @@ class ParrotCloudSyncAdapter(
             }
 
             ENTITY_TYPE_BOOK_FILE -> bookFileChangeApplier.apply(payload)
+            SyncOutboxEntry.ENTITY_TYPE_READING_SESSION -> readingSessionChangeApplier.apply(payload)
         }
     }
 
     private companion object {
         const val SYNC_BATCH_SIZE = 50
+        const val MAX_LIBRARY_PUSH_CHUNKS = 5
         const val ENTITY_TYPE_BOOK_FILE = "book_file"
         const val DEFAULT_CONTENT_HASH_ALGORITHM = "sha-256-v1"
     }
@@ -281,6 +307,18 @@ internal data class LocalReadingPositionMutation(
     val contentHashAlgorithm: String?,
     val position: ServerPosition,
 )
+
+/**
+ * Library-mutation channel membership mirrors the split in SyncBoundedPass:
+ * everything except reading_position, which must stay on the progress channel
+ * because it needs the progress engine's payload conversion, book linking and
+ * latest-snapshot collapsing. Feeding progress entries to the library-mutation
+ * engine would also poison their mutation ids on the server with responses
+ * that the progress channel can never replay past.
+ */
+internal fun List<SyncOutboxEntry>.filterLibraryMutationChannelEntries(): List<SyncOutboxEntry> {
+    return filter { entry -> entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION }
+}
 
 internal fun LocalReadingPositionMutation.toParrotCloudReadingPositionPayload(
     libraryBook: LibraryBookEntity,
