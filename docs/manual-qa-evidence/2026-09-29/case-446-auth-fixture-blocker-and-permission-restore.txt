@@ -1,0 +1,15 @@
+# Case 446 — active-playback logout blocker and permission cleanup
+
+- **Assessment time:** 2026-09-29, approximately 04:59 CEST.
+- **Device/build:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, build `BP4A.251205.006.S921BXXSGDZG1`; Parrot `com.retro99.parrot` 0.4.5 (21), final debug APK SHA-256 `d1f5202462a20294aa5a8c3fd227266deace01e661dfb37c3973fea0b0fafe06`.
+- **Blocker:** final candidate run confirmed the only retained server card is logged out. No authenticated disposable playback fixture is authorized. Did not start playback, submit credentials, tap Retry/Logout, or alter the retained server/book/profile data. Case 446 and QA-BUG-0049 remain BLOCKED for retest; the earlier confirmed `PLAYING`-after-logout defect is retained in `docs/manual-qa-bugs.md` and the 2026-09-27 case evidence.
+
+## Temporary permission restoration
+
+`POST_NOTIFICATIONS` had been temporarily granted for the historical active-ReadAloud case-446 failure reproduction; its baseline was denied. Because the current retest could not proceed, restored the baseline permission:
+
+```text
+adb -s RFCWC0SSVDM shell pm revoke com.retro99.parrot android.permission.POST_NOTIFICATIONS
+```
+
+At 2026-09-29 04:59 CEST, `dumpsys package com.retro99.parrot` reported `android.permission.POST_NOTIFICATIONS: granted=false`, matching baseline. No other device setting or app data was changed. Raw dumpsys output was not retained.
