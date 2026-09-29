@@ -1,0 +1,17 @@
+# Cases 439/776 — Continue Reading profile isolation: first fix-candidate retest
+
+- **Run time:** 2026-09-29, approximately 02:45–02:55 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`, portrait, gesture navigation.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, PID `17458`. Debug APK SHA-256 `a1e9242cec415479bbfe7891d4d94c4700836c1496593d57a4bd48e8b93f5c00`; local APK and APK pulled from the Samsung matched. Candidate built from the QA-BUG-0078 fix working tree based on source HEAD `0abdbfd37d4397b4348aeb04bd969255f7ad1bc0`.
+- **Fixture/privacy:** Used the existing disposable QA profile with no current-book row and the original profile with a current-reading target. Switched back to the original profile. No profile/book identifiers retained. No clear, stale-target tap, login, retry or app-data clear.
+
+## Outcome
+
+- Switched from original to empty disposable profile: Settings had no Clear Current Book row; Books had no Continue Reading shelf; Series had no floating bubble.
+- Switched back to original profile: its Continue Reading shelf/target returned and remained intact.
+- Literal Clear Current Book action was NOT RUN; the original target was not modified.
+- Local Analytics: two profile-switch attempt/success pairs and three profile-state events (initial available, destination unavailable, return available). Firebase ingestion is waived/not claimed.
+- Local diagnostics: three profile-rebind start/terminal correlation pairs and two profile-switch start/success pairs. Correlation IDs were checked but not retained. No fatal or generic exception marker; no unexpected failure was induced, so Crashlytics delivery was not exercised.
+- Host verification at the time: 103 Home UI + Analytics implementation tests, zero failures/errors/skips; Android debug assembly and iOS Simulator source compilation passed.
+
+This was an earlier successful fix-candidate retest. A subsequent rebuild added an unexpected-observation failure-reporting boundary for bubble-position state and repeated the same Samsung interaction; see [final rebuilt candidate evidence](case-439-profile-current-book-rebind-retest.txt).
