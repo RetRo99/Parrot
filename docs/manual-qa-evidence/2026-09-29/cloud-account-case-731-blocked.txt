@@ -1,0 +1,17 @@
+# Cloud Account case 731 — delayed duplicate-submit test blocked
+
+- **Date:** 2026-09-29.
+- **Device/build:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation; Parrot `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `c8176648c49283eb5fcd4430232d3494b024b487d56b9032c8692afe643c7360`, fix commit `2f5c5087804b58c8eabc06bec8372604fd9a2586`. App data and the existing unauthenticated server/profile fixtures remain preserved.
+
+## Disposition
+
+- **Status:** BLOCKED; no case action was attempted.
+- **Reason:** The case requires a controlled delayed Parrot Cloud authorization endpoint to observe a slow request and prove duplicate-tap suppression/one terminal outcome. No authorized reachable QA endpoint or disposable Cloud account fixture is available. The installed debug OAuth configuration targets `127.0.0.1:54321`, which is unreachable from the Samsung (see [QA-BUG-0086 endpoint evidence](cloud-account-google-oauth-debug-endpoint.txt)); this is not a valid delayed endpoint. No credentials or real account submission are authorized.
+- **Preconditions unavailable:** Authorized delayed QA endpoint plus a disposable account/rejection fixture and a documented safe reset path.
+- **Steps performed:** None. Did not tap Sign in, Create account, or Continue with Google; did not Retry the retained unauthenticated server fixture or change app/cloud configuration.
+- **Functional:** BLOCKED; duplicate-submit/race behaviour not observed.
+- **Analytics:** BLOCKED; no attempt or terminal event was emitted for this case. Firebase Analytics delivery was not tested.
+- **Diagnostics:** BLOCKED; no controlled delay/failure was induced. No Crashlytics non-fatal delivery claim.
+- **Next:** Request authorized delayed QA endpoint and disposable fixture. Until then keep case 731 BLOCKED and do not substitute arbitrary credentials or the unreachable production/debug endpoint.
+
+This test-control blocker is separate from the case-367 no-credential OAuth cancellation run. No account, profile, server, or local book state was changed.
