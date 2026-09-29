@@ -1,6 +1,6 @@
 # Parrot — Manual QA Test Plan (Full In-App Action Coverage)
 
-**Execution goal and instrumentation requirements:** [manual-qa-goal.md](manual-qa-goal.md). Read that document before running this catalogue. Baseline IDs 1–494 are preserved; extension IDs 495–782 add Samsung setup, screen edge cases and observability verification. These are planned tests, not recorded results.
+**Execution goal and instrumentation requirements:** [manual-qa-goal.md](manual-qa-goal.md). Read that document before running this catalogue. Baseline IDs 1–494 are preserved; extension IDs 495–783 add Samsung setup, screen edge cases and observability verification. These are planned tests, not recorded results.
 
 **Scope of this pass:** every action a single user can perform inside the app — opening, navigating, backing out, reading, playing, downloading, importing, backing up, configuring, viewing statistics, managing profiles/servers/accounts, and all lifecycle behaviour.
 
@@ -1111,3 +1111,9 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 782 | Last-book launch failure and Reader Retry attribution | With Open Last Book On Launch enabled and a controlled local last-book target, induce a safe retryable startup/open failure; inspect the initial attempt/failure, activate Reader Retry, then allow the same target to reach usable content. Compare local Analytics and diagnostic breadcrumbs. | Initial launch retains `home` / `splash` / `app_launch`. Retry attempt, terminal outcome and matching breadcrumbs use bounded Reader attribution (`screen=reader`, `source_screen=reader`, `entry_point=reader_retry`); attempt and terminal distinguish failure, retry, and recovery; no duplicate terminal, book/profile ID, title/path or raw error text. Do not mark the branch PASS without an authorized failure/recovery fixture and on-device usable-content retest. Firebase Analytics ingestion remains waived; Crashlytics delivery is separate. |
+
+## 52. Kotzilla SDK scheduler queue pressure and dropped-event scope
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 783 | Kotzilla CoreScheduler queue pressure, event loss and telemetry scope | On the Samsung with a labelled PID-scoped log capture, record a fresh start/end time without clearing retained logs; perform one controlled Books → Reader → Back → Continue Reading sequence and inspect only the interval. Record the exact Kotzilla SDK version and warning count; compare Parrot's local typed Analytics output separately. If authorized Kotzilla Console/session access exists, inspect the same run's SDK event timeline; do not change SDK configuration or flood the channel to force a drop. | No queue-full/drop warning during the ordinary sequence. If one occurs, confirm its SDK-owned `trySend` failure, determine full-versus-closed where observable, capture recovery and event-category/count evidence where available, and keep Kotzilla SDK event loss distinct from Parrot Analytics/Firebase. No app retry flood or user-visible degradation. Do not infer Firebase delivery/loss from Kotzilla logs; do not PASS without a controlled time-bounded Samsung run and evidence of the observed queue/recovery behavior. |

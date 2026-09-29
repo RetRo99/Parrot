@@ -1,4 +1,4 @@
-# Suspected Kotzilla CoreScheduler queue drops during Reader navigation
+# Kotzilla CoreScheduler queue drops during Reader navigation
 
 - **Observed:** 2026-09-29, 16:28–16:32 CEST, Samsung `RFCWC0SSVDM`, process PID `12761`.
 - **Build:** `com.retro99.parrot` 0.4.5 (21), APK SHA-256 `efbd8a0d742141e298c311f74b82d221f41efe75ae7c67bb26131897b77a1143`, QA-BUG-0095 source commit `198629e6670c63bcc9f03a70fe748cc20c373ce3`.
@@ -16,10 +16,24 @@ Android logcat contained repeated warnings:
 
 Counted from the retained logcat buffer: 1,283 matching warnings total across PIDs `25997` (7) and `12761` (1,276), from the first retained match at 15:49:39 to the last at 16:32:37. The concentrated navigation window included 3 at 16:28:05–16:28:06, 145 at 16:29:35, and 5 at 16:29:44. The buffer-wide total is not a controlled single-action frequency measurement.
 
-Source audit found Kotzilla's Koin analytics hook in `composeApp/src/commonMain/kotlin/com/retro99/parrot/di/KoinInit.kt` (`analytics()`), with the Kotzilla Compose SDK dependency in `composeApp/build.gradle.kts` and version catalog. This does not establish that Parrot's typed Analytics events or Firebase events were dropped; the warning may be limited to Kotzilla's own SDK event queue.
+Initial source correlation found Kotzilla's Koin analytics hook in `composeApp/src/commonMain/kotlin/com/retro99/parrot/di/KoinInit.kt` (`analytics()`), with the Kotzilla Compose SDK dependency in `composeApp/build.gradle.kts` and version catalog. At that stage, it did not establish whether these warnings represented dropped events; the subsequent artifact audit below refines that classification.
 
-## Classification and limits
+## Initial classification and limits
 
 - No user-visible failure, Reader blank state, fatal exception, or confirmed loss of Parrot/Firebase analytics was observed in this navigation sequence.
-- Classified **SUSPECTED**, low-severity instrumentation/diagnostic reliability concern. Root cause, queue consumer, downstream impact, and relationship to user-facing telemetry are unverified. No fix or suppression was attempted.
-- Further investigation should use a Firebase/Kotzilla-enabled QA build with controlled event-count comparison and SDK diagnostics. Do not infer Firebase Analytics delivery or loss from this local warning alone.
+- At capture time this was classified **SUSPECTED**, low-severity instrumentation/diagnostic reliability concern. No fix or suppression was attempted.
+- Do not infer Firebase Analytics delivery or loss from this local warning alone.
+
+## Follow-up: exact SDK queue/drop mechanism
+
+- Inspected the project-resolved Android artifact `io.kotzilla:kotzilla-core-android:1.4.2`; AAR SHA-256 `154fe6129d62c6b112231837050ee53708fca19c64221916f43e98367ea2ae06`.
+- In `io.kotzilla.sdk.core.CoreScheduler`, the channel is constructed with capacity `4000` and `BufferOverflow.DROP_LATEST`. The event enqueue path calls `events.trySend(event)` and logs the exact `[CoreScheduler] Event queue full, dropping event` warning when `trySend` reports failure. Kotlin's [`trySend` contract](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines.channels/-send-channel/try-send.html) says this failure occurs when the channel is full or closed, and the element is not delivered. The source log branch does not distinguish these causes. Thus each retained warning confirms an unsuccessful Kotzilla SDK enqueue, but not necessarily that the channel was full. This is not evidence about Parrot's typed Analytics events or Firebase Analytics.
+- The same class has a separate `eventsBuffer` that triggers an early flush at 2,800 entries and, if it exceeds 4,000, drops oldest buffered events with a different `Buffer overflow, dropped ... oldest events` warning. The observed `Event queue full, dropping event` warning is specifically the channel `trySend` failure path, not that retained-buffer overflow path.
+- The retained logcat count of 1,283 warnings therefore represents at least 1,283 rejected Kotzilla enqueue attempts across PIDs `25997` and `12761`; the aggregate is not a controlled action-level rate. Whether the channel was full or closed, how long the condition persisted, which event categories were not delivered, and any effect on Kotzilla session analysis remain unknown.
+- Kotzilla's [public SDK changelog](https://doc.kotzilla.io/docs/releaseNotes/changelogSDK) lists 1.4.2 fixes for duplicate event batches and stale Compose app versions, plus earlier scheduler-threading/event-retry changes; it does **not** document a fix for this exact full-channel warning. Current newer release notes do not establish that upgrading would resolve this observation. No dependency upgrade or suppression was attempted.
+
+## Updated classification
+
+- **CONFIRMED:** Kotzilla SDK event enqueue failures with undelivered elements. **UNCONFIRMED:** whether the channel was full or closed, controlled reproducibility/frequency, recovery, and downstream loss severity.
+- Reader and Books remained usable; no Parrot/Firebase Analytics loss, Crashlytics loss, or user-visible issue was established. Keep this distinct from Firebase delivery verification (which remains waived/unverified as separately recorded).
+- Case 783 is appended for controlled Samsung queue/recovery and telemetry-scope verification. Do not mark it PASS from the retained logcat buffer or this bytecode audit.
