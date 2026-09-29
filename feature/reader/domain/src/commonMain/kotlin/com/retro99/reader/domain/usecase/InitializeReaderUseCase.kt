@@ -97,6 +97,7 @@ class InitializeReaderUseCase(
                     serverId = book.serverId,
                     bookUuid = book.uuid,
                     bookTitle = book.title,
+                    bookAuthor = book.authors.joinToString(", ") { it.name },
                     bookCoverUrl = book.coverUrl,
                     localEbookPath = localPath,
                     bookType = bookType,
@@ -143,8 +144,9 @@ class InitializeReaderUseCase(
         Ok(
             ReaderInitializationData(
                 serverId = book.serverId,
-                bookUuid = book.uuid,
-                bookTitle = book.title,
+                    bookUuid = book.uuid,
+                    bookTitle = book.title,
+                    bookAuthor = book.author.orEmpty(),
                 bookCoverUrl = book.coverUrl,
                 localEbookPath = book.filePath,
                 bookType = book.bookType,

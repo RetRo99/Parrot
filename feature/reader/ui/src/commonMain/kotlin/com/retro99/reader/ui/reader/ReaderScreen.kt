@@ -74,6 +74,7 @@ import co.touchlab.kermit.Logger
 import com.retro99.base.nowMillis
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
+import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.LoadingScreen
 import com.retro99.base.ui.compose.TooltipIconButton
 import com.retro99.books.domain.model.BookType
@@ -279,30 +280,9 @@ private fun ReaderScreenContent(
         }
         when {
             viewState.publicationState != null -> {
-                ReaderContent(
+                ReaderOverlayContent(
                     bookUuid = bookUuid,
-                    bookTitle = viewState.bookTitle,
-                    publicationState = viewState.publicationState,
-                    isReadAloud = viewState.isReadAloud,
-                    isTtsReadAloud = viewState.isTtsReadAloud,
-                    ttsVoices = viewState.ttsVoices,
-                    selectedTtsVoiceId = viewState.selectedTtsVoiceId,
-                    isTtsVoicePreparing = viewState.isTtsVoicePreparing,
-                    isPlaying = viewState.isPlaying,
-                    isNarrationLoading = viewState.isNarrationLoading,
-                    isNarrationStartPending = viewState.isNarrationStartPending,
-                    currentAudioPositionMs = viewState.currentAudioPositionMs,
-                    totalDurationMs = viewState.totalDurationMs,
-                    sleepTimerRemainingMs = viewState.sleepTimerRemainingMs,
-                    isAudioPlayerReady = viewState.isAudioPlayerReady,
-                    tableOfContents = viewState.tableOfContents,
-                    isTocVisible = viewState.isTocVisible,
-                    previousTocPosition = viewState.previousTocPosition,
-                    chapterInfo = viewState.chapterInfo,
-                    chapterReadingTimeInfo = viewState.chapterReadingTimeInfo,
-                    currentTime = viewState.currentTime,
-                    bookmarks = viewState.bookmarks,
-                    isBookmarksVisible = viewState.isBookmarksVisible,
+                    viewState = viewState,
                     intentDispatcher = intentDispatcher,
                     loader = movableLoader,
                 )
@@ -586,312 +566,6 @@ private fun NoMoreBookmarksSnackbar(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ReaderContent(
-    bookUuid: String,
-    bookTitle: String,
-    publicationState: PublicationState,
-    isReadAloud: Boolean,
-    isTtsReadAloud: Boolean,
-    ttsVoices: List<TtsVoice>,
-    selectedTtsVoiceId: String?,
-    isTtsVoicePreparing: Boolean,
-    isPlaying: Boolean,
-    isNarrationLoading: Boolean,
-    isNarrationStartPending: Boolean,
-    currentAudioPositionMs: Long,
-    totalDurationMs: Long?,
-    sleepTimerRemainingMs: Long?,
-    tableOfContents: List<TocItemUiModel>,
-    isTocVisible: Boolean,
-    previousTocPosition: PositionUiModel?,
-    chapterInfo: ChapterInfo?,
-    chapterReadingTimeInfo: ChapterReadingTimeInfo?,
-    currentTime: String,
-    bookmarks: List<BookmarkUiModel>,
-    isBookmarksVisible: Boolean,
-    intentDispatcher: IntentDispatcher<ReaderIntent>,
-    isAudioPlayerReady: Boolean,
-    loader: @Composable (() -> Unit),
-) {
-    val settings = publicationState.settings
-    val currentPosition = publicationState.position
-    var tempScale by remember(settings.fontSize) { mutableStateOf(settings.fontSize) }
-    var isZooming by remember { mutableStateOf(false) }
-
-    var areControlsVisible by remember { mutableStateOf(true) }
-    var isAudioControlsDialogVisible by remember { mutableStateOf(false) }
-    var lastInteractionTime by remember { mutableStateOf(0L) }
-    var containerSize by remember { mutableStateOf(IntSize.Zero) }
-    val fontSizeUndoSnackbarHostState = remember { SnackbarHostState() }
-    val coroutineScope = rememberCoroutineScope()
-    val settingChangedMessage = stringResource(StringRes.settings_changed)
-    val undoLabel = stringResource(StringRes.settings_undo)
-
-    LaunchedEffect(
-        areControlsVisible,
-        lastInteractionTime,
-        isAudioControlsDialogVisible,
-        isNarrationStartPending,
-    ) {
-        if (isNarrationStartPending) {
-            areControlsVisible = true
-        } else if (areControlsVisible && !isAudioControlsDialogVisible) {
-            delay(CONTROLS_AUTO_HIDE_DELAY_MS)
-            areControlsVisible = false
-        }
-    }
-
-    val onControlsInteraction: () -> Unit = {
-        lastInteractionTime = nowMillis()
-        areControlsVisible = true
-    }
-
-    val backgroundColor = settings.theme.backgroundColor()
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(backgroundColor)
-            .statusBarsPadding(),
-    ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .onSizeChanged { containerSize = it },
-        ) {
-            EpubReaderView(
-                bookUuid = bookUuid,
-                publicationState = publicationState,
-                intentDispatcher = intentDispatcher,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(vertical = settings.marginVertical.dp)
-                    .readerGestures(
-                        containerSize = containerSize,
-                        detectDoubleTaps = isReadAloud ||
-                                (isTtsReadAloud && settings.ttsEnabled),
-                        doubleTapTimeoutMs = settings.doubleTapTimeoutMs,
-                        tapNavigationEnabled = settings.tapNavigationEnabled,
-                        onZoomChange = { scale ->
-                            isZooming = true
-                            tempScale = (settings.fontSize * scale).coerceIn(0.5, 3.0)
-                            onControlsInteraction()
-                        },
-                        onZoomEnd = { finalScale ->
-                            val newFontSize = (settings.fontSize * finalScale).coerceIn(0.5, 3.0)
-                            if (abs(newFontSize - settings.fontSize) > 0.001) {
-                                val previousSettings = settings
-                                val updatedSettings = settings.copy(fontSize = newFontSize)
-                                intentDispatcher(ReaderIntent.UpdateSettings(updatedSettings))
-
-                                coroutineScope.launch {
-                                    fontSizeUndoSnackbarHostState.currentSnackbarData?.dismiss()
-                                    val result = fontSizeUndoSnackbarHostState.showSnackbar(
-                                        message = settingChangedMessage,
-                                        actionLabel = undoLabel,
-                                        duration = SnackbarDuration.Short,
-                                    )
-                                    if (result == SnackbarResult.ActionPerformed) {
-                                        intentDispatcher(
-                                            ReaderIntent.UpdateSettings(previousSettings)
-                                        )
-                                    }
-                                }
-                            }
-                            isZooming = false
-                        },
-                        onLeftTap = {
-                            // Apply configured left tap action
-                            when (settings.leftTapAction) {
-                                NavigationAction.NEXT_PAGE -> intentDispatcher(ReaderIntent.GoToNextPage)
-                                NavigationAction.PREVIOUS_PAGE -> intentDispatcher(ReaderIntent.GoToPreviousPage)
-                            }
-                        },
-                        onRightTap = {
-                            // Apply configured right tap action
-                            when (settings.rightTapAction) {
-                                NavigationAction.NEXT_PAGE -> intentDispatcher(ReaderIntent.GoToNextPage)
-                                NavigationAction.PREVIOUS_PAGE -> intentDispatcher(ReaderIntent.GoToPreviousPage)
-                            }
-                        },
-                        onMiddleTap = {
-                            areControlsVisible = !areControlsVisible
-                            if (areControlsVisible) {
-                                lastInteractionTime = nowMillis()
-                            }
-                        },
-                        // Note: Sentence double-tap for ReadAloud is handled via JavaScript
-                        // in the WebView, which reports taps to BookController for native
-                        // double-tap timing detection. See DoubleTapDetector.kt.
-                    ),
-            )
-
-            // Loading overlay for ReadAloud books while audio player initializes
-            if (isReadAloud && !isAudioPlayerReady) {
-                loader()
-            }
-
-            // Visual Overlay (Shows only while pinching)
-            if (isZooming) {
-                Box(
-                    modifier = Modifier.align(Alignment.Center),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                        shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.padding(16.dp),
-                    ) {
-                        Text(
-                            text = "${(tempScale * 100).toInt()}%",
-                            style = MaterialTheme.typography.headlineLarge,
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
-            }
-
-            // ReadAloud audio controls
-            if ((isReadAloud && isAudioPlayerReady) || (isTtsReadAloud && settings.ttsEnabled)) {
-                this@Column.AnimatedVisibility(
-                    visible = areControlsVisible,
-                    enter = fadeIn() + slideInVertically { it },
-                    exit = fadeOut() + slideOutVertically { it },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 48.dp),
-                ) {
-                    ReadAloudControls(
-                        isPlaying = isPlaying,
-                        isLoading = isNarrationLoading,
-                        currentPositionMs = currentAudioPositionMs,
-                        totalDurationMs = totalDurationMs,
-                        playbackSpeed = if (isTtsReadAloud && !isReadAloud) {
-                            settings.ttsRate
-                        } else {
-                            settings.playbackSpeed
-                        },
-                        sleepTimerRemainingMs = sleepTimerRemainingMs,
-                        showAudioProgressBar = if (isTtsReadAloud && !isReadAloud) {
-                            false
-                        } else {
-                            settings.showAudioProgressBar
-                        },
-                        areControlsVisible = areControlsVisible,
-                        voices = ttsVoices,
-                        selectedVoiceId = selectedTtsVoiceId,
-                        isVoicePreparing = isTtsVoicePreparing,
-                        showAudioOnlyAction = isReadAloud,
-                        intentDispatcher = intentDispatcher,
-                        onOpenVoiceSettings = { intentDispatcher(ReaderIntent.OpenVoiceSettings) },
-                        onInteraction = onControlsInteraction,
-                        onSwipeDown = { areControlsVisible = false },
-                        onControlsDialogVisibilityChanged = { isVisible ->
-                            isAudioControlsDialogVisible = isVisible
-                            if (isVisible) {
-                                onControlsInteraction()
-                            }
-                        },
-                    )
-                }
-            }
-
-            // Top toolbar with labelled actions
-            this@Column.AnimatedVisibility(
-                visible = areControlsVisible,
-                enter = fadeIn() + slideInVertically { -it },
-                exit = fadeOut() + slideOutVertically { -it },
-                modifier = Modifier.align(Alignment.TopEnd),
-            ) {
-                ReaderToolbar(
-                    bookTitle = bookTitle,
-                    onCloseClick = { intentDispatcher(ReaderIntent.Close) },
-                    onTocClick = { intentDispatcher(ReaderIntent.ToggleToc) },
-                    onBookmarksClick = { intentDispatcher(ReaderIntent.ToggleBookmarks) },
-                    onSettingsClick = { intentDispatcher(ReaderIntent.OnSettingsClicked) },
-                    showTtsAction = isTtsReadAloud,
-                    ttsEnabled = settings.ttsEnabled,
-                    isTtsPlaying = isPlaying,
-                    onTtsEnabledChange = { enabled ->
-                        intentDispatcher(ReaderIntent.SetTtsEnabled(enabled))
-                    },
-                    onTtsPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
-                    onVoiceSettings = { intentDispatcher(ReaderIntent.OpenVoiceSettings) },
-                    onInteraction = onControlsInteraction,
-                )
-            }
-
-            // Table of Contents bottom sheet
-            if (isTocVisible) {
-                TableOfContentsSheet(
-                    tableOfContents = tableOfContents,
-                    currentChapterHref = currentPosition?.href,
-                    bookProgression = currentPosition?.totalProgression,
-                    onChapterClick = { href ->
-                        intentDispatcher(ReaderIntent.GoToChapter(href, currentPosition))
-                    },
-                    onPreviousChapter = {
-                        intentDispatcher(ReaderIntent.GoToPreviousChapter)
-                    },
-                    onNextChapter = {
-                        intentDispatcher(ReaderIntent.GoToNextChapter)
-                    },
-                    onDismiss = { intentDispatcher(ReaderIntent.ToggleToc) },
-                )
-            }
-
-            // Bookmarks bottom sheet
-            if (isBookmarksVisible) {
-                BookmarksSheet(
-                    bookmarks = bookmarks,
-                    onAddBookmarkClick = { intentDispatcher(ReaderIntent.AddBookmark) },
-                    onBookmarkClick = { bookmark ->
-                        intentDispatcher(ReaderIntent.GoToBookmark(bookmark))
-                    },
-                    onBookmarkDelete = { id ->
-                        intentDispatcher(ReaderIntent.DeleteBookmark(id))
-                    },
-                    onBookmarkRename = { id, newTitle ->
-                        intentDispatcher(ReaderIntent.RenameBookmark(id, newTitle))
-                    },
-                    onReorder = { ids ->
-                        intentDispatcher(ReaderIntent.ReorderBookmarks(ids))
-                    },
-                    onDismiss = { intentDispatcher(ReaderIntent.ToggleBookmarks) },
-                )
-            }
-
-            ChapterNavigationUndoSnackbar(
-                previousTocPosition = previousTocPosition,
-                onUndo = { position ->
-                    intentDispatcher(ReaderIntent.UndoChapterNavigation(position))
-                },
-                onDismiss = {
-                    intentDispatcher(ReaderIntent.DismissChapterNavigationUndo)
-                },
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-
-            FontSizeUndoSnackbarHost(
-                hostState = fontSizeUndoSnackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
-        }
-
-        AnimatedProgressBar(
-            settings = settings,
-            areControlsVisible = areControlsVisible,
-            position = ProgressBarPosition.BOTTOM,
-            lastKnownPosition = currentPosition,
-            chapterInfo = chapterInfo,
-            chapterReadingTimeInfo = chapterReadingTimeInfo,
-            currentTime = currentTime,
-        )
-    }
-}
-
 @Composable
 internal fun AnimatedProgressBar(
     settings: ReaderSettingsUiModel,
@@ -1092,7 +766,7 @@ private fun ReaderToolbar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FontSizeUndoSnackbarHost(
+internal fun FontSizeUndoSnackbarHost(
     hostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
@@ -1117,7 +791,7 @@ private fun FontSizeUndoSnackbarHost(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChapterNavigationUndoSnackbar(
+internal fun ChapterNavigationUndoSnackbar(
     previousTocPosition: PositionUiModel?,
     onUndo: (PositionUiModel) -> Unit,
     onDismiss: () -> Unit,
@@ -1184,8 +858,8 @@ private fun ReadingProgressBar(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-        shadowElevation = 4.dp,
+        color = Ember.colors.surface,
+        shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -1202,7 +876,8 @@ private fun ReadingProgressBar(
                     LinearProgressIndicator(
                         progress = { chapterProgress },
                         modifier = Modifier.fillMaxWidth(),
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        color = Ember.colors.accent,
+                        trackColor = Ember.colors.track,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
@@ -1211,7 +886,8 @@ private fun ReadingProgressBar(
                     LinearProgressIndicator(
                         progress = { totalProgress },
                         modifier = Modifier.fillMaxWidth(),
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        color = Ember.colors.accent,
+                        trackColor = Ember.colors.track,
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
@@ -1246,7 +922,7 @@ private fun ReadingProgressBar(
                     Text(
                         text = currentTime,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Ember.colors.ink2,
                         maxLines = 1,
                     )
                 }
@@ -1255,7 +931,7 @@ private fun ReadingProgressBar(
                 Text(
                     text = chapterTitleText,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = Ember.colors.ink2,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
@@ -1273,7 +949,7 @@ private fun ReadingProgressBar(
                         Text(
                             text = pageInfoText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = Ember.colors.ink2,
                         )
                     }
 
@@ -1290,7 +966,7 @@ private fun ReadingProgressBar(
                         Text(
                             text = readingTimeText,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = Ember.colors.ink2,
                         )
                     }
 
@@ -1299,7 +975,7 @@ private fun ReadingProgressBar(
                         Text(
                             text = "$totalProgressPercent%",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = Ember.colors.ink2,
                         )
                     }
                 }

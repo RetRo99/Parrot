@@ -187,6 +187,9 @@ class ReaderViewModel(
     /** Job for the Read Aloud sleep timer countdown. */
     private var sleepTimerJob: Job? = null
 
+    /** Job for the current EPUB text search. */
+    private var bookSearchJob: Job? = null
+
     /** Job for downloading and loading the selected neural voice model. */
     private var ttsPreparationJob: Job? = null
 
@@ -302,6 +305,13 @@ class ReaderViewModel(
 
     override fun onIntent(intent: ReaderIntent) {
         when (intent) {
+            ReaderIntent.ToggleBookSearch -> toggleBookSearch()
+            is ReaderIntent.SearchBook -> searchBook(intent.query)
+            is ReaderIntent.GoToSearchResult -> goToSearchResult(intent.result)
+            is ReaderIntent.SeekToChapterProgress -> seekToChapterProgress(intent.progression)
+            is ReaderIntent.StartListening -> startListening(intent.source)
+            ReaderIntent.ToggleListenSheet -> toggleListenSheet()
+            ReaderIntent.StopListening -> stopListening()
             is ReaderIntent.UpdateSettings -> updateSettings(intent.settings)
             ReaderIntent.ToggleSettings -> toggleSettings()
             ReaderIntent.Close -> close()
@@ -610,6 +620,7 @@ class ReaderViewModel(
                 state.copy(
                     bookUuid = data.bookUuid,
                     bookTitle = data.bookTitle,
+                    bookAuthor = data.bookAuthor,
                     bookCoverUrl = data.bookCoverUrl,
                     publicationState = publicationState,
                     bookType = bookType,
@@ -1661,6 +1672,126 @@ class ReaderViewModel(
         updateState { it.copy(isTocVisible = willBeVisible) }
     }
 
+    private fun toggleBookSearch() {
+        val show = !viewState.value.isBookSearchVisible
+        if (show) {
+            bookSearchJob?.cancel()
+        }
+        updateState { state ->
+            state.copy(
+                isBookSearchVisible = show,
+                bookSearchQuery = if (show) state.bookSearchQuery else "",
+                bookSearchResults = if (show) state.bookSearchResults else emptyList(),
+                isBookSearchLoading = false,
+                bookSearchFailed = false,
+            )
+        }
+    }
+
+    private fun searchBook(query: String) {
+        val normalizedQuery = query.trim()
+        bookSearchJob?.cancel()
+        if (normalizedQuery.isEmpty()) {
+            updateState { it.copy(bookSearchQuery = query, bookSearchResults = emptyList(), isBookSearchLoading = false, bookSearchFailed = false) }
+            return
+        }
+        updateState {
+            it.copy(
+                bookSearchQuery = query,
+                bookSearchResults = emptyList(),
+                isBookSearchLoading = true,
+                bookSearchFailed = false,
+            )
+        }
+        bookSearchJob = viewModelScope.launch {
+            try {
+                delay(250L)
+                val results = bookController.search(normalizedQuery)
+                updateState { state ->
+                    if (state.bookSearchQuery.trim() == normalizedQuery) {
+                        state.copy(bookSearchResults = results, isBookSearchLoading = false)
+                    } else {
+                        state
+                    }
+                }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                updateState { state ->
+                    if (state.bookSearchQuery.trim() == normalizedQuery) {
+                        state.copy(isBookSearchLoading = false, bookSearchFailed = true)
+                    } else {
+                        state
+                    }
+                }
+            }
+        }
+    }
+
+    private fun goToSearchResult(result: ReaderSearchResult) {
+        val currentPosition = viewState.value.currentPosition
+        val chapterIndex = viewState.value.tableOfContents.indexOfFirst { it.href == result.href }
+            .takeIf { it >= 0 }
+        bookController.goToPosition(
+            PositionUiModel(
+                createdAt = currentPosition?.createdAt ?: now().toString(),
+                href = result.href,
+                type = result.type,
+                title = result.title,
+                progression = result.progression,
+                position = result.position,
+                totalProgression = result.totalProgression,
+                chapterIndex = chapterIndex,
+                totalChapters = currentPosition?.totalChapters ?: viewState.value.tableOfContents.size,
+            ),
+        )
+        bookSearchJob?.cancel()
+        updateState { it.copy(isBookSearchVisible = false, isBookSearchLoading = false) }
+    }
+
+    private fun seekToChapterProgress(progression: Double) {
+        val position = viewState.value.currentPosition ?: return
+        bookController.goToPosition(
+            position.copy(
+                progression = progression.coerceIn(0.0, 1.0),
+                position = null,
+                totalProgression = null,
+            ),
+        )
+    }
+
+    private fun startListening(source: ListenSource) {
+        updateState { it.copy(isListenSheetVisible = false) }
+        when (source) {
+            ListenSource.NARRATION -> {
+                if (!viewState.value.isReadAloud) return
+                updateState { it.copy(isListening = true) }
+                if (!viewState.value.isPlaying) activeNarrationController?.togglePlayback()
+            }
+
+            ListenSource.DEVICE_VOICE -> {
+                if (!viewState.value.isTtsReadAloud) return
+                if (viewState.value.currentSettings?.ttsEnabled != true) setTtsEnabled(true)
+                updateState { it.copy(isListening = true) }
+                if (!viewState.value.isPlaying) activeNarrationController?.togglePlayback()
+            }
+        }
+    }
+
+    private fun toggleListenSheet() {
+        updateState { it.copy(isListenSheetVisible = !it.isListenSheetVisible) }
+    }
+
+    private fun stopListening() {
+        if (viewState.value.isTtsReadAloud) {
+            ttsController.stop()
+        } else {
+            audioController.pauseAudio()
+            audioController.resetPlaybackState()
+        }
+        updateState { it.copy(isListening = false) }
+    }
+
     private fun goToChapter(href: String, currentPosition: PositionUiModel?) {
         bookController.goToChapter(href)
         updateState {
@@ -1975,6 +2106,7 @@ class ReaderViewModel(
                 return
             }
         }
+        updateState { it.copy(isListening = true) }
         activeNarrationController?.togglePlayback()
     }
 

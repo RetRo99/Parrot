@@ -4,6 +4,7 @@ import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAU
 import com.retro99.reader.ui.bridge.AudioLocator
 import com.retro99.reader.ui.bridge.EpubReaderBridge
 import com.retro99.reader.ui.bridge.EpubReaderSettings
+import com.retro99.reader.ui.reader.ReaderSearchResult
 import com.retro99.reader.ui.di.ReaderScope
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.LocatorState
@@ -235,6 +236,27 @@ class IosBookController(
             position = position.position,
         )
     }
+
+    override suspend fun search(query: String): List<ReaderSearchResult> =
+        suspendCancellableCoroutine { continuation ->
+            bridge.search(query) { results ->
+                if (continuation.isActive) {
+                    continuation.resume(
+                        results.map { result ->
+                            ReaderSearchResult(
+                                href = result.href,
+                                type = result.type,
+                                title = result.title,
+                                progression = result.progression,
+                                position = result.position,
+                                totalProgression = result.totalProgression,
+                                snippet = result.snippet.orEmpty(),
+                            )
+                        },
+                    )
+                }
+            }
+        }
 
     /**
      * Applies a highlight decoration to the given locator and handles split sentences.

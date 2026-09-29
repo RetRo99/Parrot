@@ -401,6 +401,62 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
         return tableOfContentsCache
     }
 
+    func search(query: String, callback: @escaping ([SearchResultLocator]) -> Void) {
+        guard let publication = self.publication else {
+            callback([])
+            return
+        }
+
+        Task { @MainActor in
+            let searchResult = await publication.search(query: query)
+            switch searchResult {
+            case .success(let iterator):
+                var results: [SearchResultLocator] = []
+                do {
+                    while let page = try await iterator.next().get() {
+                        for locator in page.locators {
+                            let snippet = [
+                                locator.text.before,
+                                locator.text.highlight,
+                                locator.text.after
+                            ]
+                            .compactMap { $0 }
+                            .joined(separator: " ")
+                            .replacingOccurrences(
+                                of: "\\s+",
+                                with: " ",
+                                options: .regularExpression
+                            )
+
+                            results.append(
+                                SearchResultLocator(
+                                    href: locator.href.string,
+                                    type: locator.mediaType.string,
+                                    title: locator.title,
+                                    progression: locator.locations.progression.map {
+                                        KotlinDouble(value: $0)
+                                    },
+                                    position: locator.locations.position.map {
+                                        KotlinInt(value: Int32($0))
+                                    },
+                                    totalProgression: locator.locations.totalProgression.map {
+                                        KotlinDouble(value: $0)
+                                    },
+                                    snippet: snippet
+                                )
+                            )
+                        }
+                    }
+                } catch {
+                    // Return all results collected so far if an individual resource fails.
+                }
+                callback(results)
+            case .failure:
+                callback([])
+            }
+        }
+    }
+
     private func cacheTableOfContents(publication: Publication) async {
         var result: [TocItem] = []
         let tocResult = await publication.tableOfContents()

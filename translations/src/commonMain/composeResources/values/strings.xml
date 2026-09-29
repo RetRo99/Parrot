@@ -381,6 +381,30 @@
     <string name="reader_toc_no_chapters" tools:ignore="MissingTranslation">No table of contents available</string>
     <string name="reader_toc_reading" tools:ignore="MissingTranslation">Reading</string>
     <string name="reader_toc_chapter_number" tools:ignore="MissingTranslation">%1$d</string>
+    <string name="reader_overlay_contents" tools:ignore="MissingTranslation">Contents</string>
+    <string name="reader_overlay_search" tools:ignore="MissingTranslation">Search</string>
+    <string name="reader_overlay_listen" tools:ignore="MissingTranslation">Listen</string>
+    <string name="reader_overlay_display" tools:ignore="MissingTranslation">Display</string>
+    <string name="reader_overlay_listening" tools:ignore="MissingTranslation">Listening</string>
+    <string name="reader_overlay_voice" tools:ignore="MissingTranslation">Voice</string>
+    <string name="reader_overlay_narration" tools:ignore="MissingTranslation">Narration</string>
+    <string name="reader_overlay_device_voice" tools:ignore="MissingTranslation">Device voice</string>
+    <string name="reader_overlay_narration_description" tools:ignore="MissingTranslation">Synced with the text</string>
+    <string name="reader_overlay_device_voice_description" tools:ignore="MissingTranslation">Reads the text with your phone’s voice</string>
+    <string name="reader_overlay_narration_unavailable" tools:ignore="MissingTranslation">Not available for this book</string>
+    <string name="reader_overlay_start_listening" tools:ignore="MissingTranslation">Start listening</string>
+    <string name="reader_overlay_page_in_chapter" tools:ignore="MissingTranslation">Page %1$d of %2$d in chapter</string>
+    <string name="reader_overlay_minutes_left" tools:ignore="MissingTranslation">%1$d min left in chapter</string>
+    <string name="reader_overlay_chapter_page_count" tools:ignore="MissingTranslation">%1$d p</string>
+    <string name="reader_overlay_current_chapter" tools:ignore="MissingTranslation">You’re here · %1$d%%</string>
+    <string name="reader_overlay_bookmark_location" tools:ignore="MissingTranslation">Ch. %1$d · page %2$d</string>
+    <string name="reader_search_title" tools:ignore="MissingTranslation">Search this book</string>
+    <string name="reader_search_hint" tools:ignore="MissingTranslation">Find in book</string>
+    <string name="reader_search_empty" tools:ignore="MissingTranslation">Search the text of this book</string>
+    <string name="reader_search_no_results" tools:ignore="MissingTranslation">No matches found</string>
+    <string name="reader_search_failed" tools:ignore="MissingTranslation">Search isn’t available for this book</string>
+    <string name="reader_search_result_count" tools:ignore="MissingTranslation">%1$d results</string>
+    <string name="reader_bookmarks_empty_overlay" tools:ignore="MissingTranslation">No bookmarks yet — tap the bookmark icon at the top to save a page.</string>
     <string name="reader_overflow_more" tools:ignore="MissingTranslation">More</string>
     <string name="login_error_invalid_url" tools:ignore="MissingTranslation">Enter a valid http(s) URL</string>
     <string name="login_error_required_url" tools:ignore="MissingTranslation">Server URL is required</string>

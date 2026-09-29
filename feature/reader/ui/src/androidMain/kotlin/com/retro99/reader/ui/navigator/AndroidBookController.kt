@@ -11,6 +11,7 @@ import com.retro99.reader.ui.model.ReadAloudHighlightStyle
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.model.ReaderTextAlignUi
 import com.retro99.reader.ui.model.ReaderThemeUi
+import com.retro99.reader.ui.reader.ReaderSearchResult
 import com.retro99.reader.ui.tts.TtsSentence
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import org.readium.r2.shared.ExperimentalReadiumApi
 import org.koin.core.annotation.Scope
 import org.koin.core.annotation.Scoped
 import org.readium.r2.navigator.DecorableNavigator
@@ -40,6 +42,8 @@ import org.readium.r2.navigator.preferences.TextAlign
 import org.readium.r2.navigator.preferences.Theme
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
+import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.services.search.search
 import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.mediatype.MediaType
 
@@ -66,6 +70,7 @@ private const val READALOUD_DECORATION_GROUP = "readaloud"
 class AndroidBookController internal constructor() : BookController {
 
     private val _navigator = MutableStateFlow<EpubNavigatorFragment?>(null)
+    private var publication: Publication? = null
     private var controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var pendingPageTurnJob: Job? = null
 
@@ -175,9 +180,11 @@ class AndroidBookController internal constructor() : BookController {
 
     fun init(
         navigator: EpubNavigatorFragment,
+        publication: Publication,
         hasMediaOverlays: Boolean = false,
     ) {
         _navigator.value = navigator
+        this.publication = publication
         this.hasMediaOverlays = hasMediaOverlays
 
         // Execute any pending actions that were queued before initialization
@@ -186,6 +193,35 @@ class AndroidBookController internal constructor() : BookController {
         // Media-overlay books already contain addressable sentence elements.
         if (hasMediaOverlays) {
             enableSentenceTapDetection()
+        }
+    }
+
+    @OptIn(ExperimentalReadiumApi::class)
+    override suspend fun search(query: String): List<ReaderSearchResult> {
+        val currentPublication = publication ?: return emptyList()
+        val iterator = currentPublication.search(query) ?: return emptyList()
+        return try {
+            val results = mutableListOf<ReaderSearchResult>()
+            iterator.forEach { collection ->
+                collection.locators.forEach { locator ->
+                    val text = locator.text
+                    val snippet = listOfNotNull(text.before, text.highlight, text.after)
+                        .joinToString(" ") { it.trim() }
+                        .replace(Regex("\\s+"), " ")
+                    results += ReaderSearchResult(
+                        href = locator.href.toString(),
+                        type = locator.mediaType.toString(),
+                        title = locator.title,
+                        progression = locator.locations.progression,
+                        position = locator.locations.position,
+                        totalProgression = locator.locations.totalProgression,
+                        snippet = snippet,
+                    )
+                }
+            }
+            results
+        } finally {
+            iterator.close()
         }
     }
 
@@ -584,6 +620,7 @@ class AndroidBookController internal constructor() : BookController {
         // fragment is removed, so the event listener will be cleaned up automatically.
         controllerScope.cancel()
         _navigator.value = null
+        publication = null
     }
 
     private companion object Companion {

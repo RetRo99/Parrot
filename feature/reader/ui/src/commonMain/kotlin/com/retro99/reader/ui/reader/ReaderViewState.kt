@@ -17,6 +17,7 @@ data class ReaderViewState(
     val bookType: BookType,
     val bookUuid: String,
     val bookTitle: String = "",
+    val bookAuthor: String = "",
     val bookCoverUrl: String? = null,
     val localFilePath: String? = null,
     val publicationState: PublicationState? = null,
@@ -77,6 +78,14 @@ data class ReaderViewState(
     val ttsPreviewingVoiceId: String? = null,
     val isTtsPreviewPlaying: Boolean = false,
     val isVoiceSettingsVisible: Boolean = false,
+    val isListening: Boolean = false,
+    val isListenSheetVisible: Boolean = false,
+    val isContentsSearchVisible: Boolean = false,
+    val isBookSearchVisible: Boolean = false,
+    val bookSearchQuery: String = "",
+    val bookSearchResults: List<ReaderSearchResult> = emptyList(),
+    val isBookSearchLoading: Boolean = false,
+    val bookSearchFailed: Boolean = false,
 ) {
     /**
      * Whether this is a ReadAloud book with media overlay support.

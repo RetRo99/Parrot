@@ -273,7 +273,20 @@ interface EpubReaderBridge {
      * @return A list of TOC items, or empty list if no publication is open
      */
     fun getTableOfContents(): List<TocItem>
+
+    /** Runs a full-text search and returns Readium locator snippets. */
+    fun search(query: String, callback: (List<SearchResultLocator>) -> Unit)
 }
+
+data class SearchResultLocator(
+    val href: String,
+    val type: String,
+    val title: String?,
+    val progression: Double?,
+    val position: Int?,
+    val totalProgression: Double?,
+    val snippet: String?,
+)
 
 /**
  * Table of contents item data class for iOS bridge.
@@ -353,4 +366,3 @@ object EpubReaderBridgeRegistry {
      */
     fun isRegistered(): Boolean = bridge != null
 }
-

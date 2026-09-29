@@ -4,6 +4,7 @@ import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.LocatorState
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
+import com.retro99.reader.ui.reader.ReaderSearchResult
 import com.retro99.reader.ui.tts.TtsSentence
 import kotlinx.coroutines.flow.Flow
 
@@ -168,4 +169,7 @@ interface BookController : AutoCloseable {
      * requiring media overlays. Platforms that do not support TTS return an empty list.
      */
     suspend fun getChapterSentences(): List<TtsSentence> = emptyList()
+
+    /** Searches publication text and returns location-aware results. */
+    suspend fun search(query: String): List<ReaderSearchResult> = emptyList()
 }

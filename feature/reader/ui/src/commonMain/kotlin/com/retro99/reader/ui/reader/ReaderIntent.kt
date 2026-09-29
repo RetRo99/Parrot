@@ -7,6 +7,20 @@ import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.tts.NeuralVoicePackage
 
 sealed interface ReaderIntent : BaseIntent {
+    data object ToggleBookSearch : ReaderIntent
+
+    data class SearchBook(val query: String) : ReaderIntent
+
+    data class GoToSearchResult(val result: ReaderSearchResult) : ReaderIntent
+
+    data class SeekToChapterProgress(val progression: Double) : ReaderIntent
+
+    data class StartListening(val source: ListenSource) : ReaderIntent
+
+    data object ToggleListenSheet : ReaderIntent
+
+    data object StopListening : ReaderIntent
+
     data class UpdateSettings(
         val settings: ReaderSettingsUiModel,
     ) : ReaderIntent
@@ -226,3 +240,5 @@ sealed interface ReaderIntent : BaseIntent {
 
     data class GoToBookmark(val bookmark: BookmarkUiModel) : ReaderIntent
 }
+
+enum class ListenSource { NARRATION, DEVICE_VOICE }
