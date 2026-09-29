@@ -1,0 +1,29 @@
+# Cloud Account case 732 — final mode-change diagnostic retest
+
+- **Date/time:** 2026-09-29, 10:05–10:07 CEST.
+- **Device/build:** physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`navigation_mode=2`). App `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `a7a9496e2fd021bcfcbce523a7159d6d26d1f13ecf889cfcc02974fba6ab600e`, installed at 10:05:24 CEST, PID `701`. Source base HEAD `48a32396ac8fa3610ed7773757f0d4f533986420` plus the pending QA-BUG-0091 telemetry change. App data preserved.
+- **Fixture/privacy:** existing signed-out Cloud Account form. Entered only reserved-example `qa@example.com` and a synthetic local-only password; no submit action. Did not tap Sign in, Create account, or Google. No account/network request or fixture change.
+
+## Steps and results
+
+1. Closed the startup “Server unavailable or not authenticated” prompt without tapping Retry. Opened Settings → Sync & Backup, confirmed the empty Sign in form, and cleared logcat.
+2. Entered reserved-example email and synthetic password, dismissed the IME, and confirmed Sign in became enabled.
+3. Switched once to Create account. Consent remained unchecked and Create account remained clickable (QA-BUG-0090); stopped before activating it.
+4. Inspected the filtered local log. One correlated diagnostic `started` breadcrumb preceded exactly one existing mode-change Analytics event and one correlated `terminal/succeeded` diagnostic breadcrumb. There was no field payload, authentication event, fatal, exception, or Autofill `SaveUi` in the filtered output.
+5. Exited with toolbar Back without submitting. App Settings was visible after a two-second wait; no Autofill save prompt appeared. Re-entered Sync & Backup and confirmed both fields were empty. No account or app data was changed; this also smoke-tested the QA-BUG-0089 route-exit fix on the current build.
+
+- **Functional:** FAIL for the consent-gating variant (QA-BUG-0090 remains open); mode transition itself completed. No registration action was activated.
+- **Analytics:** PASS locally for one bounded email-validation success and one `cloud_account_mode_changed(mode=create_account)`. No authentication/registration attempt. Firebase Analytics ingestion is waived for this run; debug-provider output is not delivery evidence.
+- **Diagnostics:** PASS locally for one start and one terminal breadcrumb with the same diagnostic-only correlation ID; no exception/non-fatal is expected for a normal mode switch. Crashlytics delivery is not claimed.
+- **Filtered logcat:**
+
+  ```text
+  09-29 10:06:38.939   701   701 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 10:06:48.547   701   701 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=started outcome=started correlation_id=15072be2-84c8-4ff7-bb5e-7c5bb1d370a8
+  09-29 10:06:48.548   701   701 D čič : Analytics Event: cloud_account_mode_changed | Parameters: {screen=sync_and_backup, action=change_account_form_mode, operation=cloud_account_mode_change, mode=create_account}
+  09-29 10:06:48.548   701   701 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=terminal outcome=succeeded correlation_id=15072be2-84c8-4ff7-bb5e-7c5bb1d370a8
+  ```
+
+- **Checks:** Cloud Account UI host tests 9/9 pass; `:feature:home:ui:compileKotlinIosSimulatorArm64` and `:androidApp:assembleDebug` pass. iOS device testing is not covered.
+
+The earlier terminal-only candidate retest remains preserved in [the first telemetry retest record](cloud-account-case-732-mode-diagnostic-retest.txt); this later run validates start-to-terminal correlation. The consent-failure screen is recorded in [the pre-fix screenshot](cloud-account-case-732-create-mode-submit-enabled.png). Cross-app and cross-device synchronization was not tested.

@@ -1,0 +1,31 @@
+# Cloud Account case 732 — mode-change diagnostic instrumentation retest
+
+- **Date/time:** 2026-09-29, 09:58:25–09:58:50 CEST.
+- **Device/build:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation. `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `e9c17466585f4bbf5d05900df88e56da65ae42357eeaa7e6e69086c4b69a4345`, installed 09:57:03 CEST with app data preserved; PID `25824`. Source was based on HEAD `48a32396ac8fa3610ed7773757f0d4f533986420` plus the uncommitted QA-BUG-0091 instrumentation change.
+- **Privacy/fixture:** Signed-out Cloud Account form. Entered reserved-example `qa@example.com` and a synthetic local-only password; did not submit, tap Create account, Sign in, or Google. No account request or state mutation.
+
+## Steps and results
+
+1. Closed the pre-existing “Server unavailable or not authenticated” prompt without Retry. Opened Settings → Sync & Backup; confirmed an empty Sign in form and cleared logcat.
+2. Entered reserved-example email and synthetic password; dismissed the IME; Sign in became enabled.
+3. Switched to Create account. The terms checkbox remained unchecked and Create account remained enabled/clickable (QA-BUG-0090 is still present); did not tap it.
+4. Inspected local logs. The existing mode analytics event was accompanied by exactly one mode-change diagnostic breadcrumb. There was no credential payload, auth attempt, fatal or exception.
+5. Used toolbar Back to leave the form without submitting; returned to Settings. The Cloud route-exit cleanup ran; no account action was taken.
+
+- **Functional:** FAIL for consent gating, still tracked by QA-BUG-0090. Mode transition itself remained usable; registration action was not activated.
+- **Analytics:** PASS locally: one email-format validation success and one `cloud_account_mode_changed(mode=create_account)`. No authentication/registration operation event. Firebase Analytics ingestion is waived.
+- **Diagnostics:** PASS locally: exactly one bounded breadcrumb for the actual mode change, with a diagnostic-only correlation ID. No exception/fatal marker; normal mode change is not a Crashlytics non-fatal.
+- **Filtered local logcat:**
+
+  ```text
+  09-29 09:58:25.998 25824 25824 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 09:58:25.998 25824 25824 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=validate_email operation=cloud_email_validation stage=validation outcome=succeeded correlation_id=...
+  09-29 09:58:35.767 25824 25824 D čič : Analytics Event: cloud_account_mode_changed | Parameters: {screen=sync_and_backup, action=change_account_form_mode, operation=cloud_account_mode_change, mode=create_account}
+  09-29 09:58:35.768 25824 25824 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=terminal outcome=succeeded correlation_id=2b9c3ada-ca52-4e38-8bfd-12bdcf5e65c0
+  ```
+
+  Validation correlation ID is abbreviated here; the mode breadcrumb ID is shown to demonstrate the matching operation context without exposing any field values.
+
+- **Host/build checks:** Cloud Account UI host tests 9/9 pass. `:feature:home:ui:compileKotlinIosSimulatorArm64` and `:androidApp:assembleDebug` pass. No Firebase ingestion or Crashlytics delivery is claimed.
+
+The earlier missing-breadcrumb observation remains in [the pre-fix case-732 evidence](cloud-account-case-732-mode-switch-pre-fix.txt). The screenshot illustrating the still-open consent defect is [here](cloud-account-case-732-create-mode-submit-enabled.png).

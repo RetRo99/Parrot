@@ -61,6 +61,7 @@ class CloudAccountViewModel(
     val passwordState = TextFieldState()
     private val operationTelemetry = CloudAccountOperationTelemetry(analytics)
     private val emailValidationTelemetry = CloudAccountEmailValidationTelemetry(analytics)
+    private val modeTelemetry = CloudAccountModeTelemetry(analytics)
     private val retryTracker = CloudAccountRetryTracker()
     private var emailFieldHasFocus = false
 
@@ -917,7 +918,7 @@ class CloudAccountViewModel(
                 showVerificationMessage = false,
             )
         }
-        analytics.logEvent(CloudAccountAnalyticsEvent.ModeChanged(mode.analyticsName))
+        modeTelemetry.onModeChanged(mode.analyticsName)
     }
 
     private fun updateFormState(email: String, password: String) {
