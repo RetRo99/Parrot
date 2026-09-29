@@ -1,0 +1,14 @@
+# QA-BUG-0097 — host/schema and build checks
+
+- **Date:** 2026-09-29.
+- **Source base:** `5ed432f4db8801d3a52a674ead28986e70fe4074` plus the uncommitted QA-BUG-0097 attribution change at test time.
+- **Command:** `./gradlew :feature:reader:ui:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug`
+- **Latest result:** `BUILD SUCCESSFUL`; 596 actionable tasks (49 executed, 547 up-to-date; configuration cache reused). The final rerun followed addition of explicit failure-terminal assertions to the retry schema test.
+- **Tests:** Reader UI Android host suite 61 passed, 0 failures/errors. Analytics implementation Android host suite 57 passed, 0 failures/errors; this includes the new retry-schema regression. The existing launch-schema test confirms default initial attribution is unchanged.
+- **Debug APK:** `androidApp/build/outputs/apk/debug/androidApp-debug.apk`, SHA-256 `b22ebe82a5e6e378740860d16ae36f9d2351ec0ec6e4b42f235cfb0bbdfdbe76`.
+
+## Limits
+
+- This verifies event schema, source compilation, host tests and APK assembly only. The APK was not installed or exercised on Samsung during this audit.
+- Case 782's functional failure → Reader Retry → usable-content path, runtime Analytics counts/attribution, diagnostic breadcrumb correlation and final state remain **BLOCKED/NOT RUN** until a safe authorized failure/recovery fixture is available and the phone can be used without interrupting its current foreground app.
+- Firebase Analytics ingestion remains waived. No Crashlytics delivery or symbolication is claimed.

@@ -658,6 +658,91 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun lastBookLaunchRetryEventsUseReaderRetryAttributionWithoutIdentifiers() {
+        val attempted = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.LastBookLaunchAttempted(
+                bookType = "imported",
+                stage = "retry",
+                screen = "reader",
+                sourceScreen = "reader",
+                entryPoint = "reader_retry",
+            ).parameters + mapOf(
+                "book_uuid" to "private-book-id",
+                "book_title" to "private title",
+                "file_path" to "/private/path.epub",
+            ),
+        )
+        val failed = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.LastBookLaunchCompleted(
+                screen = "reader",
+                outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Failed,
+                reasonCode = "publication_open_failed",
+                bookType = "imported",
+                sourceScreen = "reader",
+                entryPoint = "reader_retry",
+            ).parameters + mapOf(
+                "book_uuid" to "private-book-id",
+                "book_title" to "private title",
+                "file_path" to "/private/path.epub",
+            ),
+        )
+        val completed = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.LastBookLaunchCompleted(
+                screen = "reader",
+                outcome = NavigationAnalyticsEvent.LastBookLaunchOutcome.Succeeded,
+                bookType = "imported",
+                sourceScreen = "reader",
+                entryPoint = "reader_retry",
+            ).parameters + mapOf(
+                "book_uuid" to "private-book-id",
+                "book_title" to "private title",
+                "file_path" to "/private/path.epub",
+            ),
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "reader",
+                "source_screen" to "reader",
+                "entry_point" to "reader_retry",
+                "action" to "open_last_book",
+                "operation" to "reader_open",
+                "stage" to "terminal",
+                "outcome" to "failed",
+                "reason_code" to "publication_open_failed",
+                "book_type" to "imported",
+            ),
+            failed,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "reader",
+                "source_screen" to "reader",
+                "entry_point" to "reader_retry",
+                "action" to "open_last_book",
+                "operation" to "reader_open",
+                "stage" to "retry",
+                "outcome" to "started",
+                "book_type" to "imported",
+            ),
+            attempted,
+        )
+        assertEquals(
+            mapOf(
+                "screen" to "reader",
+                "source_screen" to "reader",
+                "entry_point" to "reader_retry",
+                "action" to "open_last_book",
+                "operation" to "reader_open",
+                "stage" to "terminal",
+                "outcome" to "succeeded",
+                "book_type" to "imported",
+            ),
+            completed,
+        )
+    }
+
+    @Test
     fun currentBookClearEventsRetainAttemptFailureAndRetryDimensions() {
         val attempted = sanitizeAnalyticsParameters(
             AppSettingsAnalyticsEvent.CurrentBookClearAttempted(isRetry = true).parameters,

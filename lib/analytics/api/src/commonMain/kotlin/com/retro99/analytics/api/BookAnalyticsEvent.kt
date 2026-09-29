@@ -769,16 +769,19 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
         )
     }
 
-    /** Records an enabled last-book startup attempt without exposing the local book identifier. */
+    /** Records a last-book attempt; defaults preserve initial app-launch attribution. */
     data class LastBookLaunchAttempted(
         val bookType: String,
         val stage: String = "navigation",
+        val screen: String = "home",
+        val sourceScreen: String = "splash",
+        val entryPoint: String = "app_launch",
     ) : NavigationAnalyticsEvent {
         override val name: String = "last_book_launch_attempted"
         override val parameters: Map<String, Any> = mapOf(
-            "screen" to "home",
-            "source_screen" to "splash",
-            "entry_point" to "app_launch",
+            "screen" to screen,
+            "source_screen" to sourceScreen,
+            "entry_point" to entryPoint,
             "action" to "open_last_book",
             "operation" to "reader_open",
             "stage" to stage,
@@ -794,19 +797,21 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
         Cancelled("cancelled"),
     }
 
-    /** Records the terminal result of startup resume, only after content is usable or skipped. */
+    /** Records the terminal result of a startup/retry attempt without exposing book identity. */
     data class LastBookLaunchCompleted(
         val screen: String,
         val outcome: LastBookLaunchOutcome,
         val stage: String = "terminal",
         val reasonCode: String? = null,
         val bookType: String? = null,
+        val sourceScreen: String = if (screen == "reader") "home" else "splash",
+        val entryPoint: String = "app_launch",
     ) : NavigationAnalyticsEvent {
         override val name: String = "last_book_launch_completed"
         override val parameters: Map<String, Any> = buildMap {
             put("screen", screen)
-            put("source_screen", if (screen == "reader") "home" else "splash")
-            put("entry_point", "app_launch")
+            put("source_screen", sourceScreen)
+            put("entry_point", entryPoint)
             put("action", "open_last_book")
             put("operation", "reader_open")
             put("stage", stage)

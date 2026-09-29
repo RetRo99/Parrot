@@ -1,6 +1,6 @@
 # Parrot — Manual QA Test Plan (Full In-App Action Coverage)
 
-**Execution goal and instrumentation requirements:** [manual-qa-goal.md](manual-qa-goal.md). Read that document before running this catalogue. Baseline IDs 1–494 are preserved; extension IDs 495–781 add Samsung setup, screen edge cases and observability verification. These are planned tests, not recorded results.
+**Execution goal and instrumentation requirements:** [manual-qa-goal.md](manual-qa-goal.md). Read that document before running this catalogue. Baseline IDs 1–494 are preserved; extension IDs 495–782 add Samsung setup, screen edge cases and observability verification. These are planned tests, not recorded results.
 
 **Scope of this pass:** every action a single user can perform inside the app — opening, navigating, backing out, reading, playing, downloading, importing, backing up, configuring, viewing statistics, managing profiles/servers/accounts, and all lifecycle behaviour.
 
@@ -1105,3 +1105,9 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 781 | TTS startup timeout, stop/disable cancellation and loading cleanup | With system TTS on a permitted local EPUB and a safe delayed/stalled synthesis fixture, begin playback; verify the documented startup deadline, then separately stop/disable TTS while the request is pending; retry after recovery | Permission interaction remains cancellable and is not timed out as a failure. After permission is granted, a stalled synthesis/player start ends at the operation-specific 30-second deadline, clears loading, shows a usable Retry and emits one correlated failed outcome/report. Explicit stop/disable cancels pending work and cannot start speech later; it emits one cancelled terminal and no Crashlytics issue. Never record text/book/voice IDs. Host cancellation/timeout verification is required; Samsung fault execution is BLOCKED without a safe engine fixture. |
+
+## 51. Last-book launch retry attribution
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 782 | Last-book launch failure and Reader Retry attribution | With Open Last Book On Launch enabled and a controlled local last-book target, induce a safe retryable startup/open failure; inspect the initial attempt/failure, activate Reader Retry, then allow the same target to reach usable content. Compare local Analytics and diagnostic breadcrumbs. | Initial launch retains `home` / `splash` / `app_launch`. Retry attempt, terminal outcome and matching breadcrumbs use bounded Reader attribution (`screen=reader`, `source_screen=reader`, `entry_point=reader_retry`); attempt and terminal distinguish failure, retry, and recovery; no duplicate terminal, book/profile ID, title/path or raw error text. Do not mark the branch PASS without an authorized failure/recovery fixture and on-device usable-content retest. Firebase Analytics ingestion remains waived; Crashlytics delivery is separate. |

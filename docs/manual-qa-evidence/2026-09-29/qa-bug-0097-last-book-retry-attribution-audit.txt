@@ -1,0 +1,22 @@
+# QA-BUG-0097 — last-book retry attribution source audit
+
+- **Audit date:** 2026-09-29.
+- **Pre-fix repository HEAD:** `5ed432f4db8801d3a52a674ead28986e70fe4074`.
+- **Samsung package context:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `efbd8a0d742141e298c311f74b82d221f41efe75ae7c67bb26131897b77a1143`, QA-BUG-0095 source commit `198629e6670c63bcc9f03a70fe748cc20c373ce3`. This APK was used for the TTS normal-path run, not for a last-book failure/retry test.
+- **Device execution:** None. No failure was induced and no startup retry was attempted during this source audit. Case 782 requires a safe authorized failure/recovery fixture before device execution.
+
+## Pre-fix code trace
+
+1. `ReaderViewModel.retry()` (around lines 400–424) calls `lastBookLaunchOutcomeGate.beginAttempt()` and emits `LastBookLaunchAttempted(bookType, stage="retry")` when `isLastBookOnLaunch` is true.
+2. `LastBookLaunchAttempted.parameters` (around lines 773–787 in `BookAnalyticsEvent.kt`) hardcodes `screen=home`, `source_screen=splash`, `entry_point=app_launch`. Thus the explicit retry stage is paired with startup attribution.
+3. The retry-start `DiagnosticContext` in `retry()` uses `screen=reader`, `sourceScreen=home`, `entryPoint=app_launch`.
+4. `reportReaderOpenFailure()` routes last-book errors to `reportLastBookLaunchOutcome()`. That method emits `LastBookLaunchCompleted(screen="reader", ...)`; the event constructor hardcodes `source_screen=home`, `entry_point=app_launch`, and the terminal breadcrumb repeats those dimensions.
+5. Existing `AnalyticsParameterSanitizerTest.lastBookLaunchEventsRetainBoundedAttemptAndTerminalOutcomesWithoutIdentifiers` asserts the initial-launch schema, but contains no retry-attribution variant. The initial defaults must remain unchanged when retry-specific fields are introduced.
+
+## Required regression contract
+
+- Initial attempt remains `screen=home`, `source_screen=splash`, `entry_point=app_launch`, `stage=navigation`.
+- Retry attempt uses bounded Reader attribution, `screen=reader`, `source_screen=reader`, `entry_point=reader_retry`, `stage=retry`.
+- Retry terminal event and start/terminal diagnostic breadcrumbs retain the same retry source/entry point for that attempt.
+- Payloads stay identifier-free; no book UUID/title/path or raw error text.
+- The test proves event schema and local source construction only. It cannot replace case 782's Samsung failure → Retry → usable-content verification.

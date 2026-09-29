@@ -211,6 +211,10 @@ class ReaderViewModel(
     /** Prevents success, failure and close callbacks from reporting multiple launch outcomes. */
     private val lastBookLaunchOutcomeGate = LastBookLaunchOutcomeGate()
 
+    /** Attribution follows the active last-book launch attempt, including an explicit Reader retry. */
+    private var lastBookLaunchSourceScreen: String = "home"
+    private var lastBookLaunchEntryPoint: String = "app_launch"
+
     /** Monotonic mark used to generate unique bookmark IDs with nanosecond precision. */
     private val bookmarkIdMark = TimeSource.Monotonic.markNow()
 
@@ -401,18 +405,23 @@ class ReaderViewModel(
         updateState { it.copy(error = null) }
         beginContinueReadingOpenRetry()
         if (isLastBookOnLaunch) {
+            lastBookLaunchSourceScreen = "reader"
+            lastBookLaunchEntryPoint = "reader_retry"
             lastBookLaunchOutcomeGate.beginAttempt()
             analytics.logEvent(
                 NavigationAnalyticsEvent.LastBookLaunchAttempted(
                     bookType = bookType.name.lowercase(),
                     stage = "retry",
+                    screen = "reader",
+                    sourceScreen = lastBookLaunchSourceScreen,
+                    entryPoint = lastBookLaunchEntryPoint,
                 ),
             )
             analytics.logBreadcrumb(
                 DiagnosticContext(
                     screen = "reader",
-                    sourceScreen = "home",
-                    entryPoint = "app_launch",
+                    sourceScreen = lastBookLaunchSourceScreen,
+                    entryPoint = lastBookLaunchEntryPoint,
                     action = "open_last_book",
                     operation = "reader_open",
                     stage = "retry",
@@ -674,9 +683,13 @@ class ReaderViewModel(
         }
         val context = DiagnosticContext(
             screen = "reader",
-            sourceScreen = "home".takeIf { isLastBookOnLaunch || continueReadingOpenOperation != null },
+            sourceScreen = when {
+                continueReadingOpenOperation != null -> "home"
+                isLastBookOnLaunch -> lastBookLaunchSourceScreen
+                else -> null
+            },
             entryPoint = continueReadingOpenOperation?.entryPoint?.value
-                ?: "app_launch".takeIf { isLastBookOnLaunch },
+                ?: lastBookLaunchEntryPoint.takeIf { isLastBookOnLaunch },
             action = when {
                 continueReadingOpenOperation != null -> "open_continue_reading"
                 isLastBookOnLaunch -> "open_last_book"
@@ -768,12 +781,14 @@ class ReaderViewModel(
                 stage = stage,
                 reasonCode = reasonCode,
                 bookType = bookType.name.lowercase(),
+                sourceScreen = lastBookLaunchSourceScreen,
+                entryPoint = lastBookLaunchEntryPoint,
             ),
         )
         val context = DiagnosticContext(
             screen = "reader",
-            sourceScreen = "home",
-            entryPoint = "app_launch",
+            sourceScreen = lastBookLaunchSourceScreen,
+            entryPoint = lastBookLaunchEntryPoint,
             action = "open_last_book",
             operation = "reader_open",
             stage = stage,
