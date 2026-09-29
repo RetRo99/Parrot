@@ -956,4 +956,37 @@
     <string name="reader_jump_go" tools:ignore="MissingTranslation">Go</string>
     <string name="reader_jump_minus" tools:ignore="MissingTranslation">− %1$d%%</string>
     <string name="reader_jump_plus" tools:ignore="MissingTranslation">+ %1$d%%</string>
+    <string name="reader_audio_no_narration" tools:ignore="MissingTranslation">This book has no narration — reading with your device voice.</string>
+    <string name="reader_audio_left_in_chapter" tools:ignore="MissingTranslation">−%1$s left in chapter</string>
+    <string name="reader_audio_sentence_of" tools:ignore="MissingTranslation">Sentence %1$d of %2$d</string>
+    <string name="reader_audio_about_left" tools:ignore="MissingTranslation">about %1$d min left in chapter</string>
+    <string name="reader_audio_sentence" tools:ignore="MissingTranslation">Sentence</string>
+    <string name="reader_audio_previous_sentence" tools:ignore="MissingTranslation">Previous sentence</string>
+    <string name="reader_audio_next_sentence" tools:ignore="MissingTranslation">Next sentence</string>
+    <string name="reader_audio_back_10" tools:ignore="MissingTranslation">Back 10 seconds</string>
+    <string name="reader_audio_forward_10" tools:ignore="MissingTranslation">Forward 10 seconds</string>
+    <string name="reader_audio_speed" tools:ignore="MissingTranslation">Speed</string>
+    <string name="reader_audio_rate" tools:ignore="MissingTranslation">Rate</string>
+    <string name="reader_audio_pitch" tools:ignore="MissingTranslation">Pitch</string>
+    <string name="reader_audio_pitch_normal" tools:ignore="MissingTranslation">Normal</string>
+    <string name="reader_audio_decrease" tools:ignore="MissingTranslation">Decrease</string>
+    <string name="reader_audio_increase" tools:ignore="MissingTranslation">Increase</string>
+    <string name="reader_audio_sleep_timer" tools:ignore="MissingTranslation">Sleep timer</string>
+    <string name="reader_audio_sleep_off" tools:ignore="MissingTranslation">Off</string>
+    <string name="reader_audio_sleep_minutes" tools:ignore="MissingTranslation">%1$d min</string>
+    <string name="reader_audio_sleep_end_of_chapter" tools:ignore="MissingTranslation">End of ch.</string>
+    <string name="reader_audio_sleep_remaining" tools:ignore="MissingTranslation">Pauses in %1$s</string>
+    <string name="reader_audio_only" tools:ignore="MissingTranslation">Audio only</string>
+    <string name="reader_audio_only_description" tools:ignore="MissingTranslation">Hide the text, keep playing</string>
+    <string name="reader_audio_change" tools:ignore="MissingTranslation">Change</string>
+    <string name="reader_audio_stop" tools:ignore="MissingTranslation">Stop listening</string>
+    <string name="reader_audio_voice_natural" tools:ignore="MissingTranslation">Natural</string>
+    <string name="reader_audio_voice_system" tools:ignore="MissingTranslation">System voice</string>
+    <string name="reader_audio_status_downloaded" tools:ignore="MissingTranslation">Downloaded</string>
+    <string name="reader_audio_status_downloading" tools:ignore="MissingTranslation">Downloading %1$d%%</string>
+    <string name="reader_audio_status_downloading_unknown" tools:ignore="MissingTranslation">Downloading…</string>
+    <string name="reader_audio_status_update" tools:ignore="MissingTranslation">Update available</string>
+    <string name="reader_audio_status_failed" tools:ignore="MissingTranslation">Download failed</string>
+    <string name="reader_audio_status_not_downloaded" tools:ignore="MissingTranslation">Not downloaded</string>
+    <string name="reader_audio_status_on_phone" tools:ignore="MissingTranslation">On this phone</string>
 </resources>

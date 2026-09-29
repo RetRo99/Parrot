@@ -600,20 +600,53 @@ internal fun ReaderOverlayContent(
     }
 
     if (viewState.isListenSheetVisible) {
-        ReaderListenSheet(
+        val isNarration = viewState.listenSource == ListenSource.NARRATION
+        ReaderAudioSheet(
+            ui = AudioSheetUi(
+                isNarration = isNarration,
+                chapterLabel = "$chapterNumber · $chapterTitle",
+                isPlaying = viewState.isPlaying,
+                isLoading = viewState.isNarrationLoading,
+                positionMs = viewState.currentAudioPositionMs,
+                totalMs = viewState.totalDurationMs,
+                sentenceNumber = (viewState.ttsSentenceIndex + 1).coerceAtLeast(1),
+                sentenceCount = viewState.ttsSentenceCount,
+                speed = settings.playbackSpeed,
+                rate = settings.ttsRate,
+                pitch = settings.ttsPitch,
+                voice = selectedVoice,
+                isVoicePreparing = viewState.isTtsVoicePreparing,
+                preparationProgress = viewState.ttsVoicePreparationProgress,
+                voiceDownloadFailed = viewState.failedTtsVoicePackage != null,
+                sleepRemainingMs = viewState.sleepTimerRemainingMs,
+                isAudioOnly = viewState.isAudioOnlyMode,
+                isEink = isEink,
+            ),
             hasNarration = viewState.isReadAloud,
-            hasDeviceVoice = viewState.isTtsReadAloud,
-            voiceDescription = voiceDetail,
-            playbackSpeed = if (viewState.isTtsReadAloud) settings.ttsRate else settings.playbackSpeed,
-            onDismiss = { intentDispatcher(ReaderIntent.ToggleListenSheet) },
-            onOpenVoiceSettings = {
-                intentDispatcher(ReaderIntent.ToggleListenSheet)
-                intentDispatcher(ReaderIntent.OpenVoiceSettings)
-            },
-            onStart = { source, speed ->
-                intentDispatcher(ReaderIntent.SetPlaybackSpeed(speed))
-                intentDispatcher(ReaderIntent.StartListening(source))
-            },
+            actions = AudioSheetActions(
+                onDismiss = { intentDispatcher(ReaderIntent.ToggleListenSheet) },
+                onStop = {
+                    intentDispatcher(ReaderIntent.StopListening)
+                    intentDispatcher(ReaderIntent.ToggleListenSheet)
+                },
+                onPlayPause = {
+                    if (viewState.isListening) {
+                        intentDispatcher(ReaderIntent.TogglePlayback)
+                    } else {
+                        intentDispatcher(ReaderIntent.StartListening(viewState.listenSource))
+                    }
+                },
+                onSeek = { position -> intentDispatcher(ReaderIntent.SeekTo(position)) },
+                onSkipBack = { intentDispatcher(ReaderIntent.SkipBackward()) },
+                onSkipForward = { intentDispatcher(ReaderIntent.SkipForward()) },
+                onSpeed = { speed -> intentDispatcher(ReaderIntent.SetPlaybackSpeed(speed)) },
+                onRate = { rate -> intentDispatcher(ReaderIntent.SetTtsRate(rate)) },
+                onPitch = { pitch -> intentDispatcher(ReaderIntent.SetTtsPitch(pitch)) },
+                onChangeVoice = { intentDispatcher(ReaderIntent.OpenVoiceSettings) },
+                onStartSleepTimer = { durationMs -> intentDispatcher(ReaderIntent.StartSleepTimer(durationMs)) },
+                onCancelSleepTimer = { intentDispatcher(ReaderIntent.CancelSleepTimer) },
+                onAudioOnly = { intentDispatcher(ReaderIntent.ToggleAudioOnlyMode) },
+            ),
         )
     }
 }
@@ -1388,126 +1421,6 @@ private fun BookmarkRenamePrompt(
 }
 
 @Composable
-internal fun ReaderListenSheet(
-    hasNarration: Boolean,
-    hasDeviceVoice: Boolean,
-    voiceDescription: String,
-    playbackSpeed: Float,
-    onDismiss: () -> Unit,
-    onOpenVoiceSettings: () -> Unit,
-    onStart: (ListenSource, Float) -> Unit,
-) {
-    var source by remember(hasNarration, hasDeviceVoice) {
-        mutableStateOf(if (hasNarration) ListenSource.NARRATION else ListenSource.DEVICE_VOICE)
-    }
-    var speed by remember(playbackSpeed) { mutableFloatStateOf(playbackSpeed) }
-    EmberBottomSheet(onDismiss = onDismiss) {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            Column(
-                Modifier.fillMaxWidth().heightIn(max = maxHeight * 0.9f)
-                    .navigationBarsPadding().padding(horizontal = 24.dp, vertical = 4.dp),
-            ) {
-                SheetTitle(stringResource(StringRes.reader_overlay_listen), onDismiss)
-                ListenSourceCard(
-                    title = stringResource(StringRes.reader_overlay_narration),
-                    description = if (hasNarration) stringResource(StringRes.reader_overlay_narration_description)
-                    else stringResource(StringRes.reader_overlay_narration_unavailable),
-                    selected = source == ListenSource.NARRATION,
-                    enabled = hasNarration,
-                    onClick = { source = ListenSource.NARRATION },
-                )
-                Spacer(Modifier.height(8.dp))
-                ListenSourceCard(
-                    title = stringResource(StringRes.reader_overlay_device_voice),
-                    description = stringResource(StringRes.reader_overlay_device_voice_description),
-                    selected = source == ListenSource.DEVICE_VOICE,
-                    enabled = hasDeviceVoice,
-                    onClick = { source = ListenSource.DEVICE_VOICE },
-                )
-                Spacer(Modifier.height(14.dp))
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Ember.colors.bg)
-                        .clickable(onClick = onOpenVoiceSettings).padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(StringRes.reader_overlay_voice), color = Ember.colors.ink, fontWeight = FontWeight.Bold)
-                        Text(voiceDescription, color = Ember.colors.ink2, style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Text("›", color = Ember.colors.ink2, fontSize = 28.sp)
-                }
-                Spacer(Modifier.height(16.dp))
-                Text("SPEED", color = Ember.colors.ink2, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp)
-                Spacer(Modifier.height(6.dp))
-                Row(
-                    Modifier.fillMaxWidth().clip(CircleShape).background(Ember.colors.bg)
-                        .border(1.dp, Ember.colors.chipBorder, CircleShape).padding(3.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    listOf(0.8f, 1f, 1.25f, 1.5f, 2f).forEach { value ->
-                        val selected = kotlin.math.abs(speed - value) < 0.01f
-                        Box(
-                            Modifier.weight(1f).height(40.dp).clip(CircleShape)
-                                .background(if (selected) Ember.colors.accent else androidx.compose.ui.graphics.Color.Transparent)
-                                .clickable { speed = value },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                "${formatSpeed(value)}×",
-                                color = if (selected) Ember.colors.onAccent else Ember.colors.ink2,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
-                Spacer(Modifier.height(18.dp))
-                Button(
-                    onClick = { onStart(source, speed) },
-                    enabled = when (source) {
-                        ListenSource.NARRATION -> hasNarration
-                        ListenSource.DEVICE_VOICE -> hasDeviceVoice
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = CircleShape,
-                ) {
-                    Icon(Icons.Default.PlayArrow, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(StringRes.reader_overlay_start_listening), fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ListenSourceCard(
-    title: String,
-    description: String,
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    val colors = Ember.colors
-    val shape = RoundedCornerShape(18.dp)
-    Row(
-        modifier = Modifier.fillMaxWidth().clip(shape)
-            .background(if (selected) colors.navActive.copy(alpha = 0.52f) else colors.surface)
-            .border(if (selected) 2.dp else 1.dp, if (selected) colors.accent else colors.line, shape)
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = onClick, enabled = enabled)
-        Column(Modifier.padding(start = 6.dp)) {
-            Text(title, color = if (enabled) colors.ink else colors.ink2, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text(description, color = colors.ink2, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
 internal fun ReaderSearchSheet(
     query: String,
     results: List<ReaderSearchResult>,
@@ -1558,100 +1471,9 @@ internal fun ReaderSearchSheet(
     }
 }
 
-@Composable
-private fun AudioSeekBar(
-    currentPositionMs: Long,
-    totalDurationMs: Long?,
-    onSeek: (Long) -> Unit,
-) {
-    val duration = totalDurationMs ?: 0L
-    val progress = if (duration > 0L) (currentPositionMs.toFloat() / duration).coerceIn(0f, 1f) else 0f
-    Column(Modifier.fillMaxWidth()) {
-        Slider(
-            value = progress,
-            onValueChange = { value -> if (duration > 0L) onSeek((value * duration).toLong()) },
-            modifier = Modifier.fillMaxWidth().height(28.dp),
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(formatAudioTime(currentPositionMs), color = Ember.colors.ink2, style = MaterialTheme.typography.bodySmall)
-            Text("−${formatAudioTime((duration - currentPositionMs).coerceAtLeast(0L))} in chapter", color = Ember.colors.ink2, style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
+internal fun formatSpeed(speed: Float): String = if (speed % 1f == 0f) speed.toInt().toString() else speed.toString()
 
-@Composable
-private fun OverlayPill(text: String, onClick: () -> Unit) {
-    val colors = Ember.colors
-    val shape = CircleShape
-    Box(
-        Modifier.clip(shape).background(colors.surface).border(1.dp, colors.chipBorder, shape)
-            .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text, color = colors.accentText, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun SleepTimerPill(
-    remainingMs: Long?,
-    currentPositionMs: Long,
-    totalDurationMs: Long?,
-    onStart: (Long) -> Unit,
-    onCancel: () -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    var showCustomDialog by remember { mutableStateOf(false) }
-    val remainingToEndMs = totalDurationMs?.minus(currentPositionMs)?.takeIf { it > 0L }
-    Box {
-        Box(
-            Modifier.size(44.dp).clip(CircleShape).background(Ember.colors.bg).border(1.dp, Ember.colors.chipBorder, CircleShape)
-                .clickable { expanded = true },
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("☾", color = Ember.colors.ink, fontSize = 24.sp)
-        }
-        androidx.compose.material3.DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-            listOf(5, 10, 15, 30, 60).forEach { minutes ->
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text("$minutes minutes") },
-                    onClick = { onStart(minutes * 60_000L); expanded = false },
-                )
-            }
-            androidx.compose.material3.DropdownMenuItem(
-                text = { Text(stringResource(StringRes.sleep_timer_custom)) },
-                onClick = { expanded = false; showCustomDialog = true },
-            )
-            if (remainingToEndMs != null) {
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(stringResource(StringRes.sleep_timer_end_of_audio)) },
-                    onClick = { onStart(remainingToEndMs); expanded = false },
-                )
-            }
-            if (remainingMs != null) {
-                androidx.compose.material3.DropdownMenuItem(
-                    text = { Text(stringResource(StringRes.sleep_timer_cancel)) },
-                    onClick = { onCancel(); expanded = false },
-                )
-            }
-        }
-    }
-    if (showCustomDialog) {
-        SleepTimerDurationDialog(
-            title = "Custom sleep timer",
-            message = "Choose how long playback should continue before pausing.",
-            confirmLabel = "Start",
-            dismissLabel = stringResource(StringRes.general_close),
-            initialMinutes = 5,
-            onConfirm = { onStart(it * 60_000L); showCustomDialog = false },
-            onDismiss = { showCustomDialog = false },
-        )
-    }
-}
-
-private fun formatSpeed(speed: Float): String = if (speed % 1f == 0f) speed.toInt().toString() else speed.toString()
-
-private fun formatAudioTime(timeMs: Long): String {
+internal fun formatAudioTime(timeMs: Long): String {
     val totalSeconds = timeMs.coerceAtLeast(0L) / 1000L
     val hours = totalSeconds / 3600L
     val minutes = totalSeconds % 3600L / 60L

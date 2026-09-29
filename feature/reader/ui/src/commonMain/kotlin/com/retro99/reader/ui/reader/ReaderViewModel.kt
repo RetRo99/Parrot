@@ -1794,7 +1794,6 @@ class ReaderViewModel(
     }
 
     private fun startListening(source: ListenSource) {
-        updateState { it.copy(isListenSheetVisible = false) }
         when (source) {
             ListenSource.NARRATION -> {
                 if (!viewState.value.isReadAloud) return
