@@ -24,5 +24,5 @@ sealed interface RootNavigationIntent : BaseIntent {
         val serverType: String,
         val correlationId: String,
     ) : RootNavigationIntent
-    data object OnBackFromLogin : RootNavigationIntent
+    data class OnBackFromLogin(val entryPoint: String) : RootNavigationIntent
 }

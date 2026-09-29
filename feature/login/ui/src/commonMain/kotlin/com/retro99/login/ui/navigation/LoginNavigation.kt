@@ -22,7 +22,7 @@ fun LoginNavigation(
     onLoginAttemptStarted: (String, String, String) -> Unit,
     onLoginFailure: (String, String, String) -> Unit,
     onGuestModeSelected: () -> Unit,
-    onBack: (() -> Unit)? = null,
+    onBack: ((entryPoint: String) -> Unit)? = null,
     onRootBack: (() -> Unit)? = null,
     startAtLogin: Boolean = false,
     existingServerId: String? = null,
@@ -60,7 +60,7 @@ fun LoginNavigation(
                     state.backStack.size > 1 ->
                         intentDispatcher(LoginNavigationIntent.OnBackClicked)
 
-                    onBack != null -> onBack()
+                    onBack != null -> onBack("system_back")
 
                     onRootBack != null -> viewModel.onWelcomeSystemBack(onRootBack)
                 }
@@ -82,7 +82,7 @@ fun LoginNavigation(
                         onSkipLoginClick = {
                             intentDispatcher(LoginNavigationIntent.OnSkipLoginClicked)
                         },
-                        onBack = onBack,
+                        onBack = onBack?.let { callback -> { callback("toolbar_back") } },
                     )
                 }
 
@@ -95,7 +95,7 @@ fun LoginNavigation(
                         isRetryOrigin = isRetryOrigin,
                         onBackClick = {
                             if (state.backStack.size <= 1 && onBack != null) {
-                                onBack()
+                                onBack("toolbar_back")
                             } else {
                                 intentDispatcher(LoginNavigationIntent.OnBackClicked)
                             }

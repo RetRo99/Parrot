@@ -9,6 +9,8 @@ import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.auth.domain.usecase.CheckAuthStateUseCase
 import com.retro99.auth.domain.usecase.LogoutUseCase
 import com.retro99.base.ui.BaseViewModel
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
@@ -46,7 +48,7 @@ class RootNavigationViewModel(
                 handleExistingServerLoginAttemptStarted(intent)
             is RootNavigationIntent.OnExistingServerLoginFailed ->
                 handleExistingServerLoginFailed(intent)
-            RootNavigationIntent.OnBackFromLogin -> handleBackFromLogin()
+            is RootNavigationIntent.OnBackFromLogin -> handleBackFromLogin(intent.entryPoint)
         }
     }
 
@@ -160,9 +162,28 @@ class RootNavigationViewModel(
         )
     }
 
-    private fun handleBackFromLogin() {
+    @OptIn(ExperimentalUuidApi::class)
+    private fun handleBackFromLogin(entryPoint: String) {
+        val stateBeforeBack = viewState.value
+        val login = stateBeforeBack.backStack.lastOrNull() as? RootDestination.Login ?: return
+        if (login.initial || stateBeforeBack.backStack.size <= 1) return
+
+        val context = RootLoginBackContext(
+            sourceScreen = "login",
+            destinationScreen = login.sourceScreen ?: "home",
+            entryPoint = entryPoint,
+            correlationId = Uuid.random().toString(),
+        )
+        logRootLoginBackAttempt(analytics, context)
+
+        var applied = false
         updateState { state ->
+            val currentLogin = state.backStack.lastOrNull() as? RootDestination.Login
+            if (state.backStack.size <= 1 || currentLogin != login || currentLogin.initial) {
+                return@updateState state
+            }
             val backStack = state.backStack.dropLast(1)
+            applied = true
             state.copy(
                 backStack = backStack,
                 homeEntry = if (backStack.lastOrNull() == RootDestination.Home) {
@@ -172,6 +193,7 @@ class RootNavigationViewModel(
                 },
             )
         }
+        logRootLoginBackCompleted(analytics, context, applied)
     }
 
     private fun checkAuthState() {
