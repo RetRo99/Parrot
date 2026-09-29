@@ -3,7 +3,7 @@
 - **Date/time:** 2026-09-29, approximately 13:29–13:30 CEST (final concurrency-fix retest).
 - **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`; portrait 1080×2340, font scale 1.0, gesture navigation.
 - **Build:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, debuggable, final observed PID `29890`; installed APK SHA-256 `1e103ad2ac2bf79c13d3d572c33f9c7033ffed858e85e499b20287cbc642fa9b`. Built from source tree based on HEAD `66f9766b4ece71ddb9830c6d673b193615b405a6` plus the QA-BUG-0094 fix, committed after testing as `aaf58de8d9511c9d55f73e08931be02dc504b2c1` with identical source contents. Installed with `adb install -r`; app data was preserved.
-- **Fixture/privacy:** unique local QA EPUB `Parrot QA Reader Fixture 20260929`; no server account, cloud action, credential, or profile change. The app stayed on its local Reader route. The exact QA source files and temporary Books filter change still need cleanup after the focused Reader pass.
+- **Fixture/privacy:** unique local QA EPUB `Parrot QA Reader Fixture 20260929`; no server account, cloud action, credential, or profile change. The app stayed on its local Reader route. This fixture and the temporary Books filter change were subsequently cleaned up; see [scoped cleanup evidence](reader-qa-fixture-cleanup.txt).
 
 ## Samsung steps and result
 

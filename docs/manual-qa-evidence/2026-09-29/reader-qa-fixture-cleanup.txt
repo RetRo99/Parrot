@@ -1,0 +1,18 @@
+# Reader QA fixture cleanup — Samsung
+
+- **Date/time:** 2026-09-29, approximately 13:48–13:50 CEST.
+- **Device/build:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`80500`); `com.retro99.parrot` 0.4.5 (21), target SDK 36, PID `9342`; installed APK SHA-256 `1e103ad2ac2bf79c13d3d572c33f9c7033ffed858e85e499b20287cbc642fa9b`. App data was preserved.
+- **Purpose/scope:** remove only the uniquely identifiable Parrot QA Reader import and its two QA-owned source EPUBs, clear that fixture's Continue reading target, and restore the pre-existing Books `Readaloud` quick filter. No server, Cloud account, credentials, profile, network, unrelated file, or other library item was changed.
+
+## Actions and verification
+
+1. Returned from the QA Reader to Books. The filter sheet showed Server `All` selected and `Readaloud` unselected, confirming the temporary filter change was still in effect.
+2. Temporarily left the quick filter unselected to reach the unique library item. Opened the exact title `Parrot QA Reader Fixture 20260929`, entered its Detail screen, and used its `Delete Book` action. Confirmed the `Delete Local Book?` dialog. The uniquely named library card disappeared. The remaining `Pride and Prejudice` entry was not opened or modified.
+3. The Continue reading shelf still referenced the just-deleted QA title. Used that same QA shelf item's overflow `Clear` action; the shelf item disappeared. This cleared the QA current-book target without touching the remaining book or reader settings.
+4. Before deleting device files, verified the two exact QA Downloads files by SHA-256:
+   - `/sdcard/Download/ParrotQA-CriticalPass-20260929.epub` — `7a5c08be34ad6e9aefba71ea05e0baee52322673d228d563907781337c02bafe`
+   - `/sdcard/Download/ParrotQA-UniqueReader-20260929.epub` — `c379224f1005f315da30148e62490881ee7ed624c2dd2f602c3d31a56e0a718c`
+5. Deleted only those two exact paths. A subsequent existence check returned `ABSENT` for both exact filenames.
+6. Restored the original `Readaloud` quick filter and verified its chip was checked. Books showed `No Books Match Your Filters` (the expected filtered empty state); the filter badge showed one active filter. Force-stopped and relaunched Parrot without clearing app data; the same `Readaloud` filter and empty state remained, verifying persistence. [Sanitized post-relaunch screenshot](reader-qa-cleanup-filter-restored.png).
+
+**Cleanup result:** PASS for the exact Reader QA import, shelf target, two QA source files, and temporary filter change. This does not claim the separate end-of-run audit (case 514) complete: Firebase debug properties were not changed, and pre-existing disposable profile fixtures from earlier QA runs remain separately documented and untouched. No conclusion is made that the retained `Pride and Prejudice` item was created by this QA run; it was preserved.
