@@ -966,7 +966,7 @@ Run these alongside the matching baseline screen, not as a separate late pass. T
 
 | # | Test case | Steps | Expected |
 |---|---|---|---|
-| 730 | Cloud form Back with IME | Edit email/password, press Back to hide keyboard then leave screen | Normal navigation; no partially created account or leaked form telemetry |
+| 730 | Cloud form Back with IME | Enter only reserved-example/synthetic local test values; press system Back to hide keyboard, then system Back again to leave screen | Normal navigation and usable return route; no account attempt, leaked field telemetry, or Autofill save prompt for the unsubmitted password |
 | 731 | Cloud duplicate submit | Rapidly tap account submit/Google sign-in on delayed network | Single accepted flow; one terminal outcome, no multiple browser launches |
 | 732 | Cloud mode-switch input state | Edit sign-in form, switch Create account and back | Fields/validation retained or reset consistently; correct action submitted |
 | 733 | Cloud terms links | Open terms/privacy links and return, then cancel account creation | Correct links and preserved form; no implicit account creation/consent |

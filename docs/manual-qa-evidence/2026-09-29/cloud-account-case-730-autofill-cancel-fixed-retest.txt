@@ -1,0 +1,42 @@
+# Cloud Account case 730 — fixed system-Back/IME Autofill cancellation retest
+
+- **Date/time:** 2026-09-29, approximately 09:05–09:08 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`settings get secure navigation_mode` = `2`). Bitwarden remained the active Autofill service; QA did not change provider/settings.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `8cf7c78b7a462562e94f7294bc688a820fa512004cae20838c0bc003ef7f68ae`, installed `adb install -r` at 09:04:24 CEST with app data preserved; PID `29172`. APK compiled from working tree based on `313f872c66a62eb2ffaf86968fd7ee54427bb343` plus the pending focused navigation fix. The installed binary corresponds to the documented fix sources/tests; hash-matching source commit is recorded after commit.
+- **Privacy/fixture:** Existing profile, server, current-book and filter state preserved. Used only reserved-example `qa@example.com` and a synthetic local-only password to reproduce the issue. Never tapped Sign in, Create account, Google, or Save. No account request or credential persistence. The final clean form was reopened and both fields were empty.
+
+## Steps and observations
+
+1. Closed the pre-existing signed-out “Server unavailable or not authenticated” prompt without selecting Retry. Opened Settings → Sync & Backup. Confirmed signed-out form and empty fields; cleared logcat before the route-entry run.
+2. Entered the reserved-example email and synthetic password. Focus loss emitted one bounded email-validation success; no input value was logged.
+3. Pressed system Back once. The IME hid and the Cloud Account screen stayed visible with its values intact.
+4. Pressed system Back a second time to leave the form. Waited 2 seconds. App Settings was visible and usable; the system “Save password to Bitwarden?” UI did not appear. [Settings screenshot](cloud-account-case-730-autofill-cancel-fixed-retest.png).
+5. Re-entered Cloud Account through the Settings tab; accessibility tree showed both email and password fields empty. Pressed Back on the clean form and returned to App Settings. No save UI appeared.
+
+- **Functional:** PASS for case 730. Correct IME-first Back order, navigation to Settings, no account operation, and no Autofill save prompt on the unsubmitted form. The two synthetic values were not retained on route re-entry.
+- **Analytics:** PASS locally for the exercised outcomes: one bounded `cloud_account_email_validation_result` success; one `navigation_back_attempted` plus one successful `navigation_back` (`entry_point=system_back`); one App Settings exposure. On screen entry the signed-out session restore was attempted and completed once with `result_code=signed_out` (not an auth attempt). No email/password payload. Firebase ingestion is waived; DebugAnalyticsManager output is local-only.
+- **Diagnostics:** PASS locally: route-visible/session-restore, validation, and navigation breadcrumbs; Back start/terminal shared a correlation ID. No fatal/exception marker. Expected Autofill cancellation is not a Crashlytics issue; no non-fatal was sent or expected.
+- **Filtered local logcat (`adb logcat -d -v threadtime`):**
+
+  ```text
+  09-29 09:05:29.136 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=app_settings entry_point=sync_backup_row action=screen_view operation=sync_and_backup_route stage=visible outcome=succeeded
+  09-29 09:05:29.174 29172 29172 D čič : Analytics Event: cloud_account_operation_attempted | Parameters: {screen=sync_and_backup, action=restore_session, operation=cloud_session_restore, entry_point=screen_entry, stage=started, outcome=started, is_retry=false}
+  09-29 09:05:29.175 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=screen_entry action=restore_session operation=cloud_session_restore stage=started outcome=started correlation_id=fecb3d29-ba65-4771-993e-79c4fe0f94f8
+  09-29 09:05:29.177 29172 29172 D čič : Analytics Event: cloud_account_operation_succeeded | Parameters: {screen=sync_and_backup, action=restore_session, operation=cloud_session_restore, entry_point=screen_entry, stage=terminal, outcome=succeeded, is_retry=false, duration_ms=2, result_code=signed_out}
+  09-29 09:05:29.177 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=screen_entry action=restore_session operation=cloud_session_restore stage=terminal outcome=succeeded reason_code=signed_out correlation_id=fecb3d29-ba65-4771-993e-79c4fe0f94f8
+  09-29 09:06:06.916 29172 29172 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 09:06:06.916 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=validate_email operation=cloud_email_validation stage=validation outcome=succeeded correlation_id=0fa1fd2f-e2c2-4b99-8c09-588128f7b818
+  09-29 09:06:12.048 29172 29172 D čič : Analytics Event: navigation_back_attempted | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=system_back, action=back, outcome=started}
+  09-29 09:06:12.049 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=system_back action=back operation=navigation_back stage=navigation outcome=started correlation_id=719c522a-b7c2-495a-916e-8062c1edc343
+  09-29 09:06:12.054 29172 29172 D čič : Analytics Event: navigation_back | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=system_back, action=back, outcome=succeeded}
+  09-29 09:06:12.055 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=system_back action=back operation=navigation_back stage=terminal outcome=succeeded correlation_id=719c522a-b7c2-495a-916e-8062c1edc343
+  09-29 09:06:12.068 29172 29172 D čič : Analytics Event: app_settings_screen_viewed | Parameters: {screen=app_settings, source_screen=sync_and_backup, entry_point=navigation_back}
+  09-29 09:06:12.068 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=app_settings source_screen=sync_and_backup entry_point=navigation_back action=screen_view operation=app_settings_route stage=visible outcome=succeeded
+  ```
+
+  A filtered query for `SaveUi`, Autofill save text, `FATAL EXCEPTION`, and `Exception occurred` returned no matches for the fixed run. The navigation terminal excerpt is sanitized and contains no field data.
+
+- **Retest implementation:** Home navigation now calls Android `AutofillManager.cancel()` before mutating navigation state when leaving Sync & Backup (Back, route navigation, tab switch, reader replacement). iOS is a no-op. A disposal-only candidate failed and was not committed; its observation is preserved in [failed candidate evidence](cloud-account-case-730-autofill-dispose-cancel-failed-retest.txt).
+- **Build checks:** Home UI host tests 56/56 pass, including two route-owner tests; Cloud Account UI host tests 8/8; iOS Simulator Kotlin compile passes; Android debug assembly passes.
+
+Firebase delivery is not claimed. No real profile/book content, cross-app sync, or cross-device sync was tested.

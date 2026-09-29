@@ -1,0 +1,37 @@
+# Cloud Account case 730 — final pre-commit build retest
+
+- **Date/time:** 2026-09-29, 09:33–09:35 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`navigation_mode=2`). Bitwarden remained selected as Android Autofill service; QA did not change system settings.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `c8176648c49283eb5fcd4430232d3494b024b487d56b9032c8692afe643c7360`, installed at 09:33:00 CEST with `adb install -r` and app data preserved; PID `15266`. Source tree was based on HEAD `313f872c66a62eb2ffaf86968fd7ee54427bb343` and contained the focused Autofill route-cancellation change that is pending commit.
+- **Fixture/privacy:** Existing profile/server/book data preserved; the retained unauthenticated server fixture was not retried. Used only the reserved-example email and a synthetic local-only password. Did not tap Sign in, Create account, Google, or any password-manager Save action. No credential was submitted or saved.
+
+## Steps and result
+
+1. Closed the pre-existing “Server unavailable or not authenticated” prompt without tapping Retry. Opened Settings → Sync & Backup and confirmed both form fields were initially empty. Cleared logcat.
+2. Entered reserved-example email and synthetic password. Pressed system Back once; the IME hid and the form remained visible with the inputs intact.
+3. Pressed system Back again; App Settings was exposed. Waited two seconds. No “Save password to Bitwarden?” overlay appeared. [Final-build screenshot](cloud-account-case-730-autofill-cancel-final-build.png).
+4. Re-entered Sync & Backup. The accessibility tree showed both email and password fields empty. No account action was attempted.
+
+- **Functional:** PASS for case 730 on the final pre-commit source/build. Correct keyboard-first Back order, usable Settings destination, no unsubmitted-password Save offer, and no form values on re-entry.
+- **Analytics:** PASS locally for route exposure, signed-out session restore attempt/completion (`result_code=signed_out`), one bounded email-validation success, and one system-Back attempt/success with the destination exposure. No email/password payload or auth attempt. Firebase Analytics ingestion is waived; local `DebugAnalyticsManager` output is not delivery proof.
+- **Diagnostics:** PASS locally for Sync & Backup exposure/session restore, validation, and correlated Back start/terminal/destination breadcrumbs. No fatal/exception or Autofill `SaveUi` appeared in the filtered capture. No Crashlytics report is expected for user cancellation; Firebase Crashlytics delivery is not claimed.
+- **Filtered local logcat:**
+
+  ```text
+  09-29 09:33:51.182 15266 15266 D čič : Analytics Event: sync_and_backup_screen_viewed | Parameters: {screen=sync_and_backup, source_screen=app_settings, entry_point=sync_backup_row}
+  09-29 09:33:51.183 15266 15266 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=app_settings entry_point=sync_backup_row action=screen_view operation=sync_and_backup_route stage=visible outcome=succeeded
+  09-29 09:33:51.223 15266 15266 D čič : Analytics Event: cloud_account_operation_attempted | Parameters: {screen=sync_and_backup, action=restore_session, operation=cloud_session_restore, entry_point=screen_entry, stage=started, outcome=started, is_retry=false}
+  09-29 09:33:51.225 15266 15266 D čič : Analytics Event: cloud_account_operation_succeeded | Parameters: {screen=sync_and_backup, action=restore_session, operation=cloud_session_restore, entry_point=screen_entry, stage=terminal, outcome=succeeded, is_retry=false, duration_ms=2, result_code=signed_out}
+  09-29 09:34:17.912 15266 15266 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 09:34:17.912 15266 15266 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=validate_email operation=cloud_email_validation stage=validation outcome=succeeded correlation_id=33644e93-1f48-4932-b052-990fcfafee4e
+  09-29 09:34:23.170 15266 15266 D čič : Analytics Event: navigation_back_attempted | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=system_back, action=back, outcome=started}
+  09-29 09:34:23.171 15266 15266 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=system_back action=back operation=navigation_back stage=navigation outcome=started correlation_id=4c03c902-c6ff-493c-92ef-c3a90db3ad81
+  09-29 09:34:23.178 15266 15266 D čič : Analytics Event: navigation_back | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=system_back, action=back, outcome=succeeded}
+  09-29 09:34:23.180 15266 15266 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=system_back action=back operation=navigation_back stage=terminal outcome=succeeded correlation_id=4c03c902-c6ff-493c-92ef-c3a90db3ad81
+  09-29 09:34:23.220 15266 15266 D čič : Analytics Event: app_settings_screen_viewed | Parameters: {screen=app_settings, source_screen=sync_and_backup, entry_point=navigation_back}
+  09-29 09:34:23.221 15266 15266 D čič : Diagnostic breadcrumb: diagnostic_context screen=app_settings source_screen=sync_and_backup entry_point=navigation_back action=screen_view operation=app_settings_route stage=visible outcome=succeeded
+  ```
+
+- **Build checks:** `:feature:home:ui:testAndroidHostTest` 56/56, `:feature:cloud-account:ui:testAndroidHostTest` 8/8, `:feature:home:ui:compileKotlinIosSimulatorArm64`, and `:androidApp:assembleDebug` all passed. iOS is compile-only; iOS device testing is deferred.
+
+Earlier initial reproduction and failed disposal-time cancellation remain in [initial observation](cloud-account-case-730-ime-back-autofill-observation.txt) and [failed candidate evidence](cloud-account-case-730-autofill-dispose-cancel-failed-retest.txt). Cross-app and cross-device synchronization was not tested.

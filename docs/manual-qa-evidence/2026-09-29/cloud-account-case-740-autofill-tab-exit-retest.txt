@@ -1,0 +1,26 @@
+# Case 740/SyncAndBackup — bottom-tab exit with unsubmitted password
+
+- **Date/time:** 2026-09-29, approximately 09:12:28–09:15 CEST.
+- **Device/build:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation; Parrot `com.retro99.parrot` 0.4.5 (21), APK SHA-256 `8cf7c78b7a462562e94f7294bc688a820fa512004cae20838c0bc003ef7f68ae`, source tree based on `313f872c` plus pending fix, PID `29172`. App data preserved; same installed build as case 730.
+- **Fixture/privacy:** Signed-out Cloud Account form, initially empty. Entered only reserved-example `qa@example.com` and a synthetic local password; did not submit. Original profile, server, current-book, filter and Autofill-provider settings were not changed.
+
+## Steps and result
+
+1. Opened Cloud Account and cleared logcat.
+2. Entered the reserved-example email and synthetic password. Pressed system Back once; the IME hid while the form remained visible.
+3. Selected the Books bottom tab. After 2 seconds, the existing Books surface was visible and no Autofill save prompt appeared. The screenshot was not retained because this screen displays user book content.
+4. Re-entered the Settings tab, confirmed both Cloud Account fields were empty, and used system Back on the empty form to return to App Settings.
+
+- **Functional:** PASS for this parameterized tab-exit variant. Bottom-tab navigation succeeded without an Autofill save offer or cloud operation. Re-entry confirmed no local form values remained.
+- **Analytics:** PASS locally: one bounded email-format success; one `tab_switch_attempted` plus one `tab_switched` (`source_tab=settings`, `destination_tab=books`, `entry_point=bottom_navigation`). No form values or auth attempt. Firebase ingestion waived.
+- **Diagnostics:** PASS locally: tab-navigation start and terminal breadcrumbs shared correlation ID `f5f75e88-b170-4be7-9759-d414e074c53c`. Filtered logcat contained no `SaveUi`, fatal, or exception marker. No Crashlytics non-fatal is expected for cancellation.
+
+  ```text
+  09-29 09:12:28.553 29172 29172 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 09:12:52.411 29172 29172 D čič : Analytics Event: tab_switch_attempted | Parameters: {screen=home, source_tab=settings, destination_tab=books, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=navigation, outcome=started}
+  09-29 09:12:52.411 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=books source_screen=settings entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=navigation outcome=started correlation_id=f5f75e88-b170-4be7-9759-d414e074c53c
+  09-29 09:12:52.413 29172 29172 D čič : Analytics Event: tab_switched | Parameters: {screen=home, source_tab=settings, destination_tab=books, tab_name=books, entry_point=bottom_navigation, action=switch_tab, operation=tab_navigation, stage=terminal, outcome=succeeded}
+  09-29 09:12:52.413 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=books source_screen=settings entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=terminal outcome=succeeded correlation_id=f5f75e88-b170-4be7-9759-d414e074c53c
+  ```
+
+No image or actual book/profile identity is retained. Firebase delivery is waived; cross-app/cross-device sync was not tested. Parent case 740 remains open for other variants.

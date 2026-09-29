@@ -58,6 +58,7 @@ fun HomeNavigation(
     // UI state from ViewModel (currently reading, bubble position)
     val uiState by viewModel.viewState.collectAsState()
     val isProfileOperationTapShielded by ProfileOperationTapShieldHolder.instance.isBlocking.collectAsState()
+    val cancelAutofillSession = rememberAutofillSessionCanceller()
 
     // Intent dispatcher for navigation actions
     val intentDispatcher: (HomeNavigationIntent) -> Unit = { viewModel.onIntent(it) }
@@ -88,9 +89,18 @@ fun HomeNavigation(
         viewModel.navigationEvents.collect { event ->
             when (event) {
                 is HomeNavigationEvent.NavigateTo -> {
+                    if (shouldCancelCloudAccountAutofill(navigationState.currentDestination)) {
+                        cancelAutofillSession()
+                    }
                     navigationState.navigateTo(event.destination)
                 }
                 is HomeNavigationEvent.SwitchTab -> {
+                    if (
+                        shouldCancelCloudAccountAutofill(navigationState.currentDestination) &&
+                        event.tab != navigationState.currentTab
+                    ) {
+                        cancelAutofillSession()
+                    }
                     navigationState.switchTab(event.tab)
                     viewModel.reportTabSwitchApplied(
                         sourceTab = event.sourceTab,
@@ -100,6 +110,9 @@ fun HomeNavigation(
                     )
                 }
                 is HomeNavigationEvent.GoBack -> {
+                    if (shouldCancelCloudAccountAutofill(navigationState.currentDestination)) {
+                        cancelAutofillSession()
+                    }
                     val applied = navigationState.goBack()
                     event.context?.let { context ->
                         viewModel.reportBackNavigationApplied(context, applied)
@@ -125,6 +138,9 @@ fun HomeNavigation(
                             attemptAlreadyRecorded = true,
                         )
                     } else {
+                        if (shouldCancelCloudAccountAutofill(navigationState.currentDestination)) {
+                            cancelAutofillSession()
+                        }
                         navigationState.switchTab(event.tab)
                         navigationState.navigateToReplacing(
                             HomeDestination.Reader(
@@ -146,6 +162,9 @@ fun HomeNavigation(
     // Reset navigation when user profile changes
     LaunchedEffect(viewModel) {
         viewModel.userProfileChanged.collect {
+            if (shouldCancelCloudAccountAutofill(navigationState.currentDestination)) {
+                cancelAutofillSession()
+            }
             navigationState.resetAllStacks()
         }
     }

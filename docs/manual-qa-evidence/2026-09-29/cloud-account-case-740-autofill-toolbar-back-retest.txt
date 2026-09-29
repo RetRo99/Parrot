@@ -1,0 +1,26 @@
+# Case 740/SyncAndBackup — toolbar Back with unsubmitted password
+
+- **Date/time:** 2026-09-29, approximately 09:10:19–09:10:39 CEST.
+- **Device/build:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, gesture navigation; Parrot `com.retro99.parrot` 0.4.5 (21), APK SHA-256 `8cf7c78b7a462562e94f7294bc688a820fa512004cae20838c0bc003ef7f68ae`, source tree based on `313f872c` plus pending fix, PID `29172`. App data preserved; same installed build as case 730.
+- **Fixture/privacy:** Signed-out Cloud Account form, empty fields at start. Entered only reserved-example `qa@example.com` and a synthetic local password; did not submit. Existing profile/server/book state and Autofill provider unchanged.
+
+## Steps and result
+
+1. Opened the Cloud Account form and cleared logcat.
+2. Entered the reserved-example email and synthetic password; left the IME visible.
+3. Tapped the toolbar Back control. After 2 seconds, App Settings was visible and usable; no “Save password to Bitwarden?” prompt appeared. [Settings screenshot](cloud-account-case-740-autofill-toolbar-back-retest.png).
+
+- **Functional:** PASS for this parameterized toolbar-exit variant. No auth operation, save prompt, or account/server mutation.
+- **Analytics:** PASS locally: one bounded email-format success, one `navigation_back_attempted` and one `navigation_back` with `entry_point=toolbar_back`, followed by one App Settings exposure. No input values or auth attempt. Firebase ingestion waived.
+- **Diagnostics:** PASS locally: matching Back start/terminal breadcrumbs with correlation ID `26a96f14-1419-4774-b85a-b9083cbf79ac`, followed by visible Settings breadcrumb. No `SaveUi`, fatal, or exception marker; no Crashlytics report is expected for cancellation.
+
+  ```text
+  09-29 09:10:19.822 29172 29172 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 09:10:24.891 29172 29172 D čič : Analytics Event: navigation_back_attempted | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=toolbar_back, action=back, outcome=started}
+  09-29 09:10:24.891 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=toolbar_back action=back operation=navigation_back stage=navigation outcome=started correlation_id=26a96f14-1419-4774-b85a-b9083cbf79ac
+  09-29 09:10:24.893 29172 29172 D čič : Analytics Event: navigation_back | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=toolbar_back, action=back, outcome=succeeded}
+  09-29 09:10:24.894 29172 29172 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=toolbar_back action=back operation=navigation_back stage=terminal outcome=succeeded correlation_id=26a96f14-1419-4774-b85a-b9083cbf79ac
+  09-29 09:10:24.907 29172 29172 D čič : Analytics Event: app_settings_screen_viewed | Parameters: {screen=app_settings, source_screen=sync_and_backup, entry_point=navigation_back}
+  ```
+
+No screenshots include credentials. Firebase Analytics delivery and Crashlytics delivery are not claimed. This is one variant only; parent case 740 remains open.
