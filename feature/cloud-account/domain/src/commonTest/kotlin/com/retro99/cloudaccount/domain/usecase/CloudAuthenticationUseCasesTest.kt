@@ -1,6 +1,7 @@
 package com.retro99.cloudaccount.domain.usecase
 
 import com.retro99.cloudaccount.domain.CloudAccountRepository
+import com.retro99.cloudaccount.domain.CloudAccountException
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.cloudaccount.domain.PendingCloudAuthenticationRepository
 import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
@@ -16,6 +17,7 @@ import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -67,6 +69,102 @@ class CloudAuthenticationUseCasesTest {
         val pendingAuthentication = pendingAuthenticationRepository.get("profile-a")
         assertEquals(account.id, pendingAuthentication?.cloudUserId)
         assertEquals(account.email, pendingAuthentication?.email)
+    }
+
+    @Test
+    fun `sign in reports pending local authentication persistence failure with safe context`() = runTest {
+        val classUnderTest = SignInCloudAccountUseCase(
+            accountRepository = accountRepository,
+            pendingAuthenticationRepository = pendingAuthenticationRepository,
+            userRegistry = userRegistry,
+        )
+        val persistenceFailure = IllegalStateException("private preference payload")
+        accountRepository.onSignIn = { account }
+        pendingAuthenticationRepository.onSave = { authentication ->
+            pendingAuthenticationRepository.add(authentication)
+            throw persistenceFailure
+        }
+
+        val error = assertFailsWith<CloudAccountException.LocalStatePersistence> {
+            classUnderTest("reader@example.com", "password")
+        }
+
+        assertEquals("Cloud account state could not be saved on this device", error.message)
+        assertEquals(persistenceFailure, error.cause)
+        assertEquals(1, accountRepository.signOutCount)
+        assertEquals(CloudAuthState.SignedOut, accountRepository.authState)
+        assertNull(pendingAuthenticationRepository.get("profile-a"))
+    }
+
+    @Test
+    fun `sign in cancellation during local persistence is not wrapped`() = runTest {
+        val classUnderTest = SignInCloudAccountUseCase(
+            accountRepository = accountRepository,
+            pendingAuthenticationRepository = pendingAuthenticationRepository,
+            userRegistry = userRegistry,
+        )
+        accountRepository.onSignIn = { account }
+        pendingAuthenticationRepository.onSave = { authentication ->
+            pendingAuthenticationRepository.add(authentication)
+            throw CancellationException("cancelled")
+        }
+
+        assertFailsWith<CancellationException> {
+            classUnderTest("reader@example.com", "password")
+        }
+        assertEquals(1, accountRepository.signOutCount)
+        assertEquals(CloudAuthState.SignedOut, accountRepository.authState)
+        assertNull(pendingAuthenticationRepository.get("profile-a"))
+    }
+
+    @Test
+    fun `registration local persistence failure is bounded and typed`() = runTest {
+        val classUnderTest = RegisterCloudAccountUseCase(
+            accountRepository = accountRepository,
+            pendingAuthenticationRepository = pendingAuthenticationRepository,
+            userRegistry = userRegistry,
+        )
+        accountRepository.onRegister = {
+            CloudRegistrationResult.SignedIn(account).also {
+                accountRepository.authState = CloudAuthState.SignedIn(account)
+            }
+        }
+        pendingAuthenticationRepository.onSave = { authentication ->
+            pendingAuthenticationRepository.add(authentication)
+            throw IllegalStateException("private preference payload")
+        }
+
+        val error = assertFailsWith<CloudAccountException.LocalStatePersistence> {
+            classUnderTest("reader@example.com", "password", tosAccepted = true)
+        }
+
+        assertEquals("Cloud account state could not be saved on this device", error.message)
+        assertEquals(1, accountRepository.signOutCount)
+        assertEquals(CloudAuthState.SignedOut, accountRepository.authState)
+        assertNull(pendingAuthenticationRepository.get("profile-a"))
+    }
+
+    @Test
+    fun `auth persistence failure still clears pending record when session rollback throws`() = runTest {
+        val classUnderTest = SignInCloudAccountUseCase(
+            accountRepository = accountRepository,
+            pendingAuthenticationRepository = pendingAuthenticationRepository,
+            userRegistry = userRegistry,
+        )
+        accountRepository.onSignIn = { account }
+        accountRepository.onSignOut = { throw IllegalStateException("rollback failed") }
+        pendingAuthenticationRepository.onSave = { authentication ->
+            pendingAuthenticationRepository.add(authentication)
+            throw IllegalStateException("persistence failed")
+        }
+
+        val error = assertFailsWith<CloudAccountException.LocalStatePersistence> {
+            classUnderTest("reader@example.com", "password")
+        }
+
+        assertEquals(true, error.cleanupFailed)
+        assertNull(pendingAuthenticationRepository.get("profile-a"))
+        assertEquals(CloudAuthState.SignedIn(account), accountRepository.authState)
     }
 
     @Test
@@ -301,6 +399,8 @@ class CloudAuthenticationUseCasesTest {
 
 private class FakeCloudAccountRepository : CloudAccountRepository {
     var authState: CloudAuthState = CloudAuthState.SignedOut
+    var signOutCount: Int = 0
+    var onSignOut: suspend () -> Unit = { authState = CloudAuthState.SignedOut }
     var onRegister: suspend () -> CloudRegistrationResult = {
         CloudRegistrationResult.SignedIn(
             CloudAccount(
@@ -310,6 +410,7 @@ private class FakeCloudAccountRepository : CloudAccountRepository {
         )
     }
     var onGoogleSignIn: suspend () -> CloudAccount = { error("Not used") }
+    var onSignIn: suspend () -> CloudAccount = { error("Not used") }
     var onRestore: suspend () -> Unit = {}
     var onDeleteAccount: suspend () -> Unit = {}
 
@@ -326,22 +427,31 @@ private class FakeCloudAccountRepository : CloudAccountRepository {
         localProfileId: String,
         email: String,
         password: String,
-    ): CloudRegistrationResult = onRegister()
+    ): CloudRegistrationResult = onRegister().also { result ->
+        if (result is CloudRegistrationResult.SignedIn) {
+            authState = CloudAuthState.SignedIn(result.account)
+        }
+    }
 
     override suspend fun signIn(
         localProfileId: String,
         email: String,
         password: String,
-    ): CloudAccount = error("Not used")
+    ): CloudAccount = onSignIn().also { authState = CloudAuthState.SignedIn(it) }
 
-    override suspend fun signInWithGoogle(localProfileId: String): CloudAccount = onGoogleSignIn()
+    override suspend fun signInWithGoogle(localProfileId: String): CloudAccount = onGoogleSignIn().also {
+        authState = CloudAuthState.SignedIn(it)
+    }
 
     override suspend fun restoreSession(localProfileId: String): CloudAuthState {
         onRestore()
         return authState
     }
 
-    override suspend fun signOut(localProfileId: String) = Unit
+    override suspend fun signOut(localProfileId: String) {
+        signOutCount++
+        onSignOut()
+    }
 
     override suspend fun deleteAccount(localProfileId: String) = onDeleteAccount()
 }
@@ -431,17 +541,27 @@ private class FakeUploadRightsAttestationRepository : UploadRightsAttestationRep
 
 private class FakePendingCloudAuthenticationRepository : PendingCloudAuthenticationRepository {
     private val authentications = mutableMapOf<String, PendingCloudAuthentication>()
+    var onSave: suspend (PendingCloudAuthentication) -> Unit = { authentication ->
+        authentications[authentication.localProfileId] = authentication
+    }
 
     override suspend fun get(localProfileId: String): PendingCloudAuthentication? {
         return authentications[localProfileId]
     }
 
     override suspend fun save(authentication: PendingCloudAuthentication) {
-        authentications[authentication.localProfileId] = authentication
+        onSave(authentication)
     }
 
     override suspend fun clear(localProfileId: String) {
+        onClear(localProfileId)
         authentications.remove(localProfileId)
+    }
+
+    var onClear: suspend (String) -> Unit = {}
+
+    fun add(authentication: PendingCloudAuthentication) {
+        authentications[authentication.localProfileId] = authentication
     }
 }
 

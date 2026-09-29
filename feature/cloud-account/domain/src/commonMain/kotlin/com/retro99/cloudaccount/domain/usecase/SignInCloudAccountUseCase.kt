@@ -39,13 +39,15 @@ class SignInCloudAccountUseCase(
             check(userRegistry.getActiveProfileIdOrDefault() == localProfileId) {
                 "Cloud sign-in completed for an inactive profile"
             }
-            pendingAuthenticationRepository.save(
-                PendingCloudAuthentication(
+            persistPendingCloudAuthentication(
+                accountRepository = accountRepository,
+                pendingAuthenticationRepository = pendingAuthenticationRepository,
+                authentication = PendingCloudAuthentication(
                     localProfileId = localProfileId,
                     cloudUserId = account.id,
                     email = account.email ?: fallbackEmail,
                     createdAt = Clock.System.now().toEpochMilliseconds(),
-                ),
+                )
             )
             account
         }
