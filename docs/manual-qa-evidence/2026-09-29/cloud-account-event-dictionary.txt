@@ -1,0 +1,44 @@
+# Cloud Account event and diagnostic dictionary — pre-commit contract
+
+- **Scope:** the Cloud Account / Sync & Backup screen only. Existing Home route exposure remains owned by Home navigation and must not be re-emitted by this feature.
+- **Cases:** 357–384 as applicable, 730–739, 778–779; cases 370–371 remain DEFERRED for sync behavior verification.
+- **Privacy:** never include email, password, OAuth code/token, account/local-profile/server ID, URL, raw exception/error message, file path or user-authored text. Use only enum-derived screen/action/operation/reason/result/mode/entry-point dimensions, booleans, and bounded elapsed milliseconds. Diagnostic correlation IDs are diagnostic-only; never Analytics parameters.
+- **Provider evidence rule:** DebugAnalyticsManager is local logging only. Local output can verify emission and payload shape but does not prove Firebase ingestion or Crashlytics delivery. Firebase Analytics ingestion is waived for this run; Crashlytics delivery remains BLOCKED without an authorized Firebase-enabled build/Console.
+
+## Feature-operation usage events
+
+| Event | Allowed fields | Emission point and exactly-once boundary |
+|---|---|---|
+| `cloud_account_operation_attempted` | `screen=sync_and_backup`, enum `action`/`operation`, bounded `entry_point`, `stage=started`, `outcome=started`, `is_retry`; optional `auth_method=email|google`, `mode=sign_in|create_account`, `is_enabled` | `CloudAccountOperationTelemetry.execute` after the ViewModel accepts an actionable submit/operation and before its work block. One attempt per accepted operation; UI guards reject rapid duplicate actions while loading. |
+| `cloud_account_operation_succeeded` | Same identity/source fields; terminal `stage`/`outcome`; bounded `duration_ms`; optional bounded `result_code` | Exactly once when the accepted block returns a classified success. Registration waiting for email is represented as `result_code=verification_pending`, not a signed-in claim. |
+| `cloud_account_operation_failed` | Same identity/source fields; terminal failure and bounded `reason_code`; duration | Exactly once for a thrown operation exception or a returned typed non-success (for example Offline/not-configured SyncResult). Expected auth rejection remains a failure outcome, not a Crashlytics exception. |
+| `cloud_account_operation_cancelled` | Same identity/source fields; `outcome=cancelled`, bounded reason and duration | Exactly once when the accepted coroutine throws `CancellationException`; the exception is then rethrown. Cancellation is never converted into success/failure or swallowed. Google OAuth cancellation uses `oauth_cancelled`; other operations use `operation_cancelled`. |
+
+Bounded operation pairs: `cloud_session_restore`; `cloud_authentication` (auth method/mode); `cloud_profile_link`; `cloud_link_conflict_cleanup`; `cloud_storage_usage`; `cloud_auto_backup`; `cloud_sign_out`; `cloud_account_delete`; `cloud_sync_now`. `cloud_sync_now` instrumentation exists for accurate product outcomes if invoked, but no sync run/status transition is asserted in this pass.
+
+Accepted entry points are code-defined constants such as `screen_entry`, `email_submit`, `google_button`, `profile_link_confirm`, `link_confirmation_dismissal`, `sign_out_button`, `sync_button`, `auto_backup_switch`, `confirm_button`, `auth_state_observer`, and `sync_completed`. They must not be sourced from text or identifiers.
+
+## UI choices and confirmations
+
+| Event | Allowed fields | Emission point |
+|---|---|---|
+| `cloud_account_mode_changed` | `mode=sign_in|create_account` | Once per actual Sign in/Create account mode transition; no event on reselecting current mode. |
+| `cloud_account_password_visibility_changed` | `is_visible` Boolean | Once per actual show/hide icon activation; no password content or keystroke events. |
+| `cloud_account_consent_changed` | enum `consent_kind=account_terms|upload_rights`, `is_enabled` Boolean | Once per actual checkbox state transition; no raw text or duplicate unchanged-state event. |
+| `cloud_account_confirmation_shown` | `operation=profile_link|delete_account|auto_backup` | When the corresponding confirmation becomes visible. |
+| `cloud_account_confirmation_confirmed` | bounded operation and `entry_point=confirm_button`, `outcome=accepted` | On actual dialog confirmation, immediately before the separately tracked operation attempt. |
+| `cloud_account_confirmation_dismissed` | bounded operation, `entry_point=cancel_button|not_now_button|dismiss_request|system_back`, `outcome=cancelled` | On a real dialog cancellation/dismissal only. Link-dialog dismissal intentionally triggers a separate sign-out operation. |
+| `cloud_account_observation_failed` | `observation=auth_state|sync_status`, fixed reason code | Once when an auth-state or sync-status observation Flow terminates unexpectedly; not on ordinary Flow cancellation. One correlated diagnostic pair and one non-fatal are emitted at that observer boundary. |
+
+`sync_and_backup_screen_viewed` and its `sync_and_backup_route` breadcrumb remain emitted by Home navigation only, after the destination is actually visible. Toolbar/system Back is owned by existing root/Home navigation telemetry; no duplicate CloudAccountViewModel Back event is added.
+
+## Diagnostic stages and report policy
+
+- Operation breadcrumbs use screen `sync_and_backup`, operation enum, optional bounded entry point, stage/outcome, stable reason code and one per-operation correlation ID. Stages include session restore, authentication request, OAuth start, profile-link lookup, storage usage request, profile link, local-session cleanup, cloud delete, sync enable/status lookup and auto-backup persistence.
+- One start breadcrumb and one terminal breadcrumb share the same diagnostic correlation ID. Stage changes use the same ID. Diagnostics never contain Analytics correlation dimensions or private inputs.
+- A caught exception generates one failed Analytics terminal and a matching terminal breadcrumb. `Analytics.logException` is called exactly once at the ViewModel boundary only when that operation's explicit unexpected-failure predicate returns true. Auth rejection, OAuth cancellation, ordinary cancellation, validation, and typed offline outcomes are not non-fatal issues.
+- `LocalStatePersistence` is a known unexpected local completion failure and is reported once; its cause/message is sanitized by the analytics implementation. Failure to roll back the session has a separate bounded reason `local_state_rollback_failed`.
+- Observation Flow exceptions are unexpected; report one `cloud_account_observation_failed` event, one correlated start/failure breadcrumb pair and one non-fatal. A Flow cancellation is rethrown without reporting.
+- Debug/local logs may contain event names and sanitized parameters only. Verify the implementation and tests preserve these boundaries; never use local logs as Firebase delivery proof.
+
+**Disposition:** this dictionary is a source-level preflight contract. It does not claim code/test/device success. Host test results, installed build, local Samsung event counts, Firebase/Crashlytics evidence and all blocked variants are recorded separately in `manual-qa-results.md` and the run report.

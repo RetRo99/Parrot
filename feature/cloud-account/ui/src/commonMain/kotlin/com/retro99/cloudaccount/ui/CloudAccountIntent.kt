@@ -7,6 +7,7 @@ sealed interface CloudAccountIntent : BaseIntent {
 
     data object OnSubmitClicked : CloudAccountIntent
     data class OnTosAcceptedChanged(val accepted: Boolean) : CloudAccountIntent
+    data class OnPasswordVisibilityChanged(val isVisible: Boolean) : CloudAccountIntent
 
     data object OnGoogleSignInClicked : CloudAccountIntent
 
@@ -20,7 +21,7 @@ sealed interface CloudAccountIntent : BaseIntent {
 
     data object OnDeleteAccountConfirmed : CloudAccountIntent
 
-    data object OnDeleteAccountDismissed : CloudAccountIntent
+    data class OnDeleteAccountDismissed(val entryPoint: String) : CloudAccountIntent
 
     data object OnSyncClicked : CloudAccountIntent
 
@@ -30,9 +31,9 @@ sealed interface CloudAccountIntent : BaseIntent {
 
     data object OnAutoBackupConfirmed : CloudAccountIntent
 
-    data object OnAutoBackupDismissed : CloudAccountIntent
+    data class OnAutoBackupDismissed(val entryPoint: String) : CloudAccountIntent
 
     data object OnLinkConfirmed : CloudAccountIntent
 
-    data object OnLinkDismissed : CloudAccountIntent
+    data class OnLinkDismissed(val entryPoint: String) : CloudAccountIntent
 }

@@ -31,6 +31,12 @@ internal fun sanitizeAnalyticsParameters(parameters: Map<String, Any>): Map<Stri
             key == "field" && value is String && value in SAFE_VALIDATION_FIELDS ->
                 put(key, value)
 
+            key == "consent_kind" && value is String && value in SAFE_CLOUD_ACCOUNT_CONSENT_KINDS ->
+                put(key, value)
+
+            key == "observation" && value is String && value in SAFE_CLOUD_ACCOUNT_OBSERVATIONS ->
+                put(key, value)
+
             key == "bubble_side" && value is String && value in SAFE_BUBBLE_SIDES ->
                 put(key, value)
 
@@ -159,12 +165,14 @@ private val SAFE_STRING_KEYS = setOf(
     "stage",
     "outcome",
     "reason_code",
+    "result_code",
     "book_type",
     "source",
     "section_name",
     "direction",
     "error_type",
     "auth_method",
+    "mode",
     "step",
     "tab_name",
     "source_tab",
@@ -177,6 +185,8 @@ private val SAFE_STRING_KEYS = setOf(
 private val SAFE_SERVER_TYPE_KEYS = setOf("server_type", "previous_server_type")
 private val SAFE_SERVER_TYPES = setOf("storyteller", "audiobookshelf", "parrot-cloud", "local", "unknown")
 private val SAFE_VALIDATION_FIELDS = setOf("server_url", "required_fields")
+private val SAFE_CLOUD_ACCOUNT_CONSENT_KINDS = setOf("account_terms", "upload_rights")
+private val SAFE_CLOUD_ACCOUNT_OBSERVATIONS = setOf("auth_state", "sync_status")
 
 private val SAFE_SETTING_NAMES = setOf(
     "file_logging", "crash_only_logging", "open_last_book_on_launch", "show_continue_reading",

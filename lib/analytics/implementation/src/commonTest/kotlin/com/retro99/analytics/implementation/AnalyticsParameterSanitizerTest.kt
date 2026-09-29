@@ -13,6 +13,10 @@ import com.retro99.analytics.api.ReaderAnalyticsEvent
 import com.retro99.analytics.api.ReaderSettingsScreenViewed
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 import com.retro99.analytics.api.StatisticsAnalyticsEvent
+import com.retro99.analytics.api.CloudAccountAnalyticsEvent
+import com.retro99.analytics.api.CloudAccountOperation
+import com.retro99.analytics.api.CloudAccountConsentKind
+import com.retro99.analytics.api.CloudAccountObservation
 
 class AnalyticsParameterSanitizerTest {
 
@@ -63,6 +67,82 @@ class AnalyticsParameterSanitizerTest {
             ),
             sanitized,
         )
+    }
+
+    @Test
+    fun cloudAccountOperationEventsKeepBoundedFieldsAndStripUnregisteredPayloads() {
+        val event = CloudAccountAnalyticsEvent.OperationFailed(
+            operation = CloudAccountOperation.Authentication,
+            entryPoint = "email_submit",
+            isRetry = true,
+            reasonCode = "authentication_failed",
+            durationMs = 1_200,
+            authMethod = "email",
+            mode = "sign_in",
+        )
+        val sanitized = sanitizeAnalyticsParameters(
+            event.parameters + mapOf(
+                "email" to "private@example.invalid",
+                "password" to "private-password",
+                "cloud_user_id" to "private-account-id",
+                "error_message" to "private server response",
+            ),
+        )
+
+        assertEquals("cloud_account_operation_failed", event.name)
+        assertEquals(
+            mapOf(
+                "screen" to "sync_and_backup",
+                "action" to "authenticate_account",
+                "operation" to "cloud_authentication",
+                "entry_point" to "email_submit",
+                "stage" to "terminal",
+                "outcome" to "failed",
+                "is_retry" to true,
+                "auth_method" to "email",
+                "mode" to "sign_in",
+                "reason_code" to "authentication_failed",
+                "duration_ms" to 1_200L,
+            ),
+            sanitized,
+        )
+    }
+
+    @Test
+    fun cloudConsentEventsUseBoundedConsentKinds() {
+        val event = CloudAccountAnalyticsEvent.ConsentChanged(
+            kind = CloudAccountConsentKind.UploadRights,
+            isAccepted = true,
+        )
+
+        assertEquals(
+            mapOf(
+                "screen" to "sync_and_backup",
+                "action" to "change_consent",
+                "operation" to "cloud_account_consent",
+                "consent_kind" to "upload_rights",
+                "is_enabled" to true,
+            ),
+            sanitizeAnalyticsParameters(event.parameters),
+        )
+        val sanitizedWithUnregisteredConsent = sanitizeAnalyticsParameters(
+            event.parameters + ("consent_kind" to "private_checkbox_value"),
+        )
+        assertFalse("consent_kind" in sanitizedWithUnregisteredConsent)
+        assertFalse(sanitizedWithUnregisteredConsent.values.contains("private_checkbox_value"))
+    }
+
+    @Test
+    fun cloudObservationEventsKeepOnlyRegisteredObservationKinds() {
+        val event = CloudAccountAnalyticsEvent.ObservationFailed(
+            observation = CloudAccountObservation.AuthState,
+            reasonCode = "auth_state_observation_failed",
+        )
+
+        assertEquals("auth_state", sanitizeAnalyticsParameters(event.parameters)["observation"])
+        assertFalse("private_observation" in sanitizeAnalyticsParameters(
+            event.parameters + ("observation" to "private_observation"),
+        ))
     }
 
     @Test

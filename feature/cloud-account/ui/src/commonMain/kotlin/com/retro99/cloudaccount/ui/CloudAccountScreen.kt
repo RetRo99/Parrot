@@ -167,13 +167,17 @@ private fun CloudAccountScreenContent(
     if (viewState.showLinkConfirmation) {
         LinkProfileConfirmationDialog(
             onConfirm = { intentDispatcher(CloudAccountIntent.OnLinkConfirmed) },
-            onDismiss = { intentDispatcher(CloudAccountIntent.OnLinkDismissed) },
+            onDismiss = { entryPoint ->
+                intentDispatcher(CloudAccountIntent.OnLinkDismissed(entryPoint))
+            },
         )
     }
     if (viewState.showDeleteAccountConfirmation) {
         DeleteCloudAccountConfirmationDialog(
             onConfirm = { intentDispatcher(CloudAccountIntent.OnDeleteAccountConfirmed) },
-            onDismiss = { intentDispatcher(CloudAccountIntent.OnDeleteAccountDismissed) },
+            onDismiss = { entryPoint ->
+                intentDispatcher(CloudAccountIntent.OnDeleteAccountDismissed(entryPoint))
+            },
         )
     }
     if (viewState.showAutoBackupConfirmation) {
@@ -184,7 +188,9 @@ private fun CloudAccountScreenContent(
                 intentDispatcher(CloudAccountIntent.OnAutoBackupAttestationChanged(it))
             },
             onConfirm = { intentDispatcher(CloudAccountIntent.OnAutoBackupConfirmed) },
-            onDismiss = { intentDispatcher(CloudAccountIntent.OnAutoBackupDismissed) },
+            onDismiss = { entryPoint ->
+                intentDispatcher(CloudAccountIntent.OnAutoBackupDismissed(entryPoint))
+            },
         )
     }
 
@@ -269,6 +275,9 @@ private fun CloudAccountScreenContent(
                         viewState = viewState,
                         emailState = emailState,
                         passwordState = passwordState,
+                        onPasswordVisibilityChanged = { isVisible ->
+                            intentDispatcher(CloudAccountIntent.OnPasswordVisibilityChanged(isVisible))
+                        },
                         intentDispatcher = intentDispatcher,
                     )
                 }
@@ -280,10 +289,10 @@ private fun CloudAccountScreenContent(
 @Composable
 private fun LinkProfileConfirmationDialog(
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: (String) -> Unit,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { onDismiss("dismiss_request") },
         title = {
             Text(stringResource(StringRes.cloud_account_link_profile_title))
         },
@@ -296,7 +305,7 @@ private fun LinkProfileConfirmationDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = { onDismiss("cancel_button") }) {
                 Text(stringResource(StringRes.general_cancel))
             }
         },
@@ -306,10 +315,10 @@ private fun LinkProfileConfirmationDialog(
 @Composable
 private fun DeleteCloudAccountConfirmationDialog(
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: (String) -> Unit,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { onDismiss("dismiss_request") },
         title = { Text(stringResource(StringRes.cloud_account_delete_title)) },
         text = { Text(stringResource(StringRes.cloud_account_delete_message)) },
         confirmButton = {
@@ -321,7 +330,7 @@ private fun DeleteCloudAccountConfirmationDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = { onDismiss("cancel_button") }) {
                 Text(stringResource(StringRes.general_cancel))
             }
         },
@@ -334,10 +343,10 @@ private fun AutoBackupConfirmationDialog(
     isUpdating: Boolean,
     onRightsAttestedChanged: (Boolean) -> Unit,
     onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: (String) -> Unit,
 ) {
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { onDismiss("dismiss_request") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(stringResource(StringRes.cloud_backup_autobackup_confirm_body))
@@ -364,7 +373,7 @@ private fun AutoBackupConfirmationDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isUpdating) {
+            TextButton(onClick = { onDismiss("not_now_button") }, enabled = !isUpdating) {
                 Text(stringResource(StringRes.cloud_backup_autobackup_not_now))
             }
         },
@@ -377,6 +386,7 @@ private fun AccountFormContent(
     viewState: CloudAccountViewState,
     emailState: TextFieldState,
     passwordState: TextFieldState,
+    onPasswordVisibilityChanged: (Boolean) -> Unit,
     intentDispatcher: IntentDispatcher<CloudAccountIntent>,
     modifier: Modifier = Modifier,
 ) {
@@ -419,6 +429,7 @@ private fun AccountFormContent(
         PasswordField(
             passwordState = passwordState,
             enabled = !viewState.isLoading,
+            onVisibilityChanged = onPasswordVisibilityChanged,
         )
 
         if (viewState.mode == CloudAccountMode.CreateAccount) {
@@ -514,6 +525,7 @@ private fun AccountFormContent(
 private fun PasswordField(
     passwordState: TextFieldState,
     enabled: Boolean,
+    onVisibilityChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
@@ -533,7 +545,12 @@ private fun PasswordField(
             autoCorrectEnabled = false,
         ),
         trailingIcon = {
-            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+            IconButton(
+                onClick = {
+                    passwordVisible = !passwordVisible
+                    onVisibilityChanged(passwordVisible)
+                },
+            ) {
                 Icon(
                     imageVector = if (passwordVisible) {
                         Icons.Default.VisibilityOff

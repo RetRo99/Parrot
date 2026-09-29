@@ -15,6 +15,7 @@ kotlin {
         namespace = "com.retro99.feature.cloudaccount.ui"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+        withHostTest {}
     }
 
     iosArm64()
@@ -36,11 +37,13 @@ kotlin {
             implementation(projects.translations)
             implementation(projects.feature.cloudAccount.domain)
             implementation(projects.feature.sync.domain)
+            implementation(projects.lib.analytics.api)
         }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.coroutines.test)
+            implementation(projects.lib.analytics.api)
         }
     }
 }
