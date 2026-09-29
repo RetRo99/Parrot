@@ -109,6 +109,38 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun cloudEmailValidationEventKeepsOnlyBoundedFieldAndDropsEmailPayload() {
+        val event = CloudAccountAnalyticsEvent.EmailValidationResult(
+            isValid = false,
+            mode = "sign_in",
+        )
+        val sanitized = sanitizeAnalyticsParameters(
+            event.parameters + ("email" to "private@example.invalid"),
+        )
+
+        assertEquals("cloud_account_email_validation_result", event.name)
+        assertEquals(
+            mapOf(
+                "screen" to "sync_and_backup",
+                "action" to "validate_email",
+                "operation" to "cloud_email_validation",
+                "field" to "email",
+                "stage" to "validation",
+                "outcome" to "failed",
+                "mode" to "sign_in",
+                "reason_code" to "invalid_format",
+            ),
+            sanitized,
+        )
+
+        val recovered = sanitizeAnalyticsParameters(
+            CloudAccountAnalyticsEvent.EmailValidationResult(isValid = true, mode = "sign_in").parameters,
+        )
+        assertEquals("succeeded", recovered["outcome"])
+        assertFalse("reason_code" in recovered)
+    }
+
+    @Test
     fun cloudConsentEventsUseBoundedConsentKinds() {
         val event = CloudAccountAnalyticsEvent.ConsentChanged(
             kind = CloudAccountConsentKind.UploadRights,

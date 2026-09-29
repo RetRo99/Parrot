@@ -50,6 +50,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -82,6 +83,7 @@ import resources.translations.cloud_account_error_generic
 import resources.translations.cloud_account_error_server
 import resources.translations.cloud_account_error_timeout
 import resources.translations.cloud_account_email_label
+import resources.translations.cloud_account_email_invalid
 import resources.translations.cloud_account_enable_sync
 import resources.translations.cloud_account_generic_error
 import resources.translations.cloud_account_link_pending
@@ -418,7 +420,17 @@ private fun AccountFormContent(
             state = emailState,
             enabled = !viewState.isLoading,
             label = { Text(stringResource(StringRes.cloud_account_email_label)) },
-            modifier = Modifier.fillMaxWidth(),
+            isError = viewState.showEmailValidationError,
+            supportingText = if (viewState.showEmailValidationError) {
+                { Text(stringResource(StringRes.cloud_account_email_invalid)) }
+            } else {
+                null
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    intentDispatcher(CloudAccountIntent.OnEmailFocusChanged(focusState.isFocused))
+                },
             lineLimits = TextFieldLineLimits.SingleLine,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,

@@ -60,7 +60,9 @@ class CloudAccountViewModel(
     val emailState = TextFieldState()
     val passwordState = TextFieldState()
     private val operationTelemetry = CloudAccountOperationTelemetry(analytics)
+    private val emailValidationTelemetry = CloudAccountEmailValidationTelemetry(analytics)
     private val retryTracker = CloudAccountRetryTracker()
+    private var emailFieldHasFocus = false
 
     init {
         observeFormState()
@@ -73,6 +75,7 @@ class CloudAccountViewModel(
         when (intent) {
             CloudAccountIntent.OnBackClicked -> onBack()
             CloudAccountIntent.OnSubmitClicked -> submit()
+            is CloudAccountIntent.OnEmailFocusChanged -> onEmailFocusChanged(intent.isFocused)
             is CloudAccountIntent.OnTosAcceptedChanged -> updateTosAccepted(intent.accepted)
             is CloudAccountIntent.OnPasswordVisibilityChanged -> analytics.logEvent(
                 CloudAccountAnalyticsEvent.PasswordVisibilityChanged(intent.isVisible),
@@ -104,6 +107,27 @@ class CloudAccountViewModel(
         }.onEach { (email, password) ->
             updateFormState(email, password)
         }.launchIn(viewModelScope)
+    }
+
+    private fun onEmailFocusChanged(isFocused: Boolean) {
+        if (isFocused) {
+            emailFieldHasFocus = true
+            return
+        }
+        if (!emailFieldHasFocus) return
+        emailFieldHasFocus = false
+
+        val email = emailState.text.toString()
+        val isValid = email.isValidEmail()
+        emailValidationTelemetry.onValidationRequested(
+            email = email,
+            isValid = isValid,
+            mode = viewState.value.mode.analyticsName,
+        )
+        updateState {
+            it.copy(showEmailValidationError = email.isNotBlank() && !isValid)
+        }
+        updateFormState(email, passwordState.text.toString())
     }
 
     private fun observeAuthState() {
@@ -902,6 +926,8 @@ class CloudAccountViewModel(
                 isSubmitEnabled = email.isValidEmail() && password.isNotBlank() &&
                     (it.mode != CloudAccountMode.CreateAccount || it.tosAccepted) &&
                     !it.isLoading,
+                showEmailValidationError = it.showEmailValidationError &&
+                    email.isNotBlank() && !email.isValidEmail(),
             )
         }
     }
@@ -919,6 +945,8 @@ class CloudAccountViewModel(
                 isSubmitEnabled = email.isValidEmail() && password.isNotBlank() &&
                     (state.mode != CloudAccountMode.CreateAccount || state.tosAccepted) &&
                     !state.isLoading,
+                showEmailValidationError = state.showEmailValidationError &&
+                    email.isNotBlank() && !email.isValidEmail(),
             )
         }
     }

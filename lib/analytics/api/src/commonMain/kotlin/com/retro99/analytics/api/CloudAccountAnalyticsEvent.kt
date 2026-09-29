@@ -134,6 +134,23 @@ sealed interface CloudAccountAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    data class EmailValidationResult(
+        val isValid: Boolean,
+        val mode: String,
+    ) : CloudAccountAnalyticsEvent {
+        override val name: String = "cloud_account_email_validation_result"
+        override val parameters: Map<String, Any> = buildMap {
+            put("screen", "sync_and_backup")
+            put("action", "validate_email")
+            put("operation", "cloud_email_validation")
+            put("field", "email")
+            put("stage", "validation")
+            put("outcome", if (isValid) "succeeded" else "failed")
+            put("mode", mode)
+            if (!isValid) put("reason_code", "invalid_format")
+        }
+    }
+
     data class PasswordVisibilityChanged(val isVisible: Boolean) : CloudAccountAnalyticsEvent {
         override val name: String = "cloud_account_password_visibility_changed"
         override val parameters: Map<String, Any> = mapOf(

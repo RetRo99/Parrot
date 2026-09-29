@@ -184,7 +184,7 @@ private val SAFE_STRING_KEYS = setOf(
 
 private val SAFE_SERVER_TYPE_KEYS = setOf("server_type", "previous_server_type")
 private val SAFE_SERVER_TYPES = setOf("storyteller", "audiobookshelf", "parrot-cloud", "local", "unknown")
-private val SAFE_VALIDATION_FIELDS = setOf("server_url", "required_fields")
+private val SAFE_VALIDATION_FIELDS = setOf("server_url", "required_fields", "email")
 private val SAFE_CLOUD_ACCOUNT_CONSENT_KINDS = setOf("account_terms", "upload_rights")
 private val SAFE_CLOUD_ACCOUNT_OBSERVATIONS = setOf("auth_state", "sync_status")
 

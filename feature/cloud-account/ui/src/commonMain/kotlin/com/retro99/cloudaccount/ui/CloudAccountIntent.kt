@@ -6,6 +6,7 @@ sealed interface CloudAccountIntent : BaseIntent {
     data object OnBackClicked : CloudAccountIntent
 
     data object OnSubmitClicked : CloudAccountIntent
+    data class OnEmailFocusChanged(val isFocused: Boolean) : CloudAccountIntent
     data class OnTosAcceptedChanged(val accepted: Boolean) : CloudAccountIntent
     data class OnPasswordVisibilityChanged(val isVisible: Boolean) : CloudAccountIntent
 

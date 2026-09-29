@@ -160,6 +160,49 @@ class CloudAccountOperationTelemetryTest {
     }
 
     @Test
+    fun emailValidationReportsFocusLossResultsOnceAndCorrelatesRecoveryWithoutInputValues() {
+        val analytics = RecordingAnalytics()
+        val telemetry = CloudAccountEmailValidationTelemetry(analytics)
+
+        telemetry.onValidationRequested(email = "", isValid = false, mode = "sign_in")
+        telemetry.onValidationRequested(email = "synthetic invalid", isValid = false, mode = "sign_in")
+        telemetry.onValidationRequested(email = "still synthetic invalid", isValid = false, mode = "sign_in")
+        telemetry.onValidationRequested(email = "synthetic@reserved.test", isValid = true, mode = "sign_in")
+        telemetry.onValidationRequested(email = "synthetic@reserved.test", isValid = true, mode = "sign_in")
+        telemetry.onValidationRequested(email = "", isValid = false, mode = "sign_in")
+        telemetry.onValidationRequested(email = "another invalid", isValid = false, mode = "sign_in")
+
+        assertEquals(
+            listOf(
+                "cloud_account_email_validation_result",
+                "cloud_account_email_validation_result",
+                "cloud_account_email_validation_result",
+            ),
+            analytics.events.map { it.name },
+        )
+        assertEquals("failed", analytics.events[0].parameters["outcome"])
+        assertEquals("invalid_format", analytics.events[0].parameters["reason_code"])
+        assertEquals("succeeded", analytics.events[1].parameters["outcome"])
+        assertEquals("failed", analytics.events[2].parameters["outcome"])
+        assertEquals("email", analytics.events[0].parameters["field"])
+        assertEquals("sign_in", analytics.events[0].parameters["mode"])
+        assertTrue(analytics.events.all { "email" !in it.parameters })
+        assertTrue(analytics.events.all { event ->
+            event.parameters.values.none {
+                it == "synthetic invalid" || it == "still synthetic invalid" || it == "synthetic@reserved.test"
+            }
+        })
+        assertEquals(listOf("failed", "succeeded", "failed"), analytics.breadcrumbs.map { it.outcome })
+        assertEquals("invalid_format", analytics.breadcrumbs.first().reasonCode)
+        assertEquals(
+            analytics.breadcrumbs[0].correlationId,
+            analytics.breadcrumbs[1].correlationId,
+        )
+        assertTrue(analytics.breadcrumbs[0].correlationId != analytics.breadcrumbs[2].correlationId)
+        assertTrue(analytics.exceptions.isEmpty())
+    }
+
+    @Test
     fun observationFailureHasOneCorrelatedNonFatalAndNoSensitiveDimensions() {
         val analytics = RecordingAnalytics()
 

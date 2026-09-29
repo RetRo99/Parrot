@@ -483,6 +483,7 @@
     <string name="cloud_account_title" tools:ignore="MissingTranslation">Parrot Cloud</string>
     <string name="cloud_account_description" tools:ignore="MissingTranslation">Keep your progress, bookmarks, collections, and reader settings available across devices. Book files remain on this device.</string>
     <string name="cloud_account_email_label" tools:ignore="MissingTranslation">Email</string>
+    <string name="cloud_account_email_invalid" tools:ignore="MissingTranslation">Enter a valid email address.</string>
     <string name="cloud_account_password_label" tools:ignore="MissingTranslation">Password</string>
     <string name="cloud_account_sign_in" tools:ignore="MissingTranslation">Sign in</string>
     <string name="cloud_account_create_account" tools:ignore="MissingTranslation">Create account</string>

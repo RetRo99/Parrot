@@ -1,0 +1,33 @@
+# Cloud Account case 360 — fixed email validation Samsung retest
+
+- **Date/time:** 2026-09-29, 07:45–07:49 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`settings get secure navigation_mode` = `2`).
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `a2a6f5a3d399ee8b8f5ad19358b4daa6ddba6832b1d7be02d219dcc3409bdaa4`, installed via `adb install -r` at 07:42:17 CEST with data preserved; PID `25275`. Build source was the QA-BUG-0088 working-tree candidate based on `c4f7d41a`; focused fix commit was pending during this run.
+- **Fixture/privacy:** Original Default profile and unauthenticated server/book fixture retained unchanged. No Retry of that server prompt, no account credentials, no password entry, no submit, no cloud request and no profile/server mutation. Only `qa@` and reserved-example `qa@example.com` were temporarily typed; final email and password fields were empty.
+- **Pre-run:** Cleared device logcat using the Android QA tool. Opened Settings → Sync & Backup. The app showed the existing signed-out form; no unauthenticated-server Retry was performed.
+
+## Steps and results
+
+1. Focused the email field and entered the synthetic malformed value `qa@`. Before focus loss, no validation result was evaluated yet (validation is intentionally on field focus loss, not per keystroke).
+2. Tapped the empty Password field to remove focus. The Email field became red/error-styled and displayed “Enter a valid email address.” before any submit. [Screenshot](cloud-account-email-validation-fixed-invalid.png).
+3. Re-focused Email, removed the four malformed characters, entered `qa@example.com`, and confirmed the UI tree showed the corrected value while the field was focused. The error cleared after correction; Password remained empty. Tapped Password to commit focus-loss validation. [Screenshot](cloud-account-email-validation-fixed-valid.png).
+4. Cleared the synthetic email with Delete, pressed system Back once to dismiss the keyboard (screen remained Cloud Account), and confirmed both fields empty and Sign in disabled. [Clean final form](cloud-account-email-validation-fixed-clean.png).
+
+- **Functional:** PASS. Malformed input received localized inline feedback on blur; syntactically valid correction removed error state before submission; no network action occurred.
+- **Analytics:** PASS locally. Exactly one `cloud_account_email_validation_result` event each for `outcome=failed` and `outcome=succeeded`. Both contained only bounded `screen`, `action`, `operation`, `field=email`, `stage`, `outcome`, and `mode`, with `reason_code=invalid_format` only on failure. No email/password value appeared. Firebase Analytics ingestion is waived; this debug build uses DebugAnalyticsManager, so local logs do not prove delivery.
+- **Diagnostics:** PASS locally. One failed and one succeeded `diagnostic_context` breadcrumb used the same diagnostic-only correlation ID; no validation input was present. No fatal/exception marker observed. No Crashlytics non-fatal is correct for expected validation; Crashlytics delivery is not claimed.
+- **Local log evidence:** `09-29 07:45:23.078` emitted failed event and breadcrumb; `09-29 07:48:10.063` emitted succeeded event and breadcrumb. Both breadcrumbs used correlation `7baba7d0-e1ee-4721-a5ce-167de6491394`. The event lines contain no email. Filtered `adb logcat -d -v threadtime` excerpt:
+
+  ```text
+  09-29 07:45:23.078 25275 25275 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=failed, mode=sign_in, reason_code=invalid_format}
+  09-29 07:45:23.078 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=validate_email operation=cloud_email_validation stage=validation outcome=failed reason_code=invalid_format correlation_id=7baba7d0-e1ee-4721-a5ce-167de6491394
+  09-29 07:48:10.063 25275 25275 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 07:48:10.063 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=validate_email operation=cloud_email_validation stage=validation outcome=succeeded correlation_id=7baba7d0-e1ee-4721-a5ce-167de6491394
+  ```
+
+  Logcat was filtered to the validation event/breadcrumb and fatal marker; no fatal was found.
+- **Host checks:** `:feature:cloud-account:ui:testAndroidHostTest` 8/8; `:lib:analytics:implementation:testAndroidHostTest` 54/54 (including the added event-sanitizer test); `:androidApp:assembleDebug` successful.
+- **Test-control note:** An initial rapid DPAD-based replacement attempt did not change the field; the UI still showed `qa@`, so it was not treated as correction evidence. The field was then cleared with direct Delete input, valid text was separately confirmed in the UI tree, and the corrected focus-loss result above was recorded. This was a test-control hiccup, not an app defect.
+- **Defect:** QA-BUG-0088, recorded before code changes. Fix passed device retest; commit hash pending.
+
+No Firebase ingestion, Crashlytics delivery, cross-app sync or cross-device sync is claimed.
