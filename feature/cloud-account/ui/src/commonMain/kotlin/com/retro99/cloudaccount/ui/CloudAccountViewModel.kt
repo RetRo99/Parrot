@@ -119,7 +119,7 @@ class CloudAccountViewModel(
         emailFieldHasFocus = false
 
         val email = emailState.text.toString()
-        val isValid = email.isValidEmail()
+        val isValid = email.isValidCloudAccountEmail()
         emailValidationTelemetry.onValidationRequested(
             email = email,
             isValid = isValid,
@@ -263,10 +263,19 @@ class CloudAccountViewModel(
 
     private fun submit() {
         val currentState = viewState.value
-        if (!currentState.isSubmitEnabled || currentState.isLoading) return
-
         val email = emailState.text.toString().trim()
         val password = passwordState.text.toString()
+        if (
+            !currentState.isSubmitEnabled ||
+            !canSubmitCloudAccountForm(
+                mode = currentState.mode,
+                email = email,
+                password = password,
+                tosAccepted = currentState.tosAccepted,
+                isLoading = currentState.isLoading,
+            )
+        ) return
+
         updateState {
             it.copy(
                 isLoading = true,
@@ -911,6 +920,8 @@ class CloudAccountViewModel(
 
     private fun switchMode(mode: CloudAccountMode) {
         if (viewState.value.mode == mode) return
+        val email = emailState.text.toString()
+        val password = passwordState.text.toString()
         updateState {
             it.copy(
                 mode = mode,
@@ -918,17 +929,22 @@ class CloudAccountViewModel(
                 showVerificationMessage = false,
             )
         }
+        updateFormState(email, password)
         modeTelemetry.onModeChanged(mode.analyticsName)
     }
 
     private fun updateFormState(email: String, password: String) {
         updateState {
             it.copy(
-                isSubmitEnabled = email.isValidEmail() && password.isNotBlank() &&
-                    (it.mode != CloudAccountMode.CreateAccount || it.tosAccepted) &&
-                    !it.isLoading,
+                isSubmitEnabled = canSubmitCloudAccountForm(
+                    mode = it.mode,
+                    email = email,
+                    password = password,
+                    tosAccepted = it.tosAccepted,
+                    isLoading = it.isLoading,
+                ),
                 showEmailValidationError = it.showEmailValidationError &&
-                    email.isNotBlank() && !email.isValidEmail(),
+                    email.isNotBlank() && !email.isValidCloudAccountEmail(),
             )
         }
     }
@@ -943,11 +959,15 @@ class CloudAccountViewModel(
         updateState {
             val state = it.copy(tosAccepted = accepted)
             state.copy(
-                isSubmitEnabled = email.isValidEmail() && password.isNotBlank() &&
-                    (state.mode != CloudAccountMode.CreateAccount || state.tosAccepted) &&
-                    !state.isLoading,
+                isSubmitEnabled = canSubmitCloudAccountForm(
+                    mode = state.mode,
+                    email = email,
+                    password = password,
+                    tosAccepted = state.tosAccepted,
+                    isLoading = state.isLoading,
+                ),
                 showEmailValidationError = state.showEmailValidationError &&
-                    email.isNotBlank() && !email.isValidEmail(),
+                    email.isNotBlank() && !email.isValidCloudAccountEmail(),
             )
         }
     }
@@ -981,18 +1001,6 @@ class CloudAccountViewModel(
         }
         updateFormState(emailState.text.toString(), passwordState.text.toString())
     }
-}
-
-private fun String.isValidEmail(): Boolean {
-    val trimmed = trim()
-    val atIndex = trimmed.indexOf('@')
-    if (atIndex <= 0 || atIndex != trimmed.lastIndexOf('@')) return false
-    val localPart = trimmed.substring(0, atIndex)
-    val domain = trimmed.substring(atIndex + 1)
-    if (localPart.isEmpty() || domain.isEmpty()) return false
-    val lastDotIndex = domain.lastIndexOf('.')
-    if (lastDotIndex <= 0 || lastDotIndex == domain.lastIndex) return false
-    return domain.substring(lastDotIndex + 1).length >= 2
 }
 
 private fun Throwable.toCloudAccountError(): CloudAccountError {

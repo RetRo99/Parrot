@@ -1,0 +1,42 @@
+# Cloud Account case 732 — consent-gate fixed Samsung retest
+
+- **Date/time:** 2026-09-29, 10:16–10:21 CEST.
+- **Device/build:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`navigation_mode=2`). App `com.retro99.parrot` 0.4.5 (21); APK SHA-256 `7684627be52e2b954b2856cf88962ee52bf5efe48725a3d9f04fc466796b6a63`, installed 10:16:14 CEST, PID `9296`. Source base HEAD `7cdc82385c9d31267f44f13048af6ed26733cbb4` plus the pending QA-BUG-0090 fix. App data preserved.
+- **Fixture/privacy:** used only reserved-example `qa@example.com` and a synthetic local-only password. No Sign in, Create account, or Google action was submitted; no auth request/account creation/backend mutation. Existing server/profile fixtures were not retried or changed.
+
+## Steps and result
+
+1. Closed the startup “Server unavailable or not authenticated” prompt without Retry. Opened Settings → Sync & Backup and cleared logcat.
+2. Entered reserved-example email and synthetic password in Sign in mode, then dismissed the IME. Sign in was enabled.
+3. Switched to Create account. The terms checkbox was unchecked and Create account was now disabled; helper copy said to accept terms. This is the fixed-build retest of the prior QA-BUG-0090 failure.
+4. Checked the terms box; Create account became enabled. Switched back to Sign in; Sign in remained enabled with the same inputs. Switched to Create account again; consent remained checked and Create account remained enabled.
+5. Unchecked terms; Create account immediately became disabled again. Captured the [unchecked-consent/disabled-action screenshot](cloud-account-case-732-consent-gate-fixed-retest.png). Did not tap the disabled or enabled account actions.
+6. Exited with toolbar Back. After two seconds Settings was visible with no Autofill save prompt. Re-entered Sync & Backup; both fields were empty and Sign in was disabled.
+
+- **Functional:** PASS for case-732 mode-switch eligibility, terms gate, field retention during the mode round-trip, consent toggle, Back exit and empty-form re-entry. Actual authentication/registration submission and its terminal outcome are BLOCKED by the no-credentials/no-authorized-disposable-fixture boundary; no form action was submitted.
+- **Analytics:** PASS locally for one bounded email-validation success, three actual mode changes (create/sign-in/create), two committed account-terms consent changes (enabled/disabled), and signed-out session-restore attempt/success. No auth/registration attempt event or email/password payload. Firebase ingestion is waived; local debug-provider logs are not delivery evidence.
+- **Diagnostics:** PASS locally for three mode-change start/terminal pairs, each with a matching diagnostic-only correlation ID, plus route/session-restore context. No fatal/exception occurred or was induced; no Crashlytics non-fatal is expected for consent/mode actions. Crashlytics delivery is not claimed.
+- **Filtered local logcat:**
+
+  ```text
+  09-29 10:18:27.821  9296  9296 D čič : Analytics Event: cloud_account_operation_attempted | Parameters: {screen=sync_and_backup, action=restore_session, operation=cloud_session_restore, entry_point=screen_entry, stage=started, outcome=started, is_retry=false}
+  09-29 10:18:27.823  9296  9296 D čič : Analytics Event: cloud_account_operation_succeeded | Parameters: {screen=sync_and_backup, action=restore_session, operation=cloud_session_restore, entry_point=screen_entry, stage=terminal, outcome=succeeded, is_retry=false, duration_ms=2, result_code=signed_out}
+  09-29 10:19:00.238  9296  9296 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 10:19:09.838  9296  9296 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=started outcome=started correlation_id=bd6f897d-f06c-4848-8112-3fbb42b0326f
+  09-29 10:19:09.839  9296  9296 D čič : Analytics Event: cloud_account_mode_changed | Parameters: {screen=sync_and_backup, action=change_account_form_mode, operation=cloud_account_mode_change, mode=create_account}
+  09-29 10:19:09.839  9296  9296 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=terminal outcome=succeeded correlation_id=bd6f897d-f06c-4848-8112-3fbb42b0326f
+  09-29 10:19:24.704  9296  9296 D чич : Analytics Event: cloud_account_consent_changed | Parameters: {screen=sync_and_backup, action=change_consent, operation=cloud_account_consent, consent_kind=account_terms, is_enabled=true}
+  09-29 10:19:41.776  9296  9296 D чич : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=started outcome=started correlation_id=528d0730-ae1d-43bb-83f3-8fc4d3dd7fd1
+  09-29 10:19:41.777  9296  9296 D čič : Analytics Event: cloud_account_mode_changed | Parameters: {screen=sync_and_backup, action=change_account_form_mode, operation=cloud_account_mode_change, mode=sign_in}
+  09-29 10:19:41.777  9296  9296 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=terminal outcome=succeeded correlation_id=528d0730-ae1d-43bb-83f3-8fc4d3dd7fd1
+  09-29 10:19:57.250  9296  9296 D чич : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=started outcome=started correlation_id=6636c4b7-f68b-42f4-9c21-59a3b70da103
+  09-29 10:19:57.250  9296  9296 D čič : Analytics Event: cloud_account_mode_changed | Parameters: {screen=sync_and_backup, action=change_account_form_mode, operation=cloud_account_mode_change, mode=create_account}
+  09-29 10:19:57.251  9296  9296 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=terminal outcome=succeeded correlation_id=6636c4b7-f68b-42f4-9c21-59a3b70da103
+  09-29 10:20:19.988  9296  9296 D чич : Analytics Event: cloud_account_consent_changed | Parameters: {screen=sync_and_backup, action=change_consent, operation=cloud_account_consent, consent_kind=account_terms, is_enabled=false}
+  ```
+
+  (The mixed-script logger tag is the app’s existing local `DebugAnalyticsManager` tag.) No input values appear in emitted telemetry. This is local logging, not Firebase delivery evidence.
+
+- **Checks:** Cloud Account UI host tests 12/12 pass; `:feature:home:ui:compileKotlinIosSimulatorArm64` and `:androidApp:assembleDebug` pass. iOS device tests were not run.
+
+Initial failure remains preserved in [pre-fix evidence/logs](cloud-account-case-732-mode-switch-pre-fix.txt) and [pre-fix screenshot](cloud-account-case-732-create-mode-submit-enabled.png). The final screenshot retains only reserved-example/synthetic test values and a masked password.
