@@ -82,6 +82,8 @@ fun RootNavigation(
                         startAtLogin = !destination.initial,
                         existingServerId = destination.existingServerId,
                         isRetryOrigin = destination.isRetryOrigin,
+                        loginSourceScreen = destination.sourceScreen,
+                        loginEntryPoint = destination.entryPoint,
                     )
                 }
 
@@ -101,6 +103,12 @@ fun RootNavigation(
                                 RootNavigationIntent.OnLoginClicked(
                                     existingServerId = existingServerId,
                                     isRetry = isRetry,
+                                    sourceScreen = "server_management",
+                                    entryPoint = if (existingServerId == null) {
+                                        "add_server_button"
+                                    } else {
+                                        "server_card_login"
+                                    },
                                 ),
                             )
                         },

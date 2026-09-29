@@ -27,9 +27,11 @@ fun LoginNavigation(
     startAtLogin: Boolean = false,
     existingServerId: String? = null,
     isRetryOrigin: Boolean = false,
+    loginSourceScreen: String? = null,
+    loginEntryPoint: String? = null,
     modifier: Modifier = Modifier,
     viewModel: LoginNavigationViewModel = koinViewModel {
-        parametersOf(startAtLogin, existingServerId != null)
+        parametersOf(startAtLogin, existingServerId != null, loginSourceScreen, loginEntryPoint)
     },
 ) {
     BaseScreen(viewModel = viewModel) { state, intentDispatcher ->

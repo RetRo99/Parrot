@@ -12,6 +12,8 @@ sealed interface RootDestination {
         val initial: Boolean,
         val existingServerId: String? = null,
         val isRetryOrigin: Boolean = false,
+        val sourceScreen: String? = null,
+        val entryPoint: String? = null,
     ) : RootDestination
 
     @Serializable

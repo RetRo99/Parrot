@@ -1365,7 +1365,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 
 - **Title:** Login screen exposure from Server Management Add Server is attributed to Home.
 - **Severity / user impact:** Low; navigation-source and Add Server conversion analysis misclassify users, and the diagnostic journey does not identify the actual entry route. No direct functional/data impact.
-- **Status:** CONFIRMED on two Samsung candidate runs; fix not started.
+- **Status:** FIXED; Login UI host regression test and Samsung candidate retest PASS. Focused commit pending; fix hash will be added in the next documentation commit.
 - **Screen/test IDs:** Server Management cases 443 and 524; shared journey/analytics cases 747 and 749.
 - **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, build `BP4A.251205.006.S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), PID `30618`, APK SHA-256 `211d99f43ff504c5aa650c08d3cfea3889bf694ec2ac4966d9f9591d0274bb80`, source commit `c94f53e38bfaea08a5b4a4863ebe4dd09fb93622`.
 - **Preconditions:** Open Settings → Servers; use the visible Add Server action and do not enter or submit credentials.
@@ -1376,8 +1376,8 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Evidence:** [Current candidate cases 440–443/524](manual-qa-evidence/2026-09-29/cases-440-443-server-management-candidate.txt); [prior case-443 retest showing the same source](manual-qa-evidence/2026-09-27/case-443-add-server-telemetry-fixed-retest.txt).
 - **Root cause:** Confirmed. `HomeNavigation` forwards Add Server to the root Login destination using only existing-server ID/retry state. `RootDestination.Login` and `RootNavigationIntent.OnLoginClicked` do not carry the originating screen/entry point. `LoginNavigationViewModel` therefore falls back to `startAtLogin → home/add_server` for this non-initial new-server route.
 - **Affected files:** Root/Login route source contract (`HomeNavigation`, `RootNavigationIntent`, `RootDestination`, `RootNavigationViewModel`, `LoginNavigationViewModel`) and regression tests; retain the existing correctly attributed `server_add_attempted` event.
-- **Fix reference / commit:** Pending. Preserve route origin through the root Login destination and emit the actual source/entry point without server/account identifiers.
-- **Retest:** NOT RUN. Do not claim fixed until a committed candidate reproduces the bounded Login exposure and diagnostic source on Samsung. Firebase Analytics ingestion is waived; local logs only are evidence. No Crashlytics issue is expected for normal navigation.
+- **Fix reference / commit:** Pending commit. `RootDestination.Login` now carries bounded `sourceScreen`/`entryPoint` from `RootNavigationIntent.OnLoginClicked` into `LoginNavigation`; Server Management Add Server supplies `server_management/add_server_button`. `LoginNavigationViewModel` prefers this explicit route origin when reporting actual Login visibility. A Login UI regression test verifies both event and breadcrumb attribution; no server/account IDs are included.
+- **Retest:** PASS on Samsung candidate PID `12470`, package 0.4.5 (21), APK SHA-256 `7ea34f6f0d1f05b5209093dd22095f8904b6b4633089cc52f070f05ca41602f8` (local/device-pulled hashes match). Settings → Servers → Add Server displayed Login; one `server_add_attempted`, one visible `login_screen_viewed`, one matching visible `login_route` breadcrumb all reported `server_management/add_server_button`; no `server_added`, credential submit or failure. `:feature:login:ui:testAndroidHostTest` 37/37 and `:androidApp:assembleDebug` passed. [Samsung retest evidence](manual-qa-evidence/2026-09-29/qa-bug-0079-login-source-retest.txt). Firebase Analytics ingestion is waived; local logs only are evidence. No Crashlytics issue is expected for normal navigation.
 
 ## QA-BUG-0080 — Login system Back has no navigation outcome telemetry
 

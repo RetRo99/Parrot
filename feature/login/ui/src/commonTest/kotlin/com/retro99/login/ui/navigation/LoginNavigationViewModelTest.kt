@@ -213,11 +213,34 @@ class LoginNavigationViewModelTest {
         assertEquals("server_card_login", analytics.breadcrumbs.single().entryPoint)
     }
 
+    @Test
+    fun explicitRootLoginOriginIsUsedForAddServerExposure() {
+        val analytics = RecordingAnalytics()
+        val viewModel = createViewModel(
+            preferences = RecordingPreferences(),
+            analytics = analytics,
+            startAtLogin = true,
+            loginSourceScreen = "server_management",
+            loginEntryPoint = "add_server_button",
+        )
+
+        viewModel.onDestinationVisible(LoginDestination.Login, source = null)
+
+        val viewed = analytics.events.single()
+        assertEquals("login_screen_viewed", viewed.name)
+        assertEquals("server_management", viewed.parameters["source_screen"])
+        assertEquals("add_server_button", viewed.parameters["entry_point"])
+        assertEquals("server_management", analytics.breadcrumbs.single().sourceScreen)
+        assertEquals("add_server_button", analytics.breadcrumbs.single().entryPoint)
+    }
+
     private fun createViewModel(
         preferences: RecordingPreferences,
         analytics: RecordingAnalytics,
         startAtLogin: Boolean = false,
         isExistingServerLogin: Boolean = false,
+        loginSourceScreen: String? = null,
+        loginEntryPoint: String? = null,
     ) = LoginNavigationViewModel(
         startAtLogin = startAtLogin,
         buildConfig = object : BuildConfig {
@@ -228,6 +251,8 @@ class LoginNavigationViewModelTest {
         skipLoginUseCase = SkipLoginUseCase(preferences),
         analytics = analytics,
         isExistingServerLogin = isExistingServerLogin,
+        loginSourceScreen = loginSourceScreen,
+        loginEntryPoint = loginEntryPoint,
     )
 
     private class RecordingAnalytics : Analytics {

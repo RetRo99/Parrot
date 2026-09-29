@@ -1,0 +1,23 @@
+# QA-BUG-0079 — Add Server Login source attribution retest
+
+- **Run time:** 2026-09-29, approximately 04:11 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), PID `12470`, debug candidate APK SHA-256 `7ea34f6f0d1f05b5209093dd22095f8904b6b4633089cc52f070f05ca41602f8`; local APK and device-pulled installed `base.apk` hashes match. Candidate used fix source atop documentation commit `b28af3f8c25f5b8216e886a65bc8f4aaab84cde9`; focused fix commit pending at evidence capture.
+- **Host/build checks:** `:feature:login:ui:testAndroidHostTest` 37 tests, 0 failures/errors/skips; `:androidApp:assembleDebug` PASS. One initial build command used unavailable task `:composeApp:compileDebugKotlinAndroid` and failed during task lookup; rerunning the supported host-test and app-assembly tasks succeeded.
+- **Fixture/privacy:** preserved existing profile, saved book and logged-out server card; `adb install -r` was used. Tapped Add Server only. Did not enter/submit credentials, select Delete, Retry, or alter server/profile/app data. Private server/profile/book values omitted.
+
+## Steps and outcome
+
+1. Closed the existing unavailable/not-authenticated prompt using Close (not Retry).
+2. Opened Settings → Servers and verified the retained logged-out card.
+3. Tapped Add Server once. Login became visible; no credentials were entered.
+4. Inspected PID-scoped local DebugAnalyticsManager output. Exactly one `server_add_attempted` and one `login_screen_viewed` occurred; `server_added` count was zero.
+5. The Add Server event and the Login exposure both identified `source_screen=server_management, entry_point=add_server_button`. One `login_route` visible breadcrumb had the same attribution and `outcome=succeeded`.
+6. No fatal marker or unexpected failure was observed.
+
+## Disposition
+
+- Functional: **PASS** for case 443 Add Server navigation.
+- Analytics: **PASS locally** for actual Login exposure source; Firebase ingestion is waived and not claimed.
+- Diagnostics: **PASS locally** for matching visible-route breadcrumb; no Crashlytics failure was expected or induced.
+- QA-BUG-0079 retest: **PASS** on this candidate. No Firebase delivery claim. Focused source commit is pending.

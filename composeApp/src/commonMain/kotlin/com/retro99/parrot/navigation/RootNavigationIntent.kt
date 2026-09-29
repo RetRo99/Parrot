@@ -10,6 +10,8 @@ sealed interface RootNavigationIntent : BaseIntent {
     data class OnLoginClicked(
         val existingServerId: String? = null,
         val isRetry: Boolean = false,
+        val sourceScreen: String? = null,
+        val entryPoint: String? = null,
     ) : RootNavigationIntent
     data object OnExistingServerLoginSuccess : RootNavigationIntent
     data class OnExistingServerLoginAttemptStarted(
