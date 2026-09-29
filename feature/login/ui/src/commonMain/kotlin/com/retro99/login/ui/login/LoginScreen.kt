@@ -198,19 +198,6 @@ private fun LoginScreenContent(
     Box(
         modifier = modifier.fillMaxSize(),
     ) {
-        IconButton(
-            onClick = onBackClick,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .statusBarsPadding()
-                .padding(8.dp),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(StringRes.general_back),
-            )
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -472,6 +459,20 @@ private fun LoginScreenContent(
                     )
                 }
             }
+        }
+
+        // Keep Back above the full-screen scrollable form for touch and accessibility hit-testing.
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .statusBarsPadding()
+                .padding(8.dp),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(StringRes.general_back),
+            )
         }
     }
 }

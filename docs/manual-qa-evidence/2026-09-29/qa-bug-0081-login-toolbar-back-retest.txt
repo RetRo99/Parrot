@@ -1,0 +1,22 @@
+# QA-BUG-0081 — Login toolbar Back touch/accessibility retest
+
+- **Run time:** 2026-09-29, approximately 04:30 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), PID `20828`, debug APK SHA-256 `d1f5202462a20294aa5a8c3fd227266deace01e661dfb37c3973fea0b0fafe06`; local and Samsung-pulled `base.apk` hashes match. Candidate was built from the source tree atop `1beafc7f718bda6350efd90017c53acc1c514418`; QA-BUG-0081 layout fix and QA-BUG-0080 telemetry changes were both present but not yet committed at capture time.
+- **Checks:** Login UI host suite 37 tests, 0 failures/errors/skips; `:androidApp:assembleDebug` PASS.
+- **Fixture/privacy:** `adb install -r`; existing profile/server fixture preserved; all Login fields empty; no authentication, retry, deletion, app-data clear or profile/server mutation.
+
+## Reproduction and outcome
+
+1. Open Settings → Servers → Add Server.
+2. Inspect the UI hierarchy: it now exposes one clickable `Back` node at the upper-left.
+3. Activate that node. Login closes and the existing Server Management title/card return.
+4. PID-scoped local DebugAnalyticsManager output contains one `navigation_back_attempted` and one successful `navigation_back`, both `screen/source_screen=login`, `destination_screen=server_management`, `entry_point=toolbar_back`, `outcome=started/succeeded`.
+5. One diagnostic `navigation_back` start and terminal breadcrumb share a correlation ID. No fatal marker, non-fatal or unexpected failure occurred.
+
+## Result
+
+- Case 524 toolbar variant functional: **PASS**.
+- Analytics: **PASS locally** for one correctly attributed toolbar attempt/success pair; Firebase ingestion waived.
+- Diagnostics: **PASS locally** for correlated start/terminal breadcrumbs; ordinary Back produced no Crashlytics issue.
+- QA-BUG-0081 candidate retest: **PASS**. Focused commit pending. The initial failure and screenshot remain preserved at [`qa-bug-0081-login-toolbar-back-unresponsive.txt`](qa-bug-0081-login-toolbar-back-unresponsive.txt) and its paired PNG.
