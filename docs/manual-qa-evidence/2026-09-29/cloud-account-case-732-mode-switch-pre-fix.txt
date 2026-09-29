@@ -1,0 +1,24 @@
+# Cloud Account case 732 — Sign in → Create Account pre-fix observation
+
+- **Date/time:** 2026-09-29, 09:46:57–09:47:29 CEST.
+- **Device/build:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation. Parrot `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `c8176648c49283eb5fcd4430232d3494b024b487d56b9032c8692afe643c7360`, code commit `2f5c5087804b58c8eabc06bec8372604fd9a2586`, PID `15266`. App data preserved; Bitwarden remained the selected Autofill service.
+- **Fixture/privacy:** signed-out Cloud Account form. Entered only reserved-example `qa@example.com` and a synthetic local-only password. Password remained masked in the retained screenshot. Never tapped Sign in, Create account, or Google; no auth, network submission, account creation, or local state mutation.
+
+## Steps and actual state
+
+1. Opened Settings → Sync & Backup and cleared logcat. The empty Sign in form showed Sign in disabled.
+2. Entered the reserved-example email and synthetic password. Dismissed the IME. Sign in became enabled.
+3. Tapped “New to Parrot Cloud? Create an account”. The screen switched modes and retained both fields. The terms checkbox was visibly unchecked, but Create account appeared enabled; the accessibility tree reported its action as clickable and not disabled. This confirms QA-BUG-0090. QA stopped at this point and did not activate Create account.
+4. Captured [the unchecked-consent/enabled-action screen](cloud-account-case-732-create-mode-submit-enabled.png). The password is obscured; no password value is retained in this artifact.
+
+- **Functional:** FAIL for the Sign in → Create Account with eligible fields variant. The required consent gate did not disable the action. Round-trip back to Sign in is deferred to fixed-build retest.
+- **Analytics:** PASS locally for one bounded `cloud_account_mode_changed` with `mode=create_account` and one email-format validation success. No auth/registration attempt event. Firebase Analytics ingestion is waived.
+- **Diagnostics:** FAIL for mode-change coverage. Validation had its own breadcrumb; mode change did not. No fatal/exception/non-fatal was generated or expected for ordinary mode switching. QA-BUG-0091 records the gap.
+
+  ```text
+  09-29 09:46:57.540 15266 15266 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 09:46:57.540 15266 15266 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=validate_email operation=cloud_email_validation stage=validation outcome=succeeded correlation_id=e9b86777-ac97-4347-8c7f-1dcd5817df9a
+  09-29 09:47:14.886 15266 15266 D čič : Analytics Event: cloud_account_mode_changed | Parameters: {screen=sync_and_backup, action=change_account_form_mode, operation=cloud_account_mode_change, mode=create_account}
+  ```
+
+No mode-change breadcrumb followed the Analytics event. The filtered buffer had no fatal/exception markers. This is local debug-provider emission only, not Firebase delivery evidence.
