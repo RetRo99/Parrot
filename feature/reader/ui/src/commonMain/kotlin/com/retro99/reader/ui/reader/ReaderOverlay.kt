@@ -498,7 +498,8 @@ internal fun ReaderOverlayContent(
                     onListen = {
                         when {
                             nowPlaying != null -> openAudioSheet()
-                            viewState.isReadAloud -> intentDispatcher(ReaderIntent.StartListening(ListenSource.NARRATION))
+                            viewState.isReadAloud && viewState.listenSource == ListenSource.NARRATION ->
+                                intentDispatcher(ReaderIntent.StartListening(ListenSource.NARRATION))
                             else -> openAudioSheet()
                         }
                     },
@@ -623,6 +624,7 @@ internal fun ReaderOverlayContent(
                 isEink = isEink,
             ),
             hasNarration = viewState.isReadAloud,
+            canSwitchSource = viewState.canSwitchListenSource,
             actions = AudioSheetActions(
                 onDismiss = { intentDispatcher(ReaderIntent.ToggleListenSheet) },
                 onStop = {
@@ -646,6 +648,13 @@ internal fun ReaderOverlayContent(
                 onStartSleepTimer = { durationMs -> intentDispatcher(ReaderIntent.StartSleepTimer(durationMs)) },
                 onCancelSleepTimer = { intentDispatcher(ReaderIntent.CancelSleepTimer) },
                 onAudioOnly = { intentDispatcher(ReaderIntent.ToggleAudioOnlyMode) },
+                onSelectSource = { narration ->
+                    intentDispatcher(
+                        ReaderIntent.SwitchListenSource(
+                            if (narration) ListenSource.NARRATION else ListenSource.DEVICE_VOICE,
+                        ),
+                    )
+                },
             ),
         )
     }

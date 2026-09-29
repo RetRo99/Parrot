@@ -171,6 +171,9 @@ class ReaderViewModel(
 
     private var activeNarrationController: NarrationController? = null
 
+    /** Element id of the sentence the device voice last read; used to hand over to narration. */
+    private var ttsCurrentElementId: String? = null
+
     private val syncCoordinator: ReaderSyncCoordinator by lazy {
         readerScope.get<ReaderSyncCoordinator>().also {
             addCloseable(it)
@@ -311,6 +314,7 @@ class ReaderViewModel(
             is ReaderIntent.SeekToChapterProgress -> seekToChapterProgress(intent.progression)
             is ReaderIntent.JumpToBookProgress -> jumpToBookProgress(intent.progression)
             is ReaderIntent.StartListening -> startListening(intent.source)
+            is ReaderIntent.SwitchListenSource -> switchListenSource(intent.source)
             ReaderIntent.ToggleListenSheet -> toggleListenSheet()
             ReaderIntent.StopListening -> stopListening()
             is ReaderIntent.UpdateSettings -> updateSettings(intent.settings)
@@ -461,6 +465,7 @@ class ReaderViewModel(
                 updatePublicationState { it.copy(settings = uiSettings) }
                 if (
                     viewState.value.isTtsReadAloud &&
+                    !viewState.value.isReadAloud &&
                     previousTtsEnabled != null &&
                     previousTtsEnabled != uiSettings.ttsEnabled
                 ) {
@@ -650,6 +655,8 @@ class ReaderViewModel(
             // Initialize audio after publication is in state
             if (publication.hasMediaOverlays) {
                 initAudio()
+                // Device voice is offered alongside narration; narration stays the default.
+                initTts(keepNarrationActive = true)
             } else {
                 if (bookType == BookType.READALOUD) {
                     // Track when a ReadAloud book is missing media overlays and show snackbar
@@ -850,7 +857,7 @@ class ReaderViewModel(
         observeAudioPlaybackState()
     }
 
-    private fun initTts() {
+    private fun initTts(keepNarrationActive: Boolean = false) {
         observeTtsPlaybackOperations()
         viewModelScope.launch {
             bookController.currentLocator.first()
@@ -868,7 +875,7 @@ class ReaderViewModel(
                                         currentViewState().hasAcceptedSupertonicTerms
                                 )
             }
-            activeNarrationController = ttsController
+            if (!keepNarrationActive) activeNarrationController = ttsController
             updateState { state ->
                 state.copy(
                     isTtsReadAloud = true,
@@ -894,7 +901,7 @@ class ReaderViewModel(
                     }
                 }
             }
-            if (settings.ttsEnabled) {
+            if (settings.ttsEnabled && !keepNarrationActive) {
                 enableTtsSentencePlayback()
             }
             val selectedVoice = availableVoices
@@ -1364,6 +1371,7 @@ class ReaderViewModel(
     private fun observeTtsSentenceProgress() {
         ttsController.currentSentence
             .onEach { sentence ->
+                ttsCurrentElementId = sentence?.elementId ?: ttsCurrentElementId
                 if (sentence != null) {
                     updateState { state -> state.copy(ttsSentenceIndex = sentence.index) }
                 }
@@ -1803,9 +1811,61 @@ class ReaderViewModel(
 
             ListenSource.DEVICE_VOICE -> {
                 if (!viewState.value.isTtsReadAloud) return
-                if (viewState.value.currentSettings?.ttsEnabled != true) setTtsEnabled(true)
+                // Books with narration use device voice on demand without changing the saved setting.
+                if (!viewState.value.isReadAloud && viewState.value.currentSettings?.ttsEnabled != true) {
+                    setTtsEnabled(true)
+                }
                 updateState { it.copy(isListening = true) }
                 if (!viewState.value.isPlaying) activeNarrationController?.togglePlayback()
+            }
+        }
+    }
+
+    /**
+     * Hands playback to the other audio system on a book that has both. The outgoing engine is
+     * stopped first, the sync coordinator is re-pointed at the incoming one, and playback resumes
+     * from the current sentence if audio was playing.
+     */
+    private fun switchListenSource(target: ListenSource) {
+        val state = viewState.value
+        if (!state.canSwitchListenSource || state.listenSource == target) return
+
+        val wasPlaying = state.isPlaying
+        val resumeFragmentId = ttsCurrentElementId
+        val resumeHref = state.currentPosition?.href
+        when (state.listenSource) {
+            ListenSource.NARRATION -> audioController.pauseAudio()
+            ListenSource.DEVICE_VOICE -> ttsController.stop()
+        }
+        when (target) {
+            ListenSource.NARRATION -> {
+                disableTtsSentencePlayback()
+                activeNarrationController = audioController
+                syncCoordinator.startNarration(viewModelScope, audioController)
+            }
+
+            ListenSource.DEVICE_VOICE -> {
+                activeNarrationController = ttsController
+                enableTtsSentencePlayback()
+            }
+        }
+        updateState {
+            it.copy(
+                activeSource = target,
+                isPlaying = false,
+                isNarrationLoading = false,
+                isNarrationStartPending = false,
+            )
+        }
+        if (!wasPlaying) return
+
+        when (target) {
+            ListenSource.NARRATION ->
+                audioController.playFromFragment(fragmentId = resumeFragmentId.orEmpty(), chapterHref = resumeHref)
+
+            ListenSource.DEVICE_VOICE -> viewModelScope.launch {
+                ttsSentencePlaybackJob?.join()
+                togglePlayback()
             }
         }
     }
@@ -1815,7 +1875,7 @@ class ReaderViewModel(
     }
 
     private fun stopListening() {
-        if (viewState.value.isTtsReadAloud) {
+        if (viewState.value.listenSource == ListenSource.DEVICE_VOICE) {
             ttsController.stop()
         } else {
             audioController.pauseAudio()
@@ -2130,7 +2190,7 @@ class ReaderViewModel(
 
     /** Toggles the active ReadAloud or TTS narration implementation. */
     private fun togglePlayback() {
-        if (viewState.value.isTtsReadAloud) {
+        if (viewState.value.listenSource == ListenSource.DEVICE_VOICE) {
             val selectedVoice = viewState.value.ttsVoices
                 .firstOrNull { voice -> voice.id == viewState.value.selectedTtsVoiceId }
             if (selectedVoice?.needsDownload == true) {
@@ -2167,7 +2227,7 @@ class ReaderViewModel(
         analytics.logEvent(
             ReaderAnalyticsEvent.SettingChanged("playback_speed", speed.toString())
         )
-        val isTts = viewState.value.isTtsReadAloud
+        val isTts = viewState.value.listenSource == ListenSource.DEVICE_VOICE
         activeNarrationController?.setPlaybackSpeed(speed)
         updatePublicationState { publicationState ->
             val updatedSettings = if (isTts) {
@@ -2340,13 +2400,17 @@ class ReaderViewModel(
     }
 
     private fun observeNarrationPlaybackState(controller: NarrationController) {
+        // Both engines can be observed on a book that has narration and device voice; only the
+        // active one may drive the shared playback state.
         controller.isPlaying
             .distinctUntilChanged()
+            .filter { activeNarrationController === controller }
             .onEach { isPlaying -> updatePlayingState(isPlaying) }
             .launchIn(viewModelScope)
 
         controller.isLoading
             .distinctUntilChanged()
+            .filter { activeNarrationController === controller }
             .onEach { isLoading ->
                 updateState { state -> state.copy(isNarrationLoading = isLoading) }
             }
@@ -2354,6 +2418,7 @@ class ReaderViewModel(
 
         controller.isPlaybackStartPending
             .distinctUntilChanged()
+            .filter { activeNarrationController === controller }
             .onEach { isPending ->
                 updateState { state -> state.copy(isNarrationStartPending = isPending) }
             }
@@ -2380,7 +2445,7 @@ class ReaderViewModel(
         val audioPositionMs = currentState.currentAudioPositionMs
         val currentPosition = currentState.currentPosition
 
-        if (audioPositionMs <= 0) {
+        if (audioPositionMs <= 0 || currentState.listenSource != ListenSource.NARRATION) {
             return
         }
         if (currentPosition == null) {
@@ -2395,7 +2460,7 @@ class ReaderViewModel(
         val currentState = viewState.value
         val currentPosition = currentState.currentPosition ?: return
         val audioPositionMs = currentState.currentAudioPositionMs
-            .takeIf { currentState.isReadAloud && it > 0 }
+            .takeIf { currentState.isReadAloud && currentState.listenSource == ListenSource.NARRATION && it > 0 }
         positionSaveCoordinator.saveForClose(
             createPositionDomainModel(currentPosition, audioPositionMs),
         )

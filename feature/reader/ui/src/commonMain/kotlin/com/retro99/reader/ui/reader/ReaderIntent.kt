@@ -20,6 +20,9 @@ sealed interface ReaderIntent : BaseIntent {
 
     data class StartListening(val source: ListenSource) : ReaderIntent
 
+    /** Switches between narration and device voice on books that have both. */
+    data class SwitchListenSource(val source: ListenSource) : ReaderIntent
+
     data object ToggleListenSheet : ReaderIntent
 
     data object StopListening : ReaderIntent

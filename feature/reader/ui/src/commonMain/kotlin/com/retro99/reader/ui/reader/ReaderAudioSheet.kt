@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
@@ -92,7 +94,9 @@ import resources.translations.reader_audio_status_update
 import resources.translations.reader_audio_stop
 import resources.translations.reader_audio_voice_natural
 import resources.translations.reader_audio_voice_system
+import resources.translations.reader_overlay_device_voice
 import resources.translations.reader_overlay_listening
+import resources.translations.reader_overlay_narration
 import resources.translations.reader_overlay_pause
 import resources.translations.reader_overlay_play
 import kotlin.math.abs
@@ -153,12 +157,14 @@ internal data class AudioSheetActions(
     val onStartSleepTimer: (Long) -> Unit,
     val onCancelSleepTimer: () -> Unit,
     val onAudioOnly: () -> Unit,
+    val onSelectSource: (Boolean) -> Unit,
 )
 
 @Composable
 internal fun ReaderAudioSheet(
     ui: AudioSheetUi,
     hasNarration: Boolean,
+    canSwitchSource: Boolean,
     actions: AudioSheetActions,
 ) {
     val colors = Ember.colors
@@ -193,6 +199,10 @@ internal fun ReaderAudioSheet(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
+                if (canSwitchSource) {
+                    SourceSwitch(ui.isNarration, ui.isEink, actions.onSelectSource)
+                    Spacer(Modifier.height(16.dp))
+                }
                 if (ui.isNarration) {
                     NarrationBody(ui, actions)
                 } else {
@@ -220,6 +230,53 @@ internal fun ReaderAudioSheet(
                         fontWeight = FontWeight.Bold,
                     )
                 }
+            }
+        }
+    }
+}
+
+/** Narration | Device voice segmented control; the callback receives true for narration. */
+@Composable
+private fun SourceSwitch(isNarration: Boolean, isEink: Boolean, onSelect: (Boolean) -> Unit) {
+    val colors = Ember.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(CircleShape)
+            .background(if (isEink) colors.surface else colors.bg)
+            .border(if (isEink) 2.dp else 1.dp, if (isEink) colors.line else colors.chipBorder, CircleShape)
+            .padding(3.dp)
+            .selectableGroup(),
+    ) {
+        listOf(
+            true to stringResource(StringRes.reader_overlay_narration),
+            false to stringResource(StringRes.reader_overlay_device_voice),
+        ).forEach { (narration, text) ->
+            val selected = isNarration == narration
+            Row(
+                Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
+                    .clip(CircleShape)
+                    .background(if (selected) selectedFill(isEink) else Color.Transparent)
+                    .selectable(selected = selected, role = Role.RadioButton) { onSelect(narration) },
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    if (narration) Icons.Default.Headphones else Icons.Default.GraphicEq,
+                    contentDescription = null,
+                    tint = if (selected) selectedContent(isEink) else colors.ink2,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text,
+                    color = if (selected) selectedContent(isEink) else colors.ink2,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                )
             }
         }
     }
