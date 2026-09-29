@@ -766,7 +766,7 @@
     <string name="statistics_glance_today" tools:ignore="MissingTranslation">Today</string>
     <string name="statistics_glance_this_month" tools:ignore="MissingTranslation">This month</string>
     <string name="statistics_glance_all_time" tools:ignore="MissingTranslation">All time</string>
-    <string name="statistics_glance_books_finished" tools:ignore="MissingTranslation">Books finished</string>
+    <string name="statistics_glance_books_read" tools:ignore="MissingTranslation">Books read</string>
     <string name="statistics_glance_sessions" tools:ignore="MissingTranslation">Sessions</string>
     <string name="statistics_glance_avg_session" tools:ignore="MissingTranslation">Avg. session</string>
     <string name="statistics_streak_sheet_title" tools:ignore="MissingTranslation">Reading streak</string>

@@ -1,0 +1,63 @@
+# Case 421 — local EPUB Statistics across disposable profiles A/B
+
+- **Run date/time:** 2026-09-29, approximately 21:00–21:23 CEST (UTC+0200).
+- **Device:** Physical Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`; portrait 1080×2340, gesture navigation, font scale 1.0.
+- **Package/build before label fix:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug APK SHA-256 `aedfaa942c52eb4adcbd55160cbb08a323ece49ee55a797ee3075d5ce80e8a39`, source commit `cda04f742fc6f874249418f3188edae7ed8560a8`; Parrot PID `29406`.
+- **Package/build after label fix:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug APK SHA-256 `9db68a1b394fb352c806eea94fe48e80535a628f3ef2548c5e46a04c078ea6fb`, built from the QA-BUG-0099 fix tree based on `bb35289975c08528cd5c0d5701a59697f0b991e5`; identical hash verified from the Samsung-installed `base.apk`; retest PID `18361`. The update used `adb install -r`; data was not cleared.
+- **Permission/state:** English (United Kingdom) system locale verified. `POST_NOTIFICATIONS` stayed denied (`granted=false`, AppOp `ignore`).
+
+## Fixture and exact steps
+
+1. The user-authorized Parrot-only data clear had left first-run state. Entered guest mode; created disposable profiles `QA-B` and `QA-A`. QA-B was created with no book/session and its empty Statistics state was captured before and after the code update.
+2. Pushed only the repository's public-domain `iosApp/iosApp/sample-books/PrideAndPrejudice.epub` as `/sdcard/Download/ParrotQA-case421-20260929.epub`. Device file SHA-256 matched fixture hash `7a5c08be34ad6e9aefba71ea05e0baee52322673d228d563907781337c02bafe`. No case-446 server fixture was used.
+3. With `QA-A` visibly marked Active in Settings, imported that exact EPUB from Downloads. Reader opened the book, loaded the readable text (36 pages), and was advanced to page 3. Back closed Reader after 195065ms; logcat recorded `book_closed` with `progress_percent=0`, and the Reader position save attempt/success pair completed.
+4. Before the label fix, QA-A Statistics showed 3m and 1 session; empty QA-B showed 0m and 0 sessions. This is the requested per-profile isolation comparison. An earlier exploratory session in built-in `Default` is retained as a separate QA-BUG-0099 discovery and is not used as Profile A evidence.
+5. Built the label fix with `:feature:statistics:ui:testAndroidHostTest` and `:androidApp:assembleDebug`. The Statistics UI host suite passed 4/4 (zero skipped/failures/errors); Android debug assembly succeeded (593 actionable tasks; 473 executed, 120 from cache). Installed with `adb install -r` and verified the pulled installed APK hash matched.
+6. Without clearing or rebuilding profile data, reopened Statistics in QA-A: it still showed 3m / 1 session and now labels the count `Books read`. Switched to QA-B: it remained empty at 0m / 0 sessions / 0 books read. Returned to QA-A and left that disposable profile active with its EPUB and saved 0% position for later local-EPUB cases.
+
+## Results
+
+**Functional:** PASS for case 421's local-EPUB disposable-profile A/B variant. QA-A's saved reading session appears in its Statistics; QA-B remains zero/empty before and after an update install. Profile data did not leak. The EPUB import, readable-content display, progress save and session creation worked. This does not cover every case-421 variant or cross-app/device synchronization.
+
+**Analytics:** PASS for the exercised normal paths using the local DebugAnalyticsManager output only: profile switch emitted `profile_operation_attempted` then `profile_switched` with `is_retry=false`; each Statistics visit emitted `statistics_viewed`, `statistics_load_attempted`, and `statistics_load_succeeded`; Reader emitted `book_opened`, successful `reader_position_save`, and `book_closed`. Event parameters were bounded and contained no profile/book identifier. Firebase Analytics ingestion is waived and is not claimed. No failed/cancelled/retry operation was induced in this variant.
+
+**Diagnostics:** PASS for normal-path breadcrumbs: profile switch start/success used one correlation context; Statistics bottom-tab navigation, route visibility and load start/success were present; Reader position-save start/success was present. No Parrot fatal/ANR was observed in the relevant PID logs. No unexpected failure was induced, so Crashlytics backend delivery and symbolication remain NOT RUN/unverified.
+
+Sanitized PID-scoped local log excerpts (correlation IDs redacted but attempt/terminal pairings preserved):
+
+```text
+PID 29406 pre-fix, QA-A Reader close:
+09-29 21:17:07.837 Analytics Event: reader_position_save_attempted {screen=reader, action=save_reading_position, operation=reader_position_save, stage=started, outcome=started, media_type=ebook, entry_point=reader_close, is_retry=false}
+09-29 21:17:07.868 Analytics Event: reader_position_save_succeeded {screen=reader, action=save_reading_position, operation=reader_position_save, stage=terminal, outcome=succeeded, media_type=ebook, entry_point=reader_close, is_retry=false}
+09-29 21:17:07.869 Analytics Event: book_closed {reading_duration_ms=195065, progress_percent=0}
+
+PID 18361, QA-B Statistics after fix:
+21:22:20.685 Analytics Event: profile_operation_attempted {screen=app_settings, action=switch_profile, operation=profile_switch, stage=started, outcome=started, is_retry=false}
+21:22:20.685 Diagnostic breadcrumb: screen=app_settings action=switch_profile operation=profile_switch stage=started outcome=started
+21:22:20.697 Analytics Event: profile_switched {screen=app_settings, action=switch_profile, operation=profile_switch, stage=terminal, outcome=succeeded, is_retry=false}
+21:22:20.697 Diagnostic breadcrumb: screen=app_settings action=switch_profile operation=profile_switch stage=terminal outcome=succeeded
+21:22:30.454 Diagnostic breadcrumb: screen=statistics source_screen=books entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=navigation outcome=started
+21:22:30.455 Diagnostic breadcrumb: screen=statistics source_screen=books entry_point=bottom_navigation action=switch_tab operation=tab_navigation stage=terminal outcome=succeeded
+21:22:30.470 Analytics Event: statistics_viewed {screen=statistics, source_screen=books, entry_point=bottom_navigation}
+21:22:30.471 Diagnostic breadcrumb: screen=statistics source_screen=books entry_point=bottom_navigation action=screen_view operation=statistics_route stage=visible outcome=succeeded
+21:22:30.484 Analytics Event: statistics_load_attempted {screen=statistics, action=load_statistics, operation=statistics_load, stage=started, outcome=started, is_retry=false}
+21:22:30.484 Diagnostic breadcrumb: screen=statistics action=load_statistics operation=statistics_load stage=started outcome=started
+21:22:30.522 Analytics Event: statistics_load_succeeded {screen=statistics, action=load_statistics, operation=statistics_load, stage=terminal, outcome=succeeded, is_retry=false}
+21:22:30.522 Diagnostic breadcrumb: screen=statistics action=load_statistics operation=statistics_load stage=terminal outcome=succeeded
+```
+
+These are DebugAnalyticsManager local log observations, not Firebase Analytics delivery evidence.
+
+## Evidence files
+
+- Original QA-BUG-0099 observation in Default: [`case-421-profile-A-statistics.png`](case-421-profile-A-statistics.png), [`case-421-profile-A-reader-after-reading.png`](case-421-profile-A-reader-after-reading.png).
+- Correct disposable QA-A pre-fix: [`case-421-profile-A-disposable-reader.png`](case-421-profile-A-disposable-reader.png), [`case-421-profile-A-disposable-reading-progress.png`](case-421-profile-A-disposable-reading-progress.png), [`case-421-profile-A-disposable-statistics-before-fix.png`](case-421-profile-A-disposable-statistics-before-fix.png).
+- Empty QA-B before fix: [`case-421-profile-B-statistics-before-fix.png`](case-421-profile-B-statistics-before-fix.png).
+- Samsung after-fix retest: [`case-421-profile-A-statistics-after-fix.png`](case-421-profile-A-statistics-after-fix.png), [`case-421-profile-B-statistics-after-fix.png`](case-421-profile-B-statistics-after-fix.png).
+- Bug history and pre-fix source/result: [QA-BUG-0099 record](../../manual-qa-bugs.md#qa-bug-0099--statistics-labels-an-unfinished-book-as-finished), [original finding](qa-bug-0099-statistics-books-finished-count.txt).
+
+## Remaining scope/state
+
+- Case 421's requested local-EPUB A/B history variant is complete. Other cases in the full Statistics inventory remain as recorded in the catalogue and previous rows.
+- QA-A remains active with one local EPUB and one saved 0% reading session. QA-B remains empty. The uniquely named EPUB copy remains in Downloads for the pending case-417/case-425 local variants; remove only that exact file and its matching DocumentsUI search-history item after those variants are finished.
+- Case 425's local-EPUB Continue Reading shelf/bubble visual variant and case 417's local-EPUB TTS/profile-switch variant remain NOT RUN; this run does not sign them off.

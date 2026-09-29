@@ -68,7 +68,7 @@ import resources.translations.statistics_day_singular
 import resources.translations.statistics_days
 import resources.translations.statistics_glance_all_time
 import resources.translations.statistics_glance_avg_session
-import resources.translations.statistics_glance_books_finished
+import resources.translations.statistics_glance_books_read
 import resources.translations.statistics_glance_sessions
 import resources.translations.statistics_glance_this_month
 import resources.translations.statistics_glance_today
@@ -245,7 +245,7 @@ private fun StatisticsContent(
             item {
                 GlanceCard(
                     overview = overview,
-                    booksFinished = stats.totalBooksRead,
+                    booksRead = stats.totalBooksRead,
                     intentDispatcher = intentDispatcher,
                     modifier = Modifier.padding(horizontal = 20.dp),
                 )
@@ -573,7 +573,7 @@ private fun WeekStripDay(
 @Composable
 private fun GlanceCard(
     overview: StatisticsOverview,
-    booksFinished: Long,
+    booksRead: Long,
     intentDispatcher: IntentDispatcher<StatisticsIntent>,
     modifier: Modifier = Modifier,
 ) {
@@ -606,8 +606,8 @@ private fun GlanceCard(
         HorizontalDivider(thickness = style.border, color = colors.line)
         Row(modifier = Modifier.height(IntrinsicSize.Min)) {
             GlanceCell(
-                value = booksFinished.toString(),
-                label = stringResource(StringRes.statistics_glance_books_finished),
+                value = booksRead.toString(),
+                label = stringResource(StringRes.statistics_glance_books_read),
                 onClick = { intentDispatcher(StatisticsIntent.OnBooksReadClicked) },
                 modifier = Modifier.weight(1f),
             )
