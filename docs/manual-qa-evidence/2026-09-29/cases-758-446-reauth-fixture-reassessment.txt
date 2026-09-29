@@ -1,0 +1,24 @@
+# Cases 758/446 — existing-server reauthentication and fixture reassessment
+
+- **Review time:** 2026-09-29 18:23 CEST (UTC+0200).
+- **Current device availability:** `adb devices -l` listed only the Android Auto head unit and `emulator-5554`; required Samsung serial `RFCWC0SSVDM` was absent. No app was launched, no credentials were entered, and no device state was changed during this reassessment.
+
+## Reauthentication evidence and stale-blocker correction
+
+- The missing-credential/disposable-account blocker is superseded by successful same-server evidence already in the repository. On 2026-09-27 at 12:20 CEST, case 444 used the existing logged-out Storyteller server's Login form. After the user re-entered values directly in Parrot, the app emitted `login_succeeded` and returned to the same Server Management destination; the one existing card showed authenticated state with no duplicate. The hash-matched Samsung candidate was package 0.4.5 (21), PID `1746`, APK SHA-256 `ccdc973f191804446bea71fe49f65a1d73b7f96ae2d0339385a57c11ff4839bf`. See [sanitized successful reauthentication evidence](../2026-09-27/case-444-existing-server-login-success.txt).
+- The user has now reconfirmed that the demo-server credential is available and authorized for Parrot UI use. No value is present in this evidence, repo, command, or logs. A blank Username/Password form is not evidence that a credential or authenticated-server fixture is unavailable. Do not request re-entry solely because conversation context was compacted.
+- Case 758's 2026-09-27 14:56 run reached the existing-server Login form but did not submit credentials. Its statement that the form was blank and auth/reopen was untested is retained as the exact observation. However, case 444 had already demonstrated successful authentication on the same existing server earlier that day, so the broader “no usable credential fixture” disposition is stale. The case-758 run did **not** verify reopening its saved last-book target or usable Reader content after reauthentication; those remain NOT RUN.
+- The prior case-758 result-ledger wording that attributed an endpoint-rejected credential submission to that case was inaccurate: the case-758 evidence says no submission was made. The rejected attempt is separate case-449 evidence. The ledger is corrected to keep those journeys distinct.
+
+## Case 446 fixture and current disposition
+
+- The historical case-446 reproduction already used this same existing server, a cached ReadAloud item, and active playback before logout. It confirmed the media session remained `PLAYING` about 50 seconds after the server card became logged out: [pre-fix reproduction](../2026-09-27/case-446-logout-during-readaloud-playback-prefx.txt). A second server or disposable account is not inherently required for this single-server variant.
+- The 2026-09-29 04:59 assessment that no authorized authenticated playback fixture was available predates the user's renewed authorization and the successful case-444 reauthentication evidence. Treat its permission-restoration observation as valid historical cleanup, but supersede its missing-authorization blocker. `POST_NOTIFICATIONS` was restored to denied at that time.
+- The current presence of the cached ReadAloud item and saved target cannot be checked while the Samsung is disconnected. QA-BUG-0049 remains a confirmed, unfixed product defect; no fresh active-playback/logout retest was performed here. Current execution is BLOCKED by the absent required Samsung and unverified current local media state—not by a request for another server/account or renewed credential disclosure.
+
+## Next safe execution
+
+- Preserve the active screen-order gate: resume case 13 Welcome under `es-ES` when the Samsung reconnects. At the appropriate next Login/Reader/Server Management test boundary, use the authorized credential only in Parrot's existing-server Login form, confirm the same card becomes authenticated, then verify case 758's saved-target persistence and usable-content outcome.
+- Before a case-446 retest, implement and host-test/commit the focused QA-BUG-0049 stop-on-logout fix. On the Samsung, verify the existing local ReadAloud item is still usable, establish playback, perform logout, verify the media session terminates, capture bounded Analytics/diagnostics, and restore notification permission to its recorded denied baseline. Do not mark either incomplete variant PASS without device evidence.
+
+No Firebase Analytics delivery, Crashlytics delivery, or new Samsung execution is claimed by this reassessment.
