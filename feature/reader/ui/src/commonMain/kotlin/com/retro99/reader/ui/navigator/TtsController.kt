@@ -6,6 +6,7 @@ import com.retro99.reader.ui.tts.TtsSentence
 import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.reader.ui.tts.TtsVoicePreparationState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 sealed interface TtsPlaybackOperation {
     val correlationId: String
@@ -83,6 +84,10 @@ interface TtsController : NarrationController {
     override val chapterCompleted: Flow<String>
 
     val currentSentence: Flow<TtsSentence?>
+
+    /** Number of sentences in the chapter currently loaded for playback; 0 when none. */
+    val sentenceCount: Flow<Int>
+        get() = flowOf(0)
 
     val previewState: Flow<TtsPreviewState>
 

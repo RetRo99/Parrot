@@ -128,6 +128,8 @@ class AndroidTtsController(
 
     override val currentSentence: Flow<TtsSentence?> = engine.currentSentence
 
+    override val sentenceCount: Flow<Int> = engine.sentenceCount
+
     override val previewState: Flow<TtsPreviewState> = previewPlayer.state
 
     override val voicePreparationState: Flow<TtsVoicePreparationState> =

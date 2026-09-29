@@ -88,6 +88,9 @@ class TtsReadAloudEngine(
     private val _currentSentence = MutableStateFlow<TtsSentence?>(null)
     val currentSentence: StateFlow<TtsSentence?> = _currentSentence.asStateFlow()
 
+    private val _sentenceCount = MutableStateFlow(0)
+    val sentenceCount: StateFlow<Int> = _sentenceCount.asStateFlow()
+
     private val _currentSentenceDurationMs = MutableStateFlow(0L)
     val currentSentenceDurationMs: StateFlow<Long> = _currentSentenceDurationMs.asStateFlow()
 
@@ -198,6 +201,7 @@ class TtsReadAloudEngine(
     fun setSentences(list: List<TtsSentence>) {
         generation++
         sentences = list
+        _sentenceCount.value = list.size
         currentIndex = -1
         chapterTimeline = TtsChapterTimeline.EMPTY
         pendingSentenceProgress = null

@@ -940,4 +940,15 @@
     <string name="reader_hint_none" tools:ignore="MissingTranslation">none</string>
     <string name="reader_location" tools:ignore="MissingTranslation">Location</string>
     <string name="reader_mode_pages" tools:ignore="MissingTranslation">Pages</string>
+    <string name="reader_overlay_audio" tools:ignore="MissingTranslation">Audio</string>
+    <string name="reader_overlay_open_player" tools:ignore="MissingTranslation">Open player</string>
+    <string name="reader_overlay_play" tools:ignore="MissingTranslation">Play</string>
+    <string name="reader_overlay_pause" tools:ignore="MissingTranslation">Pause</string>
+    <string name="reader_overlay_open_contents" tools:ignore="MissingTranslation">Open contents</string>
+    <string name="reader_overlay_narration_progress" tools:ignore="MissingTranslation">%1$s / %2$s · %3$s×</string>
+    <string name="reader_overlay_device_voice_progress" tools:ignore="MissingTranslation">%1$s · sentence %2$d of %3$d</string>
+    <string name="reader_overlay_now_playing_narration" tools:ignore="MissingTranslation">Narration, chapter %1$d, %2$s</string>
+    <string name="reader_overlay_now_playing_device_voice" tools:ignore="MissingTranslation">Device voice, chapter %1$d, %2$s</string>
+    <string name="reader_overlay_mini_narration" tools:ignore="MissingTranslation">Narration · %1$s / %2$s</string>
+    <string name="reader_overlay_mini_device_voice" tools:ignore="MissingTranslation">Device voice · %1$s</string>
 </resources>

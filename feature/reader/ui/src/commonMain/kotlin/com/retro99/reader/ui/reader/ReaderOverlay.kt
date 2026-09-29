@@ -4,6 +4,17 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -129,6 +140,17 @@ import resources.translations.reader_bookmark_rename_cancel
 import resources.translations.reader_bookmark_rename_confirm
 import resources.translations.reader_bookmark_rename_label
 import resources.translations.reader_bookmarks_empty_overlay
+import resources.translations.reader_overlay_audio
+import resources.translations.reader_overlay_open_player
+import resources.translations.reader_overlay_play
+import resources.translations.reader_overlay_pause
+import resources.translations.reader_overlay_open_contents
+import resources.translations.reader_overlay_narration_progress
+import resources.translations.reader_overlay_device_voice_progress
+import resources.translations.reader_overlay_now_playing_narration
+import resources.translations.reader_overlay_now_playing_device_voice
+import resources.translations.reader_overlay_mini_narration
+import resources.translations.reader_overlay_mini_device_voice
 import resources.translations.reader_overlay_bookmark_location
 import resources.translations.reader_overlay_chapter_page_count
 import resources.translations.reader_overlay_contents
@@ -171,7 +193,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val SWIPE_HIDE_THRESHOLD_PX = 80f
-private val MINI_PLAYER_HEIGHT = 51.dp
+private val MINI_PLAYER_HEIGHT = 60.dp
 
 @Composable
 internal fun ReaderOverlayContent(
@@ -231,6 +253,73 @@ internal fun ReaderOverlayContent(
     val voiceDetail = selectedVoice?.let { "${it.locale} · ${it.name.substringBefore('(').trim()}" }
         ?: "System voice"
     val isEink = Ember.style.isEink
+    val nowPlaying = if (viewState.isListening) {
+        val isNarration = viewState.listenSource == ListenSource.NARRATION
+        val stateText = stringResource(
+            if (viewState.isPlaying) StringRes.reader_overlay_pause else StringRes.reader_overlay_play,
+        )
+        val voiceName = selectedVoice?.name?.substringBefore('(')?.trim()
+            ?: stringResource(StringRes.reader_overlay_voice)
+        val sentenceNumber = (viewState.ttsSentenceIndex + 1).coerceAtLeast(1)
+        val speed = formatSpeed(if (isNarration) settings.playbackSpeed else settings.ttsRate)
+        val positionText = formatAudioTime(viewState.currentAudioPositionMs)
+        val totalText = formatAudioTime(viewState.totalDurationMs ?: 0L)
+        val subtitle = if (isNarration) {
+            stringResource(StringRes.reader_overlay_narration_progress, positionText, totalText, speed)
+        } else {
+            stringResource(
+                StringRes.reader_overlay_device_voice_progress,
+                voiceName,
+                sentenceNumber,
+                viewState.ttsSentenceCount,
+            )
+        }
+        val progress = if (isNarration) {
+            val total = viewState.totalDurationMs ?: 0L
+            if (total > 0L) viewState.currentAudioPositionMs.toFloat() / total else 0f
+        } else if (viewState.ttsSentenceCount > 0) {
+            sentenceNumber.toFloat() / viewState.ttsSentenceCount
+        } else {
+            0f
+        }
+        NowPlayingUi(
+            isNarration = isNarration,
+            title = chapterTitle.ifBlank { "$chapterNumber" },
+            subtitle = subtitle,
+            miniLabel = if (isNarration) {
+                stringResource(StringRes.reader_overlay_mini_narration, positionText, totalText)
+            } else {
+                stringResource(StringRes.reader_overlay_mini_device_voice, voiceName)
+            },
+            progress = progress,
+            isPlaying = viewState.isPlaying,
+            isLoading = viewState.isNarrationLoading,
+            description = stringResource(
+                if (isNarration) StringRes.reader_overlay_now_playing_narration
+                else StringRes.reader_overlay_now_playing_device_voice,
+                chapterNumber,
+                "$subtitle, $stateText",
+            ),
+        )
+    } else {
+        null
+    }
+    val openAudioSheet = { intentDispatcher(ReaderIntent.ToggleListenSheet) }
+    val sheetMiniPlayer: (@Composable () -> Unit)? = nowPlaying?.let { playing ->
+        {
+            ReaderMiniPlayer(
+                nowPlaying = playing,
+                onOpen = {
+                    // Swap the open sheet for the audio sheet; playback is untouched either way.
+                    if (viewState.isTocVisible) intentDispatcher(ReaderIntent.ToggleToc)
+                    if (viewState.isBookmarksVisible) intentDispatcher(ReaderIntent.ToggleBookmarks)
+                    if (viewState.isBookSearchVisible) intentDispatcher(ReaderIntent.ToggleBookSearch)
+                    openAudioSheet()
+                },
+                onPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
+            )
+        }
+    }
 
     val showStrip = settings.showProgressBar == true
     val hasTopStrip = showStrip && settings.progressBarPosition == ProgressBarPosition.TOP
@@ -394,59 +483,29 @@ internal fun ReaderOverlayContent(
                         )
                     },
             ) {
-                if (viewState.isListening) {
-                    val sourceLabel = if (viewState.isReadAloud) {
-                        stringResource(StringRes.reader_overlay_narration)
-                    } else {
-                        "${stringResource(StringRes.reader_overlay_device_voice)} · ${selectedVoice?.locale ?: "English (US)"}"
-                    }
-                    ReaderListeningPanel(
-                        sourceLabel = sourceLabel,
-                        isPlaying = viewState.isPlaying,
-                        isLoading = viewState.isNarrationLoading,
-                        currentPositionMs = viewState.currentAudioPositionMs,
-                        totalDurationMs = viewState.totalDurationMs,
-                        playbackSpeed = if (viewState.isTtsReadAloud) settings.ttsRate else settings.playbackSpeed,
-                        sleepTimerRemainingMs = viewState.sleepTimerRemainingMs,
-                        isEink = isEink,
-                        onVoice = { intentDispatcher(ReaderIntent.ToggleListenSheet) },
-                        onStop = { intentDispatcher(ReaderIntent.StopListening) },
-                        onSeek = { intentDispatcher(ReaderIntent.SeekTo(it)) },
-                        onSpeed = { intentDispatcher(ReaderIntent.SetPlaybackSpeed(it)) },
-                        onSkipBack = { intentDispatcher(ReaderIntent.SkipBackward()) },
-                        onPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
-                        onSkipForward = { intentDispatcher(ReaderIntent.SkipForward()) },
-                        onStartSleepTimer = { intentDispatcher(ReaderIntent.StartSleepTimer(it)) },
-                        onCancelSleepTimer = { intentDispatcher(ReaderIntent.CancelSleepTimer) },
-                        onDismissSleepTimerWarning = { intentDispatcher(ReaderIntent.DismissSleepTimerWarning) },
-                        onPostponeSleepTimer = { intentDispatcher(ReaderIntent.StartSleepTimer(it * 60_000L)) },
-                        showSleepTimerWarning = viewState.showSleepTimerWarningPrompt,
-                    )
-                } else {
-                    ReaderReadingPanel(
-                        chapterNumber = chapterNumber,
-                        chapterTitle = chapterTitle,
-                        progression = chapterProgress,
-                        bookProgression = currentPosition?.totalProgression,
-                        pageInfo = pageInfo,
-                        remainingTime = remainingTime,
-                        currentPage = viewState.chapterInfo?.currentPage,
-                        totalPages = viewState.chapterInfo?.totalPages,
-                        isEink = isEink,
-                        onSeek = { intentDispatcher(ReaderIntent.SeekToChapterProgress(it)) },
-                        onContents = { intentDispatcher(ReaderIntent.ToggleToc) },
-                        onSearch = { intentDispatcher(ReaderIntent.ToggleBookSearch) },
-                        onListen = {
-                            if (viewState.isReadAloud) {
-                                intentDispatcher(ReaderIntent.StartListening(ListenSource.NARRATION))
-                            } else {
-                                intentDispatcher(ReaderIntent.ToggleListenSheet)
-                            }
-                        },
-                        onListenLongPress = { intentDispatcher(ReaderIntent.ToggleListenSheet) },
-                        onDisplay = { intentDispatcher(ReaderIntent.OnSettingsClicked) },
-                    )
-                }
+                ReaderReadingPanel(
+                    chapterNumber = chapterNumber,
+                    chapterTitle = chapterTitle,
+                    progression = chapterProgress,
+                    bookProgression = currentPosition?.totalProgression,
+                    pageInfo = pageInfo,
+                    remainingTime = remainingTime,
+                    nowPlaying = nowPlaying,
+                    isEink = isEink,
+                    onChapterClick = { intentDispatcher(ReaderIntent.ToggleToc) },
+                    onContents = { intentDispatcher(ReaderIntent.ToggleToc) },
+                    onSearch = { intentDispatcher(ReaderIntent.ToggleBookSearch) },
+                    onListen = {
+                        when {
+                            nowPlaying != null -> openAudioSheet()
+                            viewState.isReadAloud -> intentDispatcher(ReaderIntent.StartListening(ListenSource.NARRATION))
+                            else -> openAudioSheet()
+                        }
+                    },
+                    onListenLongPress = openAudioSheet,
+                    onDisplay = { intentDispatcher(ReaderIntent.OnSettingsClicked) },
+                    onPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
+                )
             }
 
             if (hasBottomBar) {
@@ -458,16 +517,11 @@ internal fun ReaderOverlayContent(
                         .onSizeChanged { bottomBarPx = it.height },
                 ) {
                     Column {
-                        if (viewState.isListening) {
-                            val progress = if (viewState.totalDurationMs != null && viewState.totalDurationMs > 0L) {
-                                viewState.currentAudioPositionMs.toFloat() / viewState.totalDurationMs.toFloat()
-                            } else {
-                                0f
-                            }
-                            // The listening panel replaces the mini player while the controls are shown.
+                        if (nowPlaying != null) {
+                            // The now-playing card replaces the mini player while the controls are shown.
                             ReaderMiniPlayer(
-                                isPlaying = viewState.isPlaying,
-                                progression = progress,
+                                nowPlaying = nowPlaying,
+                                onOpen = openAudioSheet,
                                 onPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
                                 modifier = Modifier.then(if (controlsVisible) Modifier.height(0.dp) else Modifier).clipToBounds(),
                             )
@@ -491,6 +545,19 @@ internal fun ReaderOverlayContent(
         }
     }
 
+    if (viewState.showSleepTimerWarningPrompt && viewState.sleepTimerRemainingMs != null) {
+        SleepTimerDurationDialog(
+            title = stringResource(StringRes.sleep_timer_ending_soon_title),
+            message = "Playback will pause in ${formatSleepTimerLabel(viewState.sleepTimerRemainingMs)}. " +
+                "Choose how many more minutes to keep listening.",
+            confirmLabel = stringResource(StringRes.sleep_timer_postpone),
+            dismissLabel = stringResource(StringRes.sleep_timer_let_it_end),
+            initialMinutes = 5,
+            onConfirm = { minutes -> intentDispatcher(ReaderIntent.StartSleepTimer(minutes * 60_000L)) },
+            onDismiss = { intentDispatcher(ReaderIntent.DismissSleepTimerWarning) },
+        )
+    }
+
     if (viewState.isTocVisible || viewState.isBookmarksVisible) {
         ReaderContentsSheet(
             tableOfContents = viewState.tableOfContents,
@@ -510,6 +577,7 @@ internal fun ReaderOverlayContent(
                 if (viewState.isTocVisible) intentDispatcher(ReaderIntent.ToggleToc)
                 if (viewState.isBookmarksVisible) intentDispatcher(ReaderIntent.ToggleBookmarks)
             },
+            footer = sheetMiniPlayer,
         )
     }
 
@@ -522,6 +590,7 @@ internal fun ReaderOverlayContent(
             onQueryChange = { intentDispatcher(ReaderIntent.SearchBook(it)) },
             onResultClick = { intentDispatcher(ReaderIntent.GoToSearchResult(it)) },
             onDismiss = { intentDispatcher(ReaderIntent.ToggleBookSearch) },
+            footer = sheetMiniPlayer,
         )
     }
 
@@ -596,6 +665,18 @@ internal fun ReaderOverlayToolbar(
     }
 }
 
+/** Everything the now-playing card and mini-player need, resolved to display strings. */
+internal data class NowPlayingUi(
+    val isNarration: Boolean,
+    val title: String,
+    val subtitle: String,
+    val miniLabel: String,
+    val progress: Float,
+    val isPlaying: Boolean,
+    val isLoading: Boolean,
+    val description: String,
+)
+
 @Composable
 internal fun ReaderReadingPanel(
     chapterNumber: Int,
@@ -604,15 +685,15 @@ internal fun ReaderReadingPanel(
     bookProgression: Double?,
     pageInfo: String,
     remainingTime: String,
-    currentPage: Int?,
-    totalPages: Int?,
+    nowPlaying: NowPlayingUi?,
     isEink: Boolean,
-    onSeek: (Double) -> Unit,
+    onChapterClick: () -> Unit,
     onContents: () -> Unit,
     onSearch: () -> Unit,
     onListen: () -> Unit,
     onListenLongPress: () -> Unit,
     onDisplay: () -> Unit,
+    onPlayPause: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = Ember.colors
@@ -623,7 +704,7 @@ internal fun ReaderReadingPanel(
             .then(if (isEink) Modifier.border(2.dp, colors.line, shape) else Modifier.shadow(2.dp, shape)),
         shape = shape,
         color = colors.surface,
-        shadowElevation = if (isEink) 0.dp else 0.dp,
+        shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
@@ -631,28 +712,51 @@ internal fun ReaderReadingPanel(
                 .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 14.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            if (nowPlaying != null) {
+                NowPlayingCard(
+                    nowPlaying = nowPlaying,
+                    isEink = isEink,
+                    onOpen = onListen,
+                    onPlayPause = onPlayPause,
+                )
+                Spacer(Modifier.height(10.dp))
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
+                    .clickable(
+                        role = Role.Button,
+                        onClickLabel = stringResource(StringRes.reader_overlay_open_contents),
+                        onClick = onChapterClick,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
                     text = "$chapterNumber · $chapterTitle",
                     modifier = Modifier.weight(1f),
                     color = colors.ink,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = "${((bookProgression ?: progression) * 100).roundToInt()}%",
                     color = colors.accentText,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = colors.ink2,
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            ChapterProgressScrubber(
-                progression = progression,
+            ProgressLine(
+                progress = progression.toFloat(),
                 isEink = isEink,
-                onSeek = onSeek,
+                modifier = Modifier.padding(top = 4.dp),
             )
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -660,14 +764,14 @@ internal fun ReaderReadingPanel(
                     text = pageInfo,
                     modifier = Modifier.weight(1f),
                     color = colors.ink2,
-                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 13.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = remainingTime,
                     color = colors.ink2,
-                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 13.sp,
                     maxLines = 1,
                 )
             }
@@ -688,10 +792,18 @@ internal fun ReaderReadingPanel(
                     modifier = Modifier.weight(1f),
                 )
                 ReaderToolTile(
-                    label = stringResource(StringRes.reader_overlay_listen),
-                    icon = { Icon(Icons.Default.Headphones, null) },
+                    label = stringResource(
+                        if (nowPlaying != null) StringRes.reader_overlay_audio else StringRes.reader_overlay_listen,
+                    ),
+                    icon = {
+                        Icon(
+                            if (nowPlaying?.isNarration == false) Icons.Default.GraphicEq else Icons.Default.Headphones,
+                            null,
+                        )
+                    },
                     onClick = onListen,
                     onLongClick = onListenLongPress,
+                    isActive = nowPlaying != null,
                     isEink = isEink,
                     modifier = Modifier.weight(1f),
                 )
@@ -707,6 +819,107 @@ internal fun ReaderReadingPanel(
     }
 }
 
+/** Thin read-only progress line (3dp; outlined on e-ink). */
+@Composable
+private fun ProgressLine(progress: Float, isEink: Boolean, modifier: Modifier = Modifier) {
+    val colors = Ember.colors
+    val shape = RoundedCornerShape(2.dp)
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(3.dp)
+            .clip(shape)
+            .background(colors.track)
+            .then(if (isEink) Modifier.border(1.dp, colors.line, shape) else Modifier),
+    ) {
+        Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).height(3.dp).background(colors.accent))
+    }
+}
+
+@Composable
+private fun NowPlayingCard(
+    nowPlaying: NowPlayingUi,
+    isEink: Boolean,
+    onOpen: () -> Unit,
+    onPlayPause: () -> Unit,
+) {
+    val colors = Ember.colors
+    val shape = RoundedCornerShape(20.dp)
+    val playLabel = stringResource(
+        if (nowPlaying.isPlaying) StringRes.reader_overlay_pause else StringRes.reader_overlay_play,
+    )
+    val openLabel = stringResource(StringRes.reader_overlay_open_player)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(if (isEink) colors.surface else colors.navActive.copy(alpha = 0.5f))
+            .then(if (isEink) Modifier.border(2.dp, colors.line, shape) else Modifier)
+            .semantics(mergeDescendants = true) {
+                contentDescription = nowPlaying.description
+                customActions = listOf(
+                    CustomAccessibilityAction(playLabel) { onPlayPause(); true },
+                    CustomAccessibilityAction(openLabel) { onOpen(); true },
+                )
+            }
+            .clickable(onClick = onOpen),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isEink) colors.ink else colors.navActive),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    if (nowPlaying.isNarration) Icons.Default.Headphones else Icons.Default.GraphicEq,
+                    contentDescription = null,
+                    tint = if (isEink) colors.surface else colors.accentText,
+                )
+            }
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(
+                    nowPlaying.title,
+                    color = colors.ink,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    nowPlaying.subtitle,
+                    color = colors.ink2,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Icon(Icons.Default.KeyboardArrowUp, contentDescription = null, tint = colors.ink2)
+            Spacer(Modifier.width(4.dp))
+            IconButton(
+                onClick = onPlayPause,
+                enabled = !nowPlaying.isLoading,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clearAndSetSemantics { }
+                    .clip(CircleShape)
+                    .background(colors.accent),
+            ) {
+                Icon(
+                    if (nowPlaying.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = colors.onAccent,
+                )
+            }
+        }
+        ProgressLine(nowPlaying.progress, isEink)
+    }
+}
+
 @Composable
 private fun ReaderToolTile(
     label: String,
@@ -715,251 +928,86 @@ private fun ReaderToolTile(
     isEink: Boolean,
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
+    isActive: Boolean = false,
 ) {
     val colors = Ember.colors
     val shape = RoundedCornerShape(16.dp)
+    val tint = if (isActive && isEink) colors.surface else if (isActive) colors.accentText else colors.ink
     Column(
         modifier = modifier
             .height(60.dp)
             .clip(shape)
-            .background(if (isEink) colors.surface else colors.bg)
+            .background(
+                when {
+                    isActive && isEink -> colors.ink
+                    isActive -> colors.navActive
+                    isEink -> colors.surface
+                    else -> colors.bg
+                },
+            )
             .then(if (isEink) Modifier.border(1.5.dp, colors.line, shape) else Modifier)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(Modifier.size(25.dp), contentAlignment = Alignment.Center) { icon() }
-        Text(label, color = colors.ink, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Box(Modifier.size(25.dp), contentAlignment = Alignment.Center) {
+            CompositionLocalProvider(LocalContentColor provides tint) { icon() }
+        }
+        Text(label, color = tint, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
-@Composable
-private fun ChapterProgressScrubber(
-    progression: Double,
-    isEink: Boolean,
-    onSeek: (Double) -> Unit,
-) {
-    val colors = Ember.colors
-    var widthPx by remember { mutableFloatStateOf(1f) }
-    var dragProgress by remember { mutableStateOf<Float?>(null) }
-    val value = (dragProgress ?: progression.toFloat()).coerceIn(0f, 1f)
-    val trackHeight = if (isEink) 10.dp else 4.dp
-    val thumbRadius = 10.dp
-
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(28.dp)
-            .onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
-            .pointerInput(widthPx) {
-                detectTapGestures { offset ->
-                    val next = (offset.x / widthPx).coerceIn(0f, 1f)
-                    dragProgress = next
-                    onSeek(next.toDouble())
-                    dragProgress = null
-                }
-            }
-            .pointerInput(widthPx) {
-                detectDragGestures(
-                    onDragStart = { offset -> dragProgress = (offset.x / widthPx).coerceIn(0f, 1f) },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        dragProgress = (change.position.x / widthPx).coerceIn(0f, 1f)
-                    },
-                    onDragEnd = {
-                        dragProgress?.let { onSeek(it.toDouble()) }
-                        dragProgress = null
-                    },
-                    onDragCancel = { dragProgress = null },
-                )
-            },
-    ) {
-        val centerY = size.height / 2f
-        val horizontalInset = thumbRadius.toPx()
-        val left = horizontalInset
-        val right = (size.width - horizontalInset).coerceAtLeast(left + 1f)
-        val usableWidth = right - left
-        val trackPx = trackHeight.toPx()
-        val trackTop = centerY - trackPx / 2f
-        drawRoundRect(
-            color = colors.track,
-            topLeft = Offset(left, trackTop),
-            size = Size(usableWidth, trackPx),
-            cornerRadius = CornerRadius(trackPx / 2f),
-        )
-        if (isEink) {
-            drawRoundRect(
-                color = colors.line,
-                topLeft = Offset(left, trackTop),
-                size = Size(usableWidth, trackPx),
-                cornerRadius = CornerRadius(trackPx / 2f),
-                style = Stroke(width = 1.5.dp.toPx()),
-            )
-        }
-        val thumbX = left + usableWidth * value
-        drawRoundRect(
-            color = colors.accent,
-            topLeft = Offset(left, trackTop),
-            size = Size((thumbX - left).coerceAtLeast(0f), trackPx),
-            cornerRadius = CornerRadius(trackPx / 2f),
-        )
-        for (tick in 1..4) {
-            val tickX = left + usableWidth * tick / 5f
-            drawLine(
-                color = if (isEink) colors.ink else colors.mutedAccent,
-                start = Offset(tickX, centerY - 5.dp.toPx()),
-                end = Offset(tickX, centerY + 5.dp.toPx()),
-                strokeWidth = if (isEink) 1.5.dp.toPx() else 1.dp.toPx(),
-            )
-        }
-        drawCircle(colors.surface, thumbRadius.toPx() + 3.dp.toPx(), Offset(thumbX, centerY))
-        drawCircle(colors.accent, thumbRadius.toPx(), Offset(thumbX, centerY))
-        if (isEink) {
-            drawCircle(colors.line, thumbRadius.toPx(), Offset(thumbX, centerY), style = Stroke(1.5.dp.toPx()))
-        }
-    }
-}
-
-@Composable
-internal fun ReaderListeningPanel(
-    sourceLabel: String,
-    isPlaying: Boolean,
-    isLoading: Boolean,
-    currentPositionMs: Long,
-    totalDurationMs: Long?,
-    playbackSpeed: Float,
-    sleepTimerRemainingMs: Long?,
-    isEink: Boolean,
-    onVoice: () -> Unit,
-    onStop: () -> Unit,
-    onSeek: (Long) -> Unit,
-    onSpeed: (Float) -> Unit,
-    onSkipBack: () -> Unit,
-    onPlayPause: () -> Unit,
-    onSkipForward: () -> Unit,
-    onStartSleepTimer: (Long) -> Unit,
-    onCancelSleepTimer: () -> Unit,
-    onDismissSleepTimerWarning: () -> Unit,
-    onPostponeSleepTimer: (Int) -> Unit,
-    showSleepTimerWarning: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val colors = Ember.colors
-    val shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(if (isEink) Modifier.border(2.dp, colors.line, shape) else Modifier.shadow(2.dp, shape)),
-        shape = shape,
-        color = colors.surface,
-    ) {
-        Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 14.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(32.dp).clip(CircleShape).background(colors.navActive),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Default.Headphones, null, tint = colors.accentText, modifier = Modifier.size(19.dp))
-                }
-                Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                    Text(stringResource(StringRes.reader_overlay_listening), color = colors.ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text(sourceLabel, color = colors.ink2, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                OverlayPill(text = stringResource(StringRes.reader_overlay_voice), onClick = onVoice)
-                IconButton(onClick = onStop, modifier = Modifier.size(44.dp)) {
-                    Icon(Icons.Default.Close, stringResource(StringRes.general_close), tint = colors.ink2)
-                }
-            }
-            Spacer(Modifier.height(10.dp))
-            AudioSeekBar(
-                currentPositionMs = currentPositionMs,
-                totalDurationMs = totalDurationMs,
-                onSeek = onSeek,
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                OverlayPill(text = "${formatSpeed(playbackSpeed)}×", onClick = {
-                    val speeds = listOf(0.8f, 1f, 1.25f, 1.5f, 2f)
-                    val next = speeds.indexOfFirst { kotlin.math.abs(it - playbackSpeed) < 0.01f }
-                    onSpeed(speeds[(next + 1).mod(speeds.size)])
-                })
-                IconButton(onClick = onSkipBack, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Default.Replay10, "Back 10 seconds", tint = colors.ink, modifier = Modifier.size(25.dp))
-                }
-                IconButton(
-                    onClick = onPlayPause,
-                    enabled = !isLoading,
-                    modifier = Modifier.size(64.dp).clip(CircleShape).background(colors.accent),
-                ) {
-                    Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        if (isPlaying) "Pause" else "Play",
-                        tint = colors.onAccent,
-                        modifier = Modifier.size(32.dp),
-                    )
-                }
-                IconButton(onClick = onSkipForward, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Default.Forward10, "Forward 10 seconds", tint = colors.ink, modifier = Modifier.size(25.dp))
-                }
-                SleepTimerPill(
-                    remainingMs = sleepTimerRemainingMs,
-                    currentPositionMs = currentPositionMs,
-                    totalDurationMs = totalDurationMs,
-                    onStart = onStartSleepTimer,
-                    onCancel = onCancelSleepTimer,
-                )
-            }
-        }
-    }
-
-    if (showSleepTimerWarning && sleepTimerRemainingMs != null) {
-        SleepTimerDurationDialog(
-            title = stringResource(StringRes.sleep_timer_ending_soon_title),
-            message = "Playback will pause in ${formatSleepTimerLabel(sleepTimerRemainingMs)}. Choose how many more minutes to keep listening.",
-            confirmLabel = stringResource(StringRes.sleep_timer_postpone),
-            dismissLabel = stringResource(StringRes.sleep_timer_let_it_end),
-            initialMinutes = 5,
-            onConfirm = onPostponeSleepTimer,
-            onDismiss = onDismissSleepTimerWarning,
-        )
-    }
-}
-
+/**
+ * 60dp mini-player: sits under the persistent reader and as the footer of the Contents, Search
+ * and Display sheets so playback stays controllable while a sheet is open.
+ */
 @Composable
 internal fun ReaderMiniPlayer(
-    isPlaying: Boolean,
-    progression: Float,
+    nowPlaying: NowPlayingUi,
+    onOpen: () -> Unit,
     onPlayPause: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = Ember.colors
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = colors.surface,
-    ) {
+    val playLabel = stringResource(
+        if (nowPlaying.isPlaying) StringRes.reader_overlay_pause else StringRes.reader_overlay_play,
+    )
+    Surface(modifier = modifier.fillMaxWidth(), color = colors.surface) {
         Column {
-            Box(Modifier.fillMaxWidth().height(3.dp).background(colors.track)) {
-                Box(Modifier.fillMaxWidth(progression.coerceIn(0f, 1f)).height(3.dp).background(colors.accent))
+            Box(Modifier.fillMaxWidth().height(2.dp).background(colors.track)) {
+                Box(
+                    Modifier.fillMaxWidth(nowPlaying.progress.coerceIn(0f, 1f)).height(2.dp).background(colors.accent),
+                )
             }
             Row(
-                Modifier.fillMaxWidth().navigationBarsPadding().height(48.dp).padding(horizontal = 14.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .height(58.dp)
+                    .clickable(onClick = onOpen)
+                    .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onPlayPause, modifier = Modifier.size(40.dp)) {
+                IconButton(
+                    onClick = onPlayPause,
+                    enabled = !nowPlaying.isLoading,
+                    modifier = Modifier.size(48.dp),
+                ) {
                     Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        if (isPlaying) "Pause" else "Play",
+                        if (nowPlaying.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = playLabel,
                         tint = colors.ink,
                     )
                 }
-                Text(stringResource(StringRes.reader_overlay_listening), color = colors.ink2, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    nowPlaying.miniLabel,
+                    modifier = Modifier.weight(1f).padding(start = 6.dp),
+                    color = colors.ink2,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -979,13 +1027,16 @@ internal fun ReaderContentsSheet(
     onBookmarkRename: (String, String) -> Unit,
     onBookmarkReorder: (List<String>) -> Unit,
     onDismiss: () -> Unit,
+    footer: (@Composable () -> Unit)? = null,
 ) {
     var selectedTab by remember { mutableStateOf(ContentsTab.CHAPTERS) }
-    EmberBottomSheet(onDismiss = onDismiss) {
+    EmberBottomSheet(onDismiss = onDismiss, footer = footer) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val maxSheetHeight = maxHeight * 0.88f
             Column(
-                Modifier.fillMaxWidth().heightIn(max = maxSheetHeight).navigationBarsPadding().padding(bottom = 8.dp),
+                Modifier.fillMaxWidth().heightIn(max = maxSheetHeight)
+                    .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier)
+                    .padding(bottom = 8.dp),
             ) {
                 SheetTitle(
                     title = stringResource(StringRes.reader_overlay_contents),
@@ -1448,11 +1499,14 @@ internal fun ReaderSearchSheet(
     onQueryChange: (String) -> Unit,
     onResultClick: (ReaderSearchResult) -> Unit,
     onDismiss: () -> Unit,
+    footer: (@Composable () -> Unit)? = null,
 ) {
-    EmberBottomSheet(onDismiss = onDismiss) {
+    EmberBottomSheet(onDismiss = onDismiss, footer = footer) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             Column(
-                Modifier.fillMaxWidth().heightIn(max = maxHeight * 0.86f).navigationBarsPadding().padding(bottom = 8.dp),
+                Modifier.fillMaxWidth().heightIn(max = maxHeight * 0.86f)
+                    .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier)
+                    .padding(bottom = 8.dp),
             ) {
                 SheetTitle(stringResource(StringRes.reader_search_title), onDismiss)
                 OutlinedTextField(

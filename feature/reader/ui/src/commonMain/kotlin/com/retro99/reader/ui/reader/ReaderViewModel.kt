@@ -880,6 +880,7 @@ class ReaderViewModel(
             observeNarrationPlaybackState(ttsController)
 
             observeTtsPreviewState()
+            observeTtsSentenceProgress()
             observeTtsVoicePreparationState()
 
             ttsController.selectVoice(selectedVoiceId)
@@ -1357,6 +1358,19 @@ class ReaderViewModel(
 
     private fun stopTtsPreview() {
         ttsController.stopPreview()
+    }
+
+    private fun observeTtsSentenceProgress() {
+        ttsController.currentSentence
+            .onEach { sentence ->
+                if (sentence != null) {
+                    updateState { state -> state.copy(ttsSentenceIndex = sentence.index) }
+                }
+            }
+            .launchIn(viewModelScope)
+        ttsController.sentenceCount
+            .onEach { count -> updateState { state -> state.copy(ttsSentenceCount = count) } }
+            .launchIn(viewModelScope)
     }
 
     private fun observeTtsPreviewState() {

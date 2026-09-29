@@ -40,6 +40,7 @@ private const val SCRIM_ALPHA = 0.62f
 fun EmberBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    footer: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = Ember.colors
@@ -58,10 +59,11 @@ fun EmberBottomSheet(
                     .clip(shape)
                     .background(colors.surface)
                     .border(2.dp, colors.line, shape)
-                    .navigationBarsPadding(),
+                    .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier),
             ) {
                 EmberSheetHandle()
                 content()
+                footer?.invoke()
             }
         }
     } else {
@@ -74,7 +76,10 @@ fun EmberBottomSheet(
             contentColor = colors.ink,
             scrimColor = colors.nav.copy(alpha = SCRIM_ALPHA),
             dragHandle = { EmberSheetHandle() },
-            content = content,
+            content = {
+                content()
+                footer?.invoke()
+            },
         )
     }
 }

@@ -79,6 +79,9 @@ data class ReaderViewState(
     val isTtsPreviewPlaying: Boolean = false,
     val isVoiceSettingsVisible: Boolean = false,
     val isListening: Boolean = false,
+    // Zero-based index and total of the sentence being read by the device voice.
+    val ttsSentenceIndex: Int = 0,
+    val ttsSentenceCount: Int = 0,
     val isListenSheetVisible: Boolean = false,
     val isContentsSearchVisible: Boolean = false,
     val isBookSearchVisible: Boolean = false,
@@ -94,6 +97,10 @@ data class ReaderViewState(
      */
     val isReadAloud: Boolean
         get() = bookType == BookType.READALOUD && publicationState?.publication?.hasMediaOverlays == true
+
+    /** Which audio system drives playback: recorded narration wins when the book has it. */
+    val listenSource: ListenSource
+        get() = if (isReadAloud) ListenSource.NARRATION else ListenSource.DEVICE_VOICE
 
     /**
      * Convenience accessor for the current reader settings.
