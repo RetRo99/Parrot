@@ -1,0 +1,45 @@
+# Case 13 — Welcome under Spanish device locale, latest committed debug build
+
+- **Run time:** 2026-09-29, approximately 20:40 CEST (UTC+0200).
+- **Device:** Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`; 1080×2340 portrait, gesture navigation, font scale 1.0.
+- **App/build:** `com.retro99.parrot` 0.4.5 (version code 21), target SDK 36, debug; source commit `cda04f742fc6f874249418f3188edae7ed8560a8`; build APK SHA-256 `aedfaa942c52eb4adcbd55160cbb08a323ece49ee55a797ee3075d5ce80e8a39`, identical to the Samsung-pulled `base.apk`; Parrot PID `7959` during the final run. Installed with `adb install -r` after the previously authorized Parrot-only data clear.
+
+## Preconditions and state
+
+- The user explicitly authorized `adb shell pm clear com.retro99.parrot` after being told it could remove the existing Reader position, local app profiles, server/login state and cached media. The command returned `Success`. No other package or device data was cleared. The original Parrot app-data state is therefore intentionally not recoverable from this run; the repository EPUB remains available for disposable-profile setup.
+- Before the locale test, both `settings get system system_locales` and `cmd locale get-device-locale` returned `en-GB`.
+- In Samsung Settings, added Español (España) and made it the default. During the test the system locale list was `es-ES,en-GB`, and `cmd locale get-device-locale` returned `es-ES`.
+- After the test, restored English (United Kingdom) to the top, removed the temporary Spanish language entry, and verified both locale queries returned exactly `en-GB`.
+- `POST_NOTIFICATIONS` remained denied (`granted=false`, AppOp `ignore`). No network, font, navigation, or permission changes were made.
+
+## Steps and result
+
+1. Built from a detached clean worktree at the committed source revision, not from the main working tree with unrelated uncommitted user changes. The first build attempt stopped before task execution because the worktree lacked ignored `local.properties`; copying the existing SDK-only local configuration resolved this environment setup issue. `:feature:login:ui:testAndroidHostTest` passed 37/37 and `:androidApp:assembleDebug` succeeded (593 actionable tasks; 462 executed, 131 cached).
+2. Installed the hash-identified APK without clearing data again and launched Parrot with `es-ES` active. Package version/code remained 0.4.5 (21); installed `base.apk` hash matched the build artifact.
+3. Expected first-run Welcome after the approved data clear. The Welcome screen was visibly usable and showed the expected English `Get Started` and `Browse without account` actions. All visible app copy in the captured Welcome screen was English; no clipping or overflow was seen. The UI hierarchy automation returned zero Compose elements/timed out, so visual inspection used the direct Samsung screenshot rather than treating the automation timeout as an app failure.
+4. Restored the original `en-GB` locale and removed the temporary Spanish language entry. The app is left at first-run state because the authorized Parrot data clear removed its previous profiles/session; notification permission remains denied.
+
+**Functional:** PASS for the Welcome-under-`es-ES` variant; full case 13 remains PARTIAL because the other routes sampled in the historical locale run were not revisited on this current build.
+
+**Analytics:** PASS for the Welcome/startup route on the local debug provider (Firebase ingestion was waived and is not claimed). PID-scoped logcat showed exactly one `app_launch_route_resolved` to Welcome and one `welcome_screen_viewed` for the visible route.
+
+**Diagnostics:** PASS for expected bounded startup/route breadcrumbs. No Parrot fatal exception or Parrot ANR was present in the captured PID interval. No unexpected failure was induced, so Crashlytics non-fatal delivery and symbolication were not exercised or verified.
+
+Sanitized PID-scoped log excerpt:
+
+```text
+09-29 20:40:08.094 7959 D ... Diagnostic breadcrumb: screen=splash action=resolve_startup_route operation=check_auth_state stage=started outcome=started
+09-29 20:40:08.097 7959 D ... Analytics Event: app_launch_route_resolved | {screen=welcome, source_screen=splash, entry_point=app_launch, outcome=success}
+09-29 20:40:08.097 7959 D ... Diagnostic breadcrumb: screen=welcome source_screen=splash entry_point=app_launch action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded reason_code=auth_state_check_completed
+09-29 20:40:08.467 7959 D ... Analytics Event: welcome_screen_viewed | {screen=welcome, source_screen=splash, entry_point=app_launch}
+09-29 20:40:08.467 7959 D ... Diagnostic breadcrumb: screen=welcome source_screen=splash entry_point=app_launch action=screen_view operation=onboarding_route stage=visible outcome=succeeded
+```
+
+## Evidence and environment note
+
+- Latest-build Samsung screenshot: [`case-013-welcome-es-ES-latest-build.png`](case-013-welcome-es-ES-latest-build.png).
+- An earlier Welcome screenshot was captured from the previously installed debug APK before the clean latest-build install: [`case-013-welcome-es-ES.png`](case-013-welcome-es-ES.png); it is retained as supplementary evidence only.
+- While changing/restoring the system locale, Android displayed one unrelated Google Play Store “not responding” dialog (system log `ANR in com.android.vending`, 20:29:02) and one unrelated Secure Folder “has stopped” dialog. The Play Store dialog was answered with Wait and the Secure Folder dialog was closed; neither involved Parrot, neither recurred during the Parrot run, and no unrelated app data was changed. These are recorded as device-environment incidents, not Parrot defects.
+- No Parrot defect was discovered in this Welcome locale variant; no bug-register entry was warranted.
+
+**Disposition:** The required case-13 Welcome `es-ES` gate is satisfied. Case 13 is not fully signed off: other route coverage is historical on an earlier build, and induced failure/Crashlytics verification remains incomplete. Next Samsung work may proceed to the separately scoped local-EPUB Statistics fixture for case 421; do not use the reserved case-446 server fixture.
