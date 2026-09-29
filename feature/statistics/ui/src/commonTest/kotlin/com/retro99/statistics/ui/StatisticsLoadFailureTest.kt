@@ -9,6 +9,8 @@ import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.books.domain.model.BookType
+import com.retro99.preferences.api.Preferences
+import com.retro99.preferences.api.PreferencesKey
 import com.retro99.statistics.domain.StatisticsRepository
 import com.retro99.statistics.domain.model.BookReadingStatsDomainModel
 import com.retro99.statistics.domain.model.DailyReadingTimeDomainModel
@@ -19,6 +21,7 @@ import com.retro99.statistics.domain.usecase.GetAllBooksReadUseCase
 import com.retro99.statistics.domain.usecase.GetBooksForPeriodUseCase
 import com.retro99.statistics.domain.usecase.GetReadingStatisticsUseCase
 import com.retro99.statistics.domain.usecase.GetRecentSessionsUseCase
+import com.retro99.statistics.domain.usecase.GetStatisticsOverviewUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
@@ -252,8 +255,40 @@ class StatisticsLoadFailureTest {
         getBooksForPeriodUseCase = GetBooksForPeriodUseCase(repository),
         getAllBooksReadUseCase = GetAllBooksReadUseCase(repository),
         getRecentSessionsUseCase = GetRecentSessionsUseCase(repository),
+        getStatisticsOverviewUseCase = GetStatisticsOverviewUseCase(
+            // The overview reads sessions from its own repository so it doesn't consume
+            // the results the detail-sheet tests queue up.
+            FakeStatisticsRepository(
+                statisticsResults = mutableListOf(),
+                allSessionsResults = MutableList(OVERVIEW_LOADS) { Ok(emptyList()) },
+            ),
+        ),
+        preferences = InMemoryPreferences(),
         analytics = analytics,
     )
+}
+
+private const val OVERVIEW_LOADS = 10
+
+private class InMemoryPreferences : Preferences {
+    private val values = mutableMapOf<String, String>()
+
+    override fun getStringOrNull(key: PreferencesKey): String? = values[key.name]
+    override fun putString(key: PreferencesKey, value: String) {
+        values[key.name] = value
+    }
+
+    override fun observeStringOrNull(key: PreferencesKey): Flow<String?> = flowOf(values[key.name])
+    override fun getBoolean(key: PreferencesKey, defaultValue: Boolean): Boolean = defaultValue
+    override fun putBoolean(key: PreferencesKey, value: Boolean) = Unit
+    override fun observeBoolean(key: PreferencesKey, defaultValue: Boolean): Flow<Boolean> =
+        flowOf(defaultValue)
+
+    override fun getLong(key: PreferencesKey, defaultValue: Long): Long = defaultValue
+    override fun putLong(key: PreferencesKey, value: Long) = Unit
+    override fun remove(key: PreferencesKey) {
+        values.remove(key.name)
+    }
 }
 
 private class RecordingAnalytics : Analytics {

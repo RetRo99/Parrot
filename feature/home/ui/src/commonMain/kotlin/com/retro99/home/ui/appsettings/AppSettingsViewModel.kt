@@ -7,6 +7,7 @@ import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.FileLogger
 import com.retro99.base.ui.BaseViewModel
+import com.retro99.base.ui.compose.ThemeMode
 import com.retro99.base.ui.sharing.FileSharer
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
@@ -59,6 +60,12 @@ class AppSettingsViewModel(
         observeBooleanPref(PreferencesKey.ShowContinueReading, defaultValue = true) { enabled ->
             updateState { it.copy(showContinueReading = enabled) }
         }
+        preferences.observeStringOrNull(PreferencesKey.ThemeMode)
+            .onEach { storedKey ->
+                val themeMode = ThemeMode.fromKey(storedKey) ?: ThemeMode.Night
+                updateState { it.copy(themeMode = themeMode) }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun observeCurrentlyReading() {
@@ -135,6 +142,16 @@ class AppSettingsViewModel(
             is AppSettingsIntent.OnLoggingToggled -> setLoggingEnabled(intent.enabled)
             is AppSettingsIntent.OnLogCrashesOnlyToggled -> setLogCrashesOnly(intent.enabled)
             is AppSettingsIntent.OnOpenLastBookToggled -> setOpenLastBookOnLaunch(intent.enabled)
+            AppSettingsIntent.OnThemeModeClicked -> {
+                updateState { it.copy(showThemeModeDialog = true) }
+            }
+            AppSettingsIntent.OnThemeModeDialogDismissed -> {
+                updateState { it.copy(showThemeModeDialog = false) }
+            }
+            is AppSettingsIntent.OnThemeModeSelected -> {
+                preferences.putString(PreferencesKey.ThemeMode, intent.themeMode.key)
+                updateState { it.copy(showThemeModeDialog = false) }
+            }
             is AppSettingsIntent.OnShowContinueReadingToggled -> setShowContinueReading(intent.enabled)
             AppSettingsIntent.OnShareLogsClicked -> shareLogs()
             AppSettingsIntent.OnShareLogsFailedMessageShown -> onLogShareFailedMessageShown()

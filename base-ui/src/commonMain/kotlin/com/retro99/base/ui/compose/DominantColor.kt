@@ -163,7 +163,7 @@ private fun darkBackdropScheme(seed: Color): ColorScheme {
     val onSurfaceVariant = Color.White.copy(alpha = 0.7f)
     // Action colors stay on the brand palette: a muted cover must never turn the
     // primary CTA grey, which reads as "disabled".
-    val brand = ParrotDarkColorScheme
+    val brand = emberColorScheme(EmberMode.Night)
     val primary = brand.primary
     val onPrimary = brand.onPrimary
     val primaryContainer = brand.primaryContainer
@@ -227,7 +227,7 @@ private fun lightBackdropScheme(seed: Color): ColorScheme {
     val onSurfaceVariant = Color.Black.copy(alpha = 0.65f)
     // Keep action colors on the brand palette so the primary CTA always reads
     // as tappable, whatever the cover looks like.
-    val brand = ParrotLightColorScheme
+    val brand = emberColorScheme(EmberMode.Day)
     val primary = brand.primary
     val onPrimary = brand.onPrimary
     val primaryContainer = brand.primaryContainer

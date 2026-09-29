@@ -113,10 +113,10 @@
 
     <!-- Book Filters -->
     <string name="books_filter_favorites">Favorites</string>
-    <string name="books_filter_ebook">Ebook</string>
+    <string name="books_filter_ebook">eBook</string>
     <string name="books_filter_audiobook">Audiobook</string>
     <string name="books_filter_readaloud">Readaloud</string>
-    <string name="books_filter_in_series">In Series</string>
+    <string name="books_filter_in_series">In a series</string>
     <string name="books_filter_rated">Rated</string>
     <string name="books_filter_tagged">Tagged</string>
     <string name="books_filter_cached">Downloaded</string>
@@ -126,8 +126,8 @@
     <string name="books_sort_title">Title</string>
     <string name="books_sort_author">Author</string>
     <string name="books_sort_rating">Rating</string>
-    <string name="books_sort_date_published">Date Published</string>
-    <string name="books_sort_date_added">Date Added</string>
+    <string name="books_sort_date_published">Date published</string>
+    <string name="books_sort_date_added">Date added</string>
     <string name="books_sort_ascending">Ascending</string>
     <string name="books_sort_descending">Descending</string>
     <string name="books_sort_a_to_z">A → Z</string>
@@ -338,7 +338,7 @@
     <string name="statistics_sessions_no_sessions">No reading sessions yet</string>
     <string name="statistics_sessions_recent">Recent Sessions</string>
     <string name="statistics_session_speed">Speed: %1$d wpm</string>
-    <string name="books_filter_in_progress" tools:ignore="MissingTranslation">In Progress</string>
+    <string name="books_filter_in_progress" tools:ignore="MissingTranslation">In progress</string>
     <string name="books_view_list" tools:ignore="MissingTranslation">List</string>
     <string name="books_view_grid" tools:ignore="MissingTranslation">Grid</string>
     <string name="books_filter_sheet_title" tools:ignore="MissingTranslation">Filters</string>
@@ -720,4 +720,61 @@
     <string name="audiobook_all_tracks" tools:ignore="MissingTranslation">View all tracks</string>
     <string name="general_ok" tools:ignore="MissingTranslation">OK</string>
     <string name="settings_custom_color" tools:ignore="MissingTranslation">Custom color</string>
+    <string name="app_settings_section_appearance" tools:ignore="MissingTranslation">Appearance</string>
+    <string name="app_settings_theme" tools:ignore="MissingTranslation">Theme</string>
+    <string name="app_settings_theme_system" tools:ignore="MissingTranslation">Match system</string>
+    <string name="app_settings_theme_night" tools:ignore="MissingTranslation">Night</string>
+    <string name="app_settings_theme_day" tools:ignore="MissingTranslation">Day</string>
+    <string name="app_settings_theme_eink" tools:ignore="MissingTranslation">E-ink</string>
+    <string name="books_library_title" tools:ignore="MissingTranslation">Library</string>
+    <string name="books_shelf_title" tools:ignore="MissingTranslation">On your shelf</string>
+    <string name="continue_reading_resume" tools:ignore="MissingTranslation">Resume</string>
+    <string name="books_shelf_count" tools:ignore="MissingTranslation">· %1$d books</string>
+    <string name="books_shelf_count_one" tools:ignore="MissingTranslation">· 1 book</string>
+    <string name="books_sort_by" tools:ignore="MissingTranslation">Sort by</string>
+    <string name="books_sort_order" tools:ignore="MissingTranslation">Order</string>
+    <string name="books_sort_chip_description" tools:ignore="MissingTranslation">Sort, currently %1$s, %2$s</string>
+    <string name="books_filters_chip" tools:ignore="MissingTranslation">Filters</string>
+    <string name="books_filters_chip_description_none" tools:ignore="MissingTranslation">Filters, none active</string>
+    <string name="books_filters_chip_description_active" tools:ignore="MissingTranslation">Filters, %1$d active</string>
+    <string name="books_filter_source" tools:ignore="MissingTranslation">Library source</string>
+    <string name="books_filter_show_only" tools:ignore="MissingTranslation">Show only</string>
+    <string name="books_filter_format" tools:ignore="MissingTranslation">Format</string>
+    <string name="books_filter_reset" tools:ignore="MissingTranslation">Reset</string>
+    <string name="books_filter_on_this_device" tools:ignore="MissingTranslation">On this device</string>
+    <string name="books_filter_show_all" tools:ignore="MissingTranslation">Show all books</string>
+    <string name="books_filter_show_count_one" tools:ignore="MissingTranslation">Show books · 1 filter</string>
+    <string name="books_filter_show_count" tools:ignore="MissingTranslation">Show books · %1$d filters</string>
+    <string name="statistics_range_week" tools:ignore="MissingTranslation">Week</string>
+    <string name="statistics_range_month" tools:ignore="MissingTranslation">Month</string>
+    <string name="statistics_range_year" tools:ignore="MissingTranslation">Year</string>
+    <string name="statistics_range_all_time" tools:ignore="MissingTranslation">All time</string>
+    <string name="statistics_reading_time" tools:ignore="MissingTranslation">Reading time</string>
+    <string name="statistics_hours" tools:ignore="MissingTranslation">%1$dh</string>
+    <string name="statistics_session_count_one" tools:ignore="MissingTranslation">1 session</string>
+    <string name="statistics_session_count" tools:ignore="MissingTranslation">%1$d sessions</string>
+    <string name="statistics_range_this_week" tools:ignore="MissingTranslation">This week · %1$s – %2$s</string>
+    <string name="statistics_range_all_time_since" tools:ignore="MissingTranslation">All time · since %1$s</string>
+    <string name="statistics_range_no_reading" tools:ignore="MissingTranslation">No reading yet</string>
+    <string name="statistics_bar_description" tools:ignore="MissingTranslation">%1$s, %2$s read</string>
+    <string name="statistics_chart_summary" tools:ignore="MissingTranslation">Reading time chart, %1$s in total</string>
+    <string name="statistics_streak_card_subtitle" tools:ignore="MissingTranslation">Current streak · best %1$s</string>
+    <string name="statistics_streak_helper_start" tools:ignore="MissingTranslation">Read today to start a new streak.</string>
+    <string name="statistics_streak_helper_keep" tools:ignore="MissingTranslation">Read today to keep your %1$d-day streak.</string>
+    <string name="statistics_streak_helper_done" tools:ignore="MissingTranslation">You've read today — streak: %1$d days.</string>
+    <string name="statistics_streak_helper_empty" tools:ignore="MissingTranslation">Start reading to begin a streak</string>
+    <string name="statistics_glance_today" tools:ignore="MissingTranslation">Today</string>
+    <string name="statistics_glance_this_month" tools:ignore="MissingTranslation">This month</string>
+    <string name="statistics_glance_all_time" tools:ignore="MissingTranslation">All time</string>
+    <string name="statistics_glance_books_finished" tools:ignore="MissingTranslation">Books finished</string>
+    <string name="statistics_glance_sessions" tools:ignore="MissingTranslation">Sessions</string>
+    <string name="statistics_glance_avg_session" tools:ignore="MissingTranslation">Avg. session</string>
+    <string name="statistics_streak_sheet_title" tools:ignore="MissingTranslation">Reading streak</string>
+    <string name="statistics_streak_tile_current" tools:ignore="MissingTranslation">Current streak</string>
+    <string name="statistics_streak_tile_longest" tools:ignore="MissingTranslation">Longest · %1$s</string>
+    <string name="statistics_streak_previous_month" tools:ignore="MissingTranslation">Previous month</string>
+    <string name="statistics_streak_next_month" tools:ignore="MissingTranslation">Next month</string>
+    <string name="statistics_legend_read" tools:ignore="MissingTranslation">Read</string>
+    <string name="statistics_legend_today" tools:ignore="MissingTranslation">Today</string>
+    <string name="statistics_heading" tools:ignore="MissingTranslation">Statistics</string>
 </resources>

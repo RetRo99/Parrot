@@ -10,6 +10,14 @@ import com.retro99.base.result.AppError
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.statistics.domain.model.StatisticsPeriod
+import com.retro99.statistics.domain.model.StatisticsRange
+import com.retro99.statistics.domain.usecase.GetStatisticsOverviewUseCase
+import com.retro99.base.ui.platform.firstDayOfWeek
+import com.retro99.preferences.api.Preferences
+import com.retro99.preferences.api.PreferencesKey
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
 import com.retro99.statistics.domain.usecase.GetAllBooksReadUseCase
 import com.retro99.statistics.domain.usecase.GetBooksForPeriodUseCase
 import com.retro99.statistics.domain.usecase.GetReadingStatisticsUseCase
@@ -34,6 +42,8 @@ class StatisticsViewModel(
     @Provided private val getBooksForPeriodUseCase: GetBooksForPeriodUseCase,
     @Provided private val getAllBooksReadUseCase: GetAllBooksReadUseCase,
     @Provided private val getRecentSessionsUseCase: GetRecentSessionsUseCase,
+    @Provided private val getStatisticsOverviewUseCase: GetStatisticsOverviewUseCase,
+    @Provided private val preferences: Preferences,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<StatisticsViewState, StatisticsIntent>(StatisticsViewState()) {
 
@@ -43,13 +53,30 @@ class StatisticsViewModel(
     private var activeDetailRequest: StatisticsDetailLoadRequest? = null
     private var detailLoadJob: Job? = null
 
+    private var overviewJob: Job? = null
+
     init {
+        val storedRange = StatisticsRange.entries.firstOrNull { range ->
+            range.name == preferences.getStringOrNull(PreferencesKey.StatisticsRange)
+        }
+        if (storedRange != null) {
+            updateState { it.copy(range = storedRange) }
+        }
         loadStatistics()
+        loadOverview()
     }
 
     override fun onIntent(intent: StatisticsIntent) {
         when (intent) {
-            StatisticsIntent.OnRefresh -> loadStatistics()
+            StatisticsIntent.OnRefresh -> {
+                loadStatistics()
+                loadOverview()
+            }
+            is StatisticsIntent.OnRangeSelected -> selectRange(intent.range)
+            is StatisticsIntent.OnBucketSelected -> {
+                updateState { it.copy(selectedBucketIndex = intent.index) }
+            }
+            is StatisticsIntent.OnStreakMonthShifted -> shiftStreakMonth(intent.months)
             StatisticsIntent.OnBackClicked -> {
                 cancelActiveDetailRequest("navigation_back")
                 onBack()
@@ -62,22 +89,9 @@ class StatisticsViewModel(
                     loadBooksForPeriod(intent.period)
                 }
             }
-            StatisticsIntent.OnCurrentStreakClicked -> {
-                if (viewState.value.statistics != null) {
-                    analytics.logEvent(
-                        StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "current_streak"),
-                    )
-                    showCurrentStreak()
-                }
-            }
-            StatisticsIntent.OnLongestStreakClicked -> {
-                if (viewState.value.statistics != null) {
-                    analytics.logEvent(
-                        StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "longest_streak"),
-                    )
-                    showLongestStreak()
-                }
-            }
+            StatisticsIntent.OnCurrentStreakClicked,
+            StatisticsIntent.OnLongestStreakClicked,
+            -> showStreakSheet()
             StatisticsIntent.OnBooksReadClicked -> {
                 if (activeDetailRequest == null) {
                     analytics.logEvent(StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "books_read"))
@@ -193,7 +207,7 @@ class StatisticsViewModel(
                 updateState {
                     it.copy(
                         detailState = StatisticsDetailState(period, emptyList(), isLoading = true),
-                        streakDetailState = null,
+                        streakSheetState = null,
                         booksReadDetailState = null,
                         sessionsDetailState = null,
                     )
@@ -222,26 +236,50 @@ class StatisticsViewModel(
         )
     }
 
-    private fun showCurrentStreak() {
-        val currentStreakDays = viewState.value.statistics?.currentStreakDays ?: return
+    private fun showStreakSheet() {
+        val today = viewState.value.overview?.today ?: return
+        analytics.logEvent(StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "streak"))
         updateState {
-            it.copy(
-                streakDetailState = StreakDetailState(
-                    streakType = StreakType.CURRENT,
-                    days = currentStreakDays,
-                )
-            )
+            it.copy(streakSheetState = StreakSheetState(LocalDate(today.year, today.month, 1)))
         }
     }
 
-    private fun showLongestStreak() {
-        val longestStreakDays = viewState.value.statistics?.longestStreakDays ?: return
-        updateState {
-            it.copy(
-                streakDetailState = StreakDetailState(
-                    streakType = StreakType.LONGEST,
-                    days = longestStreakDays,
-                )
+    private fun shiftStreakMonth(months: Int) {
+        val overview = viewState.value.overview ?: return
+        val sheet = viewState.value.streakSheetState ?: return
+        val shifted = sheet.calendarMonth.plus(months, DateTimeUnit.MONTH)
+        val currentMonth = LocalDate(overview.today.year, overview.today.month, 1)
+        if (shifted > currentMonth) return
+        updateState { it.copy(streakSheetState = StreakSheetState(shifted)) }
+    }
+
+    private fun selectRange(range: StatisticsRange) {
+        if (range == viewState.value.range) return
+        preferences.putString(PreferencesKey.StatisticsRange, range.name)
+        analytics.logEvent(StatisticsAnalyticsEvent.StatisticsPeriodChanged(period = range.name))
+        updateState { it.copy(range = range, selectedBucketIndex = null) }
+        loadOverview()
+    }
+
+    /** Loads the chart, totals and streaks for the selected range. Quiet on failure. */
+    private fun loadOverview() {
+        overviewJob?.cancel()
+        val range = viewState.value.range
+        overviewJob = viewModelScope.launch {
+            val result = try {
+                getStatisticsOverviewUseCase(range, firstDayOfWeek())
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (throwable: Throwable) {
+                Err(AppError.UnknownError(throwable))
+            }
+            result.fold(
+                success = { overview ->
+                    updateState { it.copy(overview = overview, selectedBucketIndex = null) }
+                },
+                failure = { error ->
+                    updateState { it.copy(error = error, isLoading = false) }
+                },
             )
         }
     }
@@ -256,7 +294,7 @@ class StatisticsViewModel(
                 updateState {
                     it.copy(
                         detailState = null,
-                        streakDetailState = null,
+                        streakSheetState = null,
                         booksReadDetailState = BooksReadDetailState(emptyList(), isLoading = true),
                         sessionsDetailState = null,
                     )
@@ -295,7 +333,7 @@ class StatisticsViewModel(
                 updateState {
                     it.copy(
                         detailState = null,
-                        streakDetailState = null,
+                        streakSheetState = null,
                         booksReadDetailState = null,
                         sessionsDetailState = SessionsDetailState(
                             sessions = emptyList(),
@@ -454,7 +492,7 @@ class StatisticsViewModel(
         updateState {
             it.copy(
                 detailState = null,
-                streakDetailState = null,
+                streakSheetState = null,
                 booksReadDetailState = null,
                 sessionsDetailState = null,
             )
