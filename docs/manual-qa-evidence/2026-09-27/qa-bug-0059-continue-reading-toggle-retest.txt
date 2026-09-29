@@ -16,7 +16,7 @@ Samsung execution
 - Started with original profile active and Show Continue Reading enabled. Opened App Settings and tapped the preference off, then navigated to Books and returned to App Settings; toggled it back on.
 - UI state after the off action showed the switch unchecked. After the on action, Show Continue Reading was checked again; Open Last Book remained checked. The original setting value was restored.
 - PID-scoped local DebugAnalyticsManager output contained exactly two `show_continue_reading_toggled` events: `is_enabled=false` at `21:48:02.916` and `is_enabled=true` at `21:49:55.217`. No duplicate toggle event or profile/book identifier appeared. The first App Settings exposure was `source_screen=books`, `entry_point=bottom_navigation`; a later App Settings exposure came from navigation Back and had bounded `source_screen=statistics`, `entry_point=navigation_back`.
-- The Books screen had no Continue Reading shelf or accessible floating bubble even with the preference enabled before the test; no current-reading content fixture was available. Therefore the shelf/bubble hide-and-return visual subvariant is N-A, not PASS. The toggle behavior, persisted final state and event outcomes are directly verified.
+- The Books screen had no Continue Reading shelf or accessible floating bubble even with the preference enabled before this test; no current-reading model was present. Therefore the shelf/bubble hide-and-return visual subvariant was **NOT RUN on this build**, not N-A for the feature. The toggle behavior, persisted final state and event outcomes are directly verified. A later Samsung case-425 retest used the existing current-reading model and passed the shelf/bubble hide-and-restore variant without server authentication; see [QA-BUG-0071 retest](../2026-09-28/qa-bug-0071-case-425-filtered-shelf-retest.txt).
 - Zero PID-scoped fatal-crash markers and zero exception-report markers. No failure was induced; Crashlytics delivery was not tested.
 
 Analytics/diagnostics qualification
@@ -25,4 +25,4 @@ Analytics/diagnostics qualification
 
 Disposition
 - QA-BUG-0059: implementation/host schema PASS and Samsung toggle Analytics PASS; Firebase delivery remains waived/unverified.
-- Case 425: direct preference off/on and matching local events PASS. Shelf/floating-bubble visibility is N-A because no current-reading content was available, so that visual variant is not claimed as exercised.
+- Case 425 on this QA-BUG-0059 build: direct preference off/on and matching local events PASS; shelf/floating-bubble visibility **NOT RUN** because no current-reading model was available. A later case-425/QA-BUG-0071 Samsung run passed hide/restore with an existing current-reading model, but its origin is not identified; the local-EPUB visual variant remains NOT RUN/BLOCKED. See [reconciliation](../2026-09-29/case-425-continue-reading-visual-coverage-reconciliation.txt).

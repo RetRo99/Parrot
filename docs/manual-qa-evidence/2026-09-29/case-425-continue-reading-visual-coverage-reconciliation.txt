@@ -1,0 +1,17 @@
+# Case 425 — Continue Reading shelf/bubble visual coverage reconciliation
+
+- **Review time:** 2026-09-29 19:01 CEST (UTC+0200).
+- **Current device availability:** `adb devices -l` lists the Android Auto head unit and emulator only; required Samsung `RFCWC0SSVDM` is absent. No new device action or fixture mutation was performed in this review.
+
+## Corrected disposition
+
+- In the 2026-09-27 QA-BUG-0059 Analytics retest, Show Continue Reading began enabled but there was no current-reading model, shelf, or bubble. The toggle and its `false`/`true` events were exercised; shelf/bubble visibility was **NOT RUN on that build**, not N-A as a product feature. The original preference was restored. See [QA-BUG-0059 retest](../2026-09-27/qa-bug-0059-continue-reading-toggle-retest.txt).
+- The visual variant was subsequently executed on the physical Samsung for case 425 during QA-BUG-0071 retesting on 2026-09-28. An existing Parrot current-reading model was present while the Books filter produced an empty-results message. The unauthenticated-server startup prompt was dismissed with Close; no server authentication, Retry, or fixture mutation occurred. With the filter unchanged, toggling OFF removed the Continue Reading shelf on Books and floating bubble on Series; toggling ON restored both. The original ON preference was verified afterward. Exactly one local boolean event for each state appeared. See [QA-BUG-0071 case-425 retest](../2026-09-28/qa-bug-0071-case-425-filtered-shelf-retest.txt).
+- This is a Samsung PASS for hide/restore with an existing current-reading model, without server authentication. However, that evidence does not identify the model as a local EPUB, so it does **not** close the requested local-EPUB/current-reading visual variant. A controlled local *Pride and Prejudice* EPUB was used and restored successfully on this Samsung in cases 11 and 14; see [case 11](../2026-09-27/case-011-recents-swipe-checkpoint-retest.txt) and [case 14](../2026-09-27/case-014-offline-cold-start.txt). Those records establish the local fixture, but do not tie it to the current-reading model used on 2026-09-28. Do not infer that connection. The 2026-09-29 TTS run also confirms the local EPUB remained available, but was not a case-425 hide/restore run.
+
+## Current result
+
+- Case 425 generic existing-current-model visual hide/restore: **PASS** on the later Samsung build/evidence above, with target provenance unknown.
+- Case 425 local-EPUB/current-reading visual variant: **NOT RUN / BLOCKED** pending Samsung reconnection and direct confirmation that the active target is the retained local EPUB. This is not N-A. ADB currently lists only the Android Auto head unit and emulator; no new device action or fixture mutation occurred.
+- QA-BUG-0059 direct toggle interaction, state restoration, and Analytics: **PASS**. Its original-build shelf/bubble variant was NOT RUN; the later generic model presentation passed as described above, but the local-EPUB variant remains open.
+- No credential, remote authentication, new EPUB import, or cross-device data was used. When the Samsung is available, verify the local EPUB/current-reading target, perform the OFF/ON visual check on Books and Series, and restore the pre-test reading target/position and settings.

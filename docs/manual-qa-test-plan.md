@@ -557,7 +557,7 @@ Ordinary cached-library browsing, sign-in handshakes, downloads, account control
 |---|---|---|---|
 | 423 | Open reader settings from hub | Tap "Reader settings" | Reader settings sheet opens |
 | 424 | Open last book on launch | Toggle on and off | Behaviour changes on next launch (see 11) |
-| 425 | Show continue reading | Toggle off, then on | Shelf and floating bubble hidden, then restored; emit exactly one `show_continue_reading_toggled(is_enabled)` event per committed toggle; no profile or book identifiers |
+| 425 | Show continue reading | With a local EPUB set as the current-reading target, toggle off, then on; inspect Books and an eligible Series screen. Do not require server authentication. | Shelf and floating bubble hidden, then restored; emit exactly one `show_continue_reading_toggled(is_enabled)` event per committed toggle; no profile or book identifiers |
 | 426 | Clear current book | Tap "Clear current book" | Confirmation/snackbar, continue-reading cleared |
 | 427 | Reading statistics row | Tap | Statistics screen opens |
 | 428 | Servers row | Tap | Server Management opens |
