@@ -1,0 +1,24 @@
+# Cloud Account case 360 — email validation pre-fix Samsung run
+
+- **Date/time:** 2026-09-29, approximately 07:08–07:24 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`settings get secure navigation_mode` returned `2`).
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `3895ecb2b51673e7c92b69f8ccc2e7831a8d6dfb7e5d3f1a2c5ed3037ab990df`, source commit `f876cba6720b3e5c6ac63c079c615bd6d40e0d45`, PID `11324`; repository HEAD `1b23c89c` is docs-only after the installed build. App data was preserved.
+- **Fixture/privacy:** Kept the original Default profile and unauthenticated server/book state; did not Retry or modify it. Entered only synthetic local-only values (`not-an-email`, `qa@`, and reserved `qa@example.com`) and a synthetic password. Nothing was submitted. Both fields were cleared. A Bitwarden “Save password?” system prompt appeared during keyboard editing and was explicitly declined with “No, thanks”; no credential was saved.
+
+## Steps and observed UI
+
+1. From Settings, opened Sync & Backup; initial session restoration settled signed out.
+2. In Create account mode, entered a malformed email. The email field remained neutral (no red/error styling and no field-specific supporting text); the generic form helper described email/password/terms, and the Create account button was disabled. [Screenshot: malformed field with generic helper](cloud-account-email-invalid-helper.png); [same malformed value with keyboard visible](cloud-account-email-invalid-signed-out.png).
+3. Switched to Sign in and entered another malformed value (`qa@`). The field still showed no inline error; the software keyboard was visible. [Screenshot: malformed `qa@` field](cloud-account-email-invalid-qa-at.png). An additional sign-in screenshot shows the disabled submit and generic helper while the synthetic password remains masked: [sign-in state](cloud-account-email-invalid-signin.png).
+4. Replaced it with `qa@example.com` solely to exercise syntactically valid formatting. No account operation was submitted and no password remained. [Screenshot: valid-format value, keyboard visible](cloud-account-email-valid-syntax.png).
+5. Cleared the email field. The final UI tree showed empty email and password fields, the Parrot MainActivity remained foreground, and the Default profile/server fixture was unchanged. [Intermediate focused form before final clear](cloud-account-email-invalid-form-live.png).
+
+- **Expected:** Inline, accessible email-format error appears for malformed non-empty input before any submit; correction removes the error and validation state recovers.
+- **Actual:** No email-specific error text or error styling appeared for either malformed value. The existing helper is generic form guidance, not an email error. A syntactically valid value had no explicit feedback.
+- **Functional result:** FAIL for case 360. No form submit, OAuth, network auth request or server mutation occurred.
+- **Analytics:** Local logcat contained route/session restore output, but no validation-result event on invalid input or correction. Firebase Analytics ingestion is waived; no Firebase delivery is claimed.
+- **Diagnostics:** No bounded validation failure/recovery breadcrumb appeared. This was ordinary input validation, so no Crashlytics non-fatal was expected.
+- **Unexpected test-control detour:** One attempted field replacement while keyboard focus was absent did not edit the input; a subsequent Back returned to App Settings. The app responded to Back normally. The Bitwarden save prompt was declined; the following App Settings screenshot is [here](cloud-account-email-autofill-dismissed.png). Neither event is an app defect. Re-entered the screen and completed the validation observation using a focused email field.
+- **Defect:** QA-BUG-0088, confirmed and recorded before code changes. The result ledger and bug register preserve the failure; a coupled inline-feedback and bounded validation-outcome fix is pending.
+
+All recorded input examples are synthetic and locally cleared. DebugAnalyticsManager is local-only; Firebase Analytics ingestion is waived and Crashlytics delivery is not established. No cross-app or cross-device sync was tested.
