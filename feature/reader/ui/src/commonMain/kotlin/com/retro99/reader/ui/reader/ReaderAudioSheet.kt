@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowLeft
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowRight
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
@@ -49,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,6 +78,8 @@ import resources.translations.reader_audio_only_description
 import resources.translations.reader_audio_pitch
 import resources.translations.reader_audio_pitch_normal
 import resources.translations.reader_audio_previous_sentence
+import resources.translations.reader_toc_next_chapter
+import resources.translations.reader_toc_previous_chapter
 import resources.translations.reader_audio_rate
 import resources.translations.reader_audio_sentence
 import resources.translations.reader_audio_sentence_of
@@ -150,6 +155,8 @@ internal data class AudioSheetActions(
     val onSeek: (Long) -> Unit,
     val onSkipBack: () -> Unit,
     val onSkipForward: () -> Unit,
+    val onPreviousChapter: () -> Unit,
+    val onNextChapter: () -> Unit,
     val onSpeed: (Float) -> Unit,
     val onRate: (Float) -> Unit,
     val onPitch: (Float) -> Unit,
@@ -307,6 +314,8 @@ private fun NarrationBody(ui: AudioSheetUi, actions: AudioSheetActions) {
     Transport(
         ui = ui,
         onPlayPause = actions.onPlayPause,
+        onPreviousChapter = actions.onPreviousChapter,
+        onNextChapter = actions.onNextChapter,
         start = {
             IconButton(onClick = actions.onSkipBack, modifier = Modifier.size(56.dp)) {
                 Icon(
@@ -401,9 +410,11 @@ private fun DeviceVoiceBody(ui: AudioSheetUi, hasNarration: Boolean, actions: Au
     Transport(
         ui = ui,
         onPlayPause = actions.onPlayPause,
+        onPreviousChapter = actions.onPreviousChapter,
+        onNextChapter = actions.onNextChapter,
         start = {
             LabelledSkip(
-                icon = { Icon(Icons.Default.SkipPrevious, null, tint = colors.ink, modifier = Modifier.size(28.dp)) },
+                icon = { Icon(Icons.Default.KeyboardDoubleArrowLeft, null, tint = colors.ink, modifier = Modifier.size(28.dp)) },
                 label = stringResource(StringRes.reader_audio_sentence),
                 description = stringResource(StringRes.reader_audio_previous_sentence),
                 onClick = actions.onSkipBack,
@@ -411,7 +422,7 @@ private fun DeviceVoiceBody(ui: AudioSheetUi, hasNarration: Boolean, actions: Au
         },
         end = {
             LabelledSkip(
-                icon = { Icon(Icons.Default.SkipNext, null, tint = colors.ink, modifier = Modifier.size(28.dp)) },
+                icon = { Icon(Icons.Default.KeyboardDoubleArrowRight, null, tint = colors.ink, modifier = Modifier.size(28.dp)) },
                 label = stringResource(StringRes.reader_audio_sentence),
                 description = stringResource(StringRes.reader_audio_next_sentence),
                 onClick = actions.onSkipForward,
@@ -456,6 +467,8 @@ private fun stepped(value: Float, delta: Float): Float =
 private fun Transport(
     ui: AudioSheetUi,
     onPlayPause: () -> Unit,
+    onPreviousChapter: () -> Unit,
+    onNextChapter: () -> Unit,
     start: @Composable () -> Unit,
     end: @Composable () -> Unit,
 ) {
@@ -468,6 +481,11 @@ private fun Transport(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        ChapterSkipButton(
+            icon = Icons.Default.SkipPrevious,
+            description = stringResource(StringRes.reader_toc_previous_chapter),
+            onClick = onPreviousChapter,
+        )
         start()
         IconButton(
             onClick = onPlayPause,
@@ -485,6 +503,22 @@ private fun Transport(
             )
         }
         end()
+        ChapterSkipButton(
+            icon = Icons.Default.SkipNext,
+            description = stringResource(StringRes.reader_toc_next_chapter),
+            onClick = onNextChapter,
+        )
+    }
+}
+
+@Composable
+private fun ChapterSkipButton(
+    icon: ImageVector,
+    description: String,
+    onClick: () -> Unit,
+) {
+    IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+        Icon(icon, description, tint = Ember.colors.ink, modifier = Modifier.size(28.dp))
     }
 }
 

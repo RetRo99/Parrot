@@ -811,7 +811,7 @@ private fun ReadingProgressBar(
     audioStatus: String? = null,
 ) {
     val totalProgress = totalProgression?.toFloat() ?: 0f
-    val totalProgressPercent = (totalProgress * 100).toInt()
+    val totalProgressPercent = bookPercent(totalProgression)
     val chapterProgress = chapterProgression?.toFloat() ?: 0f
     val chapterProgressPercent = chapterProgression?.let { (it * 100).toInt() }
 

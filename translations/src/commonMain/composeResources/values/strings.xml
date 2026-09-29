@@ -393,8 +393,6 @@
     <string name="reader_overlay_device_voice_description" tools:ignore="MissingTranslation">Reads the text with your phone’s voice</string>
     <string name="reader_overlay_narration_unavailable" tools:ignore="MissingTranslation">Not available for this book</string>
     <string name="reader_overlay_start_listening" tools:ignore="MissingTranslation">Start listening</string>
-    <string name="reader_overlay_page_in_chapter" tools:ignore="MissingTranslation">Page %1$d of %2$d in chapter</string>
-    <string name="reader_overlay_minutes_left" tools:ignore="MissingTranslation">%1$d min left in chapter</string>
     <string name="reader_overlay_chapter_page_count" tools:ignore="MissingTranslation">%1$d p</string>
     <string name="reader_overlay_current_chapter" tools:ignore="MissingTranslation">You’re here · %1$d%%</string>
     <string name="reader_overlay_bookmark_location" tools:ignore="MissingTranslation">Ch. %1$d · page %2$d</string>
@@ -944,7 +942,6 @@
     <string name="reader_overlay_open_player" tools:ignore="MissingTranslation">Open player</string>
     <string name="reader_overlay_play" tools:ignore="MissingTranslation">Play</string>
     <string name="reader_overlay_pause" tools:ignore="MissingTranslation">Pause</string>
-    <string name="reader_overlay_open_contents" tools:ignore="MissingTranslation">Open contents</string>
     <string name="reader_overlay_narration_progress" tools:ignore="MissingTranslation">%1$s / %2$s · %3$s×</string>
     <string name="reader_overlay_device_voice_progress" tools:ignore="MissingTranslation">%1$s · sentence %2$d of %3$d</string>
     <string name="reader_overlay_now_playing_narration" tools:ignore="MissingTranslation">Narration, chapter %1$d, %2$s</string>

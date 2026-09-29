@@ -224,7 +224,7 @@ private fun BookmarkRow(
     modifier: Modifier = Modifier,
 ) {
     val progressText = bookmark.totalProgression
-        ?.let { "${(it * 100).toInt()}%" }
+        ?.let { progress -> "${bookPercent(progress)}%" }
         ?: ""
 
     val defaultTitle = stringResource(StringRes.reader_bookmark_default_title)
