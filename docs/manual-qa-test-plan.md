@@ -544,7 +544,7 @@ Ordinary cached-library browsing, sign-in handshakes, downloads, account control
 | 414 | Empty profile name | Attempt to submit a blank name | Confirm is disabled/blank submission is ignored; no profile is created |
 | 415 | Duplicate profile names | Create two profiles with the same name | Allowed or rejected consistently — no confusion in switching |
 | 416 | Long profile name | Enter a very long name | Name truncates/wraps gracefully in tiles and menus |
-| 417 | Switch profile during playback | Switch while audio plays | Behaviour as designed (stop or continue) with no crash |
+| 417 | Switch profile during playback | In a disposable profile, use/import a local EPUB, enable on-device System TTS, and confirm actual PLAYING. Navigate to profile switching only while playback remains active (verify via the mini-player/now-playing state), then switch to another disposable profile. Do not use server ReadAloud or the case-446 server fixture; capture and restore notification permission if TTS requires it. | Record whether playback stops or continues as designed; no crash; restore the prior profile, EPUB position, TTS setting and permission baseline |
 | 418 | Switch profile while reading | Switch with a book open | Reader closes or switches as designed; positions stay per profile |
 | 419 | Per-profile filters | Set filters/sort/view mode in profile A, switch to B | Profile B has its own settings |
 | 420 | Per-profile reader settings | Change reader settings in profile A, switch to B | Profile B keeps its own reader settings |
