@@ -1,0 +1,36 @@
+# Reader critical-pass telemetry and diagnostic audit
+
+- **Date/time:** Samsung run 2026-09-29, 11:23–11:27 CEST; logcat audit performed 11:49 CEST.
+- **Device/build:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; package `com.retro99.parrot` 0.4.5 (21), PID `9296`, APK SHA-256 `7684627be52e2b954b2856cf88962ee52bf5efe48725a3d9f04fc466796b6a63`, repository HEAD `5e2f8c262e268556244bb8d581a2ee19176ec577` (documentation-only relative to installed APK).
+- **Privacy:** This is a sanitized extraction of event names and allowlisted diagnostic-context fields only. It omits parameter values, book/profile IDs, titles, content, file paths, URLs, credentials and raw log lines. DebugAnalyticsManager was the active debug provider and logs locally only.
+
+## Observed local events
+
+| Samsung time (CEST) | Local event | Interpretation |
+|---|---|---|
+| 11:23:24.444 | `book_imported` | One completion event after selecting the unique-metadata local EPUB. No import failure/cancel was induced. |
+| 11:24:28.463 | `book_detail_viewed` | Detail exposure for the selected local fixture. |
+| 11:24:46.818 | `read_button_clicked` | Read action attempt from Detail. |
+| 11:24:47.013 | `book_opened` | Reader publication opened; usable content was observed on-device. |
+| 11:25:58.825 | `book_closed` | Reader closed through system Back. |
+| 11:25:58.826 / .831 | `navigation_back_attempted` / `navigation_back` | One system-Back attempt and one successful transition to Book Detail. |
+| 11:26:19.424 | `read_button_clicked` | Reopen attempt. |
+| 11:26:19.669 | `book_opened` | Reopen succeeded; Reader restored the saved page 2/36 before further interaction. |
+
+Other nearby `sync_run_completed`, lifecycle and current-book checkpoint events are omitted from the event table because they are not Reader test outcomes. Sanitizer source confirms `book_uuid`, free-form error messages and other unapproved keys are not forwarded by the analytics provider.
+
+## Observed diagnostic breadcrumbs
+
+- 11:25:58.826: `screen=reader source_screen=reader destination_screen=book_detail entry_point=system_back action=back operation=navigation_back stage=navigation outcome=started`.
+- 11:25:58.831: `screen=reader source_screen=reader destination_screen=book_detail entry_point=system_back action=back operation=navigation_back stage=terminal outcome=succeeded`.
+- 11:25:47.014 / 11:25:47.033: `screen=reader action=save_current_book_target operation=current_book_target_save entry_point=reading_duration_threshold media_type=ebook stage=started/terminal outcome=started/succeeded`.
+
+The Back pair was correlated in the app's diagnostic context (correlation value intentionally omitted). No page-turn/center-tap breadcrumbs are expected at tap frequency.
+
+## Coverage gaps and delivery status
+
+- Local Analytics evidence is **PASS for the listed exercised events only**. Firebase Analytics ingestion was waived; no Firebase delivery claim is made.
+- Reader open success is represented by `book_opened`, but the tested path had no explicit usable-content success breadcrumb.
+- Reading-progress saves produced no outcome event/breadcrumb in this successful run. Source audit found the error result is ignored; QA-BUG-0094 records the source-confirmed failure/recovery gap. This run does not prove a failure path.
+- No exception/crash was induced. Crashlytics delivery and symbolication were not tested; the debug provider is not a Firebase sender.
+- The original internal-link navigation is not a Crashlytics failure. The intentional center-tap control test kept the same location and produced no unexpected report.
