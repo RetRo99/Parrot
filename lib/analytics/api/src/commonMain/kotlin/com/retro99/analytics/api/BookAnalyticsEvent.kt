@@ -665,6 +665,21 @@ sealed interface NavigationAnalyticsEvent : AnalyticsEvent {
         }
     }
 
+    data class ContinueReadingProfileStateResolved(
+        val isAvailable: Boolean,
+        val isProfileSwitch: Boolean,
+    ) : NavigationAnalyticsEvent {
+        override val name: String = "continue_reading_profile_state_resolved"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "home",
+            "action" to "resolve_continue_reading_target",
+            "operation" to "continue_reading_profile_rebind",
+            "stage" to "terminal",
+            "outcome" to if (isAvailable) "available" else "unavailable",
+            "reason_code" to if (isProfileSwitch) "profile_switch" else "initial_load",
+        )
+    }
+
     data class ContinueReadingOpenAttempted(
         val entryPoint: ContinueReadingEntryPoint,
         val mediaType: String,

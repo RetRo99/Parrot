@@ -36,6 +36,7 @@ import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -158,9 +159,59 @@ class HomeNavigationViewModel(
     }
 
     private fun observeCurrentlyReading() {
-        observeCurrentlyReadingUseCase()
-            .onEach { currentlyReading ->
-                updateState { it.copy(currentlyReading = currentlyReading?.toUiModel()) }
+        var correlationId: String? = null
+        var reasonCode = "initial_load"
+        var stateResolved = false
+        observeProfileScopedPreference(
+            activeProfileIds = userRegistry.observeActiveProfile().map { it?.id },
+            observePreference = { observeCurrentlyReadingUseCase() },
+        )
+            .onEach { snapshot ->
+                if (!snapshot.isResolved) {
+                    correlationId = newContinueReadingProfileCorrelationId()
+                    reasonCode = if (snapshot.isProfileSwitch) "profile_switch" else "initial_load"
+                    stateResolved = false
+                    updateState { it.copy(currentlyReading = null) }
+                    analytics.logBreadcrumb(
+                        continueReadingProfileContext(
+                            correlationId = correlationId,
+                            stage = "started",
+                            outcome = "started",
+                            reasonCode = reasonCode,
+                        ),
+                    )
+                } else {
+                    updateState { it.copy(currentlyReading = snapshot.value?.toUiModel()) }
+                    if (snapshot.isFirstValue && !stateResolved) {
+                        stateResolved = true
+                        val outcome = if (snapshot.value == null) "unavailable" else "available"
+                        analytics.logEvent(
+                            NavigationAnalyticsEvent.ContinueReadingProfileStateResolved(
+                                isAvailable = snapshot.value != null,
+                                isProfileSwitch = snapshot.isProfileSwitch,
+                            ),
+                        )
+                        analytics.logBreadcrumb(
+                            continueReadingProfileContext(
+                                correlationId = correlationId,
+                                stage = "terminal",
+                                outcome = outcome,
+                                reasonCode = reasonCode,
+                            ),
+                        )
+                    }
+                }
+            }
+            .catch { error ->
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                val failureContext = continueReadingProfileContext(
+                    correlationId = correlationId ?: newContinueReadingProfileCorrelationId(),
+                    stage = "terminal",
+                    outcome = "failed",
+                    reasonCode = "current_book_observation_failed",
+                )
+                analytics.logException(error, failureContext)
+                updateState { it.copy(currentlyReading = null) }
             }
             .launchIn(viewModelScope)
     }
@@ -302,9 +353,42 @@ class HomeNavigationViewModel(
     }
 
     private fun observeBubblePosition() {
-        observeUserPreferenceUseCase<BubblePositionModel>(PreferencesKey.BubblePosition)
-            .onEach { position ->
-                updateState { it.copy(bubblePosition = position ?: BubblePositionModel.DEFAULT) }
+        observeProfileScopedPreference(
+            activeProfileIds = userRegistry.observeActiveProfile().map { it?.id },
+            observePreference = {
+                observeUserPreferenceUseCase<BubblePositionModel>(PreferencesKey.BubblePosition)
+            },
+        )
+            .onEach { snapshot ->
+                if (!snapshot.isResolved) {
+                    failedBubblePosition = null
+                    updateState {
+                        it.copy(
+                            bubblePosition = null,
+                            bubblePositionSaveFailureCount = 0,
+                        )
+                    }
+                } else {
+                    updateState {
+                        it.copy(bubblePosition = snapshot.value ?: BubblePositionModel.DEFAULT)
+                    }
+                }
+            }
+            .catch { error ->
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                analytics.logException(
+                    error,
+                    DiagnosticContext(
+                        screen = "home",
+                        action = "observe_bubble_position",
+                        operation = "bubble_position_observation",
+                        stage = "terminal",
+                        outcome = "failed",
+                        reasonCode = "bubble_position_observation_failed",
+                    ),
+                )
+                failedBubblePosition = null
+                updateState { it.copy(bubblePosition = null) }
             }
             .launchIn(viewModelScope)
     }
@@ -826,3 +910,21 @@ class HomeNavigationViewModel(
         }
     }
 }
+
+@OptIn(ExperimentalUuidApi::class)
+private fun newContinueReadingProfileCorrelationId(): String = Uuid.random().toString()
+
+private fun continueReadingProfileContext(
+    correlationId: String?,
+    stage: String,
+    outcome: String,
+    reasonCode: String,
+): DiagnosticContext = DiagnosticContext(
+    screen = "home",
+    action = "resolve_continue_reading_target",
+    operation = "continue_reading_profile_rebind",
+    stage = stage,
+    outcome = outcome,
+    reasonCode = reasonCode,
+    correlationId = correlationId,
+)

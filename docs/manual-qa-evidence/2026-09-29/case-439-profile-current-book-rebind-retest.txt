@@ -1,0 +1,25 @@
+# Cases 439/776 — Continue Reading profile isolation: Samsung fix retest
+
+- **Run time:** 2026-09-29, approximately 03:03–03:09 CEST (final candidate retest after rebuilding).
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`, portrait, gesture navigation.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, PID `23049`. Final debug APK SHA-256 `56fe042e3a4bcad5b86a822cb9dbd1199956c7d972aa0169cb493b3fb695ec72`; local APK and APK pulled from the Samsung match. Candidate built from the QA-BUG-0078 fix working tree based on source HEAD `0abdbfd37d4397b4348aeb04bd969255f7ad1bc0`; focused source commit is recorded in the bug register after commit.
+- **Fixture/privacy:** Used the existing disposable QA profile with no current-book row in Settings and the original profile with an existing current-reading target. Switched back to the original profile after the run. No profile labels/IDs or book identifiers are retained. Did not clear the original target, activate a stale target, Retry the unauthenticated server, or clear app data.
+
+## Steps and functional outcome
+
+1. Installed the candidate over the existing app with `adb install -r`; no app data was cleared. Closed the known startup authentication prompt with Close only.
+2. From the original profile, opened Settings and switched to the existing disposable profile. Its Settings showed no Clear Current Book row. The Books screen had no Continue Reading shelf, and Series had no floating bubble. **Pass:** destination profile no longer displays the prior profile's target.
+3. Switched back to the original profile. The existing Continue Reading shelf appeared again on Books, and the existing target remained intact. **Pass:** source profile state was restored without mutation.
+4. No stale target was tapped. The explicit Clear Current Book action was not run because there was no current-book row in the disposable destination profile and clearing the original profile is prohibited.
+
+## Analytics and diagnostics (local DebugAnalyticsManager only)
+
+- Local Analytics contained two `profile_operation_attempted` and two `profile_switched` events, corresponding to switch-to-empty and switch-back. It contained three `continue_reading_profile_state_resolved` events: initial `available`, switch `unavailable`, and return `available`. Firebase Analytics ingestion is waived and not claimed.
+- Diagnostic summary contained three `continue_reading_profile_rebind` start/terminal correlation pairs (initial load, destination profile unavailable, source profile available), plus two profile-switch start/success pairs. Correlation identifiers were checked for pairing but are not retained.
+- No fatal or generic exception marker was present for final-candidate PID `23049`. No unexpected failure was induced, so Crashlytics delivery remains unverified.
+
+## Verification
+
+- Case 439 no-current-target visibility variant: **PASS** by safe profile isolation; literal Clear Current Book action: **NOT RUN**.
+- Case 776 profile-switch rebind: **PASS** for both switch-to-empty and restore-to-source directions.
+- Host tests on the final candidate: Home UI + Analytics implementation total 103 tests, 0 failures/errors/skips. Android `assembleDebug` and `:feature:home:ui:compileKotlinIosSimulatorArm64` passed. The Firebase Analytics provider was not used for an ingestion claim.

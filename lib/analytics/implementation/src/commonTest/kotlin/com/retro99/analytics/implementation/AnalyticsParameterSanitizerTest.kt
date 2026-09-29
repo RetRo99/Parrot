@@ -218,6 +218,34 @@ class AnalyticsParameterSanitizerTest {
     }
 
     @Test
+    fun continueReadingProfileResolutionUsesOnlyBoundedAvailability() {
+        val event = NavigationAnalyticsEvent.ContinueReadingProfileStateResolved(
+            isAvailable = false,
+            isProfileSwitch = true,
+        )
+        val profileSwitch = sanitizeAnalyticsParameters(
+            event.parameters + mapOf(
+                "profile_id" to "private-profile-id",
+                "book_uuid" to "private-book-id",
+            ),
+        )
+        val initialLoad = sanitizeAnalyticsParameters(
+            NavigationAnalyticsEvent.ContinueReadingProfileStateResolved(
+                isAvailable = true,
+                isProfileSwitch = false,
+            ).parameters,
+        )
+
+        assertEquals("continue_reading_profile_state_resolved", event.name)
+        assertEquals("unavailable", profileSwitch["outcome"])
+        assertEquals("profile_switch", profileSwitch["reason_code"])
+        assertFalse("profile_id" in profileSwitch)
+        assertFalse("book_uuid" in profileSwitch)
+        assertEquals("available", initialLoad["outcome"])
+        assertEquals("initial_load", initialLoad["reason_code"])
+    }
+
+    @Test
     fun homeExposureRetainsOnlyBoundedSourceAndEntryPoint() {
         val sanitized = sanitizeAnalyticsParameters(
             NavigationAnalyticsEvent.HomeViewed(
