@@ -1,7 +1,7 @@
 # QA-BUG-0097 — host/schema and build checks
 
 - **Date:** 2026-09-29.
-- **Source base:** implementation commit `1713f7600f55f65480d9bb5fcb4c5946805f6e5e` (the exact tested source tree; commit created after host/build checks).
+- **Source base:** implementation commit `1713f7600b66a57182ef29111a2ed0c2d752a0af` (the exact tested source tree; commit created after host/build checks).
 - **Command:** `./gradlew :feature:reader:ui:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug`
 - **Latest result:** `BUILD SUCCESSFUL`; 596 actionable tasks (49 executed, 547 up-to-date; configuration cache reused). The final rerun followed addition of explicit failure-terminal assertions to the retry schema test.
 - **Tests:** Reader UI Android host suite 61 passed, 0 failures/errors. Analytics implementation Android host suite 57 passed, 0 failures/errors; this includes the new retry-schema regression. The existing launch-schema test confirms default initial attribution is unchanged.
