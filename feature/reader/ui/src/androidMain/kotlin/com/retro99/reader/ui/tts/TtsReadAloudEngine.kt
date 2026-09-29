@@ -10,8 +10,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import com.retro99.analytics.api.Analytics
 import com.retro99.books.domain.model.BookType
+import com.retro99.reader.ui.navigator.TtsPlaybackFailureReason
 import com.retro99.reader.ui.playback.ForegroundServiceController
 import com.retro99.reader.ui.playback.MediaPlaybackController
 import com.retro99.reader.ui.playback.setArtworkDataIfSmall
@@ -43,15 +43,25 @@ data class TtsPlaybackInfo(
     val coverArtwork: ByteArray?,
 )
 
+class TtsPlaybackStartException(
+    val reasonCode: TtsPlaybackFailureReason,
+    cause: Throwable? = null,
+) : IllegalStateException("TTS playback start failed (${reasonCode.analyticsValue})", cause)
+
 @Single
 class TtsReadAloudEngine(
     @Provided private val context: Context,
-    @Provided private val analytics: Analytics,
     private val synthesizer: TtsSynthesizer,
     private val audioGenerator: TtsAudioGenerator,
     private val mediaPlaybackController: MediaPlaybackController,
     private val foregroundServiceController: ForegroundServiceController,
 ) : AutoCloseable {
+
+    data class PlaybackFailure(
+        val correlationId: String?,
+        val reasonCode: TtsPlaybackFailureReason,
+        val error: Throwable,
+    )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var player: ExoPlayer? = null
@@ -68,6 +78,7 @@ class TtsReadAloudEngine(
     private var generation: Int = 0
     private var chapterTimeline = TtsChapterTimeline.EMPTY
     private var pendingSentenceProgress: Double? = null
+    private var playbackOperationCorrelationId: String? = null
 
     private val readyFiles = mutableMapOf<Int, File>()
     private val queuedSentenceIndices = linkedSetOf<Int>()
@@ -85,6 +96,9 @@ class TtsReadAloudEngine(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _playbackFailures = MutableSharedFlow<PlaybackFailure>(extraBufferCapacity = 4)
+    val playbackFailures: SharedFlow<PlaybackFailure> = _playbackFailures.asSharedFlow()
 
     private val _chapterCompleted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val chapterCompleted: SharedFlow<Unit> = _chapterCompleted.asSharedFlow()
@@ -127,7 +141,13 @@ class TtsReadAloudEngine(
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            analytics.logException(error, "TTS audio playback failed")
+            _playbackFailures.tryEmit(
+                PlaybackFailure(
+                    correlationId = playbackOperationCorrelationId,
+                    reasonCode = TtsPlaybackFailureReason.PLAYER_ERROR,
+                    error = error,
+                ),
+            )
             stopInternal()
         }
     }
@@ -169,6 +189,10 @@ class TtsReadAloudEngine(
 
     fun setPlaybackInfo(info: TtsPlaybackInfo) {
         playbackInfo = info
+    }
+
+    fun setPlaybackOperationCorrelationId(correlationId: String) {
+        playbackOperationCorrelationId = correlationId
     }
 
     fun setSentences(list: List<TtsSentence>) {
@@ -289,11 +313,12 @@ class TtsReadAloudEngine(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            if (token == generation) {
-                analytics.logException(error, "TTS synthesis failed for sentence $index")
-                stopInternal()
-            }
-            return
+            if (token != generation) return
+            stopInternal()
+            throw TtsPlaybackStartException(
+                reasonCode = TtsPlaybackFailureReason.SYNTHESIS_FAILED,
+                cause = error,
+            )
         } finally {
             if (activeSynthesisJob === synthesisJob) {
                 activeSynthesisJob = null
@@ -302,23 +327,14 @@ class TtsReadAloudEngine(
         if (token != generation) return
 
         if (file == null) {
-            val next = index + 1
-            if (next <= sentences.lastIndex) {
-                startSentence(next)
-            } else {
-                stopInternal()
-            }
-            return
+            stopInternal()
+            throw TtsPlaybackStartException(TtsPlaybackFailureReason.SYNTHESIS_FAILED)
         }
 
         val playbackPlayer = ensurePlayer()
         if (playbackPlayer == null) {
-            analytics.logException(
-                IllegalStateException("TTS media service did not start"),
-                "TTS playback could not acquire a player",
-            )
             stopInternal()
-            return
+            throw TtsPlaybackStartException(TtsPlaybackFailureReason.PLAYER_UNAVAILABLE)
         }
         if (token != generation) return
 
@@ -447,10 +463,10 @@ class TtsReadAloudEngine(
             ?.let { cached -> return cached }
         readyFiles.remove(index)
         prefetchJobs[index]?.join()
-        return synthesizeIfMissing(index)
+        return synthesizeIfMissing(index, failOnError = true)
     }
 
-    private suspend fun synthesizeIfMissing(index: Int): File? {
+    private suspend fun synthesizeIfMissing(index: Int, failOnError: Boolean = false): File? {
         readyFiles[index]
             ?.takeIf { cached -> cached.exists() && cached.length() > 0L }
             ?.let { cached -> return cached }
@@ -477,10 +493,12 @@ class TtsReadAloudEngine(
             return file
         }
 
-        analytics.logException(
-            IllegalStateException("TTS synthesis failed: ${result.status} ${result.error}"),
-            "TTS synthesis failed for sentence $index",
-        )
+        if (result.status == TtsSynthesisStatus.CANCELLED) {
+            throw CancellationException("TTS synthesis cancelled")
+        }
+        if (failOnError) {
+            throw TtsPlaybackStartException(TtsPlaybackFailureReason.SYNTHESIS_FAILED)
+        }
         return null
     }
 
@@ -504,6 +522,11 @@ class TtsReadAloudEngine(
                     if (prefetchGeneration == generation) {
                         appendReadyFilesToPlaylist()
                     }
+                } catch (error: CancellationException) {
+                    throw error
+                } catch (_: Exception) {
+                    // Prefetch is opportunistic; the foreground playback request retries
+                    // synthesis and owns the user-visible outcome/diagnostic boundary.
                 } finally {
                     if (prefetchJobs[index] === runningJob) {
                         prefetchJobs.remove(index)

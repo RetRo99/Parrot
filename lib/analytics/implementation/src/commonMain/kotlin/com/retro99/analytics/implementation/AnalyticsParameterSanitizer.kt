@@ -19,6 +19,15 @@ internal fun sanitizeAnalyticsParameters(parameters: Map<String, Any>): Map<Stri
             key == "value_bucket" && value is String && value in SAFE_SETTING_BUCKETS ->
                 put(key, value)
 
+            key == "tts_action" && value is String && value in SAFE_TTS_ACTIONS ->
+                put(key, value)
+
+            key == "tts_outcome" && value is String && value in SAFE_TTS_OUTCOMES ->
+                put(key, value)
+
+            key == "tts_reason_code" && value is String && value in SAFE_TTS_REASON_CODES ->
+                put(key, value)
+
             key == "sort_config" && value is String && value in SAFE_BOOK_SORT_CONFIGS ->
                 put(key, value)
 
@@ -224,6 +233,14 @@ private val SAFE_BOOK_SORT_CONFIGS = setOf(
 private val SAFE_BOOK_VIEW_MODES = setOf("list", "grid")
 private val SAFE_BUBBLE_SIDES = setOf("start", "end")
 private val SAFE_MEDIA_TYPES = setOf("ebook", "audiobook", "readaloud")
+private val SAFE_TTS_ACTIONS = setOf(
+    "controls", "sentence_tap", "chapter", "resume", "preview_resume", "active_playback",
+)
+private val SAFE_TTS_OUTCOMES = setOf("attempted", "succeeded", "failed", "cancelled")
+private val SAFE_TTS_REASON_CODES = setOf(
+    "permission_denied", "content_unavailable", "chapter_unavailable", "synthesis_failed",
+    "player_unavailable", "player_error", "start_timeout", "operation_cancelled", "unexpected_error",
+)
 
 private val SAFE_BOOLEAN_KEYS = setOf(
     "is_enabled",

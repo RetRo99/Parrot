@@ -170,6 +170,8 @@
 
     <!-- Reader ReadAloud -->
     <string name="reader_readaloud_no_audio">This book has no audio narration available</string>
+    <string name="reader_tts_playback_failed">Couldn't start narration</string>
+    <string name="reader_tts_playback_retry">Retry</string>
 
     <!-- Reader Reading Time -->
     <string name="reader_time_remaining_minutes">%1$d min left</string>

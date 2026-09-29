@@ -189,6 +189,10 @@ sealed interface ReaderIntent : BaseIntent {
      */
     data object DismissNoAudioMessage : ReaderIntent
 
+    data object RetryTtsPlayback : ReaderIntent
+
+    data object DismissTtsPlaybackFailed : ReaderIntent
+
     /**
      * Dismiss the "bookmark save failed" snackbar message.
      */

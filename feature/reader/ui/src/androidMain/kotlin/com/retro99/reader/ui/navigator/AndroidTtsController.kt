@@ -9,6 +9,7 @@ import com.retro99.reader.ui.model.LocatorState
 import com.retro99.reader.ui.playback.NotificationPermissionHandler
 import com.retro99.reader.ui.publication.EpubPublication
 import com.retro99.reader.ui.tts.NeuralVoicePackage
+import com.retro99.reader.ui.tts.TtsPlaybackStartException
 import com.retro99.reader.ui.tts.TtsPlaybackInfo
 import com.retro99.reader.ui.tts.TtsPreparationProgress
 import com.retro99.reader.ui.tts.TtsPreviewPlayer
@@ -31,8 +32,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -45,6 +50,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Scope
 import org.koin.core.annotation.Scoped
+import java.util.UUID
 
 @Scope(ReaderScope::class)
 @Scoped(binds = [TtsController::class])
@@ -61,6 +67,13 @@ class AndroidTtsController(
     private val getReaderSettingsUseCase: GetReaderSettingsUseCase,
 ) : TtsController {
 
+    private data class PlaybackAttempt(
+        val correlationId: String,
+        val action: TtsPlaybackAction,
+        val isRetry: Boolean,
+        val startedAtMs: Long,
+    )
+
     private val controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private var sentences: List<TtsSentence> = emptyList()
@@ -75,6 +88,28 @@ class AndroidTtsController(
     private val readyChapterHref = MutableStateFlow<String?>(null)
 
     private val playbackRequestPending = MutableStateFlow(false)
+    private val _playbackOperations = MutableSharedFlow<TtsPlaybackOperation>(extraBufferCapacity = 8)
+    override val playbackOperations: SharedFlow<TtsPlaybackOperation> =
+        _playbackOperations.asSharedFlow()
+
+    private var activePlaybackAttempt: PlaybackAttempt? = null
+    private val playbackLifecycle = TtsPlaybackOperationLifecycle(
+        scope = controllerScope,
+        startupTimeoutMs = TTS_PLAYBACK_START_TIMEOUT_MS,
+        onStartupTimeout = {
+            activePlaybackAttempt?.let { attempt ->
+                finishPlaybackFailed(
+                    attempt = attempt,
+                    reasonCode = TtsPlaybackFailureReason.START_TIMEOUT,
+                    error = IllegalStateException(
+                        "TTS playback did not become active within the startup deadline",
+                    ),
+                )
+            }
+        },
+    )
+    private var previousPlaybackAttemptFailed = false
+
     override val isPlaying: Flow<Boolean> = engine.isPlaying
 
     override val isLoading: Flow<Boolean> = combine(
@@ -135,6 +170,37 @@ class AndroidTtsController(
                         sentenceDurationMs = durationMs,
                     )
                 }
+        }
+
+        controllerScope.launch {
+            engine.isPlaying.collect { isPlaying ->
+                if (isPlaying) activePlaybackAttempt?.let(::finishPlaybackSucceeded)
+            }
+        }
+
+        controllerScope.launch {
+            engine.playbackFailures.collect { failure ->
+                val attempt = activePlaybackAttempt
+                if (attempt != null) {
+                    finishPlaybackFailed(
+                        attempt = attempt,
+                        reasonCode = failure.reasonCode,
+                        error = failure.error,
+                    )
+                } else {
+                    previousPlaybackAttemptFailed = true
+                    _playbackOperations.tryEmit(
+                        TtsPlaybackOperation.Failed(
+                            correlationId = failure.correlationId ?: UUID.randomUUID().toString(),
+                            action = TtsPlaybackAction.ACTIVE_PLAYBACK,
+                            isRetry = false,
+                            durationMs = 0L,
+                            reasonCode = failure.reasonCode,
+                            error = failure.error,
+                        ),
+                    )
+                }
+            }
         }
     }
 
@@ -316,7 +382,7 @@ class AndroidTtsController(
 
     override fun disableSentencePlayback() {
         isSentencePlaybackEnabled = false
-        playbackRequestPending.value = false
+        cancelActivePlaybackAttempt()
         sentences = emptyList()
         sentencesChapterHref = null
         engine.stop()
@@ -325,54 +391,52 @@ class AndroidTtsController(
     override fun playFromSentence(fragmentId: String, chapterHref: String?) {
         if (!isSentencePlaybackEnabled || fragmentId.isBlank()) return
 
-        playbackRequestPending.value = true
-        controllerScope.launch {
-            try {
-                val requestedChapterHref = chapterHref ?: lastLocator?.href
-                if (!awaitChapter(requestedChapterHref)) return@launch
-                if (sentencesChapterHref != requestedChapterHref) {
-                    sentences = emptyList()
-                    sentencesChapterHref = null
+        requestPlayback(TtsPlaybackAction.SENTENCE_TAP) { attempt ->
+            val requestedChapterHref = chapterHref ?: lastLocator?.href
+            if (!awaitChapter(requestedChapterHref)) {
+                return@requestPlayback TtsPlaybackFailureReason.CHAPTER_UNAVAILABLE
+            }
+            if (sentencesChapterHref != requestedChapterHref) {
+                sentences = emptyList()
+                sentencesChapterHref = null
+            }
+            if (sentences.isEmpty() && !loadChapterSentences(requestedChapterHref)) {
+                return@requestPlayback TtsPlaybackFailureReason.CONTENT_UNAVAILABLE
+            }
+            var sentenceIndex = sentences.indexOfFirst { sentence ->
+                sentence.elementId == fragmentId
+            }
+            if (sentenceIndex < 0) {
+                sentences = emptyList()
+                sentencesChapterHref = null
+                if (!loadChapterSentences(requestedChapterHref)) {
+                    return@requestPlayback TtsPlaybackFailureReason.CONTENT_UNAVAILABLE
                 }
-                if (sentences.isEmpty() && !loadChapterSentences(requestedChapterHref)) {
-                    return@launch
-                }
-                var sentenceIndex = sentences.indexOfFirst { sentence ->
+                sentenceIndex = sentences.indexOfFirst { sentence ->
                     sentence.elementId == fragmentId
                 }
-                if (sentenceIndex < 0) {
-                    sentences = emptyList()
-                    sentencesChapterHref = null
-                    if (!loadChapterSentences(requestedChapterHref)) return@launch
-                    sentenceIndex = sentences.indexOfFirst { sentence ->
-                        sentence.elementId == fragmentId
-                    }
-                }
-                if (sentenceIndex < 0) return@launch
-
-                startPlayback(sentenceIndex)
-            } finally {
-                playbackRequestPending.value = false
             }
+            if (sentenceIndex < 0) return@requestPlayback TtsPlaybackFailureReason.CONTENT_UNAVAILABLE
+
+            startPlayback(attempt, sentenceIndex)
         }
     }
 
     override fun playFromChapterStart(chapterHref: String) {
         if (!isSentencePlaybackEnabled) return
 
-        playbackRequestPending.value = true
-        controllerScope.launch {
-            try {
-                if (!awaitChapter(chapterHref)) return@launch
-                if (sentencesChapterHref != chapterHref) {
-                    sentences = emptyList()
-                    sentencesChapterHref = null
-                }
-                if (sentences.isEmpty() && !loadChapterSentences(chapterHref)) return@launch
-                startPlayback(sentenceIndex = 0)
-            } finally {
-                playbackRequestPending.value = false
+        requestPlayback(TtsPlaybackAction.CHAPTER) { attempt ->
+            if (!awaitChapter(chapterHref)) {
+                return@requestPlayback TtsPlaybackFailureReason.CHAPTER_UNAVAILABLE
             }
+            if (sentencesChapterHref != chapterHref) {
+                sentences = emptyList()
+                sentencesChapterHref = null
+            }
+            if (sentences.isEmpty() && !loadChapterSentences(chapterHref)) {
+                return@requestPlayback TtsPlaybackFailureReason.CONTENT_UNAVAILABLE
+            }
+            startPlayback(attempt, sentenceIndex = 0)
         }
     }
 
@@ -381,22 +445,20 @@ class AndroidTtsController(
             engine.pause()
             return
         }
-        if (engine.currentSentence.value != null) {
-            engine.resume()
-            return
-        }
-        playbackRequestPending.value = true
-        controllerScope.launch {
-            try {
-                startPlayback()
-            } finally {
-                playbackRequestPending.value = false
+        val isResuming = engine.currentSentence.value != null
+        requestPlayback(if (isResuming) TtsPlaybackAction.RESUME else TtsPlaybackAction.CONTROLS) { attempt ->
+            if (isResuming) {
+                armPlaybackStartTimeout(attempt)
+                engine.resume()
+                null
+            } else {
+                startPlayback(attempt)
             }
         }
     }
 
     override fun stop() {
-        playbackRequestPending.value = false
+        cancelActivePlaybackAttempt()
         engine.stop()
     }
 
@@ -448,23 +510,36 @@ class AndroidTtsController(
         if (!resumeNarrationAfterPreview) return
         resumeNarrationAfterPreview = false
         if (engine.currentSentence.value != null) {
-            engine.resume()
+            requestPlayback(TtsPlaybackAction.PREVIEW_RESUME) {
+                armPlaybackStartTimeout(it)
+                engine.resume()
+                null
+            }
         } else if (isSentencePlaybackEnabled) {
-            controllerScope.launch {
-                startPlayback()
+            requestPlayback(TtsPlaybackAction.PREVIEW_RESUME) { attempt ->
+                startPlayback(attempt)
             }
         }
     }
 
-    private suspend fun startPlayback(sentenceIndex: Int? = null) {
-        if (sentences.isEmpty() && !loadChapterSentences()) return
+    private suspend fun startPlayback(
+        attempt: PlaybackAttempt,
+        sentenceIndex: Int? = null,
+    ): TtsPlaybackFailureReason? {
+        if (sentences.isEmpty() && !loadChapterSentences()) {
+            return TtsPlaybackFailureReason.CONTENT_UNAVAILABLE
+        }
 
         val settings = getReaderSettingsUseCase().first()
         voiceId = settings.ttsVoiceId
         rate = TtsSpeechRate.coerce(settings.ttsRate)
         pitch = settings.ttsPitch
 
-        if (!notificationPermissionHandler.ensurePermission()) return
+        if (!notificationPermissionHandler.ensurePermission()) {
+            return TtsPlaybackFailureReason.PERMISSION_DENIED
+        }
+        armPlaybackStartTimeout(attempt)
+        engine.setPlaybackOperationCorrelationId(attempt.correlationId)
         engine.setPlaybackInfo(createPlaybackInfo())
         engine.setSentences(sentences)
         engine.playFrom(
@@ -474,7 +549,137 @@ class AndroidTtsController(
             pitch = pitch,
             showPlaybackNotification = true,
         )
+        return null
     }
+
+    private fun requestPlayback(
+        action: TtsPlaybackAction,
+        start: suspend (PlaybackAttempt) -> TtsPlaybackFailureReason?,
+    ) {
+        val attempt = beginPlaybackAttempt(action) ?: return
+        playbackLifecycle.launchRequest {
+            try {
+                when (val reason = start(attempt)) {
+                    null -> awaitPlaybackStart(attempt)
+                    TtsPlaybackFailureReason.PERMISSION_DENIED,
+                    TtsPlaybackFailureReason.OPERATION_CANCELLED ->
+                        finishPlaybackCancelled(attempt, reason)
+
+                    else -> finishPlaybackFailed(attempt, reason, error = null)
+                }
+            } catch (error: CancellationException) {
+                finishPlaybackCancelled(attempt, TtsPlaybackFailureReason.OPERATION_CANCELLED)
+                throw error
+            } catch (error: Exception) {
+                val reason = (error as? TtsPlaybackStartException)?.reasonCode
+                    ?: TtsPlaybackFailureReason.UNEXPECTED_ERROR
+                finishPlaybackFailed(attempt, reason, error)
+            }
+        }
+    }
+
+    private fun beginPlaybackAttempt(action: TtsPlaybackAction): PlaybackAttempt? {
+        if (activePlaybackAttempt != null) return null
+        val attempt = PlaybackAttempt(
+            correlationId = UUID.randomUUID().toString(),
+            action = action,
+            isRetry = previousPlaybackAttemptFailed,
+            startedAtMs = System.currentTimeMillis(),
+        )
+        activePlaybackAttempt = attempt
+        playbackRequestPending.value = true
+        _playbackOperations.tryEmit(
+            TtsPlaybackOperation.Attempted(
+                correlationId = attempt.correlationId,
+                action = attempt.action,
+                isRetry = attempt.isRetry,
+            ),
+        )
+        return attempt
+    }
+
+    private fun awaitPlaybackStart(attempt: PlaybackAttempt) {
+        if (activePlaybackAttempt != attempt) return
+        if (engine.isPlaying.value) {
+            finishPlaybackSucceeded(attempt)
+            return
+        }
+        if (playbackLifecycle.hasStartupTimeout) return
+        armPlaybackStartTimeout(attempt)
+    }
+
+    private fun armPlaybackStartTimeout(attempt: PlaybackAttempt) {
+        if (activePlaybackAttempt != attempt) return
+        playbackLifecycle.armStartupTimeout()
+    }
+
+    private fun finishPlaybackSucceeded(attempt: PlaybackAttempt) {
+        if (activePlaybackAttempt != attempt) return
+        clearActivePlaybackAttempt()
+        previousPlaybackAttemptFailed = false
+        _playbackOperations.tryEmit(
+            TtsPlaybackOperation.Succeeded(
+                correlationId = attempt.correlationId,
+                action = attempt.action,
+                isRetry = attempt.isRetry,
+                durationMs = elapsedSince(attempt.startedAtMs),
+            ),
+        )
+    }
+
+    private fun finishPlaybackFailed(
+        attempt: PlaybackAttempt,
+        reasonCode: TtsPlaybackFailureReason,
+        error: Throwable?,
+    ) {
+        if (activePlaybackAttempt != attempt) return
+        playbackLifecycle.cancelPendingRequest()
+        engine.stop()
+        clearActivePlaybackAttempt()
+        previousPlaybackAttemptFailed = true
+        _playbackOperations.tryEmit(
+            TtsPlaybackOperation.Failed(
+                correlationId = attempt.correlationId,
+                action = attempt.action,
+                isRetry = attempt.isRetry,
+                durationMs = elapsedSince(attempt.startedAtMs),
+                reasonCode = reasonCode,
+                error = error,
+            ),
+        )
+    }
+
+    private fun finishPlaybackCancelled(
+        attempt: PlaybackAttempt,
+        reasonCode: TtsPlaybackFailureReason,
+    ) {
+        if (activePlaybackAttempt != attempt) return
+        clearActivePlaybackAttempt()
+        _playbackOperations.tryEmit(
+            TtsPlaybackOperation.Cancelled(
+                correlationId = attempt.correlationId,
+                action = attempt.action,
+                isRetry = attempt.isRetry,
+                durationMs = elapsedSince(attempt.startedAtMs),
+                reasonCode = reasonCode,
+            ),
+        )
+    }
+
+    private fun cancelActivePlaybackAttempt() {
+        val attempt = activePlaybackAttempt ?: return
+        playbackLifecycle.cancelPendingRequest()
+        finishPlaybackCancelled(attempt, TtsPlaybackFailureReason.OPERATION_CANCELLED)
+    }
+
+    private fun clearActivePlaybackAttempt() {
+        activePlaybackAttempt = null
+        playbackLifecycle.cancelStartupTimeout()
+        playbackRequestPending.value = false
+    }
+
+    private fun elapsedSince(startedAtMs: Long): Long =
+        (System.currentTimeMillis() - startedAtMs).coerceAtLeast(0L)
 
     private suspend fun createPlaybackInfo(): TtsPlaybackInfo {
         if (!isCoverArtworkLoaded) {
@@ -534,6 +739,8 @@ class AndroidTtsController(
         copy(fragments = listOf(fragmentId))
 
     private companion object {
+        // Covers synthesis/player startup after notification permission is resolved.
+        const val TTS_PLAYBACK_START_TIMEOUT_MS = 30_000L
         const val PREVIEW_START_TIMEOUT_MS = 30_000L
         const val PREVIEW_MAX_DURATION_MS = 60_000L
         const val CHAPTER_READY_TIMEOUT_MS = 5_000L

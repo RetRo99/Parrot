@@ -619,4 +619,27 @@ sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
             "duration_ms" to durationMs,
         )
     }
+
+    /**
+     * Records one TTS playback attempt or terminal result with bounded, non-content dimensions.
+     * Voice IDs, book IDs, narration text and exception messages are intentionally excluded.
+     */
+    data class TtsPlaybackOperation(
+        val action: String,
+        val outcome: String,
+        val isRetry: Boolean,
+        val durationMs: Long? = null,
+        val reasonCode: String? = null,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_playback_operation"
+        override val parameters: Map<String, Any> = buildMap {
+            put("operation", "tts_playback")
+            put("tts_action", action)
+            put("tts_outcome", outcome)
+            put("is_retry", isRetry)
+            put("media_type", "ebook")
+            durationMs?.let { put("duration_ms", it) }
+            reasonCode?.let { put("tts_reason_code", it) }
+        }
+    }
 }

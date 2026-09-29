@@ -160,7 +160,7 @@ Run the baseline and extension IDs together for each screen. Shared lifecycle/ac
 | E | Series; conditional Authors | 125–137 | 580–594 |
 | F | Reader, TOC, bookmarks | 138–184 | 595–624 |
 | G | Reader settings | 185–231 | 625–639 |
-| H | ReadAloud, sleep timer, voices | 232–289 | 640–659 |
+| H | ReadAloud, sleep timer, voices | 232–289 | 640–659, 780–781 |
 | I | Audiobook, mini player, media service | 290–326 | 660–674 |
 | J | Statistics | 385–407 | 695–709 |
 | K | App settings, profiles, servers | 408–452 | 710–729 |

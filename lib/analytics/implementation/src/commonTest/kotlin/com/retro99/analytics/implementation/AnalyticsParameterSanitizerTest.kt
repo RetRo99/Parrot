@@ -21,6 +21,66 @@ import com.retro99.analytics.api.CloudAccountObservation
 class AnalyticsParameterSanitizerTest {
 
     @Test
+    fun ttsPlaybackOutcomesKeepOnlyAllowlistedDimensions() {
+        val attempt = ReaderAnalyticsEvent.TtsPlaybackOperation(
+            action = "controls",
+            outcome = "attempted",
+            isRetry = false,
+        )
+        val failure = ReaderAnalyticsEvent.TtsPlaybackOperation(
+            action = "controls",
+            outcome = "failed",
+            isRetry = true,
+            durationMs = 12_000L,
+            reasonCode = "synthesis_failed",
+        )
+
+        assertEquals(
+            mapOf(
+                "operation" to "tts_playback",
+                "tts_action" to "controls",
+                "tts_outcome" to "attempted",
+                "is_retry" to false,
+                "media_type" to "ebook",
+            ),
+            sanitizeAnalyticsParameters(
+                attempt.parameters + mapOf(
+                    "book_uuid" to "private-book-id",
+                    "voice_id" to "private-voice-id",
+                    "sentence_text" to "private narration",
+                ),
+            ),
+        )
+        assertEquals(
+            mapOf(
+                "operation" to "tts_playback",
+                "tts_action" to "controls",
+                "tts_outcome" to "failed",
+                "is_retry" to true,
+                "media_type" to "ebook",
+                "duration_ms" to 12_000L,
+                "tts_reason_code" to "synthesis_failed",
+            ),
+            sanitizeAnalyticsParameters(failure.parameters),
+        )
+        assertEquals(
+            mapOf(
+                "operation" to "tts_playback",
+                "is_retry" to true,
+                "media_type" to "ebook",
+                "duration_ms" to 12_000L,
+            ),
+            sanitizeAnalyticsParameters(
+                failure.parameters + mapOf(
+                    "tts_action" to "private_action",
+                    "tts_outcome" to "private_outcome",
+                    "tts_reason_code" to "private/path",
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun readerPositionSaveRecoveryEventsKeepOnlyBoundedDimensions() {
         val retryAttempt = ReaderAnalyticsEvent.ReaderPositionSaveRetryAttempted("ebook")
         val retrySuccess = ReaderAnalyticsEvent.ReaderPositionSaveSucceeded("ebook", "retry", true)

@@ -51,6 +51,7 @@ import com.retro99.reader.ui.navigator.BookController
 import com.retro99.reader.ui.navigator.NarrationController
 import com.retro99.reader.ui.navigator.TTS_SYSTEM_VOICE_KEY
 import com.retro99.reader.ui.navigator.TtsController
+import com.retro99.reader.ui.navigator.TtsPlaybackOperation
 import com.retro99.reader.ui.navigator.TtsPreviewState
 import com.retro99.reader.ui.publication.PublicationState
 import com.retro99.reader.ui.service.EpubPublicationService
@@ -191,6 +192,7 @@ class ReaderViewModel(
 
     /** Job for preparing sentence elements and enabling double-tap TTS playback. */
     private var ttsSentencePlaybackJob: Job? = null
+    private var isObservingTtsPlaybackOperations = false
 
     /** Serializes full reader-settings updates so concurrent controls cannot lose changes. */
     private val readerSettingsSaveMutex = Mutex()
@@ -353,6 +355,8 @@ class ReaderViewModel(
             is ReaderIntent.SetHighlightColor -> setHighlightColor(intent.colorArgb)
             ReaderIntent.Retry -> retry()
             ReaderIntent.DismissNoAudioMessage -> dismissNoAudioMessage()
+            ReaderIntent.RetryTtsPlayback -> retryTtsPlayback()
+            ReaderIntent.DismissTtsPlaybackFailed -> dismissTtsPlaybackFailed()
             ReaderIntent.DismissBookmarkSaveFailed -> dismissBookmarkSaveFailed()
             ReaderIntent.RetryPositionSave -> retryPositionSave()
             ReaderIntent.ToggleBookmarks -> toggleBookmarks()
@@ -372,6 +376,15 @@ class ReaderViewModel(
 
     private fun dismissNoAudioMessage() {
         updateState { it.copy(showNoAudioMessage = false) }
+    }
+
+    private fun dismissTtsPlaybackFailed() {
+        updateState { it.copy(showTtsPlaybackFailed = false) }
+    }
+
+    private fun retryTtsPlayback() {
+        updateState { it.copy(showTtsPlaybackFailed = false) }
+        togglePlayback()
     }
 
     private fun dismissBookmarkSaveFailed() {
@@ -811,6 +824,7 @@ class ReaderViewModel(
     }
 
     private fun initTts() {
+        observeTtsPlaybackOperations()
         viewModelScope.launch {
             bookController.currentLocator.first()
             val hasContent = ttsController.hasReadableContent()
@@ -865,6 +879,71 @@ class ReaderViewModel(
                 prepareTtsVoice(selectedVoice.id)
             }
         }
+    }
+
+    private fun observeTtsPlaybackOperations() {
+        if (isObservingTtsPlaybackOperations) return
+        isObservingTtsPlaybackOperations = true
+        ttsController.playbackOperations
+            .onEach { operation ->
+                val action = operation.action.analyticsValue
+                val outcome = when (operation) {
+                    is TtsPlaybackOperation.Attempted -> "attempted"
+                    is TtsPlaybackOperation.Succeeded -> "succeeded"
+                    is TtsPlaybackOperation.Failed -> "failed"
+                    is TtsPlaybackOperation.Cancelled -> "cancelled"
+                }
+                val stage = if (operation is TtsPlaybackOperation.Attempted) "start" else "terminal"
+                val durationMs = when (operation) {
+                    is TtsPlaybackOperation.Attempted -> null
+                    is TtsPlaybackOperation.Succeeded -> operation.durationMs
+                    is TtsPlaybackOperation.Failed -> operation.durationMs
+                    is TtsPlaybackOperation.Cancelled -> operation.durationMs
+                }
+                val reasonCode = when (operation) {
+                    is TtsPlaybackOperation.Failed -> operation.reasonCode.analyticsValue
+                    is TtsPlaybackOperation.Cancelled -> operation.reasonCode.analyticsValue
+                    else -> null
+                }
+                analytics.logEvent(
+                    ReaderAnalyticsEvent.TtsPlaybackOperation(
+                        action = action,
+                        outcome = outcome,
+                        isRetry = operation.isRetry,
+                        durationMs = durationMs,
+                        reasonCode = reasonCode,
+                    ),
+                )
+                val context = DiagnosticContext(
+                    screen = "reader",
+                    sourceScreen = "reader",
+                    entryPoint = action,
+                    action = "start_tts_playback",
+                    operation = "tts_playback",
+                    stage = stage,
+                    outcome = outcome,
+                    reasonCode = reasonCode,
+                    mediaType = "ebook",
+                    correlationId = operation.correlationId,
+                )
+                when (operation) {
+                    is TtsPlaybackOperation.Attempted -> {
+                        updateState { it.copy(showTtsPlaybackFailed = false) }
+                        analytics.logBreadcrumb(context)
+                    }
+                    is TtsPlaybackOperation.Succeeded -> analytics.logBreadcrumb(context)
+                    is TtsPlaybackOperation.Failed -> {
+                        if (operation.error != null) {
+                            analytics.logException(operation.error, context)
+                        } else {
+                            analytics.logBreadcrumb(context)
+                        }
+                        updateState { it.copy(showTtsPlaybackFailed = true) }
+                    }
+                    is TtsPlaybackOperation.Cancelled -> analytics.logBreadcrumb(context)
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private fun selectTtsVoice(voiceId: String?) {

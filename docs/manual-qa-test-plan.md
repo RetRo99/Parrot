@@ -1,6 +1,6 @@
 # Parrot — Manual QA Test Plan (Full In-App Action Coverage)
 
-**Execution goal and instrumentation requirements:** [manual-qa-goal.md](manual-qa-goal.md). Read that document before running this catalogue. Baseline IDs 1–494 are preserved; extension IDs 495–779 add Samsung setup, screen edge cases and observability verification. These are planned tests, not recorded results.
+**Execution goal and instrumentation requirements:** [manual-qa-goal.md](manual-qa-goal.md). Read that document before running this catalogue. Baseline IDs 1–494 are preserved; extension IDs 495–781 add Samsung setup, screen edge cases and observability verification. These are planned tests, not recorded results.
 
 **Scope of this pass:** every action a single user can perform inside the app — opening, navigating, backing out, reading, playing, downloading, importing, backing up, configuring, viewing statistics, managing profiles/servers/accounts, and all lifecycle behaviour.
 
@@ -1093,3 +1093,15 @@ Each row below is a parameterized case: create a result row for **each reachable
 |---|---|---|---|
 | 778 | Cloud Account action outcomes and privacy | On every reachable Cloud Account form/connected-account action, compare accepted attempt and terminal result, cancellation/dismissal and retry; inspect route source and diagnostic correlation | Each feature action has one bounded attempt and one accurate success/failure/cancel/abandon terminal as applicable; OAuth user cancellation is distinct from auth rejection; Back/mode/visibility/dialog actions are attributed; one breadcrumb correlation per operation; unexpected user-impacting exceptions are reported once at the UI boundary; ordinary credential rejection/OAuth cancel/offline/cancellation are not Crashlytics issues; no email, password, token, cloud/profile ID, URL or raw exception message is emitted. Cases 370–371 remain deferred for sync verification under the scope rule. |
 | 779 | Cloud auth local-persistence failure rollback | With a host fake auth provider, let sign-in/registration succeed, fail the pending-auth local write, then inspect the active session and retry state; separately make cleanup fail | Do not leave an authenticated session or pending marker presented as usable after local persistence failed; attempt bounded local rollback/cleanup, terminate loading, and report the stage/reason once without credentials. Cancellation remains cancellation. Samsung fault variant is BLOCKED without an authorized disposable cloud fixture and safe local-write fault injection. |
+
+## 49. Reader TTS playback-start outcomes
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 780 | TTS playback start failure, cancellation and retry outcomes | On a permitted local EPUB with system TTS selected, inject a synthesis/player start failure; separately cancel the Android notification-permission prompt, then retry after recovery | Record bounded attempt, success, failure, cancellation and retry outcomes; one contextual report for an unexpected failure, none for ordinary permission cancellation; controls leave loading and provide a usable retry. Never record narration text, book IDs or voice IDs. Device fault injection is BLOCKED without a safe TTS engine fixture. |
+
+## 50. Reader TTS startup timeout and cancellation cleanup
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 781 | TTS startup timeout, stop/disable cancellation and loading cleanup | With system TTS on a permitted local EPUB and a safe delayed/stalled synthesis fixture, begin playback; verify the documented startup deadline, then separately stop/disable TTS while the request is pending; retry after recovery | Permission interaction remains cancellable and is not timed out as a failure. After permission is granted, a stalled synthesis/player start ends at the operation-specific 30-second deadline, clears loading, shows a usable Retry and emits one correlated failed outcome/report. Explicit stop/disable cancels pending work and cannot start speech later; it emits one cancelled terminal and no Crashlytics issue. Never record text/book/voice IDs. Host cancellation/timeout verification is required; Samsung fault execution is BLOCKED without a safe engine fixture. |

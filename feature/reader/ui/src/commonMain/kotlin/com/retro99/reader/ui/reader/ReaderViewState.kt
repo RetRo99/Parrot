@@ -44,6 +44,7 @@ data class ReaderViewState(
     val chapterReadingTimeInfo: ChapterReadingTimeInfo? = null,
     // Flag to show snackbar when ReadAloud book has no media overlays
     val showNoAudioMessage: Boolean = false,
+    val showTtsPlaybackFailed: Boolean = false,
     // Flag to show snackbar when bookmark save fails
     val showBookmarkSaveFailed: Boolean = false,
     val showPositionSaveFailed: Boolean = false,

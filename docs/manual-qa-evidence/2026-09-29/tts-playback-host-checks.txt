@@ -1,0 +1,16 @@
+Parrot TTS playback instrumentation — host/build verification
+Date: 2026-09-29
+Base repository commit: 764ab2a3cff529e1ad84828d5654f324821a7998
+Source tree: QA-BUG-0095 changes uncommitted at verification time
+
+Command:
+./gradlew :feature:reader:ui:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest :androidApp:assembleDebug
+
+Result: BUILD SUCCESSFUL
+Reader UI Android host tests: 61 passed, 0 failures, 0 errors
+Analytics implementation Android host tests: 56 passed, 0 failures, 0 errors
+New lifecycle regressions: 3 passed (pending-request cancellation, 30-second startup deadline, deadline cancellation)
+Debug APK: androidApp/build/outputs/apk/debug/androidApp-debug.apk
+APK SHA-256: efbd8a0d742141e298c311f74b82d221f41efe75ae7c67bb26131897b77a1143
+
+Scope limits: This is host/build evidence only. No Samsung TTS operation or fault injection was executed by this command. Firebase Analytics ingestion and Crashlytics delivery/symbolication were not verified.

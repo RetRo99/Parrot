@@ -31,6 +31,8 @@ class IosTtsController : TtsController {
     override val voicePreparationState: Flow<TtsVoicePreparationState> =
         flowOf(TtsVoicePreparationState.Idle)
 
+    override val playbackOperations: Flow<TtsPlaybackOperation> = emptyFlow()
+
     override suspend fun hasReadableContent(): Boolean = false
 
     override suspend fun availableVoices(): List<TtsVoice> = emptyList()

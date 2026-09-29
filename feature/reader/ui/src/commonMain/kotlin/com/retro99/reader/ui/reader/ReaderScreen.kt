@@ -112,6 +112,8 @@ import resources.translations.reader_page_of_pages
 import resources.translations.reader_position_save_failed
 import resources.translations.reader_position_save_retry
 import resources.translations.reader_readaloud_no_audio
+import resources.translations.reader_tts_playback_failed
+import resources.translations.reader_tts_playback_retry
 import resources.translations.reader_time_remaining_less_than_minute
 import resources.translations.reader_time_remaining_minutes
 import resources.translations.reader_toc_jumped_to_chapter
@@ -345,6 +347,13 @@ private fun ReaderScreenContent(
             modifier = Modifier.align(Alignment.BottomCenter),
         )
 
+        TtsPlaybackFailedSnackbar(
+            showMessage = viewState.showTtsPlaybackFailed,
+            onRetry = { intentDispatcher(ReaderIntent.RetryTtsPlayback) },
+            onDismiss = { intentDispatcher(ReaderIntent.DismissTtsPlaybackFailed) },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+
         BookmarkSaveFailedSnackbar(
             showMessage = viewState.showBookmarkSaveFailed,
             onDismiss = { intentDispatcher(ReaderIntent.DismissBookmarkSaveFailed) },
@@ -413,6 +422,36 @@ private fun NoAudioSnackbar(
                 duration = SnackbarDuration.Short,
             )
             onDismiss()
+        }
+    }
+
+    SnackbarHost(
+        hostState = snackbarHostState,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun TtsPlaybackFailedSnackbar(
+    showMessage: Boolean,
+    onRetry: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val message = stringResource(StringRes.reader_tts_playback_failed)
+    val retryLabel = stringResource(StringRes.reader_tts_playback_retry)
+
+    LaunchedEffect(showMessage) {
+        if (showMessage) {
+            when (snackbarHostState.showSnackbar(
+                message = message,
+                actionLabel = retryLabel,
+                duration = SnackbarDuration.Long,
+            )) {
+                SnackbarResult.ActionPerformed -> onRetry()
+                SnackbarResult.Dismissed -> onDismiss()
+            }
         }
     }
 
