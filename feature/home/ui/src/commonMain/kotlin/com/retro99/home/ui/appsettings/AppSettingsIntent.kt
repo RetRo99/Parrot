@@ -4,19 +4,9 @@ import com.retro99.base.ui.BaseIntent
 import com.retro99.base.ui.compose.ThemeMode
 
 sealed interface AppSettingsIntent : BaseIntent {
-    data class OnLoggingToggled(val enabled: Boolean) : AppSettingsIntent
-    data class OnLogCrashesOnlyToggled(val enabled: Boolean) : AppSettingsIntent
     data class OnOpenLastBookToggled(val enabled: Boolean) : AppSettingsIntent
     data class OnShowContinueReadingToggled(val enabled: Boolean) : AppSettingsIntent
-    data object OnThemeModeClicked : AppSettingsIntent
-    data object OnThemeModeDialogDismissed : AppSettingsIntent
     data class OnThemeModeSelected(val themeMode: ThemeMode) : AppSettingsIntent
-    data object OnShareLogsClicked : AppSettingsIntent
-    data object OnShareLogsFailedMessageShown : AppSettingsIntent
-    data object OnClearLogsClicked : AppSettingsIntent
-    data object OnLogsClearedMessageShown : AppSettingsIntent
-    data object OnLogsClearFailedMessageShown : AppSettingsIntent
-    data object OnNoLogsMessageShown : AppSettingsIntent
     data object OnClearCurrentBookClicked : AppSettingsIntent
     data object OnCurrentBookClearedMessageShown : AppSettingsIntent
     data object OnCurrentBookClearFailedMessageShown : AppSettingsIntent
@@ -27,9 +17,7 @@ sealed interface AppSettingsIntent : BaseIntent {
     data object OnProfileNameEdited : AppSettingsIntent
     data class OnProfileLongPressed(val profileId: String, val entryPoint: String) : AppSettingsIntent
     data class OnProfileMenuDismissed(val entryPoint: String) : AppSettingsIntent
-    data object OnRenameProfileClicked : AppSettingsIntent
-    data class OnRenameProfileConfirmed(val newName: String) : AppSettingsIntent
-    data class OnRenameProfileDismissed(val entryPoint: String) : AppSettingsIntent
+    data class OnEditProfileSaved(val name: String, val colorIndex: Int) : AppSettingsIntent
     data object OnDeleteProfileClicked : AppSettingsIntent
     data object OnDeleteProfileConfirmed : AppSettingsIntent
     data class OnDeleteProfileDismissed(val entryPoint: String) : AppSettingsIntent

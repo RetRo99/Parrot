@@ -1,5 +1,6 @@
 package com.retro99.statistics.domain.model
 
+import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 
 /** Period shown by the statistics screen. Week, month and year are calendar periods. */
@@ -46,4 +47,38 @@ data class StatisticsOverview(
     val longestStreakEnd: LocalDate?,
     /** Every day with reading, in the device's time zone. */
     val readDays: Set<LocalDate>,
+    val rhythm: ReadingRhythm,
 )
+
+/** Part of the day, in the device's time zone. */
+enum class TimeOfDay(val startHour: Int, val endHour: Int) {
+    MORNING(6, 12),
+    AFTERNOON(12, 18),
+    EVENING(18, 24),
+    NIGHT(0, 6),
+}
+
+/** Average reading time on one weekday. */
+data class WeekdayAverage(
+    val dayOfWeek: DayOfWeek,
+    val averageMs: Long,
+)
+
+/**
+ * When the user reads, over the last [RHYTHM_WINDOW_DAYS] days: average time per weekday
+ * (in locale week order) and the split of reading across the parts of the day.
+ * [topWeekday] and [topTimeOfDay] are null until [hasEnoughData].
+ */
+data class ReadingRhythm(
+    val weekdayAverages: List<WeekdayAverage>,
+    val topWeekday: DayOfWeek?,
+    val timeOfDayMs: Map<TimeOfDay, Long>,
+    val topTimeOfDay: TimeOfDay?,
+    val readDaysInWindow: Int,
+) {
+    val hasEnoughData: Boolean get() = readDaysInWindow >= MIN_READ_DAYS_FOR_RHYTHM
+}
+
+const val RHYTHM_WINDOW_DAYS = 90
+const val MIN_READ_DAYS_FOR_RHYTHM = 7
+

@@ -14,12 +14,13 @@ internal fun executeAppSettingToggle(
     setting: AppSettingsAnalyticsEvent.SettingToggle,
     isEnabled: Boolean,
     isRetry: Boolean,
+    screen: String = "app_settings",
     persist: () -> Unit,
     successEvent: (isRetry: Boolean) -> AnalyticsEvent,
 ): Boolean {
     val correlationId = Uuid.random().toString()
     fun context(stage: String, outcome: String, reasonCode: String? = null) = DiagnosticContext(
-        screen = "app_settings",
+        screen = screen,
         action = "toggle_setting",
         operation = setting.operation,
         stage = stage,

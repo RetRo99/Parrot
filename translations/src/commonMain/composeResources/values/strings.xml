@@ -76,7 +76,7 @@
     <string name="app_settings_log_crashes_only">Only Log Crashes</string>
     <string name="app_settings_log_crashes_only_description">Save full stack traces for fatal crashes and skip handled errors</string>
     <string name="app_settings_section_reading">Reading</string>
-    <string name="app_settings_open_last_book">Open Last Book on Launch</string>
+    <string name="app_settings_open_last_book">Open last book on launch</string>
     <string name="app_settings_open_last_book_description">Automatically open your currently reading book when the app starts</string>
 
     <!-- Series List Screen -->
@@ -482,7 +482,7 @@
     <string name="reader_tts_update_now" tools:ignore="MissingTranslation">Download now</string>
     <string name="reader_tts_update_later" tools:ignore="MissingTranslation">Later</string>
     <string name="reader_tts_system_source" tools:ignore="MissingTranslation">System</string>
-    <string name="app_settings_sync_backup" tools:ignore="MissingTranslation">Sync &amp; Backup</string>
+    <string name="app_settings_sync_backup" tools:ignore="MissingTranslation">Sync &amp; backup</string>
     <string name="app_settings_sync_backup_description" tools:ignore="MissingTranslation">Keep reading data available across devices</string>
     <string name="cloud_account_title" tools:ignore="MissingTranslation">Parrot Cloud</string>
     <string name="cloud_account_description" tools:ignore="MissingTranslation">Keep your progress, bookmarks, collections, and reader settings available across devices. Book files remain on this device.</string>
@@ -777,4 +777,143 @@
     <string name="statistics_legend_read" tools:ignore="MissingTranslation">Read</string>
     <string name="statistics_legend_today" tools:ignore="MissingTranslation">Today</string>
     <string name="statistics_heading" tools:ignore="MissingTranslation">Statistics</string>
+    <string name="statistics_rhythm_eyebrow" tools:ignore="MissingTranslation">When you read</string>
+    <string name="statistics_rhythm_headline" tools:ignore="MissingTranslation">You read most on %1$s, usually in the %2$s</string>
+    <string name="statistics_rhythm_subline" tools:ignore="MissingTranslation">Average reading time · last 90 days</string>
+    <string name="statistics_rhythm_not_enough" tools:ignore="MissingTranslation">Read on a few more days to see your rhythm.</string>
+    <string name="statistics_rhythm_time_of_day" tools:ignore="MissingTranslation">Time of day</string>
+    <string name="statistics_rhythm_morning" tools:ignore="MissingTranslation">Morning</string>
+    <string name="statistics_rhythm_afternoon" tools:ignore="MissingTranslation">Afternoon</string>
+    <string name="statistics_rhythm_evening" tools:ignore="MissingTranslation">Evening</string>
+    <string name="statistics_rhythm_night" tools:ignore="MissingTranslation">Night</string>
+    <string name="statistics_rhythm_weekday_description" tools:ignore="MissingTranslation">%1$s: %2$s on average</string>
+    <string name="statistics_rhythm_weekday_description_top" tools:ignore="MissingTranslation">%1$s: %2$s on average, most</string>
+    <string name="statistics_rhythm_time_description" tools:ignore="MissingTranslation">%1$s, %2$d percent of your reading</string>
+    <string name="statistics_rhythm_time_description_top" tools:ignore="MissingTranslation">%1$s, %2$d percent of your reading, most</string>
+    <string name="settings_section_profile" tools:ignore="MissingTranslation">Profile</string>
+    <string name="settings_section_appearance" tools:ignore="MissingTranslation">Appearance</string>
+    <string name="settings_section_reading" tools:ignore="MissingTranslation">Reading</string>
+    <string name="settings_section_library_sync" tools:ignore="MissingTranslation">Library &amp; sync</string>
+    <string name="settings_section_help" tools:ignore="MissingTranslation">Help</string>
+    <string name="settings_profile_add" tools:ignore="MissingTranslation">Add</string>
+    <string name="settings_theme_title" tools:ignore="MissingTranslation">Theme</string>
+    <string name="settings_theme_auto" tools:ignore="MissingTranslation">Auto</string>
+    <string name="settings_theme_night_description" tools:ignore="MissingTranslation">Dark and warm — easiest on the eyes at night.</string>
+    <string name="settings_theme_day_description" tools:ignore="MissingTranslation">Warm paper — best in daylight.</string>
+    <string name="settings_theme_eink_description" tools:ignore="MissingTranslation">Black and white, no animations — made for e-ink screens.</string>
+    <string name="settings_theme_auto_description" tools:ignore="MissingTranslation">Follows your phone: Day in light mode, Night in dark mode.</string>
+    <string name="settings_reader_settings_subtitle" tools:ignore="MissingTranslation">Fonts, layout, page turns, read aloud</string>
+    <string name="settings_open_last_book_subtitle" tools:ignore="MissingTranslation">Skip the library and jump back in</string>
+    <string name="settings_continue_reading_title" tools:ignore="MissingTranslation">Continue-reading shortcut</string>
+    <string name="settings_continue_reading_subtitle" tools:ignore="MissingTranslation">Card on the library and a mini player elsewhere</string>
+    <string name="settings_servers_subtitle_default" tools:ignore="MissingTranslation">Add, remove or switch servers</string>
+    <string name="settings_sync_backup_subtitle" tools:ignore="MissingTranslation">Keep progress on all your devices</string>
+    <string name="settings_diagnostics_title" tools:ignore="MissingTranslation">Diagnostics</string>
+    <string name="settings_diagnostics_subtitle" tools:ignore="MissingTranslation">Logging, share or clear logs</string>
+    <string name="settings_status_on" tools:ignore="MissingTranslation">On</string>
+    <string name="settings_status_off" tools:ignore="MissingTranslation">Off</string>
+    <string name="settings_app_name" tools:ignore="MissingTranslation">Parrot</string>
+    <string name="diagnostics_intro" tools:ignore="MissingTranslation">Only needed when something goes wrong. Logs stay on this device until you share them.</string>
+    <string name="diagnostics_save_logs" tools:ignore="MissingTranslation">Save logs to a file</string>
+    <string name="diagnostics_save_logs_subtitle" tools:ignore="MissingTranslation">Records what the app does, for bug reports</string>
+    <string name="diagnostics_crashes_only" tools:ignore="MissingTranslation">Only log crashes</string>
+    <string name="diagnostics_crashes_only_subtitle" tools:ignore="MissingTranslation">Skip everyday errors, keep full crash reports</string>
+    <string name="diagnostics_crashes_only_disabled" tools:ignore="MissingTranslation">Turn on “Save logs to a file” first</string>
+    <string name="diagnostics_section_log_files" tools:ignore="MissingTranslation">Log files</string>
+    <string name="diagnostics_share_logs" tools:ignore="MissingTranslation">Share logs</string>
+    <string name="diagnostics_share_logs_subtitle" tools:ignore="MissingTranslation">Send to the developer by email or chat</string>
+    <string name="diagnostics_clear_logs" tools:ignore="MissingTranslation">Clear logs</string>
+    <string name="diagnostics_clear_logs_subtitle" tools:ignore="MissingTranslation">Deletes all saved logs — asks first</string>
+    <string name="diagnostics_clear_confirm_title" tools:ignore="MissingTranslation">Clear all logs?</string>
+    <string name="diagnostics_clear_confirm_body" tools:ignore="MissingTranslation">This deletes every saved log file on this device. It can't be undone.</string>
+    <string name="diagnostics_clear_confirm_action" tools:ignore="MissingTranslation">Clear logs</string>
+    <string name="settings_profile_edit_button" tools:ignore="MissingTranslation">Edit</string>
+    <string name="settings_profile_edit_title" tools:ignore="MissingTranslation">Edit profile</string>
+    <string name="settings_profile_edit_done" tools:ignore="MissingTranslation">Done</string>
+    <string name="settings_profile_edit_name" tools:ignore="MissingTranslation">Name</string>
+    <string name="settings_profile_edit_color" tools:ignore="MissingTranslation">Color</string>
+    <string name="settings_profile_color_copper" tools:ignore="MissingTranslation">Copper</string>
+    <string name="settings_profile_color_moss" tools:ignore="MissingTranslation">Moss</string>
+    <string name="settings_profile_color_brick" tools:ignore="MissingTranslation">Brick</string>
+    <string name="settings_profile_color_slate" tools:ignore="MissingTranslation">Slate</string>
+    <string name="settings_profile_color_plum" tools:ignore="MissingTranslation">Plum</string>
+    <string name="settings_profile_delete" tools:ignore="MissingTranslation">Delete profile</string>
+    <string name="settings_profile_delete_only_profile" tools:ignore="MissingTranslation">You can't delete your only profile</string>
+    <string name="reader_tab_text" tools:ignore="MissingTranslation">Text</string>
+    <string name="reader_tab_page" tools:ignore="MissingTranslation">Page</string>
+    <string name="reader_tab_progress" tools:ignore="MissingTranslation">Progress</string>
+    <string name="reader_tab_controls" tools:ignore="MissingTranslation">Controls</string>
+    <string name="reader_tab_read_aloud" tools:ignore="MissingTranslation">Read aloud</string>
+    <string name="reader_page_color" tools:ignore="MissingTranslation">Page color</string>
+    <string name="reader_theme_match_app" tools:ignore="MissingTranslation">Match app</string>
+    <string name="reader_text_size" tools:ignore="MissingTranslation">Text size</string>
+    <string name="reader_font" tools:ignore="MissingTranslation">Font</string>
+    <string name="reader_font_book" tools:ignore="MissingTranslation">Book's font</string>
+    <string name="reader_boldness" tools:ignore="MissingTranslation">Boldness</string>
+    <string name="reader_keep_formatting" tools:ignore="MissingTranslation">Keep the book's formatting</string>
+    <string name="reader_keep_formatting_sub" tools:ignore="MissingTranslation">Turn off to set line spacing and alignment yourself</string>
+    <string name="reader_simplify_styles" tools:ignore="MissingTranslation">Simplify text styles</string>
+    <string name="reader_simplify_styles_sub" tools:ignore="MissingTranslation">Flatten fancy bold, italic and decorations</string>
+    <string name="reader_line_spacing" tools:ignore="MissingTranslation">Line spacing</string>
+    <string name="reader_paragraph_spacing" tools:ignore="MissingTranslation">Paragraph spacing</string>
+    <string name="reader_alignment" tools:ignore="MissingTranslation">Alignment</string>
+    <string name="reader_page_turns" tools:ignore="MissingTranslation">Page turns</string>
+    <string name="reader_page_turns_auto_note" tools:ignore="MissingTranslation">Pages for most books, scrolling for comics and long tables.</string>
+    <string name="reader_page_turns_pages_note" tools:ignore="MissingTranslation">Always turn pages, even in long chapters.</string>
+    <string name="reader_page_turns_scroll_note" tools:ignore="MissingTranslation">Scroll continuously, like a web page.</string>
+    <string name="reader_side_margins" tools:ignore="MissingTranslation">Side margins</string>
+    <string name="reader_vertical_margins" tools:ignore="MissingTranslation">Top &amp; bottom margins</string>
+    <string name="reader_full_screen" tools:ignore="MissingTranslation">Full screen</string>
+    <string name="reader_full_screen_sub" tools:ignore="MissingTranslation">Hide the phone's status bar while reading</string>
+    <string name="reader_position" tools:ignore="MissingTranslation">Position</string>
+    <string name="reader_progress_line" tools:ignore="MissingTranslation">Progress line shows</string>
+    <string name="reader_progress_line_nothing" tools:ignore="MissingTranslation">Nothing</string>
+    <string name="reader_show_book_progress" tools:ignore="MissingTranslation">Show book progress</string>
+    <string name="reader_show_book_progress_sub" tools:ignore="MissingTranslation">Adds “Book 18%” next to the chapter</string>
+    <string name="reader_show_time" tools:ignore="MissingTranslation">Show the time</string>
+    <string name="reader_show_time_sub" tools:ignore="MissingTranslation">A small clock in the progress bar</string>
+    <string name="reader_show_time_left" tools:ignore="MissingTranslation">Show time left</string>
+    <string name="reader_tap_to_turn" tools:ignore="MissingTranslation">Tap to turn pages</string>
+    <string name="reader_tap_to_turn_sub" tools:ignore="MissingTranslation">Tap the sides of the page</string>
+    <string name="reader_zone_previous" tools:ignore="MissingTranslation">Previous</string>
+    <string name="reader_zone_next" tools:ignore="MissingTranslation">Next page</string>
+    <string name="reader_zone_menu" tools:ignore="MissingTranslation">Menu</string>
+    <string name="reader_tap_left" tools:ignore="MissingTranslation">Tap left</string>
+    <string name="reader_tap_middle" tools:ignore="MissingTranslation">Tap middle</string>
+    <string name="reader_tap_right" tools:ignore="MissingTranslation">Tap right</string>
+    <string name="reader_swap_sides" tools:ignore="MissingTranslation">Swap sides</string>
+    <string name="reader_double_tap_speed" tools:ignore="MissingTranslation">Double-tap speed</string>
+    <string name="reader_volume_turn" tools:ignore="MissingTranslation">Volume buttons turn pages</string>
+    <string name="reader_volume_turn_sub" tools:ignore="MissingTranslation">eBooks only — not during read aloud</string>
+    <string name="reader_volume_mapping" tools:ignore="MissingTranslation">Volume up: %1$s · Volume down: %2$s</string>
+    <string name="reader_swap_direction" tools:ignore="MissingTranslation">Swap direction</string>
+    <string name="reader_tts" tools:ignore="MissingTranslation">Read aloud with device voices</string>
+    <string name="reader_tts_sub" tools:ignore="MissingTranslation">For books without narration</string>
+    <string name="reader_keep_screen_on" tools:ignore="MissingTranslation">Keep screen on while listening</string>
+    <string name="reader_keep_screen_on_sub" tools:ignore="MissingTranslation">Pages turn by themselves as audio plays</string>
+    <string name="reader_audio_progress_bar" tools:ignore="MissingTranslation">Audio progress bar</string>
+    <string name="reader_on_tap" tools:ignore="MissingTranslation">On tap</string>
+    <string name="reader_never" tools:ignore="MissingTranslation">Never</string>
+    <string name="reader_style_both" tools:ignore="MissingTranslation">Both</string>
+    <string name="reader_eink_underline_hint" tools:ignore="MissingTranslation">On e-ink, Underline is the clearest option.</string>
+    <string name="reader_read_aloud_note" tools:ignore="MissingTranslation">The sentence being read is marked on the page above.</string>
+    <string name="reader_value_with_hint" tools:ignore="MissingTranslation">%1$s · %2$s</string>
+    <string name="reader_decrease" tools:ignore="MissingTranslation">Decrease %1$s</string>
+    <string name="reader_increase" tools:ignore="MissingTranslation">Increase %1$s</string>
+    <string name="reader_hint_small" tools:ignore="MissingTranslation">small</string>
+    <string name="reader_hint_default" tools:ignore="MissingTranslation">default</string>
+    <string name="reader_hint_large" tools:ignore="MissingTranslation">large</string>
+    <string name="reader_hint_light" tools:ignore="MissingTranslation">light</string>
+    <string name="reader_hint_normal" tools:ignore="MissingTranslation">normal</string>
+    <string name="reader_hint_bold" tools:ignore="MissingTranslation">bold</string>
+    <string name="reader_hint_narrow" tools:ignore="MissingTranslation">narrow</string>
+    <string name="reader_hint_medium" tools:ignore="MissingTranslation">medium</string>
+    <string name="reader_hint_wide" tools:ignore="MissingTranslation">wide</string>
+    <string name="reader_hint_fast" tools:ignore="MissingTranslation">fast</string>
+    <string name="reader_hint_relaxed" tools:ignore="MissingTranslation">relaxed</string>
+    <string name="reader_hint_tight" tools:ignore="MissingTranslation">tight</string>
+    <string name="reader_hint_loose" tools:ignore="MissingTranslation">loose</string>
+    <string name="reader_hint_none" tools:ignore="MissingTranslation">none</string>
+    <string name="reader_location" tools:ignore="MissingTranslation">Location</string>
+    <string name="reader_mode_pages" tools:ignore="MissingTranslation">Pages</string>
 </resources>

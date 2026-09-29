@@ -52,6 +52,7 @@ kotlin {
             implementation(projects.lib.preferences.api)
             implementation(projects.lib.preferences.implementation)
             implementation(projects.lib.user.api)
+            implementation(projects.lib.server.api)
         }
 
         commonTest.dependencies {

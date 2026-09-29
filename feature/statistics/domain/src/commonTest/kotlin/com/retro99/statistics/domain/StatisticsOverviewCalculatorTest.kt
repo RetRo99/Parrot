@@ -3,10 +3,13 @@ package com.retro99.statistics.domain
 import com.retro99.books.domain.model.BookType
 import com.retro99.statistics.domain.model.ReadingSessionDomainModel
 import com.retro99.statistics.domain.model.StatisticsRange
+import com.retro99.statistics.domain.model.TimeOfDay
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -162,5 +165,55 @@ class StatisticsOverviewCalculatorTest {
         assertEquals(0, overview.longestStreak)
         assertNull(overview.firstSessionDate)
         assertEquals(0L, overview.averageSessionMs)
+    }
+
+    @Test
+    fun rhythmNeedsSevenReadingDays() {
+        val fewDays = calculate(
+            (0L..5L).map { offset -> session(today.minus(offset.toInt(), DateTimeUnit.DAY), 10) },
+            StatisticsRange.WEEK,
+        )
+        assertEquals(6, fewDays.rhythm.readDaysInWindow)
+        assertNull(fewDays.rhythm.topWeekday)
+        assertNull(fewDays.rhythm.topTimeOfDay)
+
+        val enough = calculate(
+            (0L..6L).map { offset -> session(today.minus(offset.toInt(), DateTimeUnit.DAY), 10) },
+            StatisticsRange.WEEK,
+        )
+        assertEquals(true, enough.rhythm.hasEnoughData)
+    }
+
+    @Test
+    fun rhythmFindsTopWeekdayAndTimeOfDay() {
+        // Sundays are the long days, read in the evening.
+        val sundays = listOf(
+            LocalDate(2026, 9, 27),
+            LocalDate(2026, 9, 20),
+            LocalDate(2026, 9, 13),
+        ).map { day -> session(day, 60, hour = 19) }
+        val others = (1..5).map { offset ->
+            session(LocalDate(2026, 9, 29).minus(offset - 1, DateTimeUnit.DAY), 10, hour = 9)
+        }
+        val overview = calculate(sundays + others, StatisticsRange.WEEK, DayOfWeek.MONDAY)
+
+        assertEquals(DayOfWeek.SUNDAY, overview.rhythm.topWeekday)
+        assertEquals(TimeOfDay.EVENING, overview.rhythm.topTimeOfDay)
+        assertEquals(DayOfWeek.MONDAY, overview.rhythm.weekdayAverages.first().dayOfWeek)
+        assertEquals(DayOfWeek.SUNDAY, overview.rhythm.weekdayAverages.last().dayOfWeek)
+    }
+
+    @Test
+    fun sessionsSpanningMidnightSplitAcrossTimeOfDay() {
+        // 23:30 for 60 minutes: 30 minutes of evening, 30 of night.
+        val overview = calculate(
+            listOf(session(LocalDate(2026, 9, 28), 60, hour = 23).let { base ->
+                base.copy(startTime = base.startTime + 30 * minute)
+            }),
+            StatisticsRange.WEEK,
+        )
+
+        assertEquals(30 * minute, overview.rhythm.timeOfDayMs[TimeOfDay.EVENING])
+        assertEquals(30 * minute, overview.rhythm.timeOfDayMs[TimeOfDay.NIGHT])
     }
 }

@@ -893,7 +893,7 @@ private fun ReaderContent(
 }
 
 @Composable
-private fun AnimatedProgressBar(
+internal fun AnimatedProgressBar(
     settings: ReaderSettingsUiModel,
     areControlsVisible: Boolean,
     position: ProgressBarPosition,

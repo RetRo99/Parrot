@@ -5,14 +5,13 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AnalyticsEvent
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
-import com.retro99.analytics.api.FileLogger
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.base.ui.compose.ThemeMode
-import com.retro99.base.ui.sharing.FileSharer
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.reader.domain.usecase.ClearCurrentlyReadingUseCase
 import com.retro99.reader.domain.usecase.ObserveCurrentlyReadingUseCase
+import com.retro99.server.api.ServerRegistry
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.catch
@@ -26,8 +25,7 @@ import org.koin.core.annotation.Provided
 
 @KoinViewModel
 class AppSettingsViewModel(
-    @Provided private val fileLogger: FileLogger,
-    @Provided private val fileSharer: FileSharer,
+    @Provided private val serverRegistry: ServerRegistry,
     @Provided private val preferences: Preferences,
     @Provided private val clearCurrentlyReadingUseCase: ClearCurrentlyReadingUseCase,
     @Provided private val observeCurrentlyReadingUseCase: ObserveCurrentlyReadingUseCase,
@@ -47,12 +45,10 @@ class AppSettingsViewModel(
 
     init {
         observeUserProfiles()
+        observeServerNames()
         observeCurrentlyReading()
         observeBooleanPref(PreferencesKey.FileLoggingEnabled, defaultValue = false) { enabled ->
             updateState { it.copy(isLoggingEnabled = enabled) }
-        }
-        observeBooleanPref(PreferencesKey.FileLoggingCrashesOnly, defaultValue = false) { enabled ->
-            updateState { it.copy(logCrashesOnly = enabled) }
         }
         observeBooleanPref(PreferencesKey.OpenLastBookOnLaunch, defaultValue = false) { enabled ->
             updateState { it.copy(openLastBookOnLaunch = enabled) }
@@ -123,6 +119,14 @@ class AppSettingsViewModel(
             .launchIn(viewModelScope)
     }
 
+    private fun observeServerNames() {
+        serverRegistry.observeAllServers()
+            .onEach { servers ->
+                updateState { state -> state.copy(serverNames = servers.map { server -> server.name }) }
+            }
+            .launchIn(viewModelScope)
+    }
+
     private fun observeUserProfiles() {
         userRegistry.observeAllProfiles()
             .onEach { profiles ->
@@ -139,26 +143,12 @@ class AppSettingsViewModel(
 
     override fun onIntent(intent: AppSettingsIntent) {
         when (intent) {
-            is AppSettingsIntent.OnLoggingToggled -> setLoggingEnabled(intent.enabled)
-            is AppSettingsIntent.OnLogCrashesOnlyToggled -> setLogCrashesOnly(intent.enabled)
             is AppSettingsIntent.OnOpenLastBookToggled -> setOpenLastBookOnLaunch(intent.enabled)
-            AppSettingsIntent.OnThemeModeClicked -> {
-                updateState { it.copy(showThemeModeDialog = true) }
-            }
-            AppSettingsIntent.OnThemeModeDialogDismissed -> {
-                updateState { it.copy(showThemeModeDialog = false) }
-            }
             is AppSettingsIntent.OnThemeModeSelected -> {
                 preferences.putString(PreferencesKey.ThemeMode, intent.themeMode.key)
-                updateState { it.copy(showThemeModeDialog = false) }
+                updateState { it.copy(themeMode = intent.themeMode) }
             }
             is AppSettingsIntent.OnShowContinueReadingToggled -> setShowContinueReading(intent.enabled)
-            AppSettingsIntent.OnShareLogsClicked -> shareLogs()
-            AppSettingsIntent.OnShareLogsFailedMessageShown -> onLogShareFailedMessageShown()
-            AppSettingsIntent.OnClearLogsClicked -> clearLogs()
-            AppSettingsIntent.OnLogsClearedMessageShown -> onLogsClearedMessageShown()
-            AppSettingsIntent.OnLogsClearFailedMessageShown -> onLogsClearFailedMessageShown()
-            AppSettingsIntent.OnNoLogsMessageShown -> onNoLogsMessageShown()
             AppSettingsIntent.OnClearCurrentBookClicked -> clearCurrentBook()
             AppSettingsIntent.OnCurrentBookClearedMessageShown -> onCurrentBookClearedMessageShown()
             AppSettingsIntent.OnCurrentBookClearFailedMessageShown -> onCurrentBookClearFailedMessageShown()
@@ -169,9 +159,7 @@ class AppSettingsViewModel(
             AppSettingsIntent.OnProfileNameEdited -> onProfileNameEdited()
             is AppSettingsIntent.OnProfileLongPressed -> onProfileLongPressed(intent.profileId, intent.entryPoint)
             is AppSettingsIntent.OnProfileMenuDismissed -> dismissProfileMenu(intent.entryPoint)
-            AppSettingsIntent.OnRenameProfileClicked -> showRenameProfileDialog()
-            is AppSettingsIntent.OnRenameProfileConfirmed -> renameProfile(intent.newName)
-            is AppSettingsIntent.OnRenameProfileDismissed -> hideRenameProfileDialog(intent.entryPoint)
+            is AppSettingsIntent.OnEditProfileSaved -> saveProfileEdit(intent.name, intent.colorIndex)
             AppSettingsIntent.OnDeleteProfileClicked -> showDeleteProfileDialog()
             AppSettingsIntent.OnDeleteProfileConfirmed -> deleteProfile()
             is AppSettingsIntent.OnDeleteProfileDismissed -> hideDeleteProfileDialog(intent.entryPoint)
@@ -297,51 +285,14 @@ class AppSettingsViewModel(
         updateState { it.copy(selectedProfileForMenu = null) }
     }
 
-    private fun showRenameProfileDialog() {
-        if (profileOperationGate.isInProgress || viewState.value.showRenameProfileDialog) return
-        if (viewState.value.selectedProfileForMenu == null) return
-        renameProfileRetryKey?.let(profileOperationRetryTracker::clear)
-        renameProfileRetryKey = profileOperationRetryTracker.newSessionKey(
-            AppSettingsAnalyticsEvent.ProfileOperation.Rename,
-        )
-        analytics.logEvent(
-            AppSettingsAnalyticsEvent.ProfileDialogOpened(AppSettingsAnalyticsEvent.ProfileOperation.Rename),
-        )
-        updateState {
-            it.copy(
-                showRenameProfileDialog = true,
-                showProfileOperationFailedMessage = false,
-                showDuplicateProfileNameError = false,
-            )
-        }
-    }
-
-    private fun hideRenameProfileDialog(entryPoint: String) {
-        if (profileOperationGate.isInProgress || !viewState.value.showRenameProfileDialog) return
-        renameProfileRetryKey?.let(profileOperationRetryTracker::clear)
-        renameProfileRetryKey = null
-        analytics.logEvent(
-            AppSettingsAnalyticsEvent.ProfileOperationCancelled(
-                profileOperation = AppSettingsAnalyticsEvent.ProfileOperation.Rename,
-                entryPoint = entryPoint,
-            ),
-        )
-        updateState {
-            it.copy(
-                showRenameProfileDialog = false,
-                selectedProfileForMenu = null,
-                showProfileOperationFailedMessage = false,
-                showDuplicateProfileNameError = false,
-            )
-        }
-    }
-
-    private fun renameProfile(newName: String) {
+    /** Saves the name and colour from the Edit profile sheet in one update. */
+    private fun saveProfileEdit(newName: String, colorIndex: Int) {
         val profile = viewState.value.selectedProfileForMenu ?: return
-        if (newName.isBlank() || !viewState.value.showRenameProfileDialog) return
+        val trimmedName = newName.trim()
+        if (trimmedName.isBlank()) return
         if (
             isDuplicateProfileName(
-                candidate = newName,
+                candidate = trimmedName,
                 profiles = viewState.value.userProfiles,
                 excludingProfileId = profile.id,
             )
@@ -353,14 +304,15 @@ class AppSettingsViewModel(
             AppSettingsAnalyticsEvent.ProfileOperation.Rename,
         ).also { renameProfileRetryKey = it }
         launchProfileOperation {
-            val updatedProfile = profile.copy(name = newName)
+            val updatedProfile = profile.copy(name = trimmedName, avatarId = colorIndex)
             val succeeded = runProfileOperation(
                 operation = AppSettingsAnalyticsEvent.ProfileOperation.Rename,
                 retryKey = retryKey,
                 successEvent = { isRetry -> AppSettingsAnalyticsEvent.ProfileRenamed(isRetry) },
             ) {
                 userRegistry.updateProfile(updatedProfile)
-                check(userRegistry.getProfile(profile.id)?.name == updatedProfile.name) {
+                val stored = userRegistry.getProfile(profile.id)
+                check(stored?.name == updatedProfile.name && stored.avatarId == updatedProfile.avatarId) {
                     "profile_rename_not_applied"
                 }
             }
@@ -368,7 +320,6 @@ class AppSettingsViewModel(
             updateState {
                 if (succeeded) {
                     it.copy(
-                        showRenameProfileDialog = false,
                         selectedProfileForMenu = null,
                         showProfileOperationFailedMessage = false,
                         showDuplicateProfileNameError = false,
@@ -406,7 +357,6 @@ class AppSettingsViewModel(
         updateState {
             it.copy(
                 showDeleteProfileDialog = false,
-                selectedProfileForMenu = null,
                 showProfileOperationFailedMessage = false,
             )
         }
@@ -521,31 +471,6 @@ class AppSettingsViewModel(
         return succeeded
     }
 
-    private fun setLoggingEnabled(enabled: Boolean) {
-        runAppSettingToggle(
-            setting = AppSettingsAnalyticsEvent.SettingToggle.FileLogging,
-            enabled = enabled,
-            persist = { preferences.putBoolean(PreferencesKey.FileLoggingEnabled, enabled) },
-            successEvent = { isRetry ->
-                AppSettingsAnalyticsEvent.FileLoggingToggled(isEnabled = enabled, isRetry = isRetry)
-            },
-        ) {
-            updateState { it.copy(isLoggingEnabled = enabled) }
-        }
-    }
-
-    private fun setLogCrashesOnly(enabled: Boolean) {
-        runAppSettingToggle(
-            setting = AppSettingsAnalyticsEvent.SettingToggle.CrashOnlyLogging,
-            enabled = enabled,
-            persist = { preferences.putBoolean(PreferencesKey.FileLoggingCrashesOnly, enabled) },
-            successEvent = { isRetry ->
-                AppSettingsAnalyticsEvent.CrashOnlyLoggingToggled(isEnabled = enabled, isRetry = isRetry)
-            },
-        ) {
-            updateState { it.copy(logCrashesOnly = enabled) }
-        }
-    }
 
     private fun setOpenLastBookOnLaunch(enabled: Boolean) {
         runAppSettingToggle(
@@ -596,64 +521,6 @@ class AppSettingsViewModel(
             failedSettingToggleTargets[setting] = enabled
             updateState { it.withAppSettingSaveFailure() }
         }
-    }
-
-    private fun shareLogs() {
-        val isRetry = viewState.value.canRetryLogShare
-        val outcome = executeLogShare(
-            analytics = analytics,
-            isRetry = isRetry,
-            readLogContents = fileLogger::getLogContents,
-            launchShareSheet = {
-                fileSharer.shareFile(
-                    filePath = fileLogger.getLogFilePath(),
-                    mimeType = "text/plain",
-                    title = "Share App Logs",
-                )
-            },
-        )
-        updateState {
-            when (outcome) {
-                LogShareOutcome.NoLogs -> it.copy(
-                    showNoLogsMessage = true,
-                    showLogShareFailedMessage = false,
-                    canRetryLogShare = false,
-                )
-                LogShareOutcome.Opened -> it.copy(
-                    showLogShareFailedMessage = false,
-                    canRetryLogShare = false,
-                )
-                LogShareOutcome.Failed -> it.copy(
-                    showLogShareFailedMessage = true,
-                    canRetryLogShare = true,
-                )
-            }
-        }
-    }
-
-    private fun onLogShareFailedMessageShown() {
-        updateState { it.copy(showLogShareFailedMessage = false) }
-    }
-
-    private fun clearLogs() {
-        val succeeded = executeLogsClear(
-            analytics = analytics,
-            isRetry = viewState.value.canRetryLogsClear,
-            clear = fileLogger::clearLogs,
-        )
-        updateState { it.withLogsClearOutcome(succeeded) }
-    }
-
-    private fun onLogsClearedMessageShown() {
-        updateState { it.copy(showLogsClearedMessage = false) }
-    }
-
-    private fun onLogsClearFailedMessageShown() {
-        updateState { it.copy(showLogsClearFailedMessage = false) }
-    }
-
-    private fun onNoLogsMessageShown() {
-        updateState { it.copy(showNoLogsMessage = false) }
     }
 
     private fun clearCurrentBook() {

@@ -32,6 +32,10 @@ data class EmberColors(
     val onError: Color,
     /** Text and check color on a selected chip, segment or radio row. */
     val chipSelectedText: Color,
+    /** Softer accent for secondary bars next to a highlighted one. */
+    val mutedAccent: Color,
+    /** Destructive actions such as clearing data. */
+    val destructive: Color,
 )
 
 /** Per-mode style values that are not colors. */
@@ -73,6 +77,8 @@ val EmberNightColors = EmberColors(
     error = Color(0xFFFFB4AB),
     onError = Color(0xFF690005),
     chipSelectedText = Color(0xFFF2C39A),
+    mutedAccent = Color(0xFF7A5A40),
+    destructive = Color(0xFFF08A7A),
 )
 
 val EmberDayColors = EmberColors(
@@ -94,6 +100,8 @@ val EmberDayColors = EmberColors(
     error = Color(0xFFBA1A1A),
     onError = Color.White,
     chipSelectedText = Color(0xFF9A4D1A),
+    mutedAccent = Color(0xFFD9B597),
+    destructive = Color(0xFFA8321F),
 )
 
 val EmberEinkColors = EmberColors(
@@ -115,6 +123,8 @@ val EmberEinkColors = EmberColors(
     error = Color.Black,
     onError = Color.White,
     chipSelectedText = Color.White,
+    mutedAccent = Color.White,
+    destructive = Color.Black,
 )
 
 val EmberNightStyle = EmberStyle(
