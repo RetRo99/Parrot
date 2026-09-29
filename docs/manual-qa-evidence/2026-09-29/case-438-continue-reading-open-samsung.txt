@@ -1,0 +1,24 @@
+# Case 438 / 774 — Continue Reading open funnel: Samsung QA-BUG-0077 retest
+
+- **Run time:** 2026-09-29, 02:19–02:20 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation, portrait, 1080×2340, font scale 1.0.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, PID `4402`. APK SHA-256 `e9512073b0c83b0fc5eac9ebc2ae33d9f5f17c550b6dcc877ecea0b3cb24d8ac`; local and Samsung-pulled APK hashes match. Source/fix commit `ee46e6deebab167250c287978066937717ba4278`.
+- **Fixture/privacy:** original profile, current-reading reference, and unauthenticated server retained unchanged. The known startup authentication prompt was dismissed with Close. For each Continue Reading path, the same expected unavailable/not-authenticated prompt appeared; **Retry was not tapped**. Both prompts were dismissed with Close. No app data was cleared or profile/server/book fixture modified. No book/profile IDs, title, URL, credentials, screenshots, raw hierarchy, raw log lines, or generated correlation IDs are retained.
+
+## Executed variants
+
+1. From Series, tapped the floating Continue Reading bubble. The Reader route opened, then displayed the existing unauthenticated-server prompt. Close returned to Series. Functional route selection PASS; usable Reader content is BLOCKED by the retained unauthenticated fixture.
+2. From Books, tapped the Continue Reading shelf. The Reader route opened, then displayed the same expected prompt. Close returned to Books. Functional route selection PASS; usable Reader content is BLOCKED. Shelf source attribution was verified separately from the floating bubble.
+3. No Retry, login, server change, or fixture alteration was attempted. Playback-conflict confirm/cancel, Reader retry, usable-content success, and audiobook source paths were not exercised.
+
+## Analytics and diagnostics
+
+- Local `DebugAnalyticsManager` showed exactly one `continue_reading_open_attempted` and one `continue_reading_open_completed(outcome=failed, reason_code=server_not_authenticated)` for the bubble source (`floating_bubble`, media `readaloud`). The same pair appeared for the shelf source (`continue_reading_shelf`). Events contained no book/profile identifiers or title/content.
+- Each source had one `continue_reading_open` started breadcrumb and a matching terminal failed breadcrumb with the same diagnostic-only correlation ID; an additional initialization-stage breadcrumb carried the same source/correlation. IDs intentionally omitted. No `FATAL EXCEPTION` or generic `Exception occurred` marker appeared for PID `4402`.
+- The auth rejection was treated as an expected operation failure, not a Crashlytics report. Crashlytics unexpected-failure delivery is not exercised. Firebase Analytics ingestion is waived and not claimed; these are local debug-provider observations only.
+
+## Result
+
+- **Case 438 tap-to-usable-reader:** BLOCKED by unavailable authentication/usable-content fixture. Drag/snap/persistence subvariant remains PASS per [Samsung drag evidence](case-438-bubble-drag-samsung.txt).
+- **Case 774 floating-bubble and shelf source-attribution variants:** Analytics PASS locally; diagnostics PASS locally for expected-auth failure and correlated source context; functional navigation PASS to the route/prompt, usable content BLOCKED. Retry, cancellation/Playback Conflict, and success variants NOT RUN.
+- QA-BUG-0077 source-attribution gap is fixed and these expected-failure variants retested; successful-content outcome and unexpected non-fatal delivery remain unverified.

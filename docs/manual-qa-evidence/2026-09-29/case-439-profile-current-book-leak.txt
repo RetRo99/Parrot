@@ -1,0 +1,25 @@
+# Cases 439/776 — Continue Reading profile isolation: Samsung observation
+
+- **Run time:** 2026-09-29, approximately 02:30–02:33 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`, portrait, gesture navigation.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), PID `4402`, APK SHA-256 `e9512073b0c83b0fc5eac9ebc2ae33d9f5f17c550b6dcc877ecea0b3cb24d8ac`, source commit `ee46e6deebab167250c287978066937717ba4278`.
+- **Fixture/privacy:** Switched between the original profile and an existing disposable QA profile; no profile names/IDs or book identifiers retained. The original profile's current-reading/server state was not edited. Did not tap the stale bubble/shelf or Clear Current Book. No app data clear, login, server retry or fixture mutation.
+
+## Steps and observation
+
+1. On the original active profile, opened App Settings and selected an existing disposable QA profile from the profile row.
+2. In App Settings after the switch, Show Continue Reading was enabled. No Clear Current Book row was present, indicating that the destination profile had no current-book target in this screen's observed state.
+3. Selected Series. The floating Continue Reading bubble remained visible. Before leaving Books, the Continue Reading shelf had also remained visible after switching.
+4. Did not activate the stale route. Returned to App Settings and switched back to the original profile. Parrot returned to Books with the original shelf visible; original profile/current-book state was preserved.
+
+## Instrumentation
+
+- Local log summary for PID `4402` showed one `profile_operation_attempted` and one `profile_switched` event. The profile switch start and terminal-success diagnostic breadcrumbs were present.
+- A current-book observation breadcrumb recorded `available` before the switch; no destination `current_book_state=unavailable` breadcrumb was observed after the switch. No source/destination profile identity or book identity is retained.
+- The local DebugAnalyticsManager is not Firebase delivery evidence. Firebase Analytics ingestion is waived. No crash occurred; no unexpected non-fatal was exercised or reported. Crashlytics delivery is unverified.
+
+## Result
+
+- Case 439 no-current-target visibility condition: **FAIL** (stale bubble visible). The literal Clear Current Book button action was **NOT RUN**, because it was absent in the disposable destination profile; the original profile was not cleared.
+- Case 776 profile-switch rebind: **FAIL** (old profile's reading target remains visible in the destination profile). One observation only; repeatability and root cause are unverified.
+- QA-BUG-0078 was recorded before any fix. No code change or profile deletion has occurred.
