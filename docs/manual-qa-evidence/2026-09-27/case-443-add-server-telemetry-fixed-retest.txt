@@ -1,9 +1,9 @@
-Case 443 — Add Server navigation, committed-fix Samsung retest
+Case 443 — Add Server attempt instrumentation, QA-BUG-0038 committed-fix retest (before QA-BUG-0079)
 Date: 2026-09-27, Samsung local CEST (UTC+0200).
 
 Device/build
 - Physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 `S921BXXSGDZG1`.
-- Installed `com.retro99.parrot` 0.4.5 (21), source commit `107d017cdcc3d834e99dc983e20a7ed6002e319c` (`fix(analytics): report Add Server as attempt [QA-BUG-0038, case 443]`), PID `19860`.
+- Installed `com.retro99.parrot` 0.4.5 (21), source commit `107d017cdcc3d834e99dc983e20a7ed6002e319c` (`fix(analytics): report Add Server as attempt [QA-BUG-0038, case 443]`), PID `19860`. This run predates QA-BUG-0079's separate Login source-attribution fix.
 - APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`; local debug APK and Samsung-pulled installed `base.apk` hashes match.
 - Analytics sanitizer host test: 18 tests, 0 failures/errors (includes the `ServerAddAttempted` bounded-schema regression). Login UI host suite: 9 tests, 0 failures/errors. `:androidApp:assembleDebug` succeeded.
 
@@ -18,12 +18,12 @@ PID-scoped local DebugAnalyticsManager output (07:32:24 CEST):
 09-27 07:32:24.425 19860 D Analytics Event: login_screen_viewed | Parameters: {screen=login, source_screen=home, entry_point=add_server}
 09-27 07:32:24.425 19860 D Diagnostic breadcrumb: diagnostic_context screen=login source_screen=home entry_point=add_server action=screen_view operation=login_route stage=visible outcome=succeeded
 ```
-- Exactly one bounded Add Server attempt appears before the destination exposure. No `server_added`, unknown server type, duplicate attempt, credentials, login attempt/result, exception or fatal marker was observed in the PID-scoped run. No crash or unexpected user-experience failure occurred.
+- Exactly one bounded Add Server attempt appears before the destination exposure. The attempt is correctly attributed, and no `server_added`, unknown server type, duplicate attempt, credentials, login attempt/result, exception or fatal marker was observed. However, the actual Login exposure and visible-route breadcrumb both report `source_screen=home, entry_point=add_server` even though this tap came from Server Management. No crash or unexpected functional failure occurred.
 
 Results, separately by dimension
 - Functional: **PASS** — Add Server opens Login; Back returns to the unchanged empty server list.
-- Analytics: **PASS for this navigation/attempt variant** — exactly one `server_add_attempted` (`outcome=started`, source/destination/entry point bounded) followed by one actual `login_screen_viewed`. The false `server_added(server_type=unknown)` from the pre-fix run is absent. Firebase ingestion is waived; these are local DebugAnalyticsManager logs only.
-- Diagnostics: **PASS for destination visibility** — one Login visible-route breadcrumb; no exception is expected for ordinary navigation. Crashlytics delivery remains unverified.
+- Analytics: **PARTIAL / FAIL for full source attribution** — the `server_add_attempted` outcome is correctly bounded and the false `server_added(server_type=unknown)` is absent, but `login_screen_viewed` is misattributed to `home/add_server`. Firebase ingestion is waived; these are local DebugAnalyticsManager logs only.
+- Diagnostics: **FAIL for entry-source attribution** — the Login visible-route breadcrumb is present but repeats the incorrect `home/add_server` context. Ordinary navigation does not warrant a Crashlytics exception; delivery remains unverified.
 - Credentials/account data were not entered or created. No app data was cleared.
 
-QA-BUG-0038 pre-fix failure and history remain preserved at [the original observation](case-443-add-server-telemetry-prefx.txt). The focused fix commit is `107d017c`; its Samsung APK hash matches the installed build.
+QA-BUG-0038 pre-fix failure and history remain preserved at [the original observation](case-443-add-server-telemetry-prefx.txt). The focused attempt-event fix commit is `107d017c`; its Samsung APK hash matches the installed build. This evidence does not pass Login source attribution: QA-BUG-0079 later fixed and retested that separately on Samsung ([focused fix retest](../2026-09-29/qa-bug-0079-login-source-retest.txt); [final combined committed build](../2026-09-29/cases-443-524-final-committed-build.txt)).

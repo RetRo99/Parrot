@@ -1,0 +1,22 @@
+QA-BUG-0079 / case 443 — source-attribution evidence reconciliation
+Review time: 2026-09-29 18:11 CEST (UTC+0200).
+
+Historical observation and corrected disposition
+- The 2026-09-27 case-443 run at 07:32 used source commit `107d017cdcc3d834e99dc983e20a7ed6002e319c`, APK SHA-256 `64b83815f96371c00407dbf5955968064348ba4aadaa0497edc659bfe1891304`, PID `19860`.
+- Its `server_add_attempted` was correctly attributed to `server_management/add_server_button`, and `server_added=0`; however, the actual Login exposure and visible-route breadcrumb both reported `home/add_server`. The tap originated from Settings → Servers → Add Server. The older run therefore passes functionally, passes the Add Server-attempt event semantics, but FAILS destination-source attribution; its overall Analytics result is PARTIAL and its diagnostics attribution result is FAIL. It predates the separate QA-BUG-0079 route-origin fix and must not be presented as a full attribution PASS.
+- The initial 2026-09-27 pre-fix observation had the same Login source mismatch in addition to the premature `server_added` event. Those original outputs are preserved; the result ledger now distinguishes both defects.
+
+Current source path and focused regression coverage
+- `RootNavigation` assigns bounded `sourceScreen=server_management` and `entryPoint=add_server_button` to the Add Server `OnLoginClicked` intent.
+- `RootNavigationIntent` carries both fields; `RootNavigationViewModel` copies them into `RootDestination.Login`; `RootNavigation` passes them to `LoginNavigation`; and `LoginNavigation` supplies them to `LoginNavigationViewModel`.
+- The ViewModel prefers explicit route origin before its fallback `startAtLogin -> home`; the fallback remains for callers that do not provide origin, but it is not used by the current Server Management Add Server route.
+- Existing focused test `LoginNavigationViewModelTest.explicitRootLoginOriginIsUsedForAddServerExposure` asserts both `login_screen_viewed` and its matching `login_route` breadcrumb use `server_management/add_server_button`. It is part of the QA-BUG-0079 fix, not a new test added during this review.
+- Current-source verification: `./gradlew :feature:login:ui:testAndroidHostTest :composeApp:testAndroidHostTest --rerun-tasks` succeeded at approximately 18:06 CEST; Login UI 37/37 and ComposeApp 8/8 passed, zero failures/errors/skips. This is host evidence, not Samsung evidence.
+
+Samsung post-fix retest evidence
+- The focused QA-BUG-0079 candidate retest on Samsung PID `12470`, APK SHA-256 `7ea34f6f0d1f05b5209093dd22095f8904b6b4633089cc52f070f05ca41602f8`, observed the event and breadcrumb correctly attributed to `server_management/add_server_button`: [QA-BUG-0079 retest](qa-bug-0079-login-source-retest.txt).
+- The final combined committed Samsung build on PID `25746`, APK SHA-256 `d1f5202462a20294aa5a8c3fd227266deace01e661dfb37c3973fea0b0fafe06`, exercised Add Server twice. Both `login_screen_viewed` events and both `login_route` breadcrumbs used `server_management/add_server_button`, alongside two `server_add_attempted` events and no `server_added`: [final case-443/524 run](cases-443-524-final-committed-build.txt). This final run includes QA-BUG-0079 fix commit `8e16676916c7ad06d82bc4bd93ecfd67f172cf80`.
+- Comparing the relevant current source to that final tested tree shows no subsequent change to the route-source handoff. `HomeNavigation.kt` has later UI changes, but its Add Server callback remains unchanged. A fresh Samsung run was not performed during this review: `RFCWC0SSVDM` was absent from `adb devices -l`; only the head unit and emulator were listed. Do not describe the existing post-fix evidence as a new run.
+
+Disposition
+- QA-BUG-0079 remains FIXED based on the hash-matched post-fix Samsung evidence above. Keep the 2026-09-27 `107d017c` run as a separate historical PARTIAL/FAIL attribution observation; the later final committed-build row remains PASS with its own evidence. Firebase Analytics ingestion is waived; local DebugAnalyticsManager output is not Firebase delivery evidence. No new product bug or code change was needed in this reconciliation.
