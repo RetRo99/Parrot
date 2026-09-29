@@ -16,6 +16,7 @@ Device availability
 Welcome instrumentation preflight (source review only; not device execution)
 - `LoginNavigationViewModel.onDestinationVisible` emits one `welcome_screen_viewed` event and one `welcome` visible-route breadcrumb for a new Welcome exposure; repeated same-destination callbacks are guarded.
 - `LoginNavigationViewModelTest.repeatedDestinationVisibilityDoesNotDuplicateExposureOrBreadcrumb` covers this deduplication. Guest-choice failure/retry and Welcome root-Back behavior also have host tests, but do not substitute for the locale/device run.
+- Host verification after this audit: `./gradlew :feature:login:ui:testAndroidHostTest --rerun-tasks` succeeded; 37 tests passed, 0 failed/errors/skipped (including 10 `LoginNavigationViewModelTest` tests). This is source/host evidence only; no APK was installed and no Samsung behavior is inferred.
 - The current Samsung-visible Welcome exposure, Spanish rendering/layout, and local event/breadcrumb have not been observed in this continuation.
 
 Next safe action
