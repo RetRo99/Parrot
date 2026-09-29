@@ -76,11 +76,9 @@ select is(
     1,
     'the second account has its own live upload reservation for the insert control'
 );
-insert into storage.objects (bucket_id, name, metadata)
-select 'book-files', storage_path, '{"size":40}'::jsonb from owner_b_upload;
-select is(
-    (select count(*)::integer from storage.objects o join owner_b_upload u on u.storage_path = o.name),
-    1,
+select lives_ok(
+    $$insert into storage.objects (bucket_id, name, metadata)
+      select 'book-files', storage_path, '{"size":40}'::jsonb from owner_b_upload$$,
     'a user may insert the object at their own live reserved path'
 );
 
@@ -97,6 +95,7 @@ select is(
     0,
     'cross-account reads cannot see an available object'
 );
+set local storage.allow_delete_query = 'true';
 with removed as (
     delete from storage.objects
     where bucket_id = 'book-files'
