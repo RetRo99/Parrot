@@ -1,13 +1,28 @@
 package com.retro99.home.ui.navigation
 
 import androidx.compose.foundation.layout.Box
+import com.retro99.base.ui.compose.Ember
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -271,11 +286,17 @@ fun HomeNavigation(
                                     )
                                 )
                             },
-                            headerContent = {
+                            headerContent = { books ->
                                 if (uiState.showContinueReading) {
                                     currentlyReading?.let { book ->
                                         ContinueReadingShelf(
                                             currentlyReading = book,
+                                            author = books
+                                                .firstOrNull { candidate ->
+                                                    candidate.uuid == book.bookUuid
+                                                }
+                                                ?.authors
+                                                ?.joinToString(", "),
                                             onClick = {
                                                 intentDispatcher(
                                                     HomeNavigationIntent.RequestOpenReader(
@@ -507,21 +528,57 @@ private fun HomeBottomNavigationBar(
     onTabSelected: (HomeTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    NavigationBar(modifier = modifier) {
-        HomeTab.entries.forEach { tab ->
-            NavigationBarItem(
-                selected = currentTab == tab,
-                onClick = { onTabSelected(tab) },
-                icon = {
-                    Icon(
-                        imageVector = tab.icon,
-                        contentDescription = stringResource(tab.labelRes),
+    val colors = Ember.colors
+    val style = Ember.style
+
+    Column(modifier = modifier.background(colors.nav)) {
+        HorizontalDivider(thickness = style.border, color = colors.line)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(72.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            HomeTab.entries.forEach { tab ->
+                val selected = currentTab == tab
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .selectable(
+                            selected = selected,
+                            role = Role.Tab,
+                            onClick = { onTabSelected(tab) },
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(width = 56.dp, height = 28.dp)
+                            .clip(CircleShape)
+                            .background(if (selected) colors.navActive else Color.Transparent),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = tab.icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(21.dp),
+                            tint = if (selected) colors.navActiveContent else colors.ink2,
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(tab.labelRes),
+                        style = Ember.type.navLabel,
+                        color = when {
+                            !selected -> colors.ink2
+                            style.progressOutlined -> colors.ink
+                            else -> colors.navActiveContent
+                        },
                     )
-                },
-                label = {
-                    Text(text = stringResource(tab.labelRes))
-                },
-            )
+                }
+            }
         }
     }
 }

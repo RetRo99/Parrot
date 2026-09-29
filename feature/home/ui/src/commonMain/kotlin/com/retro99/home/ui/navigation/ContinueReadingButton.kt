@@ -1,6 +1,15 @@
 package com.retro99.home.ui.navigation
 
 import androidx.compose.foundation.background
+import resources.translations.continue_reading_resume
+import com.retro99.base.ui.compose.EmberProgress
+import com.retro99.base.ui.compose.EmberCover
+import com.retro99.base.ui.compose.Ember
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,110 +109,114 @@ fun ContinueReadingBubble(
     }
 }
 
+/** Ember "Continue reading" hero card: cover, title, author, progress and a Resume button. */
 @Composable
 fun ContinueReadingShelf(
     currentlyReading: CurrentlyReadingUiModel,
+    author: String?,
     onClick: () -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    val colors = Ember.colors
+    val style = Ember.style
+    val type = Ember.type
+    val cardShape = RoundedCornerShape(18.dp)
+    val cardBorder = if (style.progressOutlined) {
+        Modifier.border(2.dp, colors.line, cardShape)
+    } else {
+        Modifier
+    }
+
+    Box(
         modifier = modifier
+            .padding(horizontal = 20.dp, vertical = 8.dp)
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        tonalElevation = 2.dp,
-        shadowElevation = 2.dp,
-        color = MaterialTheme.colorScheme.primaryContainer,
+            .then(cardBorder)
+            .clip(cardShape)
+            .background(colors.surface),
     ) {
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 56.dp, height = 84.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (currentlyReading.coverUrl != null) {
-                        CoilImage(
-                            data = currentlyReading.coverUrl,
-                            cacheKey = "continue_reading_shelf_${currentlyReading.bookUuid}",
-                            contentDescription = currentlyReading.bookTitle,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.matchParentSize(),
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
-                }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            EmberCover(
+                data = currentlyReading.coverUrl,
+                cacheKey = "continue_reading_shelf_${currentlyReading.bookUuid}",
+                contentDescription = currentlyReading.bookTitle,
+                elevation = style.coverElevation,
+                modifier = Modifier.size(width = 96.dp, height = 144.dp),
+            )
 
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f).height(144.dp)) {
+                Text(
+                    text = stringResource(StringRes.continue_reading_title).uppercase(),
+                    style = type.eyebrow,
+                    color = colors.accentText,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = currentlyReading.bookTitle,
+                    style = type.cardTitle,
+                    color = colors.ink,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!author.isNullOrBlank()) {
                     Text(
-                        text = stringResource(StringRes.continue_reading_title),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = currentlyReading.bookTitle,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LinearProgressIndicator(
-                        progress = { (currentlyReading.totalProgression ?: 0.0).toFloat() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(5.dp)
-                            .clip(RoundedCornerShape(3.dp)),
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "${currentlyReading.progressPercent}% - ${currentlyReading.bookType.toShelfLabel()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                        text = author,
+                        style = type.author,
+                        color = colors.ink2,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Surface(
+                Spacer(modifier = Modifier.weight(1f))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    EmberProgress(
+                        progress = (currentlyReading.totalProgression ?: 0.0).toFloat(),
+                        height = style.progressHeight,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${currentlyReading.progressPercent}%",
+                        style = type.label,
+                        color = colors.ink2,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onClick,
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.accent,
+                        contentColor = colors.onAccent,
+                    ),
+                    contentPadding = PaddingValues(start = 14.dp, end = 18.dp),
+                    modifier = Modifier.height(44.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
-                        contentDescription = stringResource(StringRes.continue_reading_title),
-                        modifier = Modifier.padding(10.dp).size(24.dp),
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(StringRes.continue_reading_resume),
+                        style = type.label,
                     )
                 }
             }
-
-            ContinueReadingOverflowMenu(
-                onClear = onClear,
-                modifier = Modifier.align(Alignment.TopEnd),
-            )
         }
+
+        ContinueReadingOverflowMenu(
+            onClear = onClear,
+            modifier = Modifier.align(Alignment.TopEnd),
+        )
     }
 }
 
@@ -223,7 +236,7 @@ private fun ContinueReadingOverflowMenu(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = stringResource(StringRes.continue_reading_more),
                 modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                tint = Ember.colors.ink2,
             )
         }
 

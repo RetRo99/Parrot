@@ -1,5 +1,6 @@
 package com.retro99.home.ui.appsettings
 
+import com.retro99.base.ui.compose.ThemeMode
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.user.api.UserProfile
 
@@ -8,6 +9,8 @@ data class AppSettingsViewState(
     val logCrashesOnly: Boolean = false,
     val openLastBookOnLaunch: Boolean = false,
     val showContinueReading: Boolean = true,
+    val themeMode: ThemeMode = ThemeMode.Night,
+    val showThemeModeDialog: Boolean = false,
     val hasCurrentlyReadingBook: Boolean = false,
     val showLogsClearedMessage: Boolean = false,
     val showLogsClearFailedMessage: Boolean = false,

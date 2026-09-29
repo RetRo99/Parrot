@@ -706,4 +706,13 @@
     <string name="audiobook_all_tracks" tools:ignore="MissingTranslation">View all tracks</string>
     <string name="general_ok" tools:ignore="MissingTranslation">OK</string>
     <string name="settings_custom_color" tools:ignore="MissingTranslation">Custom color</string>
+    <string name="app_settings_section_appearance" tools:ignore="MissingTranslation">Appearance</string>
+    <string name="app_settings_theme" tools:ignore="MissingTranslation">Theme</string>
+    <string name="app_settings_theme_system" tools:ignore="MissingTranslation">Match system</string>
+    <string name="app_settings_theme_night" tools:ignore="MissingTranslation">Night</string>
+    <string name="app_settings_theme_day" tools:ignore="MissingTranslation">Day</string>
+    <string name="app_settings_theme_eink" tools:ignore="MissingTranslation">E-ink</string>
+    <string name="books_library_title" tools:ignore="MissingTranslation">Library</string>
+    <string name="books_shelf_title" tools:ignore="MissingTranslation">On your shelf</string>
+    <string name="continue_reading_resume" tools:ignore="MissingTranslation">Resume</string>
 </resources>

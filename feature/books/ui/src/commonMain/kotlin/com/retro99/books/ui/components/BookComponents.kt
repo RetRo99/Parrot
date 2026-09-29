@@ -1,13 +1,5 @@
 package com.retro99.books.ui.components
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,14 +7,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
@@ -31,7 +22,6 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.delete
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
@@ -39,32 +29,30 @@ import androidx.compose.material.icons.outlined.DownloadDone
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.RecordVoiceOver
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.retro99.base.ui.compose.CoilImage
 import com.retro99.base.server.ServerType
+import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberCover
+import com.retro99.base.ui.compose.EmberProgress
 import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.translations.StringRes
@@ -82,15 +70,17 @@ import resources.translations.books_search_clear
 import resources.translations.books_search_placeholder
 
 /**
- * A reusable book item card component that displays book information in a card layout.
+ * A book row in the Ember list style: cover, title, author and formats, progress and favorite.
  *
  * @param book The book data to display
  * @param isFavorite Whether the book is marked as favorite
- * @param onClick Callback when the card is clicked
+ * @param onClick Callback when the row is clicked
  * @param onFavoriteClick Callback when the favorite button is clicked
- * @param modifier Modifier for the card
+ * @param modifier Modifier for the row
  * @param progressInfo Optional progress and cache info for the book
- * @param headerContent Optional composable content to display above the title (e.g., series position)
+ * @param showServerBadge Whether to show the server the book comes from
+ * @param showDivider Whether to draw a divider above the row (all but the first row of a list)
+ * @param headerContent Optional composable content to display above the title
  * @param subtitleContent Optional composable content to display below the author (e.g., series info)
  */
 @Composable
@@ -102,256 +92,234 @@ fun BookItemCard(
     modifier: Modifier = Modifier,
     progressInfo: BookProgressInfoUiModel? = null,
     showServerBadge: Boolean = true,
+    showDivider: Boolean = false,
     headerContent: @Composable (() -> Unit)? = null,
     subtitleContent: @Composable (() -> Unit)? = null,
 ) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-        ),
+    val colors = Ember.colors
+    val style = Ember.style
+    val type = Ember.type
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 14.dp),
     ) {
+        if (showDivider) {
+            HorizontalDivider(thickness = style.border, color = colors.line)
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(IntrinsicSize.Min)
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .clickable(onClick = onClick)
+                .padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            // Book cover with optional cache indicator
-            Box(
-                modifier = Modifier.size(width = 80.dp, height = 120.dp),
-            ) {
-                CoilImage(
-                    data = book.coverUrl,
-                    cacheKey = book.uuid,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .shadow(4.dp, RoundedCornerShape(12.dp))
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop,
-                    contentDescription = book.title,
-                )
-                // Cache indicator badge
-                if (progressInfo?.hasAnyCached == true) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .background(
-                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
-                                shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
-                            )
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.DownloadDone,
-                            contentDescription = stringResource(StringRes.books_cached_indicator),
-                            modifier = Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text(
-                            text = stringResource(StringRes.books_cached_indicator),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            maxLines = 1,
-                            autoSize = TextAutoSize.StepBased(
-                                minFontSize = 6.sp,
-                                maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                            ),
-                        )
-                    }
-                }
-                if (showServerBadge) {
-                    book.serverType?.let { serverType ->
-                        ServerTypeBadge(
-                            serverType = serverType,
-                            modifier = Modifier.align(Alignment.TopCenter),
-                        )
-                    }
-                }
-            }
+            EmberCover(
+                data = book.coverUrl,
+                cacheKey = book.uuid,
+                contentDescription = book.title,
+                modifier = Modifier.size(width = 44.dp, height = 66.dp),
+            )
 
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 headerContent?.invoke()
 
                 Text(
                     text = book.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
+                    style = type.bookTitle,
+                    color = colors.ink,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                if (book.authors.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = book.authors.joinToString(", "),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                BookMetaRow(
+                    book = book,
+                    isCached = progressInfo?.hasAnyCached == true,
+                    showServerBadge = showServerBadge,
+                )
 
                 subtitleContent?.invoke()
 
-                // Progress bar(s)
-                if (progressInfo != null && progressInfo.hasConflict) {
-                    // Show both local and remote progress bars when there's a conflict
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val animatedLocalProgress by animateFloatAsState(
-                        targetValue = (progressInfo.localProgression ?: 0.0).toFloat(),
-                        animationSpec = tween(durationMillis = 600),
-                        label = "localProgress",
-                    )
-                    val animatedRemoteProgress by animateFloatAsState(
-                        targetValue = (progressInfo.remoteProgression ?: 0.0).toFloat(),
-                        animationSpec = tween(durationMillis = 600),
-                        label = "remoteProgress",
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        // Local progress
-                        if (progressInfo.localProgression != null) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(StringRes.books_progress_local),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.width(48.dp),
-                                )
-                                LinearProgressIndicator(
-                                    progress = { animatedLocalProgress },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp)),
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                )
-                                Text(
-                                    text = "${progressInfo.localProgressPercent}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                        // Remote progress
-                        if (progressInfo.remoteProgression != null) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Text(
-                                    text = stringResource(StringRes.books_progress_remote),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    modifier = Modifier.width(48.dp),
-                                )
-                                LinearProgressIndicator(
-                                    progress = { animatedRemoteProgress },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp)),
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                )
-                                Text(
-                                    text = "${progressInfo.remoteProgressPercent}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.tertiary,
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    // Single progress bar when no conflict
-                    progressInfo?.displayProgression?.let { progress ->
-                        if (progress > 0.0) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            val animatedProgress by animateFloatAsState(
-                                targetValue = progress.toFloat(),
-                                animationSpec = tween(durationMillis = 600),
-                                label = "listProgress",
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                LinearProgressIndicator(
-                                    progress = { animatedProgress },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp)),
-                                    trackColor = MaterialTheme.colorScheme.surfaceContainer,
-                                )
-                                Text(
-                                    text = "${progressInfo.progressPercent}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                MediaTypeRow(book = book)
+                BookProgressLines(
+                    progressInfo = progressInfo,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
 
             IconButton(onClick = onFavoriteClick) {
-                AnimatedContent(
-                    targetState = isFavorite,
-                    transitionSpec = {
-                        (scaleIn(initialScale = 0.4f, animationSpec = tween(150)) + fadeIn(tween(150))) togetherWith
-                            (scaleOut(targetScale = 0.4f, animationSpec = tween(150)) + fadeOut(tween(150)))
+                Icon(
+                    imageVector = if (isFavorite) {
+                        Icons.Filled.Favorite
+                    } else {
+                        Icons.Outlined.FavoriteBorder
                     },
-                    label = "favoriteIcon",
-                ) { favorite ->
-                    Icon(
-                        imageVector = if (favorite) {
-                            Icons.Filled.Favorite
+                    contentDescription = stringResource(
+                        if (isFavorite) {
+                            StringRes.books_action_unfavorite
                         } else {
-                            Icons.Outlined.FavoriteBorder
+                            StringRes.books_action_favorite
                         },
-                        contentDescription = stringResource(
-                            if (favorite) {
-                                StringRes.books_action_unfavorite
-                            } else {
-                                StringRes.books_action_favorite
-                            }
-                        ),
-                        tint = if (favorite) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                }
+                    ),
+                    tint = if (isFavorite) colors.accentText else colors.ink2,
+                )
             }
         }
     }
 }
 
+/** "Author · icon Format" line under a book title. */
+@Composable
+private fun BookMetaRow(
+    book: BookUiModel,
+    isCached: Boolean,
+    showServerBadge: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val colors = Ember.colors
+    val type = Ember.type
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (book.authors.isNotEmpty()) {
+            Text(
+                text = book.authors.joinToString(", "),
+                style = type.meta,
+                color = colors.ink2,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Text(text = "·", style = type.meta, color = colors.ink2)
+        }
+        BookFormat.entries.filter { format -> format.isAvailableFor(book) }.forEach { format ->
+            Icon(
+                imageVector = format.icon,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = colors.ink2,
+            )
+            Text(
+                text = stringResource(format.labelRes),
+                style = type.meta,
+                color = colors.ink2,
+                maxLines = 1,
+            )
+        }
+        if (isCached) {
+            Icon(
+                imageVector = Icons.Outlined.DownloadDone,
+                contentDescription = stringResource(StringRes.books_cached_indicator),
+                modifier = Modifier.size(14.dp),
+                tint = colors.ink2,
+            )
+        }
+        if (showServerBadge) {
+            book.serverType?.let { serverType -> ServerTypeBadge(serverType = serverType) }
+        }
+    }
+}
+
+/**
+ * Progress bar and percentage. When the local and remote positions disagree both are
+ * shown, labelled, so the conflict is visible before the book is opened.
+ */
+@Composable
+private fun BookProgressLines(
+    progressInfo: BookProgressInfoUiModel?,
+    modifier: Modifier = Modifier,
+) {
+    val style = Ember.style
+    if (progressInfo == null) return
+
+    if (progressInfo.hasConflict) {
+        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            progressInfo.localProgression?.let { local ->
+                ProgressLine(
+                    progress = local.toFloat(),
+                    percent = progressInfo.localProgressPercent ?: 0,
+                    label = stringResource(StringRes.books_progress_local),
+                    height = style.progressHeightSmall,
+                )
+            }
+            progressInfo.remoteProgression?.let { remote ->
+                ProgressLine(
+                    progress = remote.toFloat(),
+                    percent = progressInfo.remoteProgressPercent ?: 0,
+                    label = stringResource(StringRes.books_progress_remote),
+                    height = style.progressHeightSmall,
+                )
+            }
+        }
+    } else {
+        val progress = progressInfo.displayProgression ?: 0.0
+        if (progress > 0.0) {
+            ProgressLine(
+                progress = progress.toFloat(),
+                percent = progressInfo.progressPercent,
+                label = null,
+                height = style.progressHeightSmall,
+                modifier = modifier,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProgressLine(
+    progress: Float,
+    percent: Int,
+    label: String?,
+    height: Dp,
+    modifier: Modifier = Modifier,
+) {
+    val colors = Ember.colors
+    val type = Ember.type
+
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        if (label != null) {
+            Text(
+                text = label,
+                style = type.meta.copy(fontSize = 11.sp),
+                color = colors.ink2,
+                modifier = Modifier.width(48.dp),
+            )
+        }
+        EmberProgress(progress = progress, height = height, modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = "$percent%",
+            style = type.label.copy(fontSize = type.meta.fontSize),
+            color = colors.accentText,
+            modifier = Modifier.widthIn(min = 30.dp),
+        )
+    }
+}
+
+private enum class BookFormat(
+    val icon: ImageVector,
+    val labelRes: StringResource,
+) {
+    Ebook(Icons.AutoMirrored.Outlined.MenuBook, StringRes.books_media_ebook),
+    Audio(Icons.Outlined.Headphones, StringRes.books_media_audio),
+    Readaloud(Icons.Outlined.RecordVoiceOver, StringRes.books_media_readaloud),
+    ;
+
+    fun isAvailableFor(book: BookUiModel): Boolean = when (this) {
+        Ebook -> book.hasEbook
+        Audio -> book.hasAudiobook
+        Readaloud -> book.hasReadaloud
+    }
+}
+
+/** A book in the cover grid: cover with favorite overlay, title, author and progress. */
 @Composable
 fun BookGridCard(
     book: BookUiModel,
@@ -362,59 +330,47 @@ fun BookGridCard(
     progressInfo: BookProgressInfoUiModel? = null,
     showServerBadge: Boolean = true,
 ) {
+    val colors = Ember.colors
+    val style = Ember.style
+    val type = Ember.type
+
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(4.dp),
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
     ) {
-        Box(
+        EmberCover(
+            data = book.coverUrl,
+            cacheKey = book.uuid,
+            contentDescription = book.title,
+            elevation = style.coverElevation,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f),
         ) {
-            CoilImage(
-                data = book.coverUrl,
-                cacheKey = book.uuid,
-                modifier = Modifier
-                    .matchParentSize()
-                    .shadow(6.dp, RoundedCornerShape(10.dp))
-                    .clip(RoundedCornerShape(10.dp)),
-                contentScale = ContentScale.Crop,
-                contentDescription = book.title,
-            )
             IconButton(
                 onClick = onFavoriteClick,
                 modifier = Modifier.align(Alignment.TopEnd),
             ) {
-                AnimatedContent(
-                    targetState = isFavorite,
-                    transitionSpec = {
-                        (scaleIn(initialScale = 0.4f, animationSpec = tween(150)) + fadeIn(tween(150))) togetherWith
-                            (scaleOut(targetScale = 0.4f, animationSpec = tween(150)) + fadeOut(tween(150)))
+                Icon(
+                    imageVector = if (isFavorite) {
+                        Icons.Filled.Favorite
+                    } else {
+                        Icons.Outlined.FavoriteBorder
                     },
-                    label = "favoriteIconGrid",
-                ) { favorite ->
-                    Icon(
-                        imageVector = if (favorite) {
-                            Icons.Filled.Favorite
+                    contentDescription = stringResource(
+                        if (isFavorite) {
+                            StringRes.books_action_unfavorite
                         } else {
-                            Icons.Outlined.FavoriteBorder
+                            StringRes.books_action_favorite
                         },
-                        contentDescription = stringResource(
-                            if (favorite) {
-                                StringRes.books_action_unfavorite
-                            } else {
-                                StringRes.books_action_favorite
-                            }
-                        ),
-                        tint = if (favorite) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        },
-                    )
-                }
+                    ),
+                    tint = if (isFavorite) colors.accentText else colors.ink,
+                    modifier = Modifier
+                        .background(colors.bg.copy(alpha = 0.8f), CircleShape)
+                        .padding(6.dp)
+                        .size(18.dp),
+                )
             }
             if (progressInfo?.hasAnyCached == true) {
                 Icon(
@@ -422,37 +378,35 @@ fun BookGridCard(
                     contentDescription = stringResource(StringRes.books_cached_indicator),
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .background(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.95f),
-                            shape = RoundedCornerShape(topStart = 8.dp),
-                        )
+                        .background(colors.bg.copy(alpha = 0.85f), RoundedCornerShape(topStart = 8.dp))
                         .padding(6.dp)
                         .size(16.dp),
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    tint = colors.ink,
                 )
             }
             if (showServerBadge) {
                 book.serverType?.let { serverType ->
                     ServerTypeBadge(
                         serverType = serverType,
-                        modifier = Modifier.align(Alignment.TopCenter),
+                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Text(
             text = book.title,
-            style = MaterialTheme.typography.titleSmall,
+            style = type.bookTitle.copy(fontSize = 15.sp, lineHeight = 19.sp),
+            color = colors.ink,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
         if (book.authors.isNotEmpty()) {
             Text(
                 text = book.authors.joinToString(", "),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = type.meta,
+                color = colors.ink2,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -460,110 +414,13 @@ fun BookGridCard(
         progressInfo?.displayProgression?.let { progress ->
             if (progress > 0.0) {
                 Spacer(modifier = Modifier.height(6.dp))
-                val animatedProgress by animateFloatAsState(
-                    targetValue = progress.toFloat(),
-                    animationSpec = tween(durationMillis = 600),
-                    label = "gridProgress",
-                )
-                LinearProgressIndicator(
-                    progress = { animatedProgress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp)),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                EmberProgress(
+                    progress = progress.toFloat(),
+                    height = style.progressHeightSmall,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
         }
-    }
-}
-
-@Composable
-fun MediaTypeRow(
-    book: BookUiModel,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        book.statusName?.let { status ->
-            StatusChip(status = status)
-        }
-
-        if (book.hasEbook) {
-            MediaTypeIndicator(
-                icon = Icons.AutoMirrored.Outlined.MenuBook,
-                label = stringResource(StringRes.books_media_ebook),
-            )
-        }
-
-        if (book.hasAudiobook) {
-            MediaTypeIndicator(
-                icon = Icons.Outlined.Headphones,
-                label = stringResource(StringRes.books_media_audio),
-            )
-        }
-
-        if (book.hasReadaloud) {
-            MediaTypeIndicator(
-                icon = Icons.Outlined.RecordVoiceOver,
-                label = stringResource(StringRes.books_media_readaloud),
-            )
-        }
-    }
-}
-
-@Composable
-fun StatusChip(
-    status: String,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(6.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-            )
-            Text(
-                text = status,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-        }
-    }
-}
-
-@Composable
-fun MediaTypeIndicator(
-    icon: ImageVector,
-    label: String,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(4.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            modifier = Modifier.size(14.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

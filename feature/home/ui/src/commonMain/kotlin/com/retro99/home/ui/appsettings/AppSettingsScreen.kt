@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
@@ -51,6 +52,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -66,11 +68,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.retro99.base.ui.compose.ThemeMode
 import com.retro99.base.buildconfig.BuildConfig
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.translations.StringRes
 import com.retro99.user.api.UserProfile
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
@@ -118,6 +122,12 @@ import resources.translations.app_settings_share_logs
 import resources.translations.app_settings_share_logs_description
 import resources.translations.app_settings_show_continue_reading
 import resources.translations.app_settings_show_continue_reading_description
+import resources.translations.app_settings_section_appearance
+import resources.translations.app_settings_theme
+import resources.translations.app_settings_theme_day
+import resources.translations.app_settings_theme_eink
+import resources.translations.app_settings_theme_night
+import resources.translations.app_settings_theme_system
 import resources.translations.app_settings_title
 import resources.translations.app_settings_version
 import resources.translations.general_cancel
@@ -346,6 +356,30 @@ private fun AppSettingsScreenContent(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Appearance Section
+            SettingsSectionHeader(
+                title = stringResource(StringRes.app_settings_section_appearance),
+            )
+
+            SettingsItem(
+                icon = Icons.Default.Palette,
+                title = stringResource(StringRes.app_settings_theme),
+                description = stringResource(viewState.themeMode.labelRes()),
+                onClick = { intentDispatcher(AppSettingsIntent.OnThemeModeClicked) },
+            )
+
+            if (viewState.showThemeModeDialog) {
+                ThemeModeDialog(
+                    selected = viewState.themeMode,
+                    onSelected = { themeMode ->
+                        intentDispatcher(AppSettingsIntent.OnThemeModeSelected(themeMode))
+                    },
+                    onDismiss = { intentDispatcher(AppSettingsIntent.OnThemeModeDialogDismissed) },
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Reading Section
             SettingsSectionHeader(
                 title = stringResource(StringRes.app_settings_section_reading),
@@ -486,6 +520,52 @@ private fun AppSettingsScreenContent(
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+}
+
+private fun ThemeMode.labelRes(): StringResource = when (this) {
+    ThemeMode.System -> StringRes.app_settings_theme_system
+    ThemeMode.Night -> StringRes.app_settings_theme_night
+    ThemeMode.Day -> StringRes.app_settings_theme_day
+    ThemeMode.Eink -> StringRes.app_settings_theme_eink
+}
+
+@Composable
+private fun ThemeModeDialog(
+    selected: ThemeMode,
+    onSelected: (ThemeMode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(StringRes.app_settings_theme)) },
+        text = {
+            Column {
+                ThemeMode.entries.forEach { themeMode ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelected(themeMode) }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = themeMode == selected,
+                            onClick = { onSelected(themeMode) },
+                        )
+                        Text(
+                            text = stringResource(themeMode.labelRes()),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(StringRes.general_cancel))
+            }
+        },
+    )
 }
 
 @Composable

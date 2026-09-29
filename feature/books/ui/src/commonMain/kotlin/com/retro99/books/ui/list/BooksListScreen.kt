@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -29,16 +28,30 @@ import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.delete
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.AlertDialog
+import resources.translations.books_shelf_title
+import resources.translations.books_library_title
+import com.retro99.base.ui.compose.Ember
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Checkbox
@@ -46,21 +59,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -138,7 +144,7 @@ import resources.translations.general_close
 fun BooksListScreen(
     onNavigateToBookDetail: (book: BookUiModel) -> Unit,
     modifier: Modifier = Modifier,
-    headerContent: @Composable (() -> Unit)? = null,
+    headerContent: @Composable ((books: List<BookUiModel>) -> Unit)? = null,
     viewModel: BooksListViewModel = koinViewModel { parametersOf(onNavigateToBookDetail) },
 ) {
     BaseScreen(
@@ -162,7 +168,7 @@ private fun BooksListScreenContent(
     searchFieldState: TextFieldState,
     intentDispatcher: IntentDispatcher<BooksListIntent>,
     modifier: Modifier = Modifier,
-    headerContent: @Composable (() -> Unit)? = null,
+    headerContent: @Composable ((books: List<BookUiModel>) -> Unit)? = null,
 ) {
     val filePickerLauncher = rememberFilePickerLauncher(
         type = PickerType.File(extensions = listOf("epub")),
@@ -320,29 +326,66 @@ private fun BooksListScreenContent(
         )
     }
 
-    Scaffold(
-        modifier = modifier,
-        floatingActionButton = {
-            // With an empty library the empty-state CTA is the one obvious action,
-            // so the FAB would only duplicate it.
-            val libraryIsEmpty = viewState.filteredBooks.isEmpty() &&
-                !viewState.isLoading &&
-                viewState.filterState.activeFilterCount == 0
-            if (!libraryIsEmpty) {
-                ExtendedFloatingActionButton(
-                    onClick = { filePickerLauncher.launch() },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.Add,
-                            contentDescription = null,
-                        )
-                    },
-                    text = {
-                        Text(text = stringResource(StringRes.books_action_import))
-                    },
+    val colors = Ember.colors
+    val topContent: @Composable () -> Unit = {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            LibraryHeader(
+                isSearchVisible = viewState.isSearchVisible,
+                onSearchToggled = { intentDispatcher(BooksListIntent.OnSearchToggled) },
+                onImportClicked = { filePickerLauncher.launch() },
+            )
+
+            headerContent?.invoke(viewState.books)
+
+            if (viewState.supportsCloudBackup) {
+                OutlinedButton(
+                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllClicked) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CloudUpload,
+                        contentDescription = null,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(StringRes.cloud_backup_backup_all))
+                }
+            }
+
+            AnimatedVisibility(
+                visible = viewState.isSearchVisible,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut(),
+            ) {
+                BookSearchBar(
+                    searchFieldState = searchFieldState,
+                    isVisible = viewState.isSearchVisible,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
                 )
             }
-        },
+
+            ShelfHeader(
+                activeFilterCount = viewState.filterState.activeFilterCount,
+                onFiltersClicked = { showFilterSheet = true },
+                sortConfig = viewState.sortConfig,
+                onSortChanged = { sortConfig ->
+                    intentDispatcher(BooksListIntent.OnSortChanged(sortConfig))
+                },
+                viewMode = viewState.viewMode,
+                onViewModeChanged = { viewMode ->
+                    intentDispatcher(BooksListIntent.OnViewModeChanged(viewMode))
+                },
+            )
+        }
+    }
+
+    Scaffold(
+        modifier = modifier,
+        containerColor = colors.bg,
     ) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = viewState.isRefreshing,
@@ -351,132 +394,73 @@ private fun BooksListScreenContent(
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                BooksListToolbar(
-                    isSearchVisible = viewState.isSearchVisible,
-                    onSearchToggled = { intentDispatcher(BooksListIntent.OnSearchToggled) },
-                    activeFilterCount = viewState.filterState.activeFilterCount,
-                    onFiltersClicked = { showFilterSheet = true },
-                    sortConfig = viewState.sortConfig,
-                    onSortChanged = { sortConfig ->
-                        intentDispatcher(BooksListIntent.OnSortChanged(sortConfig))
-                    },
-                    viewMode = viewState.viewMode,
-                    onViewModeChanged = { viewMode ->
-                        intentDispatcher(BooksListIntent.OnViewModeChanged(viewMode))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
+            if (viewState.filteredBooks.isEmpty() && !viewState.isLoading) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    topContent()
+                    EmptyBooksState(
+                        hasActiveFilters = viewState.filterState.hasActiveFilters ||
+                            viewState.searchQuery.isNotBlank(),
+                        onImportBook = { filePickerLauncher.launch() },
+                        onResetFilters = {
+                            intentDispatcher(BooksListIntent.OnClearAllFilters)
+                            searchFieldState.edit { delete(0, length) }
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            } else if (viewState.viewMode == BookListViewMode.GRID) {
+                BooksGrid(
+                    viewState = viewState,
+                    intentDispatcher = intentDispatcher,
+                    topContent = topContent,
+                    modifier = Modifier.fillMaxSize(),
                 )
-
-                if (viewState.supportsCloudBackup) {
-                    OutlinedButton(
-                        onClick = { intentDispatcher(BooksListIntent.OnBackupAllClicked) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        shape = RoundedCornerShape(16.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.CloudUpload,
-                            contentDescription = null,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(StringRes.cloud_backup_backup_all))
-                    }
-                }
-
-                AnimatedVisibility(
-                    visible = viewState.isSearchVisible,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut(),
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp),
                 ) {
-                    BookSearchBar(
-                        searchFieldState = searchFieldState,
-                        isVisible = viewState.isSearchVisible,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                    )
-                }
-
-                if (viewState.filteredBooks.isEmpty() && !viewState.isLoading) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        if (
-                            shouldShowHeaderInEmptyBooksState(
-                                filteredBooksEmpty = viewState.filteredBooks.isEmpty(),
-                                isLoading = viewState.isLoading,
-                                hasHeaderContent = headerContent != null,
-                            )
-                        ) {
-                            headerContent?.invoke()
-                        }
-                        EmptyBooksState(
-                            hasActiveFilters = viewState.filterState.hasActiveFilters || viewState.searchQuery.isNotBlank(),
-                            onImportBook = { filePickerLauncher.launch() },
-                            onResetFilters = {
-                                intentDispatcher(BooksListIntent.OnClearAllFilters)
-                                searchFieldState.edit { delete(0, length) }
+                    item(key = "top") { topContent() }
+                    itemsIndexed(
+                        items = viewState.filteredBooks,
+                        key = { _, book -> book.uuid },
+                    ) { index, book ->
+                        BookItemCard(
+                            modifier = Modifier.animateItem(),
+                            book = book,
+                            isFavorite = book.uuid in viewState.favoriteBookUuids,
+                            showDivider = index > 0,
+                            onClick = {
+                                intentDispatcher(BooksListIntent.OnBookClicked(book))
                             },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                } else if (viewState.viewMode == BookListViewMode.GRID) {
-                    BooksGrid(
-                        viewState = viewState,
-                        intentDispatcher = intentDispatcher,
-                        headerContent = headerContent,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        if (headerContent != null) {
-                            item(key = "header") { headerContent() }
-                        }
-                        items(
-                            items = viewState.filteredBooks,
-                            key = { it.uuid },
-                        ) { book ->
-                            BookItemCard(
-                                modifier = Modifier.animateItem(),
-                                book = book,
-                                isFavorite = book.uuid in viewState.favoriteBookUuids,
-                                onClick = {
-                                    intentDispatcher(BooksListIntent.OnBookClicked(book))
-                                },
-                                onFavoriteClick = {
-                                    intentDispatcher(BooksListIntent.OnFavoriteClicked(book.uuid))
-                                },
-                                progressInfo = viewState.bookProgressInfo[book.uuid],
-                                showServerBadge = viewState.showServerBadge,
-                                subtitleContent = {
-                                    if (book.series.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        val seriesInfo = book.series.first()
-                                        val seriesText = if (seriesInfo.position != null) {
-                                            stringResource(
-                                                StringRes.books_series_with_position,
-                                                seriesInfo.name,
-                                                seriesInfo.position,
-                                            )
-                                        } else {
-                                            seriesInfo.name
-                                        }
-                                        Text(
-                                            text = seriesText,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
+                            onFavoriteClick = {
+                                intentDispatcher(BooksListIntent.OnFavoriteClicked(book.uuid))
+                            },
+                            progressInfo = viewState.bookProgressInfo[book.uuid],
+                            showServerBadge = viewState.showServerBadge,
+                            subtitleContent = {
+                                val seriesInfo = book.series.firstOrNull()
+                                if (seriesInfo != null) {
+                                    val seriesText = if (seriesInfo.position != null) {
+                                        stringResource(
+                                            StringRes.books_series_with_position,
+                                            seriesInfo.name,
+                                            seriesInfo.position,
                                         )
+                                    } else {
+                                        seriesInfo.name
                                     }
-                                },
-                            )
-                        }
+                                    Text(
+                                        text = seriesText,
+                                        style = Ember.type.meta,
+                                        color = colors.accentText,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            },
+                        )
                     }
                 }
             }
@@ -484,10 +468,46 @@ private fun BooksListScreenContent(
     }
 }
 
+/** Screen title with the search and import actions, top-right in every theme. */
 @Composable
-private fun BooksListToolbar(
+private fun LibraryHeader(
     isSearchVisible: Boolean,
     onSearchToggled: () -> Unit,
+    onImportClicked: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = Ember.colors
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 10.dp, top = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(StringRes.books_library_title),
+            style = Ember.type.screenTitle,
+            color = colors.ink,
+            modifier = Modifier.weight(1f),
+        )
+        TooltipIconButton(
+            tooltip = stringResource(StringRes.books_action_search),
+            icon = if (isSearchVisible) Icons.Outlined.Close else Icons.Outlined.Search,
+            onClick = onSearchToggled,
+            tint = colors.ink,
+        )
+        TooltipIconButton(
+            tooltip = stringResource(StringRes.books_action_import),
+            icon = Icons.Outlined.Add,
+            onClick = onImportClicked,
+            tint = colors.ink,
+        )
+    }
+}
+
+/** "On your shelf" heading with the sort, filter and list/cover controls. */
+@Composable
+private fun ShelfHeader(
     activeFilterCount: Int,
     onFiltersClicked: () -> Unit,
     sortConfig: BookSortConfig,
@@ -496,91 +516,109 @@ private fun BooksListToolbar(
     onViewModeChanged: (BookListViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier,
-        tonalElevation = 3.dp,
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TooltipIconButton(
-                tooltip = stringResource(StringRes.books_action_search),
-                icon = if (isSearchVisible) {
-                    Icons.Filled.Clear
-                } else {
-                    Icons.Filled.Search
-                },
-                onClick = onSearchToggled,
-            )
+    val colors = Ember.colors
+    val style = Ember.style
 
-            BadgedBox(
-                badge = {
-                    if (activeFilterCount > 0) {
-                        Badge {
-                            Text(text = activeFilterCount.toString())
-                        }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 24.dp, end = 14.dp, top = 12.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(StringRes.books_shelf_title),
+            style = Ember.type.section,
+            color = colors.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+
+        SortChip(
+            sortConfig = sortConfig,
+            onSortChanged = onSortChanged,
+        )
+
+        val filterLabel = stringResource(StringRes.books_action_filter)
+        BadgedBox(
+            badge = {
+                if (activeFilterCount > 0) {
+                    Badge(
+                        containerColor = colors.accent,
+                        contentColor = colors.onAccent,
+                    ) {
+                        Text(text = activeFilterCount.toString())
                     }
-                },
+                }
+            },
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(colors.chip)
+                    .border(style.border, colors.chipBorder, CircleShape)
+                    .clickable(onClick = onFiltersClicked)
+                    .semantics { contentDescription = filterLabel },
+                contentAlignment = Alignment.Center,
             ) {
-                TooltipIconButton(
-                    tooltip = stringResource(StringRes.books_action_filter),
-                    icon = Icons.Filled.FilterList,
-                    onClick = onFiltersClicked,
+                Icon(
+                    imageVector = Icons.Outlined.FilterList,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = colors.ink,
                 )
             }
-
-            Spacer(modifier = Modifier.size(4.dp))
-
-            CompactSortSelector(
-                sortConfig = sortConfig,
-                onSortChanged = onSortChanged,
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            ViewModeIconToggle(
-                viewMode = viewMode,
-                onViewModeChanged = onViewModeChanged,
-            )
         }
+
+        ViewModeSegments(
+            viewMode = viewMode,
+            onViewModeChanged = onViewModeChanged,
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CompactSortSelector(
+private fun SortChip(
     sortConfig: BookSortConfig,
     onSortChanged: (BookSortConfig) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = Ember.colors
+    val style = Ember.style
     var expanded by remember { mutableStateOf(false) }
     val option = sortConfig.option
-    val directionLabel = if (sortConfig.direction == SortDirection.ASCENDING) {
-        option.ascendingLabel
-    } else {
-        option.descendingLabel
-    }
+    val ascending = sortConfig.direction == SortDirection.ASCENDING
+    val directionLabel = stringResource(
+        if (ascending) option.ascendingLabel else option.descendingLabel,
+    )
+    val sortLabel = stringResource(StringRes.books_action_sort)
 
     Box(modifier = modifier) {
-        TooltipBox(
-            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-            tooltip = {
-                PlainTooltip {
-                    Text(text = stringResource(StringRes.books_action_sort))
-                }
-            },
-            state = rememberTooltipState(),
+        Row(
+            modifier = Modifier
+                .height(36.dp)
+                .clip(CircleShape)
+                .background(colors.chip)
+                .border(style.border, colors.chipBorder, CircleShape)
+                .clickable { expanded = true }
+                .semantics { contentDescription = "$sortLabel: $directionLabel" }
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            SuggestionChip(
-                onClick = { expanded = true },
-                label = {
-                    Text(
-                        text = "${stringResource(option.labelRes)} ${stringResource(directionLabel)}",
-                    )
-                },
+            Icon(
+                imageVector = Icons.Outlined.SwapVert,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = colors.ink,
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = directionLabel,
+                style = Ember.type.meta,
+                color = colors.ink,
+                maxLines = 1,
             )
         }
 
@@ -591,6 +629,15 @@ private fun CompactSortSelector(
             BookSortOption.entries.forEach { sortOption ->
                 DropdownMenuItem(
                     text = { Text(stringResource(sortOption.labelRes)) },
+                    trailingIcon = {
+                        if (sortOption == option) {
+                            Icon(
+                                imageVector = Icons.Outlined.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    },
                     onClick = {
                         if (sortOption == option) {
                             onSortChanged(sortConfig.copy(direction = sortConfig.direction.toggle()))
@@ -604,13 +651,6 @@ private fun CompactSortSelector(
 
             HorizontalDivider()
 
-            val directionText = stringResource(
-                if (sortConfig.direction == SortDirection.ASCENDING) {
-                    option.ascendingLabel
-                } else {
-                    option.descendingLabel
-                }
-            )
             DropdownMenuItem(
                 text = {
                     Row(
@@ -618,17 +658,15 @@ private fun CompactSortSelector(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(
-                            imageVector = if (sortConfig.direction == SortDirection.ASCENDING) {
+                            imageVector = if (ascending) {
                                 Icons.Filled.ArrowUpward
                             } else {
                                 Icons.Filled.ArrowDownward
                             },
-                            contentDescription = directionText,
+                            contentDescription = directionLabel,
                             modifier = Modifier.size(18.dp),
                         )
-                        Text(
-                            text = directionText,
-                        )
+                        Text(text = directionLabel)
                     }
                 },
                 onClick = {
@@ -641,38 +679,60 @@ private fun CompactSortSelector(
 }
 
 @Composable
-private fun ViewModeIconToggle(
+private fun ViewModeSegments(
     viewMode: BookListViewMode,
     onViewModeChanged: (BookListViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = Ember.colors
+    val style = Ember.style
     val viewModeGroupDescription = stringResource(StringRes.books_action_view)
-    Row(
-        modifier = modifier.semantics {
-            contentDescription = viewModeGroupDescription
-        },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        TooltipIconButton(
-            tooltip = stringResource(StringRes.books_view_list),
-            icon = Icons.AutoMirrored.Filled.ViewList,
-            onClick = { onViewModeChanged(BookListViewMode.LIST) },
-            tint = if (viewMode == BookListViewMode.LIST) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
-        )
 
-        TooltipIconButton(
-            tooltip = stringResource(StringRes.books_view_grid),
-            icon = Icons.Filled.GridView,
+    Row(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(colors.chip)
+            .border(style.border, colors.chipBorder, CircleShape)
+            .padding(2.dp)
+            .semantics { contentDescription = viewModeGroupDescription },
+    ) {
+        SegmentButton(
+            icon = Icons.AutoMirrored.Outlined.ViewList,
+            label = stringResource(StringRes.books_view_list),
+            selected = viewMode == BookListViewMode.LIST,
+            onClick = { onViewModeChanged(BookListViewMode.LIST) },
+        )
+        SegmentButton(
+            icon = Icons.Outlined.GridView,
+            label = stringResource(StringRes.books_view_grid),
+            selected = viewMode == BookListViewMode.GRID,
             onClick = { onViewModeChanged(BookListViewMode.GRID) },
-            tint = if (viewMode == BookListViewMode.GRID) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            },
+        )
+    }
+}
+
+@Composable
+private fun SegmentButton(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val colors = Ember.colors
+
+    Box(
+        modifier = Modifier
+            .size(width = 38.dp, height = 30.dp)
+            .clip(CircleShape)
+            .background(if (selected) colors.accent else Color.Transparent)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(16.dp),
+            tint = if (selected) colors.onAccent else colors.ink2,
         )
     }
 }
@@ -681,19 +741,31 @@ private fun ViewModeIconToggle(
 private fun BooksGrid(
     viewState: BooksListViewState,
     intentDispatcher: IntentDispatcher<BooksListIntent>,
+    topContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
-    headerContent: @Composable (() -> Unit)? = null,
 ) {
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 128.dp),
+        columns = GridCells.Adaptive(minSize = 100.dp),
         modifier = modifier,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        if (headerContent != null) {
-            item(span = { GridItemSpan(maxLineSpan) }, key = "header") {
-                headerContent()
+        item(span = { GridItemSpan(maxLineSpan) }, key = "top") {
+            // The header sits inside the grid's horizontal padding, so it is pulled back out.
+            Box(modifier = Modifier.layout { measurable, constraints ->
+                val extra = 40.dp.roundToPx()
+                val placeable = measurable.measure(
+                    constraints.copy(
+                        minWidth = constraints.maxWidth + extra,
+                        maxWidth = constraints.maxWidth + extra,
+                    ),
+                )
+                layout(constraints.maxWidth, placeable.height) {
+                    placeable.place(-extra / 2, 0)
+                }
+            }) {
+                topContent()
             }
         }
         if (viewState.isLoading) {
@@ -704,13 +776,13 @@ private fun BooksGrid(
                         .padding(32.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    CircularProgressIndicator()
+                    CircularProgressIndicator(color = Ember.colors.accent)
                 }
             }
         }
         gridItems(
             items = viewState.filteredBooks,
-            key = { it.uuid },
+            key = { book -> book.uuid },
         ) { book ->
             BookGridCard(
                 modifier = Modifier.animateItem(),
