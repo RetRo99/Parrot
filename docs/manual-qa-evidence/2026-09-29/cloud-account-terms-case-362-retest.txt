@@ -1,0 +1,31 @@
+# Cloud Account case 362 — Terms-of-service gating Samsung run
+
+- **Date/time:** 2026-09-29, 08:12–08:14 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`settings get secure navigation_mode` = `2`).
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `a2a6f5a3d399ee8b8f5ad19358b4daa6ddba6832b1d7be02d219dcc3409bdaa4`, source commit `51b5f8a028aa858cda91ed31dfa0b5e51eb502c0`, installed 2026-09-29 07:42:17 CEST with app data preserved; PID `25275`. Repository HEAD during test `f1787269372c1a36998d91d3e0a6dcf1de3658e8`.
+- **Fixture/privacy:** Existing Default profile and unauthenticated server/book fixture retained. No account credentials or real identity used. Entered only reserved-example `qa@example.com` and a synthetic, non-credential password so email/password validity would not confound the consent check. Never tapped Create account; no account request, sign-in or cloud mutation occurred. Both fields were explicitly selected and deleted; final UI tree shows empty EditText fields, unchecked consent and disabled Create account.
+- **Pre-run:** Cleared logcat immediately before the recorded replay. Switched to Create account mode and observed the unchecked checkbox. The pre-existing signed-out fixture prompt was not retried or changed.
+
+## Steps and observations
+
+1. Entered the reserved-example email and a synthetic non-empty password. Dismissed the keyboard. UI tree confirmed both values present, consent checkbox unchecked, and Create account disabled.
+2. Tapped the consent checkbox. UI tree showed `checked`; Create account changed to enabled. [Checked/enabled screenshot](cloud-account-terms-case-362-checked-valid-fields.png).
+3. Tapped the checkbox again. UI tree showed unchecked; Create account returned to disabled. The extra screenshot for this intermediate state was excluded after an unrelated OS notification appeared; no notification content was retained. [Initial unchecked/disabled screenshot](cloud-account-terms-case-362-unchecked-valid-fields.png).
+4. Cleared both fields using select-all/delete on each, dismissed the keyboard, and confirmed the form remained in Create account mode with consent unchecked and Create account disabled. [Clean final screenshot](cloud-account-terms-case-362-clean-unchecked.png).
+
+- **Functional:** PASS. With valid-format/non-empty values, the checkbox was the gating condition: unchecked→disabled; checked→enabled; unchecked→disabled. No form submit or network operation was triggered.
+- **Analytics:** PASS locally. In the cleared log capture, exactly one consent-on and one consent-off event appeared. Email-field focus loss also emitted one expected bounded `succeeded` format-validation event, with a matched diagnostic breadcrumb; these contain no form values. Firebase ingestion is waived; local DebugAnalyticsManager output does not prove Firebase delivery.
+
+  ```text
+  09-29 08:12:19.576 25275 25275 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=create_account}
+  09-29 08:12:19.576 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=validate_email operation=cloud_email_validation stage=validation outcome=succeeded correlation_id=792b5266-ca15-4914-8167-cc5ead10c388
+  09-29 08:12:39.170 25275 25275 D čič : Analytics Event: cloud_account_consent_changed | Parameters: {screen=sync_and_backup, action=change_consent, operation=cloud_account_consent, consent_kind=account_terms, is_enabled=true}
+  09-29 08:12:49.927 25275 25275 D čič : Analytics Event: cloud_account_consent_changed | Parameters: {screen=sync_and_backup, action=change_consent, operation=cloud_account_consent, consent_kind=account_terms, is_enabled=false}
+  ```
+
+- **Diagnostics:** N-A for expected consent changes. No diagnostic failure/non-fatal is required by the contract for a checkbox transition. Filtered logcat contained no `FATAL EXCEPTION` or `Exception occurred` marker.
+- **Defects:** None discovered in this case; no independent visual/accessibility defect was observed in the checked/unchecked states.
+- **Test-control history:** An earlier exploratory interaction produced an additional checkbox pair before logcat was cleared. A bulk Delete attempt initially left a synthetic suffix in the password field. That value was subsequently cleared using explicit select-all/Delete; the clean final screenshot and UI tree confirmed empty fields. This was test-control handling, not an app defect. A notification-bearing intermediate screenshot was deleted and is not evidence.
+- **Next:** Case 363 is BLOCKED without an authorized disposable account fixture. No credentials or submission are authorized. Continue only with independent safe checks; cases 370–371 remain DEFERRED by scope.
+
+No Firebase delivery, Crashlytics delivery, cross-app sync or cross-device sync is claimed.

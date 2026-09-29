@@ -479,7 +479,7 @@ Ordinary cached-library browsing, sign-in handshakes, downloads, account control
 | 359 | Sign in / Create account switch | Switch the mode | Correct form and submit label per mode |
 | 360 | Email validation | Enter invalid emails then a valid one | Inline validation before submit |
 | 361 | Password field | Type and toggle visibility | Masked by default, toggles correctly |
-| 362 | Terms-of-service gating | Submit without ticking the ToS checkbox | Submit disabled until the checkbox is ticked |
+| 362 | Terms-of-service gating | Enter a valid-format email and non-empty local-only password; leave the ToS checkbox unchecked, then check and uncheck it | Create account remains disabled while unchecked, becomes enabled when checked (isolating the consent gate), and is disabled again when unchecked; do not submit during QA without an authorized disposable account fixture |
 | 363 | Create account | Create a new account | "Check your email" state shown as designed |
 | 364 | Sign in success | Sign in with an existing account | Signed-in view with storage card and sync status |
 | 365 | Wrong cloud credentials | Submit wrong password | Clear error, retry possible |
