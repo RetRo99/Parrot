@@ -35,3 +35,7 @@ The current Cloud Account UI has no clickable terms/privacy links; its ToS contr
 - Cases 370–371 remain deferred under the no cross-app/cross-device sync verification scope; no sync behavior will be asserted by this audit.
 
 **Disposition:** confirmed instrumentation defect QA-BUG-0082; no fix or runtime result is claimed. Focused Cloud Account instrumentation and Samsung retests are pending.
+
+## Separate suspected state issue — QA-BUG-0083
+
+`CloudAccountViewModel.signOutAfterLinkConflict()` catches and ignores a non-cancellation exception from `signOutCloudAccountUseCase()`, then writes UI auth state `SignedOut`. The cloud repository's `signOut()` has a `finally` block that clears/replaces the current profile session, so source evidence alone cannot establish whether an actual stale authenticated session can remain. No cloud-account conflict or local sign-out failure was injected. This is separately registered as SUSPECTED, not a confirmed device bug; verify the cleanup invariant with a safe host fault-injection test before changing behavior.

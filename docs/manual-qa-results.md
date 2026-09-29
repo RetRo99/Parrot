@@ -340,6 +340,50 @@ Only the Home/Books destination was observed as the guest target and local-impor
 
 The earlier post-fix rows above record the first fix-candidate pass (PID `17458`, APK SHA-256 `a1e9242cec415479bbfe7891d4d94c4700836c1496593d57a4bd48e8b93f5c00`); final rebuilt-candidate evidence is recorded separately above. [First candidate evidence](manual-qa-evidence/2026-09-29/case-439-profile-current-book-rebind-candidate1.txt).
 
+### L — Cloud Account and same-device backup (ordered pass not started)
+
+| Case | Variant | Functional | Analytics | Diagnostics | Notes / evidence |
+|---:|---|---|---|---|---|
+| 357 | Settings route and visible Cloud Account screen | NOT RUN | NOT RUN on final build | NOT RUN on final build | Older successful route exposure is preserved under case 429; recheck after Cloud instrumentation commit. |
+| 358 | Back to App Settings | NOT RUN | NOT RUN | NOT RUN | Toolbar, system and supported gesture/IME variants map to 730/740. |
+| 359 | Sign in / Create account switch | NOT RUN | NOT RUN | NOT RUN | |
+| 360 | Email validation | NOT RUN | NOT RUN | NOT RUN | |
+| 361 | Password mask / visibility | NOT RUN | NOT RUN | NOT RUN | Use synthetic local-only input; never submit/store it. |
+| 362 | Terms-of-service checkbox gating | NOT RUN | NOT RUN | NOT RUN | |
+| 363 | Account creation / email verification | BLOCKED | BLOCKED | BLOCKED | No authorized disposable cloud-account fixture/credentials. |
+| 364 | Successful email sign-in | BLOCKED | BLOCKED | BLOCKED | No authorized cloud-account credentials. |
+| 365 | Wrong cloud credentials and retry | NOT RUN | NOT RUN | NOT RUN | No credential submit in this preflight; can use only an explicitly safe synthetic rejected attempt if device execution is approved/configuration is available. |
+| 366 | Google sign-in success | BLOCKED | BLOCKED | BLOCKED | No authorized OAuth account; no external sign-in submitted. |
+| 367 | Google sign-in cancellation | NOT RUN | NOT RUN | NOT RUN | No OAuth flow opened in this preflight. |
+| 368 | Signed-in storage usage card | BLOCKED | BLOCKED | BLOCKED | Requires signed-in disposable account fixture. |
+| 369 | Storage usage error and recovery | BLOCKED | BLOCKED | BLOCKED | Requires signed-in account and safe controlled fetch-failure fixture. |
+| 370 | Sync status transitions | DEFERRED | DEFERRED | DEFERRED | Cross-device/cross-app sync verification excluded by scope; no sync behavior asserted. |
+| 371 | Sync Now | DEFERRED | DEFERRED | DEFERRED | Same scope deferral; route and local UI inventory remain in scope. |
+| 372 | Auto-backup enable and persistence | BLOCKED | BLOCKED | BLOCKED | Requires linked cloud account fixture and account-authored consent. |
+| 373 | Auto-backup Not now / dismiss | BLOCKED | BLOCKED | BLOCKED | Requires signed-in/linked account state to expose the confirmation. |
+| 374 | Link profile confirmation | BLOCKED | BLOCKED | BLOCKED | Requires authorized cloud login/profile-link fixture; cancel outcome also maps to case 778. |
+| 375 | Cloud sign out | BLOCKED | BLOCKED | BLOCKED | No signed-in cloud fixture. |
+| 376 | Sign out during upload | BLOCKED | BLOCKED | BLOCKED | Requires signed-in account and in-flight backup fixture; no upload started. |
+| 377 | Delete account and confirm | BLOCKED | BLOCKED | BLOCKED | Destructive account fixture unavailable; no delete action executed. |
+| 378 | Reauthentication-required state | BLOCKED | BLOCKED | BLOCKED | Requires controlled expired/revoked cloud session. |
+| 379 | Single-book cloud backup | BLOCKED | BLOCKED | BLOCKED | Requires authorized account and supported cloud-backup fixture; not executed in this screen pass. |
+| 380 | Restore a cloud backup on the same phone | BLOCKED | BLOCKED | BLOCKED | Requires controlled backup fixture; no cross-device assertion. |
+| 381 | Upload progress/cancel | BLOCKED | BLOCKED | BLOCKED | Requires authorized large backup fixture. |
+| 382 | Backup all | BLOCKED | BLOCKED | BLOCKED | Requires authorized account and library backup fixture. |
+| 383 | Replace vs duplicate cloud file | BLOCKED | BLOCKED | BLOCKED | Requires controlled cloud-file fixture; no mutation. |
+| 384 | Cloud session persistence | BLOCKED | BLOCKED | BLOCKED | Requires authorized signed-in cloud account. |
+| 730 | Cloud Back with IME visible | NOT RUN | NOT RUN | NOT RUN | No form text or IME action performed yet. |
+| 731 | Duplicate sign-in/Google submit | NOT RUN | NOT RUN | NOT RUN | Delayed network fixture unavailable; no submit in preflight. |
+| 732 | Mode switch with form input | NOT RUN | NOT RUN | NOT RUN | |
+| 733 | Terms/privacy links | NOT RUN | NOT RUN | NOT RUN | Source audit finds no clickable links; device reconfirmation required before N-A/outdated disposition. |
+| 734 | Backup quota reached | BLOCKED | BLOCKED | BLOCKED | No full-quota disposable cloud account. |
+| 735 | Backup network interruption | BLOCKED | BLOCKED | BLOCKED | No safe in-flight upload fixture. |
+| 736 | Cancel file restore | BLOCKED | BLOCKED | BLOCKED | No restore fixture exposed. |
+| 737 | Same-device restored-file validation | BLOCKED | BLOCKED | BLOCKED | No controlled cloud backup fixture. |
+| 738 | Delete-account cancellation | BLOCKED | BLOCKED | BLOCKED | No signed-in disposable cloud account; no dialog opened. |
+| 739 | Cloud operation failures and recovery | BLOCKED | BLOCKED | BLOCKED | Cloud credentials and safe auth/storage/backup/restore fault fixtures unavailable. |
+| 778 | Action event schema/privacy source audit | NOT RUN | FAIL by source audit: no Cloud Account operation Analytics events | FAIL by source audit: no operation breadcrumbs/contextual exception reporting; cancellation has no terminal telemetry | QA-BUG-0082 recorded before fix. Source-only finding [evidence](manual-qa-evidence/2026-09-29/cloud-account-instrumentation-source-audit.txt); no runtime result implied. |
+
 ## Early observation outside current screen order
 
 | Case | Variant / evidence | Functional | Analytics | Diagnostics | Notes / defect |
