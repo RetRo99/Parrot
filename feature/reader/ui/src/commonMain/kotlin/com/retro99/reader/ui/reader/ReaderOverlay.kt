@@ -19,6 +19,10 @@ import com.retro99.reader.domain.model.ProgressBarPosition
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -167,6 +171,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private const val SWIPE_HIDE_THRESHOLD_PX = 80f
+private val MINI_PLAYER_HEIGHT = 51.dp
 
 @Composable
 internal fun ReaderOverlayContent(
@@ -227,15 +232,18 @@ internal fun ReaderOverlayContent(
         ?: "System voice"
     val isEink = Ember.style.isEink
 
-    val showStrip = settings.showProgressBar == true && !viewState.isListening
+    val showStrip = settings.showProgressBar == true
     val hasTopStrip = showStrip && settings.progressBarPosition == ProgressBarPosition.TOP
-    val hasBottomBar = viewState.isListening ||
-        (showStrip && settings.progressBarPosition == ProgressBarPosition.BOTTOM)
+    val hasBottomStrip = showStrip && settings.progressBarPosition == ProgressBarPosition.BOTTOM
+    val hasBottomBar = viewState.isListening || hasBottomStrip
     var topBarPx by remember { mutableIntStateOf(0) }
     var bottomBarPx by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
     val topInset = if (hasTopStrip) with(density) { topBarPx.toDp() } else 0.dp
-    val bottomInset = if (hasBottomBar) with(density) { bottomBarPx.toDp() } else 0.dp
+    // The mini player collapses while the controls are shown; keep its height reserved so
+    // the reader does not reflow when they toggle.
+    val miniReserve = if (viewState.isListening && controlsVisible) MINI_PLAYER_HEIGHT else 0.dp
+    val bottomInset = if (hasBottomBar) with(density) { bottomBarPx.toDp() } + miniReserve else 0.dp
     val progressBarTime = viewState.currentTime
 
     Box(
@@ -349,45 +357,11 @@ internal fun ReaderOverlayContent(
                 )
             }
         }
-        if (hasBottomBar) {
-            Box(
-                Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .background(Ember.colors.surface)
-                    .navigationBarsPadding()
-                    .onSizeChanged { bottomBarPx = it.height },
-            ) {
-                if (viewState.isListening) {
-                    val progress = if (viewState.totalDurationMs != null && viewState.totalDurationMs > 0L) {
-                        viewState.currentAudioPositionMs.toFloat() / viewState.totalDurationMs.toFloat()
-                    } else {
-                        0f
-                    }
-                    ReaderMiniPlayer(
-                        isPlaying = viewState.isPlaying,
-                        progression = progress,
-                        onPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
-                    )
-                } else {
-                    AnimatedProgressBar(
-                        settings = settings,
-                        areControlsVisible = true,
-                        position = ProgressBarPosition.BOTTOM,
-                        lastKnownPosition = currentPosition,
-                        chapterReadingTimeInfo = viewState.chapterReadingTimeInfo,
-                        chapterInfo = viewState.chapterInfo,
-                        currentTime = progressBarTime,
-                    )
-                }
-            }
-        }
-
         AnimatedVisibility(
             visible = controlsVisible,
             enter = if (isEink) EnterTransition.None else fadeIn() + slideInVertically { -it },
             exit = if (isEink) ExitTransition.None else fadeOut() + slideOutVertically { -it },
-            modifier = Modifier.align(Alignment.TopCenter),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = topInset),
         ) {
             ReaderOverlayToolbar(
                 bookTitle = viewState.bookTitle,
@@ -402,73 +376,117 @@ internal fun ReaderOverlayContent(
             )
         }
 
-        AnimatedVisibility(
-            visible = controlsVisible,
-            enter = if (isEink) EnterTransition.None else fadeIn() + slideInVertically { it },
-            exit = if (isEink) ExitTransition.None else fadeOut() + slideOutVertically { it },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .pointerInput(Unit) {
-                    var total = 0f
-                    detectVerticalDragGestures(
-                        onDragStart = { total = 0f },
-                        onVerticalDrag = { _, delta -> total += delta },
-                        onDragEnd = { if (total > SWIPE_HIDE_THRESHOLD_PX) controlsVisible = false },
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+            AnimatedVisibility(
+                visible = controlsVisible,
+                enter = if (isEink) EnterTransition.None else fadeIn() + slideInVertically { it },
+                exit = if (isEink) ExitTransition.None else fadeOut() + slideOutVertically { it },
+                modifier = Modifier
+                    .then(
+                        if (hasBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier,
                     )
-                },
-        ) {
-            if (viewState.isListening) {
-                val sourceLabel = if (viewState.isReadAloud) {
-                    stringResource(StringRes.reader_overlay_narration)
-                } else {
-                    "${stringResource(StringRes.reader_overlay_device_voice)} · ${selectedVoice?.locale ?: "English (US)"}"
-                }
-                ReaderListeningPanel(
-                    sourceLabel = sourceLabel,
-                    isPlaying = viewState.isPlaying,
-                    isLoading = viewState.isNarrationLoading,
-                    currentPositionMs = viewState.currentAudioPositionMs,
-                    totalDurationMs = viewState.totalDurationMs,
-                    playbackSpeed = if (viewState.isTtsReadAloud) settings.ttsRate else settings.playbackSpeed,
-                    sleepTimerRemainingMs = viewState.sleepTimerRemainingMs,
-                    isEink = isEink,
-                    onVoice = { intentDispatcher(ReaderIntent.ToggleListenSheet) },
-                    onStop = { intentDispatcher(ReaderIntent.StopListening) },
-                    onSeek = { intentDispatcher(ReaderIntent.SeekTo(it)) },
-                    onSpeed = { intentDispatcher(ReaderIntent.SetPlaybackSpeed(it)) },
-                    onSkipBack = { intentDispatcher(ReaderIntent.SkipBackward()) },
-                    onPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
-                    onSkipForward = { intentDispatcher(ReaderIntent.SkipForward()) },
-                    onStartSleepTimer = { intentDispatcher(ReaderIntent.StartSleepTimer(it)) },
-                    onCancelSleepTimer = { intentDispatcher(ReaderIntent.CancelSleepTimer) },
-                    onDismissSleepTimerWarning = { intentDispatcher(ReaderIntent.DismissSleepTimerWarning) },
-                    onPostponeSleepTimer = { intentDispatcher(ReaderIntent.StartSleepTimer(it * 60_000L)) },
-                    showSleepTimerWarning = viewState.showSleepTimerWarningPrompt,
-                )
-            } else {
-                ReaderReadingPanel(
-                    chapterNumber = chapterNumber,
-                    chapterTitle = chapterTitle,
-                    progression = chapterProgress,
-                    bookProgression = currentPosition?.totalProgression,
-                    pageInfo = pageInfo,
-                    remainingTime = remainingTime,
-                    currentPage = viewState.chapterInfo?.currentPage,
-                    totalPages = viewState.chapterInfo?.totalPages,
-                    isEink = isEink,
-                    onSeek = { intentDispatcher(ReaderIntent.SeekToChapterProgress(it)) },
-                    onContents = { intentDispatcher(ReaderIntent.ToggleToc) },
-                    onSearch = { intentDispatcher(ReaderIntent.ToggleBookSearch) },
-                    onListen = {
-                        if (viewState.isReadAloud) {
-                            intentDispatcher(ReaderIntent.StartListening(ListenSource.NARRATION))
-                        } else {
-                            intentDispatcher(ReaderIntent.ToggleListenSheet)
-                        }
+                    .pointerInput(Unit) {
+                        var total = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { total = 0f },
+                            onVerticalDrag = { _, delta -> total += delta },
+                            onDragEnd = { if (total > SWIPE_HIDE_THRESHOLD_PX) controlsVisible = false },
+                        )
                     },
-                    onListenLongPress = { intentDispatcher(ReaderIntent.ToggleListenSheet) },
-                    onDisplay = { intentDispatcher(ReaderIntent.OnSettingsClicked) },
-                )
+            ) {
+                if (viewState.isListening) {
+                    val sourceLabel = if (viewState.isReadAloud) {
+                        stringResource(StringRes.reader_overlay_narration)
+                    } else {
+                        "${stringResource(StringRes.reader_overlay_device_voice)} · ${selectedVoice?.locale ?: "English (US)"}"
+                    }
+                    ReaderListeningPanel(
+                        sourceLabel = sourceLabel,
+                        isPlaying = viewState.isPlaying,
+                        isLoading = viewState.isNarrationLoading,
+                        currentPositionMs = viewState.currentAudioPositionMs,
+                        totalDurationMs = viewState.totalDurationMs,
+                        playbackSpeed = if (viewState.isTtsReadAloud) settings.ttsRate else settings.playbackSpeed,
+                        sleepTimerRemainingMs = viewState.sleepTimerRemainingMs,
+                        isEink = isEink,
+                        onVoice = { intentDispatcher(ReaderIntent.ToggleListenSheet) },
+                        onStop = { intentDispatcher(ReaderIntent.StopListening) },
+                        onSeek = { intentDispatcher(ReaderIntent.SeekTo(it)) },
+                        onSpeed = { intentDispatcher(ReaderIntent.SetPlaybackSpeed(it)) },
+                        onSkipBack = { intentDispatcher(ReaderIntent.SkipBackward()) },
+                        onPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
+                        onSkipForward = { intentDispatcher(ReaderIntent.SkipForward()) },
+                        onStartSleepTimer = { intentDispatcher(ReaderIntent.StartSleepTimer(it)) },
+                        onCancelSleepTimer = { intentDispatcher(ReaderIntent.CancelSleepTimer) },
+                        onDismissSleepTimerWarning = { intentDispatcher(ReaderIntent.DismissSleepTimerWarning) },
+                        onPostponeSleepTimer = { intentDispatcher(ReaderIntent.StartSleepTimer(it * 60_000L)) },
+                        showSleepTimerWarning = viewState.showSleepTimerWarningPrompt,
+                    )
+                } else {
+                    ReaderReadingPanel(
+                        chapterNumber = chapterNumber,
+                        chapterTitle = chapterTitle,
+                        progression = chapterProgress,
+                        bookProgression = currentPosition?.totalProgression,
+                        pageInfo = pageInfo,
+                        remainingTime = remainingTime,
+                        currentPage = viewState.chapterInfo?.currentPage,
+                        totalPages = viewState.chapterInfo?.totalPages,
+                        isEink = isEink,
+                        onSeek = { intentDispatcher(ReaderIntent.SeekToChapterProgress(it)) },
+                        onContents = { intentDispatcher(ReaderIntent.ToggleToc) },
+                        onSearch = { intentDispatcher(ReaderIntent.ToggleBookSearch) },
+                        onListen = {
+                            if (viewState.isReadAloud) {
+                                intentDispatcher(ReaderIntent.StartListening(ListenSource.NARRATION))
+                            } else {
+                                intentDispatcher(ReaderIntent.ToggleListenSheet)
+                            }
+                        },
+                        onListenLongPress = { intentDispatcher(ReaderIntent.ToggleListenSheet) },
+                        onDisplay = { intentDispatcher(ReaderIntent.OnSettingsClicked) },
+                    )
+                }
+            }
+
+            if (hasBottomBar) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(Ember.colors.surface)
+                        .navigationBarsPadding()
+                        .onSizeChanged { bottomBarPx = it.height },
+                ) {
+                    Column {
+                        if (viewState.isListening) {
+                            val progress = if (viewState.totalDurationMs != null && viewState.totalDurationMs > 0L) {
+                                viewState.currentAudioPositionMs.toFloat() / viewState.totalDurationMs.toFloat()
+                            } else {
+                                0f
+                            }
+                            // The listening panel replaces the mini player while the controls are shown.
+                            ReaderMiniPlayer(
+                                isPlaying = viewState.isPlaying,
+                                progression = progress,
+                                onPlayPause = { intentDispatcher(ReaderIntent.TogglePlayback) },
+                                modifier = Modifier.then(if (controlsVisible) Modifier.height(0.dp) else Modifier).clipToBounds(),
+                            )
+                        }
+                        if (hasBottomStrip) {
+                            Box {
+                                AnimatedProgressBar(
+                                    settings = settings,
+                                    areControlsVisible = true,
+                                    position = ProgressBarPosition.BOTTOM,
+                                    lastKnownPosition = currentPosition,
+                                    chapterReadingTimeInfo = viewState.chapterReadingTimeInfo,
+                                    chapterInfo = viewState.chapterInfo,
+                                    currentTime = progressBarTime,
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
