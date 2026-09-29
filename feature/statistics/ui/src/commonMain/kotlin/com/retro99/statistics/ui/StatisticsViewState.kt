@@ -1,17 +1,24 @@
 package com.retro99.statistics.ui
 
 import com.retro99.base.result.AppError
+import com.retro99.statistics.domain.model.StatisticsOverview
 import com.retro99.statistics.domain.model.StatisticsPeriod
+import com.retro99.statistics.domain.model.StatisticsRange
 import com.retro99.statistics.ui.model.BookReadingStatsUiModel
 import com.retro99.statistics.ui.model.ReadingSessionUiModel
 import com.retro99.statistics.ui.model.ReadingStatisticsUiModel
+import kotlinx.datetime.LocalDate
 
 data class StatisticsViewState(
     val statistics: ReadingStatisticsUiModel? = null,
     val isLoading: Boolean = true,
     val error: AppError? = null,
     val detailState: StatisticsDetailState? = null,
-    val streakDetailState: StreakDetailState? = null,
+    val range: StatisticsRange = StatisticsRange.WEEK,
+    val overview: StatisticsOverview? = null,
+    /** Tapped chart bucket; null means the busiest one. */
+    val selectedBucketIndex: Int? = null,
+    val streakSheetState: StreakSheetState? = null,
     val booksReadDetailState: BooksReadDetailState? = null,
     val sessionsDetailState: SessionsDetailState? = null,
 )
@@ -28,11 +35,10 @@ data class StatisticsDetailState(
 )
 
 /**
- * State for the streak detail bottom sheet.
+ * State for the streak bottom sheet. [calendarMonth] is the first day of the month shown.
  */
-data class StreakDetailState(
-    val streakType: StreakType,
-    val days: List<Long>,
+data class StreakSheetState(
+    val calendarMonth: LocalDate,
 )
 
 /**
@@ -55,11 +61,3 @@ data class SessionsDetailState(
     val error: AppError? = null,
     val isCancelled: Boolean = false,
 )
-
-/**
- * Type of streak being displayed.
- */
-enum class StreakType {
-    CURRENT,
-    LONGEST,
-}

@@ -4,7 +4,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -190,5 +193,38 @@ fun EmberSectionLabel(
         ),
         color = Ember.colors.ink2,
         modifier = modifier,
+    )
+}
+
+/**
+ * Rounded surface card with the theme's outline in E-ink mode. Pass [onClick] to make the
+ * whole card a button.
+ */
+@Composable
+fun EmberCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    contentPadding: Dp = 18.dp,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val colors = Ember.colors
+    val style = Ember.style
+    val shape = RoundedCornerShape(20.dp)
+    val outline = if (style.isEink) Modifier.border(2.dp, colors.line, shape) else Modifier
+    val click = if (onClick != null) {
+        Modifier.clickable(role = Role.Button, onClick = onClick)
+    } else {
+        Modifier
+    }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(outline)
+            .clip(shape)
+            .background(colors.surface)
+            .then(click)
+            .padding(contentPadding),
+        content = content,
     )
 }

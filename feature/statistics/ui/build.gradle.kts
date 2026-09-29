@@ -41,6 +41,7 @@ kotlin {
             implementation(projects.feature.statistics.domain)
             implementation(projects.feature.books.domain)
             implementation(projects.lib.analytics.api)
+            implementation(projects.lib.preferences.api)
             implementation(libs.kotlin.result)
             implementation(libs.datetime)
         }

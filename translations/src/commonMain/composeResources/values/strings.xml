@@ -731,4 +731,36 @@
     <string name="books_filter_show_all" tools:ignore="MissingTranslation">Show all books</string>
     <string name="books_filter_show_count_one" tools:ignore="MissingTranslation">Show books · 1 filter</string>
     <string name="books_filter_show_count" tools:ignore="MissingTranslation">Show books · %1$d filters</string>
+    <string name="statistics_range_week" tools:ignore="MissingTranslation">Week</string>
+    <string name="statistics_range_month" tools:ignore="MissingTranslation">Month</string>
+    <string name="statistics_range_year" tools:ignore="MissingTranslation">Year</string>
+    <string name="statistics_range_all_time" tools:ignore="MissingTranslation">All time</string>
+    <string name="statistics_reading_time" tools:ignore="MissingTranslation">Reading time</string>
+    <string name="statistics_hours" tools:ignore="MissingTranslation">%1$dh</string>
+    <string name="statistics_session_count_one" tools:ignore="MissingTranslation">1 session</string>
+    <string name="statistics_session_count" tools:ignore="MissingTranslation">%1$d sessions</string>
+    <string name="statistics_range_this_week" tools:ignore="MissingTranslation">This week · %1$s – %2$s</string>
+    <string name="statistics_range_all_time_since" tools:ignore="MissingTranslation">All time · since %1$s</string>
+    <string name="statistics_range_no_reading" tools:ignore="MissingTranslation">No reading yet</string>
+    <string name="statistics_bar_description" tools:ignore="MissingTranslation">%1$s, %2$s read</string>
+    <string name="statistics_chart_summary" tools:ignore="MissingTranslation">Reading time chart, %1$s in total</string>
+    <string name="statistics_streak_card_subtitle" tools:ignore="MissingTranslation">Current streak · best %1$s</string>
+    <string name="statistics_streak_helper_start" tools:ignore="MissingTranslation">Read today to start a new streak.</string>
+    <string name="statistics_streak_helper_keep" tools:ignore="MissingTranslation">Read today to keep your %1$d-day streak.</string>
+    <string name="statistics_streak_helper_done" tools:ignore="MissingTranslation">You've read today — streak: %1$d days.</string>
+    <string name="statistics_streak_helper_empty" tools:ignore="MissingTranslation">Start reading to begin a streak</string>
+    <string name="statistics_glance_today" tools:ignore="MissingTranslation">Today</string>
+    <string name="statistics_glance_this_month" tools:ignore="MissingTranslation">This month</string>
+    <string name="statistics_glance_all_time" tools:ignore="MissingTranslation">All time</string>
+    <string name="statistics_glance_books_finished" tools:ignore="MissingTranslation">Books finished</string>
+    <string name="statistics_glance_sessions" tools:ignore="MissingTranslation">Sessions</string>
+    <string name="statistics_glance_avg_session" tools:ignore="MissingTranslation">Avg. session</string>
+    <string name="statistics_streak_sheet_title" tools:ignore="MissingTranslation">Reading streak</string>
+    <string name="statistics_streak_tile_current" tools:ignore="MissingTranslation">Current streak</string>
+    <string name="statistics_streak_tile_longest" tools:ignore="MissingTranslation">Longest · %1$s</string>
+    <string name="statistics_streak_previous_month" tools:ignore="MissingTranslation">Previous month</string>
+    <string name="statistics_streak_next_month" tools:ignore="MissingTranslation">Next month</string>
+    <string name="statistics_legend_read" tools:ignore="MissingTranslation">Read</string>
+    <string name="statistics_legend_today" tools:ignore="MissingTranslation">Today</string>
+    <string name="statistics_heading" tools:ignore="MissingTranslation">Statistics</string>
 </resources>

@@ -1,7 +1,6 @@
 package com.retro99.books.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,33 +12,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupPositionProvider
-import androidx.compose.ui.window.PopupProperties
 import com.retro99.base.server.ServerType
 import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberBottomSheet
 import com.retro99.base.ui.compose.EmberChip
 import com.retro99.base.ui.compose.EmberSectionLabel
 import com.retro99.books.ui.model.BookFilterState
@@ -65,8 +51,6 @@ import resources.translations.books_filter_show_count_one
 import resources.translations.books_filter_show_only
 import resources.translations.books_filter_source
 
-private val SHEET_TOP_RADIUS = 26.dp
-
 private val SHOW_ONLY_FILTERS = listOf(
     BookQuickFilter.FAVORITES,
     BookQuickFilter.IN_PROGRESS,
@@ -86,7 +70,6 @@ private val FORMAT_FILTERS = listOf(
  *
  * @param availableServerTypes Library sources to offer next to "All".
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookFilterBottomSheet(
     filterState: BookFilterState,
@@ -97,10 +80,10 @@ fun BookFilterBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = Ember.colors
-    val style = Ember.style
-    val shape = RoundedCornerShape(topStart = SHEET_TOP_RADIUS, topEnd = SHEET_TOP_RADIUS)
-    val content: @Composable () -> Unit = {
+    EmberBottomSheet(
+        onDismiss = onDismiss,
+        modifier = modifier,
+    ) {
         FilterSheetContent(
             filterState = filterState,
             availableServerTypes = availableServerTypes,
@@ -108,67 +91,6 @@ fun BookFilterBottomSheet(
             onServerTypeFilterChanged = onServerTypeFilterChanged,
             onClearAllFilters = onClearAllFilters,
             onDone = onDismiss,
-        )
-    }
-
-    if (style.isEink) {
-        Popup(
-            popupPositionProvider = WindowBottomPositionProvider,
-            onDismissRequest = onDismiss,
-            properties = PopupProperties(focusable = true, clippingEnabled = false),
-        ) {
-            Column(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .clip(shape)
-                    .background(colors.surface)
-                    .border(2.dp, colors.line, shape)
-                    .navigationBarsPadding(),
-            ) {
-                DragHandle()
-                content()
-            }
-        }
-    } else {
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            modifier = modifier,
-            shape = shape,
-            containerColor = colors.surface,
-            contentColor = colors.ink,
-            scrimColor = colors.nav.copy(alpha = SCRIM_ALPHA),
-            dragHandle = { DragHandle() },
-        ) {
-            content()
-        }
-    }
-}
-
-private const val SCRIM_ALPHA = 0.62f
-
-/** Pins a popup to the bottom edge of the window, full width. */
-private object WindowBottomPositionProvider : PopupPositionProvider {
-    override fun calculatePosition(
-        anchorBounds: IntRect,
-        windowSize: IntSize,
-        layoutDirection: LayoutDirection,
-        popupContentSize: IntSize,
-    ): IntOffset = IntOffset(x = 0, y = windowSize.height - popupContentSize.height)
-}
-
-@Composable
-private fun DragHandle() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 12.dp, bottom = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(width = 40.dp, height = 4.dp)
-                .background(Ember.colors.ink2, CircleShape),
         )
     }
 }
