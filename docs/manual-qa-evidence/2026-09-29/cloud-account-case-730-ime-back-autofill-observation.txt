@@ -1,0 +1,35 @@
+# Cloud Account case 730 — IME-first Back and Autofill overlay observation
+
+- **Date/time:** 2026-09-29, 08:26–08:28 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`settings get secure navigation_mode` = `2`).
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `a2a6f5a3d399ee8b8f5ad19358b4daa6ddba6832b1d7be02d219dcc3409bdaa4`, source `51b5f8a028aa858cda91ed31dfa0b5e51eb502c0`, installed 07:42:17 CEST with app data preserved; PID `25275`. Repository HEAD `75a1e82ecad6dc767051a03e85a8e7429692a278`.
+- **Privacy/state:** Original Default profile and unauthenticated server/book fixture were preserved. Only reserved-example email and synthetic non-credential password were entered; no submit, cloud request, provider authorization or save. The OS prompt was declined with “No, thanks.”
+
+## Steps and result
+
+1. Starting on the signed-out Cloud Account Sign in form, cleared logcat, entered the reserved-example email and synthetic password.
+2. Pressed system Back once. IME dismissed; Cloud Account stayed visible and both fields remained present.
+3. Pressed system Back a second time. Parrot emitted a successful Back navigation to App Settings; an Android Autofill save dialog then appeared over the destination. Accessibility tree showed `android:id/autofill_save`, title “Save password to Bitwarden?”, and “No, thanks” / “Save” buttons.
+4. Selected “No, thanks.” The app returned to a usable App Settings screen. Save was never selected.
+
+- **Functional:** FAIL / suspected QA-BUG-0089. App navigation completed, but the unexpected system save prompt interrupted the destination after leaving an unsubmitted form.
+- **Analytics:** PASS locally for bounded output. Email-field focus loss emitted one format-validation success; navigation emitted one attempted/success pair and one destination exposure. No auth-operation attempt and no email/password values appeared. Firebase ingestion is waived.
+- **Diagnostics:** PASS locally for correlated navigation start/terminal; no fatal/exception. The post-navigation system overlay is not an app exception. No Crashlytics non-fatal was emitted or expected for the observed platform UI.
+- **Filtered `adb logcat -d -v threadtime` excerpt:**
+
+  ```text
+  09-29 08:26:58.204 25275 25275 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 08:26:58.204 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=validate_email operation=cloud_email_validation stage=validation outcome=succeeded correlation_id=1e42c68a-df10-4edf-a61e-12d0b661d86d
+  09-29 08:27:03.168 25275 25275 D čič : Analytics Event: navigation_back_attempted | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=system_back, action=back, outcome=started}
+  09-29 08:27:03.169 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=system_back action=back operation=navigation_back stage=navigation outcome=started correlation_id=06da5cb7-c9ca-44e8-98a6-a842459d72e7
+  09-29 08:27:03.172 25275 25275 D čič : Analytics Event: navigation_back | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=system_back, action=back, outcome=succeeded}
+  09-29 08:27:03.172 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=system_back action=back operation=navigation_back stage=terminal outcome=succeeded correlation_id=06da5cb7-c9ca-44e8-98a6-a842459d72e7
+  09-29 08:27:03.348 25275 25275 D čič : Analytics Event: app_settings_screen_viewed | Parameters: {screen=app_settings, source_screen=sync_and_backup, entry_point=navigation_back}
+  09-29 08:27:03.348 25275 25275 D čič : Diagnostic breadcrumb: diagnostic_context screen=app_settings source_screen=sync_and_backup entry_point=navigation_back action=screen_view operation=app_settings_route stage=visible outcome=succeeded
+  09-29 08:27:04.114 1312 1387 I WindowManager: WindowManagerGlobal#addView, ty=2038, view=com.android.internal.policy.DecorView{...}, caller=android.view.WindowManagerImpl.addView ... com.android.server.autofill.ui.SaveUi.show
+  ```
+
+- **Prompt screenshot:** Not saved. The accessibility tree provided the exact system title and actions; no prompt contents or credential values were retained.
+- **Defect:** QA-BUG-0089 was recorded as SUSPECTED before source investigation. A related older-build Bitwarden prompt is documented in [case-360 pre-fix evidence](cloud-account-case-360-email-validation-pre-fix.txt). The cause is unresolved; do not treat it as a confirmed app defect yet.
+
+No form submission, credential save, Firebase delivery or account-state change occurred.
