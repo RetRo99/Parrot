@@ -1,0 +1,24 @@
+Case 13 continuation — Welcome reset authorization and Samsung availability
+Date/time: 2026-09-29 17:49 CEST (host clock, UTC+0200).
+
+Scope and authorization
+- The user explicitly authorized resetting/deleting Parrot demo app/account data so first-run Welcome can be reached. Preservation of disposable guest onboarding state is not a blocker.
+- Preserve the existing QA evidence under `docs/manual-qa-evidence/`. Before any reset, inventory Parrot-internal files and preserve only any fixture needed for a later run; the repository's public-domain `iosApp/iosApp/sample-books/PrideAndPrejudice.epub` remains an available re-import source. Do not export unrelated account/database data.
+- No reset, reinstall, launch, locale change, or app switch was performed in this continuation.
+
+Device availability
+- Required Samsung serial: `RFCWC0SSVDM`.
+- `adb devices -l` at the recorded time listed only `10.41.65.3:5555` (Android head unit) and `emulator-5554`; the Samsung was absent.
+- Explicit read-only ADB queries using `-s RFCWC0SSVDM` returned `adb: device 'RFCWC0SSVDM' not found`.
+- The last successful read-only Samsung snapshot earlier in this session had reported system locale `en-GB`, package `com.retro99.parrot` version `0.4.5` (21), and `ai.devrev.mobile/.android.home.HomeActivity` in the foreground. Because the phone is now disconnected, current foreground, locale, installed APK hash, and app state are unknown; no claim is made that these earlier values remain current.
+- No other attached device was substituted. The previously installed Samsung APK's current hash/source commit cannot be rechecked until the Samsung reconnects.
+
+Welcome instrumentation preflight (source review only; not device execution)
+- `LoginNavigationViewModel.onDestinationVisible` emits one `welcome_screen_viewed` event and one `welcome` visible-route breadcrumb for a new Welcome exposure; repeated same-destination callbacks are guarded.
+- `LoginNavigationViewModelTest.repeatedDestinationVisibilityDoesNotDuplicateExposureOrBreadcrumb` covers this deduplication. Guest-choice failure/retry and Welcome root-Back behavior also have host tests, but do not substitute for the locale/device run.
+- The current Samsung-visible Welcome exposure, Spanish rendering/layout, and local event/breadcrumb have not been observed in this continuation.
+
+Next safe action
+- Once `RFCWC0SSVDM` is again available and not occupied by another app/test, verify its live manifest and state, preserve any required fixture, use only the authorized Parrot-scoped reset, set `es-ES`, launch to Welcome, capture redacted evidence and locally verify the actual exposure event/breadcrumb, then restore the original system locale/settings. Do not advance past case 13 until Welcome has been executed and genuinely unvisited nested routes are separately recorded as partial.
+
+Result: case 13 remains BLOCKED / partial due to Samsung ADB unavailability and unvisited Welcome/nested routes. The app-data preservation concern is explicitly cleared by user authorization and is not the blocker. No product bug was discovered; no bug-register entry is warranted.
