@@ -1,7 +1,6 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.database.api.statistics.ReadingSessionDatabase
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -28,12 +27,10 @@ class ParrotCloudReadingSessionChangeApplier(
     }
 
     suspend fun apply(payload: JsonElement) {
-        val session = try {
-            json.decodeFromJsonElement<ParrotCloudReadingSessionPayload>(payload)
-        } catch (_: SerializationException) {
-            // A malformed change must never wedge the pull cursor on retry.
-            return
-        }
+        // Let decoding failures abort the pull page. Treating a malformed
+        // change as applied would advance the checkpoint and permanently lose
+        // it, including when a later client version learns to decode it.
+        val session = json.decodeFromJsonElement<ParrotCloudReadingSessionPayload>(payload)
         val existing = readingSessionDatabase.getSessionByNaturalKey(
             bookUuid = session.bookUuid,
             bookType = session.bookType,

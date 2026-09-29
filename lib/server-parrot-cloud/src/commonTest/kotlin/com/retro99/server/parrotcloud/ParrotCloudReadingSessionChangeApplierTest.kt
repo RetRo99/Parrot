@@ -1,10 +1,12 @@
 package com.retro99.server.parrotcloud
 
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ParrotCloudReadingSessionChangeApplierTest {
@@ -62,11 +64,13 @@ class ParrotCloudReadingSessionChangeApplierTest {
     }
 
     @Test
-    fun malformedPayloadIsIgnored() = runTest {
+    fun malformedPayloadFailsSoThePullCanRetry() = runTest {
         val database = RecordingReadingSessionDatabase()
         val applier = ParrotCloudReadingSessionChangeApplier(database)
 
-        applier.apply(json.parseToJsonElement("""{"session_id":"rs1|x"}"""))
+        assertFailsWith<SerializationException> {
+            applier.apply(json.parseToJsonElement("""{"session_id":"rs1|x"}"""))
+        }
 
         assertTrue(database.inserted.isEmpty())
     }
