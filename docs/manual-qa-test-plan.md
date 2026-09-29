@@ -1,6 +1,6 @@
 # Parrot — Manual QA Test Plan (Full In-App Action Coverage)
 
-**Execution goal and instrumentation requirements:** [manual-qa-goal.md](manual-qa-goal.md). Read that document before running this catalogue. Baseline IDs 1–494 are preserved; extension IDs 495–754 add Samsung setup, screen edge cases and observability verification. These are planned tests, not recorded results.
+**Execution goal and instrumentation requirements:** [manual-qa-goal.md](manual-qa-goal.md). Read that document before running this catalogue. Baseline IDs 1–494 are preserved; extension IDs 495–779 add Samsung setup, screen edge cases and observability verification. These are planned tests, not recorded results.
 
 **Scope of this pass:** every action a single user can perform inside the app — opening, navigating, backing out, reading, playing, downloading, importing, backing up, configuring, viewing statistics, managing profiles/servers/accounts, and all lifecycle behaviour.
 
@@ -484,7 +484,7 @@ Ordinary cached-library browsing, sign-in handshakes, downloads, account control
 | 364 | Sign in success | Sign in with an existing account | Signed-in view with storage card and sync status |
 | 365 | Wrong cloud credentials | Submit wrong password | Clear error, retry possible |
 | 366 | Sign in with Google | Tap Sign in with Google | External browser OAuth completes and returns signed in |
-| 367 | Google sign-in cancel | Cancel the OAuth flow | Returns to the form with no partial state |
+| 367 | Google sign-in cancel | Start Google OAuth then cancel from the browser/system Back without authorizing | Returns to a usable form with no partial state; emit one `cancelled` terminal (not auth failure) and no Crashlytics non-fatal |
 | 368 | Storage usage card | Inspect the signed-in view | Usage bar and numbers render |
 | 369 | Storage usage error | Simulate a fetch failure | Error message on the card, rest of screen usable |
 | 370 | Sync status states | Observe across a sync | Disabled / idle / in progress / completed and last-success time all display correctly |
@@ -1091,5 +1091,5 @@ Each row below is a parameterized case: create a result row for **each reachable
 
 | # | Test case | Steps | Expected |
 |---|---|---|---|
-| 778 | Cloud Account action outcomes and privacy | On every reachable Cloud Account form/connected-account action, compare accepted attempt and terminal result, cancellation/dismissal and retry; inspect route source and diagnostic correlation | Each feature action has one bounded attempt and one accurate success/failure/cancel/abandon terminal as applicable; Back/mode/visibility/dialog actions are attributed; one breadcrumb correlation per operation; unexpected user-impacting exceptions are reported once at the UI boundary; ordinary credential rejection/OAuth cancel/offline/cancellation are not Crashlytics issues; no email, password, token, cloud/profile ID, URL or raw exception message is emitted. Cases 370–371 remain deferred for sync verification under the scope rule. |
+| 778 | Cloud Account action outcomes and privacy | On every reachable Cloud Account form/connected-account action, compare accepted attempt and terminal result, cancellation/dismissal and retry; inspect route source and diagnostic correlation | Each feature action has one bounded attempt and one accurate success/failure/cancel/abandon terminal as applicable; OAuth user cancellation is distinct from auth rejection; Back/mode/visibility/dialog actions are attributed; one breadcrumb correlation per operation; unexpected user-impacting exceptions are reported once at the UI boundary; ordinary credential rejection/OAuth cancel/offline/cancellation are not Crashlytics issues; no email, password, token, cloud/profile ID, URL or raw exception message is emitted. Cases 370–371 remain deferred for sync verification under the scope rule. |
 | 779 | Cloud auth local-persistence failure rollback | With a host fake auth provider, let sign-in/registration succeed, fail the pending-auth local write, then inspect the active session and retry state; separately make cleanup fail | Do not leave an authenticated session or pending marker presented as usable after local persistence failed; attempt bounded local rollback/cleanup, terminate loading, and report the stage/reason once without credentials. Cancellation remains cancellation. Samsung fault variant is BLOCKED without an authorized disposable cloud fixture and safe local-write fault injection. |

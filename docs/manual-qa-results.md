@@ -354,7 +354,7 @@ The earlier post-fix rows above record the first fix-candidate pass (PID `17458`
 | 364 | Successful email sign-in | BLOCKED | BLOCKED | BLOCKED | No authorized cloud-account credentials. |
 | 365 | Wrong cloud credentials and retry | NOT RUN | NOT RUN | NOT RUN | No credential submit in this preflight; can use only an explicitly safe synthetic rejected attempt if device execution is approved/configuration is available. |
 | 366 | Google sign-in success | BLOCKED | BLOCKED | BLOCKED | No authorized OAuth account; no external sign-in submitted. |
-| 367 | Google sign-in cancellation | NOT RUN | NOT RUN | NOT RUN | No OAuth flow opened in this preflight. |
+| 367 | Google sign-in cancellation | NOT RUN | FAIL by source audit: cancellation currently maps to auth failure | FAIL by source audit: no cancellation terminal is emitted for callback cancellation | QA-BUG-0085 recorded before change; safe Samsung OAuth-cancel retest remains pending after the fix. No credentials submitted. |
 | 368 | Signed-in storage usage card | BLOCKED | BLOCKED | BLOCKED | Requires signed-in disposable account fixture. |
 | 369 | Storage usage error and recovery | BLOCKED | BLOCKED | BLOCKED | Requires signed-in account and safe controlled fetch-failure fixture. |
 | 370 | Sync status transitions | DEFERRED | DEFERRED | DEFERRED | Cross-device/cross-app sync verification excluded by scope; no sync behavior asserted. |
@@ -382,7 +382,7 @@ The earlier post-fix rows above record the first fix-candidate pass (PID `17458`
 | 737 | Same-device restored-file validation | BLOCKED | BLOCKED | BLOCKED | No controlled cloud backup fixture. |
 | 738 | Delete-account cancellation | BLOCKED | BLOCKED | BLOCKED | No signed-in disposable cloud account; no dialog opened. |
 | 739 | Cloud operation failures and recovery | BLOCKED | BLOCKED | BLOCKED | Cloud credentials and safe auth/storage/backup/restore fault fixtures unavailable. |
-| 778 | Action event schema/privacy source audit | NOT RUN | FAIL by source audit: no Cloud Account operation Analytics events | FAIL by source audit: no operation breadcrumbs/contextual exception reporting; cancellation has no terminal telemetry | QA-BUG-0082 recorded before fix. Source-only finding [evidence](manual-qa-evidence/2026-09-29/cloud-account-instrumentation-source-audit.txt); no runtime result implied. |
+| 778 | Action event schema/privacy source audit | NOT RUN | FAIL by source audit: no Cloud Account operation Analytics events; OAuth cancellation also maps to auth failure | FAIL by source audit: no operation breadcrumbs/contextual exception reporting; OAuth callback cancellation has no cancellation terminal | QA-BUG-0082 and QA-BUG-0085 recorded before fixes. Source-only findings [instrumentation evidence](manual-qa-evidence/2026-09-29/cloud-account-instrumentation-source-audit.txt) and [OAuth cancellation evidence](manual-qa-evidence/2026-09-29/cloud-account-oauth-cancellation-source-audit.txt); no runtime result implied. |
 | 779 | Post-auth pending-record persistence failure rollback | NOT RUN | NOT RUN | NOT RUN | QA-BUG-0084 is confirmed by source path only; host fault-injection retest pending. Samsung failure fixture is BLOCKED without authorized disposable cloud credentials and safe local-write failure injection. [Source audit](manual-qa-evidence/2026-09-29/cloud-account-persistence-failure-source-audit.txt). |
 
 ## Early observation outside current screen order
