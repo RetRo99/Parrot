@@ -3,7 +3,7 @@
 - **Run date/time:** 2026-09-29, approximately 21:00–21:23 CEST (UTC+0200).
 - **Device:** Physical Samsung `RFCWC0SSVDM`, SM-S921B (Galaxy S24), Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`; portrait 1080×2340, gesture navigation, font scale 1.0.
 - **Package/build before label fix:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug APK SHA-256 `aedfaa942c52eb4adcbd55160cbb08a323ece49ee55a797ee3075d5ce80e8a39`, source commit `cda04f742fc6f874249418f3188edae7ed8560a8`; Parrot PID `29406`.
-- **Package/build after label fix:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug APK SHA-256 `9db68a1b394fb352c806eea94fe48e80535a628f3ef2548c5e46a04c078ea6fb`, built from the QA-BUG-0099 fix tree based on `bb35289975c08528cd5c0d5701a59697f0b991e5`; identical hash verified from the Samsung-installed `base.apk`; retest PID `18361`. The update used `adb install -r`; data was not cleared.
+- **Package/build after label fix:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, debug APK SHA-256 `9db68a1b394fb352c806eea94fe48e80535a628f3ef2548c5e46a04c078ea6fb`, source commit `da244a00bf5731bf5350343d94f4448a720e9b6b` (based on `bb35289975c08528cd5c0d5701a59697f0b991e5`); identical hash verified from the Samsung-installed `base.apk`; retest PID `18361`. The update used `adb install -r`; data was not cleared.
 - **Permission/state:** English (United Kingdom) system locale verified. `POST_NOTIFICATIONS` stayed denied (`granted=false`, AppOp `ignore`).
 
 ## Fixture and exact steps
