@@ -1,0 +1,33 @@
+# Cloud Account case 730 — route-disposal Autofill cancellation candidate failed
+
+- **Date/time:** 2026-09-29, 08:51–08:55 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`settings get secure navigation_mode` = `2`). Bitwarden was the active Android Autofill service (`com.x8bit.bitwarden/com.x8bit.bitwarden.Autofill.AutofillService`); settings were inspected but not changed.
+- **App/build:** `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `8dd4f820ef89c102ab095c895fe0365240e1a63b30983dfff28cff6066ade0fb`, installed with `adb install -r` at 08:51:33 CEST; app data preserved; PID `21299`. Candidate source was a dirty working tree based on HEAD `4caac2ae6dd8532aed0b15a6a3e0de5c926417e1`; the candidate had added `LocalAutofillManager.current` cancellation inside `DisposableEffect.onDispose` for Cloud Account. This was an uncommitted experiment and is not an accepted fix.
+- **Fixture/privacy:** Existing profile/server/book state preserved; never used Retry on the signed-out prompt or submitted form. Entered reserved-example `qa@example.com` and a synthetic local-only password to reproduce the exact issue. No credential was saved or submitted; the displayed save prompt was explicitly declined (“No, thanks”).
+
+## Steps and outcome
+
+1. Installed the candidate build with app data preserved. The app opened its pre-existing “Server unavailable or not authenticated” prompt. Closed it; did not select Retry. Original Home/Settings remained usable.
+2. Opened Settings → Sync & Backup and confirmed the signed-out Sign in form was empty. Cleared logcat.
+3. Entered the reserved-example email and synthetic password. Pressed system Back once to hide the IME; form remained visible with fields intact.
+4. Pressed system Back again. Navigation to App Settings succeeded, but the system immediately presented “Save password to Bitwarden?” over the destination. Pressed “No, thanks”; never selected Save.
+
+- **Functional:** FAIL; the candidate `DisposableEffect.onDispose { autofillManager?.cancel() }` did not suppress the save dialog. No account operation ran and no credential persisted.
+- **Analytics:** PASS locally: one bounded email validation success, one Back attempted/succeeded pair, and one App Settings route exposure. No auth attempt or field data was logged. Firebase ingestion waived.
+- **Diagnostics:** PASS locally: correlated Back start/terminal breadcrumbs; no fatal or app exception. No Crashlytics report for ordinary system UI.
+- **Filtered local log excerpt:**
+
+  ```text
+  09-29 08:54:35.323 21299 21299 D čič : Analytics Event: cloud_account_email_validation_result | Parameters: {screen=sync_and_backup, action=validate_email, operation=cloud_email_validation, field=email, stage=validation, outcome=succeeded, mode=sign_in}
+  09-29 08:54:35.323 21299 21299 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup action=validate_email operation=cloud_email_validation stage=validation outcome=succeeded correlation_id=2e9ce54e-bbd2-4f97-b90f-deaaf9606ae3
+  09-29 08:54:40.464 21299 21299 D čič : Analytics Event: navigation_back_attempted | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=system_back, action=back, outcome=started}
+  09-29 08:54:40.466 21299 21299 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=system_back action=back operation=navigation_back stage=navigation outcome=started correlation_id=5a1e0f03-d523-4724-9b4a-628aab5a40b5
+  09-29 08:54:40.474 21299 21299 D čič : Analytics Event: navigation_back | Parameters: {screen=sync_and_backup, source_screen=sync_and_backup, destination_screen=app_settings, entry_point=system_back, action=back, outcome=succeeded}
+  09-29 08:54:40.475 21299 21299 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup source_screen=sync_and_backup destination_screen=app_settings entry_point=system_back action=back operation=navigation_back stage=terminal outcome=succeeded correlation_id=5a1e0f03-d523-4724-9b4a-628aab5a40b5
+  09-29 08:54:40.487 21299 21299 D čič : Analytics Event: app_settings_screen_viewed | Parameters: {screen=app_settings, source_screen=sync_and_backup, entry_point=navigation_back}
+  09-29 08:54:40.487 21299 21299 D čič : Diagnostic breadcrumb: diagnostic_context screen=app_settings source_screen=sync_and_backup entry_point=navigation_back action=screen_view operation=app_settings_route stage=visible outcome=succeeded
+  09-29 08:54:41.316 1312 1387 I SaveUi : Showing save dialog: Save password to Bitwarden?
+  09-29 08:54:41.317 1312 1387 I WindowManager: WindowManagerGlobal#addView, ty=2038, ... com.android.server.autofill.ui.SaveUi.show
+  ```
+
+The failed candidate is preserved as an investigation result only. The system dialog was declined; no password value or screenshot was retained. Case 730 remains FAIL pending synchronous route-boundary cancellation and a successful Samsung retest.
