@@ -502,6 +502,7 @@
     <string name="cloud_account_reauthentication_required" tools:ignore="MissingTranslation">Please sign in again to resume cloud access.</string>
     <string name="cloud_account_refresh_unavailable" tools:ignore="MissingTranslation">Cloud access is temporarily unavailable. Your local reading remains available.</string>
     <string name="cloud_account_sign_in_hint" tools:ignore="MissingTranslation">Enter your email and password, then sign in. New here? Create an account below.</string>
+    <string name="cloud_account_create_account_hint" tools:ignore="MissingTranslation">Enter your email and password, then accept the terms to create your account.</string>
     <string name="cloud_account_profile_already_linked" tools:ignore="MissingTranslation">This local profile is already linked to another cloud account.</string>
     <string name="cloud_account_not_configured" tools:ignore="MissingTranslation">Cloud account access is not configured yet.</string>
     <string name="cloud_account_generic_error" tools:ignore="MissingTranslation">Cloud account action failed. Please try again.</string>

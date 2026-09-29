@@ -71,6 +71,7 @@ import resources.translations.app_settings_sync_backup
 import resources.translations.cloud_account_check_email
 import resources.translations.cloud_account_connected
 import resources.translations.cloud_account_create_account
+import resources.translations.cloud_account_create_account_hint
 import resources.translations.cloud_account_description
 import resources.translations.cloud_account_delete
 import resources.translations.cloud_account_delete_confirm
@@ -477,7 +478,13 @@ private fun AccountFormContent(
 
         if (!viewState.isSubmitEnabled && !viewState.isLoading) {
             Text(
-                text = stringResource(StringRes.cloud_account_sign_in_hint),
+                text = stringResource(
+                    if (viewState.mode == CloudAccountMode.SignIn) {
+                        StringRes.cloud_account_sign_in_hint
+                    } else {
+                        StringRes.cloud_account_create_account_hint
+                    },
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
