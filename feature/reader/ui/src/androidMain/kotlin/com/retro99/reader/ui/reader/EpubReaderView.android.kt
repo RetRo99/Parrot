@@ -216,7 +216,7 @@ internal actual fun EpubReaderViewInternal(
 }
 
 @OptIn(ExperimentalReadiumApi::class)
-private fun EpubNavigatorFragment.Configuration.registerBundledFonts() {
+internal fun EpubNavigatorFragment.Configuration.registerBundledFonts() {
     servedAssets += "reader-fonts/.*"
     bundledReaderFonts.forEach { font ->
         addFontFamilyDeclaration(FontFamily(font.cssFamily)) {
@@ -288,7 +288,7 @@ private val bundledReaderFonts = listOf(
  * decoration's tint color. This function creates custom templates that use `toCss()` without
  * an alpha override, so the alpha from the color itself is used.
  */
-private fun createUserAlphaDecorationTemplates(): HtmlDecorationTemplates {
+internal fun createUserAlphaDecorationTemplates(): HtmlDecorationTemplates {
     val defaultTint = android.graphics.Color.YELLOW
     val lineWeight = 2
     val cornerRadius = 3

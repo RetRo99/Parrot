@@ -40,6 +40,7 @@ import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
+import com.retro99.reader.ui.reader.ReaderSettingsPreview
 import com.retro99.home.ui.appsettings.DiagnosticsScreen
 import com.retro99.home.ui.appsettings.ProfileOperationTapShieldHolder
 import com.retro99.home.ui.series.SeriesListScreen
@@ -405,6 +406,13 @@ fun HomeNavigation(
                     entry<HomeDestination.Settings> {
                         SettingsScreen(
                             onClose = { requestBack("close_button") },
+                            preview = { settings, showReadAloudHighlight, previewModifier ->
+                                ReaderSettingsPreview(
+                                    settings = settings,
+                                    showReadAloudHighlight = showReadAloudHighlight,
+                                    modifier = previewModifier,
+                                )
+                            },
                         )
                     }
 

@@ -63,13 +63,7 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
     @Serializable
     data object Settings : HomeDestination {
         @Transient
-        override val isBottomSheet: Boolean = true
-
-        @Transient
-        override val bottomSheetConfig: BottomSheetConfig = BottomSheetConfig(
-            skipPartiallyExpanded = true,
-            fillMaxHeight = false,
-        )
+        override val showBottomBar: Boolean = false
     }
 
     @Serializable
