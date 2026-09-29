@@ -2,6 +2,7 @@
 
 - **Date/time:** 2026-09-29 17:36 UTC (19:36 CEST).
 - **Pre-fix source HEAD:** `8b921a5a5ff4f4564f5bbb9ff44490dfa6ea7721`; checks ran against that tree plus the uncommitted focused QA-BUG-0098 change.
+- **Fix commit:** `8452297689310999d6712d5fdf769ef981e50fdf`, with source identical to the candidate used for these checks. The commit was created after host/build verification; it has not been pushed.
 - **Commands:** `./gradlew :feature:reader:ui:testAndroidHostTest :androidApp:assembleDebug`; separate focused run `./gradlew :feature:reader:ui:testAndroidHostTest`.
 - **Result:** Both commands succeeded. Focused `ReaderSettingsSaveOperationTest` passed 4/4 with zero skipped, failed or errored cases. It verifies one bounded `screen=reader`, `action=save_reader_setting`, `operation=reader_settings_save` terminal breadcrumb and one contextual non-fatal call for a returned `AppError.DatabaseError`; no report on a successful save; thrown coroutine cancellation propagates with no report; returned ordinary cancellation emits a cancelled breadcrumb without a non-fatal. The failure context includes a diagnostic-only correlation ID and no setting value, book/profile ID, or throwable message.
 - **Candidate artifact:** `androidApp/build/outputs/apk/debug/androidApp-debug.apk`, SHA-256 `263b399bedd7d50848c5821fea4ddf96ab1c9c43233d46337dd253a9fd8b99e9`.
