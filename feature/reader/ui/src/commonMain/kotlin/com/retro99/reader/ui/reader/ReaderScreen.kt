@@ -42,6 +42,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -108,6 +109,8 @@ import resources.translations.reader_bookmark_no_more_bookmarks
 import resources.translations.reader_bookmark_save_failed
 import resources.translations.reader_bookmark_undo
 import resources.translations.reader_page_of_pages
+import resources.translations.reader_position_save_failed
+import resources.translations.reader_position_save_retry
 import resources.translations.reader_readaloud_no_audio
 import resources.translations.reader_time_remaining_less_than_minute
 import resources.translations.reader_time_remaining_minutes
@@ -348,6 +351,12 @@ private fun ReaderScreenContent(
             modifier = Modifier.align(Alignment.BottomCenter),
         )
 
+        PositionSaveFailedSnackbar(
+            showMessage = viewState.showPositionSaveFailed,
+            onRetry = { intentDispatcher(ReaderIntent.RetryPositionSave) },
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+
         BookmarkAddedSnackbar(
             showMessage = viewState.showBookmarkAdded,
             bookmarkId = viewState.lastAddedBookmarkId,
@@ -436,6 +445,22 @@ private fun BookmarkSaveFailedSnackbar(
         hostState = snackbarHostState,
         modifier = modifier,
     )
+}
+
+@Composable
+private fun PositionSaveFailedSnackbar(
+    showMessage: Boolean,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (!showMessage) return
+    val message = stringResource(StringRes.reader_position_save_failed)
+    val retryLabel = stringResource(StringRes.reader_position_save_retry)
+
+    Snackbar(
+        modifier = modifier,
+        action = { TextButton(onClick = onRetry) { Text(retryLabel) } },
+    ) { Text(message) }
 }
 
 @Composable

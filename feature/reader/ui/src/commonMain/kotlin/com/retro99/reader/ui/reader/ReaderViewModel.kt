@@ -90,6 +90,8 @@ import org.koin.core.annotation.Provided
 import org.koin.core.scope.Scope
 import org.koin.mp.KoinPlatform.getKoin
 import kotlin.time.TimeSource
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @KoinViewModel
 class ReaderViewModel(
@@ -228,6 +230,22 @@ class ReaderViewModel(
         },
     )
 
+    private var positionSaveFailureCorrelationId: String? = null
+    private var positionSaveFailureReported = false
+    private var positionSaveAttemptReported = false
+    private var positionSaveSuccessReported = false
+
+    private val positionSaveCoordinator: ReaderPositionSaveCoordinator<PositionDomainModel> by lazy {
+        ReaderPositionSaveCoordinator(
+            scope = viewModelScope,
+            save = { position -> saveReadingProgressUseCase(position) },
+            onAttempted = ::reportPositionSaveAttempt,
+            onSucceeded = ::onPositionSaveSucceeded,
+            onFailed = ::onPositionSaveFailed,
+            onCancelled = ::onPositionSaveCancelled,
+        )
+    }
+
     init {
         initializeReader()
         observeShowCurrentTimeSetting()
@@ -336,6 +354,7 @@ class ReaderViewModel(
             ReaderIntent.Retry -> retry()
             ReaderIntent.DismissNoAudioMessage -> dismissNoAudioMessage()
             ReaderIntent.DismissBookmarkSaveFailed -> dismissBookmarkSaveFailed()
+            ReaderIntent.RetryPositionSave -> retryPositionSave()
             ReaderIntent.ToggleBookmarks -> toggleBookmarks()
             ReaderIntent.AddBookmark -> addBookmark()
             ReaderIntent.DismissBookmarkAdded -> dismissBookmarkAdded()
@@ -357,6 +376,12 @@ class ReaderViewModel(
 
     private fun dismissBookmarkSaveFailed() {
         updateState { it.copy(showBookmarkSaveFailed = false) }
+    }
+
+    private fun retryPositionSave() {
+        if (positionSaveCoordinator.retry()) {
+            updateState { it.copy(showPositionSaveFailed = false) }
+        }
     }
 
     private fun retry() {
@@ -1330,20 +1355,27 @@ class ReaderViewModel(
 
         updatePublicationState { it.copy(position = position) }
 
-        val now = now().toString()
         val currentState = viewState.value
         val audioTimestamp = currentState.currentAudioPositionMs.takeIf { it > 0 }
-        val positionDomainModel = PositionDomainModel(
+        positionSaveCoordinator.submit(createPositionDomainModel(position, audioTimestamp))
+    }
+
+    private fun createPositionDomainModel(
+        position: PositionUiModel,
+        audioTimestampMs: Long?,
+    ): PositionDomainModel {
+        val currentState = viewState.value
+        return PositionDomainModel(
             bookUuid = bookUuid,
             serverId = serverId,
             timestamp = nowMillis(),
             createdAt = position.createdAt,
-            updatedAt = now,
+            updatedAt = now().toString(),
             locatorHref = position.href,
             locatorType = position.type,
             locatorTitle = position.title,
             locatorTarget = null,
-            audioTimestampMs = audioTimestamp,
+            audioTimestampMs = audioTimestampMs,
             chapterIndex = position.chapterIndex,
             progression = position.progression,
             totalChapters = position.totalChapters,
@@ -1352,12 +1384,151 @@ class ReaderViewModel(
             position = position.position,
             cssSelector = position.cssSelector,
         )
+    }
 
-        viewModelScope.launch {
-            saveReadingProgressUseCase(positionDomainModel)
-                .onSuccess { routineSyncScheduler.markDirty() }
+    private fun reportPositionSaveAttempt(isRetry: Boolean, entryPoint: String) {
+        val mediaType = bookType.name.lowercase()
+        if (isRetry) {
+            analytics.logEvent(ReaderAnalyticsEvent.ReaderPositionSaveRetryAttempted(mediaType))
+            positionSaveFailureCorrelationId?.let { correlationId ->
+                analytics.logBreadcrumb(
+                    positionSaveDiagnosticContext(
+                        stage = "retry",
+                        outcome = "started",
+                        entryPoint = entryPoint,
+                        correlationId = correlationId,
+                    ),
+                )
+            }
+        } else if (entryPoint == "reader_close" || !positionSaveAttemptReported) {
+            // Position writes may occur on every page turn. Record one representative normal
+            // attempt per Reader session, plus the final close checkpoint. Every failure and
+            // explicit retry remains distinct.
+            if (entryPoint != "reader_close") positionSaveAttemptReported = true
+            analytics.logEvent(
+                ReaderAnalyticsEvent.ReaderPositionSaveAttempted(
+                    mediaType = mediaType,
+                    entryPoint = entryPoint,
+                ),
+            )
+            analytics.logBreadcrumb(
+                positionSaveDiagnosticContext(
+                    stage = "started",
+                    outcome = "started",
+                    entryPoint = entryPoint,
+                ),
+            )
         }
     }
+
+    private fun onPositionSaveSucceeded(
+        isRetry: Boolean,
+        recoveredFailure: Boolean,
+        entryPoint: String,
+    ) {
+        routineSyncScheduler.markDirty()
+        if (isRetry || recoveredFailure || entryPoint == "reader_close" || !positionSaveSuccessReported) {
+            if (entryPoint != "reader_close") positionSaveSuccessReported = true
+            analytics.logEvent(
+                ReaderAnalyticsEvent.ReaderPositionSaveSucceeded(
+                    mediaType = bookType.name.lowercase(),
+                    entryPoint = entryPoint,
+                    isRetry = isRetry,
+                ),
+            )
+            analytics.logBreadcrumb(
+                positionSaveDiagnosticContext(
+                    stage = "terminal",
+                    outcome = "succeeded",
+                    entryPoint = entryPoint,
+                ),
+            )
+            positionSaveFailureCorrelationId = null
+            positionSaveFailureReported = false
+            updateState { it.copy(showPositionSaveFailed = false) }
+        }
+    }
+
+    private fun onPositionSaveFailed(error: AppError, isRetry: Boolean, entryPoint: String) {
+        val reasonCode = positionSaveFailureReasonCode(error)
+        val correlationId = positionSaveFailureCorrelationId ?: createPositionSaveCorrelationId().also {
+            positionSaveFailureCorrelationId = it
+        }
+        analytics.logEvent(
+            ReaderAnalyticsEvent.ReaderPositionSaveFailed(
+                mediaType = bookType.name.lowercase(),
+                reasonCode = reasonCode,
+                isRetry = isRetry,
+                entryPoint = entryPoint,
+            ),
+        )
+        val context = positionSaveDiagnosticContext(
+            stage = if (isRetry) "retry" else "persist",
+            outcome = "failed",
+            reasonCode = reasonCode,
+            entryPoint = entryPoint,
+            correlationId = correlationId,
+        )
+        if (error.shouldReportException && !positionSaveFailureReported) {
+            error.log(analytics, context)
+            positionSaveFailureReported = true
+        } else if (!error.shouldReportException || isRetry) {
+            // Retries are user-initiated and bounded; retain their terminal outcome without
+            // creating a second non-fatal for the same unresolved failure episode.
+            analytics.logBreadcrumb(context)
+        }
+        updateState { it.copy(showPositionSaveFailed = true) }
+    }
+
+    private fun onPositionSaveCancelled(isRetry: Boolean, entryPoint: String) {
+        if (!isRetry) return
+        analytics.logEvent(ReaderAnalyticsEvent.ReaderPositionSaveRetryCancelled(bookType.name.lowercase()))
+        positionSaveFailureCorrelationId?.let { correlationId ->
+            analytics.logBreadcrumb(
+                positionSaveDiagnosticContext(
+                    stage = "terminal",
+                    outcome = "cancelled",
+                    entryPoint = entryPoint,
+                    correlationId = correlationId,
+                ),
+            )
+        }
+        updateState { it.copy(showPositionSaveFailed = true) }
+    }
+
+    private fun positionSaveDiagnosticContext(
+        stage: String,
+        outcome: String,
+        reasonCode: String? = null,
+        entryPoint: String = if (stage == "retry") "retry" else "position_change",
+        correlationId: String? = positionSaveFailureCorrelationId,
+    ) = DiagnosticContext(
+        screen = "reader",
+        entryPoint = entryPoint,
+        action = if (stage == "retry") "retry_reading_position_save" else "save_reading_position",
+        operation = "reader_position_save",
+        stage = stage,
+        outcome = outcome,
+        reasonCode = reasonCode,
+        mediaType = bookType.name.lowercase(),
+        correlationId = correlationId,
+    )
+
+    private fun positionSaveFailureReasonCode(error: AppError): String = when (error) {
+        is AppError.DatabaseError -> "database_write_failed"
+        is AppError.NetworkError -> when {
+            error.isConnectivity -> "network_unavailable"
+            error.isTimeout -> "network_timeout"
+            else -> "network_failed"
+        }
+        is AppError.ApiError -> "api_failed"
+        is AppError.AuthError -> "authentication_failed"
+        is AppError.NotFoundError -> "repository_unavailable"
+        is AppError.UnknownError -> "unexpected_failure"
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun createPositionSaveCorrelationId(): String = Uuid.random().toString()
 
     private fun updateSettings(settings: ReaderSettingsUiModel) {
         updatePublicationState { publicationState ->
@@ -1637,10 +1808,9 @@ class ReaderViewModel(
         )
 
         viewModelScope.launch(NonCancellable) {
-            // Only save audio position if this is a ReadAloud book with actual media overlays
-            if (viewState.value.isReadAloud) {
-                saveCurrentAudioPositionSync()
-            }
+            // Persist the final in-memory locator (and audio offset when available) after any
+            // in-flight page checkpoint. The close navigation itself remains non-blocking.
+            saveCurrentPositionForClose()
             routineSyncScheduler.close()
             cancelSleepTimer()
 
@@ -1958,27 +2128,17 @@ class ReaderViewModel(
         }
 
 
-        val now = now().toString()
-        val positionDomainModel = PositionDomainModel(
-            bookUuid = bookUuid,
-            serverId = serverId,
-            timestamp = nowMillis(),
-            createdAt = currentPosition.createdAt,
-            updatedAt = now,
-            locatorHref = currentPosition.href,
-            locatorType = currentPosition.type,
-            locatorTitle = currentPosition.title,
-            locatorTarget = null,
-            audioTimestampMs = audioPositionMs,
-            chapterIndex = currentPosition.chapterIndex,
-            progression = currentPosition.progression,
-            totalChapters = currentPosition.totalChapters,
-            totalDurationMs = currentState.totalDurationMs,
-            totalProgression = currentPosition.totalProgression,
-            position = currentPosition.position,
+        positionSaveCoordinator.submit(createPositionDomainModel(currentPosition, audioPositionMs))
+    }
+
+    private suspend fun saveCurrentPositionForClose() {
+        val currentState = viewState.value
+        val currentPosition = currentState.currentPosition ?: return
+        val audioPositionMs = currentState.currentAudioPositionMs
+            .takeIf { currentState.isReadAloud && it > 0 }
+        positionSaveCoordinator.saveForClose(
+            createPositionDomainModel(currentPosition, audioPositionMs),
         )
-        saveReadingProgressUseCase(positionDomainModel)
-            .onSuccess { routineSyncScheduler.markDirty() }
     }
 
     override fun onCleared() {

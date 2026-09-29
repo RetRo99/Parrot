@@ -194,6 +194,8 @@ sealed interface ReaderIntent : BaseIntent {
      */
     data object DismissBookmarkSaveFailed : ReaderIntent
 
+    data object RetryPositionSave : ReaderIntent
+
     // Bookmarks
 
     data object ToggleBookmarks : ReaderIntent

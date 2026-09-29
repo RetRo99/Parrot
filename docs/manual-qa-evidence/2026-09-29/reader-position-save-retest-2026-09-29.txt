@@ -1,0 +1,32 @@
+# Reader position-save fix — Samsung retest
+
+- **Date/time:** 2026-09-29, approximately 13:29–13:30 CEST (final concurrency-fix retest).
+- **Device:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`; portrait 1080×2340, font scale 1.0, gesture navigation.
+- **Build:** `com.retro99.parrot` 0.4.5 (21), target SDK 36, debuggable, final observed PID `29890`; installed APK SHA-256 `1e103ad2ac2bf79c13d3d572c33f9c7033ffed858e85e499b20287cbc642fa9b`. Built from source tree based on HEAD `66f9766b4ece71ddb9830c6d673b193615b405a6` plus the QA-BUG-0094 working-tree fix. Installed with `adb install -r`; app data was preserved. Focused source commit and documentation commit were pending at test time.
+- **Fixture/privacy:** unique local QA EPUB `Parrot QA Reader Fixture 20260929`; no server account, cloud action, credential, or profile change. The app stayed on its local Reader route. The exact QA source files and temporary Books filter change still need cleanup after the focused Reader pass.
+
+## Samsung steps and result
+
+1. Rebuilt with `:feature:reader:ui:testAndroidHostTest`, `:lib:analytics:implementation:testAndroidHostTest`, and `:androidApp:assembleDebug`; all targeted Android host tests and the debug APK build succeeded. Installed without clearing app data and launched `MainActivity`; Parrot restored the Reader at `Page 30 of 64`, `49%`.
+2. Tapped the right page zone once. Reader advanced to `Page 31 of 64`, `49%`.
+3. Pressed Android system Back. Reader closed to Books. A final in-memory position checkpoint ran after the active page save; Books remained usable.
+4. Tapped the Continue reading shelf action. Reader reopened at `Page 31 of 64`, `18 min left`, `49%`. [Final-build sanitized status-strip evidence](reader-position-save-reopen-page31.png) omits page content and title. Earlier Page 27, Page 29, and Page 30 checkpoint images ([27](reader-position-save-reopen-page27.png), [29](reader-position-save-reopen-page29.png), [30](reader-position-save-reopen-page30.png)) remain archived and are superseded by this final-build Page 31 retest.
+
+**Functional:** PASS for the executed page-save → system Back/final checkpoint → Continue reading → restore variant (cases 140, 162, 163). No retry snackbar or crash appeared on the successful path. The injected-failure steps in case 609 were not executed.
+
+## Host failure/recovery regression
+
+- `ReaderPositionSaveCoordinatorTest`: 6 Android host tests passed. They cover a database-write error pausing automatic writes, retry saving the latest position, locator coalescing/serialization, cancellation treatment, serializing the final close save after an active checkpoint, skipping stale queued writes at close, and ensuring close-time cancellation does not abort close bookkeeping.
+- `AnalyticsParameterSanitizerTest.readerPositionSaveRecoveryEventsKeepOnlyBoundedDimensions` passed in the Analytics Android host test suite. The failure/retry schema retains only bounded screen/action/operation/outcome/media/reason/retry fields and strips book UUID and free-form error text.
+- Final targeted Android host test reports: Reader UI module 58 tests, 0 failures/errors; Analytics implementation 55 tests, 0 failures/errors. `:androidApp:assembleDebug` succeeded.
+- Samsung failure injection remains **BLOCKED**: no safe fixture was available to force a local database write failure without risking other retained app data. Therefore the actual retry snackbar and retry terminal event were not executed on the phone; see QA-BUG-0094 and case 609.
+
+## Sanitized local telemetry/diagnostics
+
+Local DebugAnalyticsManager output for PID `29890` showed the representative position-save attempt/success, a separate final `reader_close` save attempt/success, one `book_closed`, one `navigation_back_attempted` and one successful `navigation_back` to Books, and one Continue reading attempt/completion followed by `book_opened`. Matching bounded started/terminal breadcrumbs were present for both save outcomes and navigation. See [sanitized event/breadcrumb audit](reader-position-save-local-telemetry.txt).
+
+No `reader_position_save_failed` or retry event was expected because no save failure/retry was induced. No unexpected exception, fatal crash, or ANR marker appeared for the app process in the captured logcat audit. DebugAnalyticsManager is local-only; Firebase Analytics ingestion is waived and not claimed. Crashlytics delivery and symbolication were not tested.
+
+## Build validation note
+
+Targeted `testAndroidHostTest` tasks passed. A broader `:feature:reader:ui:allTests :lib:analytics:implementation:allTests` attempt was blocked by an unrelated iOS-simulator test compilation error in `lib/analytics/implementation/src/commonTest/kotlin/com/retro99/analytics/implementation/DiagnosticLogFilesTest.kt:76` (`SecurityException` unresolved on that target). No unrelated test source was changed.

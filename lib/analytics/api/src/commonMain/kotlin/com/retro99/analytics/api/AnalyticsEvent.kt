@@ -195,6 +195,91 @@ sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
         )
     }
 
+    data class ReaderPositionSaveRetryAttempted(
+        val mediaType: String,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_position_save_retry_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader",
+            "action" to "retry_reading_position_save",
+            "operation" to "reader_position_save",
+            "stage" to "retry",
+            "outcome" to "started",
+            "media_type" to mediaType,
+            "is_retry" to true,
+        )
+    }
+
+    data class ReaderPositionSaveAttempted(
+        val mediaType: String,
+        val entryPoint: String,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_position_save_attempted"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader",
+            "action" to "save_reading_position",
+            "operation" to "reader_position_save",
+            "stage" to "started",
+            "outcome" to "started",
+            "media_type" to mediaType,
+            "entry_point" to entryPoint,
+            "is_retry" to false,
+        )
+    }
+
+    data class ReaderPositionSaveSucceeded(
+        val mediaType: String,
+        val entryPoint: String,
+        val isRetry: Boolean,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_position_save_succeeded"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader",
+            "action" to "save_reading_position",
+            "operation" to "reader_position_save",
+            "stage" to "terminal",
+            "outcome" to "succeeded",
+            "media_type" to mediaType,
+            "entry_point" to entryPoint,
+            "is_retry" to isRetry,
+        )
+    }
+
+    data class ReaderPositionSaveFailed(
+        val mediaType: String,
+        val reasonCode: String,
+        val isRetry: Boolean,
+        val entryPoint: String,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_position_save_failed"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader",
+            "action" to "save_reading_position",
+            "operation" to "reader_position_save",
+            "stage" to "terminal",
+            "outcome" to "failed",
+            "media_type" to mediaType,
+            "reason_code" to reasonCode,
+            "entry_point" to entryPoint,
+            "is_retry" to isRetry,
+        )
+    }
+
+    data class ReaderPositionSaveRetryCancelled(
+        val mediaType: String,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "reader_position_save_retry_cancelled"
+        override val parameters: Map<String, Any> = mapOf(
+            "screen" to "reader",
+            "action" to "retry_reading_position_save",
+            "operation" to "reader_position_save",
+            "stage" to "terminal",
+            "outcome" to "cancelled",
+            "media_type" to mediaType,
+            "is_retry" to true,
+        )
+    }
+
     /**
      * Tracks when a book is opened - helps understand which books/types are popular.
      */

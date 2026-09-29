@@ -46,6 +46,7 @@ data class ReaderViewState(
     val showNoAudioMessage: Boolean = false,
     // Flag to show snackbar when bookmark save fails
     val showBookmarkSaveFailed: Boolean = false,
+    val showPositionSaveFailed: Boolean = false,
     // Flag to show snackbar when a bookmark is successfully added (with undo action)
     val showBookmarkAdded: Boolean = false,
     // ID of the most recently added bookmark (used for undo)

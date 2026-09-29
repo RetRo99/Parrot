@@ -21,6 +21,47 @@ import com.retro99.analytics.api.CloudAccountObservation
 class AnalyticsParameterSanitizerTest {
 
     @Test
+    fun readerPositionSaveRecoveryEventsKeepOnlyBoundedDimensions() {
+        val retryAttempt = ReaderAnalyticsEvent.ReaderPositionSaveRetryAttempted("ebook")
+        val retrySuccess = ReaderAnalyticsEvent.ReaderPositionSaveSucceeded("ebook", "retry", true)
+        val normalAttempt = ReaderAnalyticsEvent.ReaderPositionSaveAttempted("ebook", "position_change")
+        val closeSuccess = ReaderAnalyticsEvent.ReaderPositionSaveSucceeded("ebook", "reader_close", false)
+        val retryFailure = ReaderAnalyticsEvent.ReaderPositionSaveFailed(
+            mediaType = "ebook",
+            reasonCode = "database_write_failed",
+            isRetry = true,
+            entryPoint = "retry",
+        )
+        val retryCancelled = ReaderAnalyticsEvent.ReaderPositionSaveRetryCancelled("ebook")
+
+        assertEquals("reader_position_save_retry_attempted", retryAttempt.name)
+        assertEquals("reader_position_save_attempted", normalAttempt.name)
+        assertEquals("reader_position_save_succeeded", closeSuccess.name)
+        assertEquals("reader_position_save_succeeded", retrySuccess.name)
+        assertEquals("reader_position_save_failed", retryFailure.name)
+        assertEquals("reader_position_save_retry_cancelled", retryCancelled.name)
+        assertEquals(
+            mapOf(
+                "screen" to "reader",
+                "action" to "save_reading_position",
+                "operation" to "reader_position_save",
+                "stage" to "terminal",
+                "outcome" to "failed",
+                "media_type" to "ebook",
+                "reason_code" to "database_write_failed",
+                "entry_point" to "retry",
+                "is_retry" to true,
+            ),
+            sanitizeAnalyticsParameters(
+                retryFailure.parameters + mapOf(
+                    "book_uuid" to "private-book-id",
+                    "error_message" to "private database path",
+                ),
+            ),
+        )
+    }
+
+    @Test
     fun removesPrivateAndUnregisteredDimensions() {
         val sanitized = sanitizeAnalyticsParameters(
             mapOf(

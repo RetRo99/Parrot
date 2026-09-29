@@ -1,0 +1,18 @@
+# Reader position-save retest — sanitized local telemetry
+
+- **Date/time:** 2026-09-29, 13:29–13:30 CEST.
+- **Device/build:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0; `com.retro99.parrot` 0.4.5 (21), PID `29890`; APK SHA-256 `1e103ad2ac2bf79c13d3d572c33f9c7033ffed858e85e499b20287cbc642fa9b`.
+- **Privacy:** event names and validated diagnostic fields only; raw parameters, title, book/profile IDs, content, file paths, URLs, credentials and raw log lines are omitted.
+- **Provider:** local DebugAnalyticsManager; this is not Firebase delivery evidence.
+
+| Samsung time (CEST) | Local event / fields | Observed outcome |
+|---|---|---|
+| 13:29:01.940–.941 | `book_opened`, `last_book_launch_completed`; breadcrumb `screen=reader operation=reader_open stage=usable_content outcome=succeeded media_type=ebook` | App startup restored usable Reader content. |
+| 13:29:03.100–.150 | `reader_position_save_attempted` / `reader_position_save_succeeded`; breadcrumbs `entry_point=position_change operation=reader_position_save stage=started/terminal outcome=started/succeeded` | Page change persisted successfully. One representative automatic save pair per Reader session avoids page-turn event volume. |
+| 13:29:32.389 | `reader_position_save_attempted`; breadcrumb `entry_point=reader_close operation=reader_position_save stage=started outcome=started` | Final in-memory position save began on close. |
+| 13:29:32.391–.402 | `navigation_back_attempted` / `navigation_back`; breadcrumbs `screen=reader destination_screen=books entry_point=system_back operation=navigation_back outcome=started/succeeded` | One attempted and one successful transition to Books. |
+| 13:29:32.463–.464 | `reader_position_save_succeeded`, `book_closed`; breadcrumb `entry_point=reader_close operation=reader_position_save stage=terminal outcome=succeeded` | Final position checkpoint completed; Reader closed. |
+| 13:29:57.277–.597 | `continue_reading_open_attempted`, `book_opened`, `continue_reading_open_completed`; breadcrumb `screen=reader source_screen=home entry_point=continue_reading_shelf operation=continue_reading_open outcome=succeeded` | Continue reading restored the saved Page 31/64. |
+| 13:29:58.271–.304 | `reader_position_save_attempted` / `reader_position_save_succeeded`; matching start/terminal breadcrumbs | Initial locator persistence completed after restored Reader became active. |
+
+No `reader_position_save_failed`, retry attempt, retry success or retry cancellation event was expected: no local position-save fault was induced. Consequently, device-side Analytics/diagnostics coverage of that injected failure path is BLOCKED, not PASS. Host sanitizer tests verified that typed save/retry events retain only bounded dimensions and exclude book UUID and free-form error text. No Firebase Analytics ingestion, Crashlytics delivery or symbolication is claimed.

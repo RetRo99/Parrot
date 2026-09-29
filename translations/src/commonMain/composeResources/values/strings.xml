@@ -350,6 +350,8 @@
     <string name="reader_bookmark_add" tools:ignore="MissingTranslation">Add bookmark</string>
     <string name="reader_bookmark_default_title" tools:ignore="MissingTranslation">Bookmark</string>
     <string name="reader_bookmark_save_failed" tools:ignore="MissingTranslation">Failed to save bookmark</string>
+    <string name="reader_position_save_failed" tools:ignore="MissingTranslation">Couldn't save reading position</string>
+    <string name="reader_position_save_retry" tools:ignore="MissingTranslation">Retry</string>
     <string name="reader_bookmark_added" tools:ignore="MissingTranslation">Bookmark added</string>
     <string name="reader_bookmark_undo" tools:ignore="MissingTranslation">Undo</string>
     <string name="reader_bookmark_add_current_page" tools:ignore="MissingTranslation">Bookmark this page</string>
