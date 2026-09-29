@@ -644,7 +644,10 @@ internal fun ReaderOverlayContent(
                 onSpeed = { speed -> intentDispatcher(ReaderIntent.SetPlaybackSpeed(speed)) },
                 onRate = { rate -> intentDispatcher(ReaderIntent.SetTtsRate(rate)) },
                 onPitch = { pitch -> intentDispatcher(ReaderIntent.SetTtsPitch(pitch)) },
-                onChangeVoice = { intentDispatcher(ReaderIntent.OpenVoiceSettings) },
+                onChangeVoice = {
+                    intentDispatcher(ReaderIntent.ToggleListenSheet)
+                    intentDispatcher(ReaderIntent.OpenVoiceSettings)
+                },
                 onStartSleepTimer = { durationMs -> intentDispatcher(ReaderIntent.StartSleepTimer(durationMs)) },
                 onCancelSleepTimer = { intentDispatcher(ReaderIntent.CancelSleepTimer) },
                 onAudioOnly = { intentDispatcher(ReaderIntent.ToggleAudioOnlyMode) },
@@ -656,6 +659,35 @@ internal fun ReaderOverlayContent(
                     )
                 },
             ),
+        )
+    }
+    if (viewState.isVoiceSettingsVisible) {
+        VoicesSheet(
+            voices = viewState.ttsVoices,
+            selectedVoiceId = viewState.selectedTtsVoiceId,
+            preparingVoicePackage = viewState.preparingTtsVoicePackage,
+            preparationProgress = viewState.ttsVoicePreparationProgress,
+            failedVoicePackage = viewState.failedTtsVoicePackage,
+            deletingVoicePackage = viewState.deletingTtsVoicePackage,
+            hasAcceptedSupertonicTerms = viewState.hasAcceptedSupertonicTerms,
+            previewingVoiceKey = viewState.ttsPreviewingVoiceId,
+            isPreviewPlaying = viewState.isTtsPreviewPlaying,
+            isEink = isEink,
+            onVoiceSelected = { voiceId -> intentDispatcher(ReaderIntent.SelectTtsVoice(voiceId)) },
+            onUpdatePackage = { pack -> intentDispatcher(ReaderIntent.UpdateNeuralVoicePackage(pack)) },
+            onDeletePackage = { pack -> intentDispatcher(ReaderIntent.DeleteNeuralVoicePackage(pack)) },
+            onRetryPackage = { pack -> intentDispatcher(ReaderIntent.RetryTtsVoicePreparation(pack)) },
+            onCancelPreparation = { intentDispatcher(ReaderIntent.CancelTtsVoicePreparation) },
+            onAcceptTermsAndSelect = { voiceId ->
+                intentDispatcher(ReaderIntent.AcceptSupertonicTermsAndSelect(voiceId))
+            },
+            onPreviewVoice = { voiceId, text -> intentDispatcher(ReaderIntent.PreviewTtsVoice(voiceId, text)) },
+            onStopPreview = { intentDispatcher(ReaderIntent.StopTtsPreview) },
+            onClose = {
+                intentDispatcher(ReaderIntent.CloseVoiceSettings)
+                // Came from the audio sheet while listening: return to it.
+                if (viewState.isListening) intentDispatcher(ReaderIntent.ToggleListenSheet)
+            },
         )
     }
 }

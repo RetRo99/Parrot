@@ -216,50 +216,6 @@ private fun ReaderScreenContent(
         return
     }
 
-    if (viewState.isVoiceSettingsVisible) {
-        VoiceSettingsScreen(
-            voices = viewState.ttsVoices,
-            selectedVoiceId = viewState.selectedTtsVoiceId,
-            isPreparing = viewState.isTtsVoicePreparing,
-            preparingVoicePackage = viewState.preparingTtsVoicePackage,
-            preparationProgress = viewState.ttsVoicePreparationProgress,
-            failedVoicePackage = viewState.failedTtsVoicePackage,
-            deletingVoicePackage = viewState.deletingTtsVoicePackage,
-            failedVoicePackageDeletion = viewState.failedTtsVoicePackageDeletion,
-            hasAcceptedSupertonicTerms = viewState.hasAcceptedSupertonicTerms,
-            rate = viewState.currentSettings?.ttsRate ?: 1f,
-            pitch = viewState.currentSettings?.ttsPitch ?: 1f,
-            previewingVoiceKey = viewState.ttsPreviewingVoiceId,
-            isPreviewPlaying = viewState.isTtsPreviewPlaying,
-            onVoiceSelected = { voiceId ->
-                intentDispatcher(ReaderIntent.SelectTtsVoice(voiceId))
-            },
-            onDownloadNeuralVoicePackage = { voicePackage ->
-                intentDispatcher(ReaderIntent.DownloadNeuralVoicePackage(voicePackage))
-            },
-            onUpdateNeuralVoicePackage = { voicePackage ->
-                intentDispatcher(ReaderIntent.UpdateNeuralVoicePackage(voicePackage))
-            },
-            onDeleteNeuralVoicePackage = { voicePackage ->
-                intentDispatcher(ReaderIntent.DeleteNeuralVoicePackage(voicePackage))
-            },
-            onRetryVoicePreparation = { voicePackage ->
-                intentDispatcher(ReaderIntent.RetryTtsVoicePreparation(voicePackage))
-            },
-            onAcceptSupertonicTermsAndDownload = {
-                intentDispatcher(ReaderIntent.AcceptSupertonicTermsAndDownload)
-            },
-            onPreviewVoice = { voiceId, text ->
-                intentDispatcher(ReaderIntent.PreviewTtsVoice(voiceId, text))
-            },
-            onStopPreview = { intentDispatcher(ReaderIntent.StopTtsPreview) },
-            onRateChanged = { rate -> intentDispatcher(ReaderIntent.SetTtsRate(rate)) },
-            onPitchChanged = { pitch -> intentDispatcher(ReaderIntent.SetTtsPitch(pitch)) },
-            onClose = { intentDispatcher(ReaderIntent.CloseVoiceSettings) },
-        )
-        return
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()

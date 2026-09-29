@@ -141,6 +141,12 @@ sealed interface ReaderIntent : BaseIntent {
 
     data object CloseVoiceSettings : ReaderIntent
 
+    /** Cancels an in-flight voice package download. */
+    data object CancelTtsVoicePreparation : ReaderIntent
+
+    /** Accepts the Supertonic terms, then downloads and selects the given voice. */
+    data class AcceptSupertonicTermsAndSelect(val voiceId: String) : ReaderIntent
+
     data class SetTtsRate(val rate: Float) : ReaderIntent
 
     data class SetTtsPitch(val pitch: Float) : ReaderIntent

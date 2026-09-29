@@ -350,6 +350,12 @@ class ReaderViewModel(
             is ReaderIntent.PreviewTtsVoice -> previewTtsVoice(intent.voiceId, intent.text)
             ReaderIntent.StopTtsPreview -> stopTtsPreview()
             ReaderIntent.OpenVoiceSettings -> openVoiceSettings()
+            ReaderIntent.CancelTtsVoicePreparation -> cancelTtsVoicePreparation()
+            is ReaderIntent.AcceptSupertonicTermsAndSelect -> {
+                supertonicTermsStore.acceptCurrentTerms()
+                updateState { state -> state.copy(hasAcceptedSupertonicTerms = true) }
+                selectTtsVoice(intent.voiceId)
+            }
             ReaderIntent.CloseVoiceSettings -> closeVoiceSettings()
             is ReaderIntent.SetTtsRate -> setTtsRate(intent.rate)
             is ReaderIntent.SetTtsPitch -> setTtsPitch(intent.pitch)
@@ -984,11 +990,15 @@ class ReaderViewModel(
     private fun selectTtsVoice(voiceId: String?) {
         val selectedVoice = viewState.value.ttsVoices
             .firstOrNull { voice -> voice.id == voiceId }
-        if (selectedVoice?.needsDownload == true) return
         if (
             selectedVoice?.neuralVoicePackage == NeuralVoicePackage.SUPERTONIC &&
             !currentViewState().hasAcceptedSupertonicTerms
         ) {
+            return
+        }
+        if (selectedVoice?.needsDownload == true) {
+            // Picking a voice that is not downloaded fetches its package, then selects it.
+            prepareTtsVoice(selectedVoice.id, onPrepared = { selectTtsVoice(selectedVoice.id) })
             return
         }
         val isNeural = selectedVoice?.isNeural == true
@@ -1030,6 +1040,10 @@ class ReaderViewModel(
                 )
             }
         }
+    }
+
+    private fun cancelTtsVoicePreparation() {
+        ttsPreparationJob?.cancel()
     }
 
     private fun downloadNeuralVoicePackage(voicePackage: NeuralVoicePackage) {
