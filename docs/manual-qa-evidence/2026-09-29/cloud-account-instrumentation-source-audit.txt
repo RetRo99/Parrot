@@ -1,0 +1,37 @@
+# Cloud Account action instrumentation source audit
+
+- **Audit date:** 2026-09-29.
+- **Device/build context:** required Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, build `BP4A.251205.006.S921BXXSGDZG1`; last verified installed app `com.retro99.parrot` 0.4.5 (21), APK SHA-256 `d1f5202462a20294aa5a8c3fd227266deace01e661dfb37c3973fea0b0fafe06`, source through `88f44a5f0d502419413dcf95c7c63ad30c2a651f`. Repository at audit `af5d45038ace04fb6b1062f98aa6f5d2e34b1218`. This is source evidence; no Cloud Account action was executed.
+- **Source paths reviewed:** `feature/cloud-account/ui/src/commonMain/kotlin/com/retro99/cloudaccount/ui/CloudAccountScreen.kt`, `CloudAccountViewModel.kt`, `CloudAccountIntent.kt`, `CloudAccountViewState.kt`, `feature/cloud-account/ui/build.gradle.kts`, Cloud Account domain use cases/repository/auth models, `lib/analytics/api/.../Analytics.kt`, typed event hierarchies, and Home navigation route reporting.
+
+## Reachable intent/control inventory
+
+| UI action/state | Intent or route | Existing case mapping |
+|---|---|---|
+| Settings → Sync & Backup; actual route visibility | Home navigation destination and route reporter | 357; historical case 429 route run; new-build reconciliation |
+| Toolbar/system Back; keyboard-first Back | `OnBackClicked`/root navigation Back | 358, 730, shared 740 |
+| Restoring, signed-out, awaiting verification, signed-in, re-auth-required, refresh-unavailable | Auth observer/session restore; state rendering | 357, 364, 378, 384, 742 |
+| Switch Sign in/Create account | `OnSwitchToCreateAccountClicked` / `OnSwitchToSignInClicked` | 359, 732 |
+| Email/password entry; validation; show/hide password; ToS gate | form state; `OnTosAcceptedChanged`; composable visibility toggle | 360–362 |
+| Email Sign in/Create account | `OnSubmitClicked` → sign-in/register and prepare linked account | 363–365, 731, 739 |
+| Google sign-in / OAuth return/cancel | `OnGoogleSignInClicked` → OAuth use case | 366–367, 731, 739 |
+| Link-local-profile dialog / confirm / dismiss | `OnLinkConfirmed` / `OnLinkDismissed` (dismiss intentionally signs out) | 374, shared 740; cancellation also 738/778 |
+| Storage usage loading/content/error | `refreshStorageUsage()` | 368–369, 739 |
+| Sync state and Sync Now | `OnSyncClicked` → enable-sync + SyncNow use cases | 370–371 **DEFERRED** for sync verification; no sync claims |
+| Auto-backup toggle / rights attestation / Enable / Not now / Back/outside | `OnAutoBackupToggled`, attestation, confirm and dismiss intents | 372–373, shared 740, 739 |
+| Sign out / sign out during upload | `OnSignOutClicked` | 375–376, 739 |
+| Delete-account confirmation / confirm / cancel / Back/outside | delete intents | 377, 738, 739 |
+| Single-device file backup/restore on other surfaces | Detail/Books transfer actions | 379–383, 734–737, 739 |
+| Cloud session restore after relaunch | `RestoreCloudSessionUseCase` | 384, 741–742 |
+
+The current Cloud Account UI has no clickable terms/privacy links; its ToS control is a checkbox with a plain localized label. Case 733 assumes links and should be treated as N-A/outdated only after device UI reconfirmation. No account identity, email, URL or credential values are retained.
+
+## Existing telemetry and gap
+
+- Existing route-only signal: `NavigationAnalyticsEvent.SyncAndBackupViewed`, `sync_and_backup_screen_viewed`, emitted only after Home navigation reports the route visible; matching `sync_and_backup_route` visible breadcrumb. This was previously exercised under case 429. Preserve it and do not duplicate it in CloudAccountScreen/ViewModel.
+- `CloudAccountViewModel` has no Analytics dependency and no `logEvent`, `logBreadcrumb` or `logException` call. The Cloud Account UI Gradle module has no Analytics API dependency and no common UI tests.
+- Caught exceptions in auth/session restore, account linking, storage usage, sign-out, deletion, Sync Now and auto-backup persistence become UI state without operation outcomes or correlated diagnostics. `CancellationException` is rethrown without a bounded user-operation cancellation outcome. This is a deterministic source gap, not a device-observed behavior.
+- No typed Cloud Account feature event model was found. New events must not include email, password, token, cloud-user/local-profile/server IDs, URLs, free-form error messages or raw exception messages. Expected bad credentials, form validation, ordinary OAuth cancellation and offline sync are not Crashlytics issues. Unexpected user-impacting failures should be reported once at the UI boundary without duplicate repository reports.
+- Cases 370–371 remain deferred under the no cross-app/cross-device sync verification scope; no sync behavior will be asserted by this audit.
+
+**Disposition:** confirmed instrumentation defect QA-BUG-0082; no fix or runtime result is claimed. Focused Cloud Account instrumentation and Samsung retests are pending.

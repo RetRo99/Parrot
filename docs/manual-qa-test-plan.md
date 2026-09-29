@@ -1086,3 +1086,9 @@ Each row below is a parameterized case: create a result row for **each reachable
 | # | Test case | Steps | Expected |
 |---|---|---|---|
 | 777 | Server list load failure, empty completion and retry | With a safe registry/auth-state fault fixture, separately fail before the first combined value, complete without a value, fail after a usable value, and retry after recovery; cancel an in-flight load by leaving the screen | Initial failures end loading and differ from a real empty list; Retry performs a separate attempt and restores the cards; post-load observation failure preserves the last usable cards and offers retry. Each unexpected failure has one bounded outcome, correlated breadcrumbs and one non-fatal at the UI boundary; ordinary cancellation is rethrown/recorded as cancelled without a non-fatal. Host fault injection required; device failures are BLOCKED without a safe fixture. |
+
+## 48. Cloud Account operation observability and privacy
+
+| # | Test case | Steps | Expected |
+|---|---|---|---|
+| 778 | Cloud Account action outcomes and privacy | On every reachable Cloud Account form/connected-account action, compare accepted attempt and terminal result, cancellation/dismissal and retry; inspect route source and diagnostic correlation | Each feature action has one bounded attempt and one accurate success/failure/cancel/abandon terminal as applicable; Back/mode/visibility/dialog actions are attributed; one breadcrumb correlation per operation; unexpected user-impacting exceptions are reported once at the UI boundary; ordinary credential rejection/OAuth cancel/offline/cancellation are not Crashlytics issues; no email, password, token, cloud/profile ID, URL or raw exception message is emitted. Cases 370–371 remain deferred for sync verification under the scope rule. |
