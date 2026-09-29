@@ -1,0 +1,31 @@
+# Cloud Account case 733 — terms/privacy links unavailable on device
+
+- **Date/time:** 2026-09-29, 10:31–10:35 CEST.
+- **Device/build:** physical Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), firmware `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`navigation_mode=2`). `com.retro99.parrot` 0.4.5 (21), debug APK SHA-256 `7684627be52e2b954b2856cf88962ee52bf5efe48725a3d9f04fc466796b6a63`, installed 10:16:14 CEST, PID `9296`; app data preserved. App code includes commits `8f151513d27129909c3c0d9db85ba69d59e8e2b1` and `6a42e247ce81d0dc15af6055e653284d9d5c01b5`; repository HEAD during test `f43486d4ed811d6f54445ae94444a58cd93df6d9`.
+- **Fixture/privacy:** signed-out Cloud Account; email/password fields remained empty. Terms checkbox was never checked. Did not submit Sign in, Create account or Google; no auth request, account creation, fixture retry or mutation.
+
+## Steps and result
+
+1. Opened Settings → Sync & Backup from the preserved signed-out state, cleared logcat, and switched to Create account.
+2. The accessibility tree exposed the checkbox as a clickable `CheckBox`, but the entire sentence “I agree to the Terms of Service (including the Book Backup Terms) and the Privacy Policy.” appeared as a single non-clickable `TextView`. There were no separate Terms, Book Backup Terms or Privacy Policy clickable nodes.
+3. Tapped visible text regions for Terms of Service (around `410,1260`), Book Backup Terms (`730,1260`), and Privacy Policy (`488,1293`). Each left the Create Account form unchanged; no document/browser opened. The checkbox remained unchecked and Create account stayed disabled. [On-device screen capture](cloud-account-case-733-terms-links-observation.png).
+4. Returned to Sign in using “Already have an account? Sign in”, then used toolbar Back to return to Settings. No implicit consent, sign-in, registration, or account action occurred.
+
+- **Functional:** FAIL. Required legal links do not exist as interactive targets; tapping each displayed phrase does nothing. Form remained intact, consent unchecked, Create account disabled. QA-BUG-0092.
+- **Analytics:** FAIL for link-usage coverage because links/actions are absent. Local log contained only the two actual mode-change events (Create account, then Sign in) and their matching correlated start/terminal diagnostic pairs; there was no terms/privacy link-open event and no account-operation attempt. Firebase ingestion is waived; the local DebugAnalyticsManager is not delivery evidence.
+- **Diagnostics:** PASS locally for the surrounding mode-change/cancel sequence: two correlated start/terminal pairs and no fatal/exception. No non-fatal is expected for tapping a non-interactive label. Crashlytics delivery is not claimed.
+- **Filtered local logcat:**
+
+  ```text
+  09-29 10:31:53.190  9296  9296 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=started outcome=started correlation_id=8f8ae491-997e-4e36-a12d-181c4a3f8be4
+  09-29 10:31:53.191  9296  9296 D čič : Analytics Event: cloud_account_mode_changed | Parameters: {screen=sync_and_backup, action=change_account_form_mode, operation=cloud_account_mode_change, mode=create_account}
+  09-29 10:31:53.191  9296  9296 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=terminal outcome=succeeded correlation_id=8f8ae491-997e-4e36-a12d-181c4a3f8be4
+  09-29 10:34:10.470  9296  9296 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=started outcome=started correlation_id=86eb88cf-c2fb-4454-aa92-9fee2ee44636
+  09-29 10:34:10.471  9296  9296 D čič : Analytics Event: cloud_account_mode_changed | Parameters: {screen=sync_and_backup, action=change_account_form_mode, operation=cloud_account_mode_change, mode=sign_in}
+  09-29 10:34:10.471  9296  9296 D čič : Diagnostic breadcrumb: diagnostic_context screen=sync_and_backup entry_point=form_mode_switch action=change_account_form_mode operation=cloud_account_mode_change stage=terminal outcome=succeeded correlation_id=86eb88cf-c2fb-4454-aa92-9fee2ee44636
+  ```
+
+- **Source/docs audit:** `CloudAccountScreen.kt` builds the registration label as a plain `Text(stringResource(...))`; it has no `LinkAnnotation`, `LinkInteractionListener`, or `LocalUriHandler`. `docs/parrot-cloud-upload-enablement-implementation-plan.md` §Slice B explicitly calls for linked Terms/Privacy spans and says no URL pattern exists yet. `docs/parrot-cloud-legal-text-draft.md` is marked AI-drafted and requires qualified legal review before publication; its publish-time constants remain TBD. No approved main Terms, Book Backup Terms, or Privacy Policy URLs were found in the repository.
+- **Fix blocker:** Do not invent or link to the unapproved draft. Product/legal must provide counsel-approved, published destinations for all three documents. Once authorized URLs are supplied, add accessible clickable spans and safe return-to-form behavior, then re-run case 733. No code fix or link destination was attempted.
+
+No account submission or data mutation occurred. Cross-app and cross-device synchronization was not tested.
