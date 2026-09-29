@@ -9,7 +9,7 @@ Device/build
 - Login opened from Settings → Servers → Add Server. Storyteller selected; URL left at `https://`; username/password empty. No credentials entered and no app data cleared.
 
 Steps and functional result
-1. Observe fresh empty form. Sign In is enabled to permit a validation attempt; no field errors are shown before submit. [Before submit](case-018-empty-login-before-submit.png).
+1. Observe fresh empty form. Sign In is enabled to permit a validation attempt; no field errors are shown before submit. The corrected run's same-build/PID empty-form evidence is shared with case 757: [fresh empty form captured at 07:01 on the corrected build](case-757-empty-login-ime-before.png). That case-757 capture has the same installed source/APK hash, PID, route, server type and empty-field preconditions documented here; it is not the 06:41 pre-fix image.
 2. Tap Sign In once. The screen remains on Login and displays all three field errors: `Server URL is required`, `Username is required`, and `Password is required`. No request, navigation, spinner, crash or loss of entered state. [Corrected field-level errors](case-018-empty-login-corrected-errors.png).
 3. No credentials were entered or submitted. Following the test, the Login route was reopened through Server Management → Add Server; URL is back to `https://`, credentials empty, no validation errors.
 
