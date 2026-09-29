@@ -2,8 +2,8 @@ package com.retro99.home.ui.appsettings
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -20,58 +22,65 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Switch
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.retro99.base.ui.compose.ThemeMode
+import androidx.compose.ui.unit.sp
 import com.retro99.base.buildconfig.BuildConfig
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
+import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberChevron
+import com.retro99.base.ui.compose.EmberColors
+import com.retro99.base.ui.compose.EmberGroupCard
+import com.retro99.base.ui.compose.EmberMode
+import com.retro99.base.ui.compose.EmberRowDivider
+import com.retro99.base.ui.compose.EmberSectionHeader
+import com.retro99.base.ui.compose.EmberSettingRow
+import com.retro99.base.ui.compose.EmberSwitchRow
+import com.retro99.base.ui.compose.ThemeMode
+import com.retro99.base.ui.compose.colors
 import com.retro99.translations.StringRes
 import com.retro99.user.api.UserProfile
 import org.jetbrains.compose.resources.StringResource
@@ -81,64 +90,55 @@ import org.koin.compose.viewmodel.koinViewModel
 import resources.translations.action_delete
 import resources.translations.action_edit
 import resources.translations.action_rename
-import resources.translations.app_settings_clear_logs
-import resources.translations.app_settings_clear_logs_description
 import resources.translations.app_settings_clear_current_book
 import resources.translations.app_settings_clear_current_book_description
-import resources.translations.app_settings_current_book_cleared
 import resources.translations.app_settings_current_book_clear_failed
-import resources.translations.app_settings_enable_logging
-import resources.translations.app_settings_enable_logging_description
-import resources.translations.app_settings_logs_cleared
-import resources.translations.app_settings_log_operation_failed
-import resources.translations.app_settings_log_crashes_only
-import resources.translations.app_settings_log_crashes_only_description
-import resources.translations.app_settings_no_logs
-import resources.translations.app_settings_open_last_book
-import resources.translations.app_settings_open_last_book_description
-import resources.translations.app_settings_section_account
-import resources.translations.app_settings_section_profiles
+import resources.translations.app_settings_current_book_cleared
 import resources.translations.app_settings_profile_active
-import resources.translations.app_settings_profile_add
-import resources.translations.app_settings_profile_add_title
-import resources.translations.app_settings_profile_delete_message
-import resources.translations.app_settings_profile_delete_title
 import resources.translations.app_settings_profile_duplicate_index
-import resources.translations.app_settings_profile_name_already_exists
-import resources.translations.app_settings_profile_name_label
 import resources.translations.app_settings_profile_operation_failed
-import resources.translations.app_settings_profile_rename_title
-import resources.translations.app_settings_reading_statistics
-import resources.translations.app_settings_reading_statistics_description
-import resources.translations.app_settings_reader_settings
-import resources.translations.app_settings_reader_settings_description
-import resources.translations.app_settings_servers
-import resources.translations.app_settings_servers_description
-import resources.translations.app_settings_sync_backup
-import resources.translations.app_settings_sync_backup_description
-import resources.translations.app_settings_section_reading
-import resources.translations.app_settings_section_support
-import resources.translations.app_settings_share_logs
-import resources.translations.app_settings_share_logs_description
-import resources.translations.app_settings_show_continue_reading
-import resources.translations.app_settings_show_continue_reading_description
-import resources.translations.app_settings_section_appearance
-import resources.translations.app_settings_theme
 import resources.translations.app_settings_theme_day
 import resources.translations.app_settings_theme_eink
 import resources.translations.app_settings_theme_night
-import resources.translations.app_settings_theme_system
 import resources.translations.app_settings_title
 import resources.translations.app_settings_version
-import resources.translations.general_cancel
-import resources.translations.general_retry
+import resources.translations.settings_app_name
+import resources.translations.settings_continue_reading_subtitle
+import resources.translations.settings_continue_reading_title
+import resources.translations.settings_diagnostics_subtitle
+import resources.translations.settings_diagnostics_title
+import resources.translations.settings_open_last_book_subtitle
+import resources.translations.settings_profile_add
+import resources.translations.settings_reader_settings_subtitle
+import resources.translations.settings_section_appearance
+import resources.translations.settings_section_help
+import resources.translations.settings_section_library_sync
+import resources.translations.settings_section_profile
+import resources.translations.settings_section_reading
+import resources.translations.settings_servers_subtitle_default
+import resources.translations.settings_status_off
+import resources.translations.settings_status_on
+import resources.translations.settings_sync_backup_subtitle
+import resources.translations.settings_theme_auto
+import resources.translations.settings_theme_auto_description
+import resources.translations.settings_theme_day_description
+import resources.translations.settings_theme_eink_description
+import resources.translations.settings_theme_night_description
+import resources.translations.settings_theme_title
+import resources.translations.app_settings_open_last_book
+import resources.translations.app_settings_reader_settings
+import resources.translations.app_settings_servers
+import resources.translations.app_settings_sync_backup
+
+private val PREVIEW_COVER_COLOR = Color(0xFF3D4A2E)
+private val AVATAR_SIZE = 56.dp
 
 @Composable
 fun AppSettingsScreen(
-    onNavigateToStatistics: () -> Unit,
     onNavigateToServerManagement: () -> Unit,
     onNavigateToSyncAndBackup: () -> Unit,
     onNavigateToReaderSettings: () -> Unit,
+    onNavigateToDiagnostics: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AppSettingsViewModel = koinViewModel(),
 ) {
@@ -148,10 +148,10 @@ fun AppSettingsScreen(
     ) { viewState, intentDispatcher ->
         AppSettingsScreenContent(
             viewState = viewState,
-            onNavigateToStatistics = onNavigateToStatistics,
             onNavigateToServerManagement = onNavigateToServerManagement,
             onNavigateToSyncAndBackup = onNavigateToSyncAndBackup,
             onNavigateToReaderSettings = onNavigateToReaderSettings,
+            onNavigateToDiagnostics = onNavigateToDiagnostics,
             intentDispatcher = intentDispatcher,
         )
     }
@@ -160,62 +160,19 @@ fun AppSettingsScreen(
 @Composable
 private fun AppSettingsScreenContent(
     viewState: AppSettingsViewState,
-    onNavigateToStatistics: () -> Unit,
     onNavigateToServerManagement: () -> Unit,
     onNavigateToSyncAndBackup: () -> Unit,
     onNavigateToReaderSettings: () -> Unit,
+    onNavigateToDiagnostics: () -> Unit,
     intentDispatcher: IntentDispatcher<AppSettingsIntent>,
     modifier: Modifier = Modifier,
     buildConfig: BuildConfig = koinInject(),
 ) {
+    val colors = Ember.colors
     val snackbarHostState = remember { SnackbarHostState() }
-    val logsClearedMessage = stringResource(StringRes.app_settings_logs_cleared)
-    val noLogsMessage = stringResource(StringRes.app_settings_no_logs)
-    val logOperationFailedMessage = stringResource(StringRes.app_settings_log_operation_failed)
-    val retryMessage = stringResource(StringRes.general_retry)
     val currentBookClearedMessage = stringResource(StringRes.app_settings_current_book_cleared)
     val currentBookClearFailedMessage = stringResource(StringRes.app_settings_current_book_clear_failed)
     val profileOperationFailedMessage = stringResource(StringRes.app_settings_profile_operation_failed)
-
-    LaunchedEffect(viewState.showLogsClearedMessage) {
-        if (viewState.showLogsClearedMessage) {
-            snackbarHostState.showSnackbar(logsClearedMessage)
-            intentDispatcher(AppSettingsIntent.OnLogsClearedMessageShown)
-        }
-    }
-
-    LaunchedEffect(viewState.showLogsClearFailedMessage) {
-        if (viewState.showLogsClearFailedMessage) {
-            val result = snackbarHostState.showSnackbar(
-                message = logOperationFailedMessage,
-                actionLabel = retryMessage,
-            )
-            intentDispatcher(AppSettingsIntent.OnLogsClearFailedMessageShown)
-            if (result == SnackbarResult.ActionPerformed) {
-                intentDispatcher(AppSettingsIntent.OnClearLogsClicked)
-            }
-        }
-    }
-
-    LaunchedEffect(viewState.showNoLogsMessage) {
-        if (viewState.showNoLogsMessage) {
-            snackbarHostState.showSnackbar(noLogsMessage)
-            intentDispatcher(AppSettingsIntent.OnNoLogsMessageShown)
-        }
-    }
-
-    LaunchedEffect(viewState.showLogShareFailedMessage) {
-        if (viewState.showLogShareFailedMessage) {
-            val result = snackbarHostState.showSnackbar(
-                message = logOperationFailedMessage,
-                actionLabel = retryMessage,
-            )
-            intentDispatcher(AppSettingsIntent.OnShareLogsFailedMessageShown)
-            if (result == SnackbarResult.ActionPerformed) {
-                intentDispatcher(AppSettingsIntent.OnShareLogsClicked)
-            }
-        }
-    }
 
     LaunchedEffect(viewState.showCurrentBookClearedMessage) {
         if (viewState.showCurrentBookClearedMessage) {
@@ -246,6 +203,8 @@ private fun AppSettingsScreenContent(
         }
     }
 
+    ProfileDialogs(viewState = viewState, intentDispatcher = intentDispatcher)
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -254,577 +213,360 @@ private fun AppSettingsScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 24.dp),
         ) {
             Text(
                 text = stringResource(StringRes.app_settings_title),
-                style = MaterialTheme.typography.headlineMedium,
+                style = Ember.type.screenTitle,
+                color = colors.ink,
+                modifier = Modifier.padding(start = 24.dp, top = 16.dp),
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Profiles Section
-            SettingsSectionHeader(
-                title = stringResource(StringRes.app_settings_section_profiles),
-            )
-
-            ProfilesRow(
-                profiles = viewState.userProfiles,
-                activeProfile = viewState.activeProfile,
-                selectedProfileForMenu = viewState.selectedProfileForMenu,
-                isOperationInProgress = viewState.isProfileOperationInProgress,
-                onProfileSelected = { profileId ->
-                    intentDispatcher(AppSettingsIntent.OnProfileSelected(profileId))
-                },
-                onProfileLongPressed = { profileId, entryPoint ->
-                    intentDispatcher(AppSettingsIntent.OnProfileLongPressed(profileId, entryPoint))
-                },
-                onAddProfileClicked = {
-                    intentDispatcher(AppSettingsIntent.OnAddProfileClicked)
-                },
-                onMenuDismissed = {
-                    intentDispatcher(AppSettingsIntent.OnProfileMenuDismissed("dismiss_request"))
-                },
-                onRenameClicked = {
-                    intentDispatcher(AppSettingsIntent.OnRenameProfileClicked)
-                },
-                onDeleteClicked = {
-                    intentDispatcher(AppSettingsIntent.OnDeleteProfileClicked)
-                },
-                canDelete = viewState.canDeleteSelectedProfile,
-            )
-
+            EmberSectionHeader(text = stringResource(StringRes.settings_section_profile))
+            ProfileCard(viewState = viewState, intentDispatcher = intentDispatcher)
             if (
                 viewState.isProfileOperationInProgress &&
                 !viewState.showAddProfileDialog &&
                 !viewState.showRenameProfileDialog &&
                 !viewState.showDeleteProfileDialog
             ) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-
-            if (viewState.showAddProfileDialog) {
-                AddProfileDialog(
-                    onDismissRequest = {
-                        intentDispatcher(AppSettingsIntent.OnAddProfileDismissed("dismiss_request"))
-                    },
-                    onCancel = {
-                        intentDispatcher(AppSettingsIntent.OnAddProfileDismissed("cancel_button"))
-                    },
-                    onConfirm = { name -> intentDispatcher(AppSettingsIntent.OnAddProfileConfirmed(name)) },
-                    onNameChanged = { intentDispatcher(AppSettingsIntent.OnProfileNameEdited) },
-                    showError = viewState.showProfileOperationFailedMessage,
-                    showDuplicateNameError = viewState.showDuplicateProfileNameError,
-                    isOperationInProgress = viewState.isProfileOperationInProgress,
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    color = colors.accent,
+                    trackColor = colors.track,
                 )
             }
 
-            if (viewState.showRenameProfileDialog && viewState.selectedProfileForMenu != null) {
-                RenameProfileDialog(
-                    currentName = viewState.selectedProfileForMenu.name,
-                    onDismissRequest = {
-                        intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed("dismiss_request"))
-                    },
-                    onCancel = {
-                        intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed("cancel_button"))
-                    },
-                    onConfirm = { newName -> intentDispatcher(AppSettingsIntent.OnRenameProfileConfirmed(newName)) },
-                    onNameChanged = { intentDispatcher(AppSettingsIntent.OnProfileNameEdited) },
-                    showError = viewState.showProfileOperationFailedMessage,
-                    showDuplicateNameError = viewState.showDuplicateProfileNameError,
-                    isOperationInProgress = viewState.isProfileOperationInProgress,
-                )
-            }
-
-            if (viewState.showDeleteProfileDialog && viewState.selectedProfileForMenu != null) {
-                DeleteProfileConfirmationDialog(
-                    profileName = viewState.selectedProfileForMenu.name,
-                    onDismissRequest = {
-                        intentDispatcher(AppSettingsIntent.OnDeleteProfileDismissed("dismiss_request"))
-                    },
-                    onCancel = {
-                        intentDispatcher(AppSettingsIntent.OnDeleteProfileDismissed("cancel_button"))
-                    },
-                    onConfirm = { intentDispatcher(AppSettingsIntent.OnDeleteProfileConfirmed) },
-                    showError = viewState.showProfileOperationFailedMessage,
-                    isOperationInProgress = viewState.isProfileOperationInProgress,
-                )
-            }
-
-            HorizontalDivider()
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Appearance Section
-            SettingsSectionHeader(
-                title = stringResource(StringRes.app_settings_section_appearance),
-            )
-
-            SettingsItem(
-                icon = Icons.Default.Palette,
-                title = stringResource(StringRes.app_settings_theme),
-                description = stringResource(viewState.themeMode.labelRes()),
-                onClick = { intentDispatcher(AppSettingsIntent.OnThemeModeClicked) },
-            )
-
-            if (viewState.showThemeModeDialog) {
-                ThemeModeDialog(
+            EmberSectionHeader(text = stringResource(StringRes.settings_section_appearance))
+            EmberGroupCard {
+                ThemeSelector(
                     selected = viewState.themeMode,
                     onSelected = { themeMode ->
                         intentDispatcher(AppSettingsIntent.OnThemeModeSelected(themeMode))
                     },
-                    onDismiss = { intentDispatcher(AppSettingsIntent.OnThemeModeDialogDismissed) },
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            EmberSectionHeader(text = stringResource(StringRes.settings_section_reading))
+            EmberGroupCard {
+                EmberSettingRow(
+                    title = stringResource(StringRes.app_settings_reader_settings),
+                    subtitle = stringResource(StringRes.settings_reader_settings_subtitle),
+                    icon = Icons.Outlined.Tune,
+                    onClick = onNavigateToReaderSettings,
+                    trailing = { EmberChevron() },
+                )
+                EmberRowDivider()
+                EmberSwitchRow(
+                    title = stringResource(StringRes.app_settings_open_last_book),
+                    subtitle = stringResource(StringRes.settings_open_last_book_subtitle),
+                    icon = Icons.AutoMirrored.Outlined.MenuBook,
+                    checked = viewState.openLastBookOnLaunch,
+                    onCheckedChange = { enabled ->
+                        intentDispatcher(AppSettingsIntent.OnOpenLastBookToggled(enabled))
+                    },
+                )
+                EmberRowDivider()
+                EmberSwitchRow(
+                    title = stringResource(StringRes.settings_continue_reading_title),
+                    subtitle = stringResource(StringRes.settings_continue_reading_subtitle),
+                    icon = Icons.Outlined.PlayArrow,
+                    checked = viewState.showContinueReading,
+                    onCheckedChange = { enabled ->
+                        intentDispatcher(AppSettingsIntent.OnShowContinueReadingToggled(enabled))
+                    },
+                )
+                if (viewState.hasCurrentlyReadingBook) {
+                    EmberRowDivider()
+                    EmberSettingRow(
+                        title = stringResource(StringRes.app_settings_clear_current_book),
+                        subtitle = stringResource(StringRes.app_settings_clear_current_book_description),
+                        icon = Icons.Outlined.DeleteSweep,
+                        isDestructive = true,
+                        onClick = { intentDispatcher(AppSettingsIntent.OnClearCurrentBookClicked) },
+                    )
+                }
+            }
 
-            // Reading Section
-            SettingsSectionHeader(
-                title = stringResource(StringRes.app_settings_section_reading),
-            )
-
-            SettingsItem(
-                icon = Icons.Default.Tune,
-                title = stringResource(StringRes.app_settings_reader_settings),
-                description = stringResource(StringRes.app_settings_reader_settings_description),
-                onClick = onNavigateToReaderSettings,
-            )
-
-            SettingsToggleItem(
-                icon = Icons.Default.MenuBook,
-                title = stringResource(StringRes.app_settings_open_last_book),
-                description = stringResource(StringRes.app_settings_open_last_book_description),
-                isChecked = viewState.openLastBookOnLaunch,
-                onCheckedChange = { enabled ->
-                    intentDispatcher(AppSettingsIntent.OnOpenLastBookToggled(enabled))
-                },
-            )
-
-            SettingsToggleItem(
-                icon = Icons.Default.MenuBook,
-                title = stringResource(StringRes.app_settings_show_continue_reading),
-                description = stringResource(StringRes.app_settings_show_continue_reading_description),
-                isChecked = viewState.showContinueReading,
-                onCheckedChange = { enabled ->
-                    intentDispatcher(AppSettingsIntent.OnShowContinueReadingToggled(enabled))
-                },
-            )
-
-            if (viewState.hasCurrentlyReadingBook) {
-                SettingsItem(
-                    icon = Icons.Default.DeleteSweep,
-                    title = stringResource(StringRes.app_settings_clear_current_book),
-                    description = stringResource(StringRes.app_settings_clear_current_book_description),
-                    isDestructive = true,
-                    onClick = { intentDispatcher(AppSettingsIntent.OnClearCurrentBookClicked) },
+            EmberSectionHeader(text = stringResource(StringRes.settings_section_library_sync))
+            EmberGroupCard {
+                EmberSettingRow(
+                    title = stringResource(StringRes.app_settings_servers),
+                    subtitle = if (viewState.serverNames.isEmpty()) {
+                        stringResource(StringRes.settings_servers_subtitle_default)
+                    } else {
+                        viewState.serverNames.joinToString(", ")
+                    },
+                    icon = Icons.Outlined.Dns,
+                    onClick = onNavigateToServerManagement,
+                    trailing = { EmberChevron() },
+                )
+                EmberRowDivider()
+                EmberSettingRow(
+                    title = stringResource(StringRes.app_settings_sync_backup),
+                    subtitle = stringResource(StringRes.settings_sync_backup_subtitle),
+                    icon = Icons.Outlined.Cloud,
+                    onClick = onNavigateToSyncAndBackup,
+                    trailing = { EmberChevron() },
                 )
             }
 
-            SettingsItem(
-                icon = Icons.Default.BarChart,
-                title = stringResource(StringRes.app_settings_reading_statistics),
-                description = stringResource(StringRes.app_settings_reading_statistics_description),
-                onClick = onNavigateToStatistics,
-            )
+            EmberSectionHeader(text = stringResource(StringRes.settings_section_help))
+            EmberGroupCard {
+                EmberSettingRow(
+                    title = stringResource(StringRes.settings_diagnostics_title),
+                    subtitle = stringResource(StringRes.settings_diagnostics_subtitle),
+                    icon = Icons.Outlined.Description,
+                    onClick = onNavigateToDiagnostics,
+                    trailing = {
+                        Text(
+                            text = stringResource(
+                                if (viewState.isLoggingEnabled) {
+                                    StringRes.settings_status_on
+                                } else {
+                                    StringRes.settings_status_off
+                                },
+                            ),
+                            style = Ember.type.meta.copy(fontSize = 14.sp),
+                            color = colors.ink2,
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        EmberChevron()
+                    },
+                )
+            }
 
-            HorizontalDivider()
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Account Section: adding servers and syncing sit above Support
-            // because they are the tasks people come here for.
-            SettingsSectionHeader(
-                title = stringResource(StringRes.app_settings_section_account),
-            )
-
-            SettingsItem(
-                icon = Icons.Default.Dns,
-                title = stringResource(StringRes.app_settings_servers),
-                description = stringResource(StringRes.app_settings_servers_description),
-                onClick = onNavigateToServerManagement,
-            )
-
-            SettingsItem(
-                icon = Icons.Default.Cloud,
-                title = stringResource(StringRes.app_settings_sync_backup),
-                description = stringResource(StringRes.app_settings_sync_backup_description),
-                onClick = onNavigateToSyncAndBackup,
-            )
-
-            HorizontalDivider()
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Support Section
-            SettingsSectionHeader(
-                title = stringResource(StringRes.app_settings_section_support),
-            )
-
-            SettingsToggleItem(
-                icon = Icons.Default.Description,
-                title = stringResource(StringRes.app_settings_enable_logging),
-                description = stringResource(StringRes.app_settings_enable_logging_description),
-                isChecked = viewState.isLoggingEnabled,
-                onCheckedChange = { enabled ->
-                    intentDispatcher(AppSettingsIntent.OnLoggingToggled(enabled))
-                },
-            )
-
-            SettingsToggleItem(
-                icon = Icons.Default.Description,
-                title = stringResource(StringRes.app_settings_log_crashes_only),
-                description = stringResource(StringRes.app_settings_log_crashes_only_description),
-                isChecked = viewState.logCrashesOnly,
-                enabled = viewState.isLoggingEnabled,
-                onCheckedChange = { enabled ->
-                    intentDispatcher(AppSettingsIntent.OnLogCrashesOnlyToggled(enabled))
-                },
-            )
-
-            SettingsItem(
-                icon = Icons.Default.Share,
-                title = stringResource(StringRes.app_settings_share_logs),
-                description = stringResource(StringRes.app_settings_share_logs_description),
-                onClick = { intentDispatcher(AppSettingsIntent.OnShareLogsClicked) },
-            )
-
-            SettingsItem(
-                icon = Icons.Default.DeleteSweep,
-                title = stringResource(StringRes.app_settings_clear_logs),
-                description = stringResource(StringRes.app_settings_clear_logs_description),
-                onClick = { intentDispatcher(AppSettingsIntent.OnClearLogsClicked) },
-            )
-
-            HorizontalDivider()
-
-            // Version info at the end of the scrolling content, so it never overlaps rows
-            Text(
-                text = stringResource(
-                    StringRes.app_settings_version,
-                    buildConfig.versionName,
-                    buildConfig.versionCode,
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 24.dp, bottom = 32.dp),
-            )
+                    .padding(top = 26.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = stringResource(StringRes.settings_app_name),
+                    style = Ember.type.author.copy(fontSize = 15.sp),
+                    color = colors.ink2,
+                )
+                Text(
+                    text = stringResource(
+                        StringRes.app_settings_version,
+                        buildConfig.versionName,
+                        buildConfig.versionCode,
+                    ),
+                    style = Ember.type.meta.copy(fontSize = 12.sp),
+                    color = colors.ink2,
+                )
+            }
         }
 
         SnackbarHost(
             hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding(),
         )
     }
 }
 
-private fun ThemeMode.labelRes(): StringResource = when (this) {
-    ThemeMode.System -> StringRes.app_settings_theme_system
-    ThemeMode.Night -> StringRes.app_settings_theme_night
-    ThemeMode.Day -> StringRes.app_settings_theme_day
-    ThemeMode.Eink -> StringRes.app_settings_theme_eink
+@Composable
+private fun ProfileDialogs(
+    viewState: AppSettingsViewState,
+    intentDispatcher: IntentDispatcher<AppSettingsIntent>,
+) {
+    if (viewState.showAddProfileDialog) {
+        AddProfileDialog(
+            onDismissRequest = {
+                intentDispatcher(AppSettingsIntent.OnAddProfileDismissed("dismiss_request"))
+            },
+            onCancel = {
+                intentDispatcher(AppSettingsIntent.OnAddProfileDismissed("cancel_button"))
+            },
+            onConfirm = { name -> intentDispatcher(AppSettingsIntent.OnAddProfileConfirmed(name)) },
+            onNameChanged = { intentDispatcher(AppSettingsIntent.OnProfileNameEdited) },
+            showError = viewState.showProfileOperationFailedMessage,
+            showDuplicateNameError = viewState.showDuplicateProfileNameError,
+            isOperationInProgress = viewState.isProfileOperationInProgress,
+        )
+    }
+
+    val selectedProfile = viewState.selectedProfileForMenu
+    if (viewState.showRenameProfileDialog && selectedProfile != null) {
+        RenameProfileDialog(
+            currentName = selectedProfile.name,
+            onDismissRequest = {
+                intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed("dismiss_request"))
+            },
+            onCancel = {
+                intentDispatcher(AppSettingsIntent.OnRenameProfileDismissed("cancel_button"))
+            },
+            onConfirm = { newName -> intentDispatcher(AppSettingsIntent.OnRenameProfileConfirmed(newName)) },
+            onNameChanged = { intentDispatcher(AppSettingsIntent.OnProfileNameEdited) },
+            showError = viewState.showProfileOperationFailedMessage,
+            showDuplicateNameError = viewState.showDuplicateProfileNameError,
+            isOperationInProgress = viewState.isProfileOperationInProgress,
+        )
+    }
+
+    if (viewState.showDeleteProfileDialog && selectedProfile != null) {
+        DeleteProfileConfirmationDialog(
+            profileName = selectedProfile.name,
+            onDismissRequest = {
+                intentDispatcher(AppSettingsIntent.OnDeleteProfileDismissed("dismiss_request"))
+            },
+            onCancel = {
+                intentDispatcher(AppSettingsIntent.OnDeleteProfileDismissed("cancel_button"))
+            },
+            onConfirm = { intentDispatcher(AppSettingsIntent.OnDeleteProfileConfirmed) },
+            showError = viewState.showProfileOperationFailedMessage,
+            isOperationInProgress = viewState.isProfileOperationInProgress,
+        )
+    }
 }
 
 @Composable
-private fun ThemeModeDialog(
-    selected: ThemeMode,
-    onSelected: (ThemeMode) -> Unit,
-    onDismiss: () -> Unit,
+private fun ProfileCard(
+    viewState: AppSettingsViewState,
+    intentDispatcher: IntentDispatcher<AppSettingsIntent>,
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(text = stringResource(StringRes.app_settings_theme)) },
-        text = {
-            Column {
-                ThemeMode.entries.forEach { themeMode ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelected(themeMode) }
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(
-                            selected = themeMode == selected,
-                            onClick = { onSelected(themeMode) },
-                        )
-                        Text(
-                            text = stringResource(themeMode.labelRes()),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
-                }
+    val duplicateOrdinals = remember(viewState.userProfiles) {
+        duplicateProfileOrdinals(viewState.userProfiles)
+    }
+    val enabled = !viewState.isProfileOperationInProgress
+
+    EmberGroupCard {
+        LazyRow(
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(viewState.userProfiles, key = { profile -> profile.id }) { profile ->
+                ProfileAvatar(
+                    profile = profile,
+                    duplicateOrdinal = duplicateOrdinals[profile.id],
+                    isActive = profile.id == viewState.activeProfile?.id,
+                    isMenuVisible = viewState.selectedProfileForMenu?.id == profile.id,
+                    enabled = enabled,
+                    canDelete = viewState.canDeleteSelectedProfile,
+                    onClick = { intentDispatcher(AppSettingsIntent.OnProfileSelected(profile.id)) },
+                    onLongClick = {
+                        intentDispatcher(AppSettingsIntent.OnProfileLongPressed(profile.id, "long_press"))
+                    },
+                    onEditClick = {
+                        intentDispatcher(AppSettingsIntent.OnProfileLongPressed(profile.id, "edit_button"))
+                    },
+                    onMenuDismissed = {
+                        intentDispatcher(AppSettingsIntent.OnProfileMenuDismissed("dismiss_request"))
+                    },
+                    onRenameClicked = { intentDispatcher(AppSettingsIntent.OnRenameProfileClicked) },
+                    onDeleteClicked = { intentDispatcher(AppSettingsIntent.OnDeleteProfileClicked) },
+                )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(StringRes.general_cancel))
+            item(key = "add_profile") {
+                AddProfileAvatar(
+                    enabled = enabled,
+                    onClick = { intentDispatcher(AppSettingsIntent.OnAddProfileClicked) },
+                )
             }
-        },
-    )
-}
-
-@Composable
-private fun SettingsSectionHeader(
-    title: String,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier = modifier) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        HorizontalDivider()
-    }
-}
-
-@Composable
-private fun SettingsItem(
-    icon: ImageVector,
-    title: String,
-    description: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    isDestructive: Boolean = false,
-) {
-    val contentColor = if (isDestructive) {
-        MaterialTheme.colorScheme.error
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = contentColor,
-        )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor,
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsToggleItem(
-    icon: ImageVector,
-    title: String,
-    description: String,
-    isChecked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-) {
-    val contentColor = if (enabled) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!isChecked) }
-            .padding(vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = contentColor,
-        )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = contentColor,
-            )
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        Switch(
-            checked = isChecked,
-            onCheckedChange = onCheckedChange,
-            enabled = enabled,
-        )
-    }
-}
-
-@Composable
-private fun ProfilesRow(
-    profiles: List<UserProfile>,
-    activeProfile: UserProfile?,
-    selectedProfileForMenu: UserProfile?,
-    isOperationInProgress: Boolean,
-    onProfileSelected: (String) -> Unit,
-    onProfileLongPressed: (String, String) -> Unit,
-    onAddProfileClicked: () -> Unit,
-    onMenuDismissed: () -> Unit,
-    onRenameClicked: () -> Unit,
-    onDeleteClicked: () -> Unit,
-    canDelete: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val duplicateOrdinals = remember(profiles) { duplicateProfileOrdinals(profiles) }
-
-    LazyRow(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp),
-    ) {
-        items(profiles, key = { it.id }) { profile ->
-            ProfileItem(
-                profile = profile,
-                duplicateOrdinal = duplicateOrdinals[profile.id],
-                isActive = profile.id == activeProfile?.id,
-                isMenuVisible = selectedProfileForMenu?.id == profile.id,
-                enabled = !isOperationInProgress,
-                onClick = { onProfileSelected(profile.id) },
-                onLongClick = { onProfileLongPressed(profile.id, "long_press") },
-                onEditClick = { onProfileLongPressed(profile.id, "edit_button") },
-                onMenuDismissed = onMenuDismissed,
-                onRenameClicked = onRenameClicked,
-                onDeleteClicked = onDeleteClicked,
-                canDelete = canDelete,
-            )
-        }
-        item(key = "add_profile") {
-            AddProfileItem(onClick = onAddProfileClicked, enabled = !isOperationInProgress)
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ProfileItem(
+private fun ProfileAvatar(
     profile: UserProfile,
     duplicateOrdinal: Int?,
     isActive: Boolean,
     isMenuVisible: Boolean,
     enabled: Boolean,
+    canDelete: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onEditClick: () -> Unit,
     onMenuDismissed: () -> Unit,
     onRenameClicked: () -> Unit,
     onDeleteClicked: () -> Unit,
-    canDelete: Boolean,
-    modifier: Modifier = Modifier,
 ) {
-    Box {
-        Card(
-            modifier = modifier
-                .width(80.dp)
+    val colors = Ember.colors
+    val style = Ember.style
+    val activeLabel = stringResource(StringRes.app_settings_profile_active)
+
+    Box(modifier = Modifier.width(76.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
                 .combinedClickable(
                     enabled = enabled,
+                    role = Role.Button,
                     onClick = onClick,
                     onLongClick = onLongClick,
-                ),
-            colors = CardDefaults.cardColors(
-                containerColor = if (isActive) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
-            ),
+                )
+                .padding(vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+            Box(modifier = Modifier.size(AVATAR_SIZE)) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(AVATAR_SIZE)
                         .clip(CircleShape)
-                        .background(
-                            if (isActive) {
-                                MaterialTheme.colorScheme.primary
+                        .background(if (isActive) colors.accent else colors.track)
+                        .then(
+                            if (!isActive && style.isEink) {
+                                Modifier.border(style.border, colors.line, CircleShape)
                             } else {
-                                MaterialTheme.colorScheme.outline
-                            }
+                                Modifier
+                            },
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (isActive) {
+                    Text(
+                        text = profile.name.firstOrNull()?.uppercase().orEmpty(),
+                        style = Ember.type.cardTitle.copy(fontSize = 22.sp),
+                        color = if (isActive) colors.onAccent else colors.ink2,
+                    )
+                }
+                if (isActive) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .offset(x = 2.dp, y = 2.dp)
+                            .size(22.dp)
+                            .border(2.dp, colors.surface, CircleShape)
+                            .padding(2.dp)
+                            .background(colors.accent, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(StringRes.app_settings_profile_active),
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(24.dp),
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.surface,
-                            modifier = Modifier.size(24.dp),
+                            imageVector = Icons.Outlined.Check,
+                            contentDescription = activeLabel,
+                            modifier = Modifier.size(12.dp),
+                            tint = colors.onAccent,
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = profile.name,
+                style = Ember.type.meta.copy(
+                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                ),
+                color = if (isActive) colors.ink else colors.ink2,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+            duplicateOrdinal?.let { ordinal ->
                 Text(
-                    text = profile.name,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isActive) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    text = stringResource(StringRes.app_settings_profile_duplicate_index, ordinal),
+                    style = Ember.type.meta.copy(fontSize = 11.sp),
+                    color = colors.ink2,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
-                duplicateOrdinal?.let { ordinal ->
-                    Text(
-                        text = stringResource(StringRes.app_settings_profile_duplicate_index, ordinal),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isActive) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                    )
-                }
             }
         }
 
@@ -835,13 +577,13 @@ private fun ProfileItem(
             enabled = enabled,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .size(32.dp),
+                .size(28.dp),
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = stringResource(StringRes.action_edit),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
+                tint = colors.ink2,
+                modifier = Modifier.size(16.dp),
             )
         }
 
@@ -866,227 +608,238 @@ private fun ProfileItem(
 }
 
 @Composable
-private fun AddProfileItem(
-    onClick: () -> Unit,
+private fun AddProfileAvatar(
     enabled: Boolean,
-    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
-    Card(
-        modifier = modifier
-            .width(80.dp)
-            .clickable(enabled = enabled, onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        ),
+    val colors = Ember.colors
+    val label = stringResource(StringRes.settings_profile_add)
+
+    Column(
+        modifier = Modifier
+            .width(76.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .selectable(selected = false, enabled = enabled, role = Role.Button, onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(
+        Box(
+            modifier = Modifier
+                .size(AVATAR_SIZE)
+                .drawBehind {
+                    drawCircle(
+                        color = colors.ink2,
+                        style = Stroke(
+                            width = 1.5.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)),
+                        ),
+                    )
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = label,
+                modifier = Modifier.size(22.dp),
+                tint = colors.ink2,
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            style = Ember.type.meta,
+            color = colors.ink2,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** Four preview tiles (Night, Day, E-ink, Auto) with a description of the selected one. */
+@Composable
+private fun ThemeSelector(
+    selected: ThemeMode,
+    onSelected: (ThemeMode) -> Unit,
+) {
+    val colors = Ember.colors
+    val tiles = listOf(ThemeMode.Night, ThemeMode.Day, ThemeMode.Eink, ThemeMode.System)
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = stringResource(StringRes.settings_theme_title),
+            style = Ember.type.meta.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+            color = colors.ink,
+        )
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .padding(top = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(StringRes.app_settings_profile_add),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
+            tiles.forEach { themeMode ->
+                ThemeTile(
+                    themeMode = themeMode,
+                    selected = themeMode == selected,
+                    onClick = { onSelected(themeMode) },
+                    modifier = Modifier.weight(1f),
                 )
             }
+        }
+        Text(
+            text = stringResource(selected.descriptionRes()),
+            style = Ember.type.meta,
+            color = colors.ink2,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+    }
+}
 
-            Spacer(modifier = Modifier.height(8.dp))
+@Composable
+private fun ThemeTile(
+    themeMode: ThemeMode,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = Ember.colors
+    val style = Ember.style
+    val shape = RoundedCornerShape(14.dp)
+    val borderWidth = when {
+        selected -> 2.5.dp
+        style.isEink -> style.border
+        else -> 1.dp
+    }
+    val borderColor = if (selected) colors.accent else colors.line
 
+    Column(
+        modifier = modifier
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(88.dp)
+                .clip(shape)
+                .border(borderWidth, borderColor, shape)
+                .drawBehind { drawThemePreview(themeMode) },
+        )
+        Row(
+            modifier = Modifier.padding(top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (selected) {
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = colors.ink,
+                )
+                Spacer(modifier = Modifier.width(2.dp))
+            }
             Text(
-                text = stringResource(StringRes.app_settings_profile_add),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = stringResource(themeMode.labelRes()),
+                style = Ember.type.meta.copy(
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                ),
+                color = if (selected) colors.ink else colors.ink2,
                 maxLines = 1,
-                textAlign = TextAlign.Center,
             )
         }
     }
 }
 
-@Composable
-private fun AddProfileDialog(
-    onDismissRequest: () -> Unit,
-    onCancel: () -> Unit,
-    onConfirm: (String) -> Unit,
-    onNameChanged: () -> Unit,
-    showError: Boolean,
-    showDuplicateNameError: Boolean,
-    isOperationInProgress: Boolean,
-) {
-    var profileName by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = { if (!isOperationInProgress) onDismissRequest() },
-        title = {
-            Text(text = stringResource(StringRes.app_settings_profile_add_title))
-        },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = profileName,
-                    onValueChange = {
-                        profileName = it
-                        onNameChanged()
-                    },
-                    isError = showDuplicateNameError,
-                    label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
-                    enabled = !isOperationInProgress,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (showError) {
-                    Text(
-                        text = stringResource(StringRes.app_settings_profile_operation_failed),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (showDuplicateNameError) {
-                    Text(
-                        text = stringResource(StringRes.app_settings_profile_name_already_exists),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(profileName) },
-                enabled = profileName.isNotBlank() && !showDuplicateNameError && !isOperationInProgress,
-            ) {
-                if (isOperationInProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(stringResource(StringRes.app_settings_profile_add))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel, enabled = !isOperationInProgress) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
-    )
+private fun ThemeMode.labelRes(): StringResource = when (this) {
+    ThemeMode.Night -> StringRes.app_settings_theme_night
+    ThemeMode.Day -> StringRes.app_settings_theme_day
+    ThemeMode.Eink -> StringRes.app_settings_theme_eink
+    ThemeMode.System -> StringRes.settings_theme_auto
 }
 
-@Composable
-private fun RenameProfileDialog(
-    currentName: String,
-    onDismissRequest: () -> Unit,
-    onCancel: () -> Unit,
-    onConfirm: (String) -> Unit,
-    onNameChanged: () -> Unit,
-    showError: Boolean,
-    showDuplicateNameError: Boolean,
-    isOperationInProgress: Boolean,
-) {
-    var profileName by remember { mutableStateOf(currentName) }
-
-    AlertDialog(
-        onDismissRequest = { if (!isOperationInProgress) onDismissRequest() },
-        title = {
-            Text(text = stringResource(StringRes.app_settings_profile_rename_title))
-        },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = profileName,
-                    onValueChange = {
-                        profileName = it
-                        onNameChanged()
-                    },
-                    isError = showDuplicateNameError,
-                    label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
-                    enabled = !isOperationInProgress,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (showError) {
-                    Text(
-                        text = stringResource(StringRes.app_settings_profile_operation_failed),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (showDuplicateNameError) {
-                    Text(
-                        text = stringResource(StringRes.app_settings_profile_name_already_exists),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(profileName) },
-                enabled = profileName.isNotBlank() && !showDuplicateNameError && !isOperationInProgress,
-            ) {
-                if (isOperationInProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(stringResource(StringRes.action_rename))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel, enabled = !isOperationInProgress) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
-    )
+private fun ThemeMode.descriptionRes(): StringResource = when (this) {
+    ThemeMode.Night -> StringRes.settings_theme_night_description
+    ThemeMode.Day -> StringRes.settings_theme_day_description
+    ThemeMode.Eink -> StringRes.settings_theme_eink_description
+    ThemeMode.System -> StringRes.settings_theme_auto_description
 }
 
-@Composable
-private fun DeleteProfileConfirmationDialog(
-    profileName: String,
-    onDismissRequest: () -> Unit,
-    onCancel: () -> Unit,
-    onConfirm: () -> Unit,
-    showError: Boolean,
-    isOperationInProgress: Boolean,
-) {
-    AlertDialog(
-        onDismissRequest = { if (!isOperationInProgress) onDismissRequest() },
-        title = {
-            Text(text = stringResource(StringRes.app_settings_profile_delete_title))
-        },
-        text = {
-            Column {
-                Text(text = stringResource(StringRes.app_settings_profile_delete_message))
-                if (showError) {
-                    Text(
-                        text = stringResource(StringRes.app_settings_profile_operation_failed),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
+/** Draws a tiny library screen in the previewed theme. Auto splits Day and Night diagonally. */
+private fun DrawScope.drawThemePreview(themeMode: ThemeMode) {
+    when (themeMode) {
+        ThemeMode.Night -> drawLibraryPreview(EmberMode.Night.colors())
+        ThemeMode.Day -> drawLibraryPreview(EmberMode.Day.colors())
+        ThemeMode.Eink -> drawLibraryPreview(EmberMode.Eink.colors())
+        ThemeMode.System -> {
+            drawLibraryPreview(EmberMode.Day.colors())
+            val night = Path().apply {
+                moveTo(size.width, 0f)
+                lineTo(size.width, size.height)
+                lineTo(0f, size.height)
+                close()
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm, enabled = !isOperationInProgress) {
-                if (isOperationInProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(stringResource(StringRes.action_delete))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel, enabled = !isOperationInProgress) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
+            clipPath(night) { drawLibraryPreview(EmberMode.Night.colors()) }
+        }
+    }
+}
+
+private fun DrawScope.drawLibraryPreview(colors: EmberColors) {
+    val w = size.width
+    val h = size.height
+    val eink = colors.accent == Color.Black
+    drawRect(color = colors.bg)
+
+    // Title bar
+    drawRoundRect(
+        color = colors.ink,
+        topLeft = Offset(w * 0.14f, h * 0.13f),
+        size = Size(w * 0.38f, h * 0.08f),
+        cornerRadius = CornerRadius(h * 0.04f),
+    )
+    // Cover
+    val coverTopLeft = Offset(w * 0.14f, h * 0.30f)
+    val coverSize = Size(w * 0.24f, h * 0.36f)
+    if (eink) {
+        drawRoundRect(color = colors.bg, topLeft = coverTopLeft, size = coverSize, cornerRadius = CornerRadius(4f))
+        drawRoundRect(
+            color = colors.ink,
+            topLeft = coverTopLeft,
+            size = coverSize,
+            cornerRadius = CornerRadius(4f),
+            style = Stroke(width = 3f),
+        )
+    } else {
+        drawRoundRect(color = PREVIEW_COVER_COLOR, topLeft = coverTopLeft, size = coverSize, cornerRadius = CornerRadius(4f))
+    }
+    // Text lines beside the cover
+    drawRoundRect(
+        color = colors.ink,
+        topLeft = Offset(w * 0.44f, h * 0.31f),
+        size = Size(w * 0.42f, h * 0.06f),
+        cornerRadius = CornerRadius(h * 0.03f),
+    )
+    drawRoundRect(
+        color = colors.ink2,
+        topLeft = Offset(w * 0.44f, h * 0.43f),
+        size = Size(w * 0.28f, h * 0.05f),
+        cornerRadius = CornerRadius(h * 0.025f),
+    )
+    drawRoundRect(
+        color = colors.accent,
+        topLeft = Offset(w * 0.44f, h * 0.55f),
+        size = Size(w * 0.34f, h * 0.05f),
+        cornerRadius = CornerRadius(h * 0.025f),
+    )
+    // List rows
+    drawRoundRect(
+        color = colors.ink2.copy(alpha = 0.7f),
+        topLeft = Offset(w * 0.14f, h * 0.76f),
+        size = Size(w * 0.72f, h * 0.05f),
+        cornerRadius = CornerRadius(h * 0.025f),
+    )
+    drawRoundRect(
+        color = colors.ink2.copy(alpha = 0.5f),
+        topLeft = Offset(w * 0.14f, h * 0.86f),
+        size = Size(w * 0.5f, h * 0.05f),
+        cornerRadius = CornerRadius(h * 0.025f),
     )
 }

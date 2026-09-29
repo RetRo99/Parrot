@@ -76,7 +76,7 @@
     <string name="app_settings_log_crashes_only">Only Log Crashes</string>
     <string name="app_settings_log_crashes_only_description">Save full stack traces for fatal crashes and skip handled errors</string>
     <string name="app_settings_section_reading">Reading</string>
-    <string name="app_settings_open_last_book">Open Last Book on Launch</string>
+    <string name="app_settings_open_last_book">Open last book on launch</string>
     <string name="app_settings_open_last_book_description">Automatically open your currently reading book when the app starts</string>
 
     <!-- Series List Screen -->
@@ -471,7 +471,7 @@
     <string name="reader_tts_supertonic_tab" tools:ignore="MissingTranslation">Supertonic</string>
     <string name="reader_tts_high_quality" tools:ignore="MissingTranslation">High quality</string>
     <string name="reader_tts_system_source" tools:ignore="MissingTranslation">System</string>
-    <string name="app_settings_sync_backup" tools:ignore="MissingTranslation">Sync &amp; Backup</string>
+    <string name="app_settings_sync_backup" tools:ignore="MissingTranslation">Sync &amp; backup</string>
     <string name="app_settings_sync_backup_description" tools:ignore="MissingTranslation">Keep reading data available across devices</string>
     <string name="cloud_account_title" tools:ignore="MissingTranslation">Parrot Cloud</string>
     <string name="cloud_account_description" tools:ignore="MissingTranslation">Keep your progress, bookmarks, collections, and reader settings available across devices. Book files remain on this device.</string>
@@ -776,4 +776,41 @@
     <string name="statistics_rhythm_weekday_description_top" tools:ignore="MissingTranslation">%1$s: %2$s on average, most</string>
     <string name="statistics_rhythm_time_description" tools:ignore="MissingTranslation">%1$s, %2$d percent of your reading</string>
     <string name="statistics_rhythm_time_description_top" tools:ignore="MissingTranslation">%1$s, %2$d percent of your reading, most</string>
+    <string name="settings_section_profile" tools:ignore="MissingTranslation">Profile</string>
+    <string name="settings_section_appearance" tools:ignore="MissingTranslation">Appearance</string>
+    <string name="settings_section_reading" tools:ignore="MissingTranslation">Reading</string>
+    <string name="settings_section_library_sync" tools:ignore="MissingTranslation">Library &amp; sync</string>
+    <string name="settings_section_help" tools:ignore="MissingTranslation">Help</string>
+    <string name="settings_profile_add" tools:ignore="MissingTranslation">Add</string>
+    <string name="settings_theme_title" tools:ignore="MissingTranslation">Theme</string>
+    <string name="settings_theme_auto" tools:ignore="MissingTranslation">Auto</string>
+    <string name="settings_theme_night_description" tools:ignore="MissingTranslation">Dark and warm — easiest on the eyes at night.</string>
+    <string name="settings_theme_day_description" tools:ignore="MissingTranslation">Warm paper — best in daylight.</string>
+    <string name="settings_theme_eink_description" tools:ignore="MissingTranslation">Black and white, no animations — made for e-ink screens.</string>
+    <string name="settings_theme_auto_description" tools:ignore="MissingTranslation">Follows your phone: Day in light mode, Night in dark mode.</string>
+    <string name="settings_reader_settings_subtitle" tools:ignore="MissingTranslation">Fonts, layout, page turns, read aloud</string>
+    <string name="settings_open_last_book_subtitle" tools:ignore="MissingTranslation">Skip the library and jump back in</string>
+    <string name="settings_continue_reading_title" tools:ignore="MissingTranslation">Continue-reading shortcut</string>
+    <string name="settings_continue_reading_subtitle" tools:ignore="MissingTranslation">Card on the library and a mini player elsewhere</string>
+    <string name="settings_servers_subtitle_default" tools:ignore="MissingTranslation">Add, remove or switch servers</string>
+    <string name="settings_sync_backup_subtitle" tools:ignore="MissingTranslation">Keep progress on all your devices</string>
+    <string name="settings_diagnostics_title" tools:ignore="MissingTranslation">Diagnostics</string>
+    <string name="settings_diagnostics_subtitle" tools:ignore="MissingTranslation">Logging, share or clear logs</string>
+    <string name="settings_status_on" tools:ignore="MissingTranslation">On</string>
+    <string name="settings_status_off" tools:ignore="MissingTranslation">Off</string>
+    <string name="settings_app_name" tools:ignore="MissingTranslation">Parrot</string>
+    <string name="diagnostics_intro" tools:ignore="MissingTranslation">Only needed when something goes wrong. Logs stay on this device until you share them.</string>
+    <string name="diagnostics_save_logs" tools:ignore="MissingTranslation">Save logs to a file</string>
+    <string name="diagnostics_save_logs_subtitle" tools:ignore="MissingTranslation">Records what the app does, for bug reports</string>
+    <string name="diagnostics_crashes_only" tools:ignore="MissingTranslation">Only log crashes</string>
+    <string name="diagnostics_crashes_only_subtitle" tools:ignore="MissingTranslation">Skip everyday errors, keep full crash reports</string>
+    <string name="diagnostics_crashes_only_disabled" tools:ignore="MissingTranslation">Turn on “Save logs to a file” first</string>
+    <string name="diagnostics_section_log_files" tools:ignore="MissingTranslation">Log files</string>
+    <string name="diagnostics_share_logs" tools:ignore="MissingTranslation">Share logs</string>
+    <string name="diagnostics_share_logs_subtitle" tools:ignore="MissingTranslation">Send to the developer by email or chat</string>
+    <string name="diagnostics_clear_logs" tools:ignore="MissingTranslation">Clear logs</string>
+    <string name="diagnostics_clear_logs_subtitle" tools:ignore="MissingTranslation">Deletes all saved logs — asks first</string>
+    <string name="diagnostics_clear_confirm_title" tools:ignore="MissingTranslation">Clear all logs?</string>
+    <string name="diagnostics_clear_confirm_body" tools:ignore="MissingTranslation">This deletes every saved log file on this device. It can't be undone.</string>
+    <string name="diagnostics_clear_confirm_action" tools:ignore="MissingTranslation">Clear logs</string>
 </resources>

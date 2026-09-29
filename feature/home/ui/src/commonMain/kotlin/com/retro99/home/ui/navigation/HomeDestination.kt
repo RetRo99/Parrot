@@ -82,6 +82,9 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
     data object SyncAndBackup : HomeDestination
 
     @Serializable
+    data object Diagnostics : HomeDestination
+
+    @Serializable
     data object Statistics : HomeDestination
 
     /**
@@ -94,6 +97,7 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
             this is AppSettings ||
             this is ServerManagement ||
             this is SyncAndBackup ||
+            this is Diagnostics ||
             this is Statistics ||
             this is BookDetail
 }

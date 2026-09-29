@@ -40,6 +40,7 @@ import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
+import com.retro99.home.ui.appsettings.DiagnosticsScreen
 import com.retro99.home.ui.appsettings.ProfileOperationTapShieldHolder
 import com.retro99.home.ui.series.SeriesListScreen
 import com.retro99.books.domain.model.BookType
@@ -409,11 +410,6 @@ fun HomeNavigation(
 
                     entry<HomeDestination.AppSettings> {
                         AppSettingsScreen(
-                            onNavigateToStatistics = {
-                                intentDispatcher(
-                                    HomeNavigationIntent.NavigateTo(HomeDestination.Statistics)
-                                )
-                            },
                             onNavigateToServerManagement = {
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(HomeDestination.ServerManagement)
@@ -429,6 +425,11 @@ fun HomeNavigation(
                                     HomeNavigationIntent.NavigateTo(HomeDestination.Settings)
                                 )
                             },
+                            onNavigateToDiagnostics = {
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(HomeDestination.Diagnostics)
+                                )
+                            },
                         )
                     }
 
@@ -439,6 +440,12 @@ fun HomeNavigation(
                             onBack = { requestBack("toolbar_back") },
                             stopPlaybackForServer = viewModel::stopPlaybackForServer,
                             modifier = Modifier,
+                        )
+                    }
+
+                    entry<HomeDestination.Diagnostics> {
+                        DiagnosticsScreen(
+                            onBack = { requestBack("toolbar_back") },
                         )
                     }
 

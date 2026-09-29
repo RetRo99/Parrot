@@ -73,7 +73,7 @@ class LogsClearOperationTest {
 
     @Test
     fun failureStateAllowsRetryAndSuccessClearsRetryState() {
-        val failed = AppSettingsViewState().withLogsClearOutcome(succeeded = false)
+        val failed = DiagnosticsViewState().withLogsClearOutcome(succeeded = false)
         assertTrue(failed.showLogsClearFailedMessage)
         assertTrue(failed.canRetryLogsClear)
         assertFalse(failed.showLogsClearedMessage)

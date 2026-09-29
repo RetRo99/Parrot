@@ -33,5 +33,6 @@ internal fun HomeDestination.analyticsScreenName(): String = when (this) {
     HomeDestination.AppSettings -> "app_settings"
     HomeDestination.ServerManagement -> "server_management"
     HomeDestination.SyncAndBackup -> "sync_and_backup"
+    HomeDestination.Diagnostics -> "diagnostics"
     HomeDestination.Statistics -> "statistics"
 }

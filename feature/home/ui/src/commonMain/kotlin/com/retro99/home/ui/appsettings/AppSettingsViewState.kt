@@ -6,18 +6,11 @@ import com.retro99.user.api.UserProfile
 
 data class AppSettingsViewState(
     val isLoggingEnabled: Boolean = false,
-    val logCrashesOnly: Boolean = false,
     val openLastBookOnLaunch: Boolean = false,
     val showContinueReading: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.Night,
-    val showThemeModeDialog: Boolean = false,
     val hasCurrentlyReadingBook: Boolean = false,
-    val showLogsClearedMessage: Boolean = false,
-    val showLogsClearFailedMessage: Boolean = false,
-    val canRetryLogsClear: Boolean = false,
-    val showNoLogsMessage: Boolean = false,
-    val showLogShareFailedMessage: Boolean = false,
-    val canRetryLogShare: Boolean = false,
+    val serverNames: List<String> = emptyList(),
     val showCurrentBookClearedMessage: Boolean = false,
     val showCurrentBookClearFailedMessage: Boolean = false,
     val canRetryCurrentBookClear: Boolean = false,
@@ -33,20 +26,6 @@ data class AppSettingsViewState(
 ) {
     val canDeleteSelectedProfile: Boolean
         get() = userProfiles.size > 1
-}
-
-internal fun AppSettingsViewState.withLogsClearOutcome(succeeded: Boolean): AppSettingsViewState = if (succeeded) {
-    copy(
-        showLogsClearedMessage = true,
-        showLogsClearFailedMessage = false,
-        canRetryLogsClear = false,
-    )
-} else {
-    copy(
-        showLogsClearedMessage = false,
-        showLogsClearFailedMessage = true,
-        canRetryLogsClear = true,
-    )
 }
 
 internal fun AppSettingsViewState.withCurrentlyReading(

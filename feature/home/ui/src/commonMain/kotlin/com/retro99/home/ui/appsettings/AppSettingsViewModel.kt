@@ -5,14 +5,13 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AnalyticsEvent
 import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
-import com.retro99.analytics.api.FileLogger
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.base.ui.compose.ThemeMode
-import com.retro99.base.ui.sharing.FileSharer
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.reader.domain.usecase.ClearCurrentlyReadingUseCase
 import com.retro99.reader.domain.usecase.ObserveCurrentlyReadingUseCase
+import com.retro99.server.api.ServerRegistry
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.catch
@@ -26,8 +25,7 @@ import org.koin.core.annotation.Provided
 
 @KoinViewModel
 class AppSettingsViewModel(
-    @Provided private val fileLogger: FileLogger,
-    @Provided private val fileSharer: FileSharer,
+    @Provided private val serverRegistry: ServerRegistry,
     @Provided private val preferences: Preferences,
     @Provided private val clearCurrentlyReadingUseCase: ClearCurrentlyReadingUseCase,
     @Provided private val observeCurrentlyReadingUseCase: ObserveCurrentlyReadingUseCase,
@@ -46,12 +44,10 @@ class AppSettingsViewModel(
 
     init {
         observeUserProfiles()
+        observeServerNames()
         observeCurrentlyReading()
         observeBooleanPref(PreferencesKey.FileLoggingEnabled, defaultValue = false) { enabled ->
             updateState { it.copy(isLoggingEnabled = enabled) }
-        }
-        observeBooleanPref(PreferencesKey.FileLoggingCrashesOnly, defaultValue = false) { enabled ->
-            updateState { it.copy(logCrashesOnly = enabled) }
         }
         observeBooleanPref(PreferencesKey.OpenLastBookOnLaunch, defaultValue = false) { enabled ->
             updateState { it.copy(openLastBookOnLaunch = enabled) }
@@ -122,6 +118,14 @@ class AppSettingsViewModel(
             .launchIn(viewModelScope)
     }
 
+    private fun observeServerNames() {
+        serverRegistry.observeAllServers()
+            .onEach { servers ->
+                updateState { state -> state.copy(serverNames = servers.map { server -> server.name }) }
+            }
+            .launchIn(viewModelScope)
+    }
+
     private fun observeUserProfiles() {
         userRegistry.observeAllProfiles()
             .onEach { profiles ->
@@ -138,26 +142,12 @@ class AppSettingsViewModel(
 
     override fun onIntent(intent: AppSettingsIntent) {
         when (intent) {
-            is AppSettingsIntent.OnLoggingToggled -> setLoggingEnabled(intent.enabled)
-            is AppSettingsIntent.OnLogCrashesOnlyToggled -> setLogCrashesOnly(intent.enabled)
             is AppSettingsIntent.OnOpenLastBookToggled -> setOpenLastBookOnLaunch(intent.enabled)
-            AppSettingsIntent.OnThemeModeClicked -> {
-                updateState { it.copy(showThemeModeDialog = true) }
-            }
-            AppSettingsIntent.OnThemeModeDialogDismissed -> {
-                updateState { it.copy(showThemeModeDialog = false) }
-            }
             is AppSettingsIntent.OnThemeModeSelected -> {
                 preferences.putString(PreferencesKey.ThemeMode, intent.themeMode.key)
-                updateState { it.copy(showThemeModeDialog = false) }
+                updateState { it.copy(themeMode = intent.themeMode) }
             }
             is AppSettingsIntent.OnShowContinueReadingToggled -> setShowContinueReading(intent.enabled)
-            AppSettingsIntent.OnShareLogsClicked -> shareLogs()
-            AppSettingsIntent.OnShareLogsFailedMessageShown -> onLogShareFailedMessageShown()
-            AppSettingsIntent.OnClearLogsClicked -> clearLogs()
-            AppSettingsIntent.OnLogsClearedMessageShown -> onLogsClearedMessageShown()
-            AppSettingsIntent.OnLogsClearFailedMessageShown -> onLogsClearFailedMessageShown()
-            AppSettingsIntent.OnNoLogsMessageShown -> onNoLogsMessageShown()
             AppSettingsIntent.OnClearCurrentBookClicked -> clearCurrentBook()
             AppSettingsIntent.OnCurrentBookClearedMessageShown -> onCurrentBookClearedMessageShown()
             AppSettingsIntent.OnCurrentBookClearFailedMessageShown -> onCurrentBookClearFailedMessageShown()
@@ -520,18 +510,6 @@ class AppSettingsViewModel(
         return succeeded
     }
 
-    private fun setLoggingEnabled(enabled: Boolean) {
-        preferences.putBoolean(PreferencesKey.FileLoggingEnabled, enabled)
-        analytics.logEvent(AppSettingsAnalyticsEvent.FileLoggingToggled(isEnabled = enabled))
-        updateState { it.copy(isLoggingEnabled = enabled) }
-    }
-
-    private fun setLogCrashesOnly(enabled: Boolean) {
-        preferences.putBoolean(PreferencesKey.FileLoggingCrashesOnly, enabled)
-        analytics.logEvent(AppSettingsAnalyticsEvent.CrashOnlyLoggingToggled(isEnabled = enabled))
-        updateState { it.copy(logCrashesOnly = enabled) }
-    }
-
     private fun setOpenLastBookOnLaunch(enabled: Boolean) {
         preferences.putBoolean(PreferencesKey.OpenLastBookOnLaunch, enabled)
         analytics.logEvent(AppSettingsAnalyticsEvent.OpenLastBookOnLaunchToggled(isEnabled = enabled))
@@ -542,64 +520,6 @@ class AppSettingsViewModel(
         preferences.putBoolean(PreferencesKey.ShowContinueReading, enabled)
         analytics.logEvent(AppSettingsAnalyticsEvent.ShowContinueReadingToggled(isEnabled = enabled))
         updateState { it.copy(showContinueReading = enabled) }
-    }
-
-    private fun shareLogs() {
-        val isRetry = viewState.value.canRetryLogShare
-        val outcome = executeLogShare(
-            analytics = analytics,
-            isRetry = isRetry,
-            readLogContents = fileLogger::getLogContents,
-            launchShareSheet = {
-                fileSharer.shareFile(
-                    filePath = fileLogger.getLogFilePath(),
-                    mimeType = "text/plain",
-                    title = "Share App Logs",
-                )
-            },
-        )
-        updateState {
-            when (outcome) {
-                LogShareOutcome.NoLogs -> it.copy(
-                    showNoLogsMessage = true,
-                    showLogShareFailedMessage = false,
-                    canRetryLogShare = false,
-                )
-                LogShareOutcome.Opened -> it.copy(
-                    showLogShareFailedMessage = false,
-                    canRetryLogShare = false,
-                )
-                LogShareOutcome.Failed -> it.copy(
-                    showLogShareFailedMessage = true,
-                    canRetryLogShare = true,
-                )
-            }
-        }
-    }
-
-    private fun onLogShareFailedMessageShown() {
-        updateState { it.copy(showLogShareFailedMessage = false) }
-    }
-
-    private fun clearLogs() {
-        val succeeded = executeLogsClear(
-            analytics = analytics,
-            isRetry = viewState.value.canRetryLogsClear,
-            clear = fileLogger::clearLogs,
-        )
-        updateState { it.withLogsClearOutcome(succeeded) }
-    }
-
-    private fun onLogsClearedMessageShown() {
-        updateState { it.copy(showLogsClearedMessage = false) }
-    }
-
-    private fun onLogsClearFailedMessageShown() {
-        updateState { it.copy(showLogsClearFailedMessage = false) }
-    }
-
-    private fun onNoLogsMessageShown() {
-        updateState { it.copy(showNoLogsMessage = false) }
     }
 
     private fun clearCurrentBook() {
