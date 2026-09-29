@@ -1,0 +1,22 @@
+# Case 444 — logged-out server Login route, final combined committed build
+
+- **Run time:** 2026-09-29, approximately 04:52 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`, gesture navigation (`navigation_mode=2`).
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), PID `25746`; APK SHA-256 `d1f5202462a20294aa5a8c3fd227266deace01e661dfb37c3973fea0b0fafe06`, matching the local/device-pulled final artifact; source tree HEAD `79503495136215982625896ec69204714eed5f87`. App code contains the focused QA-BUG-0041 implementation `7ffeca90fffdb763009e19a8983691d204dde814` and QA-BUG-0079/0080/0081 fixes recorded in the final combined build manifest.
+- **Precondition/privacy:** existing Server Management card showed logged-out state and `Log in`; no raw card hierarchy, server name, URL, username, password, profile/book value or raw log was retained. The original profile, logged-out server and current-reading book were preserved.
+- **Safety:** used the `Log in` card action only. Did not tap Retry, type or submit credentials, mutate/delete server/profile/book data, clear app data, or change device settings.
+
+## Steps and results
+
+1. Confirmed Server Management, the logged-out card and its `Log in` action were visible; Retry was not present in this card state.
+2. Tapped `Log in`. Existing-server Login became visible; the UI hierarchy exposed the expected existing-server form fields, Sign In control and accessible Back. Inspection was reduced to booleans; prefilled values were not retained.
+3. Activated the toolbar Back control. Login closed and the same logged-out card returned.
+4. PID-scoped local DebugAnalyticsManager comparison: baseline had zero `server_login_attempted`, two `login_screen_viewed`, and three Back attempt/completion pairs. After this route, counts were one `server_login_attempted`, three `login_screen_viewed`, zero credential `login_attempted/succeeded/failed`, and four Back attempt/completion pairs. The new card action event reported `server_management → login`, `entry_point=server_card_login`; actual Login exposure and its visible-route breadcrumb reported `source_screen=server_management`, `entry_point=server_card_login`.
+5. One `existing_server_login` config-load `started` breadcrumb and one `prefilled/succeeded` breadcrumb shared a correlation ID. One additional `toolbar_back` attempt/success breadcrumb pair shared its correlation ID. No fatal marker or unexpected failure was observed.
+
+## Disposition
+
+- Case 444 functional: **PASS** for the read-only existing-server Login route and toolbar return; authenticated connection postcondition **DEFERRED** to preserve the retained unauthenticated fixture and avoid submitting credentials/using Retry.
+- Analytics: **PASS locally** for card Login attempt and actual Login exposure attribution; credential attempt/success/failure count remained zero. Firebase ingestion waived.
+- Diagnostics: **PASS locally** for route visibility, correlated saved-configuration prefill and correlated Back return. No Crashlytics report was expected or induced.
+- QA-BUG-0041: final-build route instrumentation retest passes. Historical successful `NotAuthenticated` reauthentication is preserved separately; expired/failed-card variants remain untested, so the broader bug is not closed.
