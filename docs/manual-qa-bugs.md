@@ -1509,7 +1509,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 
 - **Title:** Switching the Cloud Account form to Create account leaves helper text that instructs the user to sign in and create an account below.
 - **Severity / user impact:** Low, confirmed visual/copy inconsistency; the form controls and disabled state correctly switch to account creation, but the contradictory helper can mislead a new user about the current mode and next action.
-- **Status:** CONFIRMED on the Samsung debug build; recorded before code changes. Fix and retest pending.
+- **Status:** FIXED and Samsung-retested PASS. The signed-out form now uses mode-specific helper copy; mode transitions and submit/consent state remain usable.
 - **Screen/test IDs:** Cloud Account cases 359 and 732.
 - **Device/build/commit:** Samsung `RFCWC0SSVDM`, SM-S921B, Android 16/API 36, One UI 8.0, build `BP4A.251205.006.S921BXXSGDZG1`; package `com.retro99.parrot` 0.4.5 (21), APK SHA-256 `e30ad041567e2e043bed08e5fc6662634abd86c3a13b717a057373212e8a3c3e`, source commit `9cd6ff56ee48f8297e0cd2ebc095a3313d205f3d`.
 - **Preconditions:** Signed-out Cloud Account screen in Sign in mode; empty email/password; terms consent unchecked.
@@ -1518,7 +1518,7 @@ Keep every entry, including fixed and duplicate observations. These first findin
 - **Actual:** The helper remains “Enter your email and password, then sign in. New here? Create an account below.” while the Create account form is already active.
 - **Frequency:** Reproduced once on the installed Samsung build; one mode transition observed.
 - **Evidence:** [Pre-fix create-account screenshot](manual-qa-evidence/2026-09-29/cloud-account-create-mode.png); local mode event at 06:54:34 CEST records `mode=create_account`.
-- **Root cause:** Pending source inspection; likely helper text is not derived from the current form mode.
-- **Affected files:** Cloud Account UI and its localized string resources, to be confirmed during fix.
-- **Fix reference / commit:** Pending. Fix this single copy/state defect, add an appropriate regression check if supported, and keep it separate from OAuth/operation instrumentation changes.
-- **Retest:** NOT RUN. Do not proceed to another Cloud Account case until the fixed copy is built, installed with data preserved, and rechecked on the Samsung.
+- **Root cause:** `AccountFormContent` rendered `cloud_account_sign_in_hint` for every disabled form regardless of `CloudAccountMode`; therefore the Create account form inherited sign-in-only helper copy.
+- **Affected files:** `feature/cloud-account/ui/src/commonMain/kotlin/com/retro99/cloudaccount/ui/CloudAccountScreen.kt`; `translations/src/commonMain/composeResources/values/strings.xml`.
+- **Fix reference / commit:** `f876cba6720b3e5c6ac63c079c615bd6d40e0d45` (`fix(cloud-account): show mode-specific helper [QA-BUG-0087, test 359]`). The UI selects a dedicated create-account hint that reminds the user to accept the terms; Sign in retains its existing hint.
+- **Retest:** PASS on the physical Samsung after `adb install -r` with app data preserved. Debug APK SHA-256 `3895ecb2b51673e7c92b69f8ccc2e7831a8d6dfb7e5d3f1a2c5ed3037ab990df`; package 0.4.5 (21), PID `11324`, install time 07:01:35 CEST. Cloud Account UI host tests 7/7 passed and `:androidApp:assembleDebug` succeeded. At 07:03:09 Create account showed “Enter your email and password, then accept the terms to create your account.” and a disabled button with unchecked consent; at 07:03:18 Sign in restored the original sign-in helper; at 07:03:27 Create account again restored its matching helper. Exactly three local mode events matched three transitions. No credentials were entered. [Samsung retest evidence](manual-qa-evidence/2026-09-29/cloud-account-cases-359-mode-copy-retest.txt). Firebase ingestion is waived; Crashlytics was not applicable to this expected UI path.
