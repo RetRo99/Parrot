@@ -1,0 +1,20 @@
+# QA-BUG-0081 — visible Login toolbar Back did not respond
+
+- **Run time:** 2026-09-29, approximately 04:22–04:25 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), PID `15794`, debug APK SHA-256 `3cf489156467257fa315621daf9b6a74c62d29b312322c37bf48272e8b447a09`; source candidate contains uncommitted QA-BUG-0080 telemetry changes atop source commit `0350019899bcd2161690e3cb472203106aa23561` and QA-BUG-0079 fix `8e16676916c7ad06d82bc4bd93ecfd67f172cf80`.
+- **Fixture/privacy:** existing profile and unauthenticated server fixture preserved; Login fields empty, no sign-in attempted, no app data cleared or server/profile mutated. Screenshot contains no entered credentials or user-authored values.
+
+## Steps / actual result
+
+1. Settings → Servers → Add Server opened the Login screen.
+2. Screenshot shows a visible Back arrow at the upper-left. Accessibility lookup for `content-desc=Back` found no node; a sanitized Android UI hierarchy also did not list a clickable node in the Back area.
+3. Tried touch at approximately `(84,188)` through Android touch automation and ADB; subsequent attempts at `(70,160)` and `(75,188)` also left Login visible. No Login → Server Management Back event was logged for these inert touches.
+4. Pressed Android system Back; that did return to Server Management. The same candidate emitted exactly one attempt and one successful Login → Server Management event (`entry_point=system_back`) and a correlated start/terminal breadcrumb pair. This validates QA-BUG-0080's system Back path only.
+
+## Results and evidence
+
+- Case 524 system Back: functional, Analytics and diagnostics **PASS locally** for QA-BUG-0080; Firebase delivery waived.
+- Case 524 toolbar Back: functional **FAIL**, Analytics/diagnostics **FAIL** because the visible button did not activate; confirmed QA-BUG-0081. No Crashlytics report expected for ordinary navigation.
+- Screenshot: [`qa-bug-0081-login-toolbar-back-unresponsive.png`](qa-bug-0081-login-toolbar-back-unresponsive.png). System Back telemetry counts and sanitized outcome: this record; no correlation ID or private UI/log payload retained.
+- Firebase Analytics ingestion and Crashlytics delivery are not claimed.

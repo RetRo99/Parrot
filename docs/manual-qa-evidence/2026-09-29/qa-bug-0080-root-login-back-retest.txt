@@ -1,0 +1,19 @@
+# QA-BUG-0080 — Root Login system-Back telemetry retest
+
+- **Run time:** 2026-09-29, approximately 04:19 CEST.
+- **Device:** physical Samsung `RFCWC0SSVDM`, model SM-S921B, Android 16/API 36, One UI 8.0 (`ro.build.version.oneui=80500`), build `BP4A.251205.006.S921BXXSGDZG1`.
+- **Installed app:** `com.retro99.parrot` 0.4.5 (21), PID `15794`, debug APK SHA-256 `3cf489156467257fa315621daf9b6a74c62d29b312322c37bf48272e8b447a09`. Device `base.apk` hash not re-pulled for this candidate; local build SHA-256 recorded. Source candidate contains QA-BUG-0080 changes atop committed source `0350019899bcd2161690e3cb472203106aa23561` and QA-BUG-0079 fix `8e16676916c7ad06d82bc4bd93ecfd67f172cf80`.
+- **Host/build checks:** ComposeApp host suite 8 tests, 0 failures/errors/skips; Login UI host suite 37 tests, 0 failures/errors/skips; `:androidApp:assembleDebug` PASS.
+- **Fixture/privacy:** used existing profile and logged-out server card. No credentials entered, Retry/Delete not activated, no server/profile mutation or app-data clear. Candidate installed with `adb install -r`.
+
+## Reproduction and results
+
+1. Open Settings → Servers → Add Server without entering credentials.
+2. Press Android system Back.
+3. Login closes and the retained Server Management card is visible.
+
+- **Functional:** PASS.
+- **Analytics:** PASS locally: exactly one `navigation_back_attempted` and one `navigation_back` with `screen/source_screen=login`, `destination_screen=server_management`, `entry_point=system_back`, and started/succeeded outcomes.
+- **Diagnostics:** PASS locally: one `navigation_back` breadcrumb at `stage=navigation/outcome=started` and one at `stage=terminal/outcome=succeeded`; both shared a correlation ID. No non-fatal or fatal marker.
+- **Firebase:** Analytics ingestion waived; local DebugAnalyticsManager output only. Crashlytics delivery is not applicable to expected Back.
+- **Scope:** this verifies root Login system Back only. The visible toolbar Back did not activate and is tracked separately as QA-BUG-0081.
