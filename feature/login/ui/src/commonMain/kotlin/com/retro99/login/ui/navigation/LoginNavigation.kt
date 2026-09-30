@@ -93,6 +93,7 @@ fun LoginNavigation(
                         onSignInFailure = onLoginFailure,
                         existingServerId = existingServerId,
                         isRetryOrigin = isRetryOrigin,
+                        draft = viewModel.loginDraft,
                         onBackClick = {
                             if (state.backStack.size <= 1 && onBack != null) {
                                 onBack("toolbar_back")

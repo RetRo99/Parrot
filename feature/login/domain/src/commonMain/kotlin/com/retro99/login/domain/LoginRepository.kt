@@ -21,4 +21,13 @@ interface LoginRepository {
     ): CompletableResult
 
     suspend fun getServerConfig(serverId: String): ServerConfig?
+
+    /**
+     * Find out what is hosted at [serverUrl]. [preferredType] is checked first so a server that
+     * could match both keeps the type the user picked.
+     */
+    suspend fun probeServer(
+        serverUrl: String,
+        preferredType: ServerType,
+    ): ServerProbeResult = ServerProbeResult.Unreachable
 }

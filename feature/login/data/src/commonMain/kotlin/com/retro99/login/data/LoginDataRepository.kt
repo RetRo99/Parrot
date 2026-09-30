@@ -1,15 +1,17 @@
 package com.retro99.login.data
 
 import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.flatMap
 import com.retro99.base.result.AppError
 import com.retro99.base.result.CompletableResult
 import com.retro99.base.server.ServerType
 import com.retro99.login.data.oauth.StorytellerOAuthSessionLauncher
 import com.retro99.login.domain.LoginRepository
+import com.retro99.login.domain.ServerProbeResult
 import com.retro99.server.api.ServerAuthenticatorFactory
+import com.retro99.server.api.ServerProbeOutcome
 import com.retro99.server.api.ServerRegistry
+import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -94,6 +96,29 @@ internal class LoginDataRepository(
 
     override suspend fun getServerConfig(serverId: String) = serverRegistry.getServer(serverId)
 
+    override suspend fun probeServer(
+        serverUrl: String,
+        preferredType: ServerType,
+    ): ServerProbeResult {
+        val candidates = listOf(preferredType) +
+            PROBED_SERVER_TYPES.filter { serverType -> serverType != preferredType }
+        var sawResponse = false
+        for (serverType in candidates) {
+            val outcome = withTimeoutOrNull(PROBE_TIMEOUT_MS) {
+                authenticatorFactory.create(serverType).probe(serverUrl)
+            } ?: ServerProbeOutcome.Unreachable
+            when (outcome) {
+                is ServerProbeOutcome.Match -> return ServerProbeResult.Found(
+                    serverType = serverType,
+                    supportsBrowserSignIn = outcome.supportsBrowserSignIn,
+                )
+                ServerProbeOutcome.Mismatch -> sawResponse = true
+                ServerProbeOutcome.Unreachable -> Unit
+            }
+        }
+        return if (sawResponse) ServerProbeResult.NotSupported else ServerProbeResult.Unreachable
+    }
+
     private suspend fun validateExistingServer(
         serverId: String?,
         serverType: ServerType,
@@ -110,5 +135,10 @@ internal class LoginDataRepository(
         } else {
             AppError.AuthError("This server has changed. Return and try again.")
         }
+    }
+
+    private companion object {
+        val PROBED_SERVER_TYPES = listOf(ServerType.Storyteller, ServerType.Audiobookshelf)
+        const val PROBE_TIMEOUT_MS = 8_000L
     }
 }

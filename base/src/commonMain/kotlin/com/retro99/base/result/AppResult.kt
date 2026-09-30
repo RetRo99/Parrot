@@ -51,6 +51,8 @@ sealed class AppError(open val message: String?) {
     data class AuthError(
         override val message: String?,
         val isCancellation: Boolean = false,
+        /** The server rejected the submitted username or password. */
+        val isInvalidCredentials: Boolean = false,
     ) : AppError(message)
 
     /**

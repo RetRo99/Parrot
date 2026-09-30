@@ -10,6 +10,7 @@ sealed interface LoginIntent : BaseIntent {
     data object OnServerTypePickerOpened : LoginIntent
     data class OnServerTypePickerDismissed(val reason: ServerTypePickerDismissalReason) : LoginIntent
     data class OnServerTypeSelected(val serverType: ServerType) : LoginIntent
+    data object OnUrlFocusLost : LoginIntent
     data object OnUrlHelpOpenRequested : LoginIntent
     data object OnUrlHelpOpened : LoginIntent
     data class OnUrlHelpDismissed(val reason: UrlHelpDismissalReason) : LoginIntent

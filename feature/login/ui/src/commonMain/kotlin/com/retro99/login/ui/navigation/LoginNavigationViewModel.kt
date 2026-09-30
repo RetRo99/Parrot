@@ -7,6 +7,7 @@ import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.base.buildconfig.BuildConfig
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.login.domain.usecase.SkipLoginUseCase
+import com.retro99.login.ui.login.LoginDraft
 import kotlinx.coroutines.CancellationException
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
@@ -23,6 +24,9 @@ class LoginNavigationViewModel(
 ) : BaseViewModel<LoginNavigationState, LoginNavigationIntent>(
     initialLoginNavigationState(startAtLogin, buildConfig),
 ) {
+    /** Lives as long as the login flow, so the form survives Login being popped and reopened. */
+    val loginDraft = LoginDraft()
+
     private var lastVisibleDestination: LoginDestination? = null
     private var compactWelcomeLayoutBreadcrumbLogged = false
 

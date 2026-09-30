@@ -10,8 +10,12 @@ import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.base.result.AppError
 import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
+import com.retro99.login.domain.ServerProbeResult
 import com.retro99.login.domain.usecase.LoginUseCase
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -33,9 +37,18 @@ class LoginViewModel(
     @InjectedParam private val onBackClick: () -> Unit,
     @InjectedParam private val existingServerId: String? = null,
     @InjectedParam isRetryOrigin: Boolean = false,
-) : BaseViewModel<LoginViewState, LoginIntent>(LoginViewState()) {
+    @InjectedParam private val draft: LoginDraft = LoginDraft(),
+) : BaseViewModel<LoginViewState, LoginIntent>(
+    LoginViewState(
+        selectedServerType = if (existingServerId == null) {
+            draft.serverType
+        } else {
+            ServerType.Storyteller
+        },
+    ),
+) {
 
-    val urlState = TextFieldState(initialText = if (existingServerId == null) "https://" else "")
+    val urlState = TextFieldState()
     val usernameState = TextFieldState()
     val passwordState = TextFieldState()
     private var lastFailedLogin: Pair<String, String>? = null
@@ -47,9 +60,18 @@ class LoginViewModel(
     private val validationTelemetry = LoginValidationTelemetry(analytics)
     private var hasAttemptedCredentialsSubmit = false
     private var isExistingServerPrefillPending = existingServerId != null
+    private var addressProbeJob: Job? = null
+    private var lastProbeKey: Pair<String, ServerType>? = null
+    private var lastSeenUrl = ""
+    private var lastSeenCredentials: Pair<String, String> = "" to ""
 
     init {
+        if (existingServerId == null) {
+            urlState.edit { replace(0, length, draft.address) }
+            usernameState.edit { replace(0, length, draft.username) }
+        }
         observeTextFieldChanges()
+        observeAddressForProbe()
         if (existingServerId == null) {
             updateFormState(
                 url = urlState.text.toString(),
@@ -142,9 +164,120 @@ class LoginViewModel(
             )
         }.onEach { (url, username, password) ->
             if (!isExistingServerPrefillPending) {
+                onFormTextChanged(url)
                 updateFormState(url, username, password)
             }
         }.launchIn(viewModelScope)
+    }
+
+    private fun onFormTextChanged(url: String) {
+        if (url != lastSeenUrl) {
+            lastSeenUrl = url
+            resetAddressCheck()
+        }
+        val credentials = usernameState.text.toString() to passwordState.text.toString()
+        if (credentials != lastSeenCredentials) {
+            lastSeenCredentials = credentials
+            if (viewState.value.credentialsRejected) {
+                updateState { currentState -> currentState.copy(credentialsRejected = false) }
+            }
+        }
+    }
+
+    private fun resetAddressCheck() {
+        addressProbeJob?.cancel()
+        lastProbeKey = null
+        updateState { currentState ->
+            if (currentState.addressCheck == AddressCheck.Idle &&
+                currentState.unreachableOnSignIn == null
+            ) {
+                currentState
+            } else {
+                currentState.copy(
+                    addressCheck = AddressCheck.Idle,
+                    unreachableOnSignIn = null,
+                )
+            }
+        }
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun observeAddressForProbe() {
+        snapshotFlow { urlState.text.toString() }
+            .debounce(ADDRESS_CHECK_DEBOUNCE_MS)
+            .onEach { probeAddress() }
+            .launchIn(viewModelScope)
+    }
+
+    private fun probeAddress() {
+        if (isExistingServerPrefillPending) return
+        val url = ServerAddress.normalize(urlState.text.toString())
+        if (url.isEmpty() || !ServerAddress.isValid(url)) return
+        val preferredType = viewState.value.selectedServerType
+        val key = url to preferredType
+        if (key == lastProbeKey) return
+        lastProbeKey = key
+        addressProbeJob?.cancel()
+        updateState { currentState -> currentState.copy(addressCheck = AddressCheck.Checking) }
+        addressProbeJob = viewModelScope.launch {
+            val result = try {
+                loginUseCase.probeServer(url, preferredType)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (failure: Exception) {
+                ServerProbeResult.Unreachable
+            }
+            applyProbeResult(url, preferredType, result)
+        }
+    }
+
+    private fun applyProbeResult(
+        url: String,
+        preferredType: ServerType,
+        result: ServerProbeResult,
+    ) {
+        val host = ServerAddress.displayHost(url)
+        val check = when (result) {
+            is ServerProbeResult.Found -> AddressCheck.Found(
+                serverType = result.serverType,
+                host = host,
+                switched = result.serverType != preferredType,
+                supportsBrowserSignIn = result.supportsBrowserSignIn,
+            )
+            ServerProbeResult.Unreachable -> AddressCheck.Unreachable(host)
+            ServerProbeResult.NotSupported -> AddressCheck.NotSupported
+        }
+        val foundType = (result as? ServerProbeResult.Found)?.serverType
+        if (foundType != null && foundType != preferredType) {
+            lastProbeKey = url to foundType
+        }
+        updateState { currentState ->
+            currentState.copy(
+                addressCheck = check,
+                selectedServerType = foundType ?: currentState.selectedServerType,
+            )
+        }
+        updateFormState(
+            url = urlState.text.toString(),
+            username = usernameState.text.toString(),
+            password = passwordState.text.toString(),
+        )
+        analytics.logBreadcrumb(
+            DiagnosticContext(
+                screen = "login",
+                action = "check_address",
+                operation = "server_address_check",
+                stage = "terminal",
+                outcome = if (check is AddressCheck.Found) "succeeded" else "failed",
+                reasonCode = when (check) {
+                    is AddressCheck.Found -> if (check.switched) "server_type_switched" else null
+                    is AddressCheck.Unreachable -> "server_unreachable"
+                    AddressCheck.NotSupported -> "server_not_supported"
+                    else -> null
+                },
+                serverType = (foundType ?: preferredType).identifier,
+            ),
+        )
     }
 
     private fun updateFormState(
@@ -152,6 +285,11 @@ class LoginViewModel(
         username: String,
         password: String,
     ) {
+        if (existingServerId == null) {
+            draft.address = url
+            draft.username = username
+            draft.serverType = viewState.value.selectedServerType
+        }
         val urlError = validateUrl(url, showRequiredError = hasAttemptedCredentialsSubmit)
         val usernameError = if (hasAttemptedCredentialsSubmit && username.isBlank()) {
             LoginFieldError.Required
@@ -165,7 +303,7 @@ class LoginViewModel(
         }
         validationTelemetry.onUrlValidationChanged(
             error = urlError,
-            hasValidServerUrl = isValidServerUrl(url),
+            hasValidServerUrl = ServerAddress.isValid(ServerAddress.normalize(url)),
             serverType = viewState.value.selectedServerType,
         )
         updateState { currentState ->
@@ -178,7 +316,9 @@ class LoginViewModel(
                 usernameError = usernameError,
                 passwordError = passwordError,
                 isSignInEnabled = allFieldsNotEmpty && noErrors && !currentState.isLoading,
-                isOAuthSignInEnabled = currentState.isOAuthVisible && isValidServerUrl(url) && !currentState.isLoading,
+                isOAuthSignInEnabled = currentState.isOAuthVisible &&
+                    ServerAddress.isValid(ServerAddress.normalize(url)) &&
+                    !currentState.isLoading,
             )
         }
     }
@@ -191,6 +331,7 @@ class LoginViewModel(
             LoginIntent.OnServerTypePickerOpened -> beginServerTypePickerAttempt()
             is LoginIntent.OnServerTypePickerDismissed -> cancelServerTypePicker(intent.reason.reasonCode)
             is LoginIntent.OnServerTypeSelected -> handleServerTypeSelected(intent.serverType)
+            LoginIntent.OnUrlFocusLost -> probeAddress()
             LoginIntent.OnUrlHelpOpenRequested -> beginUrlHelpAttempt()
             LoginIntent.OnUrlHelpOpened -> markUrlHelpOpened()
             is LoginIntent.OnUrlHelpDismissed -> dismissUrlHelp(intent.reason.reasonCode)
@@ -233,6 +374,7 @@ class LoginViewModel(
             username = usernameState.text.toString(),
             password = passwordState.text.toString(),
         )
+        probeAddress()
         analytics.logEvent(
             AuthAnalyticsEvent.ServerTypeSelected(
                 previousServerType = previousServerType.identifier,
@@ -343,7 +485,7 @@ class LoginViewModel(
 
     private fun handleSignInClicked() {
         if (viewState.value.isLoading || viewState.value.serverConfigurationUnavailable) return
-        val url = urlState.text.toString().trim()
+        val url = ServerAddress.normalize(urlState.text.toString())
         val serverType = viewState.value.selectedServerType
         val username = usernameState.text.toString()
         val password = passwordState.text.toString()
@@ -372,6 +514,8 @@ class LoginViewModel(
                 isSignInEnabled = false,
                 isOAuthSignInEnabled = false,
                 loginError = null,
+                credentialsRejected = false,
+                unreachableOnSignIn = null,
             )
         }
 
@@ -387,6 +531,7 @@ class LoginViewModel(
             }.fold(
                 success = {
                     completeLogin(attempt)
+                    draft.clear()
                     onSignInSuccess()
                 },
                 failure = { error ->
@@ -401,7 +546,7 @@ class LoginViewModel(
                         correlationId = attempt.correlationId,
                         onFailure = onSignInFailure,
                     )
-                    updateAfterLoginFailure(error.message)
+                    updateAfterLoginFailure(error)
                 },
             )
         }
@@ -410,7 +555,7 @@ class LoginViewModel(
     private fun handleOAuthSignInClicked() {
         if (viewState.value.isLoading || viewState.value.serverConfigurationUnavailable) return
         if (!loginSubmissionGate.tryStart()) return
-        val url = urlState.text.toString().trim()
+        val url = ServerAddress.normalize(urlState.text.toString())
         val serverType = viewState.value.selectedServerType
         val attempt = beginLoginAttempt(serverType, authMethod = "oauth")
 
@@ -448,7 +593,7 @@ class LoginViewModel(
                         correlationId = attempt.correlationId,
                         onFailure = onSignInFailure,
                     )
-                    updateAfterLoginFailure(error.message)
+                    updateAfterLoginFailure(error)
                 },
             )
         }
@@ -644,12 +789,26 @@ class LoginViewModel(
         is AppError.NotFoundError -> "not_found"
     }
 
-    private fun updateAfterLoginFailure(errorMessage: String?) {
-        updateState {
-            it.copy(
+    private fun updateAfterLoginFailure(error: AppError) {
+        val isInvalidCredentials = (error as? AppError.AuthError)?.isInvalidCredentials == true
+        val isUnreachable = error is AppError.NetworkError &&
+            (error.isConnectivity || error.isTimeout)
+        val host = ServerAddress.displayHost(ServerAddress.normalize(urlState.text.toString()))
+        updateState { currentState ->
+            val nextFocusId = (currentState.focusRequest?.id ?: 0) + 1
+            currentState.copy(
                 isLoading = false,
                 isOAuthInProgress = false,
-                loginError = errorMessage,
+                loginError = if (isInvalidCredentials || isUnreachable) null else error.message,
+                credentialsRejected = isInvalidCredentials,
+                unreachableOnSignIn = if (isUnreachable) host else null,
+                focusRequest = when {
+                    isInvalidCredentials ->
+                        LoginFocusRequest(LoginField.Password, nextFocusId)
+                    isUnreachable && existingServerId == null ->
+                        LoginFocusRequest(LoginField.Address, nextFocusId)
+                    else -> currentState.focusRequest
+                },
             )
         }
         updateFormState(
@@ -660,35 +819,14 @@ class LoginViewModel(
     }
 
     private fun validateUrl(url: String, showRequiredError: Boolean): LoginFieldError? {
-        val trimmedUrl = url.trim()
-        if (trimmedUrl.isBlank() || trimmedUrl == "https://" || trimmedUrl == "http://") {
+        val normalizedUrl = ServerAddress.normalize(url)
+        if (normalizedUrl.isEmpty()) {
             return if (showRequiredError) LoginFieldError.Required else null
         }
-        return if (isValidServerUrl(trimmedUrl)) null else LoginFieldError.InvalidUrl
+        return if (ServerAddress.isValid(normalizedUrl)) null else LoginFieldError.InvalidUrl
     }
 
-    private fun isValidServerUrl(url: String): Boolean {
-        val trimmedUrl = url.trim()
-        val schemeSeparator = trimmedUrl.indexOf("://")
-        if (schemeSeparator <= 0) return false
-
-        val scheme = trimmedUrl.substring(0, schemeSeparator).lowercase()
-        if (scheme != "http" && scheme != "https") return false
-
-        val authority = trimmedUrl
-            .substring(schemeSeparator + 3)
-            .substringBefore('/')
-            .substringBefore('?')
-            .substringBefore('#')
-
-        if (authority.isBlank()) return false
-
-        val host = when {
-            authority.startsWith('[') -> authority.substringAfter('[').substringBefore(']')
-            authority.count { it == ':' } == 1 -> authority.substringBefore(':')
-            else -> authority
-        }
-
-        return host.isNotBlank()
+    private companion object {
+        const val ADDRESS_CHECK_DEBOUNCE_MS = 600L
     }
 }

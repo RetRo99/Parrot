@@ -6,9 +6,11 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
+import com.retro99.network.implementation.NetworkFailureClassification
 import com.retro99.network.implementation.classifyNetworkFailure
 import com.retro99.server.api.ServerAuthenticator
 import com.retro99.server.api.ServerCredentials
+import com.retro99.server.api.ServerProbeOutcome
 import com.retro99.server.api.ServerType
 import com.retro99.server.api.ServerValidationResult
 import com.retro99.server.storyteller.model.StorytellerAppTokenRequest
@@ -19,7 +21,9 @@ import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.Parameters
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
@@ -71,7 +75,7 @@ class StorytellerAuthenticator(
                     )
                 )
             } else {
-                Err(AppError.AuthError("Login failed: ${response.status}"))
+                Err(loginFailure(response.status))
             }
         } catch (e: CancellationException) {
             throw e
@@ -175,10 +179,40 @@ class StorytellerAuthenticator(
         }
     }
 
+    override suspend fun probe(baseUrl: String): ServerProbeOutcome {
+        return try {
+            // Unauthenticated NextAuth endpoint; always lists a "credentials" provider.
+            val response = httpClient.get("${baseUrl.trimEnd('/')}/api/v2/auth/providers")
+            val body = if (response.status.isSuccess()) response.bodyAsText() else ""
+            if (body.contains("\"credentials\"")) {
+                ServerProbeOutcome.Match(supportsBrowserSignIn = body.hasOAuthProvider())
+            } else {
+                ServerProbeOutcome.Mismatch
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (classifyNetworkFailure(e).isUnreachable()) {
+                ServerProbeOutcome.Unreachable
+            } else {
+                ServerProbeOutcome.Mismatch
+            }
+        }
+    }
+
+    private fun loginFailure(status: HttpStatusCode): AppError.AuthError {
+        return if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden) {
+            AppError.AuthError("Invalid credentials", isInvalidCredentials = true)
+        } else {
+            AppError.AuthError("Login failed: $status")
+        }
+    }
+
     private fun mapException(e: Exception): AppError {
         val networkFailure = classifyNetworkFailure(e)
         return when {
-            e.message?.contains("401") == true -> AppError.AuthError("Invalid credentials")
+            e.message?.contains("401") == true ->
+                AppError.AuthError("Invalid credentials", isInvalidCredentials = true)
             networkFailure.isExpectedFailure -> AppError.NetworkError(
                 throwable = e,
                 isConnectivity = networkFailure.isConnectivity,
@@ -224,3 +258,12 @@ class StorytellerAuthenticator(
         }.getOrNull()
     }
 }
+
+private fun NetworkFailureClassification.isUnreachable(): Boolean = isConnectivity || isTimeout
+
+/** True when the NextAuth providers JSON lists an OAuth/OIDC provider next to credentials. */
+private fun String.hasOAuthProvider(): Boolean = runCatching {
+    Json.parseToJsonElement(this).jsonObject.values.any { provider ->
+        provider.jsonObject["type"]?.jsonPrimitive?.contentOrNull in setOf("oauth", "oidc")
+    }
+}.getOrDefault(false)

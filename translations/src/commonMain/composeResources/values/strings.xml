@@ -19,7 +19,7 @@
     <string name="login_url_label">Server URL</string>
     <string name="login_username_label">Username</string>
     <string name="login_password_label">Password</string>
-    <string name="login_sign_in_button">Sign In</string>
+    <string name="login_sign_in_button">Sign in</string>
     <string name="login_oauth_sign_in_button">Continue in browser</string>
     <string name="login_oauth_waiting_button">Waiting for browser</string>
     <string name="login_oauth_waiting_message">Complete sign-in in the browser. Returning here without approving will cancel it.</string>
@@ -1106,4 +1106,29 @@
     <string name="server_detail_save" tools:ignore="MissingTranslation">Save</string>
     <string name="server_detail_remove_confirm" tools:ignore="MissingTranslation">Remove</string>
     <string name="servers_open_sync_backup" tools:ignore="MissingTranslation">Open Sync &amp; backup</string>
+
+    <string name="login_connect_title" tools:ignore="MissingTranslation">Connect a server</string>
+    <string name="login_connect_subtitle" tools:ignore="MissingTranslation">Sign in to get your books and sync progress.</string>
+    <string name="login_type_storyteller_description" tools:ignore="MissingTranslation">Ebooks with synced read-aloud</string>
+    <string name="login_type_audiobookshelf_description" tools:ignore="MissingTranslation">Audiobooks and ebooks</string>
+    <string name="login_address_label" tools:ignore="MissingTranslation">Server address</string>
+    <string name="login_address_placeholder" tools:ignore="MissingTranslation">books.example.com</string>
+    <string name="login_address_helper" tools:ignore="MissingTranslation">The address you open in a browser. https:// is added for you.</string>
+    <string name="login_address_help_link" tools:ignore="MissingTranslation">Where do I find this?</string>
+    <string name="login_address_checking" tools:ignore="MissingTranslation">Checking address…</string>
+    <string name="login_address_found" tools:ignore="MissingTranslation">✓ Found %1$s at %2$s</string>
+    <string name="login_address_found_switched" tools:ignore="MissingTranslation">✓ Found %1$s — switched type</string>
+    <string name="login_address_unreachable" tools:ignore="MissingTranslation">Can’t reach %1$s. Check the address, or whether you need to be on your home Wi-Fi.</string>
+    <string name="login_address_not_supported" tools:ignore="MissingTranslation">This doesn’t look like a Storyteller or Audiobookshelf server.</string>
+    <string name="login_error_invalid_credentials" tools:ignore="MissingTranslation">Username or password is incorrect.</string>
+    <string name="login_signing_in" tools:ignore="MissingTranslation">Signing in…</string>
+    <string name="login_or_divider" tools:ignore="MissingTranslation">or</string>
+    <string name="login_browser_sign_in_button" tools:ignore="MissingTranslation">Sign in with browser</string>
+    <string name="login_browser_sign_in_caption" tools:ignore="MissingTranslation">For single sign-on (SSO) set up on your server</string>
+    <string name="login_help_title" tools:ignore="MissingTranslation">Finding your server address</string>
+    <string name="login_help_step_open" tools:ignore="MissingTranslation">Open %1$s in a browser where you normally use it.</string>
+    <string name="login_help_step_copy" tools:ignore="MissingTranslation">Copy what’s in the address bar — for example %1$s or %2$s.</string>
+    <string name="login_help_step_paste" tools:ignore="MissingTranslation">Paste it here. You can leave out %1$s.</string>
+    <string name="login_help_note" tools:ignore="MissingTranslation">Only works at home? Addresses like 192.168.… are reachable only on the same Wi-Fi.</string>
+    <string name="login_help_got_it" tools:ignore="MissingTranslation">Got it</string>
 </resources>
