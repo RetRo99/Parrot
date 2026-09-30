@@ -37,6 +37,7 @@ kotlin {
             implementation(libs.navigation3.viewmodel)
             implementation(libs.markdown)
             implementation(libs.filekit.compose)
+            implementation(libs.navigationevent.compose)
             implementation(projects.base)
             implementation(projects.baseUi)
             implementation(projects.translations)

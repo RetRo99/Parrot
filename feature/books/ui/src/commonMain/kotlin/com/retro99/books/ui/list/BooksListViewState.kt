@@ -14,7 +14,8 @@ import com.retro99.books.ui.model.SortDirection
 data class BooksListViewState(
     val books: List<BookUiModel> = emptyList(),
     val searchQuery: String = "",
-    val isSearchVisible: Boolean = false,
+    val isSearchActive: Boolean = false,
+    val recentSearches: List<String> = emptyList(),
     val favoriteBookUuids: Set<String> = emptySet(),
     val bookProgressInfo: Map<String, BookProgressInfoUiModel> = emptyMap(),
     val filterState: BookFilterState = BookFilterState(),

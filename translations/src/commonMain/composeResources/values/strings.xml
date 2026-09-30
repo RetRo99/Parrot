@@ -1053,4 +1053,17 @@
     <string name="reader_voices_delete_message_no_size" tools:ignore="MissingTranslation">This removes all %1$d %2$s voices.</string>
     <string name="reader_voices_delete_using" tools:ignore="MissingTranslation">You’re using %1$s, so reading switches to your phone’s voice.</string>
     <string name="reader_voices_delete_again" tools:ignore="MissingTranslation">You can download the pack again later.</string>
+    <string name="books_dock_search" tools:ignore="MissingTranslation">Search your library</string>
+    <string name="books_dock_add" tools:ignore="MissingTranslation">Add</string>
+    <string name="books_dock_add_description" tools:ignore="MissingTranslation">Add books</string>
+    <string name="books_dock_close_search" tools:ignore="MissingTranslation">Close search</string>
+    <string name="books_search_recent_title" tools:ignore="MissingTranslation">RECENT SEARCHES</string>
+    <string name="books_search_recent_clear" tools:ignore="MissingTranslation">Clear</string>
+    <string name="books_search_recent_item" tools:ignore="MissingTranslation">Recent search: %1$s</string>
+    <string name="books_search_recent_fill" tools:ignore="MissingTranslation">Put %1$s in the search field</string>
+    <string name="books_search_hint" tools:ignore="MissingTranslation">Searches titles, authors, series and tags.</string>
+    <string name="books_search_match_count" tools:ignore="MissingTranslation">%1$d books match “%2$s”</string>
+    <string name="books_search_match_count_one" tools:ignore="MissingTranslation">1 book matches “%1$s”</string>
+    <string name="books_search_none_title" tools:ignore="MissingTranslation">No books match “%1$s”</string>
+    <string name="books_search_none_body" tools:ignore="MissingTranslation">Search looks in titles, authors, series and tags. Filters you set still apply.</string>
 </resources>

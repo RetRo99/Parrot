@@ -10,7 +10,13 @@ import io.github.vinceglb.filekit.core.PlatformFile
 
 sealed interface BooksListIntent : BaseIntent {
     data object OnRefresh : BooksListIntent
-    data object OnSearchToggled : BooksListIntent
+    data object OnSearchActivated : BooksListIntent
+    data object OnSearchKeyboardDismissed : BooksListIntent
+    data object OnSearchClosed : BooksListIntent
+    data class OnSearchQueryChanged(val query: String) : BooksListIntent
+    data class OnSearchSubmitted(val query: String) : BooksListIntent
+    data class OnRecentSearchSelected(val query: String, val run: Boolean) : BooksListIntent
+    data object OnRecentSearchesCleared : BooksListIntent
     data class OnBookClicked(val book: BookUiModel) : BooksListIntent
     data class OnFavoriteClicked(val bookUuid: String) : BooksListIntent
     data class OnImportBook(val file: PlatformFile) : BooksListIntent

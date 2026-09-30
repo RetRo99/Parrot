@@ -93,6 +93,7 @@ fun BookItemCard(
     progressInfo: BookProgressInfoUiModel? = null,
     showServerBadge: Boolean = true,
     showDivider: Boolean = false,
+    highlightQuery: String = "",
     headerContent: @Composable (() -> Unit)? = null,
     subtitleContent: @Composable (() -> Unit)? = null,
 ) {
@@ -130,7 +131,7 @@ fun BookItemCard(
                 headerContent?.invoke()
 
                 Text(
-                    text = book.title,
+                    text = highlightedText(book.title, highlightQuery),
                     style = type.bookTitle,
                     color = colors.ink,
                     maxLines = 1,
@@ -141,6 +142,7 @@ fun BookItemCard(
                     book = book,
                     isCached = progressInfo?.hasAnyCached == true,
                     showServerBadge = showServerBadge,
+                    highlightQuery = highlightQuery,
                 )
 
                 subtitleContent?.invoke()
@@ -179,6 +181,7 @@ private fun BookMetaRow(
     isCached: Boolean,
     showServerBadge: Boolean,
     modifier: Modifier = Modifier,
+    highlightQuery: String = "",
 ) {
     val colors = Ember.colors
     val type = Ember.type
@@ -190,7 +193,7 @@ private fun BookMetaRow(
     ) {
         if (book.authors.isNotEmpty()) {
             Text(
-                text = book.authors.joinToString(", "),
+                text = highlightedText(book.authors.joinToString(", "), highlightQuery),
                 style = type.meta,
                 color = colors.ink2,
                 maxLines = 1,

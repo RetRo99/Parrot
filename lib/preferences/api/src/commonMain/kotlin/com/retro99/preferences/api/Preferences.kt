@@ -69,6 +69,7 @@ sealed class PreferencesKey(val name: String) {
     data object ServerCredentials : PreferencesKey("ServerCredentials")
     data object SkippedLogin : PreferencesKey("SkippedLogin")
     data object BookListFilterSort : PreferencesKey("BookListFilterSort")
+    data object RecentLibrarySearches : PreferencesKey("RecentLibrarySearches")
     data object StatisticsRange : PreferencesKey("StatisticsRange")
     data object ThemeMode : PreferencesKey("ThemeMode")
 

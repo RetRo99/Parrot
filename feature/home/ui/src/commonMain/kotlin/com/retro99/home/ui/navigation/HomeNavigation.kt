@@ -246,7 +246,10 @@ fun HomeNavigation(
         lastVisibleDestination = currentDestination
         lastVisibleTab = navigationState.currentTab
     }
+    var isLibrarySearchActive by remember { mutableStateOf(false) }
     val showBottomBar = (currentDestination as? BottomBarDestination)?.showBottomBar != false
+    // Library search takes the whole screen, so only the tab bar goes away; the mini-player stays.
+    val showNavigationBar = showBottomBar && !isLibrarySearchActive
     val isInReader = currentDestination is HomeDestination.Reader
     val currentlyReading = uiState.currentlyReading
     val nowPlayingInfo = uiState.nowPlayingInfo
@@ -304,17 +307,19 @@ fun HomeNavigation(
                                 }
                             },
                         )
-                        HomeBottomNavigationBar(
-                            currentTab = navigationState.currentTab,
-                            onTabSelected = { tab ->
-                                intentDispatcher(
-                                    HomeNavigationIntent.SwitchTab(
-                                        sourceTab = navigationState.currentTab,
-                                        tab = tab,
-                                    ),
-                                )
-                            },
-                        )
+                        if (showNavigationBar) {
+                            HomeBottomNavigationBar(
+                                currentTab = navigationState.currentTab,
+                                onTabSelected = { tab ->
+                                    intentDispatcher(
+                                        HomeNavigationIntent.SwitchTab(
+                                            sourceTab = navigationState.currentTab,
+                                            tab = tab,
+                                        ),
+                                    )
+                                },
+                            )
+                        }
                     }
                 }
             },
@@ -326,6 +331,7 @@ fun HomeNavigation(
                 entryProvider = entryProvider {
                     entry<HomeDestination.BooksList> {
                         BooksListScreen(
+                            onSearchActiveChanged = { active -> isLibrarySearchActive = active },
                             onNavigateToBookDetail = { book ->
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(

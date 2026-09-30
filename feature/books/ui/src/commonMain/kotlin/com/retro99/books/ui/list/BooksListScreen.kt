@@ -6,6 +6,25 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.plus
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -40,12 +59,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.outlined.SwapVert
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -85,11 +101,11 @@ import io.github.vinceglb.filekit.core.PickerType
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.compose.ParrotEmptyState
-import com.retro99.base.ui.compose.TooltipIconButton
 import com.retro99.books.ui.components.BookFilterBottomSheet
 import com.retro99.books.ui.components.BookGridCard
 import com.retro99.books.ui.components.BookItemCard
 import com.retro99.books.ui.components.BookSearchBar
+import com.retro99.books.ui.components.LibraryDock
 import com.retro99.books.ui.components.ShelfHeader
 import com.retro99.books.ui.model.BookListViewMode
 import com.retro99.books.ui.model.BookSortConfig
@@ -101,8 +117,6 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import resources.translations.books_action_filter
-import resources.translations.books_action_import
-import resources.translations.books_action_search
 import resources.translations.books_action_sort
 import resources.translations.books_action_view
 import resources.translations.books_empty_filtered_subtitle
@@ -141,11 +155,18 @@ import resources.translations.cloud_backup_confirm
 import resources.translations.general_cancel
 import resources.translations.general_close
 
+/** Bottom padding that keeps the last row clear of the floating dock. */
+private val DockContentPadding = 96.dp
+
+private const val SEARCH_DEBOUNCE_MS = 150L
+private const val EINK_SEARCH_DEBOUNCE_MS = 500L
+
 @Composable
 fun BooksListScreen(
     onNavigateToBookDetail: (book: BookUiModel) -> Unit,
     modifier: Modifier = Modifier,
     headerContent: @Composable ((books: List<BookUiModel>) -> Unit)? = null,
+    onSearchActiveChanged: (Boolean) -> Unit = {},
     viewModel: BooksListViewModel = koinViewModel { parametersOf(onNavigateToBookDetail) },
 ) {
     BaseScreen(
@@ -158,6 +179,7 @@ fun BooksListScreen(
             intentDispatcher = intentDispatcher,
             modifier = modifier,
             headerContent = headerContent,
+            onSearchActiveChanged = onSearchActiveChanged,
         )
     }
 }
@@ -170,6 +192,7 @@ private fun BooksListScreenContent(
     intentDispatcher: IntentDispatcher<BooksListIntent>,
     modifier: Modifier = Modifier,
     headerContent: @Composable ((books: List<BookUiModel>) -> Unit)? = null,
+    onSearchActiveChanged: (Boolean) -> Unit = {},
 ) {
     val filePickerLauncher = rememberFilePickerLauncher(
         type = PickerType.File(extensions = listOf("epub")),
@@ -181,6 +204,56 @@ private fun BooksListScreenContent(
     }
 
     val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
+    val searchListState = rememberLazyListState()
+    val searchFocusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+    val isEink = Ember.style.isEink
+    val isSearchActive = viewState.isSearchActive
+
+    val closeSearch: () -> Unit = {
+        focusManager.clearFocus()
+        intentDispatcher(BooksListIntent.OnSearchClosed)
+    }
+
+    LaunchedEffect(isSearchActive) { onSearchActiveChanged(isSearchActive) }
+    DisposableEffect(Unit) { onDispose { onSearchActiveChanged(false) } }
+
+    // The keyboard is out of the way once the user scrolls the results.
+    LaunchedEffect(searchListState) {
+        snapshotFlow { searchListState.isScrollInProgress }
+            .filter { scrolling -> scrolling }
+            .collect {
+                focusManager.clearFocus()
+                intentDispatcher(BooksListIntent.OnSearchKeyboardDismissed)
+            }
+    }
+
+    // Live results; e-ink waits longer between updates to limit screen refreshes.
+    val currentSearchQuery by rememberUpdatedState(viewState.searchQuery)
+    @OptIn(FlowPreview::class)
+    LaunchedEffect(searchFieldState, isEink) {
+        val debounceMillis = if (isEink) EINK_SEARCH_DEBOUNCE_MS else SEARCH_DEBOUNCE_MS
+        snapshotFlow { searchFieldState.text.toString() }
+            .debounce { text -> if (text.isBlank()) 0L else debounceMillis }
+            .distinctUntilChanged()
+            .collect { text ->
+                // Re-collecting after returning from a book must not reset the scroll position.
+                if (text != currentSearchQuery) {
+                    searchListState.requestScrollToItem(0)
+                    intentDispatcher(BooksListIntent.OnSearchQueryChanged(text))
+                }
+            }
+    }
+
+    // Back while the keyboard is showing only hides the keyboard (the system handles that);
+    // with it hidden, back closes search.
+    if (isSearchActive) {
+        NavigationBackHandler(
+            state = rememberNavigationEventState(NavigationEventInfo.None),
+            onBackCompleted = closeSearch,
+        )
+    }
     var showFilterSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewState.sortConfig, viewState.filterState.activeQuickFilters) {
@@ -331,11 +404,7 @@ private fun BooksListScreenContent(
     val colors = Ember.colors
     val topContent: @Composable () -> Unit = {
         Column(modifier = Modifier.fillMaxWidth()) {
-            LibraryHeader(
-                isSearchVisible = viewState.isSearchVisible,
-                onSearchToggled = { intentDispatcher(BooksListIntent.OnSearchToggled) },
-                onImportClicked = { filePickerLauncher.launch() },
-            )
+            LibraryHeader()
 
             headerContent?.invoke(viewState.books)
 
@@ -354,20 +423,6 @@ private fun BooksListScreenContent(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(StringRes.cloud_backup_backup_all))
                 }
-            }
-
-            AnimatedVisibility(
-                visible = viewState.isSearchVisible,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut(),
-            ) {
-                BookSearchBar(
-                    searchFieldState = searchFieldState,
-                    isVisible = viewState.isSearchVisible,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 8.dp),
-                )
             }
 
             ShelfHeader(
@@ -389,136 +444,158 @@ private fun BooksListScreenContent(
     Scaffold(
         modifier = modifier,
         containerColor = colors.bg,
+        // Bottom insets belong to the dock, which rides above the keyboard while searching.
+        contentWindowInsets = WindowInsets.safeDrawing.only(
+            WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
+        ),
     ) { paddingValues ->
-        PullToRefreshBox(
-            isRefreshing = viewState.isRefreshing,
-            onRefresh = { intentDispatcher(BooksListIntent.OnRefresh) },
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
         ) {
-            if (viewState.filteredBooks.isEmpty() && !viewState.isLoading) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    topContent()
-                    EmptyBooksState(
-                        hasActiveFilters = viewState.filterState.hasActiveFilters ||
-                            viewState.searchQuery.isNotBlank(),
-                        onImportBook = { filePickerLauncher.launch() },
-                        onResetFilters = {
-                            intentDispatcher(BooksListIntent.OnClearAllFilters)
-                            searchFieldState.edit { delete(0, length) }
-                        },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            } else if (viewState.viewMode == BookListViewMode.GRID) {
-                BooksGrid(
-                    viewState = viewState,
-                    intentDispatcher = intentDispatcher,
-                    topContent = topContent,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                ) {
-                    item(key = "top") { topContent() }
-                    itemsIndexed(
-                        items = viewState.filteredBooks,
-                        key = { _, book -> book.uuid },
-                    ) { index, book ->
-                        BookItemCard(
-                            modifier = Modifier.animateItem(),
-                            book = book,
-                            isFavorite = book.uuid in viewState.favoriteBookUuids,
-                            showDivider = index > 0,
-                            onClick = {
-                                intentDispatcher(BooksListIntent.OnBookClicked(book))
+            PullToRefreshBox(
+                isRefreshing = viewState.isRefreshing,
+                onRefresh = { intentDispatcher(BooksListIntent.OnRefresh) },
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                if (isSearchActive) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        LibraryHeader()
+                        LibrarySearchContent(
+                            viewState = viewState,
+                            listState = searchListState,
+                            intentDispatcher = intentDispatcher,
+                            onRecentRun = { recent ->
+                                focusManager.clearFocus()
+                                intentDispatcher(
+                                    BooksListIntent.OnRecentSearchSelected(recent, run = true),
+                                )
                             },
-                            onFavoriteClick = {
-                                intentDispatcher(BooksListIntent.OnFavoriteClicked(book.uuid))
+                            onClearSearch = {
+                                searchFieldState.edit { delete(0, length) }
+                                searchFocusRequester.requestFocus()
                             },
-                            progressInfo = viewState.bookProgressInfo[book.uuid],
-                            showServerBadge = viewState.showServerBadge,
-                            subtitleContent = {
-                                val seriesInfo = book.series.firstOrNull()
-                                if (seriesInfo != null) {
-                                    val seriesText = if (seriesInfo.position != null) {
-                                        stringResource(
-                                            StringRes.books_series_with_position,
-                                            seriesInfo.name,
-                                            seriesInfo.position,
-                                        )
-                                    } else {
-                                        seriesInfo.name
-                                    }
-                                    Text(
-                                        text = seriesText,
-                                        style = Ember.type.meta,
-                                        color = colors.accentText,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            },
+                            modifier = Modifier.weight(1f),
                         )
+                    }
+                } else if (viewState.filteredBooks.isEmpty() && !viewState.isLoading) {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        topContent()
+                        EmptyBooksState(
+                            hasActiveFilters = viewState.filterState.hasActiveFilters,
+                            onImportBook = { filePickerLauncher.launch() },
+                            onResetFilters = {
+                                intentDispatcher(BooksListIntent.OnClearAllFilters)
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                } else if (viewState.viewMode == BookListViewMode.GRID) {
+                    BooksGrid(
+                        viewState = viewState,
+                        intentDispatcher = intentDispatcher,
+                        gridState = gridState,
+                        topContent = topContent,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = DockContentPadding),
+                    ) {
+                        item(key = "top") { topContent() }
+                        itemsIndexed(
+                            items = viewState.filteredBooks,
+                            key = { _, book -> book.uuid },
+                        ) { index, book ->
+                            BookItemCard(
+                                modifier = Modifier.animateItem(),
+                                book = book,
+                                isFavorite = book.uuid in viewState.favoriteBookUuids,
+                                showDivider = index > 0,
+                                onClick = {
+                                    intentDispatcher(BooksListIntent.OnBookClicked(book))
+                                },
+                                onFavoriteClick = {
+                                    intentDispatcher(BooksListIntent.OnFavoriteClicked(book.uuid))
+                                },
+                                progressInfo = viewState.bookProgressInfo[book.uuid],
+                                showServerBadge = viewState.showServerBadge,
+                                subtitleContent = {
+                                    val seriesInfo = book.series.firstOrNull()
+                                    if (seriesInfo != null) {
+                                        val seriesText = if (seriesInfo.position != null) {
+                                            stringResource(
+                                                StringRes.books_series_with_position,
+                                                seriesInfo.name,
+                                                seriesInfo.position,
+                                            )
+                                        } else {
+                                            seriesInfo.name
+                                        }
+                                        Text(
+                                            text = seriesText,
+                                            style = Ember.type.meta,
+                                            color = colors.accentText,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
             }
+            LibraryDock(
+                searchFieldState = searchFieldState,
+                isSearchActive = isSearchActive,
+                focusRequester = searchFocusRequester,
+                onSearchFocused = { intentDispatcher(BooksListIntent.OnSearchActivated) },
+                onSearchSubmitted = {
+                    intentDispatcher(
+                        BooksListIntent.OnSearchSubmitted(searchFieldState.text.toString()),
+                    )
+                    focusManager.clearFocus()
+                },
+                onCloseSearch = closeSearch,
+                onAddClick = { filePickerLauncher.launch() },
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
         }
     }
 }
 
-/** Screen title with the search and import actions, top-right in every theme. */
+/** Screen title. Search and import live in the floating [LibraryDock]. */
 @Composable
 private fun LibraryHeader(
-    isSearchVisible: Boolean,
-    onSearchToggled: () -> Unit,
-    onImportClicked: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = Ember.colors
-
-    Row(
+    Text(
+        text = stringResource(StringRes.books_library_title),
+        style = Ember.type.screenTitle,
+        color = Ember.colors.ink,
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 24.dp, end = 10.dp, top = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(StringRes.books_library_title),
-            style = Ember.type.screenTitle,
-            color = colors.ink,
-            modifier = Modifier.weight(1f),
-        )
-        TooltipIconButton(
-            tooltip = stringResource(StringRes.books_action_search),
-            icon = if (isSearchVisible) Icons.Outlined.Close else Icons.Outlined.Search,
-            onClick = onSearchToggled,
-            tint = colors.ink,
-        )
-        TooltipIconButton(
-            tooltip = stringResource(StringRes.books_action_import),
-            icon = Icons.Outlined.Add,
-            onClick = onImportClicked,
-            tint = colors.ink,
-        )
-    }
+            .padding(start = 24.dp, end = 24.dp, top = 16.dp),
+    )
 }
 
 @Composable
 private fun BooksGrid(
     viewState: BooksListViewState,
     intentDispatcher: IntentDispatcher<BooksListIntent>,
+    gridState: LazyGridState,
     topContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
+        state = gridState,
         columns = GridCells.Adaptive(minSize = 100.dp),
         modifier = modifier,
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 16.dp),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = DockContentPadding),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {

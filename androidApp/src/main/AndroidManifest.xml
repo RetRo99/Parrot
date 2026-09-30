@@ -28,6 +28,7 @@
         <activity
             android:exported="true"
             android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
             android:name="com.retro99.parrot.android.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

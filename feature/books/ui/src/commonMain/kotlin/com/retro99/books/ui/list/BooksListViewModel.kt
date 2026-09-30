@@ -2,7 +2,7 @@ package com.retro99.books.ui.list
 
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.delete
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
@@ -29,6 +29,7 @@ import com.retro99.books.ui.model.BookListSettings
 import com.retro99.books.ui.model.BookQuickFilter
 import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.books.ui.model.RecentSearches
 import com.retro99.books.ui.model.toUiModel
 import com.retro99.cloudaccount.domain.CloudAccountRepository
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
@@ -77,14 +78,26 @@ class BooksListViewModel(
         observeFilterSortSettings()
         observeBooks()
         observeFavorites()
-        observeSearchQuery()
+        observeRecentSearches()
     }
 
     override fun onIntent(intent: BooksListIntent) {
         when (intent) {
             BooksListIntent.OnRefresh -> refreshProgressInfo()
-            BooksListIntent.OnSearchToggled -> toggleSearch()
-            is BooksListIntent.OnBookClicked -> onNavigateToBookDetail(intent.book)
+            BooksListIntent.OnSearchActivated -> activateSearch()
+            BooksListIntent.OnSearchKeyboardDismissed ->
+                saveRecentSearch(viewState.value.searchQuery, onlyWithResults = true)
+            BooksListIntent.OnSearchClosed -> closeSearch()
+            is BooksListIntent.OnSearchQueryChanged -> updateState {
+                it.copy(searchQuery = intent.query)
+            }
+            is BooksListIntent.OnSearchSubmitted -> saveRecentSearch(intent.query)
+            is BooksListIntent.OnRecentSearchSelected -> selectRecentSearch(intent)
+            BooksListIntent.OnRecentSearchesCleared -> clearRecentSearches()
+            is BooksListIntent.OnBookClicked -> {
+                saveRecentSearch(viewState.value.searchQuery)
+                onNavigateToBookDetail(intent.book)
+            }
             is BooksListIntent.OnFavoriteClicked -> toggleFavorite(intent.bookUuid)
             is BooksListIntent.OnImportBook -> importBook(intent.file)
             BooksListIntent.OnBackupAllClicked -> updateState {
@@ -134,15 +147,37 @@ class BooksListViewModel(
         }
     }
 
-    private fun toggleSearch() {
-        val currentlyVisible = viewState.value.isSearchVisible
-        if (!currentlyVisible) {
-            analytics.logEvent(NavigationAnalyticsEvent.SearchOpened(source = "books_list"))
+    private fun activateSearch() {
+        if (viewState.value.isSearchActive) return
+        analytics.logEvent(NavigationAnalyticsEvent.SearchOpened(source = "books_list"))
+        updateState { it.copy(isSearchActive = true) }
+    }
+
+    private fun closeSearch() {
+        saveRecentSearch(viewState.value.searchQuery, onlyWithResults = true)
+        searchFieldState.edit { delete(0, length) }
+        updateState { it.copy(isSearchActive = false, searchQuery = "") }
+    }
+
+    private fun selectRecentSearch(intent: BooksListIntent.OnRecentSearchSelected) {
+        searchFieldState.setTextAndPlaceCursorAtEnd(intent.query)
+        if (intent.run) {
+            updateState { it.copy(searchQuery = intent.query) }
+            saveRecentSearch(intent.query)
         }
-        if (currentlyVisible) {
-            searchFieldState.edit { delete(0, length) }
-        }
-        updateState { it.copy(isSearchVisible = !currentlyVisible) }
+    }
+
+    private fun saveRecentSearch(query: String, onlyWithResults: Boolean = false) {
+        if (query.isBlank()) return
+        if (onlyWithResults && viewState.value.filteredBooks.isEmpty()) return
+        val updated = RecentSearches(viewState.value.recentSearches).with(query)
+        updateState { it.copy(recentSearches = updated.queries) }
+        saveUserPreferenceUseCase(PreferencesKey.RecentLibrarySearches, updated)
+    }
+
+    private fun clearRecentSearches() {
+        updateState { it.copy(recentSearches = emptyList()) }
+        saveUserPreferenceUseCase(PreferencesKey.RecentLibrarySearches, RecentSearches())
     }
 
     private fun toggleQuickFilter(filter: BookQuickFilter) {
@@ -225,10 +260,10 @@ class BooksListViewModel(
         saveUserPreferenceUseCase(PreferencesKey.BookListFilterSort, settings)
     }
 
-    private fun observeSearchQuery() {
-        snapshotFlow { searchFieldState.text.toString() }
-            .onEach { query ->
-                updateState { it.copy(searchQuery = query) }
+    private fun observeRecentSearches() {
+        observeUserPreferenceUseCase<RecentSearches>(PreferencesKey.RecentLibrarySearches)
+            .onEach { recents ->
+                updateState { it.copy(recentSearches = recents?.queries.orEmpty()) }
             }
             .launchIn(viewModelScope)
     }
