@@ -3,7 +3,7 @@ package com.retro99.parrot.navigation
 import kotlinx.coroutines.CancellationException
 
 internal data class StartupAuthResolution(
-    val isAuthenticated: Boolean,
+    val shouldOpenLibrary: Boolean,
     val usedFallback: Boolean,
 )
 
@@ -13,7 +13,7 @@ internal suspend fun resolveStartupAuthState(
     reportUnexpectedFailure: (Exception) -> Unit,
 ): StartupAuthResolution = try {
     StartupAuthResolution(
-        isAuthenticated = checkAuthState(),
+        shouldOpenLibrary = checkAuthState(),
         usedFallback = false,
     )
 } catch (cancelled: CancellationException) {
@@ -21,7 +21,9 @@ internal suspend fun resolveStartupAuthState(
 } catch (failure: Exception) {
     reportUnexpectedFailure(failure)
     StartupAuthResolution(
-        isAuthenticated = false,
+        // On an unreadable persisted state, prefer a recoverable library route over
+        // showing onboarding again to an existing user.
+        shouldOpenLibrary = true,
         usedFallback = true,
     )
 }

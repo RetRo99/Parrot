@@ -167,6 +167,8 @@ fun BooksListScreen(
     modifier: Modifier = Modifier,
     headerContent: @Composable ((books: List<BookUiModel>) -> Unit)? = null,
     onSearchActiveChanged: (Boolean) -> Unit = {},
+    initialImportRequestId: Long? = null,
+    onInitialImportRequestConsumed: (Long) -> Unit = {},
     viewModel: BooksListViewModel = koinViewModel { parametersOf(onNavigateToBookDetail) },
 ) {
     BaseScreen(
@@ -180,6 +182,8 @@ fun BooksListScreen(
             modifier = modifier,
             headerContent = headerContent,
             onSearchActiveChanged = onSearchActiveChanged,
+            initialImportRequestId = initialImportRequestId,
+            onInitialImportRequestConsumed = onInitialImportRequestConsumed,
         )
     }
 }
@@ -193,6 +197,8 @@ private fun BooksListScreenContent(
     modifier: Modifier = Modifier,
     headerContent: @Composable ((books: List<BookUiModel>) -> Unit)? = null,
     onSearchActiveChanged: (Boolean) -> Unit = {},
+    initialImportRequestId: Long? = null,
+    onInitialImportRequestConsumed: (Long) -> Unit = {},
 ) {
     val filePickerLauncher = rememberFilePickerLauncher(
         type = PickerType.File(extensions = listOf("epub")),
@@ -201,6 +207,12 @@ private fun BooksListScreenContent(
         file?.let {
             intentDispatcher(BooksListIntent.OnImportBook(it))
         }
+    }
+
+    LaunchedEffect(initialImportRequestId) {
+        val requestId = initialImportRequestId ?: return@LaunchedEffect
+        filePickerLauncher.launch()
+        onInitialImportRequestConsumed(requestId)
     }
 
     val listState = rememberLazyListState()

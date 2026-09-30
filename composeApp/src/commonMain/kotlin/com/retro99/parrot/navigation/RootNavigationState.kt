@@ -10,4 +10,5 @@ data class RootHomeEntry(
     val id: Long,
     val sourceScreen: String,
     val entryPoint: String,
+    val openPhoneFilesOnArrival: Boolean = false,
 )

@@ -29,6 +29,8 @@ kotlin {
             implementation(projects.lib.server.api)
             implementation(projects.lib.preferences.api)
         }
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
     }
 }
-

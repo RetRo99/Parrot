@@ -32,7 +32,7 @@
 
     <!-- Welcome Screen -->
     <string name="welcome_title">Parrot</string>
-    <string name="welcome_subtitle">Read and listen to your favorite books, anytime, anywhere</string>
+    <string name="welcome_subtitle">Every word highlighted as it’s read aloud.</string>
     <string name="welcome_sign_in_button">Get Started</string>
     <string name="welcome_skip_login">Browse without account</string>
     <string name="welcome_guest_mode_failed">Couldn’t save guest mode. Please try again.</string>
@@ -44,6 +44,20 @@
     <string name="welcome_feature_audio_description">Listen to your books with synchronized audio narration</string>
     <string name="welcome_feature_servers_title">Multiple Servers</string>
     <string name="welcome_feature_servers_description">Connect to Audiobookshelf, Storyteller, or local files</string>
+    <string name="welcome_where_books">Where are your books?</string>
+    <string name="welcome_parrot_cloud">Parrot Cloud</string>
+    <string name="welcome_connect_server">Storyteller or Audiobookshelf</string>
+    <string name="welcome_phone_files">Phone files</string>
+    <string name="welcome_have_account">Have an account?</string>
+    <string name="welcome_sign_in_link">Sign in</string>
+    <string name="welcome_works_offline">Works offline</string>
+    <string name="welcome_any_device">Any device</string>
+    <string name="welcome_eink_ready">E-ink ready</string>
+    <string name="welcome_use_cloud_accessibility">Use Parrot Cloud</string>
+    <string name="welcome_connect_server_accessibility">Connect Storyteller or Audiobookshelf</string>
+    <string name="welcome_cloud_sign_in_accessibility">Sign in to Parrot Cloud</string>
+    <string name="welcome_phone_files_accessibility">Open book files on this phone</string>
+    <string name="welcome_chapter_three">CHAPTER THREE</string>
 
     <!-- Home Screen -->
     <string name="home_welcome_title">🎉 Welcome Home!</string>

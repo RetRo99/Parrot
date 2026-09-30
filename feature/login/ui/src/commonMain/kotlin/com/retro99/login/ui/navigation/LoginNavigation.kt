@@ -22,6 +22,8 @@ fun LoginNavigation(
     onLoginAttemptStarted: (String, String, String) -> Unit,
     onLoginFailure: (String, String, String) -> Unit,
     onGuestModeSelected: () -> Unit,
+    onCloudAccountRequested: (createAccount: Boolean) -> Unit,
+    onPhoneFilesSelected: () -> Unit,
     onBack: ((entryPoint: String) -> Unit)? = null,
     onRootBack: (() -> Unit)? = null,
     startAtLogin: Boolean = false,
@@ -75,14 +77,12 @@ fun LoginNavigation(
                     WelcomeScreen(
                         isDebug = state.isDebug,
                         onCompactLayoutAvailable = viewModel::onWelcomeCompactLayoutAvailable,
-                        guestModeError = state.guestModeError,
-                        onSignInClick = {
+                        onServerClick = {
                             intentDispatcher(LoginNavigationIntent.NavigateTo(LoginDestination.Login))
                         },
-                        onSkipLoginClick = {
-                            intentDispatcher(LoginNavigationIntent.OnSkipLoginClicked)
-                        },
-                        onBack = onBack?.let { callback -> { callback("toolbar_back") } },
+                        onCloudCreateAccountClick = { onCloudAccountRequested(true) },
+                        onCloudSignInClick = { onCloudAccountRequested(false) },
+                        onPhoneFilesClick = onPhoneFilesSelected,
                     )
                 }
 

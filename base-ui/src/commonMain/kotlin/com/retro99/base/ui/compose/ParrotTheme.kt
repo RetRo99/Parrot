@@ -28,6 +28,7 @@ import resources.icons.fraunces_italic
 import resources.icons.fraunces_medium
 import resources.icons.fraunces_medium_italic
 import resources.icons.fraunces_semibold
+import resources.icons.literata_regular
 
 /** Fraunces, used for titles and italic section headings. */
 @Composable
@@ -45,6 +46,12 @@ fun figtreeFamily(): FontFamily = FontFamily(
     Font(Res.font.figtree_regular, FontWeight.Normal),
     Font(Res.font.figtree_semibold, FontWeight.SemiBold),
     Font(Res.font.figtree_bold, FontWeight.Bold),
+)
+
+/** Literata, used for the read-along sample on the Welcome screen. */
+@Composable
+fun literataFamily(): FontFamily = FontFamily(
+    Font(Res.font.literata_regular, FontWeight.Normal),
 )
 
 /** Ember text styles for custom layouts. Material components use the mapped [Typography]. */

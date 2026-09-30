@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 class StartupAuthRouteResolverTest {
 
     @Test
-    fun successfulAuthCheckSelectsNormalRouteWithoutReporting() = runTest {
+    fun successfulReturningUserCheckSelectsLibraryWithoutReporting() = runTest {
         var reported: Exception? = null
 
         val result = resolveStartupAuthState(
@@ -18,12 +18,25 @@ class StartupAuthRouteResolverTest {
             reportUnexpectedFailure = { reported = it },
         )
 
-        assertEquals(StartupAuthResolution(isAuthenticated = true, usedFallback = false), result)
+        assertEquals(StartupAuthResolution(shouldOpenLibrary = true, usedFallback = false), result)
         assertEquals(null, reported)
     }
 
     @Test
-    fun failedAuthCheckReportsOnceAndSelectsWelcomeFallback() = runTest {
+    fun successfulFirstRunCheckSelectsWelcomeWithoutReporting() = runTest {
+        val reported = mutableListOf<Exception>()
+
+        val result = resolveStartupAuthState(
+            checkAuthState = { false },
+            reportUnexpectedFailure = reported::add,
+        )
+
+        assertEquals(StartupAuthResolution(shouldOpenLibrary = false, usedFallback = false), result)
+        assertEquals(emptyList(), reported)
+    }
+
+    @Test
+    fun failedPersistedStateCheckReportsOnceAndOpensLibraryFallback() = runTest {
         val failure = IllegalStateException("private fixture detail")
         val reported = mutableListOf<Exception>()
 
@@ -32,7 +45,7 @@ class StartupAuthRouteResolverTest {
             reportUnexpectedFailure = reported::add,
         )
 
-        assertEquals(StartupAuthResolution(isAuthenticated = false, usedFallback = true), result)
+        assertEquals(StartupAuthResolution(shouldOpenLibrary = true, usedFallback = true), result)
         assertEquals(listOf<Exception>(failure), reported)
     }
 

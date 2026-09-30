@@ -8,6 +8,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.retro99.base.ui.BaseScreen
+import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.navigation.HomeNavigation
 import com.retro99.login.ui.navigation.LoginNavigation
 import com.retro99.parrot.splash.SplashScreen
@@ -27,6 +28,8 @@ fun RootNavigation(
                 val currentDestination = state.backStack.lastOrNull()
                 if (currentDestination is RootDestination.Login && !currentDestination.initial) {
                     intentDispatcher(RootNavigationIntent.OnBackFromLogin(entryPoint = "system_back"))
+                } else if (currentDestination is RootDestination.CloudAccount) {
+                    intentDispatcher(RootNavigationIntent.OnCloudAccountBack)
                 }
                 // Otherwise don't allow back navigation from root destinations
                 // This prevents going back to Splash or Login after logging in
@@ -73,6 +76,12 @@ fun RootNavigation(
                         onGuestModeSelected = {
                             intentDispatcher(RootNavigationIntent.OnGuestModeSelected)
                         },
+                        onCloudAccountRequested = { createAccount ->
+                            intentDispatcher(RootNavigationIntent.OnCloudAccountRequested(createAccount))
+                        },
+                        onPhoneFilesSelected = {
+                            intentDispatcher(RootNavigationIntent.OnPhoneFilesSelected)
+                        },
                         onBack = if (!destination.initial) {
                             { entryPoint ->
                                 intentDispatcher(RootNavigationIntent.OnBackFromLogin(entryPoint))
@@ -100,6 +109,12 @@ fun RootNavigation(
                         }
                     }
                     HomeNavigation(
+                        openPhoneFilesRequestId = homeEntry
+                            ?.takeIf { isHomeCurrent && it.openPhoneFilesOnArrival }
+                            ?.id,
+                        onPhoneFilesRequestConsumed = { requestId ->
+                            intentDispatcher(RootNavigationIntent.OnPhoneFilesRequestConsumed(requestId))
+                        },
                         onNavigateToLogin = { existingServerId, isRetry ->
                             intentDispatcher(
                                 RootNavigationIntent.OnLoginClicked(
@@ -115,6 +130,16 @@ fun RootNavigation(
                             )
                         },
                         failedExistingServerLoginIds = state.failedExistingServerLoginIds,
+                    )
+                }
+
+                entry<RootDestination.CloudAccount> { destination ->
+                    CloudAccountScreen(
+                        onBack = { intentDispatcher(RootNavigationIntent.OnCloudAccountBack) },
+                        initialCreateAccount = destination.createAccount,
+                        onAuthenticated = {
+                            intentDispatcher(RootNavigationIntent.OnCloudAccountAuthenticated)
+                        },
                     )
                 }
             },

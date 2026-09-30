@@ -65,6 +65,8 @@ import resources.translations.general_retry
 @Composable
 fun HomeNavigation(
     onNavigateToLogin: (String?, Boolean) -> Unit,
+    openPhoneFilesRequestId: Long? = null,
+    onPhoneFilesRequestConsumed: (Long) -> Unit = {},
     failedExistingServerLoginIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
     viewModel: HomeNavigationViewModel = koinViewModel(),
@@ -331,6 +333,8 @@ fun HomeNavigation(
                 entryProvider = entryProvider {
                     entry<HomeDestination.BooksList> {
                         BooksListScreen(
+                            initialImportRequestId = openPhoneFilesRequestId,
+                            onInitialImportRequestConsumed = onPhoneFilesRequestConsumed,
                             onSearchActiveChanged = { active -> isLibrarySearchActive = active },
                             onNavigateToBookDetail = { book ->
                                 intentDispatcher(

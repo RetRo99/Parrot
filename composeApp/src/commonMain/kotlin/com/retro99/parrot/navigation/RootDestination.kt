@@ -18,4 +18,7 @@ sealed interface RootDestination {
 
     @Serializable
     data object Home : RootDestination
+
+    @Serializable
+    data class CloudAccount(val createAccount: Boolean) : RootDestination
 }

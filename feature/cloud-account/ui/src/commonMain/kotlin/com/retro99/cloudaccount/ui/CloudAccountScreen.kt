@@ -44,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -143,12 +144,29 @@ import resources.translations.login_show_password
 fun CloudAccountScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    initialCreateAccount: Boolean = false,
+    onAuthenticated: (() -> Unit)? = null,
     viewModel: CloudAccountViewModel = koinViewModel { parametersOf(onBack) },
 ) {
     BaseScreen(
         modifier = modifier,
         viewModel = viewModel,
     ) { viewState, intentDispatcher ->
+        LaunchedEffect(initialCreateAccount) {
+            if (initialCreateAccount) {
+                intentDispatcher(CloudAccountIntent.OnSwitchToCreateAccountClicked)
+            }
+        }
+        LaunchedEffect(viewState.authState, viewState.profileLink, viewState.isLoading) {
+            val signedIn = viewState.authState as? CloudAuthState.SignedIn
+            if (onAuthenticated != null &&
+                signedIn != null &&
+                !viewState.isLoading &&
+                viewState.profileLink?.cloudUserId == signedIn.account.id
+            ) {
+                onAuthenticated()
+            }
+        }
         CloudAccountScreenContent(
             viewState = viewState,
             emailState = viewModel.emailState,

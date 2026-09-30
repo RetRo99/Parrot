@@ -34,6 +34,13 @@ class RootNavigationViewModel(
         when (intent) {
             RootNavigationIntent.OnLoginSuccess -> handleLoginSuccess()
             RootNavigationIntent.OnGuestModeSelected -> handleGuestModeSelected()
+            is RootNavigationIntent.OnCloudAccountRequested ->
+                handleCloudAccountRequested(intent.createAccount)
+            RootNavigationIntent.OnCloudAccountAuthenticated -> handleCloudAccountAuthenticated()
+            RootNavigationIntent.OnCloudAccountBack -> handleCloudAccountBack()
+            RootNavigationIntent.OnPhoneFilesSelected -> handlePhoneFilesSelected()
+            is RootNavigationIntent.OnPhoneFilesRequestConsumed ->
+                handlePhoneFilesRequestConsumed(intent.homeEntryId)
             is RootNavigationIntent.OnHomeVisible -> handleHomeVisible(intent.entryId)
             RootNavigationIntent.OnLogout -> handleLogout()
             is RootNavigationIntent.OnLoginClicked ->
@@ -223,21 +230,21 @@ class RootNavigationViewModel(
                     )
                 },
             )
-            val destination = if (resolution.isAuthenticated) {
+            val destination = if (resolution.shouldOpenLibrary) {
                 RootDestination.Home
             } else {
                 RootDestination.Login(true)
             }
             analytics.logEvent(
                 NavigationAnalyticsEvent.AppLaunchRouteResolved(
-                    destination = if (resolution.isAuthenticated) "home" else "welcome",
+                    destination = if (resolution.shouldOpenLibrary) "home" else "welcome",
                     outcome = if (resolution.usedFallback) "fallback" else "success",
                     reasonCode = if (resolution.usedFallback) "auth_state_check_failed" else null,
                 ),
             )
             analytics.logBreadcrumb(
                 DiagnosticContext(
-                    screen = if (resolution.isAuthenticated) "home" else "welcome",
+                    screen = if (resolution.shouldOpenLibrary) "home" else "welcome",
                     sourceScreen = "splash",
                     entryPoint = "app_launch",
                     action = "resolve_startup_route",
@@ -250,7 +257,7 @@ class RootNavigationViewModel(
             updateState { state ->
                 state.copy(
                     backStack = listOf(destination),
-                    homeEntry = if (resolution.isAuthenticated) {
+                    homeEntry = if (resolution.shouldOpenLibrary) {
                         createHomeEntry(sourceScreen = "splash", entryPoint = "app_launch")
                     } else {
                         null
@@ -278,6 +285,58 @@ class RootNavigationViewModel(
                     entryPoint = "browse_without_account",
                 ),
             )
+        }
+    }
+
+    private fun handleCloudAccountRequested(createAccount: Boolean) {
+        updateState { state ->
+            state.copy(backStack = state.backStack + RootDestination.CloudAccount(createAccount))
+        }
+    }
+
+    private fun handleCloudAccountAuthenticated() {
+        updateState { state ->
+            state.copy(
+                backStack = listOf(RootDestination.Home),
+                homeEntry = createHomeEntry(
+                    sourceScreen = "welcome",
+                    entryPoint = "cloud_account_authenticated",
+                ),
+            )
+        }
+    }
+
+    private fun handleCloudAccountBack() {
+        updateState { state ->
+            if (state.backStack.lastOrNull() is RootDestination.CloudAccount && state.backStack.size > 1) {
+                state.copy(backStack = state.backStack.dropLast(1))
+            } else {
+                state
+            }
+        }
+    }
+
+    private fun handlePhoneFilesSelected() {
+        updateState { state ->
+            state.copy(
+                backStack = listOf(RootDestination.Home),
+                homeEntry = createHomeEntry(
+                    sourceScreen = "welcome",
+                    entryPoint = "phone_files",
+                    openPhoneFilesOnArrival = true,
+                ),
+            )
+        }
+    }
+
+    private fun handlePhoneFilesRequestConsumed(homeEntryId: Long) {
+        updateState { state ->
+            val entry = state.homeEntry
+            if (entry?.id == homeEntryId && entry.openPhoneFilesOnArrival) {
+                state.copy(homeEntry = entry.copy(openPhoneFilesOnArrival = false))
+            } else {
+                state
+            }
         }
     }
 
@@ -309,11 +368,16 @@ class RootNavigationViewModel(
         )
     }
 
-    private fun createHomeEntry(sourceScreen: String, entryPoint: String): RootHomeEntry =
+    private fun createHomeEntry(
+        sourceScreen: String,
+        entryPoint: String,
+        openPhoneFilesOnArrival: Boolean = false,
+    ): RootHomeEntry =
         RootHomeEntry(
             id = ++nextHomeEntryId,
             sourceScreen = sourceScreen,
             entryPoint = entryPoint,
+            openPhoneFilesOnArrival = openPhoneFilesOnArrival,
         )
 
     private fun handleLogout() {

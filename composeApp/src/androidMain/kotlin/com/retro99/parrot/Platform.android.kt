@@ -24,7 +24,10 @@ actual fun SetNavigationBarAppearance(isLight: Boolean, backgroundColor: Color) 
 
     SideEffect {
         val window = (view.context as? Activity)?.window ?: return@SideEffect
-        WindowInsetsControllerCompat(window, view).isAppearanceLightNavigationBars = isLight
+        WindowInsetsControllerCompat(window, view).apply {
+            isAppearanceLightNavigationBars = isLight
+            isAppearanceLightStatusBars = isLight
+        }
         window.navigationBarColor = backgroundColor.toArgb()
         window.isNavigationBarContrastEnforced = false
     }

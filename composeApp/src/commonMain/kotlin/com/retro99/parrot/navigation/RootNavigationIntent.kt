@@ -5,6 +5,11 @@ import com.retro99.base.ui.BaseIntent
 sealed interface RootNavigationIntent : BaseIntent {
     data object OnLoginSuccess : RootNavigationIntent
     data object OnGuestModeSelected : RootNavigationIntent
+    data class OnCloudAccountRequested(val createAccount: Boolean) : RootNavigationIntent
+    data object OnCloudAccountAuthenticated : RootNavigationIntent
+    data object OnCloudAccountBack : RootNavigationIntent
+    data object OnPhoneFilesSelected : RootNavigationIntent
+    data class OnPhoneFilesRequestConsumed(val homeEntryId: Long) : RootNavigationIntent
     data class OnHomeVisible(val entryId: Long) : RootNavigationIntent
     data object OnLogout : RootNavigationIntent
     data class OnLoginClicked(

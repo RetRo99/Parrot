@@ -40,6 +40,14 @@ data class EmberColors(
     val success: Color,
     /** Fill behind inline error messages. */
     val errorContainer: Color,
+    /** Welcome-page hero and read-along illustration colors. */
+    val welcomeHero: Color,
+    val welcomePage: Color,
+    val welcomePageInk: Color,
+    val welcomeHighlight: Color,
+    val welcomeCoverGreen: Color,
+    val welcomeCoverRed: Color,
+    val welcomeChip: Color,
 )
 
 /** Per-mode style values that are not colors. */
@@ -85,6 +93,13 @@ val EmberNightColors = EmberColors(
     destructive = Color(0xFFF08A7A),
     success = Color(0xFF9CC58A),
     errorContainer = Color(0xFF3D1C18),
+    welcomeHero = Color(0xFF2A1E15),
+    welcomePage = Color(0xFFE9DCC7),
+    welcomePageInk = Color(0xFF2A2019),
+    welcomeHighlight = Color(0xFFF0C79C),
+    welcomeCoverGreen = Color(0xFF2B4A3C),
+    welcomeCoverRed = Color(0xFF7A3434),
+    welcomeChip = Color(0xFF3A2615),
 )
 
 val EmberDayColors = EmberColors(
@@ -110,6 +125,13 @@ val EmberDayColors = EmberColors(
     destructive = Color(0xFFA8321F),
     success = Color(0xFF3E6B2E),
     errorContainer = Color(0xFFFBE6E3),
+    welcomeHero = Color(0xFFEFDFCB),
+    welcomePage = Color.White,
+    welcomePageInk = Color(0xFF221A13),
+    welcomeHighlight = Color(0xFFF3D9C3),
+    welcomeCoverGreen = Color(0xFF2B4A3C),
+    welcomeCoverRed = Color(0xFF8E3B2E),
+    welcomeChip = Color.White,
 )
 
 val EmberEinkColors = EmberColors(
@@ -135,6 +157,13 @@ val EmberEinkColors = EmberColors(
     destructive = Color.Black,
     success = Color.Black,
     errorContainer = Color.White,
+    welcomeHero = Color.White,
+    welcomePage = Color.White,
+    welcomePageInk = Color.Black,
+    welcomeHighlight = Color.Transparent,
+    welcomeCoverGreen = Color.Black,
+    welcomeCoverRed = Color.White,
+    welcomeChip = Color.White,
 )
 
 val EmberNightStyle = EmberStyle(
