@@ -1066,4 +1066,44 @@
     <string name="books_search_match_count_one" tools:ignore="MissingTranslation">1 book matches “%1$s”</string>
     <string name="books_search_none_title" tools:ignore="MissingTranslation">No books match “%1$s”</string>
     <string name="books_search_none_body" tools:ignore="MissingTranslation">Search looks in titles, authors, series and tags. Filters you set still apply.</string>
+
+    <string name="servers_title" tools:ignore="MissingTranslation">Servers</string>
+    <string name="servers_intro" tools:ignore="MissingTranslation">Where your books, progress and backups come from.</string>
+    <string name="servers_add" tools:ignore="MissingTranslation">Add server</string>
+    <string name="servers_empty_title" tools:ignore="MissingTranslation">No servers yet</string>
+    <string name="servers_empty_body" tools:ignore="MissingTranslation">Connect Storyteller or Audiobookshelf to get your books, or Parrot Cloud to back up and sync progress. Local books work without a server.</string>
+    <string name="servers_not_encrypted" tools:ignore="MissingTranslation">not encrypted</string>
+    <string name="servers_status_connected" tools:ignore="MissingTranslation">Connected · %1$s</string>
+    <string name="servers_status_connected_plain" tools:ignore="MissingTranslation">Connected</string>
+    <string name="servers_status_signed_out" tools:ignore="MissingTranslation">Signed out</string>
+    <string name="servers_status_signed_out_body" tools:ignore="MissingTranslation">Sign in to get this server's books again.</string>
+    <string name="servers_status_cant_sign_in" tools:ignore="MissingTranslation">Can't sign in</string>
+    <string name="servers_status_password_rejected" tools:ignore="MissingTranslation">The saved password was not accepted.</string>
+    <string name="servers_status_session_expired" tools:ignore="MissingTranslation">Your session expired. Sign in again to keep syncing.</string>
+    <string name="servers_sign_in_again" tools:ignore="MissingTranslation">Sign in again</string>
+    <string name="servers_open_details" tools:ignore="MissingTranslation">Open details</string>
+    <string name="servers_card_description" tools:ignore="MissingTranslation">%1$s, %2$s, %3$s</string>
+    <string name="server_detail_section_connection" tools:ignore="MissingTranslation">Connection</string>
+    <string name="server_detail_section_account" tools:ignore="MissingTranslation">Account</string>
+    <string name="server_detail_section_remove" tools:ignore="MissingTranslation">Remove</string>
+    <string name="server_detail_name" tools:ignore="MissingTranslation">Name</string>
+    <string name="server_detail_address" tools:ignore="MissingTranslation">Address</string>
+    <string name="server_detail_type_server" tools:ignore="MissingTranslation">%1$s server</string>
+    <string name="server_detail_signed_in_as" tools:ignore="MissingTranslation">Signed in as</string>
+    <string name="server_detail_not_signed_in" tools:ignore="MissingTranslation">Not signed in</string>
+    <string name="server_detail_sign_out" tools:ignore="MissingTranslation">Sign out</string>
+    <string name="server_detail_sign_out_hint" tools:ignore="MissingTranslation">Keeps the server; you can sign in again later</string>
+    <string name="server_detail_sign_in" tools:ignore="MissingTranslation">Sign in</string>
+    <string name="server_detail_remove" tools:ignore="MissingTranslation">Remove server</string>
+    <string name="server_detail_remove_hint" tools:ignore="MissingTranslation">Signs out and stops syncing its books</string>
+    <string name="server_detail_sign_out_title" tools:ignore="MissingTranslation">Sign out of %1$s?</string>
+    <string name="server_detail_sign_out_body" tools:ignore="MissingTranslation">You'll be signed out of %1$s. The server stays in your list, so you can sign in again later.</string>
+    <string name="server_detail_remove_title" tools:ignore="MissingTranslation">Remove %1$s?</string>
+    <string name="server_detail_remove_body" tools:ignore="MissingTranslation">You'll be signed out of %1$s and its books will stop syncing. Downloaded files and reading progress stay on this phone. You can add the server again later.</string>
+    <string name="server_detail_edit_name_title" tools:ignore="MissingTranslation">Rename server</string>
+    <string name="server_detail_edit_address_title" tools:ignore="MissingTranslation">Change address</string>
+    <string name="server_detail_address_error" tools:ignore="MissingTranslation">Enter a valid server address.</string>
+    <string name="server_detail_save" tools:ignore="MissingTranslation">Save</string>
+    <string name="server_detail_remove_confirm" tools:ignore="MissingTranslation">Remove</string>
+    <string name="servers_open_sync_backup" tools:ignore="MissingTranslation">Open Sync &amp; backup</string>
 </resources>

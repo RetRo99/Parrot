@@ -6,10 +6,12 @@ import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.server.api.ServerAuthState
+import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerType
 import com.retro99.settings.ui.servers.model.ServerWithStatusUiModel
 import com.retro99.settings.ui.servers.model.toUiModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
@@ -36,6 +38,12 @@ class ServerManagementViewModel(
                 onLoginClick(intent.serverId, intent.serverType, intent.isRetry)
             is ServerManagementIntent.OnLogoutClick -> onLogoutClick(intent.serverId, intent.serverType)
             is ServerManagementIntent.OnRemoveClick -> onRemoveClick(intent.serverId, intent.serverType)
+            is ServerManagementIntent.OnRenameServer -> updateServerConfig(intent.serverId) { config ->
+                config.copy(name = intent.name.trim())
+            }
+            is ServerManagementIntent.OnChangeAddress -> updateServerConfig(intent.serverId) { config ->
+                config.copy(baseUrl = normalizeServerAddress(intent.baseUrl))
+            }
             ServerManagementIntent.RetryFailedOperation -> retryFailedOperation()
             ServerManagementIntent.DismissOperationFailure -> dismissOperationFailure()
             ServerManagementIntent.RetryServerListLoad -> retryServerListLoad()
@@ -187,6 +195,31 @@ class ServerManagementViewModel(
             } finally {
                 operationInProgress = false
                 updateState { it.copy(isOperationInProgress = false) }
+            }
+        }
+    }
+
+    private fun updateServerConfig(
+        serverId: String,
+        transform: (ServerConfig) -> ServerConfig,
+    ) {
+        viewModelScope.launch {
+            try {
+                val config = serverRegistry.getServer(serverId) ?: return@launch
+                serverRegistry.updateServer(transform(config))
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                analytics.logException(
+                    error,
+                    DiagnosticContext(
+                        screen = "server_management",
+                        action = "update_server_config",
+                        operation = "update_server_config",
+                        stage = "terminal",
+                        outcome = "failed",
+                    ),
+                )
             }
         }
     }

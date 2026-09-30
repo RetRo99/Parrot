@@ -505,6 +505,11 @@ fun HomeNavigation(
                             onNavigateToLogin = onNavigateToLogin,
                             failedLoginServerIds = failedExistingServerLoginIds,
                             onBack = { requestBack("toolbar_back") },
+                            onOpenSyncAndBackup = {
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(HomeDestination.SyncAndBackup)
+                                )
+                            },
                             stopPlaybackForServer = { serverId, operationContext ->
                                 viewModel.stopPlaybackForServer(serverId, operationContext)
                             },

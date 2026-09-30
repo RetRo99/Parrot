@@ -33,6 +33,7 @@ kotlin {
             implementation(compose.ui)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.navigation3.ui)
+            implementation(libs.navigationevent.compose)
             implementation(libs.navigation3.viewmodel)
             implementation(libs.colorpicker.compose)
             implementation(libs.filekit.compose)

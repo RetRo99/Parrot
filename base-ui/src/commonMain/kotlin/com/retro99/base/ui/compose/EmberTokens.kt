@@ -36,6 +36,10 @@ data class EmberColors(
     val mutedAccent: Color,
     /** Destructive actions such as clearing data. */
     val destructive: Color,
+    /** Positive status such as a connected server. */
+    val success: Color,
+    /** Fill behind inline error messages. */
+    val errorContainer: Color,
 )
 
 /** Per-mode style values that are not colors. */
@@ -79,6 +83,8 @@ val EmberNightColors = EmberColors(
     chipSelectedText = Color(0xFFF2C39A),
     mutedAccent = Color(0xFF7A5A40),
     destructive = Color(0xFFF08A7A),
+    success = Color(0xFF9CC58A),
+    errorContainer = Color(0xFF3D1C18),
 )
 
 val EmberDayColors = EmberColors(
@@ -102,6 +108,8 @@ val EmberDayColors = EmberColors(
     chipSelectedText = Color(0xFF9A4D1A),
     mutedAccent = Color(0xFFD9B597),
     destructive = Color(0xFFA8321F),
+    success = Color(0xFF3E6B2E),
+    errorContainer = Color(0xFFFBE6E3),
 )
 
 val EmberEinkColors = EmberColors(
@@ -125,6 +133,8 @@ val EmberEinkColors = EmberColors(
     chipSelectedText = Color.White,
     mutedAccent = Color.White,
     destructive = Color.Black,
+    success = Color.Black,
+    errorContainer = Color.White,
 )
 
 val EmberNightStyle = EmberStyle(
