@@ -12,6 +12,7 @@ import com.retro99.books.domain.model.links.LinkDecisionType
 import com.retro99.books.domain.model.links.testLink
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.ServerBook
+import com.retro99.server.api.ServerBookSeries
 import com.retro99.server.api.ServerBooksRepository
 import com.retro99.server.api.ServerReaderRepository
 import com.retro99.server.api.ServerSeriesRepository
@@ -54,6 +55,47 @@ class GetBooksUseCaseTest {
         assertEquals(listOf("a1", "s1", "a2"), books.map { book -> book.uuid })
         assertEquals(emptyList(), books.flatMap { book -> book.linkedCopies })
     }
+
+    @Test
+    fun `series queries retain the server copy when its library copy is primary`() = runTest {
+        // Given
+        val books = linkedLibraryAndServerBooks()
+        assertEquals("b1", books().first().get()!!.single().uuid)
+
+        // When
+        val seriesBooks = GetBooksBySeriesUseCase(books)("Dune").first().get().orEmpty()
+
+        // Then
+        assertEquals(listOf("s1"), seriesBooks.map { book -> book.uuid })
+        assertEquals(1.0, seriesBooks.single().series.single().position)
+    }
+
+    @Test
+    fun `author queries retain the server copy when its library copy is primary`() = runTest {
+        // Given
+        val books = linkedLibraryAndServerBooks()
+
+        // When
+        val authorBooks = GetBooksByAuthorUseCase(books)("Frank Herbert").first().get().orEmpty()
+
+        // Then
+        assertEquals(listOf("s1"), authorBooks.map { book -> book.uuid })
+    }
+
+    private fun linkedLibraryAndServerBooks() = GetBooksUseCase(
+        repositoryProvider = provider(
+            repository("local", ServerType.Local, "b1" to "Dune"),
+            repository("st-1", ServerType.Storyteller, "s1" to "Dune", transform = { book ->
+                book.copy(
+                    authors = listOf("Frank Herbert"),
+                    series = listOf(ServerBookSeries("series-1", "Dune", 1f)),
+                )
+            }),
+        ),
+        bookLinksRepository = linksRepository(listOf(testLink(
+            "link-1", "library:b1", "storyteller:s1",
+        ))),
+    )
 }
 
 internal fun linksRepository(links: List<BookLink>): BookLinksRepository =
@@ -96,13 +138,14 @@ internal fun repository(
     serverId: String,
     serverType: ServerType,
     vararg books: Pair<String, String>,
+    transform: (ServerBook) -> ServerBook = { book -> book },
 ): ServerBooksRepository = object : ServerBooksRepository {
     override val serverId: String = serverId
 
     override fun getBooks(): Flow<AppResult<List<ServerBook>>> = flowOf(
         Ok(
             books.map { (uuid, title) ->
-                ServerBook(
+                transform(ServerBook(
                     uuid = uuid,
                     serverId = serverId,
                     title = title,
@@ -117,7 +160,7 @@ internal fun repository(
                     hasReadaloud = false,
                     isLocal = serverType == ServerType.Local,
                     serverType = serverType,
-                )
+                ))
             },
         ),
     )

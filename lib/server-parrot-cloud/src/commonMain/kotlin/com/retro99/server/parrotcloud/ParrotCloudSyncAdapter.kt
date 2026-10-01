@@ -222,7 +222,11 @@ class ParrotCloudSyncAdapter(
         val attemptedMutationIds = mutableSetOf<String>()
         var chunkCount = 0
         while (chunk.isNotEmpty() && chunkCount < MAX_LIBRARY_PUSH_CHUNKS) {
-            val freshChunk = chunk.filter { entry -> attemptedMutationIds.add(entry.mutationId) }
+            val unattempted = chunk.filter { entry -> entry.mutationId !in attemptedMutationIds }
+            // A duplicate response can change book IDs and replace queued link snapshots.
+            // Resolve book identities before sending other mutations from this snapshot.
+            val freshChunk = unattempted.libraryMutationBatch()
+            freshChunk.forEach { entry -> attemptedMutationIds.add(entry.mutationId) }
             if (freshChunk.isEmpty()) break
             val summary = libraryMutationSyncEngine.push(
                 entries = freshChunk,
@@ -233,6 +237,7 @@ class ParrotCloudSyncAdapter(
             pushedCount += summary.acknowledgedCount + summary.conflictCount
             chunkCount++
             if (chunkCount >= MAX_LIBRARY_PUSH_CHUNKS) break
+            syncOutboxPreflight.bindUnassignedMutations(cloudUserId)
             chunk = syncOutboxPreflight.selectEligible(
                 remoteAccountId = cloudUserId,
                 maxEntries = SYNC_BATCH_SIZE,

@@ -141,7 +141,7 @@ internal class BookLinksDataRepository(
             BookLinkWrite(
                 links = listOf(updated),
                 decisions = decisions,
-                outboxEntries = listOf(updated.toOutbox()) +
+                outboxEntries = listOf(updated.toOutbox(removedMembers = listOf(copy.value))) +
                     decisions.map { decision -> decision.toOutbox() },
             ),
         )
@@ -158,7 +158,9 @@ internal class BookLinksDataRepository(
         decidedAt = decidedAt,
     )
 
-    private fun BookLinkEntity.toOutbox(): SyncOutboxEntry {
+    private fun BookLinkEntity.toOutbox(
+        removedMembers: List<String> = emptyList(),
+    ): SyncOutboxEntry {
         val deleted = deletedAt != null
         return SyncOutboxEntry.new(
             entityType = SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK,
@@ -168,7 +170,7 @@ internal class BookLinksDataRepository(
             } else {
                 SyncOutboxEntry.OPERATION_UPSERT
             },
-            payload = BookLinkJsonCodec.encodeLink(linkId, members, deleted),
+            payload = BookLinkJsonCodec.encodeLink(linkId, members, deleted, removedMembers),
             baseRevision = remoteRevision,
         )
     }

@@ -9,6 +9,7 @@ import com.retro99.database.implementation.AppDatabase
 import com.retro99.database.implementation.DatabaseManager
 import com.retro99.database.implementation.Device_files
 import com.retro99.database.implementation.Library_books
+import com.retro99.database.implementation.dao.links.mergeLibraryCopyLinks
 import com.retro99.database.implementation.dao.sync.enqueue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -161,6 +162,8 @@ internal fun AppDatabase.mergeLibraryBookRows(fromId: String, intoId: String): L
         cloudBookFileStateQueries.deleteCloudBookFileStatesForBook(fromId)
         cloudFileTransferQueries.moveNonTerminalTransfers(intoId, fromId)
         cloudFileTransferQueries.deleteTransfersForBook(fromId)
+
+        mergeLibraryCopyLinks(fromId, intoId)
 
         // Book ids are UUIDs, so a quoted occurrence in a payload can only be the id.
         syncOutboxQueries.getAllMutations().executeAsList().forEach { mutation ->

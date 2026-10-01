@@ -41,7 +41,7 @@ class SeriesListViewModel(
     private fun observeSeriesWithBooks() {
         combine(
             getSeriesUseCase(),
-            getBooksUseCase(),
+            getBooksUseCase(groupLinked = false),
         ) { seriesResult, booksResult ->
             coroutineBinding {
                 val seriesList = seriesResult.bind()
@@ -78,4 +78,3 @@ class SeriesListViewModel(
             .launchIn(viewModelScope)
     }
 }
-

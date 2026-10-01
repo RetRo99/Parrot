@@ -13,7 +13,7 @@ class GetBooksBySeriesUseCase(
     @Provided private val getBooksUseCase: GetBooksUseCase,
 ) {
     operator fun invoke(seriesName: String): Flow<AppResult<List<BookDomainModel>>> {
-        return getBooksUseCase().map { result ->
+        return getBooksUseCase(groupLinked = false).map { result ->
             result.map { books ->
                 books.filterIsInstance<BookDomainModel.StorytellerBook>()
                     .filter { book ->
@@ -30,4 +30,3 @@ class GetBooksBySeriesUseCase(
         }
     }
 }
-

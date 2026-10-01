@@ -116,11 +116,20 @@ class ParrotCloudBookLinkSync(
         // A stale revision of the same link: another device changed it first. Keep what
         // both sides added when that is still a valid link, otherwise keep this device's.
         if (local == null || local.deletedAt != null) return
-        val joined = (local.members + remote.members).distinct().sorted()
-        val members = if (joined.toCopyKeys().repeatsSource()) local.members else joined
+        val mutation = json.decodeFromString<ParrotCloudBookLinkPayload>(entry.payload)
+        val removed = mutation.removedMembers.toSet()
+        val joined = (local.members + remote.members).distinct().filterNot { member ->
+            member in removed
+        }.sorted()
+        val members = if (joined.toCopyKeys().repeatsSource()) {
+            local.members.filterNot { member -> member in removed }
+        } else {
+            joined
+        }
         reconcile(
             remote.toEntity(local, members),
             pushSurvivor = members.sorted() != remote.members.sorted(),
+            removedMembers = mutation.removedMembers,
         )
     }
 
@@ -128,7 +137,11 @@ class ParrotCloudBookLinkSync(
      * Stores [incoming] (Parrot Cloud's link, already at its revision), first merging any
      * other local link that shares a copy with it.
      */
-    private suspend fun reconcile(incoming: BookLinkEntity, pushSurvivor: Boolean) {
+    private suspend fun reconcile(
+        incoming: BookLinkEntity,
+        pushSurvivor: Boolean,
+        removedMembers: List<String> = emptyList(),
+    ) {
         val now = now()
         var survivor = incoming
         var push = pushSurvivor
@@ -174,7 +187,7 @@ class ParrotCloudBookLinkSync(
                 // Deletions first, so Parrot Cloud frees the copies before the survivor
                 // claims them.
                 outboxEntries = tombstones.map { link -> link.toOutbox() } +
-                    listOfNotNull(survivor.takeIf { push }?.toOutbox()),
+                    listOfNotNull(survivor.takeIf { push }?.toOutbox(removedMembers)),
             ),
         )
     }
@@ -193,7 +206,9 @@ class ParrotCloudBookLinkSync(
         )
     }
 
-    private fun BookLinkEntity.toOutbox(): SyncOutboxEntry {
+    private fun BookLinkEntity.toOutbox(
+        removedMembers: List<String> = emptyList(),
+    ): SyncOutboxEntry {
         val deleted = deletedAt != null
         return SyncOutboxEntry.new(
             entityType = SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK,
@@ -204,7 +219,12 @@ class ParrotCloudBookLinkSync(
                 SyncOutboxEntry.OPERATION_UPSERT
             },
             payload = json.encodeToString(
-                ParrotCloudBookLinkPayload(linkId = linkId, members = members, deleted = deleted),
+                ParrotCloudBookLinkPayload(
+                    linkId = linkId,
+                    members = members,
+                    deleted = deleted,
+                    removedMembers = removedMembers,
+                ),
             ),
             baseRevision = remoteRevision,
         )

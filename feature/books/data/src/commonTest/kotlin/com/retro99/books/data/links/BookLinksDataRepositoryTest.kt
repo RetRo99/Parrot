@@ -56,7 +56,7 @@ class BookLinksDataRepositoryTest {
         assertNull(entry.baseRevision)
         assertEquals(
             """{"link_id":"${link.linkId}","members":["library:b1","storyteller:s1"],""" +
-                """"deleted":false}""",
+                """"deleted":false,"removed_members":[]}""",
             entry.payload,
         )
     }
@@ -201,6 +201,8 @@ class BookLinksDataRepositoryTest {
                 .filter { entry -> entry.entityType == SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK }
                 .map { entry -> entry.operation },
         )
+        val entry = database.outbox.first()
+        assertTrue(entry.payload.contains("\"removed_members\":[\"storyteller:s1\"]"))
     }
 
     @Test

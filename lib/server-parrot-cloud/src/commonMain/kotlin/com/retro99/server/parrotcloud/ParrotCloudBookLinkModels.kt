@@ -17,6 +17,9 @@ internal data class ParrotCloudBookLinkPayload(
     val remoteRevision: Long? = null,
     @SerialName("created_at")
     val createdAt: String? = null,
+    /** Local mutation intent; the server ignores this field and does not echo it. */
+    @SerialName("removed_members")
+    val removedMembers: List<String> = emptyList(),
 )
 
 /** A "not the same book" or "skip" decision as Parrot Cloud sends it. */

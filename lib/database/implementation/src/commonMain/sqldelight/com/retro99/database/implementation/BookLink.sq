@@ -69,6 +69,9 @@ VALUES (?, ?, ?, ?);
 getBookLinkDecision:
 SELECT * FROM book_link_decisions WHERE pair_key = ?;
 
+deleteBookLinkDecision:
+DELETE FROM book_link_decisions WHERE pair_key = ?;
+
 selectBookLinkDecisions:
 SELECT * FROM book_link_decisions ORDER BY pair_key ASC;
 

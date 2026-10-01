@@ -28,6 +28,7 @@ kotlin {
             api(libs.koin.annotations)
             implementation(libs.datetime)
             implementation(libs.coroutines)
+            implementation(libs.serialization)
             implementation(projects.lib.database.api)
             implementation(projects.lib.preferences.api)
             implementation(projects.lib.user.api)

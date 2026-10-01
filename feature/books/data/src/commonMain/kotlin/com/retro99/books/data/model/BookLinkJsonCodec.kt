@@ -14,8 +14,12 @@ internal object BookLinkJsonCodec {
         encodeDefaults = true
     }
 
-    fun encodeLink(linkId: String, members: List<String>, deleted: Boolean): String =
-        json.encodeToString(BookLinkPayload(linkId, members, deleted))
+    fun encodeLink(
+        linkId: String,
+        members: List<String>,
+        deleted: Boolean,
+        removedMembers: List<String> = emptyList(),
+    ): String = json.encodeToString(BookLinkPayload(linkId, members, deleted, removedMembers))
 
     fun encodeDecision(pairKey: String, decision: String, decidedAt: String): String =
         json.encodeToString(BookLinkDecisionPayload(pairKey, decision, decidedAt))
@@ -27,6 +31,8 @@ private data class BookLinkPayload(
     val linkId: String,
     val members: List<String>,
     val deleted: Boolean,
+    @SerialName("removed_members")
+    val removedMembers: List<String> = emptyList(),
 )
 
 @Serializable

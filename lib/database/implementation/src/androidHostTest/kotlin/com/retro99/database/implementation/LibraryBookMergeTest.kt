@@ -3,12 +3,22 @@ package com.retro99.database.implementation
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.retro99.database.api.library.DeviceFileEntity
 import com.retro99.database.api.library.LibraryBookEntity
+import com.retro99.database.api.links.BookLinkDecisionEntity
+import com.retro99.database.api.links.BookLinkEntity
+import com.retro99.database.api.links.BookLinkWrite
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.database.implementation.dao.library.deleteBookFromDeviceRows
 import com.retro99.database.implementation.dao.library.mergeLibraryBookRows
 import com.retro99.database.implementation.dao.library.upsertDeviceFileRow
 import com.retro99.database.implementation.dao.library.upsertLibraryBookRow
 import com.retro99.database.implementation.dao.sync.enqueue
+import com.retro99.database.implementation.dao.links.readBookLink
+import com.retro99.database.implementation.dao.links.readBookLinkDecisions
+import com.retro99.database.implementation.dao.links.writeBookLinks
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -234,6 +244,140 @@ class LibraryBookMergeTest {
     }
 
     @Test
+    fun `merge moves linked copies and replaces queued snapshots with the surviving id`() {
+        // Given
+        database.writeBookLinks(BookLinkWrite(
+            links = listOf(link("link-1", "library:$FROM", "storyteller:s1")),
+            outboxEntries = listOf(SyncOutboxEntry.new(
+                entityType = SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK,
+                entityId = "link-1",
+                operation = SyncOutboxEntry.OPERATION_UPSERT,
+                payload = """{"link_id":"link-1","members":["library:$FROM","storyteller:s1"]}""",
+            )),
+        ))
+
+        // When
+        database.mergeLibraryBookRows(FROM, INTO)
+
+        // Then
+        assertEquals(
+            listOf("library:$INTO", "storyteller:s1"),
+            database.readBookLink("link-1")!!.members,
+        )
+        val mutation = database.syncOutboxQueries.getAllMutations().executeAsList().single()
+        val payload = Json.parseToJsonElement(mutation.payload).jsonObject
+        assertEquals(
+            listOf("library:$INTO", "storyteller:s1"),
+            payload.getValue("members").jsonArray.map { member -> member.jsonPrimitive.content },
+        )
+        assertEquals(
+            listOf("library:$FROM"),
+            payload.getValue("removed_members").jsonArray.map { member ->
+                member.jsonPrimitive.content
+            },
+        )
+    }
+
+    @Test
+    fun `merge joins compatible existing links and queues deletion before the survivor`() {
+        // Given
+        database.writeBookLinks(BookLinkWrite(links = listOf(
+            link("link-1", "library:$FROM", "storyteller:s1"),
+            link("link-2", "library:$INTO", "audiobookshelf:a1"),
+        )))
+
+        // When
+        database.mergeLibraryBookRows(FROM, INTO)
+
+        // Then
+        assertEquals(
+            listOf("audiobookshelf:a1", "library:$INTO", "storyteller:s1"),
+            database.readBookLink("link-1")!!.members,
+        )
+        assertNotNull(database.readBookLink("link-2")!!.deletedAt)
+        assertEquals(
+            listOf("delete", "upsert"),
+            database.syncOutboxQueries.getAllMutations().executeAsList()
+                .map { mutation -> mutation.operation },
+        )
+    }
+
+    @Test
+    fun `merge preserves unsent unlink intent in the replacement snapshot`() {
+        // Given
+        database.writeBookLinks(BookLinkWrite(
+            links = listOf(link("link-1", "library:$FROM", "storyteller:s1")),
+            outboxEntries = listOf(SyncOutboxEntry.new(
+                entityType = SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK,
+                entityId = "link-1",
+                operation = SyncOutboxEntry.OPERATION_UPSERT,
+                payload = """{"link_id":"link-1","removed_members":["audiobookshelf:a1"]}""",
+            )),
+        ))
+
+        // When
+        database.mergeLibraryBookRows(FROM, INTO)
+
+        // Then
+        val mutation = database.syncOutboxQueries.getAllMutations().executeAsList().single()
+        val removed = Json.parseToJsonElement(mutation.payload).jsonObject
+            .getValue("removed_members").jsonArray
+            .map { member -> member.jsonPrimitive.content }.toSet()
+        assertEquals(setOf("audiobookshelf:a1", "library:$FROM"), removed)
+    }
+
+    @Test
+    fun `merge retains the surviving book link when server copies conflict`() {
+        // Given
+        database.writeBookLinks(BookLinkWrite(links = listOf(
+            link("link-1", "library:$FROM", "storyteller:s1"),
+            link("link-2", "library:$INTO", "storyteller:s2"),
+        )))
+
+        // When
+        database.mergeLibraryBookRows(FROM, INTO)
+
+        // Then
+        assertNotNull(database.readBookLink("link-1")!!.deletedAt)
+        assertEquals(
+            listOf("library:$INTO", "storyteller:s2"),
+            database.readBookLink("link-2")!!.members,
+        )
+    }
+
+    @Test
+    fun `merge migrates decisions and keeps the latest decision for the surviving pair`() {
+        // Given
+        val fromPair = "library:$FROM|storyteller:s1"
+        val intoPair = "library:$INTO|storyteller:s1"
+        database.writeBookLinks(BookLinkWrite(
+            decisions = listOf(
+                BookLinkDecisionEntity(fromPair, "skip", "2026-09-30T10:00:00Z"),
+                BookLinkDecisionEntity(intoPair, "never", "2026-10-01T10:00:00Z", 3),
+            ),
+            outboxEntries = listOf(SyncOutboxEntry.new(
+                entityType = SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK_DECISION,
+                entityId = fromPair,
+                operation = SyncOutboxEntry.OPERATION_UPSERT,
+                payload = """{"pair_key":"$fromPair","decision":"skip"}""",
+            )),
+        ))
+
+        // When
+        database.mergeLibraryBookRows(FROM, INTO)
+
+        // Then
+        val decision = database.readBookLinkDecisions().single()
+        assertEquals(intoPair, decision.pairKey)
+        assertEquals("never", decision.decision)
+        assertEquals(3L, decision.remoteRevision)
+        val mutation = database.syncOutboxQueries.getAllMutations().executeAsList().single()
+        assertEquals(intoPair, mutation.entity_id)
+        assertTrue(mutation.payload.contains(intoPair))
+        assertTrue(!mutation.payload.contains(fromPair))
+    }
+
+    @Test
     fun `merge deletes the merged library book`() {
         // When
         database.mergeLibraryBookRows(fromId = FROM, intoId = INTO)
@@ -286,6 +430,14 @@ class LibraryBookMergeTest {
         assertTrue(database.deviceFileQueries.getDeviceFilesForBook(FROM).executeAsList().isEmpty())
         assertNull(database.libraryBookQueries.getLibraryBookById(FROM).executeAsOneOrNull())
     }
+
+    private fun link(id: String, vararg members: String) = BookLinkEntity(
+        linkId = id,
+        members = members.sorted(),
+        createdAt = "2026-09-30T10:00:00Z",
+        updatedAt = "2026-09-30T10:00:00Z",
+        remoteRevision = 1,
+    )
 
     private fun book(id: String) = LibraryBookEntity(
         libraryBookId = id,

@@ -213,6 +213,39 @@ class ParrotCloudBookLinkSyncTest {
     }
 
     @Test
+    fun `a stale unlink does not restore the removed copy`() = runTest {
+        // Given: an earlier queued addition was accepted before this removal.
+        setup(link(LOCAL, "library:b1", "storyteller:s1", revision = 2))
+        val entry = linkEntry(LOCAL).copy(
+            payload = """{"link_id":"$LOCAL","members":["library:b1","storyteller:s1"],"removed_members":["audiobookshelf:a1"]}""",
+        )
+
+        // When
+        applier().onConflict(
+            entry,
+            conflict(remoteLink(
+                LOCAL, "library:b1", "storyteller:s1", "audiobookshelf:a1", revision = 2,
+            )),
+        )
+
+        // Then
+        assertEquals(listOf("library:b1", "storyteller:s1"), database.liveLinks.single().members)
+        val retry = database.outbox.single()
+        assertEquals(2L, retry.baseRevision)
+        assertTrue(retry.payload.contains("\"removed_members\":[\"audiobookshelf:a1\"]"))
+
+        // Another concurrent edit must not lose the removal intent on the retry.
+        applier().onConflict(
+            retry,
+            conflict(remoteLink(
+                LOCAL, "library:b1", "storyteller:s1", "audiobookshelf:a1", revision = 3,
+            )),
+        )
+        assertEquals(listOf("library:b1", "storyteller:s1"), database.liveLinks.single().members)
+        assertEquals(3L, database.outbox.last().baseRevision)
+    }
+
+    @Test
     fun `a pulled decision is stored unless this device has a newer one`() = runTest {
         // Given
         setup()
@@ -326,7 +359,7 @@ class ParrotCloudBookLinkSyncTest {
         entityType = SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK,
         entityId = entityId,
         operation = SyncOutboxEntry.OPERATION_UPSERT,
-        payload = "{}",
+        payload = """{"link_id":"$entityId"}""",
         baseRevision = null,
         createdAt = "2026-10-01T12:00:00Z",
         attemptCount = 0,
