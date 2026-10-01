@@ -27,7 +27,7 @@ class ParrotCloudBookFileService(
             .rpc(
                 "reserve_book_upload",
                 buildJsonObject {
-                    put("cloud_book_id", request.cloudBookId)
+                    put("cloud_book_id", request.libraryBookId)
                     put("media_type", request.mediaType)
                     put("relative_path", request.relativePath)
                     put("file_name", request.fileName)
@@ -54,7 +54,6 @@ class ParrotCloudBookFileService(
 
             STATUS_ALREADY_AVAILABLE -> UploadReservationResult.AlreadyAvailable(
                 CloudBookFileRecord(
-                    cloudBookId = request.cloudBookId,
                     cloudBookFileId = requireNotNull(response.cloudBookFileId),
                     mediaType = request.mediaType,
                     relativePath = request.relativePath,
@@ -74,7 +73,6 @@ class ParrotCloudBookFileService(
                 retryAfterMillis = response.retryAfterMillis,
                 existing = response.existing?.let { existing ->
                     CloudBookFileRecord(
-                        cloudBookId = request.cloudBookId,
                         cloudBookFileId = existing.cloudBookFileId,
                         mediaType = existing.mediaType,
                         relativePath = existing.relativePath,
@@ -110,7 +108,6 @@ class ParrotCloudBookFileService(
             )
         }
         return CloudBookFileRecord(
-            cloudBookId = request.cloudBookId,
             cloudBookFileId = response.cloudBookFileId ?: reservation.cloudBookFileId,
             mediaType = request.mediaType,
             relativePath = request.relativePath,

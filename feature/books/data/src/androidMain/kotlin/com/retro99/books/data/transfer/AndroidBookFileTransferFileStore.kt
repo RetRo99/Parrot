@@ -15,8 +15,9 @@ class AndroidBookFileTransferFileStore(
     override fun stagingPath(transferId: String): String =
         File(stagingDirectory, "${transferId.safeName()}.part").absolutePath
 
-    override fun importedFilePath(localUuid: String, mediaType: String): String =
-        File(ebooksDirectory, "${localUuid.safeName()}_${mediaType.safeName()}.epub").absolutePath
+    override fun libraryFilePath(libraryBookId: String, mediaType: String): String =
+        File(libraryDirectory, "${libraryBookId.safeName()}_${mediaType.safeName()}.epub")
+            .absolutePath
 
     override suspend fun exists(path: String): Boolean = File(path).exists()
 
@@ -55,8 +56,8 @@ class AndroidBookFileTransferFileStore(
         if (!source.delete()) error("Restored book was saved but its staging file could not be removed")
     }
 
-    override suspend fun writeCover(localUuid: String, bytes: ByteArray): String {
-        val cover = File(coversDirectory, "${localUuid.safeName()}.png")
+    override suspend fun writeCover(libraryBookId: String, bytes: ByteArray): String {
+        val cover = File(coversDirectory, "${libraryBookId.safeName()}.png")
         cover.writeBytes(bytes)
         return cover.absolutePath
     }
@@ -71,8 +72,9 @@ class AndroidBookFileTransferFileStore(
         // import store. A vanished staging file simply restarts the transfer.
         get() = File(context.cacheDir, "book_file_transfers").apply { mkdirs() }
 
-    private val ebooksDirectory: File
-        get() = File(context.filesDir, "ebooks").apply { mkdirs() }
+    // Separate from the reader cache in filesDir/ebooks (I6).
+    private val libraryDirectory: File
+        get() = File(context.filesDir, "library").apply { mkdirs() }
 
     private val coversDirectory: File
         get() = File(context.filesDir, "imported_covers").apply { mkdirs() }

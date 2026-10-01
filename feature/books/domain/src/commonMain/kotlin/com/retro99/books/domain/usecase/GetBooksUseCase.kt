@@ -6,7 +6,6 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map as resultMap
 import com.retro99.base.result.AppResult
 import com.retro99.books.domain.model.BookDomainModel
-import com.retro99.books.domain.model.aggregateBookReplicas
 import com.retro99.books.domain.model.toBookDomainModel
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import kotlinx.coroutines.flow.Flow
@@ -52,7 +51,6 @@ class GetBooksUseCase(
                     combine(flows) { results ->
                         val aggregatedBooks = results
                             .flatMap { result -> result.getOrElse { emptyList() } }
-                            .aggregateBookReplicas()
                             .map { book -> book.toBookDomainModel() }
                             .sortedBy { book -> book.title.lowercase() }
                         logger.d {

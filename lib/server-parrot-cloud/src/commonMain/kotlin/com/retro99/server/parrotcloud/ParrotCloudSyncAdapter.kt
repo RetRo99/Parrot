@@ -23,8 +23,6 @@ import com.retro99.sync.data.SyncPass
 import com.retro99.sync.data.SyncExecutionContext
 import com.retro99.sync.data.SyncOutboxPreflight
 import com.retro99.sync.data.SyncOutboxCapability
-import com.retro99.sync.data.DuplicatePositionRepair
-import com.retro99.sync.data.LocalBookUuidResolver
 import com.retro99.sync.data.SyncBoundedPass
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -40,8 +38,6 @@ import org.koin.core.annotation.Single
 @Single(binds = [SyncPass::class])
 class ParrotCloudSyncAdapter(
     @Provided private val syncOutboxPreflight: SyncOutboxPreflight,
-    @Provided private val localBookUuidResolver: LocalBookUuidResolver,
-    @Provided private val duplicatePositionRepair: DuplicatePositionRepair,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
     @Provided private val libraryMutationTransport: LibraryMutationSyncTransport,
@@ -78,7 +74,6 @@ class ParrotCloudSyncAdapter(
         cloudUserId: String,
         reportPhase: SyncPhaseReporter,
     ): SyncResult {
-        duplicatePositionRepair.repair()
         // Backfill-style sweep: enqueue every local reading session recorded
         // since the last sweep before the pass drains the outbox.
         readingSessionSyncService.enqueueNewSessions(cloudUserId)
@@ -130,7 +125,7 @@ class ParrotCloudSyncAdapter(
         // the outbox until their book is linked.
         val resolvedEntries = mutableMapOf<String, SyncOutboxEntry>()
         val unresolvedMutationIds = mutableSetOf<String>()
-        val latestEntryByCloudBookId = linkedMapOf<String, Pair<Long, String>>()
+        val latestEntryByBookId = linkedMapOf<String, Pair<Long, String>>()
         entries.forEachIndexed { index, entry ->
             val cloudEntry = entry.toCloudReadingPositionEntry()
             if (cloudEntry == null) {
@@ -140,12 +135,12 @@ class ParrotCloudSyncAdapter(
             resolvedEntries[entry.mutationId] = cloudEntry
             val payload = json.decodeFromString<ParrotCloudReadingPositionPayload>(cloudEntry.payload)
             val generation = entry.localGeneration.takeIf { it > 0L } ?: index.toLong()
-            val current = latestEntryByCloudBookId[payload.cloudBookId]
+            val current = latestEntryByBookId[payload.libraryBookId]
             if (current == null || generation >= current.first) {
-                latestEntryByCloudBookId[payload.cloudBookId] = generation to entry.mutationId
+                latestEntryByBookId[payload.libraryBookId] = generation to entry.mutationId
             }
         }
-        val latestEntries = latestEntryByCloudBookId.values.map { (_, mutationId) -> resolvedEntries.getValue(mutationId) }
+        val latestEntries = latestEntryByBookId.values.map { (_, mutationId) -> resolvedEntries.getValue(mutationId) }
         val latestMutationIds = latestEntries.mapTo(mutableSetOf()) { entry -> entry.mutationId }
         entries.filter { entry ->
             entry.state == SyncOutboxEntry.STATE_PENDING &&
@@ -171,7 +166,7 @@ class ParrotCloudSyncAdapter(
                 ProgressMutation(
                     mutationId = entry.mutationId,
                     entityId = entry.entityId,
-                    remoteBookId = payload.cloudBookId,
+                    remoteBookId = payload.libraryBookId,
                     libraryBookId = payload.libraryBookId,
                     kind = ProgressKind.EBOOK,
                     snapshot = payload.position.toProgressSyncSnapshot(),
@@ -198,36 +193,19 @@ class ParrotCloudSyncAdapter(
             // Undecodable payloads stay in the outbox; they must not abort the batch.
             return null
         }
-        val libraryBook = localPosition.position.libraryBookId
-            ?.let { libraryBookId -> libraryBooksDatabase.getLibraryBookById(libraryBookId) }
-            ?: localPosition.contentHash?.let { contentHash ->
-                libraryBooksDatabase.getLibraryBookByContentHash(
-                    contentHashAlgorithm = localPosition.contentHashAlgorithm
-                        ?: DEFAULT_CONTENT_HASH_ALGORITHM,
-                    contentHash = contentHash,
-                )
-            }
-            ?: return null
-
-        val cloudBookId = libraryBook.cloudBookId ?: return null
-        val cloudPayload = localPosition.toParrotCloudReadingPositionPayload(
-            libraryBook = libraryBook,
-            cloudBookId = cloudBookId,
-        )
+        // I4: only books in your library sync to Parrot Cloud. A book whose row is gone, or
+        // that the server doesn't know yet, stays in the outbox and is retried later.
+        val libraryBookId = localPosition.position.libraryBookId ?: return null
+        val libraryBook = libraryBooksDatabase.getLibraryBookById(libraryBookId) ?: return null
+        val cloudPayload = localPosition.toParrotCloudReadingPositionPayload(libraryBook)
         return copy(payload = json.encodeToString(cloudPayload))
     }
 
     private fun parrotProgressIdentityResolver() = ProgressIdentityResolver { remote ->
-        val libraryBookId = remote.libraryBookId ?: remote.entityId ?: remote.remoteBookId
-        val localBookUuid = localBookUuidResolver.resolve(
-            libraryBookId = libraryBookId,
-            cloudBookId = remote.remoteBookId,
-            fallback = remote.entityId ?: libraryBookId,
-        )
-        ProgressIdentity(
-            localBookUuid = localBookUuid,
-            libraryBookId = libraryBookId,
-        )
+        // Parrot Cloud positions are keyed by the library book id, which is also the
+        // local position's book_uuid.
+        val bookId = remote.libraryBookId ?: remote.entityId ?: remote.remoteBookId
+        ProgressIdentity(localBookUuid = bookId, libraryBookId = bookId)
     }
 
     private suspend fun pushLibraryMutations(
@@ -296,15 +274,12 @@ class ParrotCloudSyncAdapter(
         const val SYNC_BATCH_SIZE = 50
         const val MAX_LIBRARY_PUSH_CHUNKS = 5
         const val ENTITY_TYPE_BOOK_FILE = "book_file"
-        const val DEFAULT_CONTENT_HASH_ALGORITHM = "sha-256-v1"
     }
 }
 
 @Serializable
 internal data class LocalReadingPositionMutation(
     val bookUuid: String,
-    val contentHash: String?,
-    val contentHashAlgorithm: String?,
     val position: ServerPosition,
 )
 
@@ -322,10 +297,8 @@ internal fun List<SyncOutboxEntry>.filterLibraryMutationChannelEntries(): List<S
 
 internal fun LocalReadingPositionMutation.toParrotCloudReadingPositionPayload(
     libraryBook: LibraryBookEntity,
-    cloudBookId: String,
 ): ParrotCloudReadingPositionPayload {
     return ParrotCloudReadingPositionPayload(
-        cloudBookId = cloudBookId,
         libraryBookId = libraryBook.libraryBookId,
         position = position.copy(
             bookUuid = bookUuid,

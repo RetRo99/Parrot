@@ -53,8 +53,10 @@ import com.retro99.base.server.ServerType
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberCover
 import com.retro99.base.ui.compose.EmberProgress
+import com.retro99.books.domain.model.BookHome
 import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.books.ui.model.showDownloadedIcon
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -68,6 +70,7 @@ import resources.translations.books_progress_local
 import resources.translations.books_progress_remote
 import resources.translations.books_search_clear
 import resources.translations.books_search_placeholder
+import resources.translations.library_home_this_device
 
 /**
  * A book row in the Ember list style: cover, title, author and formats, progress and favorite.
@@ -140,7 +143,7 @@ fun BookItemCard(
 
                 BookMetaRow(
                     book = book,
-                    isCached = progressInfo?.hasAnyCached == true,
+                    isCached = book.showDownloadedIcon(progressInfo),
                     showServerBadge = showServerBadge,
                     highlightQuery = highlightQuery,
                 )
@@ -225,7 +228,7 @@ private fun BookMetaRow(
             )
         }
         if (showServerBadge) {
-            book.serverType?.let { serverType -> ServerTypeBadge(serverType = serverType) }
+            HomeBadge(home = book.home)
         }
     }
 }
@@ -375,7 +378,7 @@ fun BookGridCard(
                         .size(18.dp),
                 )
             }
-            if (progressInfo?.hasAnyCached == true) {
+            if (book.showDownloadedIcon(progressInfo)) {
                 Icon(
                     imageVector = Icons.Outlined.DownloadDone,
                     contentDescription = stringResource(StringRes.books_cached_indicator),
@@ -388,12 +391,10 @@ fun BookGridCard(
                 )
             }
             if (showServerBadge) {
-                book.serverType?.let { serverType ->
-                    ServerTypeBadge(
-                        serverType = serverType,
-                        modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
-                    )
-                }
+                HomeBadge(
+                    home = book.home,
+                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
+                )
             }
         }
 
@@ -427,11 +428,23 @@ fun BookGridCard(
     }
 }
 
+/** Where a book lives. Today's server colours; This device uses the old Local colours. */
 @Composable
-fun ServerTypeBadge(
-    serverType: ServerType,
+fun HomeBadge(
+    home: BookHome,
     modifier: Modifier = Modifier,
 ) {
+    val serverType = when (home) {
+        BookHome.ThisDevice -> ServerType.Local
+        BookHome.ParrotCloud -> ServerType.ParrotCloud
+        BookHome.Storyteller -> ServerType.Storyteller
+        BookHome.Audiobookshelf -> ServerType.Audiobookshelf
+    }
+    val label = if (home == BookHome.ThisDevice) {
+        stringResource(StringRes.library_home_this_device)
+    } else {
+        serverType.displayName
+    }
     val containerColor = when (serverType) {
         ServerType.Storyteller -> MaterialTheme.colorScheme.primaryContainer
         ServerType.Audiobookshelf -> MaterialTheme.colorScheme.tertiaryContainer
@@ -467,7 +480,7 @@ fun ServerTypeBadge(
                     .background(dotColor),
             )
             Text(
-                text = serverType.displayName,
+                text = label,
                 style = MaterialTheme.typography.labelSmall,
                 color = contentColor,
                 maxLines = 1,

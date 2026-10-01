@@ -6,14 +6,13 @@ import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.base.result.log
-import com.retro99.base.server.LOCAL_SERVER_ID
 import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
-import com.retro99.base.server.ServerType
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.BookFileTransferManager
 import com.retro99.books.domain.BookFileTransferRejectedException
-import com.retro99.books.domain.FileImportManager
 import com.retro99.books.domain.usecase.CancelBookFileTransferUseCase
+import com.retro99.books.domain.usecase.DeleteBookFromDeviceUseCase
+import com.retro99.books.domain.usecase.RemoveFromParrotCloudUseCase
 import com.retro99.books.domain.usecase.ObserveBookFileTransferUseCase
 import com.retro99.books.domain.usecase.RetryBookFileTransferUseCase
 import com.retro99.books.domain.usecase.StartBookFileUploadUseCase
@@ -21,10 +20,7 @@ import com.retro99.books.domain.usecase.StartBookFileDownloadUseCase
 import com.retro99.books.domain.usecase.RemoveBookFileDownloadUseCase
 import com.retro99.books.domain.usecase.ObserveFavoriteUseCase
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
-import com.retro99.cloudaccount.domain.CloudAccountRepository
-import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
-import com.retro99.cloudaccount.domain.model.isActiveFor
 import com.retro99.books.ui.model.toUiModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.domain.model.BookType
@@ -35,6 +31,7 @@ import com.retro99.reader.domain.usecase.DownloadMediaUseCase
 import com.retro99.reader.domain.usecase.ObserveBookWithProgressUseCase
 import com.retro99.reader.domain.usecase.ObserveDownloadStateUseCase
 import com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase
+import com.retro99.server.api.ParrotCloudLibraryState
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -63,7 +60,8 @@ class BookDetailViewModel(
     @Provided private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     @Provided private val observeFavoriteUseCase: ObserveFavoriteUseCase,
     @Provided private val resolvePositionConflictUseCase: ResolvePositionConflictUseCase,
-    @Provided private val fileImportManager: FileImportManager,
+    @Provided private val deleteBookFromDeviceUseCase: DeleteBookFromDeviceUseCase,
+    @Provided private val removeFromParrotCloudUseCase: RemoveFromParrotCloudUseCase,
     @Provided private val bookFileTransferManager: BookFileTransferManager,
     @Provided private val observeBookFileTransferUseCase: ObserveBookFileTransferUseCase,
     @Provided private val startBookFileUploadUseCase: StartBookFileUploadUseCase,
@@ -72,8 +70,7 @@ class BookDetailViewModel(
     @Provided private val startBookFileDownloadUseCase: StartBookFileDownloadUseCase,
     @Provided private val removeBookFileDownloadUseCase: RemoveBookFileDownloadUseCase,
     @Provided private val uploadRightsAttestationRepository: UploadRightsAttestationRepository,
-    @Provided private val cloudAccountRepository: CloudAccountRepository,
-    @Provided private val cloudProfileLinkRepository: CloudProfileLinkRepository,
+    @Provided private val parrotCloudLibraryState: ParrotCloudLibraryState,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
@@ -81,7 +78,7 @@ class BookDetailViewModel(
 ) {
     private var transferObservationJob: Job? = null
     private var observedTransferKey: String? = null
-    private var activeCloudAccount = false
+    private var parrotActive = false
 
     init {
         analytics.logEvent(
@@ -93,7 +90,7 @@ class BookDetailViewModel(
         observeBookWithProgress()
         observeDownloadStates()
         observeFavoriteState()
-        observeActiveCloudAccount()
+        observeParrotCloudState()
     }
 
     override fun onIntent(intent: BookDetailIntent) {
@@ -185,14 +182,14 @@ class BookDetailViewModel(
                 updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
             }
 
-            is BookDetailIntent.OnDeleteCloudBackupClicked -> {
-                updateState { it.copy(cloudBackupDeleteConfirmationType = intent.bookType) }
+            BookDetailIntent.OnRemoveFromParrotClicked -> {
+                updateState { it.copy(showRemoveFromParrotConfirmation = true) }
             }
 
-            BookDetailIntent.OnDeleteCloudBackupConfirmed -> deleteCloudBackup()
+            BookDetailIntent.OnRemoveFromParrotConfirmed -> removeFromParrotCloud()
 
-            BookDetailIntent.OnDeleteCloudBackupDismissed -> {
-                updateState { it.copy(cloudBackupDeleteConfirmationType = null) }
+            BookDetailIntent.OnRemoveFromParrotDismissed -> {
+                updateState { it.copy(showRemoveFromParrotConfirmation = false) }
             }
 
             is BookDetailIntent.OnCancelBookFileTransferClicked -> cancelBookTransfer(intent.transferId)
@@ -236,8 +233,10 @@ class BookDetailViewModel(
     }
 
     private fun deleteLocalBook() {
+        val book = viewState.value.book as? BookUiModel.LibraryBook ?: return
+        if (viewState.value.libraryBookActions?.deleteFromDevice != true) return
         viewModelScope.launch {
-            fileImportManager.deleteLocalBook(bookUuid)
+            deleteBookFromDeviceUseCase(book.libraryBookId)
                 .onSuccess {
                     // Navigate back after successful deletion
                     onBack()
@@ -358,12 +357,10 @@ class BookDetailViewModel(
                         updateState {
                             it.copy(
                                 book = uiModel,
-                                supportsBookBackup = canBackUp(uiModel),
-                                supportsBookDeletion = canDeleteCloudBackup(uiModel),
                                 progressInfo = bookWithProgress.progressInfo?.toUiModel(),
                                 isLoading = false,
                                 error = null,
-                            ).withCloudTransferStates()
+                            ).withLibraryActions().withCloudTransferStates()
                         }
                     }
                     .onFailure { error ->
@@ -379,68 +376,66 @@ class BookDetailViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun canBackUp(book: BookUiModel): Boolean =
-        activeCloudAccount &&
-            bookFileTransferManager.supportsUpload(backupServerId(book)) &&
-            when (book) {
-                is BookUiModel.LocalBook ->
-                    book.origin == "import" && book.libraryBookId != null && book.filePath.isNotBlank()
-                is BookUiModel.StorytellerBook ->
-                    book.serverType == ServerType.ParrotCloud &&
-                        book.libraryBookId != null &&
-                        book.localSourceUuid != null &&
-                        book.mediaResources.any { resource -> resource.localPath != null }
-            }
-
-    private fun backupServerId(book: BookUiModel): String =
-        if (book is BookUiModel.LocalBook) PARROT_CLOUD_SERVER_ID else book.serverId
-
-    private fun observeActiveCloudAccount() {
-        val localProfileId = userRegistry.getActiveProfileIdOrDefault()
-        combine(
-            cloudAccountRepository.observeAuthState(),
-            cloudProfileLinkRepository.observeForLocalProfile(localProfileId),
-        ) { authState, profileLink -> profileLink.isActiveFor(authState) }
-            .distinctUntilChanged()
+    private fun observeParrotCloudState() {
+        parrotCloudLibraryState.observeIsActive()
             .onEach { isActive ->
-                activeCloudAccount = isActive
-                updateState { current ->
-                    current.copy(
-                        supportsBookBackup = current.book?.let(::canBackUp) == true,
-                    )
-                }
+                parrotActive = isActive
+                updateState { current -> current.withLibraryActions() }
             }
             .launchIn(viewModelScope)
     }
 
-    private fun canDeleteCloudBackup(book: BookUiModel): Boolean =
-        book is BookUiModel.StorytellerBook &&
-            book.serverType == ServerType.ParrotCloud &&
-            book.libraryBookId != null &&
-            bookFileTransferManager.supportsDeletion(serverId)
+    /** Derives every library-book action from the rules in [LibraryBookActions]. */
+    private fun BookDetailViewState.withLibraryActions(): BookDetailViewState {
+        val libraryBook = book as? BookUiModel.LibraryBook
+            ?: return copy(
+                supportsBookBackup = false,
+                libraryMediaActions = emptyMap(),
+                libraryBookActions = null,
+                // Server books keep today's cache delete for any cached type.
+                removableDownloadTypes = BookType.entries.toSet(),
+            )
+        val uploadsSupported = bookFileTransferManager.supportsUpload(PARROT_CLOUD_SERVER_ID)
+        val mediaActions = libraryBook.mediaResources.mapNotNull { resource ->
+            val bookType = BookType.entries.firstOrNull { type -> type.value == resource.mediaType }
+                ?: return@mapNotNull null
+            val actions = resource.libraryActions(parrotActive)
+            bookType to actions.copy(addToParrot = actions.addToParrot && uploadsSupported)
+        }.toMap()
+        return copy(
+            supportsBookBackup = mediaActions.values.any { actions -> actions.addToParrot },
+            libraryMediaActions = mediaActions,
+            libraryBookActions = libraryBook.bookActions(),
+            removableDownloadTypes = mediaActions
+                .filterValues { actions -> actions.removeDownload }
+                .keys,
+        )
+    }
 
-    private fun deleteCloudBackup() {
-        val bookType = viewState.value.cloudBackupDeleteConfirmationType ?: return
-        val book = viewState.value.book as? BookUiModel.StorytellerBook ?: return
-        val libraryBookId = book.libraryBookId ?: return
-        updateState { it.copy(cloudBackupDeleteConfirmationType = null) }
+    private fun removeFromParrotCloud() {
+        val book = viewState.value.book as? BookUiModel.LibraryBook ?: return
+        updateState { it.copy(showRemoveFromParrotConfirmation = false) }
+        if (viewState.value.libraryBookActions?.removeFromParrot != true) return
+        val parrotMediaTypes = book.mediaResources
+            .filter { resource -> resource.cloudBookFileId != null }
+            .map { resource -> resource.mediaType }
         viewModelScope.launch {
             try {
-                bookFileTransferManager.deleteRemoteBackup(serverId, libraryBookId, bookType.value)
+                removeFromParrotCloudUseCase(book.libraryBookId, parrotMediaTypes)
             } catch (exception: CancellationException) {
                 throw exception
             } catch (error: Exception) {
-                updateState { it.copy(bookFileTransferError = error.message ?: "Could not delete cloud backup") }
+                updateState {
+                    it.copy(bookFileTransferError = error.message ?: "Could not remove from Parrot Cloud")
+                }
             }
         }
     }
 
     private fun observeBookFileTransfers(book: BookUiModel) {
-        val libraryBookId = when (book) {
-            is BookUiModel.LocalBook -> book.libraryBookId
-            is BookUiModel.StorytellerBook -> book.libraryBookId
-        }
-        val transferServerId = backupServerId(book)
+        // Only books in your library have Parrot Cloud files.
+        val libraryBookId = (book as? BookUiModel.LibraryBook)?.libraryBookId
+        val transferServerId = PARROT_CLOUD_SERVER_ID
         val key = libraryBookId?.let { "$transferServerId:$it" }
         if (key == observedTransferKey) return
         observedTransferKey = key
@@ -455,25 +450,28 @@ class BookDetailViewModel(
     }
 
     private fun startBookBackup() {
-        val book = viewState.value.book ?: return
-        val sourceUuid = when (book) {
-            is BookUiModel.LocalBook -> book.uuid
-            is BookUiModel.StorytellerBook -> book.localSourceUuid ?: return
-        }
+        val book = viewState.value.book as? BookUiModel.LibraryBook ?: return
         if (!viewState.value.backupRightsAttested || !viewState.value.supportsBookBackup) return
+        val mediaTypes = viewState.value.libraryMediaActions
+            .filterValues { actions -> actions.addToParrot }
+            .keys
+            .map { bookType -> bookType.value }
         viewModelScope.launch {
             try {
                 val localProfileId = userRegistry.getActiveProfileIdOrDefault()
-                if (!hasActiveCloudAccount(localProfileId)) {
+                if (!parrotActive) {
                     updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
                     return@launch
                 }
                 recordUploadAttestationIfRequired(localProfileId)
-                startBookFileUploadUseCase(
-                    serverId = backupServerId(book),
-                    localBookUuid = sourceUuid,
-                    localProfileId = localProfileId,
-                )
+                mediaTypes.forEach { mediaType ->
+                    startBookFileUploadUseCase(
+                        serverId = PARROT_CLOUD_SERVER_ID,
+                        libraryBookId = book.libraryBookId,
+                        mediaType = mediaType,
+                        localProfileId = localProfileId,
+                    )
+                }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Exception) {
@@ -483,11 +481,6 @@ class BookDetailViewModel(
             }
             updateState { it.copy(showBackupConfirmation = false, backupRightsAttested = false) }
         }
-    }
-
-    private suspend fun hasActiveCloudAccount(localProfileId: String): Boolean {
-        val profileLink = cloudProfileLinkRepository.getForLocalProfile(localProfileId) ?: return false
-        return profileLink.isActiveFor(cloudAccountRepository.currentAuthState())
     }
 
     private suspend fun recordUploadAttestationIfRequired(localProfileId: String) {
@@ -651,23 +644,21 @@ class BookDetailViewModel(
             return
         }
 
-        val cloudBook = book as? BookUiModel.StorytellerBook
-        val cloudResource = cloudBook?.mediaResources?.firstOrNull { resource ->
-            resource.mediaType.equals(bookType.value, ignoreCase = true)
-        }
-        if (cloudBook?.serverType == ServerType.ParrotCloud &&
-            bookType != BookType.AUDIOBOOK &&
-            cloudBook.libraryBookId != null &&
-            cloudResource?.cloudBookFileId != null &&
-            cloudResource.remoteAvailability == "Available" &&
-            cloudResource.localPath == null &&
-            bookFileTransferManager.supportsDownload(serverId)
-        ) {
+        if (book is BookUiModel.LibraryBook) {
+            // A library book downloads from Parrot Cloud, never into the reader cache (I6).
+            val canDownload = viewState.value.libraryMediaActions[bookType]?.download == true
+            if (!canDownload || !bookFileTransferManager.supportsDownload(PARROT_CLOUD_SERVER_ID)) {
+                return
+            }
             viewModelScope.launch {
                 runCatching {
-                    startBookFileDownloadUseCase(serverId, cloudBook.libraryBookId, bookType.value)
+                    startBookFileDownloadUseCase(
+                        PARROT_CLOUD_SERVER_ID,
+                        book.libraryBookId,
+                        bookType.value,
+                    )
                 }.onFailure { error ->
-                    updateState { it.copy(bookFileTransferError = error.message ?: "Could not restore book") }
+                    updateState { it.copy(bookFileTransferError = error.message ?: "Could not download book") }
                 }
             }
             return
@@ -694,21 +685,15 @@ class BookDetailViewModel(
                 bookType = bookType.name.lowercase(),
             )
         )
+        val libraryBook = viewState.value.book as? BookUiModel.LibraryBook
+        if (bookType !in viewState.value.removableDownloadTypes) return
         viewModelScope.launch {
-            val cloudBook = viewState.value.book as? BookUiModel.StorytellerBook
-            val restoredResource = cloudBook?.mediaResources?.firstOrNull { resource ->
-                resource.mediaType.equals(bookType.value, ignoreCase = true) &&
-                    resource.localOrigin == "cloud_download"
-            }
-            val hasCompletedRestore = viewState.value.bookFileTransfers.any { transfer ->
-                transfer.direction == "download" &&
-                    transfer.mediaType.equals(bookType.value, ignoreCase = true) &&
-                    transfer.state == "completed"
-            }
-            if (cloudBook?.serverType == ServerType.ParrotCloud &&
-                cloudBook.libraryBookId != null && (restoredResource != null || hasCompletedRestore)
-            ) {
-                removeBookFileDownloadUseCase(serverId, cloudBook.libraryBookId, bookType.value)
+            if (libraryBook != null) {
+                removeBookFileDownloadUseCase(
+                    PARROT_CLOUD_SERVER_ID,
+                    libraryBook.libraryBookId,
+                    bookType.value,
+                )
             } else {
                 deleteMediaCacheUseCase(bookUuid, bookType)
             }
@@ -724,29 +709,23 @@ class BookDetailViewModel(
         }
 
     private fun navigateToReader(bookType: BookType, bookTitle: String) {
-        val cloudBook = viewState.value.book as? BookUiModel.StorytellerBook
-        val localUuid = cloudBook?.takeIf { it.serverType == ServerType.ParrotCloud }?.localSourceUuid
-        if (localUuid != null) {
-            onNavigateToReader(LOCAL_SERVER_ID, localUuid, bookType, bookTitle)
-        } else {
-            onNavigateToReader(serverId, bookUuid, bookType, bookTitle)
-        }
+        onNavigateToReader(serverId, bookUuid, bookType, bookTitle)
     }
 
+    /**
+     * A library book's media type is on the device when it has a device file, and is
+     * downloading while a Parrot Cloud download runs. The reader cache isn't asked (I6).
+     */
     private fun BookDetailViewState.withCloudTransferStates(): BookDetailViewState {
-        val cloudBook = book as? BookUiModel.StorytellerBook ?: return this
-        if (cloudBook.serverType != ServerType.ParrotCloud) return this
+        val libraryBook = book as? BookUiModel.LibraryBook ?: return this
 
-        fun stateFor(bookType: BookType, fallback: DownloadState): DownloadState {
-            val resource = cloudBook.mediaResources.firstOrNull {
-                it.mediaType.equals(bookType.value, ignoreCase = true)
-            }
-            if (resource?.localPath != null) return DownloadState.Cached
+        fun stateFor(bookType: BookType): DownloadState {
+            if (libraryBook.mediaResource(bookType)?.localPath != null) return DownloadState.Cached
             val transfer = bookFileTransfers.firstOrNull { item ->
                 item.direction == "download" &&
                     item.mediaType.equals(bookType.value, ignoreCase = true) &&
-                    item.state != "cancelled"
-            } ?: return fallback
+                    item.state in ACTIVE_DOWNLOAD_STATES
+            } ?: return DownloadState.Idle
             return when (transfer.state) {
                 "pending" -> DownloadState.Downloading(0f)
                 "transferring" -> DownloadState.Downloading(
@@ -754,17 +733,18 @@ class BookDetailViewModel(
                         (transfer.bytesTransferred.toFloat() / transfer.totalBytes).coerceIn(0f, 1f)
                     } else null,
                 )
-                "verifying", "finalizing" -> DownloadState.Downloading(1f)
-                "completed" -> DownloadState.Cached
-                else -> fallback
+                else -> DownloadState.Downloading(1f)
             }
         }
 
         return copy(
-            ebookDownloadState = stateFor(BookType.EBOOK, ebookDownloadState),
-            audiobookDownloadState = stateFor(BookType.AUDIOBOOK, audiobookDownloadState),
-            readaloudDownloadState = stateFor(BookType.READALOUD, readaloudDownloadState),
+            ebookDownloadState = stateFor(BookType.EBOOK),
+            audiobookDownloadState = stateFor(BookType.AUDIOBOOK),
+            readaloudDownloadState = stateFor(BookType.READALOUD),
         )
     }
 
+    private companion object {
+        val ACTIVE_DOWNLOAD_STATES = setOf("pending", "transferring", "verifying", "finalizing")
+    }
 }

@@ -5,22 +5,11 @@ import com.retro99.server.api.MediaResource
 
 /**
  * Maps a ServerBook to BookDomainModel.
- * Returns LocalBook if isLocal flag is true, otherwise StorytellerBook.
+ * Returns LibraryBook if isLocal flag is true, otherwise StorytellerBook.
  */
 fun ServerBook.toBookDomainModel(): BookDomainModel {
     return if (isLocal) {
-        // Determine book type from which filepath is set
-        val bookType = when {
-            ebookFilepath != null -> BookType.EBOOK
-            readaloudFilepath != null -> BookType.READALOUD
-            audiobookFilepath != null -> BookType.AUDIOBOOK
-            else -> BookType.EBOOK
-        }
-        // Get the file path and size based on book type
-        val filePath = ebookFilepath ?: readaloudFilepath ?: audiobookFilepath ?: ""
-        val fileSize = ebookFileSize ?: readaloudFileSize ?: audiobookFileSize ?: 0L
-
-        BookDomainModel.LocalBook(
+        BookDomainModel.LibraryBook(
             uuid = uuid,
             serverId = serverId,
             serverType = serverType,
@@ -28,16 +17,10 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             description = description,
             coverUrl = coverUrl,
             author = authors.firstOrNull(),
-            filePath = filePath,
-            fileSize = fileSize,
-            importedAt = createdAt ?: "",
-            lastOpenedAt = lastOpenedAt,
-            bookType = bookType,
             publicationDate = publicationDate,
-            contentHash = contentHash,
-            contentHashAlgorithm = contentHashAlgorithm,
-            origin = mediaResources.firstOrNull()?.localOrigin ?: "import",
-            cloudBookFileId = mediaResources.firstOrNull()?.cloudBookFileId,
+            addedAt = createdAt.orEmpty(),
+            lastOpenedAt = lastOpenedAt,
+            mediaResources = mediaResources,
         )
     } else {
         BookDomainModel.StorytellerBook(
@@ -130,7 +113,6 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             remoteFileAvailability = remoteFileAvailability,
             remoteRevision = remoteRevision,
             mediaResources = mediaResources,
-            localSourceUuid = localSourceUuid,
         )
     }
 }

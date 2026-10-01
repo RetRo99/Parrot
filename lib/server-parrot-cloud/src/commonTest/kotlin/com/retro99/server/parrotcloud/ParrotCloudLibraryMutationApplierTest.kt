@@ -1,13 +1,8 @@
 package com.retro99.server.parrotcloud
 
-import com.retro99.database.api.library.LibraryBookEntity
-import com.retro99.database.api.library.LibraryBooksDatabase
-import com.retro99.database.api.library.LocalBookFileEntity
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.sync.data.LibraryBookSyncApplier
 import com.retro99.sync.domain.SyncMutationResponse
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -18,8 +13,8 @@ class ParrotCloudLibraryMutationApplierTest {
     private val json = Json { encodeDefaults = true }
 
     @Test
-    fun acceptedMutationDecodesPayloadAndAppliesRemoteIdentity() = runTest {
-        val database = RecordingLibraryBooksDatabase()
+    fun acceptedMutationRecordsTheServerRevision() = runTest {
+        val database = ParrotTestLibraryBooksDatabase(parrotTestBook(BOOK_ID))
         val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
 
         applier.onAccepted(
@@ -27,21 +22,19 @@ class ParrotCloudLibraryMutationApplierTest {
             response = SyncMutationResponse(
                 mutationId = "mutation-1",
                 status = "accepted",
-                cloudBookId = "cloud-book-accepted",
                 revision = 12L,
                 payload = null,
                 reason = null,
             ),
         )
 
-        assertEquals("cloud-book-accepted", database.upserted.single().cloudBookId)
-        assertEquals("book title", database.upserted.single().title)
+        assertEquals(BOOK_ID, database.upserted.single().libraryBookId)
         assertEquals(12L, database.upserted.single().remoteRevision)
     }
 
     @Test
     fun conflictPayloadIsAppliedAsRemoteLibraryState() = runTest {
-        val database = RecordingLibraryBooksDatabase()
+        val database = ParrotTestLibraryBooksDatabase()
         val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
 
         applier.onConflict(
@@ -49,7 +42,6 @@ class ParrotCloudLibraryMutationApplierTest {
             response = SyncMutationResponse(
                 mutationId = "mutation-1",
                 status = "conflict",
-                cloudBookId = null,
                 revision = 13L,
                 payload = json.encodeToString(bookPayload().copy(title = "remote title")),
                 reason = "stale revision",
@@ -62,7 +54,7 @@ class ParrotCloudLibraryMutationApplierTest {
 
     @Test
     fun acceptedSessionMutationNeedsNoLocalBookMetadataUpdate() = runTest {
-        val database = RecordingLibraryBooksDatabase()
+        val database = ParrotTestLibraryBooksDatabase()
         val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
 
         applier.onAccepted(
@@ -72,7 +64,6 @@ class ParrotCloudLibraryMutationApplierTest {
             response = SyncMutationResponse(
                 mutationId = "mutation-1",
                 status = "accepted",
-                cloudBookId = null,
                 revision = 1L,
                 payload = null,
                 reason = null,
@@ -84,7 +75,7 @@ class ParrotCloudLibraryMutationApplierTest {
 
     @Test
     fun conflictSessionMutationDoesNotTouchLibraryState() = runTest {
-        val database = RecordingLibraryBooksDatabase()
+        val database = ParrotTestLibraryBooksDatabase()
         val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
 
         applier.onConflict(
@@ -94,7 +85,6 @@ class ParrotCloudLibraryMutationApplierTest {
             response = SyncMutationResponse(
                 mutationId = "mutation-1",
                 status = "conflict",
-                cloudBookId = null,
                 revision = 1L,
                 payload = """{"title":"remote title"}""",
                 reason = "stale revision",
@@ -108,7 +98,7 @@ class ParrotCloudLibraryMutationApplierTest {
         mutationId = "mutation-1",
         cloudUserId = "account",
         entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
-        entityId = "library-book-1",
+        entityId = BOOK_ID,
         operation = SyncOutboxEntry.OPERATION_UPSERT,
         payload = payload,
         baseRevision = 4L,
@@ -118,48 +108,46 @@ class ParrotCloudLibraryMutationApplierTest {
         lastError = null,
     )
 
+    @Test
+    fun `a duplicate saves the server's book by its own id`() = runTest {
+        // Given
+        val database = ParrotTestLibraryBooksDatabase()
+        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
+        val serverBook = bookPayload().copy(libraryBookId = EXISTING_ID, remoteRevision = 7L)
+
+        // When
+        applier.onDuplicate(
+            entry = entry(json.encodeToString(bookPayload())),
+            response = SyncMutationResponse(
+                mutationId = "mutation-1",
+                status = "duplicate",
+                revision = null,
+                payload = json.encodeToString(serverBook),
+                reason = null,
+                existingBookId = EXISTING_ID,
+            ),
+        )
+
+        // Then
+        val saved = database.upserted.single()
+        assertEquals(EXISTING_ID, saved.libraryBookId)
+        assertEquals(7L, saved.remoteRevision)
+        assertEquals("hash", saved.sourceContentHash)
+    }
+
     private fun bookPayload() = ParrotCloudBookPayload(
-        libraryBookId = "library-book-1",
-        cloudBookId = "cloud-book-1",
-        contentHash = "hash",
-        contentHashAlgorithm = "sha256",
+        libraryBookId = BOOK_ID,
+        sourceContentHash = "hash",
+        sourceContentHashAlgorithm = "sha-256-v1",
         title = "book title",
         author = "author",
         format = "ebook",
         metadataJson = "metadata",
         remoteRevision = 9L,
     )
-}
 
-private class RecordingLibraryBooksDatabase : LibraryBooksDatabase {
-    val upserted = mutableListOf<LibraryBookEntity>()
-
-    override suspend fun upsertLibraryBook(book: LibraryBookEntity) {
-        upserted += book
+    private companion object {
+        const val BOOK_ID = "11111111-1111-4111-8111-111111111111"
+        const val EXISTING_ID = "22222222-2222-4222-8222-222222222222"
     }
-
-    override suspend fun upsertLocalLibraryBook(book: LibraryBookEntity) = Unit
-
-    override fun getAllLibraryBooks(): Flow<List<LibraryBookEntity>> = emptyFlow()
-
-    override suspend fun getLibraryBookById(libraryBookId: String): LibraryBookEntity? = null
-
-    override suspend fun getLibraryBookByContentHash(contentHash: String): LibraryBookEntity? = null
-
-    override suspend fun getLibraryBookByContentHash(
-        contentHashAlgorithm: String,
-        contentHash: String,
-    ): LibraryBookEntity? = null
-
-    override suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity? = null
-
-    override suspend fun attachCloudBookId(libraryBookId: String, cloudBookId: String) = Unit
-
-    override suspend fun upsertLocalBookFile(file: LocalBookFileEntity) = Unit
-
-    override suspend fun getLocalBookFiles(libraryBookId: String): List<LocalBookFileEntity> = emptyList()
-
-    override suspend fun getLocalBookFileByImportedBookUuid(importedBookUuid: String): LocalBookFileEntity? = null
-
-    override suspend fun deleteLocalBookFileByImportedBookUuid(importedBookUuid: String) = Unit
 }

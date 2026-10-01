@@ -29,3 +29,6 @@ DELETE FROM favorites;
 getFavoritesCount:
 SELECT COUNT(*) FROM favorites;
 
+mergeFavorite:
+INSERT OR IGNORE INTO favorites(book_uuid, added_at)
+SELECT ?, added_at FROM favorites WHERE book_uuid = ?;

@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.Flow
 interface CloudFilesDatabase : DataClearable {
     suspend fun upsertFileState(file: CloudBookFileEntity)
     suspend fun getFileStates(libraryBookId: String): List<CloudBookFileEntity>
+    suspend fun getFileStateById(cloudBookFileId: String): CloudBookFileEntity?
+    suspend fun findFileStateByHash(algorithm: String, hash: String): CloudBookFileEntity?
     fun observeFileStates(): Flow<List<CloudBookFileEntity>>
     suspend fun deleteFileState(libraryBookId: String, mediaType: String, relativePath: String)
 

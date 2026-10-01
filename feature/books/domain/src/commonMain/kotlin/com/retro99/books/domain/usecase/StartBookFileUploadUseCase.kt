@@ -13,14 +13,16 @@ class StartBookFileUploadUseCase(
 ) {
     suspend operator fun invoke(
         serverId: String,
-        localBookUuid: String,
+        libraryBookId: String,
+        mediaType: String,
         localProfileId: String,
     ): String {
         val attestation = getCurrentUploadRightsAttestationUseCase(localProfileId)
         return transferManager.enqueueUpload(
-            serverId,
-            localBookUuid,
-            attestation.toBookFileUploadAttestation(),
+            serverId = serverId,
+            libraryBookId = libraryBookId,
+            mediaType = mediaType,
+            rightsAttestation = attestation.toBookFileUploadAttestation(),
         )
     }
 }

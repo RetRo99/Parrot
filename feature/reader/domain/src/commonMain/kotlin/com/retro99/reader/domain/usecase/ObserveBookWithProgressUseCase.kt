@@ -57,16 +57,8 @@ class ObserveBookWithProgressUseCase(
                 bookResult.fold(
                     success = { serverBook ->
                         positionLocalSource.observeAllPositions().map { positions ->
-                            val localPosition = serverBook.libraryBookId?.let { libraryBookId ->
-                                positions
-                                    .filter { position -> position.libraryBookId == libraryBookId }
-                                    .maxWithOrNull(
-                                        compareBy(
-                                            { position -> position.remoteRevision },
-                                            { position -> position.updatedAt },
-                                        ),
-                                    )
-                            } ?: positions.firstOrNull { position ->
+                            // For your library the uuid is the book id, which keys its position.
+                            val localPosition = positions.firstOrNull { position ->
                                 position.bookUuid == bookUuid
                             }
                             buildBookWithProgress(serverId, bookUuid, serverBook, localPosition)
@@ -94,10 +86,16 @@ class ObserveBookWithProgressUseCase(
         val remoteProgression = readerRepository?.getRemotePosition(bookUuid)
             ?.getOrElse { null }?.totalProgression
 
-        // Check cache status
-        val isEbookCached = readerSettingsRepository.isEbookCached(bookUuid, BookType.EBOOK)
-        val isAudiobookCached = readerSettingsRepository.isEbookCached(bookUuid, BookType.AUDIOBOOK)
-        val isReadaloudCached = readerSettingsRepository.isEbookCached(bookUuid, BookType.READALOUD)
+        // Library books are "cached" when they have a device copy; never ask the reader
+        // cache about them (I6).
+        val cached = if (serverBook.isLocal) {
+            serverBook.deviceCopies()
+        } else {
+            readerSettingsRepository.cachedTypes(bookUuid)
+        }
+        val isEbookCached = BookType.EBOOK in cached
+        val isAudiobookCached = BookType.AUDIOBOOK in cached
+        val isReadaloudCached = BookType.READALOUD in cached
 
         val progressInfo = createProgressInfo(
             bookUuid = bookUuid,

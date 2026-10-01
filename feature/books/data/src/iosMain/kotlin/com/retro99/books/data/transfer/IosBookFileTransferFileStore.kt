@@ -28,8 +28,9 @@ class IosBookFileTransferFileStore : BookFileTransferFileStore {
         // transfer.
         "${NSTemporaryDirectory()}book_file_transfers/${transferId.safeName()}.part"
 
-    override fun importedFilePath(localUuid: String, mediaType: String): String =
-        "${documentsDirectory()}/ebooks/${localUuid.safeName()}_${mediaType.safeName()}.epub"
+    // Documents/library holds your library; the reader cache lives in Caches/ebooks (I6).
+    override fun libraryFilePath(libraryBookId: String, mediaType: String): String =
+        "${documentsDirectory()}/library/${libraryBookId.safeName()}_${mediaType.safeName()}.epub"
 
     override suspend fun exists(path: String): Boolean = NSFileManager.defaultManager.fileExistsAtPath(path)
 
@@ -93,8 +94,8 @@ class IosBookFileTransferFileStore : BookFileTransferFileStore {
         }
     }
 
-    override suspend fun writeCover(localUuid: String, bytes: ByteArray): String {
-        val path = "${documentsDirectory()}/imported_covers/${localUuid.safeName()}.png"
+    override suspend fun writeCover(libraryBookId: String, bytes: ByteArray): String {
+        val path = "${documentsDirectory()}/imported_covers/${libraryBookId.safeName()}.png"
         ensureParent(path)
         val fileManager = NSFileManager.defaultManager
         if (!fileManager.createFileAtPath(path, contents = null, attributes = null) &&

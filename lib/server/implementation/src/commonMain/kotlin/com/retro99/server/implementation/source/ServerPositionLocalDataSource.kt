@@ -6,7 +6,7 @@ import com.retro99.base.server.LOCAL_SERVER_ID
 import com.retro99.database.api.DatabaseExecutor
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
-import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerPositionLocalSource
@@ -26,34 +26,27 @@ import org.koin.core.annotation.Single
 class ServerPositionLocalDataSource(
     @Provided private val positionDatabase: PositionDatabase,
     @Provided private val databaseExecutor: DatabaseExecutor,
-    @Provided private val importedBooksDatabase: ImportedBooksDatabase,
+    @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
 ) : ServerPositionLocalSource {
 
     override suspend fun getPosition(bookUuid: String): AppResult<ServerPosition?> {
         return databaseExecutor.executeDatabaseOperation {
-            (positionDatabase.getPositionByBookUuid(bookUuid)
-                ?: positionDatabase.getPositionByLibraryBookId(bookUuid))
-                ?.toServerPosition()
+            positionDatabase.getPositionByBookUuid(bookUuid)?.toServerPosition()
         }
     }
 
     override suspend fun savePosition(position: ServerPosition): CompletableResult {
         return databaseExecutor.executeDatabaseOperation {
             val storedPosition = positionDatabase.getPositionByBookUuid(position.bookUuid)
-                ?: position.libraryBookId?.let { libraryBookId ->
-                    positionDatabase.getPositionByLibraryBookId(libraryBookId)
-                }
             if (position.serverId == LOCAL_SERVER_ID) {
                 val localGeneration = (storedPosition?.localGeneration ?: 0L) + 1L
-                val importedBook = importedBooksDatabase.getImportedBookByUuid(position.bookUuid)
+                val libraryPosition = position.withLibraryBookId()
                 positionDatabase.upsertPositionWithMutation(
-                    position = position.toPositionEntity(
+                    position = libraryPosition.toPositionEntity(
                         remoteRevision = storedPosition?.remoteRevision,
                         localGeneration = localGeneration,
                     ),
-                    mutation = position.toSyncOutboxEntry(
-                        contentHash = importedBook?.contentHash,
-                        contentHashAlgorithm = importedBook?.contentHashAlgorithm,
+                    mutation = libraryPosition.toSyncOutboxEntry(
                         baseRevision = storedPosition?.remoteRevision,
                         localGeneration = localGeneration,
                     ),
@@ -72,19 +65,13 @@ class ServerPositionLocalDataSource(
             require(remoteAccountId.isNotBlank()) { "Remote account ID must not be blank" }
 
             val storedPosition = positionDatabase.getPositionByBookUuid(position.bookUuid)
-                ?: position.libraryBookId?.let { libraryBookId ->
-                    positionDatabase.getPositionByLibraryBookId(libraryBookId)
-                }
             val localGeneration = (storedPosition?.localGeneration ?: 0L) + 1L
-            val importedBook = importedBooksDatabase.getImportedBookByUuid(position.bookUuid)
             positionDatabase.upsertPositionWithMutation(
                 position = position.toPositionEntity(
                     remoteRevision = storedPosition?.remoteRevision,
                     localGeneration = localGeneration,
                 ),
                 mutation = position.toSyncOutboxEntry(
-                    contentHash = importedBook?.contentHash,
-                    contentHashAlgorithm = importedBook?.contentHashAlgorithm,
                     baseRevision = storedPosition?.remoteRevision,
                     localGeneration = localGeneration,
                     cloudUserId = remoteAccountId,
@@ -92,6 +79,11 @@ class ServerPositionLocalDataSource(
             )
         }
     }
+
+    /** I4: the library book id is set only for books in your library. */
+    private suspend fun ServerPosition.withLibraryBookId(): ServerPosition = copy(
+        libraryBookId = bookUuid.takeIf { id -> libraryBooksDatabase.getLibraryBookById(id) != null },
+    )
 
     override suspend fun getAllPositions(): AppResult<List<ServerPosition>> {
         return databaseExecutor.executeDatabaseOperation {
@@ -117,8 +109,6 @@ class ServerPositionLocalDataSource(
 }
 
 private fun ServerPosition.toSyncOutboxEntry(
-    contentHash: String?,
-    contentHashAlgorithm: String?,
     baseRevision: Long?,
     localGeneration: Long,
     cloudUserId: String? = null,
@@ -130,8 +120,6 @@ private fun ServerPosition.toSyncOutboxEntry(
         payload = mutationJson.encodeToString(
             LocalReadingPositionMutation(
                 bookUuid = bookUuid,
-                contentHash = contentHash,
-                contentHashAlgorithm = contentHashAlgorithm,
                 position = this,
             ),
         ),
@@ -150,8 +138,6 @@ private val mutationJson = Json {
 @Serializable
 private data class LocalReadingPositionMutation(
     val bookUuid: String,
-    val contentHash: String?,
-    val contentHashAlgorithm: String?,
     val position: ServerPosition,
 )
 
@@ -193,7 +179,7 @@ private fun ServerPosition.toPositionEntity(
 ): PositionEntity {
     return ServerPositionEntity(
         bookUuid = bookUuid,
-        libraryBookId = libraryBookId ?: bookUuid,
+        libraryBookId = libraryBookId,
         localGeneration = localGeneration,
         remoteRevision = remoteRevision,
         timestamp = timestamp,
@@ -219,7 +205,7 @@ private fun ServerPosition.toPositionEntity(
  */
 private data class ServerPositionEntity(
     override val bookUuid: String,
-    override val libraryBookId: String,
+    override val libraryBookId: String?,
     override val localGeneration: Long = 0L,
     override val remoteRevision: Long?,
     override val timestamp: Long?,

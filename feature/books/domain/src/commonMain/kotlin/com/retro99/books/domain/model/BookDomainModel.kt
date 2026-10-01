@@ -6,7 +6,7 @@ import com.retro99.server.api.MediaResource
 
 /**
  * Sealed class representing a book in the domain layer.
- * Can be either a Storyteller book (from remote API) or a local book (imported EPUB).
+ * Either a book from a Storyteller or Audiobookshelf server, or a book in your library.
  */
 sealed class BookDomainModel {
     abstract val uuid: String
@@ -72,13 +72,10 @@ sealed class BookDomainModel {
         override val remoteFileAvailability: RemoteFileAvailability = RemoteFileAvailability.None,
         override val remoteRevision: Long? = null,
         override val mediaResources: List<MediaResource> = emptyList(),
-        val localSourceUuid: String? = null,
     ) : BookDomainModel()
 
-    /**
-     * Locally imported EPUB book.
-     */
-    data class LocalBook(
+    /** Your library: files on this device and/or in Parrot Cloud. [uuid] is the book ID. */
+    data class LibraryBook(
         override val uuid: String,
         override val serverId: String,
         override val serverType: ServerType?,
@@ -86,33 +83,18 @@ sealed class BookDomainModel {
         override val description: String?,
         override val coverUrl: String?,
         val author: String?,
-        val filePath: String,
-        val fileSize: Long,
-        override val contentHash: String? = null,
-        override val contentHashAlgorithm: String? = null,
-        val importedAt: String,
-        val lastOpenedAt: String?,
-        val bookType: BookType,
         val publicationDate: String?,
-        val origin: String = "import",
-        val cloudBookFileId: String? = null,
+        val addedAt: String,
+        val lastOpenedAt: String?,
+        override val mediaResources: List<MediaResource>,
     ) : BookDomainModel() {
         override val series: List<SeriesDomainModel> = emptyList()
 
-        override val mediaResources: List<MediaResource> = listOf(
-            MediaResource(
-                mediaType = bookType.value,
-                localPath = filePath,
-                remoteAvailability = RemoteFileAvailability.None,
-                size = fileSize,
-                contentHash = contentHash,
-                contentHashAlgorithm = contentHashAlgorithm,
-                localOrigin = origin,
-                cloudBookFileId = cloudBookFileId,
-            ),
-        )
+        override val libraryBookId: String
+            get() = uuid
 
-        override val libraryBookId: String?
-            get() = contentHash?.let { hash -> "${contentHashAlgorithm ?: "sha-256-v1"}:$hash" }
+        fun deviceFilePath(bookType: BookType): String? = mediaResources
+            .firstOrNull { resource -> resource.mediaType == bookType.value }
+            ?.localPath
     }
 }

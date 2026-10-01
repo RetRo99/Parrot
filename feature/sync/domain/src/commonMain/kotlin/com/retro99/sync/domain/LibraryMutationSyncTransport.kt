@@ -28,11 +28,12 @@ data class SyncMutationRequest(
 data class SyncMutationResponse(
     val mutationId: String,
     val status: String,
-    val cloudBookId: String?,
     val revision: Long?,
     val payload: String?,
     val reason: String?,
     val retryAfterMillis: Long? = null,
+    /** For `duplicate`: the book the server already has with the same content. */
+    val existingBookId: String? = null,
 )
 
 data class SyncChangePage(

@@ -34,8 +34,9 @@ class ParrotCloudBookFileChangeApplier(
                 bookFileTransferManager.invalidateCloudFile(fileId)
             }
         }
-        val requiredCloudBookId = cloudBookId ?: return
-        val libraryBook = libraryBooksDatabase.getLibraryBookByCloudBookId(requiredCloudBookId) ?: return
+        // The server's cloud_book_id is the library book id.
+        val libraryBookId = cloudBookId ?: return
+        val libraryBook = libraryBooksDatabase.getLibraryBookById(libraryBookId) ?: return
         mediaType ?: return
         if (removed) {
             cloudFilesDatabase.deleteFileState(libraryBook.libraryBookId, mediaType, relativePath)
@@ -45,7 +46,6 @@ class ParrotCloudBookFileChangeApplier(
         cloudFilesDatabase.upsertFileState(
             CloudBookFileEntity(
                 libraryBookId = libraryBook.libraryBookId,
-                cloudBookId = requiredCloudBookId,
                 cloudBookFileId = fileId,
                 mediaType = mediaType,
                 relativePath = relativePath,

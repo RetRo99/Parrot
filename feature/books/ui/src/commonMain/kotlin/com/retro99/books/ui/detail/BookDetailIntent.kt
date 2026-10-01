@@ -23,9 +23,9 @@ sealed interface BookDetailIntent : BaseIntent {
     data class OnBackupAttestationChanged(val attested: Boolean) : BookDetailIntent
     data object OnBackupConfirmed : BookDetailIntent
     data object OnBackupDismissed : BookDetailIntent
-    data class OnDeleteCloudBackupClicked(val bookType: BookType) : BookDetailIntent
-    data object OnDeleteCloudBackupConfirmed : BookDetailIntent
-    data object OnDeleteCloudBackupDismissed : BookDetailIntent
+    data object OnRemoveFromParrotClicked : BookDetailIntent
+    data object OnRemoveFromParrotConfirmed : BookDetailIntent
+    data object OnRemoveFromParrotDismissed : BookDetailIntent
     data class OnCancelBookFileTransferClicked(val transferId: String) : BookDetailIntent
     data class OnRetryBookBackupClicked(val transferId: String) : BookDetailIntent
     data class OnReplaceBackupClicked(val transferId: String) : BookDetailIntent

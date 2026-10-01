@@ -201,7 +201,7 @@ class AutoMediaBrowser(
                 author = book.authors.firstOrNull()?.name,
                 coverUrl = book.coverUrl,
             )
-            is BookDomainModel.LocalBook -> BookInfo(
+            is BookDomainModel.LibraryBook -> BookInfo(
                 serverId = book.serverId,
                 uuid = book.uuid,
                 title = book.title,

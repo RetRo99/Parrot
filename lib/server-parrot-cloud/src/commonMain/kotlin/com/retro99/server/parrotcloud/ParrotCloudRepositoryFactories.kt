@@ -16,36 +16,18 @@ import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 @Single(binds = [ServerBooksRepositoryFactory::class])
-class ParrotCloudBooksRepositoryFactory(
-    @Provided private val booksRepository: ParrotCloudBooksRepositoryDependencies,
-) : ServerBooksRepositoryFactory {
+class ParrotCloudBooksRepositoryFactory : ServerBooksRepositoryFactory {
     override val serverType: ServerType = ServerType.ParrotCloud
 
     override fun create(serverConfig: ServerConfig): ServerBooksRepository {
         require(serverConfig.type == serverType)
-        return ParrotCloudBooksRepository(
-            serverConfig = serverConfig,
-            libraryBooksDatabase = booksRepository.libraryBooksDatabase,
-            syncOutboxDatabase = booksRepository.syncOutboxDatabase,
-            cloudFilesDatabase = booksRepository.cloudFilesDatabase,
-            importedBooksDatabase = booksRepository.importedBooksDatabase,
-        )
+        return ParrotCloudBooksRepository(serverConfig = serverConfig)
     }
 }
-
-@Single
-class ParrotCloudBooksRepositoryDependencies(
-    @Provided val libraryBooksDatabase: com.retro99.database.api.library.LibraryBooksDatabase,
-    @Provided val syncOutboxDatabase: com.retro99.database.api.sync.SyncOutboxDatabase,
-    @Provided val cloudFilesDatabase: com.retro99.database.api.cloudfiles.CloudFilesDatabase,
-    @Provided val importedBooksDatabase: com.retro99.database.api.importedbooks.ImportedBooksDatabase,
-)
 
 @Single(binds = [ServerReaderRepositoryFactory::class])
 class ParrotCloudReaderRepositoryFactory(
     @Provided private val positionDatabase: com.retro99.database.api.books.PositionDatabase,
-    @Provided private val libraryBooksDatabase: com.retro99.database.api.library.LibraryBooksDatabase,
-    @Provided private val syncOutboxDatabase: com.retro99.database.api.sync.SyncOutboxDatabase,
 ) : ServerReaderRepositoryFactory {
     override val serverType: ServerType = ServerType.ParrotCloud
 
@@ -54,8 +36,6 @@ class ParrotCloudReaderRepositoryFactory(
         return ParrotCloudReaderRepository(
             serverId = serverConfig.id,
             positionDatabase = positionDatabase,
-            libraryBooksDatabase = libraryBooksDatabase,
-            syncOutboxDatabase = syncOutboxDatabase,
         )
     }
 }

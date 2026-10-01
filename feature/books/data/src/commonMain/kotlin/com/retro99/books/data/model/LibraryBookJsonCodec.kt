@@ -6,50 +6,41 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+/** Encodes the `library_book` outbox payload that Parrot Cloud's push RPC reads. */
 internal object LibraryBookJsonCodec {
     private val json = Json {
         encodeDefaults = true
     }
 
-    fun encode(book: LibraryBookEntity): String {
+    fun encode(book: LibraryBookEntity, format: String): String {
         return json.encodeToString(
             LibraryBookPayload(
                 libraryBookId = book.libraryBookId,
-                contentHash = book.contentHash,
-                contentHashAlgorithm = book.contentHashAlgorithm,
                 title = book.title,
                 author = book.author,
-                format = book.format,
-                remoteRevision = book.remoteRevision,
-                deletedAt = book.deletedAt,
-                cloudBookId = book.cloudBookId,
+                format = format,
+                sourceContentHash = book.sourceContentHash,
+                sourceContentHashAlgorithm = book.sourceContentHashAlgorithm,
                 metadataJson = book.metadataJson,
+                remoteRevision = book.remoteRevision,
             ),
         )
-    }
-
-    fun decode(payload: String): LibraryBookEntity {
-        return json.decodeFromString<LibraryBookPayload>(payload)
     }
 }
 
 @Serializable
 private data class LibraryBookPayload(
     @SerialName("library_book_id")
-    override val libraryBookId: String,
-    @SerialName("content_hash")
-    override val contentHash: String?,
-    @SerialName("content_hash_algorithm")
-    override val contentHashAlgorithm: String?,
-    override val title: String,
-    override val author: String?,
-    override val format: String,
-    @SerialName("remote_revision")
-    override val remoteRevision: Long?,
-    @SerialName("deleted_at")
-    override val deletedAt: String?,
-    @SerialName("cloud_book_id")
-    override val cloudBookId: String? = null,
+    val libraryBookId: String,
+    val title: String,
+    val author: String?,
+    val format: String,
+    @SerialName("source_content_hash")
+    val sourceContentHash: String?,
+    @SerialName("source_content_hash_algorithm")
+    val sourceContentHashAlgorithm: String?,
     @SerialName("metadata_json")
-    override val metadataJson: String? = null,
-) : LibraryBookEntity
+    val metadataJson: String?,
+    @SerialName("remote_revision")
+    val remoteRevision: Long?,
+)

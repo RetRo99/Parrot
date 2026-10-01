@@ -1,53 +1,23 @@
 package com.retro99.books.domain
 
 import com.retro99.base.result.AppResult
-import com.retro99.base.result.CompletableResult
-import com.retro99.books.domain.model.BookDomainModel
 import io.github.vinceglb.filekit.core.PlatformFile
 
 /**
- * Manager for importing EPUB files into the app.
- * Handles copying files to app storage, extracting metadata, and saving to database.
+ * Imports EPUB files into your library.
  */
 interface FileImportManager {
     /**
-     * Imports an EPUB file from the given platform file.
+     * Copies the file into app storage, reads its metadata and adds it to your library.
+     * A file whose content is already known is attached to the existing book.
      *
-     * This method:
-     * 1. Copies the file to app's internal storage using streams (memory efficient)
-     * 2. Extracts metadata (title, author, cover) from the EPUB
-     * 3. Saves the cover image to storage
-     * 4. Creates and saves a LocalBook to the database
-     *
-     * @param platformFile The platform file from the file picker
-     * @return The imported book domain model, or an error if import fails
+     * @return the book the file belongs to, new or existing
      */
-    suspend fun importEpubFile(
-        platformFile: PlatformFile,
-    ): AppResult<BookDomainModel.LocalBook>
-
-    /**
-     * Gets the local file path for an imported book.
-     *
-     * @param uuid The UUID of the imported book
-     * @return The local file path, or null if not found
-     */
-    fun getImportedBookPath(uuid: String): String?
-
-    /**
-     * Deletes an imported book's files from storage.
-     *
-     * @param uuid The UUID of the imported book
-     * @return True if deletion was successful
-     */
-    fun deleteImportedBookFiles(uuid: String): Boolean
-
-    /**
-     * Deletes a local book completely - both from database and file storage.
-     *
-     * @param uuid The UUID of the imported book
-     * @return Success if both database entry and files were deleted
-     */
-    suspend fun deleteLocalBook(uuid: String): CompletableResult
+    suspend fun importEpubFile(platformFile: PlatformFile): AppResult<ImportedBookFile>
 }
 
+/** The library book an imported file was added to, and the file's media type. */
+data class ImportedBookFile(
+    val libraryBookId: String,
+    val mediaType: String,
+)

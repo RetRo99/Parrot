@@ -1,0 +1,61 @@
+-- ============================================
+-- DEVICE FILES TABLE (a library book's copies on this device)
+-- ============================================
+-- One row per (book, media type). Always read file_path from here; never
+-- rebuild a path from the book id. origin is 'import' or 'cloud_download'.
+
+CREATE TABLE IF NOT EXISTS device_files (
+    library_book_id TEXT NOT NULL,
+    media_type TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    content_hash TEXT,
+    content_hash_algorithm TEXT,
+    origin TEXT NOT NULL DEFAULT 'import',
+    added_at TEXT NOT NULL,
+    PRIMARY KEY (library_book_id, media_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_device_files_hash
+ON device_files(content_hash_algorithm, content_hash);
+
+upsertDeviceFile:
+INSERT OR REPLACE INTO device_files(
+    library_book_id,
+    media_type,
+    file_path,
+    file_size,
+    content_hash,
+    content_hash_algorithm,
+    origin,
+    added_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+getDeviceFile:
+SELECT * FROM device_files WHERE library_book_id = ? AND media_type = ?;
+
+getDeviceFilesForBook:
+SELECT * FROM device_files WHERE library_book_id = ?;
+
+observeAllDeviceFiles:
+SELECT * FROM device_files ORDER BY added_at ASC;
+
+findDeviceFileByHash:
+SELECT * FROM device_files
+WHERE content_hash_algorithm = ? AND content_hash = ?
+ORDER BY added_at ASC
+LIMIT 1;
+
+deleteDeviceFile:
+DELETE FROM device_files WHERE library_book_id = ? AND media_type = ?;
+
+deleteDeviceFilesForBook:
+DELETE FROM device_files WHERE library_book_id = ?;
+
+setOriginForBook:
+UPDATE device_files SET origin = ? WHERE library_book_id = ?;
+
+moveDeviceFile:
+UPDATE device_files SET library_book_id = ?
+WHERE library_book_id = ? AND media_type = ?;

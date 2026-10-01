@@ -1,12 +1,13 @@
 package com.retro99.books.ui.model
 
 import com.retro99.base.server.ServerType
+import com.retro99.books.domain.model.BookHome
 import com.retro99.books.domain.model.BookType
 import kotlinx.serialization.Serializable
 
 /**
  * Sealed class representing a book in the UI layer.
- * Can be either a Storyteller book (from remote API) or a local book (imported EPUB).
+ * Either a book from a Storyteller or Audiobookshelf server, or a book in your library.
  */
 @Serializable
 sealed class BookUiModel {
@@ -41,6 +42,9 @@ sealed class BookUiModel {
      */
     abstract val dateAdded: String?
 
+    /** Where the book lives, shown as its badge. */
+    abstract val home: BookHome
+
     /**
      * Returns the file path for the given book type, or null if not available.
      */
@@ -72,9 +76,9 @@ sealed class BookUiModel {
         val audiobookFilepath: String?,
         val readaloudFilepath: String?,
         val libraryBookId: String? = null,
-        val localSourceUuid: String? = null,
         val remoteFileAvailability: String = "None",
         val mediaResources: List<MediaResourceUiModel> = emptyList(),
+        override val home: BookHome = BookHome.Storyteller,
     ) : BookUiModel() {
         override fun filePath(bookType: BookType): String? = when (bookType) {
             BookType.EBOOK -> ebookFilepath
@@ -83,11 +87,9 @@ sealed class BookUiModel {
         }
     }
 
-    /**
-     * Locally imported EPUB book.
-     */
+    /** A book in your library. [uuid] is the book id. */
     @Serializable
-    data class LocalBook(
+    data class LibraryBook(
         override val uuid: String,
         override val serverId: String,
         override val serverType: ServerType?,
@@ -95,32 +97,33 @@ sealed class BookUiModel {
         override val description: String?,
         override val coverUrl: String?,
         val author: String?,
-        val filePath: String,
-        val fileSize: Long,
-        val importedAt: String,
-        val lastOpenedAt: String?,
-        val bookType: BookType,
         override val publicationDate: String?,
-        val libraryBookId: String? = null,
-        val origin: String = "import",
-        val cloudBookFileId: String? = null,
+        val addedAt: String,
+        val lastOpenedAt: String?,
+        override val home: BookHome,
+        val mediaResources: List<MediaResourceUiModel>,
     ) : BookUiModel() {
-        override val hasEbook: Boolean = bookType == BookType.EBOOK
-        override val hasAudiobook: Boolean = false
-        override val hasReadaloud: Boolean = bookType == BookType.READALOUD
-        override val series: List<SeriesUiModel> = emptyList()
-        override val statusName: String? = null
-        override val authors: List<String> = listOfNotNull(author)
-        override val tags: List<String> = emptyList()
-        override val subtitle: String? = null
-        override val rating: Float? = null
-        override val dateAdded: String? = importedAt
+        val libraryBookId: String get() = uuid
+        val hasDeviceCopy: Boolean
+            get() = mediaResources.any { resource -> resource.localPath != null }
+        override val hasEbook: Boolean get() = hasMediaType(BookType.EBOOK)
+        override val hasAudiobook: Boolean get() = hasMediaType(BookType.AUDIOBOOK)
+        override val hasReadaloud: Boolean get() = hasMediaType(BookType.READALOUD)
+        override val series: List<SeriesUiModel> get() = emptyList()
+        override val statusName: String? get() = null
+        override val authors: List<String> get() = listOfNotNull(author)
+        override val tags: List<String> get() = emptyList()
+        override val subtitle: String? get() = null
+        override val rating: Float? get() = null
+        override val dateAdded: String? get() = addedAt
 
-        override fun filePath(bookType: BookType): String? = when (bookType) {
-            BookType.EBOOK -> if (this.bookType == BookType.EBOOK) filePath else null
-            BookType.AUDIOBOOK -> null
-            BookType.READALOUD -> if (this.bookType == BookType.READALOUD) filePath else null
-        }
+        /** The device copy of [bookType], or null when it isn't on this device. */
+        override fun filePath(bookType: BookType): String? = mediaResource(bookType)?.localPath
+
+        fun mediaResource(bookType: BookType): MediaResourceUiModel? =
+            mediaResources.firstOrNull { resource -> resource.mediaType == bookType.value }
+
+        private fun hasMediaType(bookType: BookType): Boolean = mediaResource(bookType) != null
     }
 }
 

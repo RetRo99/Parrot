@@ -22,9 +22,15 @@ data class BookDetailViewState(
     val conflictResolutionError: AppError? = null,
     /** The book type the user wants to open, shown when there's a conflict to resolve first */
     val pendingOpenBookType: BookType? = null,
+    /** Whether "Add to Parrot Cloud" is shown: some media type of a library book can go. */
     val supportsBookBackup: Boolean = false,
-    val supportsBookDeletion: Boolean = false,
-    val cloudBackupDeleteConfirmationType: BookType? = null,
+    /** Actions per media type of a library book, from [libraryActions]. */
+    val libraryMediaActions: Map<BookType, LibraryMediaActions> = emptyMap(),
+    /** Whole-book actions of a library book, from [bookActions]. Null for server books. */
+    val libraryBookActions: LibraryBookActions? = null,
+    /** Media types whose device copy the user can remove. */
+    val removableDownloadTypes: Set<BookType> = emptySet(),
+    val showRemoveFromParrotConfirmation: Boolean = false,
     val showBackupConfirmation: Boolean = false,
     val backupRightsAttested: Boolean = false,
     val bookFileTransfers: List<BookFileTransfer> = emptyList(),

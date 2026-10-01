@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.base.server.ServerType
+import com.retro99.books.domain.model.BookHome
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberBottomSheet
 import com.retro99.base.ui.compose.EmberChip
@@ -68,14 +69,14 @@ private val FORMAT_FILTERS = listOf(
  * Filters sheet. In E-ink mode it is a plain overlay with no scrim and no enter or exit
  * animation; otherwise it is a modal bottom sheet.
  *
- * @param availableServerTypes Library sources to offer next to "All".
+ * @param availableHomes Where books live, offered next to "All".
  */
 @Composable
 fun BookFilterBottomSheet(
     filterState: BookFilterState,
-    availableServerTypes: List<ServerType>,
+    availableHomes: List<BookHome>,
     onFilterToggle: (BookQuickFilter) -> Unit,
-    onServerTypeFilterChanged: (ServerType?) -> Unit,
+    onHomeFilterChanged: (BookHome?) -> Unit,
     onClearAllFilters: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -86,9 +87,9 @@ fun BookFilterBottomSheet(
     ) {
         FilterSheetContent(
             filterState = filterState,
-            availableServerTypes = availableServerTypes,
+            availableHomes = availableHomes,
             onFilterToggle = onFilterToggle,
-            onServerTypeFilterChanged = onServerTypeFilterChanged,
+            onHomeFilterChanged = onHomeFilterChanged,
             onClearAllFilters = onClearAllFilters,
             onDone = onDismiss,
         )
@@ -99,9 +100,9 @@ fun BookFilterBottomSheet(
 @Composable
 private fun FilterSheetContent(
     filterState: BookFilterState,
-    availableServerTypes: List<ServerType>,
+    availableHomes: List<BookHome>,
     onFilterToggle: (BookQuickFilter) -> Unit,
-    onServerTypeFilterChanged: (ServerType?) -> Unit,
+    onHomeFilterChanged: (BookHome?) -> Unit,
     onClearAllFilters: () -> Unit,
     onDone: () -> Unit,
 ) {
@@ -144,15 +145,15 @@ private fun FilterSheetContent(
         FilterSection(title = stringResource(StringRes.books_filter_source)) {
             EmberChip(
                 label = stringResource(StringRes.books_filter_all),
-                selected = filterState.serverTypeFilter == null,
-                onClick = { onServerTypeFilterChanged(null) },
+                selected = filterState.homeFilter == null,
+                onClick = { onHomeFilterChanged(null) },
                 role = Role.RadioButton,
             )
-            availableServerTypes.forEach { serverType ->
+            availableHomes.forEach { home ->
                 EmberChip(
-                    label = serverType.sourceLabel(),
-                    selected = filterState.serverTypeFilter == serverType,
-                    onClick = { onServerTypeFilterChanged(serverType) },
+                    label = home.sourceLabel(),
+                    selected = filterState.homeFilter == home,
+                    onClick = { onHomeFilterChanged(home) },
                     role = Role.RadioButton,
                 )
             }
@@ -222,9 +223,11 @@ private fun FilterSection(
 }
 
 @Composable
-private fun ServerType.sourceLabel(): String = when (this) {
-    ServerType.Local -> stringResource(StringRes.books_filter_on_this_device)
-    else -> displayName
+private fun BookHome.sourceLabel(): String = when (this) {
+    BookHome.ThisDevice -> stringResource(StringRes.books_filter_on_this_device)
+    BookHome.ParrotCloud -> ServerType.ParrotCloud.displayName
+    BookHome.Storyteller -> ServerType.Storyteller.displayName
+    BookHome.Audiobookshelf -> ServerType.Audiobookshelf.displayName
 }
 
 private val BookQuickFilter.labelRes: StringResource

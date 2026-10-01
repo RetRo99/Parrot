@@ -11,7 +11,7 @@ values (
     'authenticated', 'authenticated', 'abuse-ops-test@example.invalid', '', now()
 );
 insert into public.cloud_books (
-    id, cloud_user_id, content_hash, content_hash_algorithm, title, format
+    id, cloud_user_id, source_content_hash, source_content_hash_algorithm, title, format
 ) values (
     '20000000-0000-0000-0000-000000000021',
     '10000000-0000-0000-0000-000000000021',

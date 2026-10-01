@@ -164,10 +164,10 @@
     <string name="books_delete_cache_confirm">Delete</string>
 
     <!-- Book Detail - Delete Local Book Dialog -->
-    <string name="books_delete_local_title">Delete Local Book?</string>
-    <string name="books_delete_local_message">Are you sure you want to delete \"%1$s\"? This will permanently remove the book and its files from your device.</string>
+    <string name="books_delete_local_title">Delete from this device?</string>
+    <string name="books_delete_local_message">“%1$s” is only on this device. Deleting it removes the book and its file. This can’t be undone.</string>
     <string name="books_delete_local_confirm">Delete</string>
-    <string name="books_delete_local_button">Delete Book</string>
+    <string name="books_delete_local_button">Delete from this device</string>
 
     <!-- Book Progress -->
     <string name="books_reading_progress">Reading Progress</string>
@@ -570,37 +570,37 @@
     <string name="cloud_account_sync_status_items_progress" tools:ignore="MissingTranslation">Completed %1$d of %2$d items.</string>
     <string name="cloud_account_sync_status_bytes_progress" tools:ignore="MissingTranslation">Transferred %1$d of %2$d bytes.</string>
     <string name="cloud_account_sync_status_last_successful" tools:ignore="MissingTranslation">Last successful delivery: %s</string>
-    <string name="cloud_backup_button" tools:ignore="MissingTranslation">Back up to Parrot Cloud</string>
-    <string name="cloud_backup_title" tools:ignore="MissingTranslation">Back up this book?</string>
+    <string name="cloud_backup_button" tools:ignore="MissingTranslation">Add to Parrot Cloud</string>
+    <string name="cloud_backup_title" tools:ignore="MissingTranslation">Add this book to Parrot Cloud?</string>
     <string name="cloud_backup_attestation" tools:ignore="MissingTranslation">I confirm I have the right to store this file in my Parrot Cloud account.</string>
     <string name="cloud_backup_attestation_checkbox" tools:ignore="MissingTranslation">I have the right to back up this file — I own it or have permission from the rights holder.</string>
     <string name="cloud_backup_attestation_terms" tools:ignore="MissingTranslation">Your file is stored privately and only for you. There is no sharing. We may remove it if a rights holder validly objects. See the Book Backup Terms.</string>
     <string name="cloud_account_tos_checkbox" tools:ignore="MissingTranslation">I agree to the Terms of Service (including the Book Backup Terms) and the Privacy Policy.</string>
-    <string name="cloud_backup_autobackup_prompt_title" tools:ignore="MissingTranslation">Back up imported books automatically?</string>
-    <string name="cloud_backup_autobackup_prompt_body" tools:ignore="MissingTranslation">New books you import will be uploaded to your private Parrot Cloud backup. You can change this anytime in Sync &amp; Backup settings.</string>
-    <string name="cloud_backup_autobackup_confirm_body" tools:ignore="MissingTranslation">Books you import will be uploaded to your private Parrot Cloud storage, within your 5 GB quota. This counts against your quota and download bandwidth. By enabling, you confirm the checkbox below.</string>
-    <string name="cloud_backup_autobackup_toggle" tools:ignore="MissingTranslation">Back up new books automatically</string>
-    <string name="cloud_backup_autobackup_enable" tools:ignore="MissingTranslation">Turn on backup</string>
+    <string name="cloud_backup_autobackup_prompt_title" tools:ignore="MissingTranslation">Add imported books to Parrot Cloud automatically?</string>
+    <string name="cloud_backup_autobackup_prompt_body" tools:ignore="MissingTranslation">New books you import will be uploaded to your Parrot Cloud library. You can change this anytime in Sync &amp; Backup settings.</string>
+    <string name="cloud_backup_autobackup_confirm_body" tools:ignore="MissingTranslation">Books you import will be uploaded to your Parrot Cloud library. They count against your 5 GB storage and download bandwidth. By turning this on, you confirm the checkbox below.</string>
+    <string name="cloud_backup_autobackup_toggle" tools:ignore="MissingTranslation">Add new books to Parrot Cloud automatically</string>
+    <string name="cloud_backup_autobackup_enable" tools:ignore="MissingTranslation">Turn on</string>
     <string name="cloud_backup_autobackup_not_now" tools:ignore="MissingTranslation">Not now</string>
-    <string name="cloud_backup_confirm" tools:ignore="MissingTranslation">Back up</string>
-    <string name="cloud_backup_queued" tools:ignore="MissingTranslation">Backup queued</string>
-    <string name="cloud_backup_progress" tools:ignore="MissingTranslation">Backing up · %1$d%%</string>
-    <string name="cloud_backup_finishing" tools:ignore="MissingTranslation">Finishing backup…</string>
-    <string name="cloud_backup_complete" tools:ignore="MissingTranslation">Backup complete</string>
-    <string name="cloud_backup_failed" tools:ignore="MissingTranslation">Backup failed: %1$s</string>
-    <string name="cloud_backup_reason_file_exists" tools:ignore="MissingTranslation">A cloud backup already exists for this file.</string>
+    <string name="cloud_backup_confirm" tools:ignore="MissingTranslation">Add</string>
+    <string name="cloud_backup_queued" tools:ignore="MissingTranslation">Waiting to upload</string>
+    <string name="cloud_backup_progress" tools:ignore="MissingTranslation">Uploading to Parrot Cloud · %1$d%%</string>
+    <string name="cloud_backup_finishing" tools:ignore="MissingTranslation">Finishing upload…</string>
+    <string name="cloud_backup_complete" tools:ignore="MissingTranslation">In Parrot Cloud</string>
+    <string name="cloud_backup_failed" tools:ignore="MissingTranslation">Upload failed: %1$s</string>
+    <string name="cloud_backup_reason_file_exists" tools:ignore="MissingTranslation">This file is already in your Parrot Cloud library.</string>
     <string name="cloud_backup_reason_quota_exceeded" tools:ignore="MissingTranslation">Your Parrot Cloud storage is full.</string>
-    <string name="cloud_backup_reason_content_blocked" tools:ignore="MissingTranslation">This file is unavailable for cloud backup.</string>
-    <string name="cloud_backup_reason_attestation_required" tools:ignore="MissingTranslation">Confirm your backup rights before retrying.</string>
+    <string name="cloud_backup_reason_content_blocked" tools:ignore="MissingTranslation">This file can\'t be added to Parrot Cloud.</string>
+    <string name="cloud_backup_reason_attestation_required" tools:ignore="MissingTranslation">Confirm you have the rights to this file, then try again.</string>
     <string name="cloud_backup_reason_verify_failed" tools:ignore="MissingTranslation">The file could not be verified.</string>
     <string name="cloud_backup_reason_generic" tools:ignore="MissingTranslation">Please try again. If the problem continues, check your connection and account.</string>
-    <string name="cloud_backup_cancel" tools:ignore="MissingTranslation">Cancel backup</string>
-    <string name="cloud_backup_cancelled" tools:ignore="MissingTranslation">Backup cancelled</string>
-    <string name="cloud_backup_retry" tools:ignore="MissingTranslation">Retry backup</string>
-    <string name="cloud_backup_replace_button" tools:ignore="MissingTranslation">Replace backup</string>
-    <string name="cloud_backup_replace_title" tools:ignore="MissingTranslation">Replace cloud backup?</string>
-    <string name="cloud_backup_replace_message" tools:ignore="MissingTranslation">Delete the existing cloud backup for “%1$s” and upload the copy stored on this device?</string>
-    <string name="cloud_backup_replacing" tools:ignore="MissingTranslation">Replacing backup…</string>
+    <string name="cloud_backup_cancel" tools:ignore="MissingTranslation">Cancel upload</string>
+    <string name="cloud_backup_cancelled" tools:ignore="MissingTranslation">Upload cancelled</string>
+    <string name="cloud_backup_retry" tools:ignore="MissingTranslation">Retry upload</string>
+    <string name="cloud_backup_replace_button" tools:ignore="MissingTranslation">Replace file in Parrot Cloud</string>
+    <string name="cloud_backup_replace_title" tools:ignore="MissingTranslation">Replace the file in Parrot Cloud?</string>
+    <string name="cloud_backup_replace_message" tools:ignore="MissingTranslation">Replace the Parrot Cloud file for “%1$s” with the copy on this device?</string>
+    <string name="cloud_backup_replacing" tools:ignore="MissingTranslation">Replacing file…</string>
     <string name="cloud_download_queued" tools:ignore="MissingTranslation">Restore queued</string>
     <string name="cloud_download_progress" tools:ignore="MissingTranslation">Restoring · %1$d%%</string>
     <string name="cloud_download_finishing" tools:ignore="MissingTranslation">Verifying restored file…</string>
@@ -613,17 +613,13 @@
     <string name="cloud_download_cancelled" tools:ignore="MissingTranslation">Restore cancelled</string>
     <string name="cloud_download_retry" tools:ignore="MissingTranslation">Retry restore</string>
     <string name="cloud_backup_unknown_state" tools:ignore="MissingTranslation">Transfer status unavailable.</string>
-    <string name="cloud_backup_all_button" tools:ignore="MissingTranslation">Back up all</string>
-    <string name="cloud_backup_backup_all" tools:ignore="MissingTranslation">Back up all existing books</string>
-    <string name="cloud_backup_all_title" tools:ignore="MissingTranslation">Back up all imported books?</string>
-    <string name="cloud_backup_all_message" tools:ignore="MissingTranslation">Books linked to your Parrot Cloud library will be queued for backup.</string>
-    <string name="cloud_backup_all_queued" tools:ignore="MissingTranslation">Queued %1$d book backups.</string>
-    <string name="cloud_backup_all_summary" tools:ignore="MissingTranslation">Queued %1$d book backups; %2$d could not be queued.</string>
-    <string name="cloud_backup_all_result_title" tools:ignore="MissingTranslation">Book backup</string>
-    <string name="cloud_backup_delete_button" tools:ignore="MissingTranslation">Delete %1$s cloud backup</string>
-    <string name="cloud_backup_delete_title" tools:ignore="MissingTranslation">Delete cloud backup?</string>
-    <string name="cloud_backup_delete_message" tools:ignore="MissingTranslation">Delete the %1$s cloud backup of “%2$s” from Parrot Cloud? Restored copies will also be removed, but imported original files will stay on this device.</string>
-    <string name="cloud_backup_delete_confirm" tools:ignore="MissingTranslation">Delete backup</string>
+    <string name="cloud_backup_all_button" tools:ignore="MissingTranslation">Add all</string>
+    <string name="cloud_backup_backup_all" tools:ignore="MissingTranslation">Add all books on this device to Parrot Cloud</string>
+    <string name="cloud_backup_all_title" tools:ignore="MissingTranslation">Add all books to Parrot Cloud?</string>
+    <string name="cloud_backup_all_message" tools:ignore="MissingTranslation">Books on this device will be queued for upload to Parrot Cloud.</string>
+    <string name="cloud_backup_all_queued" tools:ignore="MissingTranslation">Queued %1$d books for upload.</string>
+    <string name="cloud_backup_all_summary" tools:ignore="MissingTranslation">Queued %1$d books for upload; %2$d could not be queued.</string>
+    <string name="cloud_backup_all_result_title" tools:ignore="MissingTranslation">Add to Parrot Cloud</string>
     <string name="cloud_storage_usage_title" tools:ignore="MissingTranslation">Parrot Cloud storage</string>
     <string name="cloud_storage_usage_used" tools:ignore="MissingTranslation">%1$s of %2$s used</string>
     <string name="cloud_storage_usage_reserved" tools:ignore="MissingTranslation">%1$s reserved for active transfers</string>
@@ -777,7 +773,7 @@
     <string name="books_filter_show_only" tools:ignore="MissingTranslation">Show only</string>
     <string name="books_filter_format" tools:ignore="MissingTranslation">Format</string>
     <string name="books_filter_reset" tools:ignore="MissingTranslation">Reset</string>
-    <string name="books_filter_on_this_device" tools:ignore="MissingTranslation">On this device</string>
+    <string name="books_filter_on_this_device" tools:ignore="MissingTranslation">Only on this device</string>
     <string name="books_filter_show_all" tools:ignore="MissingTranslation">Show all books</string>
     <string name="books_filter_show_count_one" tools:ignore="MissingTranslation">Show books · 1 filter</string>
     <string name="books_filter_show_count" tools:ignore="MissingTranslation">Show books · %1$d filters</string>
@@ -1145,4 +1141,13 @@
     <string name="login_help_step_paste" tools:ignore="MissingTranslation">Paste it here. You can leave out %1$s.</string>
     <string name="login_help_note" tools:ignore="MissingTranslation">Only works at home? Addresses like 192.168.… are reachable only on the same Wi-Fi.</string>
     <string name="login_help_got_it" tools:ignore="MissingTranslation">Got it</string>
+    <string name="library_home_this_device" tools:ignore="MissingTranslation">This device</string>
+    <string name="library_status_only_this_device" tools:ignore="MissingTranslation">Only on this device</string>
+    <string name="library_status_parrot_downloaded" tools:ignore="MissingTranslation">In Parrot Cloud · Downloaded</string>
+    <string name="library_status_parrot_not_downloaded" tools:ignore="MissingTranslation">In Parrot Cloud · Not downloaded</string>
+    <string name="library_remove_from_parrot_button" tools:ignore="MissingTranslation">Remove from Parrot Cloud</string>
+    <string name="library_remove_from_parrot_title" tools:ignore="MissingTranslation">Remove from Parrot Cloud?</string>
+    <string name="library_remove_from_parrot_message_keep_local" tools:ignore="MissingTranslation">“%1$s” will be removed from Parrot Cloud and your other devices. It stays on this device.</string>
+    <string name="library_remove_from_parrot_message" tools:ignore="MissingTranslation">“%1$s” will be removed from Parrot Cloud and your other devices.</string>
+    <string name="library_remove_from_parrot_confirm" tools:ignore="MissingTranslation">Remove</string>
 </resources>

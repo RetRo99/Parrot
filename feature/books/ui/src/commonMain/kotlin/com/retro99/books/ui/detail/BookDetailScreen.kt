@@ -111,6 +111,7 @@ import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.domain.BookFileTransfer
 import com.retro99.books.ui.model.SeriesUiModel
+import com.retro99.books.domain.model.BookHome
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.DownloadState
 import com.retro99.translations.StringRes
@@ -125,6 +126,14 @@ import resources.translations.books_delete_local_button
 import resources.translations.books_delete_local_confirm
 import resources.translations.books_delete_local_message
 import resources.translations.books_delete_local_title
+import resources.translations.library_remove_from_parrot_button
+import resources.translations.library_remove_from_parrot_confirm
+import resources.translations.library_remove_from_parrot_message
+import resources.translations.library_remove_from_parrot_message_keep_local
+import resources.translations.library_remove_from_parrot_title
+import resources.translations.library_status_only_this_device
+import resources.translations.library_status_parrot_downloaded
+import resources.translations.library_status_parrot_not_downloaded
 import resources.translations.books_detail_action_continue_listening
 import resources.translations.books_detail_action_continue_reading
 import resources.translations.books_detail_action_download_failed
@@ -184,10 +193,6 @@ import resources.translations.cloud_download_reason_unavailable
 import resources.translations.cloud_download_reason_verify_failed
 import resources.translations.cloud_download_retry
 import resources.translations.cloud_backup_unknown_state
-import resources.translations.cloud_backup_delete_button
-import resources.translations.cloud_backup_delete_title
-import resources.translations.cloud_backup_delete_message
-import resources.translations.cloud_backup_delete_confirm
 import resources.translations.books_reading_progress
 import resources.translations.general_back
 import resources.translations.general_cancel
@@ -230,8 +235,9 @@ fun BookDetailScreen(
                 conflictResolutionError = viewState.conflictResolutionError,
                 pendingOpenBookType = viewState.pendingOpenBookType,
                 supportsBookBackup = viewState.supportsBookBackup,
-                supportsBookDeletion = viewState.supportsBookDeletion,
-                cloudBackupDeleteConfirmationType = viewState.cloudBackupDeleteConfirmationType,
+                libraryBookActions = viewState.libraryBookActions,
+                removableDownloadTypes = viewState.removableDownloadTypes,
+                showRemoveFromParrotConfirmation = viewState.showRemoveFromParrotConfirmation,
                 showBackupConfirmation = viewState.showBackupConfirmation,
                 backupRightsAttested = viewState.backupRightsAttested,
                 bookFileTransfers = viewState.bookFileTransfers,
@@ -259,8 +265,9 @@ private fun BookDetailScreenContent(
     conflictResolutionError: AppError?,
     pendingOpenBookType: BookType?,
     supportsBookBackup: Boolean,
-    supportsBookDeletion: Boolean,
-    cloudBackupDeleteConfirmationType: BookType?,
+    libraryBookActions: LibraryBookActions?,
+    removableDownloadTypes: Set<BookType>,
+    showRemoveFromParrotConfirmation: Boolean,
     showBackupConfirmation: Boolean,
     backupRightsAttested: Boolean,
     bookFileTransfers: List<BookFileTransfer>,
@@ -323,12 +330,12 @@ private fun BookDetailScreenContent(
         )
     }
 
-    cloudBackupDeleteConfirmationType?.let { bookType ->
-        DeleteCloudBackupConfirmationDialog(
+    if (showRemoveFromParrotConfirmation) {
+        RemoveFromParrotConfirmationDialog(
             bookTitle = book.title,
-            bookType = bookType,
-            onConfirm = { intentDispatcher(BookDetailIntent.OnDeleteCloudBackupConfirmed) },
-            onDismiss = { intentDispatcher(BookDetailIntent.OnDeleteCloudBackupDismissed) },
+            keepsDeviceCopy = (book as? BookUiModel.LibraryBook)?.hasDeviceCopy == true,
+            onConfirm = { intentDispatcher(BookDetailIntent.OnRemoveFromParrotConfirmed) },
+            onDismiss = { intentDispatcher(BookDetailIntent.OnRemoveFromParrotDismissed) },
         )
     }
 
@@ -432,7 +439,10 @@ private fun BookDetailScreenContent(
                 ) {
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    BookHeader(book = book)
+                    BookHeader(
+                        book = book,
+                        libraryStatus = libraryStatusText(book, bookFileTransfers),
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -457,6 +467,7 @@ private fun BookDetailScreenContent(
                             ebookDownloadState = ebookDownloadState,
                             audiobookDownloadState = audiobookDownloadState,
                             readaloudDownloadState = readaloudDownloadState,
+                            removableDownloadTypes = removableDownloadTypes,
                             intentDispatcher = intentDispatcher,
                         )
                     } else {
@@ -468,6 +479,7 @@ private fun BookDetailScreenContent(
                             ebookDownloadState = ebookDownloadState,
                             audiobookDownloadState = audiobookDownloadState,
                             readaloudDownloadState = readaloudDownloadState,
+                            removableDownloadTypes = removableDownloadTypes,
                             intentDispatcher = intentDispatcher,
                         )
                     }
@@ -488,43 +500,20 @@ private fun BookDetailScreenContent(
                         }
                     }
 
-                    if (supportsBookDeletion && book is BookUiModel.StorytellerBook) {
-                        book.mediaResources
-                            .filter { resource ->
-                                resource.cloudBookFileId != null &&
-                                    resource.remoteAvailability in setOf("Available", "Deleting")
-                            }
-                            .forEach { resource ->
-                                val bookType = BookType.fromValue(resource.mediaType)
-                                val mediaTypeName = when (bookType) {
-                                    BookType.EBOOK -> stringResource(StringRes.books_media_ebook)
-                                    BookType.READALOUD -> stringResource(StringRes.books_media_readaloud)
-                                    BookType.AUDIOBOOK -> stringResource(StringRes.books_media_audio)
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                OutlinedButton(
-                                    onClick = {
-                                        intentDispatcher(BookDetailIntent.OnDeleteCloudBackupClicked(bookType))
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Delete,
-                                        contentDescription = stringResource(
-                                            StringRes.cloud_backup_delete_button,
-                                            mediaTypeName,
-                                        ),
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = stringResource(
-                                            StringRes.cloud_backup_delete_button,
-                                            mediaTypeName,
-                                        ),
-                                    )
-                                }
-                            }
+                    if (libraryBookActions?.removeFromParrot == true) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = { intentDispatcher(BookDetailIntent.OnRemoveFromParrotClicked) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Delete,
+                                contentDescription = stringResource(StringRes.library_remove_from_parrot_button),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = stringResource(StringRes.library_remove_from_parrot_button))
+                        }
                     }
 
                     if (bookFileTransfers.isNotEmpty()) {
@@ -594,7 +583,7 @@ private fun BookDetailScreenContent(
                         )
                     }
 
-                    if (book is BookUiModel.LocalBook) {
+                    if (libraryBookActions?.deleteFromDevice == true) {
                         Spacer(modifier = Modifier.height(20.dp))
                         SectionDivider()
                         Spacer(modifier = Modifier.height(20.dp))
@@ -613,6 +602,7 @@ private fun BookDetailScreenContent(
 @Composable
 private fun BookHeader(
     book: BookUiModel,
+    libraryStatus: String?,
     modifier: Modifier = Modifier,
 ) {
     val coverEntrance = remember { Animatable(0.9f) }
@@ -684,6 +674,15 @@ private fun BookHeader(
                 )
             }
 
+            libraryStatus?.let { status ->
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
             val ratingValue = book.rating
             if (ratingValue != null && ratingValue > 0f) {
                 Spacer(modifier = Modifier.height(6.dp))
@@ -716,6 +715,28 @@ private fun BookHeader(
                 )
             }
         }
+    }
+}
+
+/**
+ * Where a library book lives. Null for server books, and while a transfer runs, when the
+ * transfer's own progress text says more.
+ */
+@Composable
+private fun libraryStatusText(
+    book: BookUiModel,
+    transfers: List<BookFileTransfer>,
+): String? {
+    val libraryBook = book as? BookUiModel.LibraryBook ?: return null
+    val transferRunning = transfers.any { transfer ->
+        transfer.state in setOf("pending", "transferring", "verifying", "finalizing")
+    }
+    if (transferRunning) return null
+    return when {
+        libraryBook.home != BookHome.ParrotCloud ->
+            stringResource(StringRes.library_status_only_this_device)
+        libraryBook.hasDeviceCopy -> stringResource(StringRes.library_status_parrot_downloaded)
+        else -> stringResource(StringRes.library_status_parrot_not_downloaded)
     }
 }
 
@@ -943,7 +964,7 @@ private fun PrimaryMediaAction(
         BookType.AUDIOBOOK -> audiobookDownloadState
         BookType.READALOUD -> readaloudDownloadState
     }
-    val state = if (book is BookUiModel.LocalBook) DownloadState.Cached else rawState
+    val state = rawState
     val isAudio = primaryType != BookType.EBOOK
     val isCached = state is DownloadState.Cached
     val isDownloading = state is DownloadState.Downloading
@@ -1019,10 +1040,10 @@ private fun MediaActionButtons(
     ebookDownloadState: DownloadState,
     audiobookDownloadState: DownloadState,
     readaloudDownloadState: DownloadState,
+    removableDownloadTypes: Set<BookType>,
     intentDispatcher: IntentDispatcher<BookDetailIntent>,
     modifier: Modifier = Modifier,
 ) {
-    val isLocalBook = book is BookUiModel.LocalBook
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1032,8 +1053,7 @@ private fun MediaActionButtons(
                 icon = Icons.AutoMirrored.Outlined.MenuBook,
                 label = stringResource(StringRes.books_media_ebook),
                 downloadState = ebookDownloadState,
-                isLocalBook = isLocalBook,
-                canDeleteCache = book.localOrigin(BookType.EBOOK) != "import",
+                canDeleteCache = BookType.EBOOK in removableDownloadTypes,
                 onReadClick = { intentDispatcher(BookDetailIntent.OnReadEbookClicked) },
                 onDownloadClick = { intentDispatcher(BookDetailIntent.OnDownloadClicked(BookType.EBOOK)) },
                 onDeleteClick = {
@@ -1047,8 +1067,7 @@ private fun MediaActionButtons(
                 icon = Icons.Filled.Headphones,
                 label = stringResource(StringRes.books_media_audio),
                 downloadState = audiobookDownloadState,
-                isLocalBook = isLocalBook,
-                canDeleteCache = book.localOrigin(BookType.AUDIOBOOK) != "import",
+                canDeleteCache = BookType.AUDIOBOOK in removableDownloadTypes,
                 onReadClick = { intentDispatcher(BookDetailIntent.OnPlayAudiobookClicked) },
                 onDownloadClick = { intentDispatcher(BookDetailIntent.OnDownloadClicked(BookType.AUDIOBOOK)) },
                 onDeleteClick = {
@@ -1062,8 +1081,7 @@ private fun MediaActionButtons(
                 icon = Icons.Outlined.RecordVoiceOver,
                 label = stringResource(StringRes.books_media_readaloud),
                 downloadState = readaloudDownloadState,
-                isLocalBook = isLocalBook,
-                canDeleteCache = book.localOrigin(BookType.READALOUD) != "import",
+                canDeleteCache = BookType.READALOUD in removableDownloadTypes,
                 onReadClick = { intentDispatcher(BookDetailIntent.OnReadReadaloudClicked) },
                 onDownloadClick = { intentDispatcher(BookDetailIntent.OnDownloadClicked(BookType.READALOUD)) },
                 onDeleteClick = {
@@ -1075,12 +1093,6 @@ private fun MediaActionButtons(
     }
 }
 
-private fun BookUiModel.localOrigin(bookType: BookType): String? =
-    (this as? BookUiModel.StorytellerBook)
-        ?.mediaResources
-        ?.firstOrNull { resource -> resource.mediaType.equals(bookType.value, ignoreCase = true) }
-        ?.localOrigin
-
 /**
  * Single-format books only: the primary action already covers reading/listening,
  * so all that is left here is managing the on-device copy.
@@ -1091,6 +1103,7 @@ private fun SingleFormatHousekeeping(
     ebookDownloadState: DownloadState,
     audiobookDownloadState: DownloadState,
     readaloudDownloadState: DownloadState,
+    removableDownloadTypes: Set<BookType>,
     intentDispatcher: IntentDispatcher<BookDetailIntent>,
     modifier: Modifier = Modifier,
 ) {
@@ -1105,8 +1118,8 @@ private fun SingleFormatHousekeeping(
         BookType.AUDIOBOOK -> audiobookDownloadState
         BookType.READALOUD -> readaloudDownloadState
     }
-    val isCached = (book is BookUiModel.LocalBook) || rawState is DownloadState.Cached
-    val canDeleteCache = book.localOrigin(primaryType) != "import"
+    val isCached = rawState is DownloadState.Cached
+    val canDeleteCache = primaryType in removableDownloadTypes
     if (!isCached || !canDeleteCache) return
 
     TextButton(
@@ -1132,14 +1145,13 @@ private fun MediaButton(
     icon: ImageVector,
     label: String,
     downloadState: DownloadState,
-    isLocalBook: Boolean,
     canDeleteCache: Boolean,
     onReadClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onDeleteClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val effectiveState = if (isLocalBook) DownloadState.Cached else downloadState
+    val effectiveState = downloadState
     val isDownloading = effectiveState is DownloadState.Downloading
     val isCached = effectiveState is DownloadState.Cached
     val downloadProgress = (effectiveState as? DownloadState.Downloading)?.progress
@@ -1292,7 +1304,7 @@ private fun MediaButton(
                         )
                     }
 
-                    if (!isLocalBook && canDeleteCache) {
+                    if (canDeleteCache) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = stringResource(StringRes.books_media_delete),
@@ -1597,32 +1609,32 @@ private fun DeleteLocalBookConfirmationDialog(
 }
 
 @Composable
-private fun DeleteCloudBackupConfirmationDialog(
+private fun RemoveFromParrotConfirmationDialog(
     bookTitle: String,
-    bookType: BookType,
+    keepsDeviceCopy: Boolean,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val mediaTypeName = when (bookType) {
-        BookType.EBOOK -> stringResource(StringRes.books_media_ebook)
-        BookType.AUDIOBOOK -> stringResource(StringRes.books_media_audio)
-        BookType.READALOUD -> stringResource(StringRes.books_media_readaloud)
+    val message = if (keepsDeviceCopy) {
+        StringRes.library_remove_from_parrot_message_keep_local
+    } else {
+        StringRes.library_remove_from_parrot_message
     }
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        title = { Text(stringResource(StringRes.cloud_backup_delete_title)) },
+        title = { Text(stringResource(StringRes.library_remove_from_parrot_title)) },
         text = {
             Text(
-                stringResource(StringRes.cloud_backup_delete_message, mediaTypeName, bookTitle),
+                stringResource(message, bookTitle),
                 style = MaterialTheme.typography.bodyMedium,
             )
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(
-                    stringResource(StringRes.cloud_backup_delete_confirm),
+                    stringResource(StringRes.library_remove_from_parrot_confirm),
                     color = MaterialTheme.colorScheme.error,
                 )
             }

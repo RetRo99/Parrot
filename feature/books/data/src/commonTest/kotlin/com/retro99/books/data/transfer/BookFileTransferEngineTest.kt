@@ -18,14 +18,15 @@ import com.retro99.books.domain.UploadSessionResult
 import com.retro99.database.api.cloudfiles.CloudBookFileEntity
 import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
 import com.retro99.database.api.cloudfiles.CloudFilesDatabase
-import com.retro99.database.api.importedbooks.ImportedBookEntity
-import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.library.DeviceFileEntity
 import com.retro99.database.api.library.LibraryBookEntity
-import com.retro99.database.api.library.LibraryBookMutation
 import com.retro99.database.api.library.LibraryBooksDatabase
-import com.retro99.database.api.library.LocalBookFileEntity
-import com.retro99.database.api.books.PositionEntity
 import com.retro99.books.data.CONTENT_HASH_ALGORITHM
+import com.retro99.books.data.FakeDeviceFilesDatabase
+import com.retro99.books.data.FakeLibraryBooksDatabase
+import com.retro99.books.data.InMemoryFileStore
+import com.retro99.books.data.testDeviceFile
+import com.retro99.books.data.testLibraryBook
 import com.retro99.books.data.sha256
 import com.retro99.books.data.toHexString
 import kotlinx.coroutines.flow.Flow
@@ -50,7 +51,6 @@ class BookFileTransferEngineTest {
     fun downloadResumesFromDurablePartAndFinalizesReplica() = runTest {
         val state = CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "ebook",
             relativePath = "",
@@ -65,7 +65,6 @@ class BookFileTransferEngineTest {
         val database = FakeCloudFilesDatabase(activeTransfer().copy(
             direction = "download",
             state = "failed",
-            localSourceUuid = "restored-book",
             stagingPath = "/staging/transfer.part",
             sizeBytes = 6,
             bytesTransferred = 2,
@@ -75,7 +74,7 @@ class BookFileTransferEngineTest {
             storagePath = null,
             tusUploadUrl = null,
         ), state)
-        val fileStore = FakeTransferFileStore().apply { files["/staging/transfer.part"] = "ab".encodeToByteArray() }
+        val fileStore = InMemoryFileStore().apply { files["/staging/transfer.part"] = "ab".encodeToByteArray() }
         val transport = ResumingDownloadTransport()
         val finalized = CompletableDeferred<Unit>()
         val finalizer = object : DownloadTransferFinalizer {
@@ -83,7 +82,6 @@ class BookFileTransferEngineTest {
                 transfer: CloudFileTransferEntity,
                 request: BookFileDownloadRequest,
             ): CloudFileTransferEntity {
-                assertEquals("restored-book", transfer.localSourceUuid)
                 assertEquals("abcdef", fileStore.files.getValue("/staging/transfer.part").decodeToString())
                 val completed = transfer.copy(state = "completed", stagingPath = null, bytesTransferred = 6)
                 database.updateTransfer(completed)
@@ -93,8 +91,8 @@ class BookFileTransferEngineTest {
         }
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = UnusedImportedBooksDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = emptyList(),
             downloadTransports = listOf(transport),
             downloadFinalizer = finalizer,
@@ -112,11 +110,37 @@ class BookFileTransferEngineTest {
     }
 
     @Test
+    fun `remove download deletes only that media type's device copy`() = runTest {
+        // Given
+        val ebook = testDeviceFile(LIBRARY_BOOK_ID, mediaType = "ebook")
+        val readAloud = testDeviceFile(LIBRARY_BOOK_ID, mediaType = "readaloud")
+        val deviceFiles = FakeDeviceFilesDatabase(ebook, readAloud)
+        val fileStore = InMemoryFileStore().apply {
+            files[ebook.filePath] = byteArrayOf(1)
+            files[readAloud.filePath] = byteArrayOf(2)
+        }
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = FakeCloudFilesDatabase(),
+            deviceFilesDatabase = deviceFiles,
+            libraryBooksDatabase = FakeLibraryBooksDatabase(testLibraryBook(LIBRARY_BOOK_ID)),
+            transports = emptyList(),
+            fileStore = fileStore,
+        )
+
+        // When
+        engine.removeDownload(SERVER_ID, LIBRARY_BOOK_ID, "ebook")
+
+        // Then
+        assertEquals(listOf(readAloud), deviceFiles.files.value)
+        assertTrue(ebook.filePath !in fileStore.files)
+        assertTrue(readAloud.filePath in fileStore.files)
+    }
+
+    @Test
     fun cancelPersistsLocalTerminalStateBeforeBestEffortRemoteCleanup() = runTest {
         val transfer = activeTransfer()
         val fileState = CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -132,8 +156,8 @@ class BookFileTransferEngineTest {
         val transport = CheckingCancelTransport(filesDatabase)
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = filesDatabase,
-            importedBooksDatabase = UnusedImportedBooksDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = listOf(transport),
         )
 
@@ -149,7 +173,6 @@ class BookFileTransferEngineTest {
         val transfer = activeTransfer().copy(
             direction = "download",
             state = "completed",
-            localSourceUuid = "restored-book",
             stagingPath = null,
             uploadId = null,
             storagePath = null,
@@ -157,7 +180,6 @@ class BookFileTransferEngineTest {
         )
         val fileState = CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -170,17 +192,21 @@ class BookFileTransferEngineTest {
             updatedAt = "before",
         )
         val database = FakeCloudFilesDatabase(transfer, fileState)
-        val fileStore = FakeTransferFileStore().apply {
-            files["/imports/restored-book.epub"] = "restored".encodeToByteArray()
+        val fileStore = InMemoryFileStore().apply {
+            files["/library/restored.epub"] = "restored".encodeToByteArray()
         }
-        val importedBooksDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
-            override suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity? = null
-        }
+        val deviceFiles = FakeDeviceFilesDatabase(
+            testDeviceFile(
+                libraryBookId = LIBRARY_BOOK_ID,
+                filePath = "/library/restored.epub",
+                origin = DeviceFileEntity.ORIGIN_CLOUD_DOWNLOAD,
+            ),
+        )
         val deletionTransport = RecordingDeletionTransport()
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = importedBooksDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = deviceFiles,
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = emptyList(),
             deletionTransports = listOf(deletionTransport),
             fileStore = fileStore,
@@ -193,7 +219,8 @@ class BookFileTransferEngineTest {
         assertEquals("cloud-file", deletionTransport.deletedFileId)
         assertNull(database.getTransfer(TRANSFER_ID))
         assertTrue(database.fileStates.isEmpty())
-        assertTrue("/imports/restored-book.epub" !in fileStore.files)
+        assertTrue("/library/restored.epub" !in fileStore.files)
+        assertTrue(deviceFiles.files.value.isEmpty())
     }
 
     @Test
@@ -204,7 +231,6 @@ class BookFileTransferEngineTest {
         )
         val fileState = CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -220,11 +246,11 @@ class BookFileTransferEngineTest {
         val deletionTransport = RecordingDeletionTransport()
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = UnusedImportedBooksDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = emptyList(),
             deletionTransports = listOf(deletionTransport),
-            fileStore = FakeTransferFileStore(),
+            fileStore = InMemoryFileStore(),
         )
 
         engine.deleteRemoteBackup(SERVER_ID, LIBRARY_BOOK_ID, "ebook")
@@ -240,7 +266,6 @@ class BookFileTransferEngineTest {
         val transfer = activeTransfer().copy(
             direction = "download",
             state = "pending",
-            localSourceUuid = "restored-book",
             stagingPath = "/staging/transfer.part",
             sizeBytes = 6,
             bytesTransferred = 2,
@@ -255,7 +280,6 @@ class BookFileTransferEngineTest {
         )
         val fileState = CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -268,7 +292,7 @@ class BookFileTransferEngineTest {
             updatedAt = "before",
         )
         val database = FakeCloudFilesDatabase(transfer, fileState)
-        val fileStore = FakeTransferFileStore().apply {
+        val fileStore = InMemoryFileStore().apply {
             files["/staging/transfer.part"] = "ab".encodeToByteArray()
         }
         val transport = ResumingDownloadTransport()
@@ -290,8 +314,8 @@ class BookFileTransferEngineTest {
         }
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = UnusedImportedBooksDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = emptyList(),
             downloadTransports = listOf(transport),
             downloadFinalizer = finalizer,
@@ -317,7 +341,6 @@ class BookFileTransferEngineTest {
         val transfer = activeTransfer().copy(
             direction = "download",
             state = "pending",
-            localSourceUuid = "restored-book",
             stagingPath = "/staging/transfer.part",
             sizeBytes = 6,
             bytesTransferred = 0,
@@ -330,7 +353,6 @@ class BookFileTransferEngineTest {
         )
         val fileState = CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -345,8 +367,8 @@ class BookFileTransferEngineTest {
         val database = FakeCloudFilesDatabase(transfer, fileState)
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = UnusedImportedBooksDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = emptyList(),
             downloadTransports = listOf(FailingDownloadTransport()),
             downloadFinalizer = object : DownloadTransferFinalizer {
@@ -355,7 +377,7 @@ class BookFileTransferEngineTest {
                     request: BookFileDownloadRequest,
                 ): CloudFileTransferEntity = error("Finalization is not expected after a failed download")
             },
-            fileStore = FakeTransferFileStore(),
+            fileStore = InMemoryFileStore(),
         )
 
         engine.recoverPendingTransfers()
@@ -372,7 +394,6 @@ class BookFileTransferEngineTest {
         val transfer = activeTransfer().copy(
             direction = "download",
             state = "pending",
-            localSourceUuid = "restored-book",
             stagingPath = "/staging/transfer.part",
             sizeBytes = 6,
             bytesTransferred = 0,
@@ -384,7 +405,6 @@ class BookFileTransferEngineTest {
         )
         val fileState = CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -399,8 +419,8 @@ class BookFileTransferEngineTest {
         val database = FakeCloudFilesDatabase(transfer, fileState)
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = UnusedImportedBooksDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = emptyList(),
             downloadTransports = listOf(FailingDownloadTransport()),
             downloadFinalizer = object : DownloadTransferFinalizer {
@@ -409,7 +429,7 @@ class BookFileTransferEngineTest {
                     request: BookFileDownloadRequest,
                 ): CloudFileTransferEntity = error("Finalization is not expected after a failed download")
             },
-            fileStore = FakeTransferFileStore(),
+            fileStore = InMemoryFileStore(),
         )
 
         val beforeRetry = Clock.System.now().toEpochMilliseconds()
@@ -436,7 +456,6 @@ class BookFileTransferEngineTest {
         )
         val fileState = CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -449,14 +468,11 @@ class BookFileTransferEngineTest {
             updatedAt = "before",
         )
         val database = FakeCloudFilesDatabase(transfer, fileState)
-        val importedBook = testImportedBook()
-        val importedDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
-            override suspend fun getImportedBookByUuid(uuid: String) = importedBook.takeIf { it.uuid == uuid }
-        }
+        val deviceFiles = FakeDeviceFilesDatabase(testDeviceFile(LIBRARY_BOOK_ID, mediaType = "EBOOK"))
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = importedDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = deviceFiles,
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = listOf(
                 ReservationRetryTransport(
                     UploadReservationResult.Rejected(
@@ -493,7 +509,6 @@ class BookFileTransferEngineTest {
         )
         val fileState = CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -506,15 +521,12 @@ class BookFileTransferEngineTest {
             updatedAt = "before",
         )
         val database = FakeCloudFilesDatabase(transfer, fileState)
-        val importedBook = testImportedBook()
-        val importedDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
-            override suspend fun getImportedBookByUuid(uuid: String) = importedBook.takeIf { it.uuid == uuid }
-        }
+        val deviceFiles = FakeDeviceFilesDatabase(testDeviceFile(LIBRARY_BOOK_ID, mediaType = "EBOOK"))
         val transport = HashMismatchedUploadTransport()
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = importedDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = deviceFiles,
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = listOf(transport),
         )
 
@@ -534,7 +546,6 @@ class BookFileTransferEngineTest {
         val transfer = activeTransfer().copy(
             direction = "download",
             state = "completed",
-            localSourceUuid = "original-book",
             stagingPath = null,
             uploadId = null,
             storagePath = null,
@@ -542,7 +553,6 @@ class BookFileTransferEngineTest {
         )
         val database = FakeCloudFilesDatabase(transfer, CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -554,32 +564,15 @@ class BookFileTransferEngineTest {
             remoteRevision = 2,
             updatedAt = "before",
         ))
-        val original = object : ImportedBookEntity {
-            override val uuid = "original-book"
-            override val title = "Original"
-            override val author: String? = null
-            override val description: String? = null
-            override val coverPath: String? = null
-            override val filePath = "/imports/original-book.epub"
-            override val fileSize = 512L
-            override val contentHash: String? = "hash"
-            override val contentHashAlgorithm: String? = "sha-256-v1"
-            override val importedAt = "before"
-            override val lastOpenedAt: String? = null
-            override val bookType = "ebook"
-            override val publicationDate: String? = null
-            override val origin = "import"
-        }
-        val importedDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
-            override suspend fun getImportedBookByUuid(uuid: String) = original.takeIf { it.uuid == uuid }
-        }
-        val fileStore = FakeTransferFileStore().apply {
+        val original = testDeviceFile(LIBRARY_BOOK_ID, filePath = "/library/original.epub")
+        val deviceFiles = FakeDeviceFilesDatabase(original)
+        val fileStore = InMemoryFileStore().apply {
             files[original.filePath] = "original".encodeToByteArray()
         }
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = importedDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = deviceFiles,
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = emptyList(),
             fileStore = fileStore,
         )
@@ -587,6 +580,7 @@ class BookFileTransferEngineTest {
         engine.invalidateCloudFile("cloud-file")
 
         assertTrue(original.filePath in fileStore.files)
+        assertEquals(listOf(original), deviceFiles.files.value)
         assertNull(database.getTransfer(TRANSFER_ID))
     }
 
@@ -595,7 +589,6 @@ class BookFileTransferEngineTest {
         val transfer = activeTransfer().copy(
             direction = "download",
             state = "completed",
-            localSourceUuid = "restored-book",
             stagingPath = null,
             uploadId = null,
             storagePath = null,
@@ -603,7 +596,6 @@ class BookFileTransferEngineTest {
         )
         val database = FakeCloudFilesDatabase(transfer, CloudBookFileEntity(
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
             relativePath = "",
@@ -615,47 +607,28 @@ class BookFileTransferEngineTest {
             remoteRevision = 2,
             updatedAt = "before",
         ))
-        val restored = object : ImportedBookEntity {
-            override val uuid = "restored-book"
-            override val title = "Restored"
-            override val author: String? = null
-            override val description: String? = null
-            override val coverPath = "/covers/restored-book.png"
-            override val filePath = "/imports/restored-book.epub"
-            override val fileSize = 8L
-            override val contentHash: String? = "hash"
-            override val contentHashAlgorithm: String? = CONTENT_HASH_ALGORITHM
-            override val importedAt = "before"
-            override val lastOpenedAt: String? = null
-            override val bookType = "ebook"
-            override val publicationDate: String? = null
-            override val origin = "cloud_download"
-            override val cloudBookFileId = "cloud-file"
-        }
-        val deletedBooks = mutableListOf<String>()
-        val importedDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
-            override suspend fun getImportedBookByUuid(uuid: String) = restored.takeIf { it.uuid == uuid }
-            override suspend fun deleteImportedBook(uuid: String) {
-                deletedBooks += uuid
-            }
-        }
-        val fileStore = FakeTransferFileStore().apply {
+        val restored = testDeviceFile(
+            libraryBookId = LIBRARY_BOOK_ID,
+            filePath = "/library/restored.epub",
+            fileSize = 8,
+            origin = DeviceFileEntity.ORIGIN_CLOUD_DOWNLOAD,
+        )
+        val deviceFiles = FakeDeviceFilesDatabase(restored)
+        val fileStore = InMemoryFileStore().apply {
             files[restored.filePath] = "bookdata".encodeToByteArray()
-            files[requireNotNull(restored.coverPath)] = byteArrayOf(1, 2)
         }
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = importedDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = deviceFiles,
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = emptyList(),
             fileStore = fileStore,
         )
 
         engine.invalidateCloudFile("cloud-file")
 
-        assertEquals(listOf("restored-book"), deletedBooks)
+        assertTrue(deviceFiles.files.value.isEmpty())
         assertTrue(restored.filePath !in fileStore.files)
-        assertTrue(restored.coverPath !in fileStore.files)
         assertNull(database.getTransfer(TRANSFER_ID))
     }
 
@@ -665,7 +638,7 @@ class BookFileTransferEngineTest {
         val contentHash = sha256(bytes).toHexString()
         val transfer = uploadTransfer(contentHash, bytes.size.toLong())
         val transport = UploadPathTransport(bytes, uploadedFile(contentHash, bytes.size.toLong()))
-        val fixture = uploadFixture(transfer, testImportedBook(contentHash, bytes.size.toLong()), transport)
+        val fixture = uploadFixture(transfer, uploadSource(contentHash, bytes.size.toLong()), transport)
 
         fixture.engine.processTransfer(transfer.transferId)
 
@@ -683,7 +656,7 @@ class BookFileTransferEngineTest {
     fun repeatedUploadEnqueueKeepsFutureBackoffUntilExplicitRetry() = runTest {
         val bytes = "enqueue retry source".encodeToByteArray()
         val contentHash = sha256(bytes).toHexString()
-        val importedBook = testImportedBook(contentHash, bytes.size.toLong())
+        val importedBook = uploadSource(contentHash, bytes.size.toLong())
         val transfer = uploadTransfer(contentHash, bytes.size.toLong()).copy(
             attemptCount = 2,
             nextAttemptAt = "2999-01-01T00:00:00Z",
@@ -693,12 +666,10 @@ class BookFileTransferEngineTest {
             payload = bytes,
             file = uploadedFile(contentHash, bytes.size.toLong()),
         )
-        val fileStore = FakeTransferFileStore().apply { files[importedBook.filePath] = bytes }
+        val fileStore = InMemoryFileStore().apply { files[importedBook.filePath] = bytes }
         val fixture = uploadFixture(transfer, importedBook, transport, fileStore)
 
-        assertEquals(transfer.transferId, fixture.engine.enqueueUpload(
-            SERVER_ID,
-            importedBook.uuid,
+        assertEquals(transfer.transferId, fixture.engine.enqueueUpload(SERVER_ID, importedBook.libraryBookId, importedBook.mediaType,
             UploadRightsAttestation("now", "terms", "rights"),
         ))
         assertEquals("2999-01-01T00:00:00Z", fixture.database.getTransfer(transfer.transferId)?.nextAttemptAt)
@@ -715,33 +686,25 @@ class BookFileTransferEngineTest {
     fun concurrentEnqueueUploadCallsCreateOneTransferRow() = runTest {
         val bytes = "double tap source".encodeToByteArray()
         val contentHash = sha256(bytes).toHexString()
-        val importedBook = testImportedBook(contentHash, bytes.size.toLong())
+        val importedBook = uploadSource(contentHash, bytes.size.toLong())
         val database = FakeCloudFilesDatabase()
-        val importedDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
-            override suspend fun getImportedBookByUuid(uuid: String) = importedBook.takeIf { it.uuid == uuid }
-        }
-        val libraryBook = testLibraryBook("$CONTENT_HASH_ALGORITHM:$contentHash", contentHash)
-        val libraryDatabase = object : LibraryBooksDatabase by UnusedLibraryBooksDatabase {
-            override suspend fun getLibraryBookById(libraryBookId: String) =
-                libraryBook.takeIf { it.libraryBookId == libraryBookId }
-        }
-        val fileStore = FakeTransferFileStore().apply { files[importedBook.filePath] = bytes }
+        val fileStore = InMemoryFileStore().apply { files[importedBook.filePath] = bytes }
         val transport = UploadPathTransport(
             payload = bytes,
             file = uploadedFile(contentHash, bytes.size.toLong()),
         )
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = importedDatabase,
-            libraryBooksDatabase = libraryDatabase,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(importedBook),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(testLibraryBook(LIBRARY_BOOK_ID)),
             transports = listOf(transport),
             fileStore = fileStore,
         )
 
         val ids = coroutineScope {
             listOf(
-                async { engine.enqueueUpload(SERVER_ID, importedBook.uuid, UploadRightsAttestation("now", "terms", "rights")) },
-                async { engine.enqueueUpload(SERVER_ID, importedBook.uuid, UploadRightsAttestation("now", "terms", "rights")) },
+                async { engine.enqueueUpload(SERVER_ID, importedBook.libraryBookId, importedBook.mediaType, UploadRightsAttestation("now", "terms", "rights")) },
+                async { engine.enqueueUpload(SERVER_ID, importedBook.libraryBookId, importedBook.mediaType, UploadRightsAttestation("now", "terms", "rights")) },
             ).map { deferred -> deferred.await() }
         }
         database.completedTransfer.await()
@@ -757,39 +720,32 @@ class BookFileTransferEngineTest {
         val missingBytes = "not linked yet".encodeToByteArray()
         val missingHash = sha256(missingBytes).toHexString()
         val uploadGate = CompletableDeferred<Unit>()
-        val uploadedBook = testImportedBook(
+        val uploadedBook = uploadSource(
             uploadHash,
             uploadBytes.size.toLong(),
-            uuid = "imported-book",
-            filePath = "/imports/imported-book.epub",
+            filePath = "/library/imported.epub",
         )
-        val cloudReplica = testImportedBook(
+        val cloudReplica = uploadSource(
             uploadHash,
             uploadBytes.size.toLong(),
-            uuid = "restored-book",
-            filePath = "/imports/restored-book.epub",
-            origin = "cloud_download",
+            libraryBookId = RESTORED_BOOK_ID,
+            filePath = "/library/restored.epub",
+            origin = DeviceFileEntity.ORIGIN_CLOUD_DOWNLOAD,
         )
-        val unlinkedImport = testImportedBook(
+        val unlinkedImport = uploadSource(
             missingHash,
             missingBytes.size.toLong(),
-            uuid = "unlinked-book",
-            filePath = "/imports/unlinked-book.epub",
+            libraryBookId = UNSYNCED_BOOK_ID,
+            filePath = "/library/unsynced.epub",
         )
-        val attemptedBooks = mutableListOf<String>()
-        val importedDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
-            override fun getAllImportedBooks() = flowOf(listOf(uploadedBook, cloudReplica, unlinkedImport))
-            override suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity? {
-                attemptedBooks += uuid
-                return listOf(uploadedBook, cloudReplica, unlinkedImport).firstOrNull { it.uuid == uuid }
-            }
-        }
-        val libraryBook = testLibraryBook("$CONTENT_HASH_ALGORITHM:$uploadHash", uploadHash)
-        val libraryDatabase = object : LibraryBooksDatabase by UnusedLibraryBooksDatabase {
-            override suspend fun getLibraryBookById(libraryBookId: String) =
-                libraryBook.takeIf { it.libraryBookId == libraryBookId }
-        }
-        val fileStore = FakeTransferFileStore().apply {
+        val deviceFiles = FakeDeviceFilesDatabase(uploadedBook, cloudReplica, unlinkedImport)
+        // The unsynced book has no remote revision yet, so it can't be uploaded.
+        val libraryDatabase = FakeLibraryBooksDatabase(
+            testLibraryBook(LIBRARY_BOOK_ID),
+            testLibraryBook(RESTORED_BOOK_ID),
+            testLibraryBook(UNSYNCED_BOOK_ID, remoteRevision = null),
+        )
+        val fileStore = InMemoryFileStore().apply {
             files[uploadedBook.filePath] = uploadBytes
             files[cloudReplica.filePath] = uploadBytes
             files[unlinkedImport.filePath] = missingBytes
@@ -802,7 +758,7 @@ class BookFileTransferEngineTest {
         val database = FakeCloudFilesDatabase()
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = importedDatabase,
+            deviceFilesDatabase = deviceFiles,
             libraryBooksDatabase = libraryDatabase,
             transports = listOf(transport),
             fileStore = fileStore,
@@ -816,9 +772,10 @@ class BookFileTransferEngineTest {
         database.completedTransfer.await()
 
         assertEquals(BackupAllResult(queuedCount = 1, failedCount = 1), result)
-        assertTrue(attemptedBooks.contains("imported-book"))
-        assertTrue(attemptedBooks.contains("unlinked-book"))
-        assertFalse(attemptedBooks.contains("restored-book"))
+        assertEquals(
+            listOf(LIBRARY_BOOK_ID),
+            database.insertedTransfers.map { transfer -> transfer.libraryBookId },
+        )
     }
 
     @Test
@@ -837,8 +794,8 @@ class BookFileTransferEngineTest {
         database.insertTransfer(upload.copy(transferId = "failed-transfer", state = "failed", lastError = "file_exists"))
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = UnusedImportedBooksDatabase,
-            libraryBooksDatabase = UnusedLibraryBooksDatabase,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
             transports = listOf(ReservationRetryTransport(UploadReservationResult.Rejected("unused"))),
             downloadTransports = listOf(FailingDownloadTransport()),
         )
@@ -863,7 +820,7 @@ class BookFileTransferEngineTest {
             file = existingFile,
             reservationResult = UploadReservationResult.AlreadyAvailable(existingFile),
         )
-        val fixture = uploadFixture(transfer, testImportedBook(contentHash, bytes.size.toLong()), transport)
+        val fixture = uploadFixture(transfer, uploadSource(contentHash, bytes.size.toLong()), transport)
 
         fixture.engine.processTransfer(transfer.transferId)
 
@@ -884,7 +841,7 @@ class BookFileTransferEngineTest {
             file = uploadedFile(contentHash, bytes.size.toLong()),
             reservationResult = UploadReservationResult.Rejected("content_blocked"),
         )
-        val fixture = uploadFixture(transfer, testImportedBook(contentHash, bytes.size.toLong()), transport)
+        val fixture = uploadFixture(transfer, uploadSource(contentHash, bytes.size.toLong()), transport)
 
         fixture.engine.processTransfer(transfer.transferId)
 
@@ -909,7 +866,7 @@ class BookFileTransferEngineTest {
                 file = uploadedFile(contentHash, bytes.size.toLong()),
                 reserveException = IllegalStateException("network unavailable"),
             )
-            val fixture = uploadFixture(transfer, testImportedBook(contentHash, bytes.size.toLong()), transport)
+            val fixture = uploadFixture(transfer, uploadSource(contentHash, bytes.size.toLong()), transport)
             val beforeRetry = Clock.System.now().toEpochMilliseconds()
 
             fixture.engine.processTransfer(transfer.transferId)
@@ -945,7 +902,7 @@ class BookFileTransferEngineTest {
             finalizeFailureFirst = "upload_expired",
             expireWhenResuming = true,
         )
-        val fixture = uploadFixture(transfer, testImportedBook(contentHash, bytes.size.toLong()), transport)
+        val fixture = uploadFixture(transfer, uploadSource(contentHash, bytes.size.toLong()), transport)
 
         fixture.engine.processTransfer(transfer.transferId)
 
@@ -982,7 +939,7 @@ class BookFileTransferEngineTest {
             file = uploadedFile(contentHash, bytes.size.toLong()),
             finalizeFailureFirst = "upload_incomplete",
         )
-        val fixture = uploadFixture(transfer, testImportedBook(contentHash, bytes.size.toLong()), transport)
+        val fixture = uploadFixture(transfer, uploadSource(contentHash, bytes.size.toLong()), transport)
 
         fixture.engine.recoverPendingTransfers()
         fixture.database.completedTransfer.await()
@@ -994,13 +951,12 @@ class BookFileTransferEngineTest {
 
     private fun uploadFixture(
         transfer: CloudFileTransferEntity,
-        importedBook: ImportedBookEntity,
+        source: DeviceFileEntity,
         transport: UploadPathTransport,
-        fileStore: FakeTransferFileStore = FakeTransferFileStore(),
+        fileStore: InMemoryFileStore = InMemoryFileStore(),
     ): UploadFixture {
         val fileState = CloudBookFileEntity(
             libraryBookId = transfer.libraryBookId,
-            cloudBookId = transfer.cloudBookId ?: "cloud-book",
             cloudBookFileId = transfer.cloudBookFileId ?: "pending-file",
             mediaType = transfer.mediaType,
             relativePath = "",
@@ -1013,24 +969,30 @@ class BookFileTransferEngineTest {
             updatedAt = "before",
         )
         val database = FakeCloudFilesDatabase(transfer, fileState)
-        val importedDatabase = object : ImportedBooksDatabase by UnusedImportedBooksDatabase {
-            override suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity? =
-                importedBook.takeIf { it.uuid == uuid }
-        }
-        val libraryBook = testLibraryBook(transfer.libraryBookId, transfer.contentHash.orEmpty())
-        val libraryDatabase = object : LibraryBooksDatabase by UnusedLibraryBooksDatabase {
-            override suspend fun getLibraryBookById(libraryBookId: String): LibraryBookEntity? =
-                libraryBook.takeIf { it.libraryBookId == libraryBookId }
-        }
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
-            importedBooksDatabase = importedDatabase,
-            libraryBooksDatabase = libraryDatabase,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(source),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(testLibraryBook(transfer.libraryBookId)),
             transports = listOf(transport),
             fileStore = fileStore,
         )
         return UploadFixture(engine, database)
     }
+
+    private fun uploadSource(
+        contentHash: String,
+        sizeBytes: Long,
+        libraryBookId: String = LIBRARY_BOOK_ID,
+        filePath: String = "/library/book.epub",
+        origin: String = DeviceFileEntity.ORIGIN_IMPORT,
+    ) = testDeviceFile(
+        libraryBookId = libraryBookId,
+        mediaType = "EBOOK",
+        filePath = filePath,
+        contentHash = contentHash,
+        fileSize = sizeBytes,
+        origin = origin,
+    )
 
     private data class UploadFixture(
         val engine: BookFileTransferEngine,
@@ -1039,10 +1001,8 @@ class BookFileTransferEngineTest {
 
     private fun uploadTransfer(contentHash: String, sizeBytes: Long) = activeTransfer().copy(
         direction = "upload",
-        libraryBookId = "$CONTENT_HASH_ALGORITHM:$contentHash",
-        cloudBookId = "cloud-book",
+        libraryBookId = LIBRARY_BOOK_ID,
         cloudBookFileId = null,
-        localSourceUuid = "local-book",
         sizeBytes = sizeBytes,
         bytesTransferred = 0,
         contentHash = contentHash,
@@ -1063,7 +1023,6 @@ class BookFileTransferEngineTest {
         sizeBytes: Long,
         cloudBookFileId: String = "uploaded-file",
     ) = CloudBookFileRecord(
-        cloudBookId = "cloud-book",
         cloudBookFileId = cloudBookFileId,
         mediaType = "EBOOK",
         relativePath = "",
@@ -1074,17 +1033,6 @@ class BookFileTransferEngineTest {
         contentHashAlgorithm = CONTENT_HASH_ALGORITHM,
         remoteRevision = 1,
     )
-
-    private fun testLibraryBook(libraryBookId: String, contentHash: String): LibraryBookEntity =
-        object : LibraryBookEntity {
-            override val libraryBookId = libraryBookId
-            override val contentHash = contentHash
-            override val contentHashAlgorithm = CONTENT_HASH_ALGORITHM
-            override val title = "Book"
-            override val author: String? = null
-            override val format = "ebook"
-            override val cloudBookId = "cloud-book"
-        }
 
     private class UploadPathTransport(
         private val payload: ByteArray,
@@ -1184,6 +1132,12 @@ class BookFileTransferEngineTest {
 
         override suspend fun getFileStates(libraryBookId: String): List<CloudBookFileEntity> =
             fileStates.filter { it.libraryBookId == libraryBookId }
+
+        override suspend fun getFileStateById(cloudBookFileId: String): CloudBookFileEntity? =
+            fileStates.firstOrNull { it.cloudBookFileId == cloudBookFileId }
+
+        override suspend fun findFileStateByHash(algorithm: String, hash: String): CloudBookFileEntity? =
+            fileStates.firstOrNull { it.contentHashAlgorithm == algorithm && it.contentHash == hash }
 
         override fun observeFileStates(): Flow<List<CloudBookFileEntity>> = flowOf(fileStates.toList())
 
@@ -1389,92 +1343,11 @@ class BookFileTransferEngineTest {
         }
     }
 
-    private class FakeTransferFileStore : BookFileTransferFileStore {
-        val files = mutableMapOf<String, ByteArray>()
-        override fun stagingPath(transferId: String) = "/staging/$transferId.part"
-        override fun importedFilePath(localUuid: String, mediaType: String) = "/imports/$localUuid.epub"
-        override suspend fun exists(path: String) = path in files
-        override suspend fun size(path: String) = files[path]?.size?.toLong() ?: 0L
-        override fun contentHash(path: String) = sha256(files[path] ?: error("No file at $path")).toHexString()
-        override suspend fun truncate(path: String) { files[path] = byteArrayOf() }
-        override suspend fun write(path: String, offset: Long, bytes: ByteArray) {
-            val current = files[path] ?: byteArrayOf()
-            val result = ByteArray(maxOf(current.size.toLong(), offset + bytes.size).toInt())
-            current.copyInto(result)
-            bytes.copyInto(result, offset.toInt())
-            files[path] = result
-        }
-        override suspend fun moveToImportedStore(stagingPath: String, destinationPath: String) {
-            files[destinationPath] = files.remove(stagingPath) ?: error("No staging file")
-        }
-        override suspend fun writeCover(localUuid: String, bytes: ByteArray) = "/covers/$localUuid.png"
-        override suspend fun delete(path: String): Boolean = files.remove(path) != null
-    }
-
-    private object UnusedImportedBooksDatabase : ImportedBooksDatabase {
-        override suspend fun upsertImportedBook(book: ImportedBookEntity) = error("Unused")
-        override suspend fun upsertImportedBookWithLibraryMapping(
-            book: ImportedBookEntity,
-            mutation: LibraryBookMutation,
-        ) = error("Unused")
-        override suspend fun saveRestoredBookWithLibraryMapping(
-            book: ImportedBookEntity,
-            libraryBook: LibraryBookEntity,
-            localBookFile: LocalBookFileEntity,
-            transfer: CloudFileTransferEntity,
-            position: PositionEntity?,
-        ) = error("Unused")
-        override fun getAllImportedBooks(): Flow<List<ImportedBookEntity>> = emptyFlow()
-        override suspend fun getImportedBookByUuid(uuid: String): ImportedBookEntity? = error("Unused")
-        override suspend fun getImportedBookByContentHash(contentHash: String): ImportedBookEntity? = error("Unused")
-        override suspend fun deleteImportedBook(uuid: String) = error("Unused")
-        override suspend fun deleteAllImportedBooks() = error("Unused")
-        override suspend fun getImportedBooksCount(): Int = error("Unused")
-        override suspend fun updateLastOpenedAt(uuid: String, lastOpenedAt: String) = error("Unused")
-        override suspend fun searchImportedBooksByTitle(query: String): List<ImportedBookEntity> = error("Unused")
-    }
-
-    private object UnusedLibraryBooksDatabase : LibraryBooksDatabase {
-        override suspend fun upsertLibraryBook(book: LibraryBookEntity) = error("Unused")
-        override suspend fun upsertLocalLibraryBook(book: LibraryBookEntity) = error("Unused")
-        override fun getAllLibraryBooks(): Flow<List<LibraryBookEntity>> = emptyFlow()
-        override suspend fun getLibraryBookById(libraryBookId: String): LibraryBookEntity? = error("Unused")
-        override suspend fun getLibraryBookByContentHash(contentHash: String): LibraryBookEntity? = error("Unused")
-        override suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity? = error("Unused")
-        override suspend fun attachCloudBookId(libraryBookId: String, cloudBookId: String) = error("Unused")
-        override suspend fun upsertLocalBookFile(file: LocalBookFileEntity) = error("Unused")
-        override suspend fun getLocalBookFiles(libraryBookId: String): List<LocalBookFileEntity> = error("Unused")
-        override suspend fun getLocalBookFileByImportedBookUuid(importedBookUuid: String): LocalBookFileEntity? =
-            error("Unused")
-        override suspend fun deleteLocalBookFileByImportedBookUuid(importedBookUuid: String) = error("Unused")
-    }
-
-    private fun testImportedBook(
-        contentHash: String = "hash",
-        fileSize: Long = 512,
-        uuid: String = "local-book",
-        filePath: String = "/imports/local-book.epub",
-        origin: String = "import",
-    ): ImportedBookEntity = object : ImportedBookEntity {
-        override val uuid = uuid
-        override val title = "Book"
-        override val author: String? = null
-        override val description: String? = null
-        override val coverPath: String? = null
-        override val filePath = filePath
-        override val fileSize = fileSize
-        override val contentHash: String? = contentHash
-        override val contentHashAlgorithm: String? = "sha-256-v1"
-        override val importedAt = "before"
-        override val lastOpenedAt: String? = null
-        override val bookType = "EBOOK"
-        override val publicationDate: String? = null
-        override val origin = origin
-    }
-
     private companion object {
         const val SERVER_ID = "test-cloud"
-        const val LIBRARY_BOOK_ID = "sha-256-v1:expected-hash"
+        const val LIBRARY_BOOK_ID = "55555555-5555-4555-8555-555555555555"
+        const val RESTORED_BOOK_ID = "66666666-6666-4666-8666-666666666666"
+        const val UNSYNCED_BOOK_ID = "77777777-7777-4777-8777-777777777777"
         const val TRANSFER_ID = "transfer-1"
 
         fun activeTransfer() = CloudFileTransferEntity(
@@ -1482,10 +1355,8 @@ class BookFileTransferEngineTest {
             serverId = SERVER_ID,
             direction = "upload",
             libraryBookId = LIBRARY_BOOK_ID,
-            cloudBookId = "cloud-book",
             cloudBookFileId = "cloud-file",
             mediaType = "EBOOK",
-            localSourceUuid = "local-book",
             stagingPath = null,
             sizeBytes = 512,
             bytesTransferred = 128,

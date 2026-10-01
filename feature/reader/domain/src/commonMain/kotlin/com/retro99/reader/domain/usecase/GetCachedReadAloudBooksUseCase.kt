@@ -46,7 +46,9 @@ class GetCachedReadAloudBooksUseCase(
     private fun hasReadAloudSupport(book: BookDomainModel): Boolean {
         return when (book) {
             is BookDomainModel.StorytellerBook -> book.readaloud != null
-            is BookDomainModel.LocalBook -> book.bookType == BookType.READALOUD
+            is BookDomainModel.LibraryBook -> book.mediaResources.any { resource ->
+                resource.mediaType == BookType.READALOUD.value
+            }
         }
     }
 
@@ -58,10 +60,8 @@ class GetCachedReadAloudBooksUseCase(
             is BookDomainModel.StorytellerBook -> {
                 readerSettingsRepository.isEbookCached(book.uuid, BookType.READALOUD)
             }
-            is BookDomainModel.LocalBook -> {
-                // Local ReadAloud books are already on device
-                true
-            }
+            // Library books are on the device when they have a device copy (I6).
+            is BookDomainModel.LibraryBook -> book.deviceFilePath(BookType.READALOUD) != null
         }
     }
 }

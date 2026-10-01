@@ -27,7 +27,6 @@ internal class CloudFilesSqlDelightDao(
     suspend fun upsertFileState(file: CloudBookFileEntity) = withContext(Dispatchers.IO) {
         databaseManager.getDatabase().cloudBookFileStateQueries.upsertCloudBookFileState(
             library_book_id = file.libraryBookId,
-            cloud_book_id = file.cloudBookId,
             cloud_book_file_id = file.cloudBookFileId,
             media_type = file.mediaType,
             relative_path = file.relativePath,
@@ -47,6 +46,22 @@ internal class CloudFilesSqlDelightDao(
                 .getCloudBookFileStates(libraryBookId)
                 .executeAsList()
                 .map(Cloud_book_file_state::toEntity)
+        }
+
+    suspend fun getFileStateById(cloudBookFileId: String): CloudBookFileEntity? =
+        withContext(Dispatchers.IO) {
+            databaseManager.getDatabase().cloudBookFileStateQueries
+                .getCloudBookFileStateById(cloudBookFileId)
+                .executeAsOneOrNull()
+                ?.toEntity()
+        }
+
+    suspend fun findFileStateByHash(algorithm: String, hash: String): CloudBookFileEntity? =
+        withContext(Dispatchers.IO) {
+            databaseManager.getDatabase().cloudBookFileStateQueries
+                .findCloudFileByHash(algorithm, hash)
+                .executeAsOneOrNull()
+                ?.toEntity()
         }
 
     fun observeFileStates(): Flow<List<CloudBookFileEntity>> =
@@ -72,10 +87,8 @@ internal class CloudFilesSqlDelightDao(
             server_id = transfer.serverId,
             direction = transfer.direction,
             library_book_id = transfer.libraryBookId,
-            cloud_book_id = transfer.cloudBookId,
             cloud_book_file_id = transfer.cloudBookFileId,
             media_type = transfer.mediaType,
-            local_source_uuid = transfer.localSourceUuid,
             staging_path = transfer.stagingPath,
             size_bytes = transfer.sizeBytes,
             bytes_transferred = transfer.bytesTransferred,
@@ -172,7 +185,6 @@ internal class CloudFilesSqlDelightDao(
 
 private fun Cloud_book_file_state.toEntity() = CloudBookFileEntity(
     libraryBookId = library_book_id,
-    cloudBookId = cloud_book_id,
     cloudBookFileId = cloud_book_file_id,
     mediaType = media_type,
     relativePath = relative_path,
@@ -190,10 +202,8 @@ private fun Cloud_file_transfers.toEntity() = CloudFileTransferEntity(
     serverId = server_id,
     direction = direction,
     libraryBookId = library_book_id,
-    cloudBookId = cloud_book_id,
     cloudBookFileId = cloud_book_file_id,
     mediaType = media_type,
-    localSourceUuid = local_source_uuid,
     stagingPath = staging_path,
     sizeBytes = size_bytes,
     bytesTransferred = bytes_transferred,

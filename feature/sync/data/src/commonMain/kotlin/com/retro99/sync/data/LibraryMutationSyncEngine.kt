@@ -2,6 +2,7 @@ package com.retro99.sync.data
 
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.sync.domain.LibraryBookMerger
 import com.retro99.sync.domain.LibraryMutationSyncTransport
 import com.retro99.sync.domain.SyncMutationRequest
 import com.retro99.sync.domain.SyncMutationResponse
@@ -22,6 +23,7 @@ import kotlin.time.Duration.Companion.seconds
 @Single
 class LibraryMutationSyncEngine(
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
+    @Provided private val libraryBookMerger: LibraryBookMerger,
 ) {
     suspend fun push(
         entries: List<SyncOutboxEntry>,
@@ -68,6 +70,21 @@ class LibraryMutationSyncEngine(
                         acknowledgedCount++
                     }
 
+                    STATUS_DUPLICATE -> {
+                        val existingBookId = response.existingBookId
+                        if (existingBookId == null) {
+                            scheduleRetry(entry, response)
+                            retryCount++
+                        } else {
+                            // The surviving book first, so the merge has a row to move onto.
+                            applier.onDuplicate(entry, response)
+                            libraryBookMerger.merge(fromId = entry.entityId, intoId = existingBookId)
+                            // The merge already dropped this upsert; deleting again is a no-op.
+                            syncOutboxDatabase.delete(entry.mutationId)
+                            acknowledgedCount++
+                        }
+                    }
+
                     STATUS_CONFLICT -> {
                         applier.onConflict(entry, response)
                         syncOutboxDatabase.markConflict(
@@ -111,6 +128,7 @@ class LibraryMutationSyncEngine(
     private companion object {
         const val STATUS_ACCEPTED = "accepted"
         const val STATUS_CONFLICT = "conflict"
+        const val STATUS_DUPLICATE = "duplicate"
         const val MAX_BACKOFF_POWER = 6
     }
 }
@@ -122,6 +140,12 @@ interface LibraryMutationApplier {
     )
 
     suspend fun onConflict(
+        entry: SyncOutboxEntry,
+        response: SyncMutationResponse,
+    )
+
+    /** Saves the server's copy of the book that [entry] duplicates. */
+    suspend fun onDuplicate(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     )

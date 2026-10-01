@@ -14,6 +14,8 @@ kotlin {
         namespace = "com.retro99.feature.books.domain"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -33,6 +35,12 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.coroutines.test)
             implementation(libs.kotlin.test)
+        }
+
+        named("androidHostTest") {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+            }
         }
     }
 }

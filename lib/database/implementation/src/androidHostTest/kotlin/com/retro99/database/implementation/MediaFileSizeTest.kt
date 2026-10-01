@@ -76,7 +76,7 @@ class MediaFileSizeTest {
                 parameters = 0,
             )
 
-            AppDatabase.Schema.migrate(migrationDriver, 26, AppDatabase.Schema.version)
+            AppDatabase.Schema.migrate(migrationDriver, 26, 27)
 
             val migrated = AppDatabase(migrationDriver)
             migrated.mediaFileQueries.upsertMediaFile(

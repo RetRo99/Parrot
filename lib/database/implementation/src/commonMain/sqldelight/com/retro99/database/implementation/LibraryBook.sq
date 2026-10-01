@@ -1,94 +1,70 @@
+-- ============================================
+-- LIBRARY BOOKS TABLE (your library: device and Parrot Cloud)
+-- ============================================
+-- library_book_id is a random UUID chosen when the book is created. It never
+-- changes and is never derived from file content. The source hash is only a
+-- hint for spotting duplicates.
+
 CREATE TABLE IF NOT EXISTS library_books (
     library_book_id TEXT NOT NULL PRIMARY KEY,
-    content_hash TEXT,
-    content_hash_algorithm TEXT,
     title TEXT NOT NULL,
     author TEXT,
-    format TEXT NOT NULL,
+    description TEXT,
+    cover_path TEXT,
+    publication_date TEXT,
+    source_content_hash TEXT,
+    source_content_hash_algorithm TEXT,
+    added_at TEXT NOT NULL,
+    last_opened_at TEXT,
     remote_revision INTEGER,
     deleted_at TEXT,
-    cloud_book_id TEXT,
     metadata_json TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_library_books_content_hash
-ON library_books(content_hash);
-
-CREATE INDEX IF NOT EXISTS idx_library_books_hash_identity
-ON library_books(content_hash_algorithm, content_hash);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_library_books_cloud_book
-ON library_books(cloud_book_id)
-WHERE cloud_book_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_library_books_source_hash
+ON library_books(source_content_hash_algorithm, source_content_hash);
 
 upsertLibraryBook:
 INSERT OR REPLACE INTO library_books(
     library_book_id,
-    content_hash,
-    content_hash_algorithm,
     title,
     author,
-    format,
+    description,
+    cover_path,
+    publication_date,
+    source_content_hash,
+    source_content_hash_algorithm,
+    added_at,
+    last_opened_at,
     remote_revision,
     deleted_at,
-    cloud_book_id,
     metadata_json
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-
-insertLocalLibraryBook:
-INSERT OR IGNORE INTO library_books(
-    library_book_id,
-    content_hash,
-    content_hash_algorithm,
-    title,
-    author,
-    format
-)
-VALUES (?, ?, ?, ?, ?, ?);
-
-updateLocalLibraryBook:
-UPDATE library_books
-SET content_hash = ?,
-    content_hash_algorithm = ?,
-    title = ?,
-    author = ?,
-    format = ?
-WHERE library_book_id = ?;
-
-getAllLibraryBooks:
-SELECT * FROM library_books
-WHERE deleted_at IS NULL
-ORDER BY title ASC;
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getLibraryBookById:
 SELECT * FROM library_books WHERE library_book_id = ?;
 
-getLibraryBookByContentHash:
+observeLibraryBooks:
 SELECT * FROM library_books
-WHERE content_hash = ? AND deleted_at IS NULL;
+WHERE deleted_at IS NULL
+ORDER BY title ASC;
 
-getLibraryBookByContentHashAndAlgorithm:
+findLibraryBookBySourceHash:
 SELECT * FROM library_books
-WHERE content_hash_algorithm = ?
-AND content_hash = ?
-AND deleted_at IS NULL;
-
-getLibraryBookByCloudBookId:
-SELECT * FROM library_books
-WHERE cloud_book_id = ? AND deleted_at IS NULL;
-
-attachCloudBookId:
-UPDATE library_books
-SET cloud_book_id = ?
-WHERE library_book_id = ?;
-
-deleteUnreferencedUnsyncedLibraryBooks:
-DELETE FROM library_books
-WHERE remote_revision IS NULL
+WHERE source_content_hash_algorithm = ?
+AND source_content_hash = ?
 AND deleted_at IS NULL
-AND NOT EXISTS (
-    SELECT 1
-    FROM local_book_files
-    WHERE local_book_files.library_book_id = library_books.library_book_id
-);
+ORDER BY added_at ASC
+LIMIT 1;
+
+countLibraryBooksWithDeviceFiles:
+SELECT COUNT(DISTINCT library_books.library_book_id) FROM library_books
+JOIN device_files ON device_files.library_book_id = library_books.library_book_id
+WHERE library_books.deleted_at IS NULL;
+
+deleteLibraryBook:
+DELETE FROM library_books WHERE library_book_id = ?;
+
+updateLastOpenedAt:
+UPDATE library_books SET last_opened_at = ? WHERE library_book_id = ?;

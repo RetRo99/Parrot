@@ -8,7 +8,8 @@ import com.retro99.database.api.books.BooksDatabase
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.cloudfiles.CloudFilesDatabase
 import com.retro99.database.api.favorites.FavoritesDatabase
-import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.library.DeviceFilesDatabase
+import com.retro99.database.api.library.LibraryBookMergeDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.reader.ReaderSettingsDatabase
 import com.retro99.database.api.statistics.ReadingSessionDatabase
@@ -25,8 +26,6 @@ import com.retro99.database.implementation.dao.books.BooksDatabaseImpl
 import com.retro99.database.implementation.dao.books.BooksSqlDelightDao
 import com.retro99.database.implementation.dao.favorites.FavoritesDatabaseImpl
 import com.retro99.database.implementation.dao.favorites.FavoritesSqlDelightDao
-import com.retro99.database.implementation.dao.importedbooks.ImportedBooksDatabaseImpl
-import com.retro99.database.implementation.dao.importedbooks.ImportedBooksSqlDelightDao
 import com.retro99.database.implementation.dao.library.LibraryBooksDatabaseImpl
 import com.retro99.database.implementation.dao.library.LibraryBooksSqlDelightDao
 import com.retro99.database.implementation.dao.reader.ReaderSettingsDatabaseImpl
@@ -128,20 +127,6 @@ class DatabaseModule {
     }
 
     @Single
-    internal fun provideImportedBooksSqlDelightDao(
-        databaseManager: DatabaseManager,
-    ): ImportedBooksSqlDelightDao {
-        return ImportedBooksSqlDelightDao(databaseManager)
-    }
-
-    @Single
-    internal fun provideImportedBooksDatabase(
-        importedBooksSqlDelightDao: ImportedBooksSqlDelightDao,
-    ): ImportedBooksDatabase {
-        return ImportedBooksDatabaseImpl(importedBooksSqlDelightDao)
-    }
-
-    @Single
     internal fun provideLibraryBooksSqlDelightDao(
         databaseManager: DatabaseManager,
     ): LibraryBooksSqlDelightDao {
@@ -149,11 +134,26 @@ class DatabaseModule {
     }
 
     @Single
-    internal fun provideLibraryBooksDatabase(
+    internal fun provideLibraryBooksDatabaseImpl(
         libraryBooksSqlDelightDao: LibraryBooksSqlDelightDao,
-    ): LibraryBooksDatabase {
+    ): LibraryBooksDatabaseImpl {
         return LibraryBooksDatabaseImpl(libraryBooksSqlDelightDao)
     }
+
+    @Single
+    internal fun provideLibraryBooksDatabase(
+        impl: LibraryBooksDatabaseImpl,
+    ): LibraryBooksDatabase = impl
+
+    @Single
+    internal fun provideDeviceFilesDatabase(
+        impl: LibraryBooksDatabaseImpl,
+    ): DeviceFilesDatabase = impl
+
+    @Single
+    internal fun provideLibraryBookMergeDatabase(
+        impl: LibraryBooksDatabaseImpl,
+    ): LibraryBookMergeDatabase = impl
 
     @Single
     internal fun provideSyncOutboxSqlDelightDao(

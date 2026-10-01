@@ -6,7 +6,6 @@ import com.retro99.base.result.AppResult
 import com.retro99.books.domain.model.BookProgressInfoDomainModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.books.domain.model.BookWithProgressDomainModel
-import com.retro99.books.domain.model.aggregateBookReplicas
 import com.retro99.books.domain.model.toBookDomainModel
 import com.retro99.reader.domain.ReaderSettingsRepository
 import com.retro99.server.api.AuthenticatedRepositoryProvider
@@ -63,9 +62,7 @@ class ObserveAllBooksWithProgressUseCase(
                     // Combine all book flows with position observation and refresh trigger
                     combine(
                         combine(bookFlows) { results ->
-                            results
-                                .flatMap { result -> result.getOrElse { emptyList() } }
-                                .aggregateBookReplicas()
+                            results.flatMap { result -> result.getOrElse { emptyList() } }
                         },
                         positionLocalSource.observeAllPositions(),
                         refreshTrigger
@@ -111,26 +108,16 @@ class ObserveAllBooksWithProgressUseCase(
         books: List<ServerBook>,
         localPositions: List<ServerPosition>,
     ): AppResult<List<BookWithProgressDomainModel>> {
-        val localPositionMap = localPositions.associateBy { it.bookUuid }
-        val libraryPositionMap = localPositions
-            .filter { position -> position.libraryBookId != null }
-            .groupBy { position -> position.libraryBookId }
-            .mapValues { (_, positions) ->
-                positions.maxWithOrNull(
-                    compareBy({ position -> position.remoteRevision }, { position -> position.updatedAt }),
-                )
-            }
+        // Every book's position is keyed by its uuid; for your library that is the book id.
+        val localPositionMap = localPositions.associateBy { position -> position.bookUuid }
 
         val booksWithProgress = books.map { serverBook ->
             val bookUuid = serverBook.uuid
-            val localPosition = serverBook.libraryBookId?.let { libraryBookId ->
-                libraryPositionMap[libraryBookId]
-            } ?: localPositionMap[bookUuid]
             val remoteProgression = remoteProgressionCache[bookUuid]
 
             val progressInfo = createProgressInfo(
-                bookUuid = bookUuid,
-                localPosition = localPosition,
+                serverBook = serverBook,
+                localPosition = localPositionMap[bookUuid],
                 remoteProgression = remoteProgression,
             )
 
@@ -140,26 +127,31 @@ class ObserveAllBooksWithProgressUseCase(
             )
         }
 
-        return Ok(booksWithProgress.sortedBy { it.book.title.lowercase() })
+        return Ok(booksWithProgress.sortedBy { book -> book.book.title.lowercase() })
     }
 
     private suspend fun createProgressInfo(
-        bookUuid: String,
+        serverBook: ServerBook,
         localPosition: ServerPosition?,
         remoteProgression: Double?,
     ): BookProgressInfoDomainModel? {
-        val isEbookCached = readerSettingsRepository.isEbookCached(bookUuid, BookType.EBOOK)
-        val isAudiobookCached = readerSettingsRepository.isEbookCached(bookUuid, BookType.AUDIOBOOK)
-        val isReadaloudCached = readerSettingsRepository.isEbookCached(bookUuid, BookType.READALOUD)
+        val cached = if (serverBook.isLocal) {
+            serverBook.deviceCopies()
+        } else {
+            readerSettingsRepository.cachedTypes(serverBook.uuid)
+        }
+        val isEbookCached = BookType.EBOOK in cached
+        val isAudiobookCached = BookType.AUDIOBOOK in cached
+        val isReadaloudCached = BookType.READALOUD in cached
 
         val localProgression = localPosition?.totalProgression
         val hasLocalProgress = localProgression != null && localProgression > 0.0
         val hasRemoteProgress = remoteProgression != null && remoteProgression > 0.0
-        val hasCached = isEbookCached || isAudiobookCached || isReadaloudCached
+        val hasCached = cached.isNotEmpty()
 
         return if (hasLocalProgress || hasRemoteProgress || hasCached) {
             BookProgressInfoDomainModel(
-                bookUuid = bookUuid,
+                bookUuid = serverBook.uuid,
                 localProgression = localProgression,
                 remoteProgression = remoteProgression,
                 isEbookCached = isEbookCached,
@@ -171,3 +163,13 @@ class ObserveAllBooksWithProgressUseCase(
         }
     }
 }
+
+/** Media types a library book has on this device, from its device files (I6). */
+internal fun ServerBook.deviceCopies(): Set<BookType> = mediaResources
+    .filter { resource -> resource.localPath != null }
+    .mapNotNull { resource -> BookType.entries.firstOrNull { type -> type.value == resource.mediaType } }
+    .toSet()
+
+/** Media types of a server book that are in the reader cache. */
+internal suspend fun ReaderSettingsRepository.cachedTypes(bookUuid: String): Set<BookType> =
+    BookType.entries.filterTo(mutableSetOf()) { type -> isEbookCached(bookUuid, type) }

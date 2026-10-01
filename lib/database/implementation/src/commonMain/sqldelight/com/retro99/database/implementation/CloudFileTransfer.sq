@@ -3,10 +3,8 @@ CREATE TABLE IF NOT EXISTS cloud_file_transfers (
     server_id TEXT NOT NULL,
     direction TEXT NOT NULL,
     library_book_id TEXT NOT NULL,
-    cloud_book_id TEXT,
     cloud_book_file_id TEXT,
     media_type TEXT NOT NULL,
-    local_source_uuid TEXT,
     staging_path TEXT,
     size_bytes INTEGER NOT NULL,
     bytes_transferred INTEGER NOT NULL DEFAULT 0,
@@ -33,11 +31,11 @@ ON cloud_file_transfers(server_id, library_book_id, created_at);
 
 insertCloudFileTransfer:
 INSERT OR REPLACE INTO cloud_file_transfers(
-    transfer_id, server_id, direction, library_book_id, cloud_book_id, cloud_book_file_id,
-    media_type, local_source_uuid, staging_path, size_bytes, bytes_transferred, content_hash,
+    transfer_id, server_id, direction, library_book_id, cloud_book_file_id,
+    media_type, staging_path, size_bytes, bytes_transferred, content_hash,
     content_hash_algorithm, upload_id, storage_path, tus_upload_url, tus_expires_at,
     rights_attestation, state, attempt_count, next_attempt_at, last_error, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getCloudFileTransfer:
 SELECT * FROM cloud_file_transfers WHERE transfer_id = ?;
@@ -70,3 +68,11 @@ SELECT * FROM cloud_file_transfers ORDER BY created_at ASC;
 
 deleteAllCloudFileTransfers:
 DELETE FROM cloud_file_transfers;
+
+moveNonTerminalTransfers:
+UPDATE cloud_file_transfers SET library_book_id = ?
+WHERE library_book_id = ?
+AND state IN ('pending', 'transferring', 'verifying', 'finalizing');
+
+deleteTransfersForBook:
+DELETE FROM cloud_file_transfers WHERE library_book_id = ?;

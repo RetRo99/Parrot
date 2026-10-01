@@ -2,7 +2,6 @@ package com.retro99.database.api.cloudfiles
 
 data class CloudBookFileEntity(
     val libraryBookId: String,
-    val cloudBookId: String,
     val cloudBookFileId: String,
     val mediaType: String,
     val relativePath: String,

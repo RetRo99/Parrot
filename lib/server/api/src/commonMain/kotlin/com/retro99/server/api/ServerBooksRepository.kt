@@ -73,7 +73,6 @@ data class ServerBook(
     val remoteFileAvailability: RemoteFileAvailability = RemoteFileAvailability.None,
     val remoteRevision: Long? = null,
     val mediaResources: List<MediaResource> = emptyList(),
-    val localSourceUuid: String? = null,
 )
 
 enum class RemoteFileAvailability {
@@ -83,6 +82,19 @@ enum class RemoteFileAvailability {
     Uploading,
     UploadFailed,
     Deleting,
+    ;
+
+    companion object {
+        /** Maps a Parrot Cloud file status (`cloud_book_file_state.status`). */
+        fun fromFileStatus(status: String): RemoteFileAvailability = when (status) {
+            "available" -> Available
+            "upload_pending" -> UploadPending
+            "uploading" -> Uploading
+            "upload_failed" -> UploadFailed
+            "deleting" -> Deleting
+            else -> None
+        }
+    }
 }
 
 data class ServerBookSeries(

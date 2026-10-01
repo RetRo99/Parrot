@@ -144,11 +144,10 @@ class ParrotCloudProgressTransport(
             operation = OPERATION_UPSERT,
             payload = json.encodeToJsonElement(
                 ParrotCloudReadingPositionPayload(
-                    cloudBookId = remoteBookId,
-                    libraryBookId = libraryBookId ?: entityId,
+                    libraryBookId = remoteBookId,
                     position = snapshot.toServerPosition(
-                        bookUuid = entityId,
-                        libraryBookId = libraryBookId ?: entityId,
+                        bookUuid = remoteBookId,
+                        libraryBookId = remoteBookId,
                     ),
                 ),
             ),
@@ -163,8 +162,8 @@ class ParrotCloudProgressTransport(
         revision: Long?,
     ): RemoteProgressSnapshot {
         return RemoteProgressSnapshot(
-            entityId = position.bookUuid,
-            remoteBookId = cloudBookId,
+            entityId = libraryBookId,
+            remoteBookId = libraryBookId,
             libraryBookId = libraryBookId,
             kind = ProgressKind.EBOOK,
             snapshot = position.toProgressSyncSnapshot(),

@@ -13,6 +13,8 @@ kotlin {
         namespace = "com.retro99.server.local"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+
+        withHostTest {}
     }
 
     iosArm64()
@@ -29,6 +31,18 @@ kotlin {
             implementation(projects.lib.user.api)
             implementation(projects.feature.books.data)
             implementation(projects.feature.books.domain)
+            implementation(projects.lib.database.api)
+        }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+            implementation(libs.coroutines.test)
+        }
+
+        named("androidHostTest") {
+            dependencies {
+                implementation(libs.kotlin.testJunit)
+            }
         }
     }
 }

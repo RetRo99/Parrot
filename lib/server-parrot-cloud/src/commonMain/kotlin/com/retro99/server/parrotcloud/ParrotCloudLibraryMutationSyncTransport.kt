@@ -57,11 +57,11 @@ class ParrotCloudLibraryMutationSyncTransport(
             SyncMutationResponse(
                 mutationId = result.mutationId,
                 status = result.status,
-                cloudBookId = result.cloudBookId,
                 revision = result.revision,
                 payload = result.payload?.let(json::encodeToString),
                 reason = result.reason,
                 retryAfterMillis = result.retryAfterMillis,
+                existingBookId = result.existingBookId,
             )
         }
     }
@@ -129,13 +129,13 @@ private data class ParrotCloudLibraryMutationResponse(
     @SerialName("mutation_id")
     val mutationId: String,
     val status: String,
-    @SerialName("cloud_book_id")
-    val cloudBookId: String? = null,
     val revision: Long? = null,
     val payload: JsonElement? = null,
     val reason: String? = null,
     @SerialName("retry_after_ms")
     val retryAfterMillis: Long? = null,
+    @SerialName("existing_book_id")
+    val existingBookId: String? = null,
 )
 
 @Serializable

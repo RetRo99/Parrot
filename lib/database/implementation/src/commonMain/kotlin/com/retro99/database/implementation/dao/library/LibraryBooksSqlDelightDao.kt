@@ -2,13 +2,14 @@ package com.retro99.database.implementation.dao.library
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import com.retro99.database.api.library.DeviceFileEntity
 import com.retro99.database.api.library.LibraryBookEntity
-import com.retro99.database.api.library.LocalBookFileEntity
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.database.implementation.AppDatabase
 import com.retro99.database.implementation.DatabaseManager
+import com.retro99.database.implementation.Device_files
 import com.retro99.database.implementation.Library_books
-import com.retro99.database.implementation.Local_book_files
+import com.retro99.database.implementation.dao.sync.enqueue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -18,125 +19,196 @@ import kotlinx.coroutines.withContext
 internal class LibraryBooksSqlDelightDao(
     private val databaseManager: DatabaseManager,
 ) {
-    suspend fun upsertLibraryBook(book: LibraryBookEntity) {
-        withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().upsertLibraryBookRow(book)
-        }
+    private val database get() = databaseManager.getDatabase()
+
+    suspend fun upsertLibraryBook(book: LibraryBookEntity) = withContext(Dispatchers.IO) {
+        database.upsertLibraryBookRow(book)
     }
 
-    suspend fun upsertLocalLibraryBook(book: LibraryBookEntity) {
-        withContext(Dispatchers.IO) {
-            val database = databaseManager.getDatabase()
-            database.transaction {
-                database.upsertLocalLibraryBookRow(book)
-            }
-        }
-    }
-
-    fun getAllLibraryBooks(): Flow<List<LibraryBookEntity>> {
-        return databaseManager.getDatabase().libraryBookQueries.getAllLibraryBooks()
+    fun observeLibraryBooks(): Flow<List<LibraryBookEntity>> =
+        database.libraryBookQueries.observeLibraryBooks()
             .asFlow()
             .mapToList(Dispatchers.IO)
             .map { rows -> rows.map { row -> row.toEntity() } }
-    }
 
-    suspend fun getLibraryBookById(libraryBookId: String): LibraryBookEntity? {
-        return withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().libraryBookQueries.getLibraryBookById(libraryBookId)
-                .executeAsOneOrNull()
-                ?.toEntity()
-        }
-    }
-
-    suspend fun getLibraryBookByContentHash(contentHash: String): LibraryBookEntity? {
-        return withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().libraryBookQueries
-                .getLibraryBookByContentHash(contentHash)
-                .executeAsOneOrNull()
-                ?.toEntity()
-        }
-    }
-
-    suspend fun getLibraryBookByContentHash(
-        contentHashAlgorithm: String,
-        contentHash: String,
-    ): LibraryBookEntity? {
-        return withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().libraryBookQueries
-                .getLibraryBookByContentHashAndAlgorithm(contentHashAlgorithm, contentHash)
-                .executeAsOneOrNull()
-                ?.toEntity()
-        }
-    }
-
-    suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity? {
-        return withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().libraryBookQueries
-                .getLibraryBookByCloudBookId(cloudBookId)
-                .executeAsOneOrNull()
-                ?.toEntity()
-        }
-    }
-
-    suspend fun attachCloudBookId(libraryBookId: String, cloudBookId: String) {
+    suspend fun getLibraryBookById(libraryBookId: String): LibraryBookEntity? =
         withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().libraryBookQueries
-                .attachCloudBookId(cloudBookId, libraryBookId)
+            database.libraryBookQueries.getLibraryBookById(libraryBookId)
+                .executeAsOneOrNull()
+                ?.toEntity()
         }
-    }
 
-    suspend fun upsertLocalBookFile(file: LocalBookFileEntity) {
+    suspend fun findLibraryBookBySourceHash(algorithm: String, hash: String): LibraryBookEntity? =
         withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().upsertLocalBookFileRow(file)
+            database.libraryBookQueries.findLibraryBookBySourceHash(algorithm, hash)
+                .executeAsOneOrNull()
+                ?.toEntity()
+        }
+
+    suspend fun countLibraryBooksWithDeviceFiles(): Int = withContext(Dispatchers.IO) {
+        database.libraryBookQueries.countLibraryBooksWithDeviceFiles().executeAsOne().toInt()
+    }
+
+    suspend fun updateLastOpenedAt(libraryBookId: String, lastOpenedAt: String) =
+        withContext(Dispatchers.IO) {
+            database.libraryBookQueries.updateLastOpenedAt(lastOpenedAt, libraryBookId)
+        }
+
+    suspend fun insertImportedBook(
+        book: LibraryBookEntity,
+        file: DeviceFileEntity,
+        outboxEntry: SyncOutboxEntry,
+    ) = withContext(Dispatchers.IO) {
+        val database = database
+        database.transaction {
+            database.upsertLibraryBookRow(book)
+            database.upsertDeviceFileRow(file)
+            database.syncOutboxQueries.enqueue(outboxEntry)
         }
     }
 
-    suspend fun getLocalBookFiles(libraryBookId: String): List<LocalBookFileEntity> {
-        return withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().localBookFileQueries.getLocalBookFiles(libraryBookId)
+    suspend fun deleteBookFromDevice(libraryBookId: String) = withContext(Dispatchers.IO) {
+        database.deleteBookFromDeviceRows(libraryBookId)
+    }
+
+    fun observeAllDeviceFiles(): Flow<List<DeviceFileEntity>> =
+        database.deviceFileQueries.observeAllDeviceFiles()
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { rows -> rows.map { row -> row.toEntity() } }
+
+    suspend fun getDeviceFiles(libraryBookId: String): List<DeviceFileEntity> =
+        withContext(Dispatchers.IO) {
+            database.deviceFileQueries.getDeviceFilesForBook(libraryBookId)
                 .executeAsList()
                 .map { row -> row.toEntity() }
         }
-    }
 
-    suspend fun getLocalBookFileByImportedBookUuid(
-        importedBookUuid: String,
-    ): LocalBookFileEntity? {
-        return withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().localBookFileQueries
-                .getLocalBookFileByImportedBookUuid(importedBookUuid)
+    suspend fun getDeviceFile(libraryBookId: String, mediaType: String): DeviceFileEntity? =
+        withContext(Dispatchers.IO) {
+            database.deviceFileQueries.getDeviceFile(libraryBookId, mediaType)
                 .executeAsOneOrNull()
                 ?.toEntity()
         }
-    }
 
-    suspend fun deleteLocalBookFileByImportedBookUuid(importedBookUuid: String) {
+    suspend fun findDeviceFileByHash(algorithm: String, hash: String): DeviceFileEntity? =
         withContext(Dispatchers.IO) {
-            databaseManager.getDatabase().localBookFileQueries
-                .deleteLocalBookFileByImportedBookUuid(importedBookUuid)
+            database.deviceFileQueries.findDeviceFileByHash(algorithm, hash)
+                .executeAsOneOrNull()
+                ?.toEntity()
         }
+
+    suspend fun upsertDeviceFile(file: DeviceFileEntity) = withContext(Dispatchers.IO) {
+        database.upsertDeviceFileRow(file)
     }
 
-    private fun Library_books.toEntity(): LibraryBookEntity {
-        return LibraryBookEntityImpl(
-            libraryBookId = library_book_id,
-            contentHash = content_hash,
-            contentHashAlgorithm = content_hash_algorithm,
-            title = title,
-            author = author,
-            format = format,
-            remoteRevision = remote_revision,
-            deletedAt = deleted_at,
-            cloudBookId = cloud_book_id,
-            metadataJson = metadata_json,
-        )
-    }
+    suspend fun deleteDeviceFile(libraryBookId: String, mediaType: String) =
+        withContext(Dispatchers.IO) {
+            database.deviceFileQueries.deleteDeviceFile(libraryBookId, mediaType)
+        }
 
-    private fun Local_book_files.toEntity(): LocalBookFileEntity {
-        return LocalBookFileEntityImpl(
-            libraryBookId = library_book_id,
-            importedBookUuid = imported_book_uuid,
-            fileAvailability = file_availability,
+    suspend fun setOriginForBook(libraryBookId: String, origin: String) =
+        withContext(Dispatchers.IO) {
+            database.deviceFileQueries.setOriginForBook(origin, libraryBookId)
+        }
+
+    suspend fun mergeLibraryBook(fromId: String, intoId: String): List<String> =
+        withContext(Dispatchers.IO) {
+            database.mergeLibraryBookRows(fromId = fromId, intoId = intoId)
+        }
+}
+
+/**
+ * Applies the merge rules in one transaction. Returns the paths of `fromId` device
+ * files that `intoId` already had a copy of, for the caller to delete after commit.
+ */
+internal fun AppDatabase.mergeLibraryBookRows(fromId: String, intoId: String): List<String> {
+    if (fromId == intoId) return emptyList()
+    return transactionWithResult {
+        // position: the most recently updated row wins.
+        val fromPosition = positionQueries.getPositionByBookUuid(fromId).executeAsOneOrNull()
+        val intoPosition = positionQueries.getPositionByBookUuid(intoId).executeAsOneOrNull()
+        if (fromPosition != null) {
+            val fromIsNewer = intoPosition == null ||
+                (fromPosition.updated_at ?: "") > (intoPosition.updated_at ?: "")
+            if (fromIsNewer) {
+                if (intoPosition != null) positionQueries.deletePosition(intoId)
+                positionQueries.moveBookPosition(intoId, intoId, fromId)
+            } else {
+                positionQueries.deletePosition(fromId)
+            }
+        }
+        positionQueries.deleteRemotePosition(fromId)
+
+        favoriteQueries.mergeFavorite(intoId, fromId)
+        favoriteQueries.deleteFavorite(fromId)
+        bookmarkQueries.moveBookmarks(intoId, fromId)
+        readingSessionQueries.moveReadingSessions(intoId, fromId)
+
+        val redundantPaths = mutableListOf<String>()
+        val intoMediaTypes = deviceFileQueries.getDeviceFilesForBook(intoId)
+            .executeAsList()
+            .mapTo(mutableSetOf()) { file -> file.media_type }
+        deviceFileQueries.getDeviceFilesForBook(fromId).executeAsList().forEach { file ->
+            if (file.media_type in intoMediaTypes) {
+                redundantPaths += file.file_path
+                deviceFileQueries.deleteDeviceFile(fromId, file.media_type)
+            } else {
+                deviceFileQueries.moveDeviceFile(intoId, fromId, file.media_type)
+            }
+        }
+
+        cloudBookFileStateQueries.deleteCloudBookFileStatesForBook(fromId)
+        cloudFileTransferQueries.moveNonTerminalTransfers(intoId, fromId)
+        cloudFileTransferQueries.deleteTransfersForBook(fromId)
+
+        // Book ids are UUIDs, so a quoted occurrence in a payload can only be the id.
+        syncOutboxQueries.getAllMutations().executeAsList().forEach { mutation ->
+            val quotedFrom = "\"$fromId\""
+            if (mutation.entity_id != fromId && quotedFrom !in mutation.payload) return@forEach
+            if (mutation.entity_type == SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK &&
+                mutation.entity_id == fromId
+            ) {
+                // The server already has the surviving book; its upsert was the duplicate.
+                syncOutboxQueries.deleteMutation(mutation.mutation_id)
+                return@forEach
+            }
+            syncOutboxQueries.rewriteMutation(
+                entity_id = if (mutation.entity_id == fromId) intoId else mutation.entity_id,
+                payload = mutation.payload.replace(quotedFrom, "\"$intoId\""),
+                mutation_id = mutation.mutation_id,
+            )
+        }
+
+        // The survivor usually came from Parrot Cloud, which stores no cover or description.
+        val fromBook = libraryBookQueries.getLibraryBookById(fromId).executeAsOneOrNull()
+        val intoBook = libraryBookQueries.getLibraryBookById(intoId).executeAsOneOrNull()
+        if (fromBook != null && intoBook != null) {
+            upsertLibraryBookRow(
+                intoBook.toEntity().copy(
+                    coverPath = intoBook.cover_path ?: fromBook.cover_path,
+                    description = intoBook.description ?: fromBook.description,
+                    publicationDate = intoBook.publication_date ?: fromBook.publication_date,
+                    addedAt = minOf(intoBook.added_at, fromBook.added_at),
+                    lastOpenedAt = listOfNotNull(intoBook.last_opened_at, fromBook.last_opened_at)
+                        .maxOrNull(),
+                ),
+            )
+        }
+        libraryBookQueries.deleteLibraryBook(fromId)
+        redundantPaths
+    }
+}
+
+internal fun AppDatabase.deleteBookFromDeviceRows(libraryBookId: String) {
+    transaction {
+        deviceFileQueries.deleteDeviceFilesForBook(libraryBookId)
+        cloudBookFileStateQueries.deleteCloudBookFileStatesForBook(libraryBookId)
+        cloudFileTransferQueries.deleteTransfersForBook(libraryBookId)
+        libraryBookQueries.deleteLibraryBook(libraryBookId)
+        syncOutboxQueries.deletePendingMutationsForEntityAnyUser(
+            entity_type = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+            entity_id = libraryBookId,
         )
     }
 }
@@ -144,67 +216,59 @@ internal class LibraryBooksSqlDelightDao(
 internal fun AppDatabase.upsertLibraryBookRow(book: LibraryBookEntity) {
     libraryBookQueries.upsertLibraryBook(
         library_book_id = book.libraryBookId,
-        content_hash = book.contentHash,
-        content_hash_algorithm = book.contentHashAlgorithm,
         title = book.title,
         author = book.author,
-        format = book.format,
+        description = book.description,
+        cover_path = book.coverPath,
+        publication_date = book.publicationDate,
+        source_content_hash = book.sourceContentHash,
+        source_content_hash_algorithm = book.sourceContentHashAlgorithm,
+        added_at = book.addedAt,
+        last_opened_at = book.lastOpenedAt,
         remote_revision = book.remoteRevision,
         deleted_at = book.deletedAt,
-        cloud_book_id = book.cloudBookId,
         metadata_json = book.metadataJson,
     )
+    // A position saved before its book arrived (for example by a pull) joins it now.
+    positionQueries.linkPositionToLibraryBook(book.libraryBookId)
 }
 
-internal fun AppDatabase.upsertLocalLibraryBookRow(book: LibraryBookEntity) {
-    libraryBookQueries.insertLocalLibraryBook(
-        library_book_id = book.libraryBookId,
-        content_hash = book.contentHash,
-        content_hash_algorithm = book.contentHashAlgorithm,
-        title = book.title,
-        author = book.author,
-        format = book.format,
-    )
-    libraryBookQueries.updateLocalLibraryBook(
-        content_hash = book.contentHash,
-        content_hash_algorithm = book.contentHashAlgorithm,
-        title = book.title,
-        author = book.author,
-        format = book.format,
-        library_book_id = book.libraryBookId,
-    )
-}
-
-internal fun AppDatabase.upsertLocalBookFileRow(file: LocalBookFileEntity) {
-    localBookFileQueries.upsertLocalBookFile(
+internal fun AppDatabase.upsertDeviceFileRow(file: DeviceFileEntity) {
+    deviceFileQueries.upsertDeviceFile(
         library_book_id = file.libraryBookId,
-        imported_book_uuid = file.importedBookUuid,
-        file_availability = file.fileAvailability,
+        media_type = file.mediaType,
+        file_path = file.filePath,
+        file_size = file.fileSize,
+        content_hash = file.contentHash,
+        content_hash_algorithm = file.contentHashAlgorithm,
+        origin = file.origin,
+        added_at = file.addedAt,
     )
 }
 
-internal fun AppDatabase.deleteOrphanedLibraryBookState() {
-    libraryBookQueries.deleteUnreferencedUnsyncedLibraryBooks()
-    syncOutboxQueries.deletePendingMutationsForMissingLibraryBooks(
-        entity_type = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
-    )
-}
+internal fun Library_books.toEntity() = LibraryBookEntity(
+    libraryBookId = library_book_id,
+    title = title,
+    author = author,
+    description = description,
+    coverPath = cover_path,
+    publicationDate = publication_date,
+    sourceContentHash = source_content_hash,
+    sourceContentHashAlgorithm = source_content_hash_algorithm,
+    addedAt = added_at,
+    lastOpenedAt = last_opened_at,
+    remoteRevision = remote_revision,
+    deletedAt = deleted_at,
+    metadataJson = metadata_json,
+)
 
-private data class LibraryBookEntityImpl(
-    override val libraryBookId: String,
-    override val contentHash: String?,
-    override val contentHashAlgorithm: String?,
-    override val title: String,
-    override val author: String?,
-    override val format: String,
-    override val remoteRevision: Long?,
-    override val deletedAt: String?,
-    override val cloudBookId: String?,
-    override val metadataJson: String?,
-) : LibraryBookEntity
-
-private data class LocalBookFileEntityImpl(
-    override val libraryBookId: String,
-    override val importedBookUuid: String,
-    override val fileAvailability: String,
-) : LocalBookFileEntity
+internal fun Device_files.toEntity() = DeviceFileEntity(
+    libraryBookId = library_book_id,
+    mediaType = media_type,
+    filePath = file_path,
+    fileSize = file_size,
+    contentHash = content_hash,
+    contentHashAlgorithm = content_hash_algorithm,
+    origin = origin,
+    addedAt = added_at,
+)

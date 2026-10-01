@@ -100,7 +100,7 @@ class ProgressSyncEngine(
         val pending = syncOutboxDatabase.getPending(accountId)
         val hasPendingLocalProgress = pending.any { entry ->
             entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION &&
-                entry.entityId in setOf(
+                entry.entityId in setOfNotNull(
                     identity.localBookUuid,
                     identity.libraryBookId,
                     remote.remoteBookId,
@@ -224,7 +224,7 @@ fun interface ProgressIdentityResolver {
                 ?: remote.remoteBookId
             ProgressIdentity(
                 localBookUuid = localBookUuid,
-                libraryBookId = remote.libraryBookId ?: localBookUuid,
+                libraryBookId = remote.libraryBookId,
             )
         }
     }
@@ -232,7 +232,8 @@ fun interface ProgressIdentityResolver {
 
 data class ProgressIdentity(
     val localBookUuid: String,
-    val libraryBookId: String,
+    /** Only meaningful for books in your library; the database decides what it stores. */
+    val libraryBookId: String?,
 )
 
 data class ProgressPushSummary(
@@ -274,7 +275,7 @@ private fun RemoteProgressSnapshot.toPositionEntity(
 
 private data class EnginePositionEntity(
     override val bookUuid: String,
-    override val libraryBookId: String,
+    override val libraryBookId: String?,
     override val remoteRevision: Long?,
     override val timestamp: Long?,
     override val createdAt: String?,

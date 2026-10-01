@@ -396,15 +396,15 @@ private fun BooksListScreenContent(
     if (showFilterSheet) {
         BookFilterBottomSheet(
             filterState = viewState.filterState,
-            availableServerTypes = viewState.books
-                .mapNotNull { book -> book.serverType }
-                .plus(listOfNotNull(viewState.filterState.serverTypeFilter))
+            availableHomes = viewState.books
+                .map { book -> book.home }
+                .plus(listOfNotNull(viewState.filterState.homeFilter))
                 .distinct(),
             onFilterToggle = { filter ->
                 intentDispatcher(BooksListIntent.OnQuickFilterToggled(filter))
             },
-            onServerTypeFilterChanged = { serverType ->
-                intentDispatcher(BooksListIntent.OnServerTypeFilterChanged(serverType))
+            onHomeFilterChanged = { home ->
+                intentDispatcher(BooksListIntent.OnHomeFilterChanged(home))
             },
             onClearAllFilters = {
                 intentDispatcher(BooksListIntent.OnClearAllFilters)

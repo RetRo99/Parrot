@@ -45,3 +45,6 @@ DELETE FROM bookmarks;
 
 getBookmarksCount:
 SELECT COUNT(*) FROM bookmarks;
+
+moveBookmarks:
+UPDATE bookmarks SET book_uuid = ? WHERE book_uuid = ?;

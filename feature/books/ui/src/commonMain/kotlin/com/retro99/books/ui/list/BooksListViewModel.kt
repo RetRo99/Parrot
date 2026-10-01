@@ -11,10 +11,10 @@ import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.analytics.api.BooksListAnalyticsEvent
 import com.retro99.analytics.api.NavigationAnalyticsEvent
-import com.retro99.base.server.ServerType
 import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
+import com.retro99.books.domain.model.BookHome
 import com.retro99.books.domain.BookFileTransferManager
 import com.retro99.books.domain.BookFileTransferRejectedException
 import com.retro99.books.domain.usecase.BackupAllBooksUseCase
@@ -129,7 +129,7 @@ class BooksListViewModel(
             BooksListIntent.OnImportBackupConfirmed -> confirmImportedBookBackup()
             BooksListIntent.OnImportBackupDismissed -> dismissImportedBookBackupPrompt()
             is BooksListIntent.OnQuickFilterToggled -> toggleQuickFilter(intent.filter)
-            is BooksListIntent.OnServerTypeFilterChanged -> setServerTypeFilter(intent.serverType)
+            is BooksListIntent.OnHomeFilterChanged -> setHomeFilter(intent.home)
             BooksListIntent.OnClearAllFilters -> clearAllFilters()
             BooksListIntent.OnClearQuickFilters -> clearQuickFilters()
             is BooksListIntent.OnSortChanged -> updateSort(intent.sortConfig)
@@ -200,12 +200,13 @@ class BooksListViewModel(
         saveFilterSortSettings()
     }
 
-    private fun setServerTypeFilter(serverType: ServerType?) {
+    private fun setHomeFilter(home: BookHome?) {
+        // The analytics event keeps its name; it now carries where books live.
         analytics.logEvent(
-            BooksListAnalyticsEvent.ServerTypeFilterChanged(serverType = serverType?.name),
+            BooksListAnalyticsEvent.ServerTypeFilterChanged(serverType = home?.name),
         )
         updateState { state ->
-            state.copy(filterState = state.filterState.copy(serverTypeFilter = serverType))
+            state.copy(filterState = state.filterState.copy(homeFilter = home))
         }
         saveFilterSortSettings()
     }
@@ -354,10 +355,10 @@ class BooksListViewModel(
         viewModelScope.launch {
             updateState { it.copy(isImporting = true) }
             importEpubUseCase(file)
-                .onSuccess { book ->
-                    analytics.logEvent(BookAnalyticsEvent.BookImported(bookUuid = book.uuid))
+                .onSuccess { imported ->
+                    analytics.logEvent(BookAnalyticsEvent.BookImported(bookUuid = imported.libraryBookId))
                     viewModelScope.launch {
-                        maybeQueueImportedBookBackup(book.uuid)
+                        maybeQueueImportedBookBackup(imported.libraryBookId, imported.mediaType)
                     }
                 }
                 .onFailure { error ->
@@ -382,7 +383,7 @@ class BooksListViewModel(
         }
     }
 
-    private suspend fun maybeQueueImportedBookBackup(bookUuid: String) {
+    private suspend fun maybeQueueImportedBookBackup(bookUuid: String, mediaType: String) {
         if (!bookFileTransferManager.supportsUpload(PARROT_CLOUD_SERVER_ID)) return
 
         try {
@@ -396,13 +397,15 @@ class BooksListViewModel(
                 updateState {
                     it.copy(
                         pendingAutoBackupBookUuid = bookUuid,
+                        pendingAutoBackupMediaType = mediaType,
                         importBackupRightsAttested = false,
                     )
                 }
             } else {
                 startBookFileUploadUseCase(
                     serverId = PARROT_CLOUD_SERVER_ID,
-                    localBookUuid = bookUuid,
+                    libraryBookId = bookUuid,
+                    mediaType = mediaType,
                     localProfileId = localProfileId,
                 )
             }
@@ -415,6 +418,7 @@ class BooksListViewModel(
 
     private fun confirmImportedBookBackup() {
         val bookUuid = viewState.value.pendingAutoBackupBookUuid ?: return
+        val mediaType = viewState.value.pendingAutoBackupMediaType ?: return
         if (!viewState.value.importBackupRightsAttested || viewState.value.isStartingImportBackup) return
         updateState { it.copy(isStartingImportBackup = true) }
         viewModelScope.launch {
@@ -425,7 +429,8 @@ class BooksListViewModel(
                     uploadRightsAttestationRepository.record(localProfileId)
                     startBookFileUploadUseCase(
                         serverId = PARROT_CLOUD_SERVER_ID,
-                        localBookUuid = bookUuid,
+                        libraryBookId = bookUuid,
+                        mediaType = mediaType,
                         localProfileId = localProfileId,
                     )
                 }
@@ -437,6 +442,7 @@ class BooksListViewModel(
             updateState {
                 it.copy(
                     pendingAutoBackupBookUuid = null,
+                    pendingAutoBackupMediaType = null,
                     importBackupRightsAttested = false,
                     isStartingImportBackup = false,
                 )
@@ -449,6 +455,7 @@ class BooksListViewModel(
         updateState {
             it.copy(
                 pendingAutoBackupBookUuid = null,
+                pendingAutoBackupMediaType = null,
                 importBackupRightsAttested = false,
             )
         }

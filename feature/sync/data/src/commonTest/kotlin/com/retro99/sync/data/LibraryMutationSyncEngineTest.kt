@@ -2,6 +2,7 @@ package com.retro99.sync.data
 
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.sync.domain.LibraryBookMerger
 import com.retro99.sync.domain.LibraryMutationSyncTransport
 import com.retro99.sync.domain.SyncChangePage
 import com.retro99.sync.domain.SyncMutationResponse
@@ -22,7 +23,6 @@ class LibraryMutationSyncEngineTest {
                 SyncMutationResponse(
                     mutationId = accepted.mutationId,
                     status = "accepted",
-                    cloudBookId = "cloud-book",
                     revision = 12L,
                     payload = null,
                     reason = null,
@@ -30,7 +30,6 @@ class LibraryMutationSyncEngineTest {
                 SyncMutationResponse(
                     mutationId = rejected.mutationId,
                     status = "rate_limited",
-                    cloudBookId = null,
                     revision = null,
                     payload = null,
                     reason = "try later",
@@ -39,7 +38,7 @@ class LibraryMutationSyncEngineTest {
             ),
         )
         val applier = RecordingLibraryMutationApplier()
-        val engine = LibraryMutationSyncEngine(outbox)
+        val engine = LibraryMutationSyncEngine(outbox, RecordingMerger())
 
         val summary = engine.push(
             entries = listOf(accepted, rejected, omitted),
@@ -63,6 +62,42 @@ class LibraryMutationSyncEngineTest {
             transport.receivedMutationIds,
         )
         assertEquals("opaque-cursor", transport.receivedCursor)
+    }
+
+    @Test
+    fun `a duplicate saves the server book, merges into it and resolves the entry`() = runTest {
+        // Given
+        val duplicate = entry("duplicate")
+        val outbox = RecordingLibraryMutationOutbox()
+        val merger = RecordingMerger()
+        val transport = RecordingLibraryMutationTransport(
+            responses = listOf(
+                SyncMutationResponse(
+                    mutationId = duplicate.mutationId,
+                    status = "duplicate",
+                    revision = null,
+                    payload = """{"library_book_id":"existing-book"}""",
+                    reason = null,
+                    existingBookId = "existing-book",
+                ),
+            ),
+        )
+        val applier = RecordingLibraryMutationApplier()
+        val engine = LibraryMutationSyncEngine(outbox, merger)
+
+        // When
+        val summary = engine.push(
+            entries = listOf(duplicate),
+            transport = transport,
+            cursor = null,
+            applier = applier,
+        )
+
+        // Then
+        assertEquals(listOf(duplicate.mutationId), applier.duplicateIds)
+        assertEquals(listOf(duplicate.entityId to "existing-book"), merger.merges)
+        assertEquals(listOf(duplicate.mutationId), outbox.deletedIds)
+        assertEquals(1, summary.acknowledgedCount)
     }
 
     private fun entry(id: String) = SyncOutboxEntry(
@@ -114,6 +149,23 @@ private class RecordingLibraryMutationApplier : LibraryMutationApplier {
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     ) = Unit
+
+    val duplicateIds = mutableListOf<String>()
+
+    override suspend fun onDuplicate(
+        entry: SyncOutboxEntry,
+        response: SyncMutationResponse,
+    ) {
+        duplicateIds += entry.mutationId
+    }
+}
+
+private class RecordingMerger : LibraryBookMerger {
+    val merges = mutableListOf<Pair<String, String>>()
+
+    override suspend fun merge(fromId: String, intoId: String) {
+        merges += fromId to intoId
+    }
 }
 
 private class RecordingLibraryMutationOutbox : SyncOutboxDatabase {

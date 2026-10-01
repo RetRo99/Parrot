@@ -7,8 +7,6 @@ import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
-import com.retro99.database.api.library.LibraryBooksDatabase
-import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerReaderRepository
@@ -19,11 +17,13 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Provided
 
+/**
+ * Positions of books in your library, keyed by the book id. Parrot Cloud lists no books
+ * of its own, so this is only reached for ids that are library book ids.
+ */
 class ParrotCloudReaderRepository(
     override val serverId: String,
     @Provided private val positionDatabase: PositionDatabase,
-    @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
-    @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
 ) : ServerReaderRepository {
     private val json = Json {
         encodeDefaults = true
@@ -38,14 +38,12 @@ class ParrotCloudReaderRepository(
         position: ServerPosition,
     ): CompletableResult {
         return try {
-            val libraryBookId = resolveLibraryBookId(bookUuid, position.libraryBookId)
-            val cloudBookId = resolveCloudBookId(libraryBookId, bookUuid)
-            val stored = positionDatabase.getPositionByLibraryBookId(libraryBookId)
+            val stored = positionDatabase.getPositionByBookUuid(bookUuid)
             val localGeneration = (stored?.localGeneration ?: 0L) + 1L
             val normalizedPosition = position.copy(
                 bookUuid = bookUuid,
                 serverId = serverId,
-                libraryBookId = libraryBookId,
+                libraryBookId = bookUuid,
             )
             positionDatabase.upsertPositionWithMutation(
                 position = normalizedPosition.toParrotCloudPositionEntity(
@@ -58,8 +56,7 @@ class ParrotCloudReaderRepository(
                     operation = SyncOutboxEntry.OPERATION_UPSERT,
                     payload = json.encodeToString(
                         ParrotCloudReadingPositionPayload(
-                            cloudBookId = cloudBookId,
-                            libraryBookId = libraryBookId,
+                            libraryBookId = bookUuid,
                             position = normalizedPosition,
                         ),
                     ),
@@ -75,11 +72,7 @@ class ParrotCloudReaderRepository(
 
     override suspend fun getLocalPosition(bookUuid: String): AppResult<ServerPosition?> {
         return try {
-            val libraryBookId = resolveLibraryBookId(bookUuid, null)
-            Ok(
-                positionDatabase.getPositionByLibraryBookId(libraryBookId)
-                    ?.toServerPosition(bookUuid),
-            )
+            Ok(positionDatabase.getPositionByBookUuid(bookUuid)?.toServerPosition(bookUuid))
         } catch (exception: Exception) {
             Err(AppError.UnknownError(exception))
         }
@@ -102,24 +95,11 @@ class ParrotCloudReaderRepository(
             Err(AppError.UnknownError(exception))
         }
     }
-
-    private suspend fun resolveLibraryBookId(bookUuid: String, fallback: String?): String {
-        return libraryBooksDatabase.getLibraryBookByCloudBookId(bookUuid)?.libraryBookId
-            ?: fallback
-            ?: bookUuid
-    }
-
-    private suspend fun resolveCloudBookId(libraryBookId: String, fallback: String): String {
-        return libraryBooksDatabase.getLibraryBookById(libraryBookId)?.cloudBookId
-            ?: libraryBooksDatabase.getLibraryBookByCloudBookId(fallback)?.cloudBookId
-            ?: fallback
-    }
 }
 
+/** The stored and pulled `reading_position` payload: `{library_book_id, position}`. */
 @Serializable
 internal data class ParrotCloudReadingPositionPayload(
-    @kotlinx.serialization.SerialName("cloud_book_id")
-    val cloudBookId: String,
     @kotlinx.serialization.SerialName("library_book_id")
     val libraryBookId: String,
     val position: ServerPosition,
@@ -152,7 +132,7 @@ private fun PositionEntity.toServerPosition(bookUuid: String): ServerPosition {
 internal fun ServerPosition.toParrotCloudPositionEntity(remoteRevision: Long?): PositionEntity {
     return ParrotCloudPositionEntity(
         bookUuid = bookUuid,
-        libraryBookId = libraryBookId ?: bookUuid,
+        libraryBookId = libraryBookId,
         remoteRevision = remoteRevision,
         timestamp = timestamp,
         createdAt = createdAt,
@@ -178,7 +158,7 @@ internal fun ServerPosition.toParrotCloudPositionEntity(
 ): PositionEntity {
     return ParrotCloudPositionEntity(
         bookUuid = bookUuid,
-        libraryBookId = libraryBookId ?: bookUuid,
+        libraryBookId = libraryBookId,
         localGeneration = localGeneration,
         remoteRevision = remoteRevision,
         timestamp = timestamp,
@@ -255,7 +235,7 @@ internal fun PositionEntity.toParrotCloudPositionEntity(
 
 internal data class ParrotCloudPositionEntity(
     override val bookUuid: String,
-    override val libraryBookId: String,
+    override val libraryBookId: String?,
     override val localGeneration: Long = 0L,
     override val remoteRevision: Long?,
     override val timestamp: Long?,

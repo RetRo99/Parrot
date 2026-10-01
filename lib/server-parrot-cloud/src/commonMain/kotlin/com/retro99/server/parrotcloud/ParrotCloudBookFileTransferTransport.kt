@@ -65,7 +65,7 @@ class ParrotCloudBookFileTransferTransport(
                 uploadEndpoint = reservation.uploadEndpoint,
                 metadata = TusUploadMetadata(
                     targetPath = reservation.storagePath,
-                    bookUuid = request.localBookUuid,
+                    bookUuid = request.libraryBookId,
                     fileName = request.fileName,
                     mediaType = request.mediaType,
                     sizeBytes = request.sizeBytes,

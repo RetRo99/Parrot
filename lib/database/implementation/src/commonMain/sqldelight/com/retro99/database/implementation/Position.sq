@@ -57,7 +57,16 @@ INSERT OR REPLACE INTO position(
     audio_timestamp_ms, chapter_index, progression, total_chapters,
     total_duration_ms, total_progression, position
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+-- library_book_id is the book id only for books in your library (I4), NULL otherwise.
+VALUES (
+    ?,
+    (SELECT lb.library_book_id FROM library_books lb WHERE lb.library_book_id = ?),
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+);
+
+linkPositionToLibraryBook:
+UPDATE position SET library_book_id = book_uuid
+WHERE book_uuid = ? AND library_book_id IS NULL;
 
 updateRemoteRevision:
 UPDATE position SET remote_revision = ? WHERE book_uuid = ?;
@@ -118,3 +127,6 @@ DELETE FROM position;
 
 deleteAllRemotePositions:
 DELETE FROM remote_position;
+
+moveBookPosition:
+UPDATE position SET book_uuid = ?, library_book_id = ? WHERE book_uuid = ?;

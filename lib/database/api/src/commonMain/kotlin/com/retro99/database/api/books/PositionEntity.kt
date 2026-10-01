@@ -7,8 +7,10 @@ package com.retro99.database.api.books
  */
 interface PositionEntity {
     val bookUuid: String
-    val libraryBookId: String
-        get() = bookUuid
+
+    /** The book id for books in your library, NULL for server books (I4). */
+    val libraryBookId: String?
+        get() = null
     /** Local version used to guard acknowledgements for older uploads. */
     val localGeneration: Long
         get() = 0L

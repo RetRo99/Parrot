@@ -12,7 +12,7 @@ values
      'authenticated', 'authenticated', 'storage-b@example.invalid', '', now());
 
 insert into public.cloud_books (
-    id, cloud_user_id, content_hash, content_hash_algorithm, title, format
+    id, cloud_user_id, source_content_hash, source_content_hash_algorithm, title, format
 ) values
     ('24000000-0000-0000-0000-000000000001', '14000000-0000-0000-0000-000000000001',
      repeat('a', 64), 'sha-256-v1', 'Owner A', 'epub'),

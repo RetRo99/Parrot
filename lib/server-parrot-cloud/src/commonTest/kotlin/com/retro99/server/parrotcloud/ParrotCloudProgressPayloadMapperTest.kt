@@ -1,29 +1,25 @@
 package com.retro99.server.parrotcloud
 
-import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.server.api.ServerPosition
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ParrotCloudProgressPayloadMapperTest {
+
     @Test
-    fun mapsLocalReaderProgressToLinkedCloudAndLibraryBookIdentity() {
-        val libraryBook = TestLibraryBook(
-            libraryBookId = "sha-256-v1:content-hash",
-            cloudBookId = "cloud-book-id",
-        )
+    fun `local reader progress is sent under the library book id`() {
+        // Given
         val localMutation = LocalReadingPositionMutation(
-            bookUuid = "local-book-id",
-            contentHash = "content-hash",
-            contentHashAlgorithm = "sha-256-v1",
+            bookUuid = BOOK_ID,
             position = ServerPosition(
-                bookUuid = "local-book-id",
+                bookUuid = BOOK_ID,
                 serverId = "local",
-                libraryBookId = "sha-256-v1:content-hash",
+                libraryBookId = BOOK_ID,
                 timestamp = 1L,
                 createdAt = "2026-09-24T00:00:00Z",
                 updatedAt = "2026-09-24T00:01:00Z",
@@ -41,29 +37,39 @@ class ParrotCloudProgressPayloadMapperTest {
             ),
         )
 
-        val payload = localMutation.toParrotCloudReadingPositionPayload(
-            libraryBook = libraryBook,
-            cloudBookId = "cloud-book-id",
-        )
+        // When
+        val payload = localMutation.toParrotCloudReadingPositionPayload(parrotTestBook(BOOK_ID))
 
-        assertEquals("cloud-book-id", payload.cloudBookId)
-        assertEquals("sha-256-v1:content-hash", payload.libraryBookId)
-        assertEquals("local-book-id", payload.position.bookUuid)
+        // Then
+        assertEquals(BOOK_ID, payload.libraryBookId)
+        assertEquals(BOOK_ID, payload.position.bookUuid)
         assertEquals(PARROT_CLOUD_SERVER_ID, payload.position.serverId)
         assertEquals(0.1, payload.position.totalProgression)
-
         val encoded = Json.Default.encodeToString(payload)
-        assertTrue("\"cloud_book_id\":\"cloud-book-id\"" in encoded)
-        assertTrue("\"library_book_id\":\"sha-256-v1:content-hash\"" in encoded)
+        assertTrue("\"library_book_id\":\"$BOOK_ID\"" in encoded)
+        assertFalse("cloud_book_id" in encoded)
     }
-}
 
-private data class TestLibraryBook(
-    override val libraryBookId: String,
-    override val cloudBookId: String?,
-) : LibraryBookEntity {
-    override val contentHash: String? = "content-hash"
-    override val title: String = "Test book"
-    override val author: String? = null
-    override val format: String = "epub"
+    @Test
+    fun `a pulled position without cloud_book_id decodes`() {
+        // Given
+        val pulled = """{"library_book_id":"$BOOK_ID","position":{"bookUuid":"$BOOK_ID",""" +
+            """"serverId":"parrot-cloud","timestamp":null,"createdAt":null,"updatedAt":null,""" +
+            """"locatorHref":null,"locatorType":null,"locatorTitle":null,"locatorTarget":null,""" +
+            """"audioTimestampMs":null,"chapterIndex":null,"progression":0.5,""" +
+            """"totalChapters":null,"totalDurationMs":null,"totalProgression":0.5,""" +
+            """"position":null}}"""
+
+        // When
+        val payload = Json { ignoreUnknownKeys = true }
+            .decodeFromString<ParrotCloudReadingPositionPayload>(pulled)
+
+        // Then
+        assertEquals(BOOK_ID, payload.libraryBookId)
+        assertEquals(0.5, payload.position.progression)
+    }
+
+    private companion object {
+        const val BOOK_ID = "33333333-3333-4333-8333-333333333333"
+    }
 }

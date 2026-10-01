@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS cloud_book_file_state (
     library_book_id TEXT NOT NULL,
-    cloud_book_id TEXT NOT NULL,
     cloud_book_file_id TEXT NOT NULL,
     media_type TEXT NOT NULL,
     relative_path TEXT NOT NULL DEFAULT '',
@@ -17,12 +16,14 @@ CREATE TABLE IF NOT EXISTS cloud_book_file_state (
 CREATE INDEX IF NOT EXISTS idx_cloud_book_file_state_book
 ON cloud_book_file_state(library_book_id);
 
+CREATE INDEX IF NOT EXISTS idx_cloud_book_file_state_hash
+ON cloud_book_file_state(content_hash_algorithm, content_hash);
+
 upsertCloudBookFileState:
 INSERT OR REPLACE INTO cloud_book_file_state(
-    library_book_id, cloud_book_id, cloud_book_file_id, media_type, relative_path,
+    library_book_id, cloud_book_file_id, media_type, relative_path,
     file_name, status, size_bytes, content_hash, content_hash_algorithm, remote_revision, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getCloudBookFileStates:
 SELECT * FROM cloud_book_file_state WHERE library_book_id = ?;
@@ -36,3 +37,15 @@ WHERE library_book_id = ? AND media_type = ? AND relative_path = ?;
 
 deleteAllCloudBookFileStates:
 DELETE FROM cloud_book_file_state;
+
+findCloudFileByHash:
+SELECT * FROM cloud_book_file_state
+WHERE content_hash_algorithm = ? AND content_hash = ?
+ORDER BY updated_at ASC
+LIMIT 1;
+
+deleteCloudBookFileStatesForBook:
+DELETE FROM cloud_book_file_state WHERE library_book_id = ?;
+
+getCloudBookFileStateById:
+SELECT * FROM cloud_book_file_state WHERE cloud_book_file_id = ? LIMIT 1;

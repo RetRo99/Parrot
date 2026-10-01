@@ -76,7 +76,16 @@ class SyncBoundedPassTest {
         )
 
         assertEquals(
-            listOf("pull:null", "select", "refresh:2", "progress:1", "library-mutation:1:1", "pull:1", "pending"),
+            listOf(
+                "pull:null",
+                "select",
+                "refresh:2",
+                "library-mutation:1:1",
+                "select",
+                "progress:1",
+                "pull:1",
+                "pending",
+            ),
             events,
         )
         assertEquals(
@@ -103,6 +112,47 @@ class SyncBoundedPassTest {
             ),
             result,
         )
+    }
+
+    @Test
+    fun `books are pushed before progress, and progress is re-read after a merge`() = runTest {
+        // Given
+        var outbox = listOf(
+            testEntry(
+                mutationId = "progress",
+                entityType = SyncOutboxEntry.ENTITY_TYPE_READING_POSITION,
+            ).copy(entityId = "merged-book"),
+            testEntry(
+                mutationId = "book",
+                entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+            ).copy(entityId = "merged-book"),
+        )
+        val pushed = mutableListOf<String>()
+        val coordinator = SyncBoundedPass(SyncPullEngine(BoundedRecordingCheckpointDatabase()))
+
+        // When
+        coordinator.execute(
+            destinationId = "parrot-cloud",
+            remoteAccountId = "account",
+            batchSize = 50,
+            selectEntries = { outbox },
+            pushProgressEntries = { entries ->
+                pushed += entries.map { entry -> "progress:${entry.entityId}" }
+                entries.size
+            },
+            pushLibraryMutationEntries = { entries, _ ->
+                pushed += entries.map { entry -> "book:${entry.entityId}" }
+                // The server reported a duplicate; the merge rewrote the position entry.
+                outbox = listOf(outbox.first().copy(entityId = "surviving-book"))
+                entries.size
+            },
+            fetchAndApply = { _, _, _ -> SyncPullPage(0, null, false) },
+            pendingMutationCount = { 0 },
+            pullEnabled = false,
+        )
+
+        // Then
+        assertEquals(listOf("book:merged-book", "progress:surviving-book"), pushed)
     }
 
     @Test

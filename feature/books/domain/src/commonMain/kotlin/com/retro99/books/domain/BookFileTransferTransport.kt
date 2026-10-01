@@ -52,7 +52,6 @@ data class BookFileDownloadRequest(
     val transferId: String,
     val serverId: String,
     val libraryBookId: String,
-    val cloudBookId: String,
     val cloudBookFileId: String,
     val mediaType: String,
     val fileName: String,
@@ -80,8 +79,6 @@ data class BookFileUploadRequest(
     val transferId: String,
     val serverId: String,
     val libraryBookId: String,
-    val cloudBookId: String,
-    val localBookUuid: String,
     val mediaType: String,
     val relativePath: String,
     val fileName: String,
@@ -129,7 +126,6 @@ data class UploadSessionResult(
 )
 
 data class CloudBookFileRecord(
-    val cloudBookId: String,
     val cloudBookFileId: String,
     val mediaType: String,
     val relativePath: String,
@@ -160,7 +156,8 @@ interface BookFileTransferManager {
 
     suspend fun enqueueUpload(
         serverId: String,
-        localBookUuid: String,
+        libraryBookId: String,
+        mediaType: String,
         rightsAttestation: UploadRightsAttestation,
     ): String
 

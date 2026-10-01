@@ -2,18 +2,15 @@ package com.retro99.books.data.transfer
 
 import com.github.michaelbull.result.getOrElse
 import com.retro99.books.data.CONTENT_HASH_ALGORITHM
+import com.retro99.books.data.EpubMetadata
 import com.retro99.books.data.EpubMetadataExtractor
-import com.retro99.books.data.model.ImportedBookLocalModel
-import com.retro99.books.data.model.LibraryBookLocalModel
-import com.retro99.books.data.model.LocalBookFileLocalModel
 import com.retro99.books.domain.BookFileDownloadRequest
 import com.retro99.books.domain.BookFileTransferRejectedException
 import com.retro99.books.domain.model.BookType
-import com.retro99.database.api.books.PositionDatabase
-import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
-import com.retro99.database.api.importedbooks.ImportedBookEntity
-import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.cloudfiles.CloudFilesDatabase
+import com.retro99.database.api.library.DeviceFileEntity
+import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
 import kotlinx.coroutines.Dispatchers
@@ -22,11 +19,15 @@ import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 import kotlin.time.Clock
 
+/**
+ * Turns a verified download into a device copy of the book it belongs to. The position,
+ * favorites and bookmarks are keyed by the book id already, so nothing else moves.
+ */
 @Single(binds = [DownloadTransferFinalizer::class])
 class DownloadFinalizer(
-    @Provided private val importedBooksDatabase: ImportedBooksDatabase,
     @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
-    @Provided private val booksDatabase: PositionDatabase,
+    @Provided private val deviceFilesDatabase: DeviceFilesDatabase,
+    @Provided private val cloudFilesDatabase: CloudFilesDatabase,
     @Provided private val metadataExtractor: EpubMetadataExtractor,
     @Provided private val fileStore: BookFileTransferFileStore,
 ) : DownloadTransferFinalizer {
@@ -37,32 +38,31 @@ class DownloadFinalizer(
         if (request.contentHashAlgorithm != CONTENT_HASH_ALGORITHM) {
             throw BookFileTransferRejectedException("unsupported_hash_algorithm")
         }
-        if (request.libraryBookId != "${request.contentHashAlgorithm}:${request.contentHash}") {
-            throw BookFileTransferRejectedException("cloud_file_identity_mismatch")
-        }
         val bookType = when (request.mediaType.lowercase()) {
             BookType.EBOOK.value -> BookType.EBOOK
             BookType.READALOUD.value -> BookType.READALOUD
             else -> throw BookFileTransferRejectedException("unsupported_media_type")
         }
-        val existing = importedBooksDatabase.getImportedBookByContentHash(request.contentHash)
-            ?.takeIf { localBook ->
-                localBook.contentHashAlgorithm == request.contentHashAlgorithm &&
-                    localBook.bookType.equals(request.mediaType, ignoreCase = true) &&
-                    fileStore.exists(localBook.filePath) &&
-                    fileStore.size(localBook.filePath) == request.sizeBytes &&
-                    fileStore.contentHash(localBook.filePath) == request.contentHash
+        val bookId = request.libraryBookId
+        val existingFile = deviceFilesDatabase.getDeviceFile(bookId, bookType.value)
+            ?.takeIf { file ->
+                file.contentHash == request.contentHash &&
+                    fileStore.exists(file.filePath) &&
+                    fileStore.size(file.filePath) == request.sizeBytes &&
+                    fileStore.contentHash(file.filePath) == request.contentHash
             }
 
-        val localUuid = existing?.uuid ?: requireNotNull(transfer.localSourceUuid)
         val stagingPath = requireNotNull(transfer.stagingPath)
-        val importedFilePath = existing?.filePath ?: fileStore.importedFilePath(localUuid, bookType.value)
+        val destinationPath = existingFile?.filePath
+            ?: fileStore.libraryFilePath(bookId, bookType.value)
         var sourcePath: String? = null
-        if (existing == null) {
+        if (existingFile == null) {
+            // A retry after a crash may find the file already moved into place.
             sourcePath = when {
-                fileStore.exists(stagingPath) && fileStore.size(stagingPath) == request.sizeBytes -> stagingPath
-                fileStore.exists(importedFilePath) && fileStore.size(importedFilePath) == request.sizeBytes ->
-                    importedFilePath
+                fileStore.exists(stagingPath) && fileStore.size(stagingPath) == request.sizeBytes ->
+                    stagingPath
+                fileStore.exists(destinationPath) &&
+                    fileStore.size(destinationPath) == request.sizeBytes -> destinationPath
                 else -> error("Downloaded staging file is missing or truncated")
             }
             if (fileStore.contentHash(sourcePath) != request.contentHash) {
@@ -70,143 +70,85 @@ class DownloadFinalizer(
             }
         }
 
-        val existingLibraryBook = libraryBooksDatabase.getLibraryBookByCloudBookId(request.cloudBookId)
-            ?: libraryBooksDatabase.getLibraryBookByContentHash(
-                request.contentHashAlgorithm,
-                request.contentHash,
-            )
-        val libraryBook = existingLibraryBook?.let { existingBook ->
-            if (existingBook.cloudBookId != null && existingBook.cloudBookId != request.cloudBookId) {
-                throw BookFileTransferRejectedException("library_book_identity_mismatch")
-            }
-            LibraryBookLocalModel(
-                libraryBookId = existingBook.libraryBookId,
-                contentHash = existingBook.contentHash ?: request.contentHash,
-                contentHashAlgorithm = existingBook.contentHashAlgorithm ?: request.contentHashAlgorithm,
-                title = existingBook.title,
-                author = existingBook.author,
-                format = existingBook.format,
-                remoteRevision = existingBook.remoteRevision,
-                deletedAt = existingBook.deletedAt,
-                cloudBookId = request.cloudBookId,
-                metadataJson = existingBook.metadataJson,
-            )
-        } ?: LibraryBookLocalModel(
-                libraryBookId = request.libraryBookId,
-                contentHash = request.contentHash,
-                contentHashAlgorithm = request.contentHashAlgorithm,
-                title = existing?.title ?: request.fileName.substringBeforeLast('.', request.fileName),
-                author = existing?.author,
-                format = bookType.value,
-                cloudBookId = request.cloudBookId,
-            )
-        if (libraryBook.libraryBookId != request.libraryBookId) {
-            throw BookFileTransferRejectedException("library_book_identity_mismatch")
+        saveLibraryBook(bookId, request, readablePath = sourcePath ?: destinationPath)
+        if (sourcePath != null && sourcePath != destinationPath) {
+            fileStore.moveToImportedStore(sourcePath, destinationPath)
         }
-
-        val importedBook = existing ?: createImportedBook(
-            localUuid = localUuid,
-            sourcePath = requireNotNull(sourcePath),
-            destinationPath = importedFilePath,
-            request = request,
-            bookType = bookType,
-            libraryBook = libraryBook,
-        )
-        if (sourcePath != null && sourcePath != importedFilePath) {
-            fileStore.moveToImportedStore(sourcePath, importedFilePath)
+        if (existingFile == null) {
+            deviceFilesDatabase.upsertDeviceFile(
+                DeviceFileEntity(
+                    libraryBookId = bookId,
+                    mediaType = bookType.value,
+                    filePath = destinationPath,
+                    fileSize = request.sizeBytes,
+                    contentHash = request.contentHash,
+                    contentHashAlgorithm = request.contentHashAlgorithm,
+                    origin = DeviceFileEntity.ORIGIN_CLOUD_DOWNLOAD,
+                    addedAt = now(),
+                ),
+            )
         }
         val completedTransfer = transfer.copy(
-            libraryBookId = libraryBook.libraryBookId,
-            cloudBookId = request.cloudBookId,
             cloudBookFileId = request.cloudBookFileId,
-            localSourceUuid = localUuid,
             stagingPath = null,
             bytesTransferred = request.sizeBytes,
             state = STATE_COMPLETED,
             nextAttemptAt = null,
             lastError = null,
-            updatedAt = Clock.System.now().toString(),
+            updatedAt = now(),
         )
-        val canonicalPosition = booksDatabase.getPositionByLibraryBookId(libraryBook.libraryBookId)
-        val localPosition = canonicalPosition?.let { position ->
-            RestoredPositionEntity(
-                source = position,
-                bookUuid = localUuid,
-                libraryBookId = libraryBook.libraryBookId,
-            )
-        }
-        importedBooksDatabase.saveRestoredBookWithLibraryMapping(
-            book = importedBook,
-            libraryBook = libraryBook,
-            localBookFile = LocalBookFileLocalModel(
-                libraryBookId = libraryBook.libraryBookId,
-                importedBookUuid = localUuid,
-            ),
-            transfer = completedTransfer,
-            position = localPosition,
-        )
+        cloudFilesDatabase.updateTransfer(completedTransfer)
         fileStore.delete(stagingPath)
         completedTransfer
     }
 
-    private suspend fun createImportedBook(
-        localUuid: String,
-        sourcePath: String,
-        destinationPath: String,
+    /**
+     * The book row normally arrives by pull. Create it when it hasn't, and fill in the
+     * cover and description Parrot Cloud doesn't store yet.
+     */
+    private suspend fun saveLibraryBook(
+        bookId: String,
         request: BookFileDownloadRequest,
-        bookType: BookType,
-        libraryBook: LibraryBookEntity,
-    ): ImportedBookEntity {
-        val metadata = metadataExtractor.extractMetadata(sourcePath).getOrElse { error ->
+        readablePath: String,
+    ) {
+        val existing = libraryBooksDatabase.getLibraryBookById(bookId)
+        if (existing != null && existing.coverPath != null && existing.description != null) return
+        val metadata = metadataExtractor.extractMetadata(readablePath).getOrElse {
+            if (existing != null) return
             throw BookFileTransferRejectedException("restored_epub_invalid")
         }
-        val coverPath = metadata.coverBytes?.let { bytes -> fileStore.writeCover(localUuid, bytes) }
-        return ImportedBookLocalModel(
-            uuid = localUuid,
-            title = metadata.title.ifBlank { libraryBook.title },
-            author = metadata.author ?: libraryBook.author,
-            description = metadata.description,
-            coverPath = coverPath,
-            filePath = destinationPath,
-            fileSize = request.sizeBytes,
-            contentHash = request.contentHash,
-            contentHashAlgorithm = request.contentHashAlgorithm,
-            importedAt = Clock.System.now().toString(),
-            lastOpenedAt = null,
-            bookType = bookType.value,
-            publicationDate = metadata.publicationDate,
-            origin = ORIGIN_CLOUD_DOWNLOAD,
-            cloudBookFileId = request.cloudBookFileId,
+        val coverPath = existing?.coverPath
+            ?: metadata.coverBytes?.let { bytes -> fileStore.writeCover(bookId, bytes) }
+        libraryBooksDatabase.upsertLibraryBook(
+            existing?.copy(
+                coverPath = coverPath,
+                description = existing.description ?: metadata.description,
+                publicationDate = existing.publicationDate ?: metadata.publicationDate,
+            ) ?: newBook(bookId, request, metadata, coverPath),
         )
     }
 
-    private data class RestoredPositionEntity(
-        val source: PositionEntity,
-        override val bookUuid: String,
-        override val libraryBookId: String,
-    ) : PositionEntity {
-        override val localGeneration: Long get() = source.localGeneration
-        override val remoteRevision: Long? get() = source.remoteRevision
-        override val timestamp: Long? get() = source.timestamp
-        override val createdAt: String? get() = source.createdAt
-        override val updatedAt: String? get() = source.updatedAt
-        override val locatorHref: String? get() = source.locatorHref
-        override val locatorType: String? get() = source.locatorType
-        override val locatorTitle: String? get() = source.locatorTitle
-        override val locatorTarget: Int? get() = source.locatorTarget
-        override val cssSelector: String? get() = source.cssSelector
-        override val audioTimestampMs: Long? get() = source.audioTimestampMs
-        override val chapterIndex: Int? get() = source.chapterIndex
-        override val progression: Double? get() = source.progression
-        override val totalChapters: Int? get() = source.totalChapters
-        override val totalDurationMs: Long? get() = source.totalDurationMs
-        override val totalProgression: Double? get() = source.totalProgression
-        override val position: Int? get() = source.position
-    }
+    private fun newBook(
+        bookId: String,
+        request: BookFileDownloadRequest,
+        metadata: EpubMetadata,
+        coverPath: String?,
+    ) = LibraryBookEntity(
+        libraryBookId = bookId,
+        title = metadata.title.ifBlank { request.fileName.substringBeforeLast('.') },
+        author = metadata.author,
+        description = metadata.description,
+        coverPath = coverPath,
+        publicationDate = metadata.publicationDate,
+        sourceContentHash = request.contentHash,
+        sourceContentHashAlgorithm = request.contentHashAlgorithm,
+        addedAt = now(),
+    )
+
+    private fun now(): String = Clock.System.now().toString()
 
     private companion object {
         const val STATE_COMPLETED = "completed"
-        const val ORIGIN_CLOUD_DOWNLOAD = "cloud_download"
     }
 }
 

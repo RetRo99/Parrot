@@ -12,6 +12,12 @@ internal class CloudFilesDatabaseImpl(
 
     override suspend fun getFileStates(libraryBookId: String) = dao.getFileStates(libraryBookId)
 
+    override suspend fun getFileStateById(cloudBookFileId: String) =
+        dao.getFileStateById(cloudBookFileId)
+
+    override suspend fun findFileStateByHash(algorithm: String, hash: String) =
+        dao.findFileStateByHash(algorithm, hash)
+
     override fun observeFileStates(): Flow<List<CloudBookFileEntity>> = dao.observeFileStates()
 
     override suspend fun deleteFileState(

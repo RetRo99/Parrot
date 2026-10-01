@@ -50,6 +50,15 @@ class ParrotCloudLibraryMutationApplier(
             )
         }
     }
+
+    override suspend fun onDuplicate(
+        entry: SyncOutboxEntry,
+        response: SyncMutationResponse,
+    ) {
+        val payload = response.payload ?: return
+        val book = json.decodeFromString<ParrotCloudBookPayload>(payload)
+        libraryBookSyncApplier.applyRemote(book.toSyncLibraryBookSnapshot(book.remoteRevision))
+    }
 }
 
 internal fun ParrotCloudBookPayload.toSyncLibraryBookSnapshot(
@@ -57,9 +66,8 @@ internal fun ParrotCloudBookPayload.toSyncLibraryBookSnapshot(
 ): SyncLibraryBookSnapshot {
     return SyncLibraryBookSnapshot(
         libraryBookId = libraryBookId,
-        cloudBookId = cloudBookId,
-        contentHash = contentHash,
-        contentHashAlgorithm = contentHashAlgorithm,
+        sourceContentHash = sourceContentHash,
+        sourceContentHashAlgorithm = sourceContentHashAlgorithm,
         title = title,
         author = author,
         format = format,

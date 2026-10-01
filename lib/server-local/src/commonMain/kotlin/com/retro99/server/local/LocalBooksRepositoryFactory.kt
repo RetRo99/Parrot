@@ -1,6 +1,7 @@
 package com.retro99.server.local
 
-import com.retro99.books.data.source.ImportedBooksLocalSource
+import com.retro99.books.data.source.LibraryLocalSource
+import com.retro99.server.api.ParrotCloudLibraryState
 import com.retro99.server.api.ServerBooksRepository
 import com.retro99.server.api.ServerBooksRepositoryFactory
 import com.retro99.server.api.ServerConfig
@@ -15,7 +16,8 @@ import org.koin.core.annotation.Single
  */
 @Single(binds = [ServerBooksRepositoryFactory::class])
 class LocalBooksRepositoryFactory(
-    @Provided private val localSource: ImportedBooksLocalSource,
+    @Provided private val localSource: LibraryLocalSource,
+    @Provided private val parrotCloudLibraryState: ParrotCloudLibraryState,
 ) : ServerBooksRepositoryFactory {
 
     override val serverType: ServerType = ServerType.Local
@@ -24,7 +26,7 @@ class LocalBooksRepositoryFactory(
         require(serverConfig.type == ServerType.Local) {
             "LocalBooksRepositoryFactory can only create repositories for Local servers"
         }
-        return LocalBooksRepository(localSource, serverConfig.id)
+        return LocalBooksRepository(localSource, parrotCloudLibraryState, serverConfig.id)
     }
 }
 

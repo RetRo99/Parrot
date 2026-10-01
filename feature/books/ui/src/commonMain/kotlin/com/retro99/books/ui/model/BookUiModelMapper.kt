@@ -2,6 +2,8 @@ package com.retro99.books.ui.model
 
 import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.books.domain.model.SeriesDomainModel
+import com.retro99.books.domain.model.home
+import com.retro99.server.api.MediaResource
 
 fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
     is BookDomainModel.StorytellerBook -> BookUiModel.StorytellerBook(
@@ -26,22 +28,11 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
         audiobookFilepath = audiobook?.filepath,
         readaloudFilepath = readaloud?.filepath,
         libraryBookId = libraryBookId,
-        localSourceUuid = localSourceUuid,
         remoteFileAvailability = remoteFileAvailability.name,
-        mediaResources = mediaResources.map { resource ->
-            MediaResourceUiModel(
-                mediaType = resource.mediaType,
-                localPath = resource.localPath,
-                remoteAvailability = resource.remoteAvailability.name,
-                size = resource.size,
-                contentHash = resource.contentHash,
-                contentHashAlgorithm = resource.contentHashAlgorithm,
-                localOrigin = resource.localOrigin,
-                cloudBookFileId = resource.cloudBookFileId,
-            )
-        },
+        mediaResources = mediaResources.map { resource -> resource.toUiModel() },
+        home = home,
     )
-    is BookDomainModel.LocalBook -> BookUiModel.LocalBook(
+    is BookDomainModel.LibraryBook -> BookUiModel.LibraryBook(
         uuid = uuid,
         serverId = serverId,
         serverType = serverType,
@@ -49,17 +40,24 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
         description = description,
         coverUrl = coverUrl,
         author = author,
-        filePath = filePath,
-        fileSize = fileSize,
-        importedAt = importedAt,
-        lastOpenedAt = lastOpenedAt,
-        bookType = bookType,
         publicationDate = publicationDate,
-        libraryBookId = libraryBookId,
-        origin = origin,
-        cloudBookFileId = cloudBookFileId,
+        addedAt = addedAt,
+        lastOpenedAt = lastOpenedAt,
+        home = home,
+        mediaResources = mediaResources.map { resource -> resource.toUiModel() },
     )
 }
+
+private fun MediaResource.toUiModel() = MediaResourceUiModel(
+    mediaType = mediaType,
+    localPath = localPath,
+    remoteAvailability = remoteAvailability.name,
+    size = size,
+    contentHash = contentHash,
+    contentHashAlgorithm = contentHashAlgorithm,
+    localOrigin = localOrigin,
+    cloudBookFileId = cloudBookFileId,
+)
 
 fun SeriesDomainModel.toUiModel(): SeriesUiModel = SeriesUiModel(
     uuid = uuid,

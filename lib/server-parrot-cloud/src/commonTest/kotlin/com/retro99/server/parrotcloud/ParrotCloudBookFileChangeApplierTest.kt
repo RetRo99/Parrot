@@ -7,9 +7,6 @@ import com.retro99.books.domain.UploadRightsAttestation
 import com.retro99.database.api.cloudfiles.CloudBookFileEntity
 import com.retro99.database.api.cloudfiles.CloudFileTransferEntity
 import com.retro99.database.api.cloudfiles.CloudFilesDatabase
-import com.retro99.database.api.library.LibraryBookEntity
-import com.retro99.database.api.library.LibraryBooksDatabase
-import com.retro99.database.api.library.LocalBookFileEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -31,8 +28,7 @@ class ParrotCloudBookFileChangeApplierTest {
 
         assertEquals(1, cloudFiles.upserts.size)
         val file = cloudFiles.upserts.single()
-        assertEquals("library-book", file.libraryBookId)
-        assertEquals("cloud-book", file.cloudBookId)
+        assertEquals(BOOK_ID, file.libraryBookId)
         assertEquals("cloud-file", file.cloudBookFileId)
         assertEquals("ebook", file.mediaType)
         assertEquals("extras/cover.epub", file.relativePath)
@@ -69,7 +65,7 @@ class ParrotCloudBookFileChangeApplierTest {
 
         assertEquals(listOf("cloud-file"), manager.invalidated)
         assertTrue(cloudFiles.upserts.isEmpty())
-        assertEquals(listOf(Triple("library-book", "ebook", "extras/cover.epub")), cloudFiles.deleted)
+        assertEquals(listOf(Triple(BOOK_ID, "ebook", "extras/cover.epub")), cloudFiles.deleted)
     }
 
     private fun applier(
@@ -77,17 +73,14 @@ class ParrotCloudBookFileChangeApplierTest {
         manager: RecordingTransferManager,
     ): ParrotCloudBookFileChangeApplier = ParrotCloudBookFileChangeApplier(
         cloudFilesDatabase = cloudFiles,
-        libraryBooksDatabase = object : LibraryBooksDatabase by EmptyLibraryBooksDatabase {
-            override suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity? =
-                libraryBook.takeIf { it.cloudBookId == cloudBookId }
-        },
+        libraryBooksDatabase = ParrotTestLibraryBooksDatabase(parrotTestBook(BOOK_ID)),
         bookFileTransferManager = manager,
     )
 
     private fun payload(status: String) = Json.parseToJsonElement(
         """
         {
-          "cloud_book_id":"cloud-book",
+          "cloud_book_id":"$BOOK_ID",
           "cloud_book_file_id":"cloud-file",
           "media_type":"ebook",
           "relative_path":"extras/cover.epub",
@@ -101,16 +94,6 @@ class ParrotCloudBookFileChangeApplierTest {
         """.trimIndent(),
     ).jsonObject
 
-    private val libraryBook = object : LibraryBookEntity {
-        override val libraryBookId = "library-book"
-        override val contentHash: String? = "content-hash"
-        override val contentHashAlgorithm = "sha-256-v1"
-        override val title = "Title"
-        override val author: String? = null
-        override val format = "ebook"
-        override val cloudBookId = "cloud-book"
-    }
-
     private class RecordingCloudFilesDatabase : CloudFilesDatabase {
         val upserts = mutableListOf<CloudBookFileEntity>()
         val deleted = mutableListOf<Triple<String, String, String>>()
@@ -119,6 +102,9 @@ class ParrotCloudBookFileChangeApplierTest {
             upserts += file
         }
         override suspend fun getFileStates(libraryBookId: String): List<CloudBookFileEntity> = emptyList()
+        override suspend fun getFileStateById(cloudBookFileId: String): CloudBookFileEntity? = null
+        override suspend fun findFileStateByHash(algorithm: String, hash: String): CloudBookFileEntity? =
+            null
         override fun observeFileStates(): Flow<List<CloudBookFileEntity>> = flowOf(upserts.toList())
         override suspend fun deleteFileState(libraryBookId: String, mediaType: String, relativePath: String) {
             deleted += Triple(libraryBookId, mediaType, relativePath)
@@ -140,7 +126,12 @@ class ParrotCloudBookFileChangeApplierTest {
         override fun supportsUpload(serverId: String) = false
         override fun supportsDownload(serverId: String) = false
         override fun supportsDeletion(serverId: String) = false
-        override suspend fun enqueueUpload(serverId: String, localBookUuid: String, rightsAttestation: UploadRightsAttestation): String = error("unused")
+        override suspend fun enqueueUpload(
+            serverId: String,
+            libraryBookId: String,
+            mediaType: String,
+            rightsAttestation: UploadRightsAttestation,
+        ): String = error("unused")
         override suspend fun backupAll(
             serverId: String,
             rightsAttestation: UploadRightsAttestation,
@@ -157,17 +148,7 @@ class ParrotCloudBookFileChangeApplierTest {
         override fun observeForBook(serverId: String, libraryBookId: String): Flow<List<BookFileTransfer>> = emptyFlow()
     }
 
-    private object EmptyLibraryBooksDatabase : LibraryBooksDatabase {
-        override suspend fun upsertLibraryBook(book: LibraryBookEntity) = Unit
-        override suspend fun upsertLocalLibraryBook(book: LibraryBookEntity) = Unit
-        override fun getAllLibraryBooks(): Flow<List<LibraryBookEntity>> = emptyFlow()
-        override suspend fun getLibraryBookById(libraryBookId: String): LibraryBookEntity? = null
-        override suspend fun getLibraryBookByContentHash(contentHash: String): LibraryBookEntity? = null
-        override suspend fun getLibraryBookByCloudBookId(cloudBookId: String): LibraryBookEntity? = null
-        override suspend fun attachCloudBookId(libraryBookId: String, cloudBookId: String) = Unit
-        override suspend fun upsertLocalBookFile(file: LocalBookFileEntity) = Unit
-        override suspend fun getLocalBookFiles(libraryBookId: String): List<LocalBookFileEntity> = emptyList()
-        override suspend fun getLocalBookFileByImportedBookUuid(importedBookUuid: String): LocalBookFileEntity? = null
-        override suspend fun deleteLocalBookFileByImportedBookUuid(importedBookUuid: String) = Unit
+    private companion object {
+        const val BOOK_ID = "44444444-4444-4444-8444-444444444444"
     }
 }

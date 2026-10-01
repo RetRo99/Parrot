@@ -109,3 +109,6 @@ DELETE FROM reading_session WHERE id = ?;
 deleteAllSessions:
 DELETE FROM reading_session;
 
+
+moveReadingSessions:
+UPDATE reading_session SET book_uuid = ? WHERE book_uuid = ?;

@@ -58,7 +58,7 @@ class InitializeReaderUseCase(
 
             bookResult.flatMap { book ->
                 when (book) {
-                    is BookDomainModel.LocalBook -> initializeImportedBook(book, bookType)
+                    is BookDomainModel.LibraryBook -> initializeLibraryBook(book, bookType)
                     is BookDomainModel.StorytellerBook -> initializeStorytellerBook(book, bookType)
                 }
             }
@@ -109,26 +109,17 @@ class InitializeReaderUseCase(
     }
 
     /**
-     * Initializes the reader for an imported book.
-     * Imported books are already stored locally, so no download is needed.
-     *
-     * @param book The imported book to initialize
-     * @param requestedBookType The book type requested by the caller (should match book.bookType)
+     * Initializes the reader for a book in your library. It opens the device copy of the
+     * requested type, read from `device_files` (I5); the reader cache isn't involved (I6).
      */
-    private suspend fun initializeImportedBook(
-        book: BookDomainModel.LocalBook,
-        requestedBookType: BookType,
+    private suspend fun initializeLibraryBook(
+        book: BookDomainModel.LibraryBook,
+        bookType: BookType,
     ): AppResult<ReaderInitializationData> = coroutineScope {
-        // Validate that the requested book type matches the stored book type
-        if (requestedBookType != book.bookType) {
-            return@coroutineScope Err(
-                AppError.UnknownError(
-                    Throwable(
-                        "Book type mismatch: requested $requestedBookType but book is ${book.bookType}"
-                    )
-                )
+        val devicePath = book.deviceFilePath(bookType)
+            ?: return@coroutineScope Err(
+                AppError.NotFoundError("Book has no downloaded $bookType file"),
             )
-        }
 
         val settingsDeferred = async {
             getReaderSettingsUseCase().first()
@@ -144,12 +135,12 @@ class InitializeReaderUseCase(
         Ok(
             ReaderInitializationData(
                 serverId = book.serverId,
-                    bookUuid = book.uuid,
-                    bookTitle = book.title,
-                    bookAuthor = book.author.orEmpty(),
+                bookUuid = book.uuid,
+                bookTitle = book.title,
+                bookAuthor = book.author.orEmpty(),
                 bookCoverUrl = book.coverUrl,
-                localEbookPath = book.filePath,
-                bookType = book.bookType,
+                localEbookPath = devicePath,
+                bookType = bookType,
                 initialSettings = settings,
                 progressResult = progressResult,
             )

@@ -60,27 +60,39 @@ class SyncBoundedPass(
         } else {
             reportPhase(SyncPhase.PULLING, 0, entries.size)
             refreshProgressEntries(entries)
-            val progressEntries = entries.filter { entry ->
-                entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
+            val progressMutationIds = entries
+                .filter { entry -> entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION }
+                .mapTo(mutableSetOf()) { entry -> entry.mutationId }
+            // I7: books go before anything that refers to them, so a duplicate merge can
+            // rewrite the other entries before they are sent.
+            val libraryMutationEntries = entries
+                .filter { entry -> entry.mutationId !in progressMutationIds }
+                .sortedBy { entry ->
+                    if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK) 0 else 1
+                }
+            val libraryMutationCount = if (libraryMutationEntries.isEmpty()) {
+                0
+            } else {
+                reportPhase(SyncPhase.UPLOADING_CHANGES, 0, entries.size)
+                pushLibraryMutationEntries(libraryMutationEntries, initialPull.cursor)
             }
-            val libraryMutationEntries = entries.filter { entry ->
-                entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
+            // Re-read progress entries: a merge above may have moved them to another book.
+            val progressEntries = when {
+                progressMutationIds.isEmpty() -> emptyList()
+                libraryMutationEntries.isEmpty() -> entries.filter { entry ->
+                    entry.mutationId in progressMutationIds
+                }
+                else -> selectEntries().filter { entry -> entry.mutationId in progressMutationIds }
             }
             val progressCount = if (progressEntries.isEmpty()) {
                 0
             } else {
-                reportPhase(SyncPhase.UPLOADING_CHANGES, 0, entries.size)
-                pushProgressEntries(progressEntries)
-            }
-            val libraryMutationCount = if (libraryMutationEntries.isEmpty()) {
-                0
-            } else {
                 reportPhase(
                     SyncPhase.UPLOADING_CHANGES,
-                    progressCount,
+                    libraryMutationCount,
                     entries.size,
                 )
-                pushLibraryMutationEntries(libraryMutationEntries, initialPull.cursor)
+                pushProgressEntries(progressEntries)
             }
             progressCount + libraryMutationCount
         }

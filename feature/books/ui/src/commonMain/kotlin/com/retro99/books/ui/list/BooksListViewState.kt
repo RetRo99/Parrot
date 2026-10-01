@@ -1,7 +1,6 @@
 package com.retro99.books.ui.list
 
 import com.retro99.base.result.AppError
-import com.retro99.base.server.ServerType
 import com.retro99.books.ui.model.BookFilterState
 import com.retro99.books.ui.model.BookListViewMode
 import com.retro99.books.ui.model.BookProgressInfoUiModel
@@ -10,6 +9,9 @@ import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookSortOption
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.SortDirection
+import com.retro99.books.ui.model.filterByHome
+import com.retro99.books.ui.model.isOnThisDevice
+import com.retro99.books.ui.model.showHomeBadge
 
 data class BooksListViewState(
     val books: List<BookUiModel> = emptyList(),
@@ -32,6 +34,7 @@ data class BooksListViewState(
     val backupAllFailedCount: Int? = null,
     val backupAllError: String? = null,
     val pendingAutoBackupBookUuid: String? = null,
+    val pendingAutoBackupMediaType: String? = null,
     val importBackupRightsAttested: Boolean = false,
     val isStartingImportBackup: Boolean = false,
     val error: AppError? = null,
@@ -42,12 +45,12 @@ data class BooksListViewState(
     val filteredBooks: List<BookUiModel>
         get() = books
             .applySearchFilter(searchQuery)
-            .applyServerTypeFilter(filterState.serverTypeFilter)
+            .filterByHome(filterState.homeFilter)
             .applyQuickFilters(filterState.activeQuickFilters, favoriteBookUuids, bookProgressInfo)
             .applySorting(sortConfig)
 
     val showServerBadge: Boolean
-        get() = books.mapNotNull { it.serverType }.distinct().size > 1
+        get() = books.showHomeBadge()
 
     private fun List<BookUiModel>.applySearchFilter(query: String): List<BookUiModel> {
         if (query.isBlank()) return this
@@ -58,11 +61,6 @@ data class BooksListViewState(
                     book.series.any { it.name.lowercase().contains(lowerQuery) } ||
                     book.tags.any { it.lowercase().contains(lowerQuery) }
         }
-    }
-
-    private fun List<BookUiModel>.applyServerTypeFilter(serverType: ServerType?): List<BookUiModel> {
-        if (serverType == null) return this
-        return filter { book -> book.serverType == serverType }
     }
 
     private fun List<BookUiModel>.applyQuickFilters(
@@ -76,7 +74,7 @@ data class BooksListViewState(
                 when (filter) {
                     BookQuickFilter.FAVORITES -> book.uuid in favoriteUuids
                     BookQuickFilter.IN_PROGRESS -> (progressInfo[book.uuid]?.displayProgression ?: 0.0) > 0.0
-                    BookQuickFilter.CACHED -> progressInfo[book.uuid]?.hasAnyCached == true
+                    BookQuickFilter.CACHED -> book.isOnThisDevice(progressInfo[book.uuid])
                     BookQuickFilter.HAS_EBOOK -> book.hasEbook
                     BookQuickFilter.HAS_AUDIOBOOK -> book.hasAudiobook || book.hasReadaloud
                     BookQuickFilter.HAS_READALOUD -> book.hasReadaloud

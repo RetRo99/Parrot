@@ -1,7 +1,7 @@
 package com.retro99.auth.domain.usecase
 
 import com.retro99.base.server.ServerType
-import com.retro99.database.api.importedbooks.ImportedBooksDatabase
+import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.server.api.ServerRegistry
@@ -12,7 +12,7 @@ import org.koin.core.annotation.Provided
 class CheckAuthStateUseCase(
     @Provided private val serverRegistry: ServerRegistry,
     @Provided private val preferences: Preferences,
-    @Provided private val importedBooksDatabase: ImportedBooksDatabase,
+    @Provided private val libraryBooksDatabase: LibraryBooksDatabase,
 ) {
     /**
      * Existing server setups, Cloud-linked profiles, guest users, and local libraries
@@ -20,7 +20,7 @@ class CheckAuthStateUseCase(
      */
     suspend operator fun invoke(): Boolean {
         val hasSkippedLogin = preferences.getBoolean(PreferencesKey.SkippedLogin, defaultValue = false)
-        val hasImportedBooks = importedBooksDatabase.getImportedBooksCount() > 0
+        val hasImportedBooks = libraryBooksDatabase.countLibraryBooksWithDeviceFiles() > 0
         val hasConfiguredRemoteServer = serverRegistry.getAllServers()
             .any { it.type != ServerType.Local }
         val hasAuthenticatedRemoteServer = serverRegistry.getAuthenticatedServers()
