@@ -107,6 +107,21 @@ class AbsEbookLocationTest {
     }
 
     @Test
+    fun `a non-linear cover first in the spine counts as spine item 0`() = runTest {
+        // Given: the full spine, with the cover (linear="no") as the first itemref.
+        val spine = listOf("OEBPS/cover.xhtml", "OEBPS/chapter1.xhtml", "OEBPS/chapter2.xhtml")
+        val chapterOne = place().copy(href = "OEBPS/chapter1.xhtml")
+
+        // When
+        val built = buildAbsEbookLocation(chapterOne, storedRaw = null) { spine }
+        val parsed = parseAbsEbookLocation("epubcfi(/6/4!/4/2/1:0)", 0.1) { spine }
+
+        // Then
+        assertEquals("epubcfi(/6/4!/4)", built)
+        assertEquals("OEBPS/chapter1.xhtml", parsed.href)
+    }
+
+    @Test
     fun `a stored json locator is mirrored as json`() = runTest {
         // Given
         val stored = """{"href":"OEBPS/ch01.xhtml","locations":{"progression":0.1}}"""

@@ -43,6 +43,40 @@ class EpubTextReaderTest {
     }
 
     @Test
+    fun `the spine keeps a non-linear cover first, as cfis count it`() = runTest {
+        // Given: the fixture's first itemref (the nav document) is linear="no".
+        val epub = FixtureEpubs.plain(directory)
+
+        // When
+        val spine = assertNotNull(reader.readSpineHrefs(epub.path).get())
+
+        // Then
+        assertEquals(
+            listOf(
+                "OEBPS/nav.xhtml",
+                "OEBPS/chapter 1.xhtml",
+                "OEBPS/chapter2.xhtml",
+                "OEBPS/chapter3.xhtml",
+            ),
+            spine,
+        )
+        assertEquals(1, spine.indexOf("OEBPS/chapter 1.xhtml"))
+    }
+
+    @Test
+    fun `without non-linear items the spine is the reading order`() = runTest {
+        // Given
+        val epub = FixtureEpubs.readaloud(directory)
+
+        // When
+        val spine = assertNotNull(reader.readSpineHrefs(epub.path).get())
+        val chapters = assertNotNull(reader.readChapters(epub.path).get())
+
+        // Then
+        assertEquals(chapters.map { chapter -> chapter.href }, spine)
+    }
+
+    @Test
     fun `chapter text collapses whitespace, decodes entities and breaks blocks`() = runTest {
         // Given
         val epub = FixtureEpubs.plain(directory)

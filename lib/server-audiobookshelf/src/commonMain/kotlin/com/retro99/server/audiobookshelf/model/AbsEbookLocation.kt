@@ -48,7 +48,8 @@ fun isAbsCfi(raw: String?): Boolean = raw?.trim()?.startsWith(CFI_PREFIX) == tru
 
 /**
  * Reads [raw] by its shape. A CFI's spine step is resolved to a chapter through the book's
- * reading order ([readingOrderHrefs], null when the book isn't on this device); the element
+ * full spine ([readingOrderHrefs]: every itemref, non-linear ones included, as CFIs count
+ * them; null when the book isn't on this device); the element
  * path inside the chapter isn't resolved yet, so [ebookProgress] stands in for the place.
  */
 suspend fun parseAbsEbookLocation(
