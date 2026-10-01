@@ -42,6 +42,14 @@ sealed class BookUiModel {
      * For local books this is importedAt, for Storyteller books this is createdAt.
      */
     abstract val dateAdded: String?
+    open val narrators: List<String> get() = emptyList()
+    open val language: String? get() = null
+    open val audioDurationMs: Long? get() = null
+    open val lastOpened: String? get() = null
+    open val mediaSizes: Map<BookType, Long> get() = emptyMap()
+    open val narrationStatus: String? get() = null
+    open val narrationStage: String? get() = null
+    open val narrationProgress: Double? get() = null
 
     /** Where the book lives, shown as its badge. */
     abstract val home: BookHome
@@ -91,6 +99,14 @@ sealed class BookUiModel {
         val mediaResources: List<MediaResourceUiModel> = emptyList(),
         override val home: BookHome = BookHome.Storyteller,
         override val linkedCopies: List<LinkedCopyUiModel> = emptyList(),
+        override val narrators: List<String> = emptyList(),
+        override val language: String? = null,
+        override val audioDurationMs: Long? = null,
+        override val lastOpened: String? = null,
+        override val mediaSizes: Map<BookType, Long> = emptyMap(),
+        override val narrationStatus: String? = null,
+        override val narrationStage: String? = null,
+        override val narrationProgress: Double? = null,
     ) : BookUiModel() {
         override fun filePath(bookType: BookType): String? = when (bookType) {
             BookType.EBOOK -> ebookFilepath
@@ -129,6 +145,13 @@ sealed class BookUiModel {
         override val subtitle: String? get() = null
         override val rating: Float? get() = null
         override val dateAdded: String? get() = addedAt
+        override val lastOpened: String? get() = lastOpenedAt
+        override val mediaSizes: Map<BookType, Long>
+            get() = mediaResources.mapNotNull { resource ->
+                val type = BookType.entries.find { type -> type.value == resource.mediaType }
+                val size = resource.size
+                if (type != null && size != null) type to size else null
+            }.toMap()
 
         /** The device copy of [bookType], or null when it isn't on this device. */
         override fun filePath(bookType: BookType): String? = mediaResource(bookType)?.localPath

@@ -83,8 +83,8 @@ class ObserveBookWithProgressUseCase(
         val readerRepository = repositoryProvider.getReaderRepository(serverId)
 
         // Fetch remote position (one-time per emission)
-        val remoteProgression = readerRepository?.getRemotePosition(bookUuid)
-            ?.getOrElse { null }?.totalProgression
+        val remotePosition = readerRepository?.getRemotePosition(bookUuid)?.getOrElse { null }
+        val remoteProgression = remotePosition?.totalProgression
 
         // Library books are "cached" when they have a device copy; never ask the reader
         // cache about them (I6).
@@ -104,6 +104,11 @@ class ObserveBookWithProgressUseCase(
             isEbookCached = isEbookCached,
             isAudiobookCached = isAudiobookCached,
             isReadaloudCached = isReadaloudCached,
+            chapterIndex = localPosition?.chapterIndex,
+            totalChapters = localPosition?.totalChapters,
+            totalDurationMs = localPosition?.totalDurationMs,
+            bookTimeMs = localPosition?.bookTimeMs,
+            remoteObservedAt = remotePosition?.observedAt ?: remotePosition?.updatedAt,
         )
 
         return Ok(
@@ -121,6 +126,11 @@ class ObserveBookWithProgressUseCase(
         isEbookCached: Boolean,
         isAudiobookCached: Boolean,
         isReadaloudCached: Boolean,
+        chapterIndex: Int?,
+        totalChapters: Int?,
+        totalDurationMs: Long?,
+        bookTimeMs: Long?,
+        remoteObservedAt: String?,
     ): BookProgressInfoDomainModel? {
         val localProgression = localPosition?.totalProgression
         val hasLocalProgress = localProgression != null && localProgression > 0.0
@@ -135,6 +145,11 @@ class ObserveBookWithProgressUseCase(
                 isEbookCached = isEbookCached,
                 isAudiobookCached = isAudiobookCached,
                 isReadaloudCached = isReadaloudCached,
+                chapterIndex = chapterIndex,
+                totalChapters = totalChapters,
+                totalDurationMs = totalDurationMs,
+                bookTimeMs = bookTimeMs,
+                remoteObservedAt = remoteObservedAt,
             )
         } else {
             null

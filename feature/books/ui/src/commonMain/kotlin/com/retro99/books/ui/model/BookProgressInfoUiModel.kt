@@ -21,6 +21,13 @@ data class BookProgressInfoUiModel(
      * Whether any media type is cached locally.
      */
     val hasAnyCached: Boolean,
+    val hasConflict: Boolean = localProgression != null && remoteProgression != null &&
+        localProgression != remoteProgression,
+    val chapterIndex: Int? = null,
+    val totalChapters: Int? = null,
+    val totalDurationMs: Long? = null,
+    val bookTimeMs: Long? = null,
+    val remoteObservedAt: String? = null,
 ) {
     /**
      * Returns the display progress (prefers local) as a percentage (0-100).
@@ -43,12 +50,6 @@ data class BookProgressInfoUiModel(
     /**
      * Returns true if there's a conflict between local and remote progress.
      */
-    val hasConflict: Boolean
-        get() {
-            val local = localProgression ?: return false
-            val remote = remoteProgression ?: return false
-            return kotlin.math.abs(local - remote) > 0.01
-        }
 
     /**
      * Returns the progress to display (prefers local if available).
@@ -63,6 +64,11 @@ fun BookProgressInfoDomainModel.toUiModel(): BookProgressInfoUiModel {
         localProgression = localProgression,
         remoteProgression = remoteProgression,
         hasAnyCached = hasAnyCached,
+        hasConflict = hasConflict,
+        chapterIndex = chapterIndex,
+        totalChapters = totalChapters,
+        totalDurationMs = totalDurationMs,
+        bookTimeMs = bookTimeMs,
+        remoteObservedAt = remoteObservedAt,
     )
 }
-

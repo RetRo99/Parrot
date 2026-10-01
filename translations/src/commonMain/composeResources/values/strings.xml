@@ -1198,4 +1198,84 @@
     <string name="positions_audio_position" tools:ignore="MissingTranslation">%1$s of %2$s</string>
     <string name="positions_duration" tools:ignore="MissingTranslation">%1$d h %2$d min</string>
     <string name="settings_update_linked_copies" tools:ignore="MissingTranslation">Update my other servers as I read</string>
+    <string name="book_detail_read_along" tools:ignore="MissingTranslation">Read-along</string>
+    <string name="book_detail_audiobook" tools:ignore="MissingTranslation">Audiobook</string>
+    <string name="book_detail_preparing_format" tools:ignore="MissingTranslation">%1$s · preparing</string>
+    <string name="book_detail_series_number" tools:ignore="MissingTranslation">%1$s · Book %2$s ›</string>
+    <string name="book_detail_size_bytes" tools:ignore="MissingTranslation">%1$d B</string>
+    <string name="book_detail_size_kb" tools:ignore="MissingTranslation">%1$d KB</string>
+    <string name="book_detail_size_mb" tools:ignore="MissingTranslation">%1$d MB</string>
+    <string name="book_detail_chapter_progress" tools:ignore="MissingTranslation">%1$d%% · Chapter %2$d of %3$d</string>
+    <string name="book_detail_progress_announcement" tools:ignore="MissingTranslation">%1$d percent</string>
+    <string name="book_detail_percent" tools:ignore="MissingTranslation">%1$d%%</string>
+    <string name="book_detail_remote_further" tools:ignore="MissingTranslation">Another device is further: %1$d%%.</string>
+    <string name="book_detail_remote_position" tools:ignore="MissingTranslation">Another device is at %1$d%%.</string>
+    <string name="book_detail_go_remote" tools:ignore="MissingTranslation">Go to %1$d%%</string>
+    <string name="book_detail_use_remote" tools:ignore="MissingTranslation">Use %1$d%%</string>
+    <string name="book_detail_keep_local" tools:ignore="MissingTranslation">Keep this device’s position</string>
+    <string name="book_detail_time_left" tools:ignore="MissingTranslation">about %1$s left</string>
+    <string name="book_detail_continue_reading" tools:ignore="MissingTranslation">Continue reading</string>
+    <string name="book_detail_continue_listening" tools:ignore="MissingTranslation">Continue listening</string>
+    <string name="book_detail_download_read" tools:ignore="MissingTranslation">Download to read</string>
+    <string name="book_detail_download_listen" tools:ignore="MissingTranslation">Download to listen</string>
+    <string name="book_detail_action_size" tools:ignore="MissingTranslation">%1$s · %2$s</string>
+    <string name="book_detail_upload_wait" tools:ignore="MissingTranslation">Available after upload finishes</string>
+    <string name="book_detail_downloading" tools:ignore="MissingTranslation">Downloading… %1$d%%</string>
+    <string name="book_detail_downloading_unknown" tools:ignore="MissingTranslation">Downloading…</string>
+    <string name="book_detail_download_caption" tools:ignore="MissingTranslation">Downloads the eBook. Works offline after download.</string>
+    <string name="book_detail_download_readalong_caption" tools:ignore="MissingTranslation">Includes the read-along narration. Works offline after download.</string>
+    <string name="book_detail_download_audio_caption" tools:ignore="MissingTranslation">Downloads the audiobook. Works offline after download.</string>
+    <string name="book_detail_download_continues" tools:ignore="MissingTranslation">You can leave this screen — the download continues.</string>
+    <string name="book_detail_about" tools:ignore="MissingTranslation">ABOUT</string>
+    <string name="book_detail_read_more" tools:ignore="MissingTranslation">Read more</string>
+    <string name="book_detail_length" tools:ignore="MissingTranslation">Length</string>
+    <string name="book_detail_narrator" tools:ignore="MissingTranslation">Narrator</string>
+    <string name="book_detail_language" tools:ignore="MissingTranslation">Language</string>
+    <string name="book_detail_added" tools:ignore="MissingTranslation">Added</string>
+    <string name="book_detail_last_opened" tools:ignore="MissingTranslation">Last opened</string>
+    <string name="book_detail_chapters" tools:ignore="MissingTranslation">%1$d chapters</string>
+    <string name="book_detail_duration_hours" tools:ignore="MissingTranslation">%1$d h %2$d min</string>
+    <string name="book_detail_duration_minutes" tools:ignore="MissingTranslation">%1$d min</string>
+    <string name="book_detail_fact_pair" tools:ignore="MissingTranslation">%1$s · %2$s</string>
+    <string name="book_detail_phone" tools:ignore="MissingTranslation">On this phone</string>
+    <string name="book_detail_phone_only" tools:ignore="MissingTranslation">Only on this phone</string>
+    <string name="book_detail_phone_missing" tools:ignore="MissingTranslation">Not on this phone</string>
+    <string name="book_detail_offline_hint" tools:ignore="MissingTranslation">Download to read offline</string>
+    <string name="book_detail_formats" tools:ignore="MissingTranslation">%1$d formats · %2$s</string>
+    <string name="book_detail_remove" tools:ignore="MissingTranslation">Remove</string>
+    <string name="book_detail_manage" tools:ignore="MissingTranslation">Manage downloads &amp; copies ›</string>
+    <string name="book_detail_manage_title" tools:ignore="MissingTranslation">Manage this book</string>
+    <string name="book_detail_cloud" tools:ignore="MissingTranslation">Parrot Cloud</string>
+    <string name="book_detail_cloud_available" tools:ignore="MissingTranslation">✓ On all your devices</string>
+    <string name="book_detail_only_phone" tools:ignore="MissingTranslation">Only on this phone</string>
+    <string name="book_detail_also_on" tools:ignore="MissingTranslation">Also on %1$s</string>
+    <string name="book_detail_open" tools:ignore="MissingTranslation">Open</string>
+    <string name="book_detail_preparation" tools:ignore="MissingTranslation">Narration is being prepared on the server.</string>
+    <string name="book_detail_preparation_stage" tools:ignore="MissingTranslation">Narration is being prepared on the server (%1$s · %2$d%%).</string>
+    <string name="book_detail_transferred_bytes" tools:ignore="MissingTranslation">%1$s of %2$s</string>
+    <string name="book_detail_replace" tools:ignore="MissingTranslation">Replace…</string>
+    <string name="book_detail_elsewhere" tools:ignore="MissingTranslation">SAME BOOK ELSEWHERE</string>
+    <string name="book_detail_downloaded" tools:ignore="MissingTranslation">Downloaded</string>
+    <string name="book_detail_not_downloaded" tools:ignore="MissingTranslation">Not downloaded</string>
+    <string name="book_detail_link_copy" tools:ignore="MissingTranslation">Link another copy…</string>
+    <string name="book_detail_cloud_delete_caption" tools:ignore="MissingTranslation">Deletes the cloud copy for all your devices. Asks first.</string>
+    <string name="book_detail_device_delete_caption" tools:ignore="MissingTranslation">Can’t be undone.</string>
+    <string name="book_detail_load_error" tools:ignore="MissingTranslation">Can’t load this book</string>
+    <string name="book_detail_load_reason" tools:ignore="MissingTranslation">The book couldn’t be loaded. Check your connection, or whether you’re still signed in to its server.</string>
+    <string name="book_detail_retry" tools:ignore="MissingTranslation">Try again</string>
+    <string name="book_detail_servers" tools:ignore="MissingTranslation">Servers</string>
+    <string name="book_detail_conflict_error" tools:ignore="MissingTranslation">Couldn’t update the reading position.</string>
+    <string name="book_detail_unlink_never" tools:ignore="MissingTranslation">We won’t suggest linking these again.</string>
+    <string name="book_detail_format_count" tools:ignore="MissingTranslation">%1$d formats</string>
+    <string name="book_detail_loading" tools:ignore="MissingTranslation">Loading book…</string>
+    <string name="book_detail_download_failed" tools:ignore="MissingTranslation">Couldn’t download this format.</string>
+    <string name="book_detail_remove_download_label" tools:ignore="MissingTranslation">Remove downloaded content from this phone</string>
+    <string name="book_detail_remove_format_label" tools:ignore="MissingTranslation">Remove the %1$s download from this phone</string>
+    <string name="book_detail_chapter_announcement" tools:ignore="MissingTranslation">%1$d percent, chapter %2$d of %3$d</string>
+    <plurals name="book_detail_format_quantity" tools:ignore="MissingTranslation">
+        <item quantity="one">%1$d format</item>
+        <item quantity="other">%1$d formats</item>
+    </plurals>
+    <string name="book_detail_today" tools:ignore="MissingTranslation">Today</string>
+    <string name="book_detail_yesterday" tools:ignore="MissingTranslation">Yesterday</string>
 </resources>

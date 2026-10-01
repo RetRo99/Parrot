@@ -45,4 +45,7 @@ data class BookDetailViewState(
     val unlinkConfirmationCopy: LinkedCopyUiModel? = null,
     /** Another linked copy was read more recently: offered before opening (§1.3). */
     val linkedResumeOffer: LinkedResumeOffer? = null,
+    val comparingLinkedPositions: Boolean = false,
+    val pendingListenMode: Boolean = false,
+    val parrotActive: Boolean = false,
 )

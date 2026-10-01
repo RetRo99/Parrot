@@ -87,8 +87,7 @@ fun LinkedResumeDialog(
         stringResource(StringRes.resume_linked_body, source, time)
     }
     AlertDialog(
-        // Dismissing without an answer would leave the open undecided.
-        onDismissRequest = {},
+        onDismissRequest = onStay,
         modifier = modifier,
         title = { Text(text = title, style = MaterialTheme.typography.headlineSmall) },
         text = { Text(text = body, style = MaterialTheme.typography.bodyMedium) },

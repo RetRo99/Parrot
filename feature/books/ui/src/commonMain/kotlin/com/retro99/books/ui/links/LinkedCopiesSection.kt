@@ -28,6 +28,7 @@ import resources.translations.link_open_copy
 import resources.translations.link_same_book_as
 import resources.translations.link_unlink_confirm_message
 import resources.translations.link_unlink_confirm_title
+import resources.translations.book_detail_unlink_never
 
 /**
  * The linking part of a book's detail screen: the other copies it is linked to ("Also in")
@@ -118,7 +119,7 @@ fun UnlinkCopyConfirmationDialog(
                     StringRes.link_unlink_confirm_message,
                     copy.title,
                     copy.home.label(),
-                ),
+                ) + "\n\n" + stringResource(StringRes.book_detail_unlink_never),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 4.dp),
             )

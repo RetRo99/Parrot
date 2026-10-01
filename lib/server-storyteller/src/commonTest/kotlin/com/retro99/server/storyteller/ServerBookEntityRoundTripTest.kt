@@ -100,6 +100,31 @@ class ServerBookEntityRoundTripTest {
         assertEquals("2016-11-22", roundTripped.publicationDate)
     }
 
+    @Test
+    fun `narration preparation and rating survive the cache round trip`() {
+        // Given
+        val api = StorytellerBookApiModel(
+            uuid = "preparing",
+            title = "Book",
+            rating = 4.3f,
+            readaloud = StorytellerReadaloudApiModel(
+                status = "processing",
+                currentStage = "alignment",
+                stageProgress = 0.35,
+            ),
+        )
+        val remote = api.toDomain("server-1", "https://books.example.com")
+        // When
+        val cached = remote.toEntity().toServerBook(null)
+        // Then
+        assertEquals(true, cached.hasReadaloud)
+        assertEquals("processing", cached.readaloudStatus)
+        assertEquals("alignment", cached.readaloudStage)
+        assertEquals(0.35, cached.readaloudStageProgress)
+        assertEquals(4.3f, cached.rating)
+        assertEquals(remote, cached)
+    }
+
     /**
      * The cache queries order relations by name while the API returns its own order, so
      * relation order must not participate in equality or cachedRemoteFlow rewrites the

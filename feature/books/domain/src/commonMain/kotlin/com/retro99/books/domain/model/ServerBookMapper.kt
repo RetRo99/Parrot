@@ -36,7 +36,7 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             createdAt = createdAt,
             updatedAt = null,
             publicationDate = publicationDate,
-            rating = null,
+            rating = rating,
             suffix = null,
             subtitle = null,
             ebookCoverUrl = null,
@@ -100,9 +100,9 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
                 uuid = "$uuid-readaloud",
                 filepath = mediaResources.firstOrNull { it.mediaType == "readaloud" }?.localPath ?: readaloudFilepath,
                 missing = null,
-                status = null,
-                currentStage = null,
-                stageProgress = null,
+                status = readaloudStatus,
+                currentStage = readaloudStage,
+                stageProgress = readaloudStageProgress,
                 queuePosition = null,
                 restartPending = null,
                 createdAt = null,
@@ -116,6 +116,13 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             mediaResources = mediaResources,
             isbn = isbn,
             asin = asin,
+            audioDurationMs = audioDurationMs,
+            lastOpenedAt = lastOpenedAt,
+            mediaSizes = listOfNotNull(
+                ebookFileSize?.let { size -> BookType.EBOOK to size },
+                audiobookFileSize?.let { size -> BookType.AUDIOBOOK to size },
+                readaloudFileSize?.let { size -> BookType.READALOUD to size },
+            ).toMap(),
         )
     }
 }

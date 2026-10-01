@@ -95,6 +95,9 @@ sealed class BookDomainModel {
         override val isbn: String? = null,
         override val asin: String? = null,
         override val linkedCopies: List<LinkedCopy> = emptyList(),
+        val audioDurationMs: Long? = null,
+        val lastOpenedAt: String? = null,
+        val mediaSizes: Map<BookType, Long> = emptyMap(),
     ) : BookDomainModel()
 
     /** Your library: files on this device and/or in Parrot Cloud. [uuid] is the book ID. */

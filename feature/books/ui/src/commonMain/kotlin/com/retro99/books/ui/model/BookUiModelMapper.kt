@@ -32,6 +32,14 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
         mediaResources = mediaResources.map { resource -> resource.toUiModel() },
         home = home,
         linkedCopies = linkedCopies.map { copy -> copy.toUiModel() },
+        narrators = narrators.map { narrator -> narrator.name },
+        language = language,
+        audioDurationMs = audioDurationMs,
+        lastOpened = lastOpenedAt,
+        mediaSizes = mediaSizes,
+        narrationStatus = readaloud?.status,
+        narrationStage = readaloud?.currentStage,
+        narrationProgress = readaloud?.stageProgress,
     )
     is BookDomainModel.LibraryBook -> BookUiModel.LibraryBook(
         uuid = uuid,

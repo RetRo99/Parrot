@@ -27,6 +27,11 @@ data class BookProgressInfoDomainModel(
      * Whether the readaloud is cached locally.
      */
     val isReadaloudCached: Boolean,
+    val chapterIndex: Int? = null,
+    val totalChapters: Int? = null,
+    val totalDurationMs: Long? = null,
+    val bookTimeMs: Long? = null,
+    val remoteObservedAt: String? = null,
 ) {
     /**
      * Returns true if any media type is cached.

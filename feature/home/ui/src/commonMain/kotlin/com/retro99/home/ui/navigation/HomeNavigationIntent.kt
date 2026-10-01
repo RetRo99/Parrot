@@ -40,6 +40,7 @@ sealed interface HomeNavigationIntent : BaseIntent {
         val bookTitle: String? = null,
         val continueReadingEntryPoint: String? = null,
         val linkedResumeResolved: Boolean = false,
+        val listenMode: Boolean = false,
     ) : HomeNavigationIntent
 
     /**

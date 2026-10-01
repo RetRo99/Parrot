@@ -43,6 +43,7 @@ data class PlaybackConflictDialogState(
     val targetBookType: BookType,
     val continueReadingOpenOperation: ContinueReadingOpenOperation? = null,
     val linkedResumeResolved: Boolean = false,
+    val listenMode: Boolean = false,
 )
 
 /**

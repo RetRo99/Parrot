@@ -2,6 +2,7 @@ package com.retro99.base
 
 import java.text.DateFormat
 import java.util.Date
+import java.util.Calendar
 
 /**
  * Android implementation of formatCurrentTime.
@@ -13,3 +14,10 @@ actual fun formatCurrentTime(): String {
     return timeFormat.format(Date())
 }
 
+actual fun formatMediumDate(year: Int, month: Int, day: Int): String {
+    val calendar = Calendar.getInstance().apply {
+        clear()
+        set(year, month - 1, day, 12, 0, 0)
+    }
+    return DateFormat.getDateInstance(DateFormat.MEDIUM).format(calendar.time)
+}

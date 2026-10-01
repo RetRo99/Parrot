@@ -147,6 +147,7 @@ fun ReaderScreen(
     readerOpenEntryPoint: String? = null,
     readerOpenCorrelationId: String? = null,
     linkedResumeResolved: Boolean = false,
+    listenMode: Boolean = false,
     onComparePositions: () -> Unit = {},
     onClose: (ReaderCloseSource) -> Unit,
     onSettingsClick: () -> Unit,
@@ -177,6 +178,15 @@ fun ReaderScreen(
         modifier = modifier,
         viewModel = viewModel,
     ) { viewState, intentDispatcher ->
+        var listenStarted by remember(bookUuid, listenMode) { mutableStateOf(false) }
+        LaunchedEffect(listenMode, viewState.isAudioPlayerReady,
+            viewState.linkedResumeOffer, viewState.positionConflict) {
+            if (listenMode && !listenStarted && viewState.isAudioPlayerReady &&
+                viewState.linkedResumeOffer == null && viewState.positionConflict == null) {
+                listenStarted = true
+                intentDispatcher(ReaderIntent.StartListening(ListenSource.NARRATION))
+            }
+        }
         ReaderScreenContent(
             bookUuid = bookUuid,
             viewState = viewState,

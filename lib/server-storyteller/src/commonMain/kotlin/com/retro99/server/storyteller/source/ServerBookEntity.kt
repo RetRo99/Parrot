@@ -85,7 +85,7 @@ internal fun ServerBook.toEntity(): BookEntity {
         language = language,
         publicationDate = publicationDate,
         description = description,
-        rating = null,
+        rating = rating,
         suffix = null,
         createdAt = createdAt,
         updatedAt = null,
@@ -131,7 +131,9 @@ internal fun ServerBook.toEntity(): BookEntity {
         coverUrl = coverUrl,
         ebook = if (hasEbook) SimpleMediaFileEntity(uuid, "ebook", ebookFilepath, ebookFileSize) else null,
         audiobook = if (hasAudiobook) SimpleMediaFileEntity(uuid, "audiobook", audiobookFilepath, audiobookFileSize) else null,
-        readaloud = if (hasReadaloud) SimpleReadaloudEntity(uuid, readaloudFilepath) else null,
+        readaloud = if (hasReadaloud) SimpleReadaloudEntity(
+            uuid, readaloudFilepath, readaloudStatus, readaloudStage, readaloudStageProgress,
+        ) else null,
         isbn = isbn,
         asin = asin,
         audioDurationMs = audioDurationMs,
@@ -154,12 +156,12 @@ internal data class SimpleMediaFileEntity(
 internal data class SimpleReadaloudEntity(
     override val bookUuid: String,
     override val filepath: String? = null,
+    override val status: String? = null,
+    override val currentStage: String? = null,
+    override val stageProgress: Double? = null,
 ) : ReadaloudEntity {
     override val uuid: String = "$bookUuid-readaloud"
     override val missing: Int? = null
-    override val status: String? = null
-    override val currentStage: String? = null
-    override val stageProgress: Double? = null
     override val queuePosition: Int? = null
     override val restartPending: Boolean? = null
     override val createdAt: String? = null
@@ -212,5 +214,9 @@ internal fun BookEntity.toServerBook(baseUrl: String?): ServerBook {
         asin = asin,
         audioDurationMs = audioDurationMs,
         audioTrackDurationsMs = audioTrackDurationsMs,
+        rating = rating,
+        readaloudStatus = readaloud?.status,
+        readaloudStage = readaloud?.currentStage,
+        readaloudStageProgress = readaloud?.stageProgress,
     )
 }

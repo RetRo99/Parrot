@@ -421,10 +421,12 @@ fun HomeNavigation(
 
                     entry<HomeDestination.BookDetail> { destination ->
                         BookDetailScreen(
+                            bottomNavigationHeight = paddingValues.calculateBottomPadding(),
                             serverId = destination.serverId,
                             bookUuid = destination.bookUuid,
                             onNavigateToReader = {
-                                    serverId, bookUuid, bookType, bookTitle, linkedResumeResolved ->
+                                    serverId, bookUuid, bookType, bookTitle,
+                                    linkedResumeResolved, listenMode ->
                                 intentDispatcher(
                                     HomeNavigationIntent.RequestOpenReader(
                                         serverId = serverId,
@@ -432,6 +434,7 @@ fun HomeNavigation(
                                         bookType = bookType,
                                         bookTitle = bookTitle,
                                         linkedResumeResolved = linkedResumeResolved,
+                                        listenMode = listenMode,
                                     )
                                 )
                             },
@@ -476,6 +479,11 @@ fun HomeNavigation(
                                     ),
                                 )
                             },
+                            onNavigateToServers = {
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(
+                                    HomeDestination.ServerManagement,
+                                ))
+                            },
                         )
                     }
 
@@ -517,6 +525,7 @@ fun HomeNavigation(
                                 readerOpenEntryPoint = destination.readerOpenEntryPoint,
                                 readerOpenCorrelationId = destination.readerOpenCorrelationId,
                                 linkedResumeResolved = destination.linkedResumeResolved,
+                                listenMode = destination.listenMode,
                                 onComparePositions = {
                                     intentDispatcher(
                                         HomeNavigationIntent.NavigateTo(

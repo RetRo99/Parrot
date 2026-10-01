@@ -37,6 +37,7 @@ import com.retro99.reader.domain.usecase.FindLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.ResolveLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase
 import com.retro99.server.api.ParrotCloudLibraryState
+import com.retro99.server.api.ServerRegistry
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -60,6 +61,7 @@ class BookDetailViewModel(
         bookType: BookType,
         bookTitle: String,
         linkedResumeResolved: Boolean,
+        listenMode: Boolean,
     ) -> Unit,
     @InjectedParam private val onNavigateToSeriesDetail: (seriesUuid: String, seriesName: String) -> Unit,
     @InjectedParam private val onBack: () -> Unit,
@@ -91,12 +93,14 @@ class BookDetailViewModel(
     @Provided private val unlinkCopyUseCase: UnlinkCopyUseCase,
     @Provided private val findLinkedResumeUseCase: FindLinkedResumeUseCase,
     @Provided private val resolveLinkedResumeUseCase: ResolveLinkedResumeUseCase,
+    @Provided private val serverRegistry: ServerRegistry,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
     BookDetailViewState(),
 ) {
     private var transferObservationJob: Job? = null
     private var observedTransferKey: String? = null
     private var parrotActive = false
+    private var bookObservationJob: Job? = null
 
     init {
         analytics.logEvent(
@@ -114,6 +118,10 @@ class BookDetailViewModel(
 
     override fun onIntent(intent: BookDetailIntent) {
         when (intent) {
+            BookDetailIntent.OnReturnedToDetail -> {
+                updateState { state -> state.returnFromPositionComparison() }
+            }
+            is BookDetailIntent.OnListenClicked -> handleReadClick(intent.bookType, listenMode = true)
             BookDetailIntent.OnBackClicked -> {
                 onBack()
             }
@@ -256,7 +264,7 @@ class BookDetailViewModel(
             BookDetailIntent.OnLinkedResumeCompareClicked -> {
                 // Comparing isn't an answer: nothing is recorded, and the book doesn't open.
                 updateState { state ->
-                    state.copy(linkedResumeOffer = null, pendingOpenBookType = null)
+                    state.beginPositionComparison()
                 }
                 onNavigateToPositions(serverId, bookUuid)
             }
@@ -281,10 +289,21 @@ class BookDetailViewModel(
     }
 
     private fun observeLinkedCopies() {
-        observeLinkedCopiesUseCase(serverId, bookUuid)
+        combine(
+            observeLinkedCopiesUseCase(serverId, bookUuid),
+            serverRegistry.observeAllServers(),
+        ) { copies, servers ->
+            copies.map { copy ->
+                val server = servers.firstOrNull { candidate -> candidate.id == copy.serverId }
+                copy.toUiModel().copy(serverLabel = server?.baseUrl
+                    ?.substringAfter("://")?.substringBefore('/')?.takeIf { host ->
+                        host.isNotBlank()
+                    })
+            }
+        }
             .onEach { copies ->
                 updateState { state ->
-                    state.copy(linkedCopies = copies.map { copy -> copy.toUiModel() })
+                    state.copy(linkedCopies = copies)
                 }
             }
             .launchIn(viewModelScope)
@@ -382,7 +401,8 @@ class BookDetailViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun handleReadClick(bookType: BookType) {
+    private fun handleReadClick(bookType: BookType, listenMode: Boolean = false) {
+        updateState { state -> state.copy(pendingListenMode = listenMode) }
         analytics.logEvent(
             BookAnalyticsEvent.ReadButtonClicked(
                 bookUuid = bookUuid,
@@ -448,7 +468,8 @@ class BookDetailViewModel(
      * This replaces the separate fetchBook() and observeProgressChanges() methods.
      */
     private fun observeBookWithProgress() {
-        observeBookWithProgressUseCase(serverId, bookUuid)
+        bookObservationJob?.cancel()
+        bookObservationJob = observeBookWithProgressUseCase(serverId, bookUuid)
             .onStart {
                 updateState { it.copy(isLoading = true, error = null) }
             }
@@ -483,7 +504,9 @@ class BookDetailViewModel(
         parrotCloudLibraryState.observeIsActive()
             .onEach { isActive ->
                 parrotActive = isActive
-                updateState { current -> current.withLibraryActions() }
+                updateState { current ->
+                    current.copy(parrotActive = isActive).withLibraryActions()
+                }
             }
             .launchIn(viewModelScope)
     }
@@ -816,7 +839,10 @@ class BookDetailViewModel(
         bookTitle: String,
         linkedResumeResolved: Boolean = false,
     ) {
-        onNavigateToReader(serverId, bookUuid, bookType, bookTitle, linkedResumeResolved)
+        onNavigateToReader(
+            serverId, bookUuid, bookType, bookTitle, linkedResumeResolved,
+            viewState.value.pendingListenMode,
+        )
     }
 
     /**

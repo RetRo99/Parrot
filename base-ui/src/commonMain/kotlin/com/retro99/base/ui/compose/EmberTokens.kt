@@ -48,6 +48,8 @@ data class EmberColors(
     val welcomeCoverGreen: Color,
     val welcomeCoverRed: Color,
     val welcomeChip: Color,
+    /** Fixed book-details hero; never derived from cover art. */
+    val bookHero: Color = bg,
 )
 
 /** Per-mode style values that are not colors. */
@@ -66,6 +68,8 @@ data class EmberStyle(
     val coverElevation: Dp,
     /** False on e-ink: no transitions and no ripples. */
     val animations: Boolean,
+    val detailBorder: Dp = 1.dp,
+    val detailProgressHeight: Dp = 6.dp,
 ) {
     val isEink: Boolean get() = progressOutlined
 }
@@ -100,6 +104,7 @@ val EmberNightColors = EmberColors(
     welcomeCoverGreen = Color(0xFF2B4A3C),
     welcomeCoverRed = Color(0xFF7A3434),
     welcomeChip = Color(0xFF3A2615),
+    bookHero = Color(0xFF2E2016),
 )
 
 val EmberDayColors = EmberColors(
@@ -132,6 +137,7 @@ val EmberDayColors = EmberColors(
     welcomeCoverGreen = Color(0xFF2B4A3C),
     welcomeCoverRed = Color(0xFF8E3B2E),
     welcomeChip = Color.White,
+    bookHero = Color(0xFFEFDFCB),
 )
 
 val EmberEinkColors = EmberColors(
@@ -191,6 +197,8 @@ val EmberEinkStyle = EmberStyle(
     progressOutlined = true,
     coverElevation = 0.dp,
     animations = false,
+    detailBorder = 2.dp,
+    detailProgressHeight = 10.dp,
 )
 
 fun EmberMode.colors(): EmberColors = when (this) {

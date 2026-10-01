@@ -84,6 +84,10 @@ data class ServerBook(
      * reports them (Audiobookshelf). Null when any length is unknown.
      */
     val audioTrackDurationsMs: List<Long>? = null,
+    val rating: Float? = null,
+    val readaloudStatus: String? = null,
+    val readaloudStage: String? = null,
+    val readaloudStageProgress: Double? = null,
 )
 
 enum class RemoteFileAvailability {

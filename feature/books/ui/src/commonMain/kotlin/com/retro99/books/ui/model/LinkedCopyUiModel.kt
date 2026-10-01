@@ -18,6 +18,7 @@ data class LinkedCopyUiModel(
     val isDownloaded: Boolean,
     /** Text a library search matches against. */
     val searchTerms: List<String> = emptyList(),
+    val serverLabel: String? = null,
 )
 
 fun LinkedCopy.toUiModel() = LinkedCopyUiModel(

@@ -68,6 +68,12 @@ data class StorytellerBookApiModel(
 data class StorytellerReadaloudApiModel(
     @SerialName("filepath")
     val filepath: String? = null,
+    @SerialName("status")
+    val status: String? = null,
+    @SerialName("currentStage")
+    val currentStage: String? = null,
+    @SerialName("stageProgress")
+    val stageProgress: Double? = null,
 )
 
 @Serializable
@@ -139,7 +145,7 @@ fun StorytellerBookApiModel.toDomain(
         tags = tags.map { it.name }.sorted(),
         hasEbook = ebook?.filepath != null,
         hasAudiobook = hasAudiobook,
-        hasReadaloud = readaloud?.filepath != null,
+        hasReadaloud = readaloud != null,
         ebookFilepath = ebook?.filepath?.let { "/api/v2/books/$uuid/files?format=ebook" },
         // Keep the path consistent with hasAudiobook: a missing size means the book is
         // treated as having no audiobook, so it must not carry an audiobook path either.
@@ -157,6 +163,9 @@ fun StorytellerBookApiModel.toDomain(
         isLocal = false,
         serverType = ServerType.Storyteller,
         language = language?.takeIf { value -> value.isNotBlank() },
+        rating = rating,
+        readaloudStatus = readaloud?.status,
+        readaloudStage = readaloud?.currentStage,
+        readaloudStageProgress = readaloud?.stageProgress,
     )
 }
-
