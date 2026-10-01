@@ -10,8 +10,7 @@ import kotlin.test.assertTrue
 
 class OneBookIdMigrationTest {
 
-    // The platform drivers recreate the database on any schema change, so only the
-    // migration from the previous schema (27) is exercised here.
+    // Version 27 resets on devices; retain this historical migration regression test.
     @Test
     fun `migrating from 27 produces the fresh schema`() {
         listOf(27L to "v27_schema.sql").forEach { (version, fixture) ->
@@ -143,36 +142,4 @@ class OneBookIdMigrationTest {
             parameters = 0,
         ).value
 
-    private fun schemaOf(driver: SqlDriver): Map<String, List<String>> {
-        val tables = driver.executeQuery(
-            identifier = null,
-            sql = "SELECT name FROM sqlite_master WHERE type = 'table' " +
-                "AND name NOT LIKE 'sqlite_%' ORDER BY name",
-            mapper = { cursor ->
-                val names = mutableListOf<String>()
-                while (cursor.next().value) names += cursor.getString(0).orEmpty()
-                QueryResult.Value(names)
-            },
-            parameters = 0,
-        ).value
-        return tables.associateWith { table ->
-            driver.executeQuery(
-                identifier = null,
-                sql = "SELECT name, type, \"notnull\", pk FROM pragma_table_info('$table')",
-                mapper = { cursor ->
-                    val columns = mutableListOf<String>()
-                    while (cursor.next().value) {
-                        columns += listOf(
-                            cursor.getString(0),
-                            cursor.getString(1),
-                            cursor.getLong(2),
-                            cursor.getLong(3),
-                        ).joinToString(":")
-                    }
-                    QueryResult.Value(columns.sorted())
-                },
-                parameters = 0,
-            ).value
-        }
-    }
 }

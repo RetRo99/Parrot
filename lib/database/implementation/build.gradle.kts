@@ -1,3 +1,6 @@
+import app.cash.sqldelight.gradle.SqlDelightTask
+import app.cash.sqldelight.gradle.VerifyMigrationTask
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
@@ -63,7 +66,21 @@ sqldelight {
     databases {
         create("AppDatabase") {
             packageName.set("com.retro99.database.implementation")
-            version = 26
+            schemaOutputDirectory.set(file("src/commonMain/sqldelight/databases"))
+            verifyMigrations.set(true)
         }
+    }
+}
+
+// SQLDelight 2.0.2's interface compiler validates the historical chain from an empty schema.
+// Migrations 1–27 predate the baseline and are not a complete creation history. Keep them for
+// version numbering, but validate supported upgrades using the snapshot verification task.
+afterEvaluate {
+    tasks.named<SqlDelightTask>("generateCommonMainAppDatabaseInterface") {
+        verifyMigrations.set(false)
+    }
+    tasks.named<VerifyMigrationTask>("verifyCommonMainAppDatabaseMigration") {
+        // The plugin discovers snapshots but omits them from its default task input patterns.
+        include("**/*.db")
     }
 }

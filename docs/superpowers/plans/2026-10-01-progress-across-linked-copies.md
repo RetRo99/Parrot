@@ -737,11 +737,8 @@ position.
   app. The "different place" threshold (§1.3) avoids ping-pong prompts caused by rounding.
 - **Privacy:** anchors are short excerpts of the user's own book, stored only on the device and
   never sent anywhere.
-- **Database wipe on upgrade:** until the real-migrations plan
-  (`2026-10-01-real-database-migrations.md`) lands, the app deletes the local database whenever
-  the schema version changes (`PlatformDatabaseModule.android.kt` and `.ios.kt`). So this
-  project's migrations won't run on a device before then. Write them and their tests anyway, and
-  don't change the wipe behaviour in this project.
+- **Database upgrades:** migrations run on devices; `verifyMigrations` and `MigrationChainTest`
+  must pass. Version 28 is the immutable baseline; older databases and downgrades still reset.
 - **Later, not now:**
   - server-side transcripts, such as Storyteller forced-alignment assets, for audiobooks without
     a read-aloud,
