@@ -19,14 +19,31 @@ import org.koin.core.annotation.Provided
  * this device, loads their text and SMIL timing through `lib/epub`, and runs the translator.
  * Results are cached per (source copy, source observation time, target copy).
  */
-@Factory
+/** Translates a position in one linked copy into another (§1.5). */
+fun interface PositionTranslation {
+    suspend fun translate(
+        source: LinkedCopy,
+        position: PositionDomainModel,
+        target: LinkedCopy,
+        others: List<LinkedCopy>,
+    ): TranslatedPosition?
+}
+
+@Factory(binds = [PositionTranslation::class])
 class TranslatePositionUseCase(
     private val fileLocator: CopyFileLocator,
     private val contentCache: CopyContentCache,
     private val translationCache: TranslationCache,
     @Provided private val positionDatabase: PositionDatabase,
-) {
+) : PositionTranslation {
     private val translator = CopyPositionTranslator()
+
+    override suspend fun translate(
+        source: LinkedCopy,
+        position: PositionDomainModel,
+        target: LinkedCopy,
+        others: List<LinkedCopy>,
+    ): TranslatedPosition? = invoke(source, position, target, others)
 
     suspend operator fun invoke(
         source: LinkedCopy,

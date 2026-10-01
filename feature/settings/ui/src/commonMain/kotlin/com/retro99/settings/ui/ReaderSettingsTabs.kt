@@ -124,6 +124,7 @@ import resources.translations.settings_text_align_start
 import resources.translations.settings_tts_enabled
 import resources.translations.settings_underline_color
 import kotlin.math.roundToInt
+import resources.translations.settings_update_linked_copies
 
 private val TabPadding = 24.dp
 
@@ -524,6 +525,14 @@ internal fun ProgressTab(
             subtitle = stringResource(StringRes.settings_show_reading_time_description),
             checked = viewState.showReadingTime,
             onCheckedChange = { intentDispatcher(SettingsIntent.OnShowReadingTimeChanged(it)) },
+        )
+        SwitchRow(
+            title = stringResource(StringRes.settings_update_linked_copies),
+            subtitle = null,
+            checked = viewState.updateLinkedCopies,
+            onCheckedChange = { enabled ->
+                intentDispatcher(SettingsIntent.OnUpdateLinkedCopiesChanged(enabled))
+            },
         )
     }
 }

@@ -15,6 +15,7 @@ import com.retro99.reader.domain.usecase.GetCustomReaderFontsUseCase
 import com.retro99.reader.domain.usecase.GetReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.ImportCustomReaderFontUseCase
 import com.retro99.reader.domain.usecase.SaveReaderSettingsUseCase
+import com.retro99.reader.domain.write.LinkedCopyPropagationSetting
 import com.retro99.settings.ui.model.ReaderSettingsUiModel
 import com.retro99.settings.ui.model.toDomainModel
 import com.retro99.settings.ui.model.toUiModel
@@ -37,6 +38,7 @@ class SettingsViewModel(
     @Provided private val getCustomReaderFontsUseCase: GetCustomReaderFontsUseCase,
     @Provided private val importCustomReaderFontUseCase: ImportCustomReaderFontUseCase,
     @Provided private val analytics: Analytics,
+    @Provided private val linkedCopyPropagationSetting: LinkedCopyPropagationSetting,
 ) : BaseViewModel<SettingsViewState, SettingsIntent>(SettingsViewState()) {
 
     private val saveMutex = Mutex()
@@ -48,6 +50,9 @@ class SettingsViewModel(
 
     init {
         observeReaderSettings()
+        linkedCopyPropagationSetting.observeEnabled()
+            .onEach { enabled -> updateState { state -> state.copy(updateLinkedCopies = enabled) } }
+            .launchIn(viewModelScope)
     }
 
     override fun onIntent(intent: SettingsIntent) {
@@ -221,6 +226,11 @@ class SettingsViewModel(
                 intent.showCurrentTime.toString(),
             ) {
                 it.copy(showCurrentTime = intent.showCurrentTime)
+            }
+
+            is SettingsIntent.OnUpdateLinkedCopiesChanged -> {
+                updateState { state -> state.copy(updateLinkedCopies = intent.enabled) }
+                viewModelScope.launch { linkedCopyPropagationSetting.setEnabled(intent.enabled) }
             }
 
             is SettingsIntent.OnShowReadingTimeChanged -> updateReaderSetting(

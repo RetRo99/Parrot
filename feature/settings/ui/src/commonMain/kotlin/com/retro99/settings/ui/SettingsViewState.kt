@@ -13,6 +13,8 @@ import com.retro99.settings.ui.model.ReaderThemeUiModel
 data class SettingsViewState(
     val isLoading: Boolean = false,
     val readerSettings: ReaderSettingsUiModel = ReaderSettingsUiModel(),
+    /** "Update my other servers as I read" (project 3, slice 4). */
+    val updateLinkedCopies: Boolean = true,
     val undoReaderSettings: ReaderSettingsUiModel? = null,
     val undoSettingName: String? = null,
     val undoRequestId: Int = 0,

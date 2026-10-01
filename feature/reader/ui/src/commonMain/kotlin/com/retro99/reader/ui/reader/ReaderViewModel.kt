@@ -34,6 +34,7 @@ import com.retro99.reader.domain.usecase.GetReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.FindLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.InitializeReaderUseCase
 import com.retro99.reader.domain.usecase.ObserveAppliedPositionUseCase
+import com.retro99.reader.domain.usecase.PropagateToLinkedCopiesUseCase
 import com.retro99.reader.domain.usecase.ObserveBookmarksUseCase
 import com.retro99.reader.domain.usecase.ReorderBookmarksUseCase
 import com.retro99.reader.domain.usecase.ResolveLinkedResumeUseCase
@@ -96,6 +97,7 @@ import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
 import org.koin.core.scope.Scope
 import org.koin.mp.KoinPlatform.getKoin
+import kotlin.time.Clock
 import kotlin.time.TimeSource
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -117,6 +119,7 @@ class ReaderViewModel(
     @Provided private val findLinkedResumeUseCase: FindLinkedResumeUseCase,
     @Provided private val resolveLinkedResumeUseCase: ResolveLinkedResumeUseCase,
     @Provided private val observeAppliedPositionUseCase: ObserveAppliedPositionUseCase,
+    @Provided private val propagateToLinkedCopiesUseCase: PropagateToLinkedCopiesUseCase,
     @Provided private val getReaderSettingsUseCase: GetReaderSettingsUseCase,
     @Provided private val getCustomReaderFontsUseCase: GetCustomReaderFontsUseCase,
     @Provided private val saveReaderSettingsUseCase: SaveReaderSettingsUseCase,
@@ -2284,7 +2287,7 @@ class ReaderViewModel(
         viewModelScope.launch(NonCancellable) {
             // Persist the final in-memory locator (and audio offset when available) after any
             // in-flight page checkpoint. The close navigation itself remains non-blocking.
-            saveCurrentPositionForClose()
+            val finalPosition = saveCurrentPositionForClose()
             routineSyncScheduler.close()
             cancelSleepTimer()
 
@@ -2323,6 +2326,9 @@ class ReaderViewModel(
                     readingSpeedWpm = sessionReadingSpeedWpm,
                 )
             }
+
+            // The reading session ended: move the other linked copies here too (slice 4).
+            finalPosition?.let { position -> propagateToLinkedCopies(position) }
 
             // Update currently reading book if session was long enough (≥ 1 minute)
             if (
@@ -2588,7 +2594,7 @@ class ReaderViewModel(
      */
     private fun saveCurrentAudioPosition() {
         viewModelScope.launch {
-            saveCurrentAudioPositionSync()
+            saveCurrentAudioPositionSync()?.let { position -> propagateToLinkedCopies(position) }
         }
     }
 
@@ -2597,30 +2603,55 @@ class ReaderViewModel(
      * This is called when the reader is closed to ensure the position is saved
      * before navigation occurs.
      */
-    private suspend fun saveCurrentAudioPositionSync() {
+    /** @return the position submitted for saving, or null when nothing was saved. */
+    private suspend fun saveCurrentAudioPositionSync(): PositionDomainModel? {
         val currentState = viewState.value
         val audioPositionMs = currentState.currentAudioPositionMs
         val currentPosition = currentState.currentPosition
 
         if (audioPositionMs <= 0 || currentState.listenSource != ListenSource.NARRATION) {
-            return
+            return null
         }
         if (currentPosition == null) {
-            return
+            return null
         }
 
 
-        positionSaveCoordinator.submit(createPositionDomainModel(currentPosition, audioPositionMs))
+        val position = createPositionDomainModel(currentPosition, audioPositionMs)
+        positionSaveCoordinator.submit(position)
+        return position
     }
 
-    private suspend fun saveCurrentPositionForClose() {
+    /** @return the final position saved, or null when there was none. */
+    private suspend fun saveCurrentPositionForClose(): PositionDomainModel? {
         val currentState = viewState.value
-        val currentPosition = currentState.currentPosition ?: return
+        val currentPosition = currentState.currentPosition ?: return null
         val audioPositionMs = currentState.currentAudioPositionMs
             .takeIf { currentState.isReadAloud && currentState.listenSource == ListenSource.NARRATION && it > 0 }
-        positionSaveCoordinator.saveForClose(
-            createPositionDomainModel(currentPosition, audioPositionMs),
-        )
+        val position = createPositionDomainModel(currentPosition, audioPositionMs)
+        positionSaveCoordinator.saveForClose(position)
+        return position
+    }
+
+    /**
+     * Moves the other linked copies to where reading stopped, when the translation is
+     * reliable (P5). Never blocks or fails the reader.
+     */
+    private suspend fun propagateToLinkedCopies(position: PositionDomainModel) {
+        if (viewState.value.linkedResumeOffer != null || viewState.value.positionConflict != null) {
+            return
+        }
+        try {
+            propagateToLinkedCopiesUseCase(
+                serverId = serverId,
+                bookUuid = bookUuid,
+                position = position.copy(observedAt = Clock.System.now().toString()),
+            )
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            analytics.logException(exception, "ReaderViewModel: Failed to update linked copies")
+        }
     }
 
     override fun onCleared() {
