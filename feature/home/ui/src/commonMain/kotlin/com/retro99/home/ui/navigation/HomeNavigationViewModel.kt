@@ -835,6 +835,7 @@ class HomeNavigationViewModel(
                         targetBookUuid = intent.bookUuid,
                         targetBookType = intent.bookType,
                         continueReadingOpenOperation = continueReadingOpenOperation,
+                        linkedResumeResolved = intent.linkedResumeResolved,
                     )
                 )
             }
@@ -845,6 +846,7 @@ class HomeNavigationViewModel(
                 intent.bookUuid,
                 intent.bookType,
                 continueReadingOpenOperation = continueReadingOpenOperation,
+                linkedResumeResolved = intent.linkedResumeResolved,
             )
         }
     }
@@ -865,6 +867,7 @@ class HomeNavigationViewModel(
             dialogState.targetBookUuid,
             dialogState.targetBookType,
             continueReadingOpenOperation = dialogState.continueReadingOpenOperation,
+            linkedResumeResolved = dialogState.linkedResumeResolved,
         )
     }
 
@@ -884,6 +887,7 @@ class HomeNavigationViewModel(
         bookUuid: String,
         bookType: BookType,
         continueReadingOpenOperation: ContinueReadingOpenOperation? = null,
+        linkedResumeResolved: Boolean = false,
     ) {
         emitNavigationEvent(
             HomeNavigationEvent.NavigateTo(
@@ -893,6 +897,7 @@ class HomeNavigationViewModel(
                     bookType = bookType,
                     readerOpenEntryPoint = continueReadingOpenOperation?.entryPoint?.value,
                     readerOpenCorrelationId = continueReadingOpenOperation?.correlationId,
+                    linkedResumeResolved = linkedResumeResolved,
                 )
             )
         )

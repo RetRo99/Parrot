@@ -68,6 +68,8 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
         val isLastBookOnLaunch: Boolean = false,
         val readerOpenEntryPoint: String? = null,
         val readerOpenCorrelationId: String? = null,
+        /** Book detail already asked about a newer linked copy: the reader asks nothing. */
+        val linkedResumeResolved: Boolean = false,
     ) : HomeDestination {
         @Transient
         override val showBottomBar: Boolean = false

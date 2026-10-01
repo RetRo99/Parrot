@@ -422,13 +422,15 @@ fun HomeNavigation(
                         BookDetailScreen(
                             serverId = destination.serverId,
                             bookUuid = destination.bookUuid,
-                            onNavigateToReader = { serverId, bookUuid, bookType, bookTitle ->
+                            onNavigateToReader = {
+                                    serverId, bookUuid, bookType, bookTitle, linkedResumeResolved ->
                                 intentDispatcher(
                                     HomeNavigationIntent.RequestOpenReader(
                                         serverId = serverId,
                                         bookUuid = bookUuid,
                                         bookType = bookType,
                                         bookTitle = bookTitle,
+                                        linkedResumeResolved = linkedResumeResolved,
                                     )
                                 )
                             },
@@ -495,6 +497,7 @@ fun HomeNavigation(
                                 isLastBookOnLaunch = destination.isLastBookOnLaunch,
                                 readerOpenEntryPoint = destination.readerOpenEntryPoint,
                                 readerOpenCorrelationId = destination.readerOpenCorrelationId,
+                                linkedResumeResolved = destination.linkedResumeResolved,
                                 onClose = { closeSource -> requestBack(closeSource.entryPoint) },
                                 onSettingsClick = {
                                     intentDispatcher(

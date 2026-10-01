@@ -1167,4 +1167,14 @@
     <string name="link_unlink_confirm_message" tools:ignore="MissingTranslation">“%1$s” on %2$s will show as a separate book again.</string>
     <string name="link_source_library" tools:ignore="MissingTranslation">your library</string>
     <string name="link_review_linked_count" tools:ignore="MissingTranslation">Linked %1$d books</string>
+    <string name="resume_linked_title_exact" tools:ignore="MissingTranslation">Continue from %1$s?</string>
+    <string name="resume_linked_title_approximate" tools:ignore="MissingTranslation">Continue from about %1$d%%?</string>
+    <string name="resume_linked_body" tools:ignore="MissingTranslation">You read there in %1$s %2$s.</string>
+    <string name="resume_linked_listened_body" tools:ignore="MissingTranslation">You listened there in %1$s %2$s.</string>
+    <string name="resume_linked_this_place" tools:ignore="MissingTranslation">this place</string>
+    <string name="resume_linked_continue" tools:ignore="MissingTranslation">Continue</string>
+    <string name="resume_linked_stay" tools:ignore="MissingTranslation">Stay here</string>
+    <string name="resume_linked_source_readaloud" tools:ignore="MissingTranslation">%1$s (read-aloud)</string>
+    <string name="resume_linked_source_audiobook" tools:ignore="MissingTranslation">%1$s (audiobook)</string>
+    <string name="resume_linked_source_ebook" tools:ignore="MissingTranslation">%1$s (ebook)</string>
 </resources>

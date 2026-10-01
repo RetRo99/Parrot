@@ -33,6 +33,8 @@ import com.retro99.reader.domain.usecase.DeleteMediaCacheUseCase
 import com.retro99.reader.domain.usecase.DownloadMediaUseCase
 import com.retro99.reader.domain.usecase.ObserveBookWithProgressUseCase
 import com.retro99.reader.domain.usecase.ObserveDownloadStateUseCase
+import com.retro99.reader.domain.usecase.FindLinkedResumeUseCase
+import com.retro99.reader.domain.usecase.ResolveLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase
 import com.retro99.server.api.ParrotCloudLibraryState
 import com.retro99.user.api.UserRegistry
@@ -52,7 +54,13 @@ import org.koin.core.annotation.Provided
 class BookDetailViewModel(
     @InjectedParam private val serverId: String,
     @InjectedParam private val bookUuid: String,
-    @InjectedParam private val onNavigateToReader: (serverId: String, bookUuid: String, bookType: BookType, bookTitle: String) -> Unit,
+    @InjectedParam private val onNavigateToReader: (
+        serverId: String,
+        bookUuid: String,
+        bookType: BookType,
+        bookTitle: String,
+        linkedResumeResolved: Boolean,
+    ) -> Unit,
     @InjectedParam private val onNavigateToSeriesDetail: (seriesUuid: String, seriesName: String) -> Unit,
     @InjectedParam private val onBack: () -> Unit,
     @InjectedParam private val onNavigateToLinkPicker: (serverId: String, bookUuid: String) -> Unit,
@@ -80,6 +88,8 @@ class BookDetailViewModel(
     @Provided private val analytics: Analytics,
     @Provided private val observeLinkedCopiesUseCase: ObserveLinkedCopiesUseCase,
     @Provided private val unlinkCopyUseCase: UnlinkCopyUseCase,
+    @Provided private val findLinkedResumeUseCase: FindLinkedResumeUseCase,
+    @Provided private val resolveLinkedResumeUseCase: ResolveLinkedResumeUseCase,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
     BookDetailViewState(),
 ) {
@@ -238,6 +248,10 @@ class BookDetailViewModel(
                 updateState { it.copy(pendingOpenBookType = null) }
             }
 
+            BookDetailIntent.OnLinkedResumeContinueClicked -> answerLinkedResume(accept = true)
+
+            BookDetailIntent.OnLinkedResumeStayClicked -> answerLinkedResume(accept = false)
+
             BookDetailIntent.OnSameBookAsClicked -> onNavigateToLinkPicker(serverId, bookUuid)
 
             is BookDetailIntent.OnOpenLinkedCopyClicked ->
@@ -373,15 +387,48 @@ class BookDetailViewModel(
         }
 
         if (downloadState is DownloadState.Cached) {
-            // Check for conflict - show dialog for user to resolve first
-            if (currentState.progressInfo?.hasConflict == true) {
-                updateState { it.copy(pendingOpenBookType = bookType) }
-            } else {
-                val bookTitle = currentState.book?.title ?: ""
-                navigateToReader(bookType, bookTitle)
+            viewModelScope.launch {
+                // A newer reading in a linked copy is offered instead of the same-copy
+                // conflict: it already weighs this copy's local and remote positions.
+                val offer = findLinkedResumeUseCase(serverId, bookUuid)
+                val state = viewState.value
+                val hasConflict = state.progressInfo?.hasConflict == true
+                when (bookDetailOpenPrompt(offer, hasConflict)) {
+                    BookDetailOpenPrompt.LinkedResume -> updateState {
+                        it.copy(linkedResumeOffer = offer, pendingOpenBookType = bookType)
+                    }
+                    // Check for conflict - show dialog for user to resolve first
+                    BookDetailOpenPrompt.SameCopyConflict -> {
+                        updateState { it.copy(pendingOpenBookType = bookType) }
+                    }
+                    BookDetailOpenPrompt.None -> navigateToReader(bookType, state.book?.title ?: "")
+                }
             }
         }
         // If not cached, user should click download first
+    }
+
+    /** "Continue" or "Stay here"; either way the reader opens without asking again. */
+    private fun answerLinkedResume(accept: Boolean) {
+        val offer = viewState.value.linkedResumeOffer ?: return
+        val bookType = viewState.value.pendingOpenBookType
+        updateState { it.copy(linkedResumeOffer = null, pendingOpenBookType = null) }
+        viewModelScope.launch {
+            if (accept) {
+                resolveLinkedResumeUseCase.continueFrom(offer).onFailure { error ->
+                    error.log(
+                        analytics,
+                        "BookDetailViewModel: Failed to continue from another copy",
+                    )
+                }
+            } else {
+                resolveLinkedResumeUseCase.stayHere(offer)
+            }
+            bookType?.let { type ->
+                val bookTitle = viewState.value.book?.title ?: ""
+                navigateToReader(type, bookTitle, linkedResumeResolved = true)
+            }
+        }
     }
 
     /**
@@ -753,8 +800,12 @@ class BookDetailViewModel(
                 transfer.state in setOf("pending", "transferring", "verifying", "finalizing")
         }
 
-    private fun navigateToReader(bookType: BookType, bookTitle: String) {
-        onNavigateToReader(serverId, bookUuid, bookType, bookTitle)
+    private fun navigateToReader(
+        bookType: BookType,
+        bookTitle: String,
+        linkedResumeResolved: Boolean = false,
+    ) {
+        onNavigateToReader(serverId, bookUuid, bookType, bookTitle, linkedResumeResolved)
     }
 
     /**

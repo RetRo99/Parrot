@@ -7,6 +7,7 @@ import com.retro99.books.ui.model.LinkedCopyUiModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.DownloadState
 import com.retro99.books.domain.BookFileTransfer
+import com.retro99.reader.domain.linked.LinkedResumeOffer
 
 data class BookDetailViewState(
     val book: BookUiModel? = null,
@@ -42,4 +43,6 @@ data class BookDetailViewState(
     val linkedCopies: List<LinkedCopyUiModel> = emptyList(),
     /** The copy the user is about to unlink with "Not the same book". */
     val unlinkConfirmationCopy: LinkedCopyUiModel? = null,
+    /** Another linked copy was read more recently: offered before opening (§1.3). */
+    val linkedResumeOffer: LinkedResumeOffer? = null,
 )

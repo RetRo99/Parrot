@@ -78,6 +78,8 @@ import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.LoadingScreen
 import com.retro99.base.ui.compose.TooltipIconButton
 import com.retro99.books.domain.model.BookType
+import com.retro99.books.ui.components.LinkedResumeDialog
+import com.retro99.books.ui.components.toUiModel
 import com.retro99.reader.domain.model.ChapterProgressDisplayMode
 import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.domain.model.ProgressBarPosition
@@ -143,6 +145,7 @@ fun ReaderScreen(
     isLastBookOnLaunch: Boolean = false,
     readerOpenEntryPoint: String? = null,
     readerOpenCorrelationId: String? = null,
+    linkedResumeResolved: Boolean = false,
     onClose: (ReaderCloseSource) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -156,6 +159,7 @@ fun ReaderScreen(
             onSettingsClick,
             readerOpenEntryPoint,
             readerOpenCorrelationId,
+            linkedResumeResolved,
         )
     },
 ) {
@@ -266,6 +270,14 @@ private fun ReaderScreenContent(
                     .align(Alignment.TopStart)
                     .statusBarsPadding()
                     .padding(start = 8.dp, top = 4.dp),
+            )
+        }
+
+        viewState.linkedResumeOffer?.let { offer ->
+            LinkedResumeDialog(
+                model = offer.toUiModel(),
+                onContinue = { intentDispatcher(ReaderIntent.ContinueLinkedResume) },
+                onStay = { intentDispatcher(ReaderIntent.StayLinkedResume) },
             )
         }
 

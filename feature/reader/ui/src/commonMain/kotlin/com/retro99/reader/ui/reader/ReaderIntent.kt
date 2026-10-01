@@ -69,6 +69,12 @@ sealed interface ReaderIntent : BaseIntent {
      */
     data object UseRemotePosition : ReaderIntent
 
+    /** "Continue" in the linked resume prompt: jump to the other copy's place. */
+    data object ContinueLinkedResume : ReaderIntent
+
+    /** "Stay here" in the linked resume prompt. */
+    data object StayLinkedResume : ReaderIntent
+
     // Table of Contents intents
 
     /**

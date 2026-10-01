@@ -198,7 +198,10 @@ import resources.translations.general_back
 import resources.translations.general_cancel
 import resources.translations.reader_conflict_use_local
 import resources.translations.reader_conflict_use_remote
+import com.retro99.books.ui.components.LinkedResumeDialog
+import com.retro99.books.ui.components.LinkedResumeUiModel
 import com.retro99.books.ui.components.PositionConflictDialog
+import com.retro99.books.ui.components.toUiModel
 import com.retro99.books.ui.links.LinkedCopiesSection
 import com.retro99.books.ui.links.UnlinkCopyConfirmationDialog
 import com.retro99.books.ui.model.LinkedCopyUiModel
@@ -211,7 +214,13 @@ private const val DescriptionExpandThreshold = 200
 fun BookDetailScreen(
     serverId: String,
     bookUuid: String,
-    onNavigateToReader: (serverId: String, bookUuid: String, bookType: BookType, bookTitle: String) -> Unit,
+    onNavigateToReader: (
+        serverId: String,
+        bookUuid: String,
+        bookType: BookType,
+        bookTitle: String,
+        linkedResumeResolved: Boolean,
+    ) -> Unit,
     onNavigateToSeriesDetail: (seriesUuid: String, seriesName: String) -> Unit,
     onBack: () -> Unit,
     onNavigateToLinkPicker: (serverId: String, bookUuid: String) -> Unit,
@@ -259,6 +268,7 @@ fun BookDetailScreen(
                 replacingBackupTransferId = viewState.replacingBackupTransferId,
                 linkedCopies = viewState.linkedCopies,
                 unlinkConfirmationCopy = viewState.unlinkConfirmationCopy,
+                linkedResume = viewState.linkedResumeOffer?.toUiModel(),
                 intentDispatcher = intentDispatcher,
             )
         }
@@ -291,6 +301,7 @@ private fun BookDetailScreenContent(
     replacingBackupTransferId: String?,
     linkedCopies: List<LinkedCopyUiModel>,
     unlinkConfirmationCopy: LinkedCopyUiModel?,
+    linkedResume: LinkedResumeUiModel?,
     intentDispatcher: IntentDispatcher<BookDetailIntent>,
     modifier: Modifier = Modifier,
 ) {
@@ -378,7 +389,13 @@ private fun BookDetailScreenContent(
         }
     }
 
-    if (pendingOpenBookType != null && progressInfo?.hasConflict == true) {
+    if (linkedResume != null) {
+        LinkedResumeDialog(
+            model = linkedResume,
+            onContinue = { intentDispatcher(BookDetailIntent.OnLinkedResumeContinueClicked) },
+            onStay = { intentDispatcher(BookDetailIntent.OnLinkedResumeStayClicked) },
+        )
+    } else if (pendingOpenBookType != null && progressInfo?.hasConflict == true) {
         PositionConflictDialog(
             localProgressPercent = progressInfo.localProgressPercent ?: 0,
             remoteProgressPercent = progressInfo.remoteProgressPercent ?: 0,

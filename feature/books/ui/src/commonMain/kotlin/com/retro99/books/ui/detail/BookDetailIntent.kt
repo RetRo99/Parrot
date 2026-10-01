@@ -36,6 +36,8 @@ sealed interface BookDetailIntent : BaseIntent {
     data object OnUseRemotePositionClicked : BookDetailIntent
     data object OnConflictResolutionErrorDismissed : BookDetailIntent
     data object OnConflictDialogDismissed : BookDetailIntent
+    data object OnLinkedResumeContinueClicked : BookDetailIntent
+    data object OnLinkedResumeStayClicked : BookDetailIntent
     data object OnSameBookAsClicked : BookDetailIntent
     data class OnOpenLinkedCopyClicked(val copy: LinkedCopyUiModel) : BookDetailIntent
     data class OnNotSameBookClicked(val copy: LinkedCopyUiModel) : BookDetailIntent
