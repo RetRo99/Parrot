@@ -10,7 +10,6 @@ import com.retro99.reader.domain.fakes.FakePositionDatabase
 import com.retro99.reader.domain.fakes.FakeReaderRepository
 import com.retro99.reader.domain.fakes.FakeRepositoryProvider
 import com.retro99.reader.domain.fakes.StoredPosition
-import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.translate.CopyContentCache
 import com.retro99.reader.domain.translate.TranslatedPosition
 import com.retro99.reader.domain.translate.TranslationConfidence

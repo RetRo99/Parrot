@@ -120,17 +120,10 @@ class ProgressSyncEngine(
         if (!hasPendingLocalProgress && stored != null && stored.isSameSnapshotAs(remote)) {
             return ProgressPullOutcome.AppliedToLocal
         }
-        // Guard 2: an echo of this device's own write into a linked copy isn't real reading.
-        val ownWrite = linkedCopyWritesDatabase
-            .getWriteForBook(identity.localBookUuid, notBefore = writeLogCutoff())
-            ?.let { write -> OwnWrite(write.marker, write.totalProgression) }
-        val isEcho = EchoClassifier.isEcho(
-            pulledMarker = remote.marker,
-            pulledTotalProgression = remote.snapshot.totalProgression,
-            ownWrite = ownWrite,
+        val remotePosition = remote.toPositionEntity(
+            identity = identity,
+            origin = pulledOrigin(remote, identity),
         )
-        val origin = if (isEcho) PositionEntity.ORIGIN_LINKED_COPY else PositionEntity.ORIGIN_REMOTE
-        val remotePosition = remote.toPositionEntity(identity = identity, origin = origin)
 
         return if (hasPendingLocalProgress) {
             positionDatabase.upsertRemotePosition(remotePosition)
@@ -199,6 +192,22 @@ class ProgressSyncEngine(
         syncOutboxDatabase.delete(entry.mutationId)
     }
 
+    /** Guard 2: an echo of this device's own write into a linked copy isn't real reading. */
+    private suspend fun pulledOrigin(
+        remote: RemoteProgressSnapshot,
+        identity: ProgressIdentity,
+    ): String {
+        val ownWrite = linkedCopyWritesDatabase
+            .getWriteForBook(identity.localBookUuid, notBefore = writeLogCutoff())
+            ?.let { write -> OwnWrite(write.marker, write.totalProgression) }
+        val isEcho = EchoClassifier.isEcho(
+            pulledMarker = remote.marker,
+            pulledTotalProgression = remote.snapshot.totalProgression,
+            ownWrite = ownWrite,
+        )
+        return if (isEcho) PositionEntity.ORIGIN_LINKED_COPY else PositionEntity.ORIGIN_REMOTE
+    }
+
     /**
      * Parrot Cloud's marker is the revision acknowledged for our write into a linked copy.
      * It's recorded only when the acknowledged mutation carries the values we wrote.
@@ -224,6 +233,18 @@ class ProgressSyncEngine(
         remote: RemoteProgressSnapshot,
         identityResolver: ProgressIdentityResolver,
     ) {
+        val identity = identityResolver.resolve(remote)
+        val stored = positionDatabase.getPositionByBookUuid(identity.localBookUuid)
+        if (stored?.origin == PositionEntity.ORIGIN_LINKED_COPY) {
+            // An automatic write from another linked copy lost to newer reading on that
+            // server (Storyteller's 409, guard 13). That's the right outcome, not a choice
+            // for the person: the server's position replaces ours, and nothing is retried.
+            val origin = pulledOrigin(remote, identity)
+            positionDatabase.upsertPosition(remote.toPositionEntity(identity, origin))
+            positionDatabase.deleteRemotePosition(identity.localBookUuid)
+            syncOutboxDatabase.delete(entry.mutationId)
+            return
+        }
         applyRemote(
             remote = remote,
             accountId = entry.cloudUserId ?: "",

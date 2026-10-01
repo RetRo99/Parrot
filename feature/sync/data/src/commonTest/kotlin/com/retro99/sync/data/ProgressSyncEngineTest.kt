@@ -182,6 +182,54 @@ class ProgressSyncEngineTest {
         }
 
     @Test
+    fun `an automatic write that lost a conflict gives way to the server's reading`() =
+        runTest {
+            // Given: our linked_copy write is pending; the server holds newer reading.
+            val entry = outboxEntry(mutationId = "linked-409")
+            val outbox = RecordingOutboxDatabase(listOf(entry))
+            val positions = RecordingPositionDatabase()
+            positions.upsertPosition(storedLinkedCopy())
+            val engine = ProgressSyncEngine(outbox, positions, RecordingWrites())
+
+            // When
+            engine.push(
+                entries = listOf(entry),
+                transport = RecordingTransport(
+                    pushResults = listOf(
+                        ProgressPushResult.Conflict("linked-409", remoteSnapshot()),
+                    ),
+                ),
+                codec = ProgressOutboxCodec { pending -> pending.toProgressMutation() },
+            )
+
+            // Then
+            val stored = positions.localPositions.last()
+            assertEquals(PositionEntity.ORIGIN_REMOTE, stored.origin)
+            assertTrue(positions.remotePositions.isEmpty())
+            assertEquals(listOf("linked-409"), outbox.deletedIds)
+            assertTrue(outbox.conflictIds.isEmpty())
+        }
+
+    private fun storedLinkedCopy(): PositionEntity = object : PositionEntity {
+        override val bookUuid = "book-1"
+        override val timestamp: Long? = 5L
+        override val createdAt: String? = null
+        override val updatedAt: String? = null
+        override val locatorHref: String? = "c.xhtml"
+        override val locatorType: String? = null
+        override val locatorTitle: String? = null
+        override val locatorTarget: Int? = null
+        override val audioTimestampMs: Long? = null
+        override val chapterIndex: Int? = null
+        override val progression: Double? = 0.2
+        override val totalChapters: Int? = null
+        override val totalDurationMs: Long? = null
+        override val totalProgression: Double? = 0.2
+        override val position: Int? = null
+        override val origin: String = PositionEntity.ORIGIN_LINKED_COPY
+    }
+
+    @Test
     fun `storyteller - a pull with our write's timestamp is an echo`() = runTest {
         // Given
         val (engine, positions) = engineWithWrite(marker = "1700", totalProgression = 0.4)

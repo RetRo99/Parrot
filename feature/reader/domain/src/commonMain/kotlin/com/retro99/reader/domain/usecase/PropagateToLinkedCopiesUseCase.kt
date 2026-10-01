@@ -80,7 +80,7 @@ class PropagateToLinkedCopiesUseCase(
             // Guard 6: the same source reading is written to a target once.
             val lastWrite = linkedCopyWritesDatabase.getWrite(target.key.value, notBefore = cutoff)
             val alreadyWritten = lastWrite?.sourceKey == source.key.value &&
-                ObservedTime.toEpochMillis(lastWrite?.sourceObservedAt) == sourceMillis
+                ObservedTime.toEpochMillis(lastWrite.sourceObservedAt) == sourceMillis
             if (alreadyWritten) return@mapNotNull null
 
             val newProgression = translated.position.totalProgression
