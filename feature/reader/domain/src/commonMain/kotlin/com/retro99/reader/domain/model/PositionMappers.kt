@@ -1,0 +1,77 @@
+package com.retro99.reader.domain.model
+
+import com.retro99.database.api.books.PositionEntity
+import com.retro99.server.api.PositionOrigin
+import com.retro99.server.api.ServerPosition
+import com.retro99.server.api.TextAnchor
+
+/** A stored position as the reader's model. The database doesn't store the server id. */
+fun PositionEntity.toPositionDomainModel(serverId: String): PositionDomainModel =
+    PositionDomainModel(
+        bookUuid = bookUuid,
+        serverId = serverId,
+        timestamp = timestamp,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        locatorHref = locatorHref,
+        locatorType = locatorType,
+        locatorTitle = locatorTitle,
+        locatorTarget = locatorTarget,
+        audioTimestampMs = audioTimestampMs,
+        chapterIndex = chapterIndex,
+        progression = progression,
+        totalChapters = totalChapters,
+        totalDurationMs = totalDurationMs,
+        totalProgression = totalProgression,
+        position = position,
+        cssSelector = cssSelector,
+        origin = PositionOrigin.fromValue(origin),
+        observedAt = observedAt ?: updatedAt ?: createdAt,
+        textAnchor = TextAnchor.fromJson(textAnchor),
+    )
+
+fun ServerPosition.toPositionDomainModel(): PositionDomainModel = PositionDomainModel(
+    bookUuid = bookUuid,
+    serverId = serverId,
+    timestamp = timestamp,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    locatorHref = locatorHref,
+    locatorType = locatorType,
+    locatorTitle = locatorTitle,
+    locatorTarget = locatorTarget,
+    audioTimestampMs = audioTimestampMs,
+    chapterIndex = chapterIndex,
+    progression = progression,
+    totalChapters = totalChapters,
+    totalDurationMs = totalDurationMs,
+    totalProgression = totalProgression,
+    position = position,
+    cssSelector = cssSelector,
+    origin = origin,
+    observedAt = observedAt ?: updatedAt ?: createdAt,
+    textAnchor = textAnchor,
+)
+
+fun PositionDomainModel.toServerPosition(): ServerPosition = ServerPosition(
+    bookUuid = bookUuid,
+    serverId = serverId,
+    timestamp = timestamp,
+    createdAt = createdAt,
+    updatedAt = updatedAt,
+    locatorHref = locatorHref,
+    locatorType = locatorType,
+    locatorTitle = locatorTitle,
+    locatorTarget = locatorTarget,
+    audioTimestampMs = audioTimestampMs,
+    chapterIndex = chapterIndex,
+    progression = progression,
+    totalChapters = totalChapters,
+    totalDurationMs = totalDurationMs,
+    totalProgression = totalProgression,
+    position = position,
+    cssSelector = cssSelector,
+    origin = origin,
+    observedAt = observedAt,
+    textAnchor = textAnchor,
+)

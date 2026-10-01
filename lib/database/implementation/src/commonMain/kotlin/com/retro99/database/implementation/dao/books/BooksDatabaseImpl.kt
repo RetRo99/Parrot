@@ -385,6 +385,9 @@ internal class BooksDatabaseImpl(
             totalDurationMs = totalDurationMs,
             totalProgression = totalProgression,
             position = position,
+            origin = origin,
+            observedAt = observedAt,
+            textAnchor = textAnchor,
         )
     }
 
@@ -443,6 +446,7 @@ internal class BooksDatabaseImpl(
             readaloud = readaloud,
             isbn = book.isbn,
             asin = book.asin,
+            audioDurationMs = book.audioDurationMs,
         )
     }
 
@@ -536,6 +540,7 @@ internal class BooksDatabaseImpl(
             updatedAt = updatedAt,
             isbn = isbn,
             asin = asin,
+            audioDurationMs = audioDurationMs,
         )
     }
 
@@ -579,6 +584,7 @@ private data class BookEntityImpl(
     override val readaloud: ReadaloudEntity?,
     override val isbn: String? = null,
     override val asin: String? = null,
+    override val audioDurationMs: Long? = null,
 ) : BookEntity
 
 private data class SeriesWithPositionEntityImpl(

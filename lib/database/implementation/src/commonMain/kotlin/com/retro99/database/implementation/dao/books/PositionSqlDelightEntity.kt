@@ -22,4 +22,7 @@ data class PositionSqlDelightEntity(
     override val totalDurationMs: Long?,
     override val totalProgression: Double?,
     override val position: Int?,
+    override val origin: String = PositionEntity.ORIGIN_USER,
+    override val observedAt: String? = null,
+    override val textAnchor: String? = null,
 ) : PositionEntity

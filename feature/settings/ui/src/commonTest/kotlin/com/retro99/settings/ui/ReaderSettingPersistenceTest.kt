@@ -21,6 +21,7 @@ import com.retro99.reader.domain.usecase.GetCustomReaderFontsUseCase
 import com.retro99.reader.domain.usecase.GetReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.ImportCustomReaderFontUseCase
 import com.retro99.reader.domain.usecase.SaveReaderSettingsUseCase
+import com.retro99.reader.domain.write.LinkedCopyPropagationSetting
 import com.retro99.settings.ui.model.ReaderThemeUiModel
 import io.github.vinceglb.filekit.core.PlatformFile
 import kotlinx.coroutines.Dispatchers
@@ -126,6 +127,11 @@ class ReaderSettingPersistenceTest {
             readerSettingsRepository = repository,
         ),
         analytics = analytics,
+        linkedCopyPropagationSetting = object : LinkedCopyPropagationSetting {
+            override fun observeEnabled() = flowOf(true)
+            override suspend fun isEnabled() = true
+            override suspend fun setEnabled(enabled: Boolean) = Unit
+        },
     )
 
     private class RecordingAnalytics : Analytics {

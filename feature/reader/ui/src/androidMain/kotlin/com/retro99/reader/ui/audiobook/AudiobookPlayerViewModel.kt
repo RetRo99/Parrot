@@ -24,6 +24,7 @@ import com.retro99.reader.domain.ReaderSettingsRepository
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.reader.domain.usecase.GetReadingProgressWithConflictUseCase
+import com.retro99.reader.domain.usecase.PropagateToLinkedCopiesUseCase
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.ui.playback.ForegroundServiceController
 import com.retro99.reader.ui.playback.MediaPlaybackController
@@ -34,6 +35,7 @@ import com.retro99.sync.domain.SyncScope
 import com.retro99.sync.domain.SyncTriggerReason
 import com.retro99.sync.domain.SyncUrgency
 import com.retro99.sync.domain.usecase.SyncNowUseCase
+import kotlin.time.Clock
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
@@ -58,6 +60,7 @@ class AudiobookPlayerViewModel(
     @Provided private val notificationPermissionHandler: NotificationPermissionHandler,
     @Provided private val readerSettingsRepository: ReaderSettingsRepository,
     @Provided private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
+    @Provided private val propagateToLinkedCopiesUseCase: PropagateToLinkedCopiesUseCase,
     @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val getReadingProgressWithConflictUseCase: GetReadingProgressWithConflictUseCase,
     @Provided private val getBookByUuidUseCase: GetBookByUuidUseCase,
@@ -376,6 +379,10 @@ class AudiobookPlayerViewModel(
                 } else {
                     stopPositionUpdates()
                     saveProgress()
+                    // Pausing ends a listening stretch: move the other linked copies here too.
+                    player?.let(::buildProgress)?.let { progress ->
+                        viewModelScope.launch(NonCancellable) { propagateToLinkedCopies(progress) }
+                    }
                 }
             }
 
@@ -568,7 +575,10 @@ class AudiobookPlayerViewModel(
         val isPlaybackActive = p != null && p.isPlaying
         val finalProgress = p?.let(::buildProgress)
         viewModelScope.launch(NonCancellable) {
-            finalProgress?.let { progress -> saveProgressAndWait(progress) }
+            finalProgress?.let { progress ->
+                saveProgressAndWait(progress)
+                propagateToLinkedCopies(progress)
+            }
             routineSyncScheduler.close()
             syncNowUseCase(
                 SyncRequest(
@@ -603,6 +613,21 @@ class AudiobookPlayerViewModel(
             foregroundServiceController.stopService()
         }
         player = null
+    }
+
+    /** Never blocks or fails playback (P5). */
+    private suspend fun propagateToLinkedCopies(progress: PositionDomainModel) {
+        try {
+            propagateToLinkedCopiesUseCase(
+                serverId = progress.serverId,
+                bookUuid = progress.bookUuid,
+                position = progress.copy(observedAt = Clock.System.now().toString()),
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.w(e) { "Failed to update linked copies" }
+        }
     }
 
     private suspend fun saveProgressAndWait(progress: PositionDomainModel) {

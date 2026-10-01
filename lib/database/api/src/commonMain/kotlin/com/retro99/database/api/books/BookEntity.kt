@@ -32,6 +32,8 @@ interface BookEntity {
     val readaloud: ReadaloudEntity?
     val isbn: String? get() = null
     val asin: String? get() = null
+    /** The length of a server audiobook, when the server reports it. */
+    val audioDurationMs: Long? get() = null
 }
 
 /**

@@ -73,6 +73,12 @@ sealed class PreferencesKey(val name: String) {
     data object StatisticsRange : PreferencesKey("StatisticsRange")
     data object ThemeMode : PreferencesKey("ThemeMode")
 
+    /** "Stay here" answers to the linked resume prompt, newest last. */
+    data object DismissedLinkedResume : PreferencesKey("DismissedLinkedResume")
+
+    /** "Update my other servers as I read"; on when unset. */
+    data object UpdateLinkedCopies : PreferencesKey("UpdateLinkedCopies")
+
     // User profile keys (device-level, not user-scoped)
     data object UserProfiles : PreferencesKey("UserProfiles")
     data object ActiveProfileId : PreferencesKey("ActiveProfileId")

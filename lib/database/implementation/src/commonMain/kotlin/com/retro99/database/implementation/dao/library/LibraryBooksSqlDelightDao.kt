@@ -164,6 +164,7 @@ internal fun AppDatabase.mergeLibraryBookRows(fromId: String, intoId: String): L
         cloudFileTransferQueries.deleteTransfersForBook(fromId)
 
         mergeLibraryCopyLinks(fromId, intoId)
+        mergeLinkedCopyWrites(fromId, intoId)
 
         // Book ids are UUIDs, so a quoted occurrence in a payload can only be the id.
         syncOutboxQueries.getAllMutations().executeAsList().forEach { mutation ->
@@ -275,3 +276,26 @@ internal fun Device_files.toEntity() = DeviceFileEntity(
     origin = origin,
     addedAt = added_at,
 )
+
+/** The write log follows the surviving book; on a clash the newer write is kept. */
+internal fun AppDatabase.mergeLinkedCopyWrites(fromId: String, intoId: String) {
+    val fromKey = "library:$fromId"
+    val intoKey = "library:$intoId"
+    val fromWrite = linkedCopyWriteQueries.getWrite(fromKey).executeAsOneOrNull() ?: return
+    val intoWrite = linkedCopyWriteQueries.getWrite(intoKey).executeAsOneOrNull()
+    if (intoWrite == null || fromWrite.written_at > intoWrite.written_at) {
+        linkedCopyWriteQueries.upsertWrite(
+            target_key = intoKey,
+            target_book_uuid = intoId,
+            source_key = fromWrite.source_key,
+            source_observed_at = fromWrite.source_observed_at,
+            written_at = fromWrite.written_at,
+            marker = fromWrite.marker,
+            locator_href = fromWrite.locator_href,
+            progression = fromWrite.progression,
+            total_progression = fromWrite.total_progression,
+            audio_ms = fromWrite.audio_ms,
+        )
+    }
+    linkedCopyWriteQueries.deleteWrite(fromKey)
+}

@@ -27,6 +27,28 @@ class AudiobookshelfLibraryItemMapperTest {
         }
     }
 
+    @Test
+    fun `the audiobook's length comes from its duration, or its audio files`() {
+        // Given
+        val withDuration = AudiobookshelfMediaApiModel(duration = 3_600.5)
+        val withFiles = AudiobookshelfMediaApiModel(
+            audioFiles = listOf(
+                AudiobookshelfAudioFileApiModel(duration = 1_800.0),
+                AudiobookshelfAudioFileApiModel(duration = 1_200.0),
+            ),
+        )
+
+        // When
+        val lengths = listOf(withDuration, withFiles, AudiobookshelfMediaApiModel()).map { media ->
+            AudiobookshelfLibraryItemApiModel(id = "item-1", media = media)
+                .toDomain(serverId = "abs-1", baseUrl = null)
+                .audioDurationMs
+        }
+
+        // Then
+        assertEquals(listOf(3_600_500L, 3_000_000L, null), lengths)
+    }
+
     private fun metadata(isbn: String?, asin: String?, language: String?) =
         AudiobookshelfBookMetadataApiModel(
             title = "The Hobbit",

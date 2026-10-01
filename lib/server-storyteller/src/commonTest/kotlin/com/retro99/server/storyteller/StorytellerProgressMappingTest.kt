@@ -1,5 +1,8 @@
 package com.retro99.server.storyteller
 
+import com.retro99.server.api.PositionOrigin
+import com.retro99.server.api.ServerPosition
+import com.retro99.server.api.TextAnchor
 import com.retro99.server.storyteller.model.StorytellerPositionApiModel
 import com.retro99.server.storyteller.model.StorytellerLocatorApiModel
 import com.retro99.server.storyteller.model.StorytellerLocationsApiModel
@@ -13,6 +16,40 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class StorytellerProgressMappingTest {
+    @Test
+    fun `the payload ignores origin, observation time and text anchor`() {
+        // Given
+        val plain = ServerPosition(
+            bookUuid = "book-1",
+            serverId = "storyteller",
+            timestamp = 100L,
+            createdAt = null,
+            updatedAt = null,
+            locatorHref = "chapter.xhtml",
+            locatorType = null,
+            locatorTitle = null,
+            locatorTarget = null,
+            audioTimestampMs = null,
+            chapterIndex = 1,
+            progression = 0.5,
+            totalChapters = 4,
+            totalDurationMs = null,
+            totalProgression = 0.3,
+            position = null,
+        )
+        val annotated = plain.copy(
+            origin = PositionOrigin.LinkedCopy,
+            observedAt = "2026-10-01T10:00:00Z",
+            textAnchor = TextAnchor(before = "before", after = "after"),
+        )
+
+        // When
+        val payload = annotated.toStorytellerApiModel()
+
+        // Then
+        assertEquals(plain.toStorytellerApiModel(), payload)
+    }
+
     @Test
     fun mutationMappingPreservesLocatorAndAudioFields() {
         val snapshot = snapshot()

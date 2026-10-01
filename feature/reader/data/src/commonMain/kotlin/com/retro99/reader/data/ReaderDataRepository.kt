@@ -87,6 +87,10 @@ internal class ReaderDataRepository(
         return localSource.deleteEbookCache(bookUuid, bookType)
     }
 
+    override suspend fun getCachedMediaPath(bookUuid: String, bookType: BookType): String? {
+        return localSource.getCachedEbookPath(bookUuid, bookType)
+    }
+
     override fun getCurrentlyReading(): CurrentlyReadingDomainModel? {
         return localSource.getCurrentlyReading()
     }

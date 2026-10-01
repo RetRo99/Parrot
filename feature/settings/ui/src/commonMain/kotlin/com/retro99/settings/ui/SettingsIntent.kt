@@ -58,6 +58,7 @@ sealed interface SettingsIntent : BaseIntent {
 
     // Show reading time intent
     data class OnShowReadingTimeChanged(val showReadingTime: Boolean) : SettingsIntent
+    data class OnUpdateLinkedCopiesChanged(val enabled: Boolean) : SettingsIntent
 
     // Volume button navigation intents
     data class OnVolumeButtonsEnabledChanged(val enabled: Boolean) : SettingsIntent

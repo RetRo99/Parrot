@@ -5,6 +5,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import com.github.michaelbull.result.getOrElse
 import com.retro99.analytics.api.Analytics
 import com.retro99.books.domain.model.BookType
+import com.retro99.epub.implementation.smil.SmilParser
 import com.retro99.reader.data.source.EbookFileDownloader
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.ui.media.DynamicPublicationDataSourceFactory
@@ -15,7 +16,6 @@ import com.retro99.reader.ui.media.smil.SmilChapterIndex
 import com.retro99.reader.ui.media.smil.SmilClipCache
 import com.retro99.reader.ui.media.smil.SmilClipRepository
 import com.retro99.reader.ui.media.smil.SmilLoadingManager
-import com.retro99.reader.ui.media.smil.SmilParser
 import com.retro99.reader.ui.media.smil.SmilQuickScanner
 import com.retro99.reader.ui.playback.MAX_EMBEDDED_ARTWORK_BYTES
 import com.retro99.reader.ui.service.EpubPublicationService

@@ -196,12 +196,17 @@ import resources.translations.cloud_backup_unknown_state
 import resources.translations.books_reading_progress
 import resources.translations.general_back
 import resources.translations.general_cancel
+import resources.translations.positions_action
 import resources.translations.reader_conflict_use_local
 import resources.translations.reader_conflict_use_remote
+import com.retro99.books.ui.components.LinkedResumeDialog
+import com.retro99.books.ui.components.LinkedResumeUiModel
 import com.retro99.books.ui.components.PositionConflictDialog
+import com.retro99.books.ui.components.toUiModel
 import com.retro99.books.ui.links.LinkedCopiesSection
 import com.retro99.books.ui.links.UnlinkCopyConfirmationDialog
 import com.retro99.books.ui.model.LinkedCopyUiModel
+import resources.translations.resume_linked_compare
 
 private val CoverWidth = 120.dp
 private val DescriptionCollapsedMaxHeight = 140.dp
@@ -211,11 +216,18 @@ private const val DescriptionExpandThreshold = 200
 fun BookDetailScreen(
     serverId: String,
     bookUuid: String,
-    onNavigateToReader: (serverId: String, bookUuid: String, bookType: BookType, bookTitle: String) -> Unit,
+    onNavigateToReader: (
+        serverId: String,
+        bookUuid: String,
+        bookType: BookType,
+        bookTitle: String,
+        linkedResumeResolved: Boolean,
+    ) -> Unit,
     onNavigateToSeriesDetail: (seriesUuid: String, seriesName: String) -> Unit,
     onBack: () -> Unit,
     onNavigateToLinkPicker: (serverId: String, bookUuid: String) -> Unit,
     onNavigateToBookDetail: (serverId: String, bookUuid: String) -> Unit,
+    onNavigateToPositions: (serverId: String, bookUuid: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BookDetailViewModel = koinViewModel {
         parametersOf(
@@ -226,6 +238,7 @@ fun BookDetailScreen(
             onBack,
             onNavigateToLinkPicker,
             onNavigateToBookDetail,
+            onNavigateToPositions,
         )
     },
 ) {
@@ -259,6 +272,7 @@ fun BookDetailScreen(
                 replacingBackupTransferId = viewState.replacingBackupTransferId,
                 linkedCopies = viewState.linkedCopies,
                 unlinkConfirmationCopy = viewState.unlinkConfirmationCopy,
+                linkedResume = viewState.linkedResumeOffer?.toUiModel(),
                 intentDispatcher = intentDispatcher,
             )
         }
@@ -291,6 +305,7 @@ private fun BookDetailScreenContent(
     replacingBackupTransferId: String?,
     linkedCopies: List<LinkedCopyUiModel>,
     unlinkConfirmationCopy: LinkedCopyUiModel?,
+    linkedResume: LinkedResumeUiModel?,
     intentDispatcher: IntentDispatcher<BookDetailIntent>,
     modifier: Modifier = Modifier,
 ) {
@@ -378,7 +393,20 @@ private fun BookDetailScreenContent(
         }
     }
 
-    if (pendingOpenBookType != null && progressInfo?.hasConflict == true) {
+    if (linkedResume != null) {
+        LinkedResumeDialog(
+            model = linkedResume,
+            onContinue = { intentDispatcher(BookDetailIntent.OnLinkedResumeContinueClicked) },
+            onStay = { intentDispatcher(BookDetailIntent.OnLinkedResumeStayClicked) },
+            compareAll = {
+                TextButton(
+                    onClick = { intentDispatcher(BookDetailIntent.OnLinkedResumeCompareClicked) },
+                ) {
+                    Text(stringResource(StringRes.resume_linked_compare))
+                }
+            },
+        )
+    } else if (pendingOpenBookType != null && progressInfo?.hasConflict == true) {
         PositionConflictDialog(
             localProgressPercent = progressInfo.localProgressPercent ?: 0,
             remoteProgressPercent = progressInfo.remoteProgressPercent ?: 0,
@@ -569,6 +597,15 @@ private fun BookDetailScreenContent(
                         },
                         onSameBookAs = { intentDispatcher(BookDetailIntent.OnSameBookAsClicked) },
                     )
+                    if (linkedCopies.isNotEmpty()) {
+                        TextButton(
+                            onClick = {
+                                intentDispatcher(BookDetailIntent.OnReadingPositionsClicked)
+                            },
+                        ) {
+                            Text(stringResource(StringRes.positions_action))
+                        }
+                    }
 
                     progressInfo?.displayProgression?.let { progress ->
                         if (progress > 0.0) {

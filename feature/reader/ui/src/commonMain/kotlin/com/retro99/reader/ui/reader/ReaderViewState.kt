@@ -2,6 +2,7 @@ package com.retro99.reader.ui.reader
 
 import com.retro99.base.result.AppError
 import com.retro99.books.domain.model.BookType
+import com.retro99.reader.domain.linked.LinkedResumeOffer
 import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.ChapterReadingTimeInfo
@@ -22,6 +23,8 @@ data class ReaderViewState(
     val localFilePath: String? = null,
     val publicationState: PublicationState? = null,
     val positionConflict: PositionConflictUiModel? = null,
+    /** A newer reading in another linked copy, offered in place of [positionConflict]. */
+    val linkedResumeOffer: LinkedResumeOffer? = null,
     val isSettingsVisible: Boolean = false,
     val error: AppError? = null,
     // Current time formatted according to user's locale (updated every minute)

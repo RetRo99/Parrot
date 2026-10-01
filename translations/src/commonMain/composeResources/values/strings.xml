@@ -1167,4 +1167,35 @@
     <string name="link_unlink_confirm_message" tools:ignore="MissingTranslation">“%1$s” on %2$s will show as a separate book again.</string>
     <string name="link_source_library" tools:ignore="MissingTranslation">your library</string>
     <string name="link_review_linked_count" tools:ignore="MissingTranslation">Linked %1$d books</string>
+    <string name="resume_linked_title_exact" tools:ignore="MissingTranslation">Continue from %1$s?</string>
+    <string name="resume_linked_title_approximate" tools:ignore="MissingTranslation">Continue from about %1$d%%?</string>
+    <string name="resume_linked_body" tools:ignore="MissingTranslation">You read there in %1$s %2$s.</string>
+    <string name="resume_linked_listened_body" tools:ignore="MissingTranslation">You listened there in %1$s %2$s.</string>
+    <string name="resume_linked_this_place" tools:ignore="MissingTranslation">this place</string>
+    <string name="resume_linked_continue" tools:ignore="MissingTranslation">Continue</string>
+    <string name="resume_linked_stay" tools:ignore="MissingTranslation">Stay here</string>
+    <string name="resume_linked_source_readaloud" tools:ignore="MissingTranslation">%1$s (read-aloud)</string>
+    <string name="resume_linked_source_audiobook" tools:ignore="MissingTranslation">%1$s (audiobook)</string>
+    <string name="resume_linked_source_ebook" tools:ignore="MissingTranslation">%1$s (ebook)</string>
+    <string name="positions_action" tools:ignore="MissingTranslation">Reading positions</string>
+    <string name="positions_title" tools:ignore="MissingTranslation">Where you are in this book</string>
+    <string name="positions_latest" tools:ignore="MissingTranslation">Latest</string>
+    <string name="positions_stale" tools:ignore="MissingTranslation">May be out of date</string>
+    <string name="positions_from_device" tools:ignore="MissingTranslation">Read on this device %1$s</string>
+    <string name="positions_from_server" tools:ignore="MissingTranslation">From %1$s %2$s</string>
+    <string name="positions_set_from" tools:ignore="MissingTranslation">Set from %1$s %2$s</string>
+    <string name="positions_use_this" tools:ignore="MissingTranslation">Use this position</string>
+    <string name="positions_apply_title" tools:ignore="MissingTranslation">Move these copies to this position?</string>
+    <string name="positions_same_place" tools:ignore="MissingTranslation">%1$s · same place</string>
+    <string name="positions_about" tools:ignore="MissingTranslation">about %1$d%%</string>
+    <string name="positions_warn_start" tools:ignore="MissingTranslation">This would move %1$s to the start of the book.</string>
+    <string name="positions_warn_end" tools:ignore="MissingTranslation">This would mark %1$s as almost finished.</string>
+    <string name="positions_not_supported" tools:ignore="MissingTranslation">Can't update %1$s yet.</string>
+    <string name="positions_apply" tools:ignore="MissingTranslation">Apply</string>
+    <string name="positions_applied" tools:ignore="MissingTranslation">Updated %1$s</string>
+    <string name="positions_apply_failed" tools:ignore="MissingTranslation">Couldn't update %1$s</string>
+    <string name="resume_linked_compare" tools:ignore="MissingTranslation">Compare all</string>
+    <string name="positions_audio_position" tools:ignore="MissingTranslation">%1$s of %2$s</string>
+    <string name="positions_duration" tools:ignore="MissingTranslation">%1$d h %2$d min</string>
+    <string name="settings_update_linked_copies" tools:ignore="MissingTranslation">Update my other servers as I read</string>
 </resources>

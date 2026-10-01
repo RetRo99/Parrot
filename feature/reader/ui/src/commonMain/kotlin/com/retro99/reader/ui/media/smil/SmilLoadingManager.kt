@@ -2,6 +2,8 @@ package com.retro99.reader.ui.media.smil
 
 import com.retro99.analytics.api.Analytics
 import com.retro99.base.nowMillis
+import com.retro99.epub.api.SmilClip
+import com.retro99.epub.implementation.smil.SmilParser
 import com.retro99.reader.ui.di.ReaderScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -73,7 +75,7 @@ interface SmilContentProvider {
 @Scope(ReaderScope::class)
 @Scoped
 class SmilLoadingManager(
-    private val smilParser: SmilParser,
+    @Provided private val smilParser: SmilParser,
     private val quickScanner: SmilQuickScanner,
     private val analytics: Analytics,
     private val index: SmilChapterIndex,

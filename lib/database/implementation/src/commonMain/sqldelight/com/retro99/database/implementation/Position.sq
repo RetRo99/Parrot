@@ -21,7 +21,13 @@ CREATE TABLE IF NOT EXISTS position (
     total_chapters INTEGER,
     total_duration_ms INTEGER,
     total_progression REAL,
-    position INTEGER
+    position INTEGER,
+    -- user, restore, remote, linked_copy or manual (project 3, §1.4).
+    origin TEXT NOT NULL DEFAULT 'user',
+    -- When the reading happened, not when it was saved.
+    observed_at TEXT,
+    -- JSON {"before": "...", "after": "..."} for ebook positions. Never sent to a server.
+    text_anchor TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_position_updated ON position(updated_at);
@@ -55,13 +61,13 @@ INSERT OR REPLACE INTO position(
     book_uuid, library_book_id, local_generation, remote_revision, timestamp, created_at, updated_at,
     locator_href, locator_type, locator_title, locator_target, css_selector,
     audio_timestamp_ms, chapter_index, progression, total_chapters,
-    total_duration_ms, total_progression, position
+    total_duration_ms, total_progression, position, origin, observed_at, text_anchor
 )
 -- library_book_id is the book id only for books in your library (I4), NULL otherwise.
 VALUES (
     ?,
     (SELECT lb.library_book_id FROM library_books lb WHERE lb.library_book_id = ?),
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 );
 
 linkPositionToLibraryBook:

@@ -36,4 +36,24 @@ interface PositionEntity {
     val totalDurationMs: Long?
     val totalProgression: Double?
     val position: Int?
+
+    /** Where the position came from: `user`, `restore`, `remote`, `linked_copy` or `manual`. */
+    val origin: String
+        get() = ORIGIN_USER
+
+    /** When the reading happened (ISO-8601), which isn't necessarily when it was saved. */
+    val observedAt: String?
+        get() = null
+
+    /** JSON `{"before": "...", "after": "..."}` for ebook positions, local only. */
+    val textAnchor: String?
+        get() = null
+
+    companion object {
+        const val ORIGIN_USER = "user"
+        const val ORIGIN_RESTORE = "restore"
+        const val ORIGIN_REMOTE = "remote"
+        const val ORIGIN_LINKED_COPY = "linked_copy"
+        const val ORIGIN_MANUAL = "manual"
+    }
 }

@@ -9,6 +9,7 @@ import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.ServerPosition
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
+import kotlin.time.Clock
 
 /**
  * Use case for saving reading progress.
@@ -56,5 +57,8 @@ private fun PositionDomainModel.toServerPosition(): ServerPosition {
         totalProgression = totalProgression,
         position = position,
         cssSelector = cssSelector,
+        origin = origin,
+        observedAt = observedAt ?: Clock.System.now().toString(),
+        textAnchor = textAnchor,
     )
 }

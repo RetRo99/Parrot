@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="id">readaloud-fixture</dc:identifier>
+    <dc:title>Fixture</dc:title>
+    <meta property="media:duration">0:00:28.000</meta>
+    <meta property="media:duration" refines="#s1">0:00:06.000</meta>
+  </metadata>
+  <manifest>
+    <item id="r1" href="text/r1.xhtml" media-type="application/xhtml+xml" media-overlay="s1"/>
+    <item id="r2" href="text/r2.xhtml" media-type="application/xhtml+xml" media-overlay="s2"/>
+    <item id="r3" href="text/r3.xhtml" media-type="application/xhtml+xml" media-overlay="s3"/>
+    <item id="r4" href="text/r4.xhtml" media-type="application/xhtml+xml" media-overlay="s4"/>
+    <item id="s1" href="smil/r1.smil" media-type="application/smil+xml"/>
+    <item id="s2" href="smil/r2.smil" media-type="application/smil+xml"/>
+    <item id="s3" href="smil/r3.smil" media-type="application/smil+xml"/>
+    <item id="s4" href="smil/r4.smil" media-type="application/smil+xml"/>
+    <item id="a1" href="audio/part1.mp3" media-type="audio/mpeg"/>
+    <item id="a2" href="audio/part2.mp3" media-type="audio/mpeg"/>
+  </manifest>
+  <spine>
+    <itemref idref="r1"/>
+    <itemref idref="r2"/>
+    <itemref idref="r3"/>
+    <itemref idref="r4"/>
+  </spine>
+</package>

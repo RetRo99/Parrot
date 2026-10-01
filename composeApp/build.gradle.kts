@@ -31,6 +31,9 @@ kotlin {
             export(projects.feature.reader.ui)
             export(projects.feature.login.data)
             export(projects.feature.books.data)
+            // Swift uses SmilParser and SmilClip by their plain names.
+            export(projects.lib.epub.api)
+            export(projects.lib.epub.implementation)
         }
     }
 
@@ -48,6 +51,8 @@ kotlin {
             api(projects.feature.reader.ui)
             api(projects.feature.login.data)
             api(projects.feature.books.data)
+            api(projects.lib.epub.api)
+            api(projects.lib.epub.implementation)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -76,6 +81,8 @@ kotlin {
             implementation(projects.lib.analytics.implementation)
             implementation(projects.lib.database.api)
             implementation(projects.lib.database.implementation)
+            implementation(projects.lib.epub.api)
+            implementation(projects.lib.epub.implementation)
             implementation(projects.lib.server.api)
             implementation(projects.lib.server.implementation)
             implementation(projects.lib.serverStoryteller)

@@ -45,6 +45,9 @@ class PositionBaselineTest {
             total_duration_ms = null,
             total_progression = 0.2,
             position = 10L,
+            origin = "user",
+            observed_at = null,
+            text_anchor = null,
         )
         database.positionQueries.upsertRemotePosition(
             book_uuid = "book-1",
@@ -103,6 +106,9 @@ class PositionBaselineTest {
             total_duration_ms = null,
             total_progression = 0.2,
             position = 10L,
+            origin = "user",
+            observed_at = null,
+            text_anchor = null,
         )
 
         database.positionQueries.updateRemoteRevisionIfGeneration(8L, "book-1", 2L)

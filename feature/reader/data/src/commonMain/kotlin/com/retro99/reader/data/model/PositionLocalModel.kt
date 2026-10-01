@@ -2,6 +2,8 @@ package com.retro99.reader.data.model
 
 import com.retro99.database.api.books.PositionEntity
 import com.retro99.reader.domain.model.PositionDomainModel
+import com.retro99.server.api.PositionOrigin
+import com.retro99.server.api.TextAnchor
 
 data class PositionLocalModel(
     override val bookUuid: String,
@@ -22,6 +24,9 @@ data class PositionLocalModel(
     override val totalDurationMs: Long?,
     override val totalProgression: Double?,
     override val position: Int?,
+    override val origin: String = PositionEntity.ORIGIN_USER,
+    override val observedAt: String? = null,
+    override val textAnchor: String? = null,
 ) : PositionEntity
 
 fun PositionLocalModel.toDomain(serverId: String): PositionDomainModel {
@@ -43,6 +48,9 @@ fun PositionLocalModel.toDomain(serverId: String): PositionDomainModel {
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        origin = PositionOrigin.fromValue(origin),
+        observedAt = observedAt,
+        textAnchor = TextAnchor.fromJson(textAnchor),
     )
 }
 
@@ -66,6 +74,9 @@ fun PositionDomainModel.toLocal(): PositionLocalModel {
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        origin = origin.value,
+        observedAt = observedAt,
+        textAnchor = textAnchor?.toJson(),
     )
 }
 
@@ -89,5 +100,8 @@ fun PositionEntity.toLocalModel(): PositionLocalModel {
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        origin = origin,
+        observedAt = observedAt,
+        textAnchor = textAnchor,
     )
 }

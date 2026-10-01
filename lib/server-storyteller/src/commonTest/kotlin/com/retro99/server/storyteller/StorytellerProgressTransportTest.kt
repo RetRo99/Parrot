@@ -10,6 +10,7 @@ import com.retro99.server.storyteller.model.toStorytellerApiModel
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressLocator
 import com.retro99.sync.domain.ProgressMutation
+import com.retro99.sync.domain.ProgressPushResult
 import com.retro99.sync.domain.ProgressSnapshot
 import io.ktor.http.HeadersBuilder
 import io.ktor.util.reflect.TypeInfo
@@ -73,6 +74,67 @@ class StorytellerProgressTransportTest {
 
         assertTrue(rejected.reason.contains("offline"))
         assertNull(rejected.retryAfterMillis)
+    }
+
+    @Test
+    fun `a 409 followed by a successful fetch is a conflict carrying the server position`() =
+        runTest {
+            // Given
+            val serverPosition = StorytellerPositionApiModel(timestamp = 500L)
+            val client = RecordingNetworkClient(
+                getResult = Ok(serverPosition),
+                postResult = Err(AppError.ApiError(code = 409, message = "Timestamp older")),
+            )
+            val transport = StorytellerProgressTransport(client)
+
+            // When
+            val result = transport.pushProgress(listOf(mutation()))
+
+            // Then
+            val conflict = assertIs<ProgressPushResult.Conflict>(result.single())
+            assertEquals("mutation-1", conflict.mutationId)
+            assertEquals(500L, conflict.remote.snapshot.timestamp)
+            assertEquals("book-1", conflict.remote.remoteBookId)
+            assertEquals(
+                listOf("POST:/api/v2/books/book-1/positions", "GET:/api/v2/books/book-1/positions"),
+                client.calls,
+            )
+        }
+
+    @Test
+    fun `a 409 followed by a failed fetch is rejected with a long retry delay`() = runTest {
+        // Given
+        val client = RecordingNetworkClient(
+            getResult = Err(AppError.NetworkError(IllegalStateException("offline"))),
+            postResult = Err(AppError.ApiError(code = 409)),
+        )
+        val transport = StorytellerProgressTransport(client)
+
+        // When
+        val result = transport.pushProgress(listOf(mutation()))
+
+        // Then
+        val rejected = assertIs<ProgressPushResult.Rejected>(result.single())
+        assertEquals(
+            StorytellerProgressTransport.CONFLICT_RETRY_AFTER_MILLIS,
+            rejected.retryAfterMillis,
+        )
+        assertTrue(rejected.retryAfterMillis!! >= 15 * 60 * 1000L)
+    }
+
+    @Test
+    fun `a server error stays rejected on the short backoff`() = runTest {
+        // Given
+        val client = RecordingNetworkClient(postResult = Err(AppError.ApiError(code = 500)))
+        val transport = StorytellerProgressTransport(client)
+
+        // When
+        val result = transport.pushProgress(listOf(mutation()))
+
+        // Then
+        val rejected = assertIs<ProgressPushResult.Rejected>(result.single())
+        assertNull(rejected.retryAfterMillis)
+        assertEquals(listOf("POST:/api/v2/books/book-1/positions"), client.calls)
     }
 
     private fun mutation() = ProgressMutation(

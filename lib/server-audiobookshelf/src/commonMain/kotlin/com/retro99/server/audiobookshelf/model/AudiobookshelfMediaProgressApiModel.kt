@@ -1,8 +1,10 @@
 package com.retro99.server.audiobookshelf.model
 
+import com.retro99.server.api.PositionOrigin
 import com.retro99.server.api.ServerPosition
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 @Serializable
 data class AudiobookshelfMediaProgressApiModel(
@@ -67,6 +69,8 @@ fun AudiobookshelfMediaProgressApiModel.toServerPosition(
         totalDurationMs = duration?.let { dur -> (dur * 1000).toLong() },
         totalProgression = ebookProgress ?: progress,
         position = null,
+        origin = PositionOrigin.Remote,
+        observedAt = lastUpdate?.let { millis -> Instant.fromEpochMilliseconds(millis).toString() },
     )
 }
 

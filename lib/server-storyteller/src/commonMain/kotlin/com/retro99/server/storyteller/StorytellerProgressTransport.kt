@@ -1,6 +1,8 @@
 package com.retro99.server.storyteller
 
 import com.github.michaelbull.result.fold
+import com.github.michaelbull.result.get
+import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.server.api.ServerNetworkClient
@@ -82,13 +84,46 @@ class StorytellerProgressTransport(
                     )
                 },
                 failure = { error ->
-                    ProgressPushResult.Rejected(
-                        mutationId = mutation.mutationId,
-                        reason = error.toString(),
-                    )
+                    if (error is AppError.ApiError && error.code == HTTP_CONFLICT) {
+                        conflictOf(mutation)
+                    } else {
+                        ProgressPushResult.Rejected(
+                            mutationId = mutation.mutationId,
+                            reason = error.toString(),
+                        )
+                    }
                 },
             )
         }
     }
 
+    /**
+     * Storyteller answers 409 when it already holds a position with a newer timestamp. That
+     * is a conflict, not a failure to retry: take the server's position, which stops the
+     * retries. If it can't be fetched, wait long before trying again.
+     */
+    private suspend fun conflictOf(mutation: ProgressMutation): ProgressPushResult {
+        val current: AppResult<StorytellerPositionApiModel?> = networkClient
+            .get(path = "/api/v2/books/${mutation.remoteBookId}/positions")
+        val remote = current.get()?.toRemoteProgressSnapshot(
+            remoteBookId = mutation.remoteBookId,
+            serverId = networkClient.serverId,
+        )
+        return if (remote != null) {
+            ProgressPushResult.Conflict(mutationId = mutation.mutationId, remote = remote)
+        } else {
+            ProgressPushResult.Rejected(
+                mutationId = mutation.mutationId,
+                reason = "Storyteller holds a newer position, which could not be fetched",
+                retryAfterMillis = CONFLICT_RETRY_AFTER_MILLIS,
+            )
+        }
+    }
+
+    companion object {
+        private const val HTTP_CONFLICT = 409
+
+        /** How long a 409 waits when the server's position couldn't be fetched. */
+        const val CONFLICT_RETRY_AFTER_MILLIS = 15L * 60 * 1000
+    }
 }

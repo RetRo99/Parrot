@@ -77,6 +77,8 @@ data class ServerBook(
     val language: String? = null,
     val isbn: String? = null,
     val asin: String? = null,
+    /** The length of the audiobook, when the server reports it (Audiobookshelf). */
+    val audioDurationMs: Long? = null,
 )
 
 enum class RemoteFileAvailability {

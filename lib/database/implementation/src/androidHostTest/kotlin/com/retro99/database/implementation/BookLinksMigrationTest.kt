@@ -18,11 +18,14 @@ class BookLinksMigrationTest {
             executeScript(migrated, readResource("v28_schema.sql"))
 
             // When
-            AppDatabase.Schema.migrate(migrated, oldVersion = 28, newVersion = 29)
+            AppDatabase.Schema.migrate(
+                migrated,
+                oldVersion = 28,
+                newVersion = AppDatabase.Schema.version,
+            )
             AppDatabase.Schema.create(fresh)
 
             // Then
-            assertEquals(29L, AppDatabase.Schema.version)
             assertEquals(schemaOf(fresh), schemaOf(migrated))
             assertTrue("book_links" in schemaOf(migrated).keys)
         } finally {
@@ -48,7 +51,11 @@ class BookLinksMigrationTest {
             )
 
             // When
-            AppDatabase.Schema.migrate(driver, oldVersion = 28, newVersion = 29)
+            AppDatabase.Schema.migrate(
+                driver,
+                oldVersion = 28,
+                newVersion = AppDatabase.Schema.version,
+            )
 
             // Then
             assertEquals(1L, count(driver, "SELECT COUNT(*) FROM library_books"))

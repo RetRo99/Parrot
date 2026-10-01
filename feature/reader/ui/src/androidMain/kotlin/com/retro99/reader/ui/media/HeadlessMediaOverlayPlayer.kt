@@ -9,7 +9,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.retro99.analytics.api.Analytics
-import com.retro99.reader.ui.media.smil.SmilClip
+import com.retro99.epub.api.SmilClip
 import com.retro99.reader.ui.media.smil.SmilLoadingManager
 import com.retro99.reader.ui.playback.setArtworkDataIfSmall
 import com.retro99.reader.ui.publication.EpubPublication

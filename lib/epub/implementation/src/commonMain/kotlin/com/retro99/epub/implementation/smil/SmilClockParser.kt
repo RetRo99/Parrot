@@ -1,6 +1,7 @@
-package com.retro99.reader.ui.media.smil
+package com.retro99.epub.implementation.smil
 
 import com.retro99.analytics.api.Analytics
+import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 /**
@@ -13,7 +14,7 @@ import org.koin.core.annotation.Single
  */
 @Single
 class SmilClockParser(
-    private val analytics: Analytics,
+    @Provided private val analytics: Analytics,
 ) {
 
     /**

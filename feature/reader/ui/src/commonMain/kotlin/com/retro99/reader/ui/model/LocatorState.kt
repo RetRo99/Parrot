@@ -1,5 +1,7 @@
 package com.retro99.reader.ui.model
 
+import com.retro99.server.api.TextAnchor
+
 /**
  * Combined information about the current chapter including page position and word count.
  *
@@ -43,6 +45,8 @@ data class LocatorState(
     val fragments: List<String>?,
     val chapterInfo: ChapterInfo? = null,
     val cssSelector: String? = null,
+    /** Text around the start of the visible page, for matching this place in other copies. */
+    val textAnchor: TextAnchor? = null,
 )
 
 /**

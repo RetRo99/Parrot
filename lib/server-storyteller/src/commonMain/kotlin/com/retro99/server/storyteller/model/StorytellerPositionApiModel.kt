@@ -1,8 +1,10 @@
 package com.retro99.server.storyteller.model
 
+import com.retro99.server.api.PositionOrigin
 import com.retro99.server.api.ServerPosition
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 /**
  * Storyteller API model for reading position.
@@ -86,6 +88,11 @@ fun StorytellerPositionApiModel.toServerPosition(bookUuid: String, serverId: Str
         totalDurationMs = locator?.locations?.totalDurationMs,
         totalProgression = locator?.locations?.totalProgression,
         position = locator?.locations?.position,
+        origin = PositionOrigin.Remote,
+        // The timestamp is the reading time the writing client sent.
+        observedAt = timestamp?.let { millis -> Instant.fromEpochMilliseconds(millis).toString() }
+            ?: updatedAt
+            ?: createdAt,
     )
 }
 

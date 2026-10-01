@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<smil xmlns="http://www.w3.org/ns/SMIL" version="3.0">
+  <body><seq>
+    <par><text src="../text/r3.xhtml#r3-s1"/><audio src="../audio/part2.mp3" clipBegin="0s" clipEnd="2s"/></par>
+    <par><text src="../text/r3.xhtml#r3-s2"/><audio src="../audio/part2.mp3" clipBegin="2s" clipEnd="3500ms"/></par>
+    <par><text src="../text/r3.xhtml#r3-s3"/><audio src="../audio/part2.mp3" clipBegin="3.5s" clipEnd="5s"/></par>
+  </seq></body>
+</smil>
