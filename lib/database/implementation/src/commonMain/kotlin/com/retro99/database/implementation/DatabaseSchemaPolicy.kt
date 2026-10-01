@@ -1,6 +1,11 @@
 package com.retro99.database.implementation
 
-/** First migratable schema: the schema at commit 1df302ab. Older installs reset once. */
+/**
+ * First migratable schema: the schema at commit 1df302ab. Older installs reset once.
+ *
+ * Every .sq schema change needs a new N.sqm and passing MigrationChainTest and verifyMigrations.
+ * Never edit the immutable 28.db baseline to make a migration pass.
+ */
 internal const val MIN_MIGRATABLE_SCHEMA_VERSION = 28L
 
 internal enum class DatabaseOpenAction {

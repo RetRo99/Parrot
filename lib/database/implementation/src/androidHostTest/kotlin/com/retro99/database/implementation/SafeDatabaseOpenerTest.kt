@@ -43,7 +43,8 @@ class SafeDatabaseOpenerTest {
                     .bufferedReader().use { reader -> reader.readText() }
                 schema.split(';').map { statement -> statement.trim() }
                     .filter { statement ->
-                        statement.isNotEmpty() && !statement.startsWith("CREATE TABLE sqlite_sequence")
+                        statement.isNotEmpty() &&
+                            !statement.startsWith("CREATE TABLE sqlite_sequence")
                     }
                     .forEach { statement -> driver.execute(null, statement, 0) }
                 driver.execute(null, "PRAGMA user_version = 28", 0)
