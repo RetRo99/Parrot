@@ -31,6 +31,7 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
         remoteFileAvailability = remoteFileAvailability.name,
         mediaResources = mediaResources.map { resource -> resource.toUiModel() },
         home = home,
+        linkedCopies = linkedCopies.map { copy -> copy.toUiModel() },
     )
     is BookDomainModel.LibraryBook -> BookUiModel.LibraryBook(
         uuid = uuid,
@@ -45,6 +46,7 @@ fun BookDomainModel.toUiModel(): BookUiModel = when (this) {
         lastOpenedAt = lastOpenedAt,
         home = home,
         mediaResources = mediaResources.map { resource -> resource.toUiModel() },
+        linkedCopies = linkedCopies.map { copy -> copy.toUiModel() },
     )
 }
 

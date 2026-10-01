@@ -38,6 +38,7 @@ class LinkedCopyTest {
                     hasAudiobook = false,
                     hasReadaloud = false,
                     isDownloaded = true,
+                    searchTerms = listOf("Book b1"),
                 ),
                 LinkedCopy(
                     key = CopyKey(CopySource.Audiobookshelf, "a1"),
@@ -49,6 +50,7 @@ class LinkedCopyTest {
                     hasAudiobook = false,
                     hasReadaloud = false,
                     isDownloaded = false,
+                    searchTerms = listOf("Book a1"),
                 ),
             ),
             copies,

@@ -1,6 +1,7 @@
 package com.retro99.books.ui.list
 
 import com.retro99.base.result.AppError
+import com.retro99.books.domain.model.BookHome
 import com.retro99.books.ui.model.BookFilterState
 import com.retro99.books.ui.model.BookListViewMode
 import com.retro99.books.ui.model.BookProgressInfoUiModel
@@ -9,6 +10,7 @@ import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookSortOption
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.SortDirection
+import com.retro99.books.ui.model.availableHomes
 import com.retro99.books.ui.model.filterByHome
 import com.retro99.books.ui.model.isOnThisDevice
 import com.retro99.books.ui.model.showHomeBadge
@@ -52,14 +54,23 @@ data class BooksListViewState(
     val showServerBadge: Boolean
         get() = books.showHomeBadge()
 
+    /** The homes the source filter offers. */
+    val availableHomes: List<BookHome>
+        get() = books.availableHomes()
+
     private fun List<BookUiModel>.applySearchFilter(query: String): List<BookUiModel> {
         if (query.isBlank()) return this
         val lowerQuery = query.lowercase()
         return filter { book ->
             book.title.lowercase().contains(lowerQuery) ||
+                    book.subtitle?.lowercase()?.contains(lowerQuery) == true ||
                     book.authors.any { it.lowercase().contains(lowerQuery) } ||
                     book.series.any { it.name.lowercase().contains(lowerQuery) } ||
-                    book.tags.any { it.lowercase().contains(lowerQuery) }
+                    book.tags.any { it.lowercase().contains(lowerQuery) } ||
+                    // A linked book matches if any of its copies does.
+                    book.linkedCopies.any { copy ->
+                        copy.searchTerms.any { term -> term.lowercase().contains(lowerQuery) }
+                    }
         }
     }
 

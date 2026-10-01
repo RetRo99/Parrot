@@ -1,5 +1,6 @@
 package com.retro99.books.domain.model
 
+import com.retro99.books.domain.model.links.LinkedCopy
 import com.retro99.server.api.ServerType
 import com.retro99.server.api.RemoteFileAvailability
 import com.retro99.server.api.MediaResource
@@ -41,6 +42,18 @@ sealed class BookDomainModel {
     open val asin: String?
         get() = null
 
+    /**
+     * The other copies of this book, when it stands for a linked book in a list. Empty for
+     * a book that isn't linked, and for a book loaded on its own.
+     */
+    open val linkedCopies: List<LinkedCopy>
+        get() = emptyList()
+
+    fun withLinkedCopies(copies: List<LinkedCopy>): BookDomainModel = when (this) {
+        is StorytellerBook -> copy(linkedCopies = copies)
+        is LibraryBook -> copy(linkedCopies = copies)
+    }
+
     abstract val series: List<SeriesDomainModel>
 
     /**
@@ -81,6 +94,7 @@ sealed class BookDomainModel {
         override val mediaResources: List<MediaResource> = emptyList(),
         override val isbn: String? = null,
         override val asin: String? = null,
+        override val linkedCopies: List<LinkedCopy> = emptyList(),
     ) : BookDomainModel()
 
     /** Your library: files on this device and/or in Parrot Cloud. [uuid] is the book ID. */
@@ -97,6 +111,7 @@ sealed class BookDomainModel {
         val lastOpenedAt: String?,
         override val mediaResources: List<MediaResource>,
         override val isbn: String? = null,
+        override val linkedCopies: List<LinkedCopy> = emptyList(),
     ) : BookDomainModel() {
         override val series: List<SeriesDomainModel> = emptyList()
 

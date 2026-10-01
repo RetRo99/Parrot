@@ -110,7 +110,7 @@ class LinkPickerViewModelTest {
             serverId = "storyteller",
             bookUuid = "s1",
             onBack = { backCount++ },
-            getBooksUseCase = GetBooksUseCase(provider),
+            getBooksUseCase = GetBooksUseCase(provider, links),
             observeBookLinksUseCase = ObserveBookLinksUseCase(links),
             linkBooksUseCase = LinkBooksUseCase(links),
         )

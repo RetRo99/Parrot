@@ -28,7 +28,8 @@ class GetCachedReadAloudBooksUseCase(
      * @return List of books filtered to only ReadAloud books that are cached
      */
     suspend operator fun invoke(): AppResult<List<BookDomainModel>> {
-        val allBooks = getBooksUseCase().first().getOrElse { emptyList() }
+        // Every copy: a linked book's cached read-aloud may not be its primary copy.
+        val allBooks = getBooksUseCase(groupLinked = false).first().getOrElse { emptyList() }
 
         // Filter to only ReadAloud books that are cached
         val cachedReadAloudBooks = allBooks.filter { book ->

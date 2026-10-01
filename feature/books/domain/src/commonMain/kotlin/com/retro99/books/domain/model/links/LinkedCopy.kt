@@ -17,6 +17,8 @@ data class LinkedCopy(
     val hasAudiobook: Boolean,
     val hasReadaloud: Boolean,
     val isDownloaded: Boolean,
+    /** Text a library search matches against: title, subtitle, authors, series, tags. */
+    val searchTerms: List<String> = emptyList(),
 )
 
 /** The order homes are listed in, and preferred in, for a linked book. */
@@ -44,7 +46,16 @@ fun BookDomainModel.toLinkedCopy(
     hasAudiobook = hasMedia(BookType.AUDIOBOOK),
     hasReadaloud = hasMedia(BookType.READALOUD),
     isDownloaded = isDownloaded,
+    searchTerms = searchTerms(),
 )
+
+private fun BookDomainModel.searchTerms(): List<String> = when (this) {
+    is BookDomainModel.LibraryBook -> listOfNotNull(title, author)
+    is BookDomainModel.StorytellerBook -> listOfNotNull(title, subtitle) +
+        authors.map { author -> author.name } +
+        series.map { entry -> entry.name } +
+        tags.map { tag -> tag.name }
+}
 
 private fun BookDomainModel.hasMedia(bookType: BookType): Boolean = when (this) {
     is BookDomainModel.LibraryBook ->

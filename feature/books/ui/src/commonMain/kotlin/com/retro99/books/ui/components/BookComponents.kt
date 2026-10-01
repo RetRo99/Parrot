@@ -232,7 +232,8 @@ private fun BookMetaRow(
             )
         }
         if (showServerBadge) {
-            HomeBadge(home = book.home)
+            // A linked book shows one badge per home it has a copy in.
+            book.homes.forEach { home -> HomeBadge(home = home) }
         }
     }
 }
@@ -395,10 +396,13 @@ fun BookGridCard(
                 )
             }
             if (showServerBadge) {
-                HomeBadge(
-                    home = book.home,
+                // A linked book shows one badge per home it has a copy in.
+                Column(
                     modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
-                )
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    book.homes.forEach { home -> HomeBadge(home = home) }
+                }
             }
         }
 

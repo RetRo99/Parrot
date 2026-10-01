@@ -396,8 +396,7 @@ private fun BooksListScreenContent(
     if (showFilterSheet) {
         BookFilterBottomSheet(
             filterState = viewState.filterState,
-            availableHomes = viewState.books
-                .map { book -> book.home }
+            availableHomes = viewState.availableHomes
                 .plus(listOfNotNull(viewState.filterState.homeFilter))
                 .distinct(),
             onFilterToggle = { filter ->

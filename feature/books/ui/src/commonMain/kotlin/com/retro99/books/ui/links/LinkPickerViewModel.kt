@@ -62,7 +62,7 @@ class LinkPickerViewModel(
     }
 
     private fun observeCandidates() {
-        combine(getBooksUseCase(), observeBookLinksUseCase()) { booksResult, links ->
+        combine(getBooksUseCase(groupLinked = false), observeBookLinksUseCase()) { booksResult, links ->
             val books = booksResult.getOrElse { emptyList() }
             val book = books.firstOrNull { candidate ->
                 candidate.serverId == serverId && candidate.uuid == bookUuid

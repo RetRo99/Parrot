@@ -1,6 +1,5 @@
 package com.retro99.books.domain.usecase
 
-import com.github.michaelbull.result.Ok
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.books.domain.BookLinksRepository
@@ -9,11 +8,6 @@ import com.retro99.books.domain.model.links.CopyKey
 import com.retro99.books.domain.model.links.LinkDecision
 import com.retro99.books.domain.model.links.LinkDecisionType
 import com.retro99.books.domain.model.links.testLink
-import com.retro99.server.api.AuthenticatedRepositoryProvider
-import com.retro99.server.api.ServerBook
-import com.retro99.server.api.ServerBooksRepository
-import com.retro99.server.api.ServerReaderRepository
-import com.retro99.server.api.ServerSeriesRepository
 import com.retro99.server.api.ServerType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,10 +25,11 @@ class ObserveLinkedCopiesUseCaseTest {
         val links = MutableStateFlow(emptyList<BookLink>())
         val classUnderTest = ObserveLinkedCopiesUseCase(
             getBooksUseCase = GetBooksUseCase(
-                provider(
-                    repository("st-1", ServerType.Storyteller, "s1"),
-                    repository("abs-1", ServerType.Audiobookshelf, "a1"),
+                repositoryProvider = provider(
+                    repository("st-1", ServerType.Storyteller, "s1" to "Book s1"),
+                    repository("abs-1", ServerType.Audiobookshelf, "a1" to "Book a1"),
                 ),
+                bookLinksRepository = FakeLinksRepository(links),
             ),
             bookLinksRepository = FakeLinksRepository(links),
         )
@@ -67,58 +62,4 @@ class ObserveLinkedCopiesUseCaseTest {
             decision: LinkDecisionType,
         ): CompletableResult = error("not used")
     }
-
-    private fun provider(vararg repositories: ServerBooksRepository) =
-        object : AuthenticatedRepositoryProvider {
-            override fun observeBooksRepositories(): Flow<List<ServerBooksRepository>> =
-                flowOf(repositories.toList())
-
-            override suspend fun getBooksRepositories() = repositories.toList()
-
-            override suspend fun getBooksRepository(serverId: String) =
-                repositories.firstOrNull { repository -> repository.serverId == serverId }
-
-            override suspend fun getReaderRepository(serverId: String): ServerReaderRepository? =
-                null
-
-            override fun observeSeriesRepositories(): Flow<List<ServerSeriesRepository>> =
-                flowOf(emptyList())
-
-            override suspend fun getSeriesRepositories(): List<ServerSeriesRepository> =
-                emptyList()
-        }
-
-    private fun repository(serverId: String, serverType: ServerType, uuid: String) =
-        object : ServerBooksRepository {
-            override val serverId: String = serverId
-
-            override fun getBooks(): Flow<AppResult<List<ServerBook>>> = flowOf(
-                Ok(
-                    listOf(
-                        ServerBook(
-                            uuid = uuid,
-                            serverId = serverId,
-                            title = "Book $uuid",
-                            description = null,
-                            coverUrl = null,
-                            authors = emptyList(),
-                            narrators = emptyList(),
-                            series = emptyList(),
-                            tags = emptyList(),
-                            hasEbook = true,
-                            hasAudiobook = false,
-                            hasReadaloud = false,
-                            serverType = serverType,
-                        ),
-                    ),
-                ),
-            )
-
-            override fun getBook(uuid: String): Flow<AppResult<ServerBook>> = error("not used")
-
-            override suspend fun saveBook(book: ServerBook): CompletableResult = Ok(Unit)
-
-            override suspend fun searchBooks(query: String): AppResult<List<ServerBook>> =
-                Ok(emptyList())
-        }
 }

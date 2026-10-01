@@ -16,6 +16,8 @@ data class LinkedCopyUiModel(
     val hasAudiobook: Boolean,
     val hasReadaloud: Boolean,
     val isDownloaded: Boolean,
+    /** Text a library search matches against. */
+    val searchTerms: List<String> = emptyList(),
 )
 
 fun LinkedCopy.toUiModel() = LinkedCopyUiModel(
@@ -28,4 +30,5 @@ fun LinkedCopy.toUiModel() = LinkedCopyUiModel(
     hasAudiobook = hasAudiobook,
     hasReadaloud = hasReadaloud,
     isDownloaded = isDownloaded,
+    searchTerms = searchTerms,
 )

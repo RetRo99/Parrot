@@ -17,7 +17,7 @@ class ObserveLinkedCopiesUseCase(
     @Provided private val bookLinksRepository: BookLinksRepository,
 ) {
     operator fun invoke(serverId: String, uuid: String): Flow<List<LinkedCopy>> = combine(
-        getBooksUseCase(),
+        getBooksUseCase(groupLinked = false),
         bookLinksRepository.observeLinks(),
     ) { booksResult, links ->
         val books = booksResult.getOrElse { emptyList() }

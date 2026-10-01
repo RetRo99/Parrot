@@ -3,11 +3,17 @@ package com.retro99.reader.domain.usecase
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getOrElse
 import com.retro99.base.result.AppResult
+import com.retro99.books.domain.BookLinksRepository
+import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.books.domain.model.BookProgressInfoDomainModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.books.domain.model.BookWithProgressDomainModel
+import com.retro99.books.domain.model.links.BookLink
+import com.retro99.books.domain.model.links.copyKey
+import com.retro99.books.domain.model.links.groupLinkedBooks
 import com.retro99.books.domain.model.toBookDomainModel
 import com.retro99.reader.domain.ReaderSettingsRepository
+import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.ServerBook
 import com.retro99.server.api.ServerPosition
@@ -18,10 +24,13 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onStart
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
+import kotlin.time.Instant
 
 /**
  * Combined use case that observes all books with their progress information.
@@ -30,12 +39,17 @@ import org.koin.core.annotation.Provided
  * Returns a list of [BookWithProgressDomainModel] that updates when:
  * - Books are added/removed from servers
  * - Local reading progress changes
+ * - Books are linked or unlinked
+ *
+ * The copies of a linked book are one entry: its primary copy, with that copy's progress,
+ * carrying the other copies as `linkedCopies`.
  */
 @Factory
 class ObserveAllBooksWithProgressUseCase(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
     @Provided private val readerSettingsRepository: ReaderSettingsRepository,
     @Provided private val positionLocalSource: ServerPositionLocalSource,
+    @Provided private val bookLinksRepository: BookLinksRepository,
 ) {
     // Cache of remote progressions - fetched once per refresh
     private val remoteProgressionCache = mutableMapOf<String, Double?>()
@@ -65,9 +79,11 @@ class ObserveAllBooksWithProgressUseCase(
                             results.flatMap { result -> result.getOrElse { emptyList() } }
                         },
                         positionLocalSource.observeAllPositions(),
-                        refreshTrigger
-                    ) { books, localPositions, _ ->
-                        buildBooksWithProgress(books, localPositions)
+                        refreshTrigger,
+                        bookLinksRepository.observeLinks(),
+                        observeCurrentlyReading(),
+                    ) { books, localPositions, _, links, currentlyReading ->
+                        buildBooksWithProgress(books, localPositions, links, currentlyReading)
                     }
                 }
             }
@@ -104,9 +120,16 @@ class ObserveAllBooksWithProgressUseCase(
         remoteProgressionCache.clear()
     }
 
+    private fun observeCurrentlyReading(): Flow<CurrentlyReadingDomainModel?> =
+        readerSettingsRepository.observeCurrentlyReading()
+            .onStart { emit(readerSettingsRepository.getCurrentlyReading()) }
+            .distinctUntilChanged()
+
     private suspend fun buildBooksWithProgress(
         books: List<ServerBook>,
         localPositions: List<ServerPosition>,
+        links: List<BookLink>,
+        currentlyReading: CurrentlyReadingDomainModel?,
     ): AppResult<List<BookWithProgressDomainModel>> {
         // Every book's position is keyed by its uuid; for your library that is the book id.
         val localPositionMap = localPositions.associateBy { position -> position.bookUuid }
@@ -127,7 +150,50 @@ class ObserveAllBooksWithProgressUseCase(
             )
         }
 
-        return Ok(booksWithProgress.sortedBy { book -> book.book.title.lowercase() })
+        val grouped = groupLinkedCopies(
+            entries = booksWithProgress,
+            links = links,
+            localPositions = localPositionMap,
+            currentlyReading = currentlyReading,
+        )
+        return Ok(grouped.sortedBy { book -> book.book.title.lowercase() })
+    }
+
+    /** One entry per linked book: its primary copy, keeping that copy's progress. */
+    private fun groupLinkedCopies(
+        entries: List<BookWithProgressDomainModel>,
+        links: List<BookLink>,
+        localPositions: Map<String, ServerPosition>,
+        currentlyReading: CurrentlyReadingDomainModel?,
+    ): List<BookWithProgressDomainModel> {
+        if (links.isEmpty()) return entries
+        val progressByBook = entries.associate { entry ->
+            (entry.book.serverId to entry.book.uuid) to entry.progressInfo
+        }
+        val lastOpened = entries.mapNotNull { entry ->
+            val openedAt = entry.book.lastOpenedMillis(localPositions[entry.book.uuid])
+                ?: return@mapNotNull null
+            entry.book.copyKey() to openedAt
+        }.toMap()
+        val reading = entries.firstOrNull { entry ->
+            entry.book.serverId == currentlyReading?.serverId &&
+                entry.book.uuid == currentlyReading.bookUuid
+        }?.book?.copyKey()
+        val downloaded = entries
+            .filter { entry -> entry.progressInfo?.hasAnyCached == true }
+            .mapTo(mutableSetOf()) { entry -> entry.book.copyKey() }
+        return groupLinkedBooks(
+            books = entries.map { entry -> entry.book },
+            links = links,
+            lastOpened = lastOpened,
+            currentlyReading = reading,
+            downloaded = downloaded,
+        ).map { book ->
+            BookWithProgressDomainModel(
+                book = book,
+                progressInfo = progressByBook[book.serverId to book.uuid],
+            )
+        }
     }
 
     private suspend fun createProgressInfo(
@@ -173,3 +239,12 @@ internal fun ServerBook.deviceCopies(): Set<BookType> = mediaResources
 /** Media types of a server book that are in the reader cache. */
 internal suspend fun ReaderSettingsRepository.cachedTypes(bookUuid: String): Set<BookType> =
     BookType.entries.filterTo(mutableSetOf()) { type -> isEbookCached(bookUuid, type) }
+
+/** When a copy was last opened on this device: its saved position, or the library's record. */
+internal fun BookDomainModel.lastOpenedMillis(position: ServerPosition?): Long? {
+    val positionMillis = position?.timestamp
+        ?: position?.updatedAt?.let { value -> Instant.parseOrNull(value)?.toEpochMilliseconds() }
+    val libraryMillis = (this as? BookDomainModel.LibraryBook)?.lastOpenedAt
+        ?.let { value -> Instant.parseOrNull(value)?.toEpochMilliseconds() }
+    return listOfNotNull(positionMillis, libraryMillis).maxOrNull()
+}

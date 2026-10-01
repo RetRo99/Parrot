@@ -3,6 +3,7 @@ package com.retro99.books.ui.model
 import com.retro99.base.server.ServerType
 import com.retro99.books.domain.model.BookHome
 import com.retro99.books.domain.model.BookType
+import com.retro99.books.domain.model.links.linkOrder
 import kotlinx.serialization.Serializable
 
 /**
@@ -45,6 +46,16 @@ sealed class BookUiModel {
     /** Where the book lives, shown as its badge. */
     abstract val home: BookHome
 
+    /** The other copies of a linked book. Empty for a book that isn't linked. */
+    abstract val linkedCopies: List<LinkedCopyUiModel>
+
+    /** Every home of the book: this copy's first, then its linked copies' in priority order. */
+    val homes: List<BookHome>
+        get() = (
+            listOf(home) +
+                linkedCopies.map { copy -> copy.home }.sortedBy { other -> other.linkOrder }
+            ).distinct()
+
     /**
      * Returns the file path for the given book type, or null if not available.
      */
@@ -79,6 +90,7 @@ sealed class BookUiModel {
         val remoteFileAvailability: String = "None",
         val mediaResources: List<MediaResourceUiModel> = emptyList(),
         override val home: BookHome = BookHome.Storyteller,
+        override val linkedCopies: List<LinkedCopyUiModel> = emptyList(),
     ) : BookUiModel() {
         override fun filePath(bookType: BookType): String? = when (bookType) {
             BookType.EBOOK -> ebookFilepath
@@ -102,6 +114,7 @@ sealed class BookUiModel {
         val lastOpenedAt: String?,
         override val home: BookHome,
         val mediaResources: List<MediaResourceUiModel>,
+        override val linkedCopies: List<LinkedCopyUiModel> = emptyList(),
     ) : BookUiModel() {
         val libraryBookId: String get() = uuid
         val hasDeviceCopy: Boolean
