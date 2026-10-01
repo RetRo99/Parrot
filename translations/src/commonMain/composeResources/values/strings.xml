@@ -1166,4 +1166,5 @@
     <string name="link_unlink_confirm_title" tools:ignore="MissingTranslation">Not the same book?</string>
     <string name="link_unlink_confirm_message" tools:ignore="MissingTranslation">“%1$s” on %2$s will show as a separate book again.</string>
     <string name="link_source_library" tools:ignore="MissingTranslation">your library</string>
+    <string name="link_review_linked_count" tools:ignore="MissingTranslation">Linked %1$d books</string>
 </resources>

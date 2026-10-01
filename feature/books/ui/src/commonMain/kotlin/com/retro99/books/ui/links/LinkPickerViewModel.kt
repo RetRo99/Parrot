@@ -68,7 +68,11 @@ class LinkPickerViewModel(
                 candidate.serverId == serverId && candidate.uuid == bookUuid
             }
             currentBook = book
-            candidates = if (book == null) emptyList() else linkPickerCandidates(book, books, links)
+            candidates = if (book == null) {
+                emptyList()
+            } else {
+                linkPickerCandidates(book, books, links)
+            }
             candidates
         }
             .onEach { books ->

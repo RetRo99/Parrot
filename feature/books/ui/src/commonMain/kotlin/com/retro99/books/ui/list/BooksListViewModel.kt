@@ -22,6 +22,7 @@ import com.retro99.books.domain.model.BookWithProgressDomainModel
 import com.retro99.books.domain.usecase.ImportEpubUseCase
 import com.retro99.books.domain.usecase.StartBookFileUploadUseCase
 import com.retro99.books.domain.usecase.ObserveAllFavoritesUseCase
+import com.retro99.books.domain.usecase.ObserveLinkSuggestionsUseCase
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
 import com.retro99.books.ui.model.BookFilterState
 import com.retro99.books.ui.model.BookListViewMode
@@ -68,6 +69,7 @@ class BooksListViewModel(
     @Provided private val cloudAccountRepository: CloudAccountRepository,
     @Provided private val startBookFileUploadUseCase: StartBookFileUploadUseCase,
     @Provided private val userRegistry: UserRegistry,
+    @Provided private val observeLinkSuggestionsUseCase: ObserveLinkSuggestionsUseCase,
 ) : BaseViewModel<BooksListViewState, BooksListIntent>(BooksListViewState()) {
 
     private var currentBooks: List<BookWithProgressDomainModel> = emptyList()
@@ -79,6 +81,15 @@ class BooksListViewModel(
         observeBooks()
         observeFavorites()
         observeRecentSearches()
+        observeLinkSuggestions()
+    }
+
+    private fun observeLinkSuggestions() {
+        observeLinkSuggestionsUseCase()
+            .onEach { suggestions ->
+                updateState { state -> state.copy(linkSuggestionCount = suggestions.size) }
+            }
+            .launchIn(viewModelScope)
     }
 
     override fun onIntent(intent: BooksListIntent) {

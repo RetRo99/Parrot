@@ -40,7 +40,13 @@ data class BooksListViewState(
     val importBackupRightsAttested: Boolean = false,
     val isStartingImportBackup: Boolean = false,
     val error: AppError? = null,
+    /** Pairs of books that may be the same across servers, waiting for review. */
+    val linkSuggestionCount: Int = 0,
 ) {
+    /** The "books may be the same" row shows only while something is waiting. */
+    val showLinkSuggestionsBanner: Boolean
+        get() = linkSuggestionCount > 0
+
     val showImportBackupAttestation: Boolean
         get() = pendingAutoBackupBookUuid != null
 

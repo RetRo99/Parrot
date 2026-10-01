@@ -104,6 +104,7 @@ import com.retro99.base.ui.compose.ParrotEmptyState
 import com.retro99.books.ui.components.BookFilterBottomSheet
 import com.retro99.books.ui.components.BookGridCard
 import com.retro99.books.ui.components.BookItemCard
+import com.retro99.books.ui.links.LinkSuggestionsBanner
 import com.retro99.books.ui.components.BookSearchBar
 import com.retro99.books.ui.components.LibraryDock
 import com.retro99.books.ui.components.ShelfHeader
@@ -169,6 +170,7 @@ fun BooksListScreen(
     onSearchActiveChanged: (Boolean) -> Unit = {},
     initialImportRequestId: Long? = null,
     onInitialImportRequestConsumed: (Long) -> Unit = {},
+    onNavigateToLinkReview: () -> Unit = {},
     viewModel: BooksListViewModel = koinViewModel { parametersOf(onNavigateToBookDetail) },
 ) {
     BaseScreen(
@@ -184,6 +186,7 @@ fun BooksListScreen(
             onSearchActiveChanged = onSearchActiveChanged,
             initialImportRequestId = initialImportRequestId,
             onInitialImportRequestConsumed = onInitialImportRequestConsumed,
+            onNavigateToLinkReview = onNavigateToLinkReview,
         )
     }
 }
@@ -199,6 +202,7 @@ private fun BooksListScreenContent(
     onSearchActiveChanged: (Boolean) -> Unit = {},
     initialImportRequestId: Long? = null,
     onInitialImportRequestConsumed: (Long) -> Unit = {},
+    onNavigateToLinkReview: () -> Unit = {},
 ) {
     val filePickerLauncher = rememberFilePickerLauncher(
         type = PickerType.File(extensions = listOf("epub")),
@@ -434,6 +438,13 @@ private fun BooksListScreenContent(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(stringResource(StringRes.cloud_backup_backup_all))
                 }
+            }
+
+            if (viewState.showLinkSuggestionsBanner) {
+                LinkSuggestionsBanner(
+                    suggestionCount = viewState.linkSuggestionCount,
+                    onClick = onNavigateToLinkReview,
+                )
             }
 
             ShelfHeader(

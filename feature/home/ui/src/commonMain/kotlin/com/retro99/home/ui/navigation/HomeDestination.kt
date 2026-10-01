@@ -44,6 +44,10 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
         val bookUuid: String,
     ) : HomeDestination
 
+    /** "Same book?": review books that may be the same across servers. */
+    @Serializable
+    data object LinkReview : HomeDestination
+
     @Serializable
     data class SeriesDetail(
         val seriesUuid: String,
@@ -103,7 +107,8 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
             this is Diagnostics ||
             this is Statistics ||
             this is BookDetail ||
-            this is LinkPicker
+            this is LinkPicker ||
+            this is LinkReview
 }
 
 /** Returns whether this destination already restores the requested Reader route. */

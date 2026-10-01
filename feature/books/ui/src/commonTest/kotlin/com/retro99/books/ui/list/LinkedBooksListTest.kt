@@ -138,6 +138,17 @@ class LinkedBooksListTest {
         assertEquals(listOf(BookHome.ParrotCloud, BookHome.Storyteller), homes)
     }
 
+    @Test
+    fun `the review banner shows only while suggestions are waiting`() {
+        // When
+        val none = BooksListViewState(linkSuggestionCount = 0).showLinkSuggestionsBanner
+        val some = BooksListViewState(linkSuggestionCount = 3).showLinkSuggestionsBanner
+
+        // Then
+        assertFalse(none)
+        assertTrue(some)
+    }
+
     private fun state(
         searchQuery: String = "",
         filterState: BookFilterState = BookFilterState(),

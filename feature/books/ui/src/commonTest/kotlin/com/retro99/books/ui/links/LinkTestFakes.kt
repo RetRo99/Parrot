@@ -97,8 +97,8 @@ internal fun fakeRepositoryProvider(
 internal fun fakeServerBook(
     uuid: String,
     serverType: ServerType,
-    serverId: String = serverType.identifier,
     title: String = "Book $uuid",
+    serverId: String = serverType.identifier,
     author: String? = null,
     isbn: String? = null,
 ) = ServerBook(

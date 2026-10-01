@@ -2,12 +2,15 @@ package com.retro99.books.domain.usecase
 
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
+import com.github.michaelbull.result.Ok
 import com.retro99.books.domain.BookLinksRepository
 import com.retro99.books.domain.model.links.BookLink
 import com.retro99.books.domain.model.links.CopyKey
 import com.retro99.books.domain.model.links.LinkDecision
 import com.retro99.books.domain.model.links.LinkDecisionType
 import com.retro99.books.domain.model.links.testLink
+import com.retro99.server.api.ServerBook
+import com.retro99.server.api.ServerBooksRepository
 import com.retro99.server.api.ServerType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +45,39 @@ class ObserveLinkedCopiesUseCaseTest {
         // Then
         assertEquals(emptyList(), before)
         assertEquals(listOf("abs-1" to "a1"), after.map { copy -> copy.serverId to copy.uuid })
+    }
+
+    @Test
+    fun `a book that is not linked does not load the book lists`() = runTest {
+        // Given: a link exists, but for other books
+        val links = MutableStateFlow(
+            listOf(testLink("link-1", "storyteller:other", "audiobookshelf:a1")),
+        )
+        var listLoads = 0
+        val countingRepository = object : ServerBooksRepository by repository(
+            "st-1",
+            ServerType.Storyteller,
+            "s1" to "Book s1",
+        ) {
+            override fun getBooks(): Flow<AppResult<List<ServerBook>>> {
+                listLoads++
+                return flowOf(Ok(emptyList()))
+            }
+        }
+        val classUnderTest = ObserveLinkedCopiesUseCase(
+            getBooksUseCase = GetBooksUseCase(
+                repositoryProvider = provider(countingRepository),
+                bookLinksRepository = FakeLinksRepository(links),
+            ),
+            bookLinksRepository = FakeLinksRepository(links),
+        )
+
+        // When
+        val copies = classUnderTest("st-1", "s1").first()
+
+        // Then
+        assertEquals(emptyList(), copies)
+        assertEquals(0, listLoads)
     }
 
     private class FakeLinksRepository(

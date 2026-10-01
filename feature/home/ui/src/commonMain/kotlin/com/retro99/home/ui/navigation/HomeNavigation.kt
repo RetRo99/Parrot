@@ -42,6 +42,7 @@ import androidx.navigation3.runtime.entryProvider
 import com.retro99.analytics.api.ContinueReadingEntryPoint
 import com.retro99.books.ui.detail.BookDetailScreen
 import com.retro99.books.ui.links.LinkPickerScreen
+import com.retro99.books.ui.links.LinkReviewScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
@@ -337,6 +338,11 @@ fun HomeNavigation(
                             initialImportRequestId = openPhoneFilesRequestId,
                             onInitialImportRequestConsumed = onPhoneFilesRequestConsumed,
                             onSearchActiveChanged = { active -> isLibrarySearchActive = active },
+                            onNavigateToLinkReview = {
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(HomeDestination.LinkReview),
+                                )
+                            },
                             onNavigateToBookDetail = { book ->
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(
@@ -458,6 +464,10 @@ fun HomeNavigation(
                                 )
                             },
                         )
+                    }
+
+                    entry<HomeDestination.LinkReview> {
+                        LinkReviewScreen(onBack = { requestBack("toolbar_back") })
                     }
 
                     entry<HomeDestination.LinkPicker> { destination ->

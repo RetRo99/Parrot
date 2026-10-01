@@ -19,7 +19,9 @@ fun choosePrimary(
     require(copies.isNotEmpty()) { "A linked book has at least one copy" }
     copies.firstOrNull { copy -> copy.copyKey() == currentlyReading }?.let { copy -> return copy }
     return copies.sortedWith(
-        compareByDescending<BookDomainModel> { copy -> lastOpened[copy.copyKey()] ?: Long.MIN_VALUE }
+        compareByDescending<BookDomainModel> { copy ->
+            lastOpened[copy.copyKey()] ?: Long.MIN_VALUE
+        }
             .thenBy { copy -> copy.home.linkOrder }
             .thenBy { copy -> copy.copyKey().value },
     ).first()
