@@ -385,6 +385,7 @@ internal class BooksDatabaseImpl(
             totalDurationMs = totalDurationMs,
             totalProgression = totalProgression,
             bookTimeMs = bookTimeMs,
+            ebookLocationRaw = ebookLocationRaw,
             position = position,
             origin = origin,
             observedAt = observedAt,

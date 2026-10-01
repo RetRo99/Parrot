@@ -57,6 +57,10 @@ interface PositionEntity {
     val bookTimeMs: Long?
         get() = null
 
+    /** Audiobookshelf's raw `ebookLocation` (CFI or JSON locator), so a push mirrors its shape. */
+    val ebookLocationRaw: String?
+        get() = null
+
     companion object {
         const val ORIGIN_USER = "user"
         const val ORIGIN_RESTORE = "restore"

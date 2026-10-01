@@ -30,7 +30,7 @@ class AudiobookBookTimeMigrationTest {
             )
 
             // When
-            AppDatabase.Schema.migrate(driver, oldVersion = 30, newVersion = 31)
+            AppDatabase.Schema.migrate(driver, oldVersion = 30, AppDatabase.Schema.version)
 
             // Then
             val database = AppDatabase(driver)
@@ -57,11 +57,11 @@ class AudiobookBookTimeMigrationTest {
             database.positionQueries.upsertPosition(
                 "book-1", "book-1", 0, null, null, null, null, null, null, null, null,
                 null, 450_000, 20, null, 40, 36_000_000, 0.5125, null,
-                "user", null, null, 18_450_000,
+                "user", null, null, 18_450_000, null,
             )
             database.positionQueries.upsertRemotePosition(
                 "book-1", null, 1, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, 36_000_000, 0.6, null, 21_600_000,
+                null, null, null, null, null, 36_000_000, 0.6, null, 21_600_000, null,
             )
 
             // Then

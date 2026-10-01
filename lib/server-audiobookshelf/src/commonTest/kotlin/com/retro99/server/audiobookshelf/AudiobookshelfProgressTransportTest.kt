@@ -5,7 +5,9 @@ import com.github.michaelbull.result.Ok
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.server.api.ServerNetworkClient
+import com.retro99.server.audiobookshelf.model.AbsLocationShape
 import com.retro99.server.audiobookshelf.model.AudiobookshelfMediaProgressApiModel
+import com.retro99.server.audiobookshelf.model.parseAbsEbookLocation
 import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressLocator
 import com.retro99.sync.domain.ProgressMutation
@@ -177,6 +179,7 @@ class AudiobookshelfProgressTransportTest {
         val result = AudiobookshelfProgressTransport(client).pushProgress(listOf(mutation))
 
         assertEquals(listOf("PATCH:/api/me/progress/book-1"), client.calls)
+        // An audio position: book-level audio values only, and never the bare href.
         assertEquals(
             AudiobookshelfMediaProgressApiModel(
                 libraryItemId = "library-book-1",
@@ -184,12 +187,94 @@ class AudiobookshelfProgressTransportTest {
                 progress = 0.25,
                 currentTime = 12.5,
                 lastUpdate = 100L,
-                ebookLocation = "chapter.xhtml",
-                ebookProgress = 0.25,
             ),
             client.patchBody,
         )
         assertIs<ProgressPushResult.Accepted>(result.single())
+    }
+
+    @Test
+    fun `pulled ebook locations are read by their shape and kept raw`() = runTest {
+        // Given
+        val json = """{"href":"OEBPS/ch02.xhtml","locations":{"progression":0.42}}"""
+        val cases = listOf(
+            "epubcfi(/6/6!/4/2/8:0)" to "OEBPS/ch02.xhtml",
+            json to "OEBPS/ch02.xhtml",
+        )
+
+        cases.forEach { (raw, expectedHref) ->
+            val client = RecordingNetworkClient(
+                getResult = Ok(
+                    AudiobookshelfMediaProgressApiModel(
+                        currentTime = 0.0,
+                        ebookLocation = raw,
+                        ebookProgress = 0.7,
+                    ),
+                ),
+            )
+            val transport = AudiobookshelfProgressTransport(
+                networkClient = client,
+                readingOrderHrefs = { _ -> READING_ORDER },
+            )
+
+            // When
+            val snapshot = transport.fetchProgress(setOf("book-1")).getValue("book-1").snapshot
+
+            // Then
+            assertEquals(expectedHref, snapshot.locator?.href, "for $raw")
+            assertEquals(0.7, snapshot.totalProgression)
+            assertEquals(raw, snapshot.ebookLocationRaw)
+        }
+    }
+
+    @Test
+    fun `an ebook position is pushed in the stored shape`() = runTest {
+        // Given
+        val stored = listOf(
+            """{"href":"OEBPS/ch01.xhtml"}""" to AbsLocationShape.ReadiumJson,
+            "epubcfi(/6/4!/4/2)" to AbsLocationShape.Cfi,
+            null to AbsLocationShape.Cfi,
+        )
+
+        stored.forEach { (raw, expectedShape) ->
+            val client = RecordingNetworkClient(patchResult = Ok(Unit))
+            val transport = AudiobookshelfProgressTransport(
+                networkClient = client,
+                storedEbookLocation = { _ -> raw },
+                readingOrderHrefs = { _ -> READING_ORDER },
+            )
+
+            // When
+            transport.pushProgress(listOf(ebookMutation(href = "OEBPS/ch02.xhtml")))
+
+            // Then
+            val body = assertIs<AudiobookshelfMediaProgressApiModel>(client.patchBody)
+            val written = parseAbsEbookLocation(body.ebookLocation, null) { READING_ORDER }
+            assertEquals(expectedShape, written.shape, "for $raw")
+            assertEquals("OEBPS/ch02.xhtml", written.href)
+            assertEquals(0.7, body.ebookProgress)
+            assertEquals(0.7, body.progress)
+            assertNull(body.currentTime)
+        }
+    }
+
+    @Test
+    fun `a bare href is never pushed`() = runTest {
+        // Given: an old bare href stored, and a chapter that isn't in the reading order.
+        val client = RecordingNetworkClient(patchResult = Ok(Unit))
+        val transport = AudiobookshelfProgressTransport(
+            networkClient = client,
+            storedEbookLocation = { _ -> "OEBPS/ch01.xhtml" },
+            readingOrderHrefs = { _ -> READING_ORDER },
+        )
+
+        // When
+        transport.pushProgress(listOf(ebookMutation(href = "OEBPS/missing.xhtml")))
+
+        // Then: only the progress is sent.
+        val body = assertIs<AudiobookshelfMediaProgressApiModel>(client.patchBody)
+        assertNull(body.ebookLocation)
+        assertEquals(0.7, body.ebookProgress)
     }
 
     @Test
@@ -203,6 +288,24 @@ class AudiobookshelfProgressTransportTest {
 
         assertTrue(rejected.reason.contains("offline"))
         assertEquals(null, rejected.retryAfterMillis)
+    }
+
+    private fun ebookMutation(href: String) = mutation().let { base ->
+        base.copy(
+            snapshot = base.snapshot.copy(
+                locator = ProgressLocator(
+                    href = href,
+                    type = "application/xhtml+xml",
+                    title = null,
+                    target = null,
+                    cssSelector = null,
+                ),
+                audioTimestampMs = null,
+                progression = 0.42,
+                totalDurationMs = null,
+                totalProgression = 0.7,
+            ),
+        )
     }
 
     private fun audioMutation(
@@ -258,6 +361,8 @@ class AudiobookshelfProgressTransportTest {
 }
 
 private val FORTY_FILES = List(40) { _ -> 15L * 60 * 1000 }
+
+private val READING_ORDER = listOf("OEBPS/cover.xhtml", "OEBPS/ch01.xhtml", "OEBPS/ch02.xhtml")
 
 private class RecordingNetworkClient(
     override val serverId: String = "audiobookshelf-1",

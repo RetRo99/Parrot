@@ -78,7 +78,7 @@ class PositionOriginMigrationTest {
             database.positionQueries.upsertPosition(
                 "book-1", "book-1", 0, null, null, null, null, "c1", null, null, null,
                 null, null, null, 0.1, null, null, 0.1, null,
-                "linked_copy", "2026-10-01T10:00:00Z", """{"before":"a","after":"b"}""", null,
+                "linked_copy", "2026-10-01T10:00:00Z", """{"before":"a","after":"b"}""", null, null,
             )
 
             // Then
@@ -149,6 +149,6 @@ class PositionOriginMigrationTest {
     }
 
     private companion object {
-        const val LATEST = 31L
+        const val LATEST = 32L
     }
 }

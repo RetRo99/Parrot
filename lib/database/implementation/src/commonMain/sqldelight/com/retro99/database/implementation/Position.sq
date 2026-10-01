@@ -31,7 +31,9 @@ CREATE TABLE IF NOT EXISTS position (
     -- Audiobooks: time from the start of the book. audio_timestamp_ms and chapter_index stay
     -- the offset in the current file and its index; total_duration_ms and total_progression
     -- are whole-book. NULL when the files' lengths aren't known.
-    book_time_ms INTEGER
+    book_time_ms INTEGER,
+    -- Audiobookshelf's raw ebookLocation (CFI or JSON locator), so a push mirrors its shape.
+    ebook_location_raw TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_position_updated ON position(updated_at);
@@ -57,7 +59,8 @@ CREATE TABLE IF NOT EXISTS remote_position (
     total_duration_ms INTEGER,
     total_progression REAL,
     position INTEGER,
-    book_time_ms INTEGER
+    book_time_ms INTEGER,
+    ebook_location_raw TEXT
 );
 
 -- Queries
@@ -67,13 +70,13 @@ INSERT OR REPLACE INTO position(
     locator_href, locator_type, locator_title, locator_target, css_selector,
     audio_timestamp_ms, chapter_index, progression, total_chapters,
     total_duration_ms, total_progression, position, origin, observed_at, text_anchor,
-    book_time_ms
+    book_time_ms, ebook_location_raw
 )
 -- library_book_id is the book id only for books in your library (I4), NULL otherwise.
 VALUES (
     ?,
     (SELECT lb.library_book_id FROM library_books lb WHERE lb.library_book_id = ?),
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
 );
 
 linkPositionToLibraryBook:
@@ -92,9 +95,9 @@ INSERT OR REPLACE INTO remote_position(
     book_uuid, library_book_id, remote_revision, timestamp, created_at, updated_at,
     locator_href, locator_type, locator_title, locator_target, css_selector,
     audio_timestamp_ms, chapter_index, progression, total_chapters,
-    total_duration_ms, total_progression, position, book_time_ms
+    total_duration_ms, total_progression, position, book_time_ms, ebook_location_raw
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getRemotePositionByBookUuid:
 SELECT * FROM remote_position WHERE book_uuid = ?;

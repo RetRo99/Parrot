@@ -222,9 +222,15 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
             let initialPreferences = settings.toEpubPreferences()
             registerCustomFonts(settings.customFonts)
 
-            // Create initial locator from settings if available
+            // Create initial locator from settings if available. A stored href this
+            // publication doesn't have (e.g. an Audiobookshelf CFI) opens at its total
+            // progression once the navigator is ready, instead of the start of the book.
             var initialLocation: Locator? = nil
+            var openAtProgression: Double? = nil
             if let position = settings.initialPosition,
+               !isInReadingOrder(position.href, of: publication) {
+                openAtProgression = position.totalProgression?.doubleValue
+            } else if let position = settings.initialPosition,
                let href = AnyURL(legacyHREF: position.href) {
                 initialLocation = Locator(
                     href: href,
@@ -249,6 +255,9 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
                 httpServer: httpServer
             )
             self.navigatorViewController = navigator
+            if let progression = openAtProgression {
+                goToTotalProgression(progression)
+            }
 
             // Set delegate to receive location change callbacks
             navigator.delegate = self
@@ -369,7 +378,19 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
         }
     }
 
-    func goToPosition(href: String, type: String, progression: KotlinDouble?, position: KotlinInt?) {
+    func goToPosition(
+        href: String,
+        type: String,
+        progression: KotlinDouble?,
+        position: KotlinInt?,
+        totalProgression: KotlinDouble?
+    ) {
+        if let publication = self.publication, !isInReadingOrder(href, of: publication) {
+            if let totalProgression = totalProgression?.doubleValue {
+                goToTotalProgression(totalProgression)
+            }
+            return
+        }
         Task { @MainActor in
             guard let url = AnyURL(legacyHREF: href) else {
                 return
@@ -386,6 +407,43 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
                 )
             )
             _ = await navigatorViewController?.go(to: locator)
+        }
+    }
+
+    /// Whether `href` names one of the publication's reading-order resources, ignoring a
+    /// fragment and a leading slash.
+    private func isInReadingOrder(_ href: String, of publication: Publication) -> Bool {
+        guard !publication.readingOrder.isEmpty else { return true }
+        let path = Self.resourcePath(href)
+        guard !path.isEmpty else { return false }
+        return publication.readingOrder.contains { link in
+            Self.resourcePath(link.href.description) == path
+        }
+    }
+
+    private static func resourcePath(_ href: String) -> String {
+        let withoutFragment = href.split(separator: "#", omittingEmptySubsequences: false)
+            .first.map(String.init) ?? href
+        return String(withoutFragment.drop(while: { $0 == "/" }))
+    }
+
+    /// Moves to `progression` of the whole book once the navigator has loaded.
+    private func goToTotalProgression(_ progression: Double) {
+        guard let publication = self.publication, (0.0...1.0).contains(progression) else {
+            return
+        }
+        Task { @MainActor [weak self] in
+            guard let target = await publication.locate(progression: progression) else {
+                return
+            }
+            for _ in 0..<50 {
+                if let navigator = self?.navigatorViewController,
+                   navigator.currentLocation != nil {
+                    _ = await navigator.go(to: target)
+                    return
+                }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
         }
     }
 

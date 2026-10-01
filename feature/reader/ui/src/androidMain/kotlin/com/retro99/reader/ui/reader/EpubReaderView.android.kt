@@ -22,7 +22,10 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.reader.ui.navigator.AndroidBookController
 import com.retro99.reader.ui.navigator.BookController
+import com.retro99.reader.ui.navigator.ReaderOpenTarget
 import com.retro99.reader.ui.navigator.SentenceTapJsInterface
+import com.retro99.reader.ui.navigator.openTarget
+import com.retro99.reader.ui.navigator.readingOrderHrefs
 import com.retro99.reader.ui.navigator.toAndroidLocator
 import com.retro99.reader.ui.navigator.toEpubPreferences
 import com.retro99.reader.ui.publication.PublicationState
@@ -177,10 +180,18 @@ internal actual fun EpubReaderViewInternal(
                 }
                 existingFragment = null
             }
+            var openAtProgression: Double? = null
             if (existingFragment == null) {
                 // Use current settings and position from PublicationState
-                // This ensures the fragment is created with up-to-date values on rotation
-                val initialLocator = publicationState.position?.toAndroidLocator()
+                // This ensures the fragment is created with up-to-date values on rotation.
+                // A stored href this publication doesn't have (e.g. an Audiobookshelf CFI)
+                // opens at its total progression once the navigator is ready, not at the start.
+                val position = publicationState.position
+                val openTarget = position?.openTarget(readiumPublication.readingOrderHrefs())
+                val initialLocator = position
+                    ?.takeIf { _ -> openTarget == ReaderOpenTarget.Locator }
+                    ?.toAndroidLocator()
+                openAtProgression = (openTarget as? ReaderOpenTarget.TotalProgression)?.progression
                 fragmentManager.fragmentFactory = navigatorFactory.createFragmentFactory(
                     initialLocator = initialLocator,
                     initialPreferences = publicationState.settings.toEpubPreferences(),
@@ -211,6 +222,9 @@ internal actual fun EpubReaderViewInternal(
                     publication = readiumPublication,
                     hasMediaOverlays = publication.hasMediaOverlays,
                 )
+                openAtProgression?.let { progression ->
+                    navigatorController?.goToTotalProgressionLater(progression)
+                }
             }
         },
     )

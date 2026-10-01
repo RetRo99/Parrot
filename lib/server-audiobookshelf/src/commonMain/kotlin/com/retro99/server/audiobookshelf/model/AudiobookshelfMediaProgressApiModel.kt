@@ -76,53 +76,39 @@ internal fun absAudioPlace(
     )
 }
 
-fun AudiobookshelfMediaProgressApiModel.toServerPosition(
+/**
+ * A position read from Audiobookshelf: book-level audio values (see [absAudioPlace]) and the
+ * ebook location read by its shape (see [parseAbsEbookLocation]), keeping the raw value.
+ */
+suspend fun AudiobookshelfMediaProgressApiModel.toServerPosition(
     bookUuid: String,
     serverId: String,
     trackDurationsMs: List<Long>? = null,
+    readingOrderHrefs: suspend () -> List<String>? = { null },
 ): ServerPosition {
     val place = absAudioPlace(currentTime, trackDurationsMs)
+    val ebook = parseAbsEbookLocation(ebookLocation, ebookProgress, readingOrderHrefs)
     return ServerPosition(
         bookUuid = bookUuid,
         serverId = serverId,
         timestamp = lastUpdate,
         createdAt = startedAt?.toString(),
         updatedAt = lastUpdate?.toString(),
-        locatorHref = ebookLocation,
-        locatorType = null,
+        locatorHref = ebook.href,
+        locatorType = ebook.type,
         locatorTitle = null,
         locatorTarget = null,
         audioTimestampMs = place.offsetMs,
-        chapterIndex = place.trackIndex,
-        progression = progress,
-        totalChapters = trackDurationsMs?.size,
+        chapterIndex = if (place.isListening) place.trackIndex else ebook.spineIndex,
+        progression = if (place.isListening) progress else ebook.progression,
+        totalChapters = trackDurationsMs?.size.takeIf { _ -> place.isListening },
         totalDurationMs = duration?.let { dur -> (dur * 1000).toLong() },
-        totalProgression = if (place.isListening) progress else ebookProgress ?: progress,
+        totalProgression = if (place.isListening) progress else ebook.totalProgression ?: progress,
         position = null,
+        cssSelector = ebook.cssSelector,
         bookTimeMs = place.bookTimeMs,
+        ebookLocationRaw = ebookLocation,
         origin = PositionOrigin.Remote,
         observedAt = lastUpdate?.let { millis -> Instant.fromEpochMilliseconds(millis).toString() },
-    )
-}
-
-fun ServerPosition.toAudiobookshelfMediaProgress(
-    libraryItemId: String,
-): AudiobookshelfMediaProgressApiModel {
-    // Book-level values only: a file offset is the book time only for a single-file book.
-    val isSingleFile = (totalChapters ?: 1) <= 1 && (chapterIndex ?: 0) == 0
-    val isBookLevel = bookTimeMs != null || isSingleFile
-    return AudiobookshelfMediaProgressApiModel(
-        libraryItemId = libraryItemId,
-        duration = totalDurationMs?.takeIf { _ -> isBookLevel }?.let { ms -> ms / 1000.0 },
-        progress = progression?.takeIf { _ -> isBookLevel },
-        currentTime = (bookTimeMs ?: audioTimestampMs?.takeIf { _ -> isSingleFile })
-            ?.let { ms -> ms / 1000.0 },
-        isFinished = null,
-        hideFromContinueListening = null,
-        lastUpdate = timestamp,
-        startedAt = null,
-        finishedAt = null,
-        ebookLocation = locatorHref,
-        ebookProgress = totalProgression,
     )
 }

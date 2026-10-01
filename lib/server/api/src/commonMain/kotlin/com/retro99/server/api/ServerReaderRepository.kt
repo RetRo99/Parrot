@@ -110,4 +110,10 @@ data class ServerPosition(
     val observedAt: String? = null,
     @Transient
     val textAnchor: TextAnchor? = null,
+    /**
+     * Audiobookshelf's raw `ebookLocation` (a CFI or a JSON locator), kept so a push writes
+     * the same shape back. Read from storage when pushing, so never part of a payload.
+     */
+    @Transient
+    val ebookLocationRaw: String? = null,
 )
