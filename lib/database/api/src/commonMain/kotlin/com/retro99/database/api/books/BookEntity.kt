@@ -30,6 +30,8 @@ interface BookEntity {
     val ebook: MediaFileEntity?
     val audiobook: MediaFileEntity?
     val readaloud: ReadaloudEntity?
+    val isbn: String? get() = null
+    val asin: String? get() = null
 }
 
 /**

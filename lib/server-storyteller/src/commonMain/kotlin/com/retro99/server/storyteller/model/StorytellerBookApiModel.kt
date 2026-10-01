@@ -156,6 +156,7 @@ fun StorytellerBookApiModel.toDomain(
         // Storyteller books are not local
         isLocal = false,
         serverType = ServerType.Storyteller,
+        language = language?.takeIf { value -> value.isNotBlank() },
     )
 }
 

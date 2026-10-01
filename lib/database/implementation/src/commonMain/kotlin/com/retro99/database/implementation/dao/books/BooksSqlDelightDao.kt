@@ -59,6 +59,8 @@ internal class BooksSqlDelightDao(
                 cover_url = book.coverUrl,
                 created_at = book.createdAt,
                 updated_at = book.updatedAt,
+                isbn = book.isbn,
+                asin = book.asin,
             )
         }
     }
@@ -82,6 +84,8 @@ internal class BooksSqlDelightDao(
                     coverUrl = row.cover_url,
                     createdAt = row.created_at,
                     updatedAt = row.updated_at,
+                    isbn = row.isbn,
+                    asin = row.asin,
                 )
             }
         }
@@ -106,6 +110,8 @@ internal class BooksSqlDelightDao(
                     coverUrl = row.cover_url,
                     createdAt = row.created_at,
                     updatedAt = row.updated_at,
+                    isbn = row.isbn,
+                    asin = row.asin,
                 )
             }
         }
@@ -130,6 +136,8 @@ internal class BooksSqlDelightDao(
                     coverUrl = row.cover_url,
                     createdAt = row.created_at,
                     updatedAt = row.updated_at,
+                    isbn = row.isbn,
+                    asin = row.asin,
                 )
             }
         }
@@ -154,6 +162,8 @@ internal class BooksSqlDelightDao(
                     coverUrl = row.cover_url,
                     createdAt = row.created_at,
                     updatedAt = row.updated_at,
+                    isbn = row.isbn,
+                    asin = row.asin,
                 )
             }
         }

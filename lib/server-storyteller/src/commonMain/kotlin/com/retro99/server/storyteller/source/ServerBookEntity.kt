@@ -41,6 +41,8 @@ internal data class ServerBookEntityImpl(
     override val ebook: MediaFileEntity?,
     override val audiobook: MediaFileEntity?,
     override val readaloud: ReadaloudEntity?,
+    override val isbn: String? = null,
+    override val asin: String? = null,
 ) : BookEntity
 
 internal data class SimplePersonEntity(
@@ -78,7 +80,7 @@ internal fun ServerBook.toEntity(): BookEntity {
         id = 0L, // ServerBook doesn't have numeric id
         title = title,
         subtitle = null,
-        language = null,
+        language = language,
         publicationDate = publicationDate,
         description = description,
         rating = null,
@@ -128,6 +130,8 @@ internal fun ServerBook.toEntity(): BookEntity {
         ebook = if (hasEbook) SimpleMediaFileEntity(uuid, "ebook", ebookFilepath, ebookFileSize) else null,
         audiobook = if (hasAudiobook) SimpleMediaFileEntity(uuid, "audiobook", audiobookFilepath, audiobookFileSize) else null,
         readaloud = if (hasReadaloud) SimpleReadaloudEntity(uuid, readaloudFilepath) else null,
+        isbn = isbn,
+        asin = asin,
     )
 }
 
@@ -199,5 +203,8 @@ internal fun BookEntity.toServerBook(baseUrl: String?): ServerBook {
         // Cached books are not local
         isLocal = false,
         serverType = serverType?.let { ServerType.fromIdentifier(it) },
+        language = language,
+        isbn = isbn,
+        asin = asin,
     )
 }

@@ -1150,4 +1150,20 @@
     <string name="library_remove_from_parrot_message_keep_local" tools:ignore="MissingTranslation">“%1$s” will be removed from Parrot Cloud and your other devices. It stays on this device.</string>
     <string name="library_remove_from_parrot_message" tools:ignore="MissingTranslation">“%1$s” will be removed from Parrot Cloud and your other devices.</string>
     <string name="library_remove_from_parrot_confirm" tools:ignore="MissingTranslation">Remove</string>
+    <string name="link_also_in" tools:ignore="MissingTranslation">Also in</string>
+    <string name="link_open_copy" tools:ignore="MissingTranslation">Open</string>
+    <string name="link_not_same_book" tools:ignore="MissingTranslation">Not the same book</string>
+    <string name="link_same_book_as" tools:ignore="MissingTranslation">Same book as…</string>
+    <string name="link_picker_title" tools:ignore="MissingTranslation">Choose the same book on another server</string>
+    <string name="link_error_same_source" tools:ignore="MissingTranslation">These books are both from %1$s. Only books from different servers can be linked.</string>
+    <string name="link_suggestions_banner" tools:ignore="MissingTranslation">%1$d books may be the same across your servers · Review</string>
+    <string name="link_review_title" tools:ignore="MissingTranslation">Same book?</string>
+    <string name="link_review_link" tools:ignore="MissingTranslation">Link</string>
+    <string name="link_review_skip" tools:ignore="MissingTranslation">Skip</string>
+    <string name="link_review_link_all_confident" tools:ignore="MissingTranslation">Link all %1$d confident matches</string>
+    <string name="link_reason_identifier" tools:ignore="MissingTranslation">Same ISBN</string>
+    <string name="link_reason_title_author" tools:ignore="MissingTranslation">Similar title and author</string>
+    <string name="link_unlink_confirm_title" tools:ignore="MissingTranslation">Not the same book?</string>
+    <string name="link_unlink_confirm_message" tools:ignore="MissingTranslation">“%1$s” on %2$s will show as a separate book again.</string>
+    <string name="link_source_library" tools:ignore="MissingTranslation">your library</string>
 </resources>

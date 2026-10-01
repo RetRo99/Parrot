@@ -34,6 +34,13 @@ sealed class BookDomainModel {
     open val mediaResources: List<MediaResource>
         get() = emptyList()
 
+    /** Identifiers used to suggest that books on different sources are the same book. */
+    open val isbn: String?
+        get() = null
+
+    open val asin: String?
+        get() = null
+
     abstract val series: List<SeriesDomainModel>
 
     /**
@@ -72,6 +79,8 @@ sealed class BookDomainModel {
         override val remoteFileAvailability: RemoteFileAvailability = RemoteFileAvailability.None,
         override val remoteRevision: Long? = null,
         override val mediaResources: List<MediaResource> = emptyList(),
+        override val isbn: String? = null,
+        override val asin: String? = null,
     ) : BookDomainModel()
 
     /** Your library: files on this device and/or in Parrot Cloud. [uuid] is the book ID. */
@@ -87,6 +96,7 @@ sealed class BookDomainModel {
         val addedAt: String,
         val lastOpenedAt: String?,
         override val mediaResources: List<MediaResource>,
+        override val isbn: String? = null,
     ) : BookDomainModel() {
         override val series: List<SeriesDomainModel> = emptyList()
 

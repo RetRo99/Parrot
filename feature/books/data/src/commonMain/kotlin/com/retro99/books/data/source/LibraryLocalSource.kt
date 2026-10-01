@@ -41,4 +41,5 @@ data class LibraryBookRecord(
     val lastOpenedAt: String?,
     val deviceFiles: List<DeviceFileEntity>,
     val parrotFiles: List<CloudBookFileEntity>,
+    val isbn: String? = null,
 )

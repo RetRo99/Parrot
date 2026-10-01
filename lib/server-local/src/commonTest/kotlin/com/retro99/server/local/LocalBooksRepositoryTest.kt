@@ -20,6 +20,18 @@ class LocalBooksRepositoryTest {
     )
 
     @Test
+    fun `a library book carries the isbn of its record`() {
+        // Given
+        val record = record(device = deviceFile()).copy(isbn = "9780261102217")
+
+        // When
+        val book = record.toLibraryServerBook(serverId = "local", parrotActive = false)
+
+        // Then
+        assertEquals("9780261102217", book?.isbn)
+    }
+
+    @Test
     fun `library books are listed by where their copies are`() {
         // Given
         val cases = listOf(

@@ -1,0 +1,76 @@
+-- ============================================
+-- BOOK LINKS (the same book on different sources)
+-- ============================================
+-- A link groups copies of one book. A copy is named by a portable key such as
+-- library:<bookId>, storyteller:<uuid> or audiobookshelf:<itemId>, and belongs
+-- to at most one link. A link with deleted_at set is a tombstone with no members.
+
+CREATE TABLE IF NOT EXISTS book_links (
+    link_id TEXT NOT NULL PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    remote_revision INTEGER,
+    deleted_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS book_link_members (
+    link_id TEXT NOT NULL,
+    member_key TEXT NOT NULL UNIQUE,
+    added_at TEXT NOT NULL,
+    PRIMARY KEY (link_id, member_key)
+);
+
+CREATE TABLE IF NOT EXISTS book_link_decisions (
+    pair_key TEXT NOT NULL PRIMARY KEY,
+    decision TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    remote_revision INTEGER
+);
+
+upsertBookLink:
+INSERT OR REPLACE INTO book_links(link_id, created_at, updated_at, remote_revision, deleted_at)
+VALUES (?, ?, ?, ?, ?);
+
+getBookLink:
+SELECT * FROM book_links WHERE link_id = ?;
+
+setBookLinkRemoteRevision:
+UPDATE book_links SET remote_revision = ? WHERE link_id = ?;
+
+selectLiveBookLinkMembers:
+SELECT
+    book_links.link_id,
+    book_links.created_at,
+    book_links.updated_at,
+    book_links.remote_revision,
+    book_link_members.member_key
+FROM book_links
+JOIN book_link_members ON book_link_members.link_id = book_links.link_id
+WHERE book_links.deleted_at IS NULL
+ORDER BY book_links.link_id ASC, book_link_members.member_key ASC;
+
+getBookLinkMembers:
+SELECT member_key FROM book_link_members WHERE link_id = ? ORDER BY member_key ASC;
+
+insertBookLinkMember:
+INSERT INTO book_link_members(link_id, member_key, added_at)
+VALUES (?, ?, ?);
+
+deleteBookLinkMember:
+DELETE FROM book_link_members WHERE link_id = ? AND member_key = ?;
+
+deleteBookLinkMembers:
+DELETE FROM book_link_members WHERE link_id = ?;
+
+upsertBookLinkDecision:
+INSERT OR REPLACE INTO book_link_decisions(pair_key, decision, decided_at, remote_revision)
+VALUES (?, ?, ?, ?);
+
+getBookLinkDecision:
+SELECT * FROM book_link_decisions WHERE pair_key = ?;
+
+selectBookLinkDecisions:
+SELECT * FROM book_link_decisions ORDER BY pair_key ASC;
+
+setBookLinkDecisionRemoteRevision:
+UPDATE book_link_decisions SET remote_revision = ? WHERE pair_key = ?;

@@ -15,7 +15,10 @@ class ParrotCloudLibraryMutationApplierTest {
     @Test
     fun acceptedMutationRecordsTheServerRevision() = runTest {
         val database = ParrotTestLibraryBooksDatabase(parrotTestBook(BOOK_ID))
-        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
+        val applier = ParrotCloudLibraryMutationApplier(
+            LibraryBookSyncApplier(database),
+            ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+        )
 
         applier.onAccepted(
             entry = entry(json.encodeToString(bookPayload())),
@@ -35,7 +38,10 @@ class ParrotCloudLibraryMutationApplierTest {
     @Test
     fun conflictPayloadIsAppliedAsRemoteLibraryState() = runTest {
         val database = ParrotTestLibraryBooksDatabase()
-        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
+        val applier = ParrotCloudLibraryMutationApplier(
+            LibraryBookSyncApplier(database),
+            ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+        )
 
         applier.onConflict(
             entry = entry("{}"),
@@ -55,7 +61,10 @@ class ParrotCloudLibraryMutationApplierTest {
     @Test
     fun acceptedSessionMutationNeedsNoLocalBookMetadataUpdate() = runTest {
         val database = ParrotTestLibraryBooksDatabase()
-        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
+        val applier = ParrotCloudLibraryMutationApplier(
+            LibraryBookSyncApplier(database),
+            ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+        )
 
         applier.onAccepted(
             entry = entry(payload = "{}").copy(
@@ -76,7 +85,10 @@ class ParrotCloudLibraryMutationApplierTest {
     @Test
     fun conflictSessionMutationDoesNotTouchLibraryState() = runTest {
         val database = ParrotTestLibraryBooksDatabase()
-        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
+        val applier = ParrotCloudLibraryMutationApplier(
+            LibraryBookSyncApplier(database),
+            ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+        )
 
         applier.onConflict(
             entry = entry("{}").copy(
@@ -112,7 +124,10 @@ class ParrotCloudLibraryMutationApplierTest {
     fun `a duplicate saves the server's book by its own id`() = runTest {
         // Given
         val database = ParrotTestLibraryBooksDatabase()
-        val applier = ParrotCloudLibraryMutationApplier(LibraryBookSyncApplier(database))
+        val applier = ParrotCloudLibraryMutationApplier(
+            LibraryBookSyncApplier(database),
+            ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+        )
         val serverBook = bookPayload().copy(libraryBookId = EXISTING_ID, remoteRevision = 7L)
 
         // When

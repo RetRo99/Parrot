@@ -57,6 +57,21 @@ class ServerBookEntityRoundTripTest {
     }
 
     @Test
+    fun `language isbn and asin survive the cache round trip`() {
+        // Given
+        val fromRemote = StorytellerBookApiModel(uuid = "book-3", title = "Dune", language = "en")
+            .toDomain(serverId = "server-1", baseUrl = "http://example.com")
+            .copy(isbn = "9780441013593", asin = "B00B7NPRY8")
+
+        // When
+        val roundTripped = fromRemote.toEntity().toServerBook(baseUrl = null)
+
+        // Then
+        assertEquals("en", fromRemote.language)
+        assertEquals(fromRemote, roundTripped)
+    }
+
+    @Test
     fun publicationDateSurvivesTheCacheRoundTrip() {
         val apiModel = StorytellerBookApiModel(
             uuid = "book-2",

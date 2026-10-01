@@ -100,6 +100,43 @@ class LibraryMutationSyncEngineTest {
         assertEquals(1, summary.acknowledgedCount)
     }
 
+    @Test
+    fun `a conflict the applier resolves leaves the outbox instead of being preserved`() =
+        runTest {
+            // Given
+            val resolved = entry("resolved")
+            val preserved = entry("preserved")
+            val outbox = RecordingLibraryMutationOutbox()
+            val transport = RecordingLibraryMutationTransport(
+                responses = listOf(resolved, preserved).map { entry ->
+                    SyncMutationResponse(
+                        mutationId = entry.mutationId,
+                        status = "conflict",
+                        revision = 3L,
+                        payload = "{}",
+                        reason = null,
+                    )
+                },
+            )
+            val applier = RecordingLibraryMutationApplier(
+                discardedConflictIds = setOf(resolved.mutationId),
+            )
+            val engine = LibraryMutationSyncEngine(outbox, RecordingMerger())
+
+            // When
+            val summary = engine.push(
+                entries = listOf(resolved, preserved),
+                transport = transport,
+                cursor = null,
+                applier = applier,
+            )
+
+            // Then
+            assertEquals(listOf(resolved.mutationId), outbox.deletedIds)
+            assertEquals(listOf(preserved.mutationId), outbox.conflictIds)
+            assertEquals(2, summary.conflictCount)
+        }
+
     private fun entry(id: String) = SyncOutboxEntry(
         mutationId = id,
         cloudUserId = "account",
@@ -135,8 +172,13 @@ private class RecordingLibraryMutationTransport(
     }
 }
 
-private class RecordingLibraryMutationApplier : LibraryMutationApplier {
+private class RecordingLibraryMutationApplier(
+    private val discardedConflictIds: Set<String> = emptySet(),
+) : LibraryMutationApplier {
     val acceptedIds = mutableListOf<String>()
+
+    override fun discardsConflict(entry: SyncOutboxEntry): Boolean =
+        entry.mutationId in discardedConflictIds
 
     override suspend fun onAccepted(
         entry: SyncOutboxEntry,
@@ -172,6 +214,7 @@ private class RecordingLibraryMutationOutbox : SyncOutboxDatabase {
     val dispatchedIds = mutableListOf<String>()
     val deletedIds = mutableListOf<String>()
     val failureIds = mutableListOf<String>()
+    val conflictIds = mutableListOf<String>()
 
     override suspend fun enqueue(entry: SyncOutboxEntry) = Unit
 
@@ -185,7 +228,9 @@ private class RecordingLibraryMutationOutbox : SyncOutboxDatabase {
         dispatchedIds += mutationId
     }
 
-    override suspend fun markConflict(mutationId: String, error: String) = Unit
+    override suspend fun markConflict(mutationId: String, error: String) {
+        conflictIds += mutationId
+    }
 
     override suspend fun delete(mutationId: String) {
         deletedIds += mutationId

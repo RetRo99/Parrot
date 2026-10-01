@@ -87,10 +87,15 @@ class LibraryMutationSyncEngine(
 
                     STATUS_CONFLICT -> {
                         applier.onConflict(entry, response)
-                        syncOutboxDatabase.markConflict(
-                            mutationId = entry.mutationId,
-                            error = response.reason ?: "Remote mutation conflict",
-                        )
+                        if (applier.discardsConflict(entry)) {
+                            // The applier settled it and queued whatever must be sent next.
+                            syncOutboxDatabase.delete(entry.mutationId)
+                        } else {
+                            syncOutboxDatabase.markConflict(
+                                mutationId = entry.mutationId,
+                                error = response.reason ?: "Remote mutation conflict",
+                            )
+                        }
                         conflictCount++
                     }
 
@@ -143,6 +148,12 @@ interface LibraryMutationApplier {
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     )
+
+    /**
+     * True when [onConflict] settles conflicts of this kind itself, so the conflicting
+     * entry is dropped instead of being kept in the outbox.
+     */
+    fun discardsConflict(entry: SyncOutboxEntry): Boolean = false
 
     /** Saves the server's copy of the book that [entry] duplicates. */
     suspend fun onDuplicate(

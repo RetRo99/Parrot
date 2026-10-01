@@ -37,6 +37,13 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
         val bookUuid: String,
     ) : HomeDestination
 
+    /** "Same book as…": pick a book on another server to link this book to. */
+    @Serializable
+    data class LinkPicker(
+        val serverId: String,
+        val bookUuid: String,
+    ) : HomeDestination
+
     @Serializable
     data class SeriesDetail(
         val seriesUuid: String,
@@ -95,7 +102,8 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
             this is SyncAndBackup ||
             this is Diagnostics ||
             this is Statistics ||
-            this is BookDetail
+            this is BookDetail ||
+            this is LinkPicker
 }
 
 /** Returns whether this destination already restores the requested Reader route. */

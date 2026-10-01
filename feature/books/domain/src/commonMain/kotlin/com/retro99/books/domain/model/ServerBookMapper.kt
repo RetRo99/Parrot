@@ -21,6 +21,7 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             addedAt = createdAt.orEmpty(),
             lastOpenedAt = lastOpenedAt,
             mediaResources = mediaResources,
+            isbn = isbn,
         )
     } else {
         BookDomainModel.StorytellerBook(
@@ -31,7 +32,7 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             description = description,
             coverUrl = coverUrl,
             id = 0L,
-            language = null,
+            language = language,
             createdAt = createdAt,
             updatedAt = null,
             publicationDate = publicationDate,
@@ -113,6 +114,8 @@ fun ServerBook.toBookDomainModel(): BookDomainModel {
             remoteFileAvailability = remoteFileAvailability,
             remoteRevision = remoteRevision,
             mediaResources = mediaResources,
+            isbn = isbn,
+            asin = asin,
         )
     }
 }

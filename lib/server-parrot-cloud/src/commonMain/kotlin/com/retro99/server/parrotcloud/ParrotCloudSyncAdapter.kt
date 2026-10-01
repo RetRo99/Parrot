@@ -51,6 +51,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val bookFileChangeApplier: ParrotCloudBookFileChangeApplier,
     @Provided private val readingSessionSyncService: ParrotCloudReadingSessionSyncService,
     @Provided private val readingSessionChangeApplier: ParrotCloudReadingSessionChangeApplier,
+    private val bookLinkSync: ParrotCloudBookLinkSync,
 ) : SyncPass {
     private val outboxCapability = SyncOutboxCapability(
         unsupportedEntityTypes = setOf(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS),
@@ -267,6 +268,9 @@ class ParrotCloudSyncAdapter(
 
             ENTITY_TYPE_BOOK_FILE -> bookFileChangeApplier.apply(payload)
             SyncOutboxEntry.ENTITY_TYPE_READING_SESSION -> readingSessionChangeApplier.apply(payload)
+            SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK -> bookLinkSync.applyRemoteLink(payload)
+            SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK_DECISION ->
+                bookLinkSync.applyRemoteDecision(payload)
         }
     }
 

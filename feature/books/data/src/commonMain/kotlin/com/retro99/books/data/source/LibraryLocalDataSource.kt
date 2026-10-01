@@ -3,6 +3,7 @@ package com.retro99.books.data.source
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.books.data.model.LibraryBookJsonCodec
+import com.retro99.books.data.model.LibraryBookMetadataJson
 import com.retro99.books.data.transfer.BookFileTransferFileStore
 import com.retro99.books.domain.DeviceLibraryRepository
 import com.retro99.database.api.DatabaseExecutor
@@ -126,6 +127,7 @@ internal class LibraryLocalDataSource(
             sourceContentHash = file.contentHash,
             sourceContentHashAlgorithm = file.contentHashAlgorithm,
             addedAt = now(),
+            metadataJson = LibraryBookMetadataJson.encode(isbn = file.metadata.isbn),
         )
         try {
             libraryBooksDatabase.insertImportedBook(
@@ -172,6 +174,7 @@ internal class LibraryLocalDataSource(
         lastOpenedAt = lastOpenedAt,
         deviceFiles = deviceFiles,
         parrotFiles = parrotFiles,
+        isbn = LibraryBookMetadataJson.isbn(metadataJson),
     )
 
     private fun now(): String = Clock.System.now().toString()

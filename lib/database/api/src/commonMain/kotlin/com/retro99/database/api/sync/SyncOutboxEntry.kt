@@ -20,6 +20,8 @@ data class SyncOutboxEntry(
     val state: String = STATE_PENDING,
 ) {
     companion object {
+        const val ENTITY_TYPE_BOOK_LINK = "book_link"
+        const val ENTITY_TYPE_BOOK_LINK_DECISION = "book_link_decision"
         const val ENTITY_TYPE_BOOKMARK = "bookmark"
         const val ENTITY_TYPE_LIBRARY_BOOK = "library_book"
         const val ENTITY_TYPE_READER_SETTINGS = "reader_settings"

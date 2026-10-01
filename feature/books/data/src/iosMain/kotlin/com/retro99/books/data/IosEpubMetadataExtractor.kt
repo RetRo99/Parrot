@@ -37,6 +37,7 @@ class IosEpubMetadataExtractor : EpubMetadataExtractor {
                                 coverBytes = coverBytes,
                                 hasMediaOverlays = result.hasMediaOverlays,
                                 publicationDate = result.publicationDate,
+                                isbn = isbnFromIdentifier(result.identifier),
                             )
                         )
                     )

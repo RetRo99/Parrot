@@ -199,6 +199,9 @@ import resources.translations.general_cancel
 import resources.translations.reader_conflict_use_local
 import resources.translations.reader_conflict_use_remote
 import com.retro99.books.ui.components.PositionConflictDialog
+import com.retro99.books.ui.links.LinkedCopiesSection
+import com.retro99.books.ui.links.UnlinkCopyConfirmationDialog
+import com.retro99.books.ui.model.LinkedCopyUiModel
 
 private val CoverWidth = 120.dp
 private val DescriptionCollapsedMaxHeight = 140.dp
@@ -211,9 +214,19 @@ fun BookDetailScreen(
     onNavigateToReader: (serverId: String, bookUuid: String, bookType: BookType, bookTitle: String) -> Unit,
     onNavigateToSeriesDetail: (seriesUuid: String, seriesName: String) -> Unit,
     onBack: () -> Unit,
+    onNavigateToLinkPicker: (serverId: String, bookUuid: String) -> Unit,
+    onNavigateToBookDetail: (serverId: String, bookUuid: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BookDetailViewModel = koinViewModel {
-        parametersOf(serverId, bookUuid, onNavigateToReader, onNavigateToSeriesDetail, onBack)
+        parametersOf(
+            serverId,
+            bookUuid,
+            onNavigateToReader,
+            onNavigateToSeriesDetail,
+            onBack,
+            onNavigateToLinkPicker,
+            onNavigateToBookDetail,
+        )
     },
 ) {
     BaseScreen(
@@ -244,6 +257,8 @@ fun BookDetailScreen(
                 bookFileTransferError = viewState.bookFileTransferError,
                 replaceBackupConfirmationTransferId = viewState.replaceBackupConfirmationTransferId,
                 replacingBackupTransferId = viewState.replacingBackupTransferId,
+                linkedCopies = viewState.linkedCopies,
+                unlinkConfirmationCopy = viewState.unlinkConfirmationCopy,
                 intentDispatcher = intentDispatcher,
             )
         }
@@ -274,6 +289,8 @@ private fun BookDetailScreenContent(
     bookFileTransferError: String?,
     replaceBackupConfirmationTransferId: String?,
     replacingBackupTransferId: String?,
+    linkedCopies: List<LinkedCopyUiModel>,
+    unlinkConfirmationCopy: LinkedCopyUiModel?,
     intentDispatcher: IntentDispatcher<BookDetailIntent>,
     modifier: Modifier = Modifier,
 ) {
@@ -336,6 +353,14 @@ private fun BookDetailScreenContent(
             keepsDeviceCopy = (book as? BookUiModel.LibraryBook)?.hasDeviceCopy == true,
             onConfirm = { intentDispatcher(BookDetailIntent.OnRemoveFromParrotConfirmed) },
             onDismiss = { intentDispatcher(BookDetailIntent.OnRemoveFromParrotDismissed) },
+        )
+    }
+
+    unlinkConfirmationCopy?.let { copy ->
+        UnlinkCopyConfirmationDialog(
+            copy = copy,
+            onConfirm = { intentDispatcher(BookDetailIntent.OnNotSameBookConfirmed) },
+            onDismiss = { intentDispatcher(BookDetailIntent.OnNotSameBookDismissed) },
         )
     }
 
@@ -532,6 +557,18 @@ private fun BookDetailScreenContent(
                             },
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    LinkedCopiesSection(
+                        linkedCopies = linkedCopies,
+                        onOpenCopy = { copy ->
+                            intentDispatcher(BookDetailIntent.OnOpenLinkedCopyClicked(copy))
+                        },
+                        onNotSameBook = { copy ->
+                            intentDispatcher(BookDetailIntent.OnNotSameBookClicked(copy))
+                        },
+                        onSameBookAs = { intentDispatcher(BookDetailIntent.OnSameBookAsClicked) },
+                    )
 
                     progressInfo?.displayProgression?.let { progress ->
                         if (progress > 0.0) {

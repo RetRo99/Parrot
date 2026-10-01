@@ -41,6 +41,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.navigation3.runtime.entryProvider
 import com.retro99.analytics.api.ContinueReadingEntryPoint
 import com.retro99.books.ui.detail.BookDetailScreen
+import com.retro99.books.ui.links.LinkPickerScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
@@ -435,6 +436,34 @@ fun HomeNavigation(
                                     )
                                 )
                             },
+                            onBack = { requestBack("toolbar_back") },
+                            onNavigateToLinkPicker = { serverId, bookUuid ->
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(
+                                        HomeDestination.LinkPicker(
+                                            serverId = serverId,
+                                            bookUuid = bookUuid,
+                                        ),
+                                    ),
+                                )
+                            },
+                            onNavigateToBookDetail = { serverId, bookUuid ->
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(
+                                        HomeDestination.BookDetail(
+                                            serverId = serverId,
+                                            bookUuid = bookUuid,
+                                        ),
+                                    ),
+                                )
+                            },
+                        )
+                    }
+
+                    entry<HomeDestination.LinkPicker> { destination ->
+                        LinkPickerScreen(
+                            serverId = destination.serverId,
+                            bookUuid = destination.bookUuid,
                             onBack = { requestBack("toolbar_back") },
                         )
                     }

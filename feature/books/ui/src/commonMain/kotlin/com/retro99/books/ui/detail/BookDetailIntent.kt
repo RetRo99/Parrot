@@ -2,6 +2,7 @@ package com.retro99.books.ui.detail
 
 import com.retro99.base.ui.BaseIntent
 import com.retro99.books.domain.model.BookType
+import com.retro99.books.ui.model.LinkedCopyUiModel
 
 sealed interface BookDetailIntent : BaseIntent {
     data object OnBackClicked : BookDetailIntent
@@ -35,4 +36,9 @@ sealed interface BookDetailIntent : BaseIntent {
     data object OnUseRemotePositionClicked : BookDetailIntent
     data object OnConflictResolutionErrorDismissed : BookDetailIntent
     data object OnConflictDialogDismissed : BookDetailIntent
+    data object OnSameBookAsClicked : BookDetailIntent
+    data class OnOpenLinkedCopyClicked(val copy: LinkedCopyUiModel) : BookDetailIntent
+    data class OnNotSameBookClicked(val copy: LinkedCopyUiModel) : BookDetailIntent
+    data object OnNotSameBookConfirmed : BookDetailIntent
+    data object OnNotSameBookDismissed : BookDetailIntent
 }

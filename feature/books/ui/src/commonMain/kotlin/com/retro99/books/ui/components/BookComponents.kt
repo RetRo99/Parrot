@@ -83,6 +83,7 @@ import resources.translations.library_home_this_device
  * @param progressInfo Optional progress and cache info for the book
  * @param showServerBadge Whether to show the server the book comes from
  * @param showDivider Whether to draw a divider above the row (all but the first row of a list)
+ * @param showFavorite Whether the favorite button is shown (not when picking a book)
  * @param headerContent Optional composable content to display above the title
  * @param subtitleContent Optional composable content to display below the author (e.g., series info)
  */
@@ -97,6 +98,7 @@ fun BookItemCard(
     showServerBadge: Boolean = true,
     showDivider: Boolean = false,
     highlightQuery: String = "",
+    showFavorite: Boolean = true,
     headerContent: @Composable (() -> Unit)? = null,
     subtitleContent: @Composable (() -> Unit)? = null,
 ) {
@@ -156,22 +158,24 @@ fun BookItemCard(
                 )
             }
 
-            IconButton(onClick = onFavoriteClick) {
-                Icon(
-                    imageVector = if (isFavorite) {
-                        Icons.Filled.Favorite
-                    } else {
-                        Icons.Outlined.FavoriteBorder
-                    },
-                    contentDescription = stringResource(
-                        if (isFavorite) {
-                            StringRes.books_action_unfavorite
+            if (showFavorite) {
+                IconButton(onClick = onFavoriteClick) {
+                    Icon(
+                        imageVector = if (isFavorite) {
+                            Icons.Filled.Favorite
                         } else {
-                            StringRes.books_action_favorite
+                            Icons.Outlined.FavoriteBorder
                         },
-                    ),
-                    tint = if (isFavorite) colors.accentText else colors.ink2,
-                )
+                        contentDescription = stringResource(
+                            if (isFavorite) {
+                                StringRes.books_action_unfavorite
+                            } else {
+                                StringRes.books_action_favorite
+                            },
+                        ),
+                        tint = if (isFavorite) colors.accentText else colors.ink2,
+                    )
+                }
             }
         }
     }

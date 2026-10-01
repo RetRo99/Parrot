@@ -53,6 +53,20 @@ class LibraryImportTest {
     }
 
     @Test
+    fun `a new book keeps the isbn of its file`() = runTest {
+        // Given
+        val file = stage("with isbn", hash = "hash-isbn", isbn = "9780261102217")
+
+        // When
+        val bookId = requireNotNull(classUnderTest.addImportedFile(file).get())
+
+        // Then
+        val book = assertNotNull(libraryBooks.getLibraryBookById(bookId))
+        assertEquals("""{"isbn":"9780261102217"}""", book.metadataJson)
+        assertEquals("9780261102217", classUnderTest.getLibraryBook(bookId)?.isbn)
+    }
+
+    @Test
     fun `the same hash imported twice returns the same book and adds nothing`() = runTest {
         // Given
         val firstId = requireNotNull(classUnderTest.addImportedFile(stage("book", "hash-a")).get())
@@ -137,6 +151,7 @@ class LibraryImportTest {
         hash: String,
         mediaType: String = "ebook",
         stagedPath: String = "/staging/$content.epub",
+        isbn: String? = null,
     ): ImportedFileCandidate {
         fileStore.files[stagedPath] = content.encodeToByteArray()
         return ImportedFileCandidate(
@@ -152,6 +167,7 @@ class LibraryImportTest {
                 coverBytes = null,
                 hasMediaOverlays = mediaType == "readaloud",
                 publicationDate = null,
+                isbn = isbn,
             ),
         )
     }

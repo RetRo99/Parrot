@@ -73,6 +73,10 @@ data class ServerBook(
     val remoteFileAvailability: RemoteFileAvailability = RemoteFileAvailability.None,
     val remoteRevision: Long? = null,
     val mediaResources: List<MediaResource> = emptyList(),
+    // Used to suggest that books on different sources are the same book.
+    val language: String? = null,
+    val isbn: String? = null,
+    val asin: String? = null,
 )
 
 enum class RemoteFileAvailability {

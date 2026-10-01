@@ -440,6 +440,8 @@ internal class BooksDatabaseImpl(
             ebook = mediaFiles.find { it.type == "ebook" },
             audiobook = mediaFiles.find { it.type == "audiobook" },
             readaloud = readaloud,
+            isbn = book.isbn,
+            asin = book.asin,
         )
     }
 
@@ -531,6 +533,8 @@ internal class BooksDatabaseImpl(
             coverUrl = coverUrl,
             createdAt = createdAt,
             updatedAt = updatedAt,
+            isbn = isbn,
+            asin = asin,
         )
     }
 
@@ -572,6 +576,8 @@ private data class BookEntityImpl(
     override val ebook: MediaFileEntity?,
     override val audiobook: MediaFileEntity?,
     override val readaloud: ReadaloudEntity?,
+    override val isbn: String? = null,
+    override val asin: String? = null,
 ) : BookEntity
 
 private data class SeriesWithPositionEntityImpl(

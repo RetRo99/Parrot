@@ -132,6 +132,7 @@ internal fun LibraryBookRecord.toLibraryServerBook(
         serverType = ServerType.Local,
         libraryBookId = libraryBookId,
         mediaResources = resources,
+        isbn = isbn,
     )
 }
 

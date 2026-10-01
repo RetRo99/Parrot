@@ -10,6 +10,8 @@ data class EpubMetadataResult(
     val coverFilePath: String?,
     val hasMediaOverlays: Boolean,
     val publicationDate: String?,
+    /** The publication's `dc:identifier`, whatever kind it is. */
+    val identifier: String?,
 )
 
 /**

@@ -19,4 +19,6 @@ data class BookSqlDelightEntity(
     val coverUrl: String?,
     val createdAt: String?,
     val updatedAt: String?,
+    val isbn: String? = null,
+    val asin: String? = null,
 )

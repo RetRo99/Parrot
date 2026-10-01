@@ -3,6 +3,7 @@ package com.retro99.books.ui.detail
 import com.retro99.base.result.AppError
 import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.books.ui.model.LinkedCopyUiModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.model.DownloadState
 import com.retro99.books.domain.BookFileTransfer
@@ -37,4 +38,8 @@ data class BookDetailViewState(
     val bookFileTransferError: String? = null,
     val replaceBackupConfirmationTransferId: String? = null,
     val replacingBackupTransferId: String? = null,
+    /** The other copies this book is linked to, shown under "Also in". */
+    val linkedCopies: List<LinkedCopyUiModel> = emptyList(),
+    /** The copy the user is about to unlink with "Not the same book". */
+    val unlinkConfirmationCopy: LinkedCopyUiModel? = null,
 )

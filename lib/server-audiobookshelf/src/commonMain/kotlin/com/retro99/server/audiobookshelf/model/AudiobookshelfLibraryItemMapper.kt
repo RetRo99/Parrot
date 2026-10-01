@@ -52,5 +52,8 @@ fun AudiobookshelfLibraryItemApiModel.toDomain(
         publicationDate = metadata?.publishedYear,
         isLocal = false,
         serverType = ServerType.Audiobookshelf,
+        language = metadata?.language?.takeIf { value -> value.isNotBlank() },
+        isbn = metadata?.isbn?.takeIf { value -> value.isNotBlank() },
+        asin = metadata?.asin?.takeIf { value -> value.isNotBlank() },
     )
 }

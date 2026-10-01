@@ -19,6 +19,9 @@ import com.retro99.books.domain.usecase.StartBookFileUploadUseCase
 import com.retro99.books.domain.usecase.StartBookFileDownloadUseCase
 import com.retro99.books.domain.usecase.RemoveBookFileDownloadUseCase
 import com.retro99.books.domain.usecase.ObserveFavoriteUseCase
+import com.retro99.books.domain.usecase.ObserveLinkedCopiesUseCase
+import com.retro99.books.domain.usecase.UnlinkCopyUseCase
+import com.retro99.books.domain.model.links.CopyKey
 import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
 import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
 import com.retro99.books.ui.model.toUiModel
@@ -52,6 +55,8 @@ class BookDetailViewModel(
     @InjectedParam private val onNavigateToReader: (serverId: String, bookUuid: String, bookType: BookType, bookTitle: String) -> Unit,
     @InjectedParam private val onNavigateToSeriesDetail: (seriesUuid: String, seriesName: String) -> Unit,
     @InjectedParam private val onBack: () -> Unit,
+    @InjectedParam private val onNavigateToLinkPicker: (serverId: String, bookUuid: String) -> Unit,
+    @InjectedParam private val onNavigateToBookDetail: (serverId: String, bookUuid: String) -> Unit,
     @Provided private val observeBookWithProgressUseCase: ObserveBookWithProgressUseCase,
     @Provided private val downloadMediaUseCase: DownloadMediaUseCase,
     @Provided private val cancelDownloadUseCase: CancelDownloadUseCase,
@@ -73,6 +78,8 @@ class BookDetailViewModel(
     @Provided private val parrotCloudLibraryState: ParrotCloudLibraryState,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val analytics: Analytics,
+    @Provided private val observeLinkedCopiesUseCase: ObserveLinkedCopiesUseCase,
+    @Provided private val unlinkCopyUseCase: UnlinkCopyUseCase,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
     BookDetailViewState(),
 ) {
@@ -91,6 +98,7 @@ class BookDetailViewModel(
         observeDownloadStates()
         observeFavoriteState()
         observeParrotCloudState()
+        observeLinkedCopies()
     }
 
     override fun onIntent(intent: BookDetailIntent) {
@@ -228,6 +236,43 @@ class BookDetailViewModel(
 
             BookDetailIntent.OnConflictDialogDismissed -> {
                 updateState { it.copy(pendingOpenBookType = null) }
+            }
+
+            BookDetailIntent.OnSameBookAsClicked -> onNavigateToLinkPicker(serverId, bookUuid)
+
+            is BookDetailIntent.OnOpenLinkedCopyClicked ->
+                onNavigateToBookDetail(intent.copy.serverId, intent.copy.uuid)
+
+            is BookDetailIntent.OnNotSameBookClicked -> {
+                updateState { state -> state.copy(unlinkConfirmationCopy = intent.copy) }
+            }
+
+            BookDetailIntent.OnNotSameBookConfirmed -> unlinkConfirmedCopy()
+
+            BookDetailIntent.OnNotSameBookDismissed -> {
+                updateState { state -> state.copy(unlinkConfirmationCopy = null) }
+            }
+        }
+    }
+
+    private fun observeLinkedCopies() {
+        observeLinkedCopiesUseCase(serverId, bookUuid)
+            .onEach { copies ->
+                updateState { state ->
+                    state.copy(linkedCopies = copies.map { copy -> copy.toUiModel() })
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    /** "Not the same book": takes the chosen copy out of this book's link. */
+    private fun unlinkConfirmedCopy() {
+        val copy = viewState.value.unlinkConfirmationCopy ?: return
+        updateState { state -> state.copy(unlinkConfirmationCopy = null) }
+        val key = CopyKey.parse(copy.key) ?: return
+        viewModelScope.launch {
+            unlinkCopyUseCase(key).onFailure { error ->
+                error.log(analytics, "BookDetailViewModel: Failed to unlink a copy")
             }
         }
     }

@@ -16,6 +16,7 @@ import org.koin.core.annotation.Single
 @Single
 class ParrotCloudLibraryMutationApplier(
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
+    private val bookLinkSync: ParrotCloudBookLinkSync,
 ) : LibraryMutationApplier {
     private val json = Json {
         encodeDefaults = true
@@ -30,6 +31,10 @@ class ParrotCloudLibraryMutationApplier(
         // Reading sessions are append-only ledger rows: acceptance needs no
         // local metadata update, the outbox entry is simply acknowledged.
         if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_SESSION) return
+        if (entry.entityType in BOOK_LINK_ENTITY_TYPES) {
+            bookLinkSync.onAccepted(entry, response)
+            return
+        }
         val payload = json.decodeFromString<ParrotCloudBookPayload>(entry.payload)
         libraryBookSyncApplier.applyAccepted(
             entry = entry,
@@ -43,6 +48,10 @@ class ParrotCloudLibraryMutationApplier(
         response: SyncMutationResponse,
     ) {
         if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_SESSION) return
+        if (entry.entityType in BOOK_LINK_ENTITY_TYPES) {
+            bookLinkSync.onConflict(entry, response)
+            return
+        }
         response.payload?.let { payload ->
             val book = json.decodeFromString<ParrotCloudBookPayload>(payload)
             libraryBookSyncApplier.applyRemote(
@@ -51,6 +60,9 @@ class ParrotCloudLibraryMutationApplier(
         }
     }
 
+    override fun discardsConflict(entry: SyncOutboxEntry): Boolean =
+        entry.entityType == SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK
+
     override suspend fun onDuplicate(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
@@ -58,6 +70,13 @@ class ParrotCloudLibraryMutationApplier(
         val payload = response.payload ?: return
         val book = json.decodeFromString<ParrotCloudBookPayload>(payload)
         libraryBookSyncApplier.applyRemote(book.toSyncLibraryBookSnapshot(book.remoteRevision))
+    }
+
+    private companion object {
+        val BOOK_LINK_ENTITY_TYPES = setOf(
+            SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK,
+            SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK_DECISION,
+        )
     }
 }
 

@@ -84,7 +84,8 @@ class ReadiumEpubMetadataBridge: EpubMetadataBridge {
                     description: description,
                     coverFilePath: coverFilePath,
                     hasMediaOverlays: hasMediaOverlays,
-                    publicationDate: publicationDate
+                    publicationDate: publicationDate,
+                    identifier: metadata.identifier
                 ))
             } catch {
                 callback(nil)

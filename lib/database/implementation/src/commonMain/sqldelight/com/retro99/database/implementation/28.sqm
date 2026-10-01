@@ -1,0 +1,30 @@
+-- Linked books across servers. A link groups copies of one book that live on
+-- different sources; a copy belongs to at most one link (member_key is UNIQUE).
+-- Decisions record "not the same book" and "skip" answers to suggestions.
+
+CREATE TABLE book_links (
+    link_id TEXT NOT NULL PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    remote_revision INTEGER,
+    deleted_at TEXT
+);
+
+CREATE TABLE book_link_members (
+    link_id TEXT NOT NULL,
+    member_key TEXT NOT NULL UNIQUE,
+    added_at TEXT NOT NULL,
+    PRIMARY KEY (link_id, member_key)
+);
+
+CREATE TABLE book_link_decisions (
+    pair_key TEXT NOT NULL PRIMARY KEY,
+    decision TEXT NOT NULL,
+    decided_at TEXT NOT NULL,
+    remote_revision INTEGER
+);
+
+-- Identifiers of cached server books, used to suggest links. Stored so the cache
+-- round-trips a server book unchanged.
+ALTER TABLE books ADD COLUMN isbn TEXT;
+ALTER TABLE books ADD COLUMN asin TEXT;
