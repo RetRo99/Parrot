@@ -77,7 +77,9 @@ class BookLinksMigrationTest {
     private fun executeScript(driver: SqlDriver, script: String) {
         script.split(';')
             .map { statement -> statement.trim() }
-            .filter { statement -> statement.isNotEmpty() }
+            .filter { statement ->
+                statement.isNotEmpty() && !statement.startsWith("CREATE TABLE sqlite_sequence")
+            }
             .forEach { statement -> driver.execute(null, statement, 0) }
     }
 
