@@ -277,8 +277,15 @@ interface EpubReaderBridge {
      */
     fun getTableOfContents(): List<TocItem>
 
-    /** Runs a full-text search and returns Readium locator snippets. */
-    fun search(query: String, callback: (List<SearchResultLocator>) -> Unit)
+    fun isSearchable(): Boolean
+    fun searchReadingOrder(): List<String>
+    fun searchChapterBoundaries(callback: (List<com.retro99.reader.ui.reader.SearchChapterBoundary>) -> Unit)
+    fun search(query: String, token: String, onBatch: (List<SearchResultLocator>, Int, () -> Unit) -> Unit,
+        onComplete: (Int) -> Unit, onError: (String, Boolean) -> Unit)
+    fun cancelSearch(token: String)
+    fun goToSearchLocator(locatorJson: String)
+    fun decorateSearch(locators: List<String>, selectedIndex: Int, accent: Int, soft: Int, eink: Boolean)
+    fun clearSearchDecorations()
 }
 
 data class SearchResultLocator(
@@ -288,7 +295,11 @@ data class SearchResultLocator(
     val progression: Double?,
     val position: Int?,
     val totalProgression: Double?,
-    val snippet: String?,
+    val before: String?,
+    val match: String?,
+    val after: String?,
+    val index: Int,
+    val locatorJson: String,
 )
 
 /**

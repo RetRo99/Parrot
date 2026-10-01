@@ -5,6 +5,10 @@ import com.retro99.reader.ui.bridge.AudioLocator
 import com.retro99.reader.ui.bridge.EpubReaderBridge
 import com.retro99.reader.ui.bridge.EpubReaderSettings
 import com.retro99.reader.ui.reader.ReaderSearchResult
+import com.retro99.reader.ui.reader.ReaderSearchBatch
+import com.retro99.reader.ui.reader.BookNotSearchableException
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 import com.retro99.reader.ui.di.ReaderScope
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.LocatorState
@@ -12,6 +16,7 @@ import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.server.api.TextAnchor
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -253,26 +258,65 @@ class IosBookController(
         )
     }
 
-    override suspend fun search(query: String): List<ReaderSearchResult> =
+    override val isSearchable: Boolean get() = bridge.isSearchable()
+    override val searchIgnoresCaseAndAccents: Boolean get() = true
+    override fun searchReadingOrder(): List<String> = bridge.searchReadingOrder()
+    override suspend fun searchChapterBoundaries(): List<com.retro99.reader.ui.reader.SearchChapterBoundary> =
         suspendCancellableCoroutine { continuation ->
-            bridge.search(query) { results ->
-                if (continuation.isActive) {
-                    continuation.resume(
-                        results.map { result ->
-                            ReaderSearchResult(
-                                href = result.href,
-                                type = result.type,
-                                title = result.title,
-                                progression = result.progression,
-                                position = result.position,
-                                totalProgression = result.totalProgression,
-                                snippet = result.snippet.orEmpty(),
-                            )
-                        },
-                    )
-                }
-            }
+            bridge.searchChapterBoundaries { if (continuation.isActive) continuation.resume(it) }
         }
+    private var searchSequence = 0
+
+    override fun search(query: String): Flow<ReaderSearchBatch> = callbackFlow {
+        val token = "search-${kotlin.random.Random.nextLong()}-${++searchSequence}"
+        bridge.search(query, token, onBatch = { results, count, acknowledge ->
+            launch(start = CoroutineStart.UNDISPATCHED) {
+                try {
+                    send(ReaderSearchBatch(results.map { result ->
+                        ReaderSearchResult(
+                            href = result.href,
+                            type = result.type,
+                            title = result.title,
+                            progression = result.progression,
+                            position = result.position,
+                            totalProgression = result.totalProgression,
+                            before = result.before,
+                            match = result.match,
+                            after = result.after,
+                            index = result.index,
+                            locatorJson = result.locatorJson,
+                        )
+                    }, count))
+                } finally { acknowledge() }
+            }
+        }, onComplete = { count ->
+            launch {
+                send(ReaderSearchBatch(emptyList(), count, isComplete = true))
+                close()
+            }
+        }, onError = { message, unavailable ->
+            close(if (unavailable) BookNotSearchableException(noTextLayer = message == "no-text-layer") else IllegalStateException(message))
+        })
+        awaitClose { bridge.cancelSearch(token) }
+    }
+
+    override fun goToSearchResult(result: ReaderSearchResult) = bridge.goToSearchLocator(result.locatorJson)
+    override fun decorateSearch(results: List<ReaderSearchResult>, selectedIndex: Int, accent: Int, soft: Int, onAccent: Int, eink: Boolean) {
+        bridge.decorateSearch(results.map { it.locatorJson }, results.indexOfFirst { it.index == selectedIndex }, accent, soft, eink)
+        results.firstOrNull { it.index == selectedIndex }?.let { result ->
+            bridge.evaluateJavaScript(SearchAnchorResolver.script(result, if (eink) 0xff000000.toInt() else accent,
+                if (eink) 0xffffffff.toInt() else onAccent)) {}
+        }
+    }
+    override fun clearSearchDecorations() {
+        bridge.clearSearchDecorations()
+        bridge.evaluateJavaScript(SearchAnchorResolver.CLEAR) {}
+    }
+    override suspend fun searchSentenceId(result: ReaderSearchResult): String? = suspendCancellableCoroutine { continuation ->
+        bridge.evaluateJavaScript(SearchAnchorResolver.script(result)) { value ->
+            if (continuation.isActive) continuation.resume(value?.removeSurrounding("\"")?.takeUnless { it == "null" || it.isBlank() })
+        }
+    }
 
     /**
      * Applies a highlight decoration to the given locator and handles split sentences.

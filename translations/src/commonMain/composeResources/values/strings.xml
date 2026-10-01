@@ -1278,4 +1278,56 @@
     </plurals>
     <string name="book_detail_today" tools:ignore="MissingTranslation">Today</string>
     <string name="book_detail_yesterday" tools:ignore="MissingTranslation">Yesterday</string>
+    <string name="reader_find_placeholder">Find a word or phrase</string>
+    <string name="reader_find_recents">RECENT IN THIS BOOK</string>
+    <string name="reader_find_clear">Clear</string>
+    <string name="reader_find_hint">Finds words and phrases anywhere in the book.</string>
+    <string name="reader_find_insensitive">Upper and lower case and accents don’t matter.</string>
+    <string name="reader_find_minimum">Type at least 2 characters to search.</string>
+    <string name="reader_find_submit">Press Search on the keyboard to search.</string>
+    <string name="reader_find_running">Searching… %1$d so far</string>
+    <string name="reader_find_summary">%1$s in %2$s</string>
+    <string name="reader_find_partial">%1$s so far in %2$s</string>
+    <plurals name="reader_find_match_quantity">
+        <item quantity="one">%1$d match</item>
+        <item quantity="other">%1$d matches</item>
+    </plurals>
+    <plurals name="reader_find_chapter_quantity">
+        <item quantity="one">%1$d chapter</item>
+        <item quantity="other">%1$d chapters</item>
+    </plurals>
+    <string name="reader_find_count_partial">%1$d+ matches</string>
+    <string name="reader_find_nearest">Nearest to me</string>
+    <string name="reader_find_position">Your reading position · %1$d%</string>
+    <string name="reader_find_position_no_percent">Your reading position</string>
+    <string name="reader_find_before">These matches are earlier in the book.</string>
+    <string name="reader_find_after">These matches are later in the book.</string>
+    <string name="reader_find_before_capped">The shown matches are earlier in the book.</string>
+    <string name="reader_find_after_capped">The shown matches are later in the book.</string>
+    <string name="reader_find_ahead">Search ahead in the book</string>
+    <string name="reader_find_earlier_summary">%1$s before your reading position</string>
+    <string name="reader_find_spoilers">Hidden to avoid spoilers</string>
+    <string name="reader_find_show_ahead">Show later matches</string>
+    <string name="reader_find_hide_ahead">Hide later matches</string>
+    <string name="reader_find_empty">No matches for “%1$s”</string>
+    <string name="reader_find_empty_hint">Check the spelling or try a shorter word. Search looks for the exact letters you type, in order.</string>
+    <string name="reader_find_unavailable">This book can’t be searched</string>
+    <string name="reader_find_unavailable_hint">Text search isn’t available for this publication.</string>
+    <string name="reader_find_no_text_layer">This book has no searchable text layer. Text inside images can’t be searched.</string>
+    <string name="reader_find_failed">Search stopped early</string>
+    <string name="reader_find_retry">Try again</string>
+    <string name="reader_find_cap">Showing the first %1$d matches — refine your search</string>
+    <string name="reader_find_beginning">Beginning of book</string>
+    <string name="reader_find_other">Other</string>
+    <string name="reader_find_chapter">Chapter %1$d</string>
+    <string name="reader_find_row">%1$s, %2$d percent: %3$s</string>
+    <string name="reader_find_row_no_percent">%1$s: %2$s</string>
+    <string name="reader_find_previous">Previous match</string>
+    <string name="reader_find_next">Next match</string>
+    <string name="reader_find_close">Close search</string>
+    <string name="reader_find_reopen">Show search results</string>
+    <string name="reader_find_selected">%1$d of %2$d · %3$s</string>
+    <string name="reader_find_selected_partial">%1$d of %2$d+ · %3$s</string>
+    <string name="reader_find_back">Back to where I was · %1$d%</string>
+    <string name="reader_find_back_no_percent">Back to where I was</string>
 </resources>

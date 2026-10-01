@@ -7,6 +7,29 @@ import ReadiumShared
 import ReadiumStreamer
 import ReadiumNavigator
 import ReadiumAdapterGCDWebServer
+import SwiftSoup
+
+/// Mirrors Readium's strict-XML extraction before its HTML-recovery fallback.
+private final class SearchBoundaryXMLParser: NSObject, XMLParserDelegate {
+    var text = ""
+    var offsets: [String: Int] = [:]
+    var hasXhtmlBody = false
+    private var bodyDepth = 0
+    func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName: String?, attributes: [String: String]) {
+        if elementName == "body" && namespaceURI == "http://www.w3.org/1999/xhtml" { hasXhtmlBody = true }
+        if elementName.components(separatedBy: ":").last == "body" || bodyDepth > 0 { bodyDepth += 1 }
+        if bodyDepth > 0, let id = attributes["id"] ?? attributes["xml:id"] { offsets[id] = text.utf16.count }
+    }
+    func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName: String?) {
+        if bodyDepth > 0 { bodyDepth -= 1 }
+    }
+    func parser(_ parser: XMLParser, foundCharacters string: String) {
+        if bodyDepth > 0 { text += string }
+    }
+    func parser(_ parser: XMLParser, foundCDATA CDATABlock: Data) {
+        if bodyDepth > 0 { text += String(decoding: CDATABlock, as: UTF8.self) }
+    }
+}
 
 /// Available highlight styles for ReadAloud text highlighting.
 enum HighlightStyle {
@@ -96,6 +119,9 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
 
     // Cached table of contents (populated when publication is opened)
     private var tableOfContentsCache: [TocItem] = []
+    private var searchTasks: [String: Task<Void, Never>] = [:]
+    private var searchIterators: [String: SearchIterator] = [:]
+    private var publicationHasSearchText: Bool?
 
     // Media overlay support
     private var mediaOverlayPlayer: MediaOverlayPlayer?
@@ -191,6 +217,8 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
     }
 
     func closePublication() {
+        publicationHasSearchText = nil
+        for token in Array(searchTasks.keys) { cancelSearch(token: token) }
         mediaOverlayPlayer?.release()
         mediaOverlayPlayer = nil
 
@@ -459,33 +487,107 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
         return tableOfContentsCache
     }
 
-    func search(query: String, callback: @escaping ([SearchResultLocator]) -> Void) {
+    func isSearchable() -> Bool { publication?.isSearchable == true && publicationHasSearchText != false }
+    func searchReadingOrder() -> [String] { publication?.readingOrder.map { $0.href.description } ?? [] }
+
+    func searchChapterBoundaries(callback: @escaping ([SearchChapterBoundary]) -> Void) {
+        guard let publication = publication else { callback([]); return }
+        Task { @MainActor in
+            var boundaries: [SearchChapterBoundary] = []
+            let groups = Dictionary(grouping: tableOfContentsCache, by: { $0.href.components(separatedBy: "#")[0] })
+            for (href, entries) in groups {
+                for entry in entries where !entry.href.contains("#") {
+                    boundaries.append(SearchChapterBoundary(href: entry.href, progression: KotlinDouble(value: 0)))
+                }
+                guard entries.contains(where: { $0.href.contains("#") }),
+                      let link = publication.readingOrder.first(where: { $0.href == href }),
+                      let resource = publication.get(link),
+                      let html = try? await resource.readAsString().get() else { continue }
+                let delegate = SearchBoundaryXMLParser()
+                let parser = XMLParser(data: Data(html.utf8))
+                parser.delegate = delegate
+                parser.shouldProcessNamespaces = true
+                let validXML = parser.parse() && delegate.hasXhtmlBody
+                let document = validXML ? nil : try? SwiftSoup.parse(html)
+                let parsedText = validXML ? delegate.text : (try? document?.body()?.text())
+                let fullText = parsedText.flatMap { try? Entities.unescape($0) }
+                guard let text = fullText, !text.isEmpty else { resource.close(); continue }
+                for entry in entries where entry.href.contains("#") {
+                    let fragment = String(entry.href.split(separator: "#", maxSplits: 1)[1]).removingPercentEncoding ?? ""
+                    var offset: Int?
+                    if validXML, let rawOffset = delegate.offsets[fragment] {
+                        let prefix = String(decoding: delegate.text.utf16.prefix(rawOffset), as: UTF16.self)
+                        offset = (try? Entities.unescape(prefix))?.utf16.count
+                    } else if let clone = try? SwiftSoup.parse(html),
+                              let target = try? clone.getElementById(fragment) {
+                        let marker = "\u{E000}EMBERSEARCHBOUNDARY\u{E001}"
+                        _ = try? target.prependText(marker)
+                        if let parsed = try? clone.body()?.text(), let marked = try? Entities.unescape(parsed), let range = marked.range(of: marker) {
+                            offset = range.lowerBound.utf16Offset(in: marked)
+                        }
+                    }
+                    if let offset = offset {
+                        boundaries.append(SearchChapterBoundary(href: entry.href,
+                            progression: KotlinDouble(value: min(1, Double(offset) / Double(text.utf16.count)))))
+                    }
+                }
+                resource.close()
+            }
+            callback(boundaries)
+        }
+    }
+
+    func cancelSearch(token: String) {
+        searchTasks.removeValue(forKey: token)?.cancel()
+        searchIterators.removeValue(forKey: token)?.close()
+    }
+
+    func goToSearchLocator(locatorJson: String) {
+        guard let locator = try? Locator(jsonString: locatorJson) else { return }
+        Task { @MainActor in _ = await navigatorViewController?.go(to: locator) }
+    }
+
+    func decorateSearch(locators: [String], selectedIndex: Int32, accent: Int32, soft: Int32, eink: Bool) {
+        let decorations = locators.enumerated().compactMap { index, json -> Decoration? in
+            guard let locator = try? Locator(jsonString: json) else { return nil }
+            let selected = index == Int(selectedIndex)
+            let color = highlightColorFromArgb(eink ? Int32(bitPattern: 0xff000000) : selected ? accent : soft)
+            return Decoration(id: "search-\(index)", locator: locator,
+                style: eink && !selected ? .underline(tint: color) : .highlight(tint: color, isActive: selected))
+        }
+        navigatorViewController?.apply(decorations: decorations, in: "book-search")
+    }
+
+    func clearSearchDecorations() {
+        navigatorViewController?.apply(decorations: [], in: "book-search")
+    }
+
+    func search(query: String, token: String,
+                onBatch: @escaping ([SearchResultLocator], KotlinInt, @escaping () -> KotlinUnit) -> Void,
+                onComplete: @escaping (KotlinInt) -> Void,
+                onError: @escaping (String, KotlinBoolean) -> Void) {
         guard let publication = self.publication else {
-            callback([])
+            onError("Publication is not open", KotlinBoolean(value: true))
             return
         }
 
-        Task { @MainActor in
+        searchTasks[token] = Task { @MainActor in
+            defer {
+                searchIterators.removeValue(forKey: token)?.close()
+                searchTasks.removeValue(forKey: token)
+            }
             let searchResult = await publication.search(query: query)
+            guard !Task.isCancelled else { return }
             switch searchResult {
             case .success(let iterator):
-                var results: [SearchResultLocator] = []
+                searchIterators[token] = iterator
+                var count = 0
                 do {
                     while let page = try await iterator.next().get() {
+                        try Task.checkCancellation()
+                        var results: [SearchResultLocator] = []
                         for locator in page.locators {
-                            let snippet = [
-                                locator.text.before,
-                                locator.text.highlight,
-                                locator.text.after
-                            ]
-                            .compactMap { $0 }
-                            .joined(separator: " ")
-                            .replacingOccurrences(
-                                of: "\\s+",
-                                with: " ",
-                                options: .regularExpression
-                            )
-
+                            try Task.checkCancellation()
                             results.append(
                                 SearchResultLocator(
                                     href: locator.href.string,
@@ -500,19 +602,55 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
                                     totalProgression: locator.locations.totalProgression.map {
                                         KotlinDouble(value: $0)
                                     },
-                                    snippet: snippet
+                                    before: locator.text.before,
+                                    match: locator.text.highlight,
+                                    after: locator.text.after,
+                                    index: Int32(count),
+                                    locatorJson: locator.jsonString ?? "{}"
                                 )
                             )
+                            count += 1
+                        }
+                        await withCheckedContinuation { continuation in
+                            onBatch(results, KotlinInt(value: Int32(count))) {
+                                continuation.resume()
+                                return KotlinUnit.shared
+                            }
                         }
                     }
+                    try Task.checkCancellation()
+                    if count == 0 {
+                        let hasText = try await hasSearchText(publication)
+                        try Task.checkCancellation()
+                        if !hasText { onError("no-text-layer", KotlinBoolean(value: true)); return }
+                    }
+                    onComplete(KotlinInt(value: Int32(count)))
                 } catch {
-                    // Return all results collected so far if an individual resource fails.
+                    if !Task.isCancelled { onError(error.localizedDescription, KotlinBoolean(value: false)) }
                 }
-                callback(results)
-            case .failure:
-                callback([])
+            case .failure(let error):
+                if case .publicationNotSearchable = error {
+                    onError(error.localizedDescription, KotlinBoolean(value: true))
+                } else {
+                    onError(error.localizedDescription, KotlinBoolean(value: false))
+                }
             }
         }
+    }
+
+    private func hasSearchText(_ publication: Publication) async throws -> Bool {
+        if let cached = publicationHasSearchText { return cached }
+        let factory = _DefaultResourceContentExtractorFactory()
+        for link in publication.readingOrder {
+            try Task.checkCancellation()
+            guard let resource = publication.get(link), let mediaType = link.mediaType else { continue }
+            defer { resource.close() }
+            guard let extractor = factory.makeExtractor(for: resource, mediaType: mediaType) else { continue }
+            let text = try await extractor.extractText(of: resource).get()
+            if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { publicationHasSearchText = true; return true }
+        }
+        publicationHasSearchText = false
+        return false
     }
 
     private func cacheTableOfContents(publication: Publication) async {
@@ -922,7 +1060,8 @@ extension ReadiumEpubReaderBridge: EPUBNavigatorDelegate {
             },
             totalProgression: locator.locations.totalProgression.map {
                 KotlinDouble(value: $0)
-            }
+            },
+            cssSelector: locator.locations.otherLocations["cssSelector"] as? String
         )
         callback(positionLocator)
 

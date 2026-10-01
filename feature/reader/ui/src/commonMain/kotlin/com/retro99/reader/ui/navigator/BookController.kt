@@ -5,6 +5,7 @@ import com.retro99.reader.ui.model.LocatorState
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.reader.ReaderSearchResult
+import com.retro99.reader.ui.reader.ReaderSearchBatch
 import com.retro99.reader.ui.tts.TtsSentence
 import kotlinx.coroutines.flow.Flow
 
@@ -179,6 +180,20 @@ interface BookController : AutoCloseable {
     /** Navigates to a fraction (0..1) of the whole book. Returns false when unsupported. */
     suspend fun goToTotalProgression(progression: Double): Boolean = false
 
-    /** Searches publication text and returns location-aware results. */
-    suspend fun search(query: String): List<ReaderSearchResult> = emptyList()
+    val isSearchable: Boolean get() = false
+    val searchIgnoresCaseAndAccents: Boolean get() = false
+    fun searchReadingOrder(): List<String> = emptyList()
+    suspend fun searchChapterBoundaries(): List<com.retro99.reader.ui.reader.SearchChapterBoundary> = emptyList()
+
+    /** Cold stream; closing collection must cancel native work and release its iterator. */
+    fun search(query: String): Flow<ReaderSearchBatch> = kotlinx.coroutines.flow.flow {
+        throw com.retro99.reader.ui.reader.BookNotSearchableException()
+    }
+
+    fun goToSearchResult(result: ReaderSearchResult) { throw UnsupportedOperationException() }
+
+    /** Separate group from narration decorations. */
+    fun decorateSearch(results: List<ReaderSearchResult>, selectedIndex: Int, accent: Int, soft: Int, onAccent: Int, eink: Boolean) = Unit
+    fun clearSearchDecorations() = Unit
+    suspend fun searchSentenceId(result: ReaderSearchResult): String? = null
 }

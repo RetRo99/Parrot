@@ -12,6 +12,20 @@ import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.model.ReaderTextAlignUi
 import com.retro99.reader.ui.model.ReaderThemeUi
 import com.retro99.reader.ui.reader.ReaderSearchResult
+import com.retro99.reader.ui.reader.ReaderSearchBatch
+import com.retro99.reader.ui.reader.BookNotSearchableException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import org.json.JSONObject
+import org.jsoup.Jsoup
+import org.jsoup.parser.Parser
+import kotlinx.coroutines.withContext
+import org.readium.r2.shared.util.data.decodeString
+import com.retro99.reader.ui.reader.SearchChapterBoundary
+import org.readium.r2.shared.util.resource.content.DefaultResourceContentExtractorFactory
+import org.readium.r2.shared.publication.services.search.isSearchable
 import com.retro99.reader.ui.tts.TtsSentence
 import com.retro99.server.api.TextAnchor
 import kotlinx.coroutines.CoroutineScope
@@ -74,6 +88,7 @@ class AndroidBookController internal constructor() : BookController {
 
     private val _navigator = MutableStateFlow<EpubNavigatorFragment?>(null)
     private var publication: Publication? = null
+    private var publicationHasSearchText: Boolean? = null
     private var controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var pendingPageTurnJob: Job? = null
 
@@ -216,32 +231,131 @@ class AndroidBookController internal constructor() : BookController {
     }
 
     @OptIn(ExperimentalReadiumApi::class)
-    override suspend fun search(query: String): List<ReaderSearchResult> {
-        val currentPublication = publication ?: return emptyList()
-        val iterator = currentPublication.search(query) ?: return emptyList()
-        return try {
-            val results = mutableListOf<ReaderSearchResult>()
-            iterator.forEach { collection ->
-                collection.locators.forEach { locator ->
+    override fun search(query: String): Flow<ReaderSearchBatch> = flow {
+        val currentPublication = publication ?: throw BookNotSearchableException()
+        val iterator = currentPublication.search(query) ?: throw BookNotSearchableException()
+        var count = 0
+        try {
+            while (true) {
+                currentCoroutineContext().ensureActive()
+                val collection = iterator.next().fold({ it }, { throw IllegalStateException(it.message) })
+                if (collection == null) break
+                val results = collection.locators.map { locator ->
+                    currentCoroutineContext().ensureActive()
                     val text = locator.text
-                    val snippet = listOfNotNull(text.before, text.highlight, text.after)
-                        .joinToString(" ") { it.trim() }
-                        .replace(Regex("\\s+"), " ")
-                    results += ReaderSearchResult(
+                    ReaderSearchResult(
                         href = locator.href.toString(),
                         type = locator.mediaType.toString(),
                         title = locator.title,
                         progression = locator.locations.progression,
                         position = locator.locations.position,
                         totalProgression = locator.locations.totalProgression,
-                        snippet = snippet,
+                        before = text.before,
+                        match = text.highlight,
+                        after = text.after,
+                        index = count++,
+                        locatorJson = locator.toJSON().toString(),
                     )
                 }
+                emit(ReaderSearchBatch(results, count))
             }
-            results
+            if (count == 0 && !hasSearchText(currentPublication)) throw BookNotSearchableException(noTextLayer = true)
+            emit(ReaderSearchBatch(emptyList(), count, isComplete = true))
         } finally {
             iterator.close()
         }
+    }.flowOn(Dispatchers.IO)
+
+    @OptIn(ExperimentalReadiumApi::class)
+    override val isSearchable: Boolean get() = publication?.isSearchable == true && publicationHasSearchText != false
+    override val searchIgnoresCaseAndAccents: Boolean get() = android.os.Build.VERSION.SDK_INT >= 24
+    override fun searchReadingOrder(): List<String> = publication?.readingOrder?.map { it.href.toString() }.orEmpty()
+
+    @OptIn(ExperimentalReadiumApi::class)
+    private suspend fun hasSearchText(pub: Publication): Boolean {
+        publicationHasSearchText?.let { return it }
+        val factory = DefaultResourceContentExtractorFactory()
+        for (link in pub.readingOrder) {
+            currentCoroutineContext().ensureActive()
+            val resource = pub.get(link) ?: continue
+            try {
+                val mediaType = link.mediaType ?: continue
+                val extractor = factory.createExtractor(resource, mediaType) ?: continue
+                val text = extractor.extractText(resource).fold({ it }, { throw IllegalStateException(it.toString()) })
+                if (text.isNotBlank()) { publicationHasSearchText = true; return true }
+            } finally { resource.close() }
+        }
+        publicationHasSearchText = false
+        return false
+    }
+
+    override suspend fun searchChapterBoundaries(): List<SearchChapterBoundary> = withContext(Dispatchers.IO) {
+        val pub = publication ?: return@withContext emptyList()
+        fun flatten(links: List<Link>): List<Link> = links.flatMap { listOf(it) + flatten(it.children) }
+        val result = mutableListOf<SearchChapterBoundary>()
+        for ((href, links) in flatten(pub.tableOfContents).groupBy { it.href.toString().substringBefore('#') }) {
+            currentCoroutineContext().ensureActive()
+            val fragments = links.filter { '#' in it.href.toString() }
+            links.filter { '#' !in it.href.toString() }.forEach { result += SearchChapterBoundary(it.href.toString(), 0.0) }
+            if (fragments.isEmpty()) continue
+            val resource = Url(href)?.let { pub.get(it) } ?: continue
+            try {
+                val html = resource.read().getOrNull()?.decodeString()?.getOrNull() ?: continue
+                val document = Jsoup.parse(html)
+                val text = Parser.unescapeEntities(document.body().text(), false)
+                if (text.isEmpty()) continue
+                for (link in fragments) {
+                    currentCoroutineContext().ensureActive()
+                    val clone = document.clone()
+                    val fragment = android.net.Uri.decode(link.href.toString().substringAfter('#'))
+                    val target = clone.getElementById(fragment) ?: continue
+                    val marker = "\uE000EMBERSEARCHBOUNDARY\uE001"
+                    target.prependText(marker)
+                    val marked = Parser.unescapeEntities(clone.body().text(), false)
+                    val offset = marked.indexOf(marker)
+                    if (offset >= 0) result += SearchChapterBoundary(link.href.toString(), (offset.toDouble() / text.length).coerceIn(0.0, 1.0))
+                }
+            } finally { resource.close() }
+        }
+        result
+    }
+
+    override fun goToSearchResult(result: ReaderSearchResult) {
+        val locator = Locator.fromJSON(JSONObject(result.locatorJson)) ?: return
+        withNavigator { it.go(locator) }
+    }
+
+    override fun decorateSearch(results: List<ReaderSearchResult>, selectedIndex: Int, accent: Int, soft: Int, onAccent: Int, eink: Boolean) {
+        val decorations = results.mapNotNull { result ->
+            val locator = Locator.fromJSON(JSONObject(result.locatorJson)) ?: return@mapNotNull null
+            val selected = result.index == selectedIndex
+            Decoration("search-${result.index}", locator, if (eink && !selected) {
+                Decoration.Style.Underline(tint = android.graphics.Color.BLACK)
+            } else {
+                Decoration.Style.Highlight(tint = if (eink) android.graphics.Color.BLACK else if (selected) accent else soft, isActive = selected)
+            })
+        }
+        controllerScope.launch { withNavigatorOrNull { nav ->
+            (nav as? DecorableNavigator)?.applyDecorations(decorations, "book-search")
+            val result = results.firstOrNull { it.index == selectedIndex }
+            if (result != null && nav.currentLocator.value.href.toString().substringBefore('#') == result.href.substringBefore('#')) {
+                nav.evaluateJavascript(SearchAnchorResolver.script(result,
+                    if (eink) android.graphics.Color.BLACK else accent, if (eink) android.graphics.Color.WHITE else onAccent))
+            }
+        } }
+    }
+
+    override fun clearSearchDecorations() {
+        controllerScope.launch { withNavigatorOrNull {
+            (it as? DecorableNavigator)?.applyDecorations(emptyList(), "book-search")
+            it.evaluateJavascript(SearchAnchorResolver.CLEAR)
+        } }
+    }
+
+    override suspend fun searchSentenceId(result: ReaderSearchResult): String? = withNavigatorOrNull { nav ->
+        if (nav.currentLocator.value?.href?.toString()?.substringBefore('#') != result.href.substringBefore('#')) return@withNavigatorOrNull null
+        nav.evaluateJavascript(SearchAnchorResolver.script(result))?.let { cleanWebViewJson(it) }
+            ?.takeUnless { it == "null" || it.isBlank() }?.removeSurrounding("\"")
     }
 
     /**

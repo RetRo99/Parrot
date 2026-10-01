@@ -197,6 +197,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import androidx.compose.ui.graphics.toArgb
 
 private const val SWIPE_HIDE_THRESHOLD_PX = 80f
 private val MINI_PLAYER_HEIGHT = 60.dp
@@ -252,6 +253,16 @@ internal fun ReaderOverlayContent(
     val voiceDetail = selectedVoice?.let { "${it.locale} · ${it.name.substringBefore('(').trim()}" }
         ?: "System voice"
     val isEink = Ember.style.isEink
+    val searchActive = viewState.selectedSearchIndex != null
+    val searchAccent = Ember.colors.accent.toArgb()
+    val searchSoft = Ember.colors.navActive.toArgb()
+    val searchOnAccent = Ember.colors.onAccent.toArgb()
+    LaunchedEffect(searchActive, searchAccent, searchSoft, searchOnAccent, isEink) {
+        if (searchActive) {
+            controlsVisible = false
+            intentDispatcher(ReaderIntent.UpdateSearchDecorations(searchAccent, searchSoft, searchOnAccent, isEink))
+        }
+    }
     val nowPlaying = if (viewState.isListening) {
         val isNarration = viewState.listenSource == ListenSource.NARRATION
         val stateText = stringResource(
@@ -393,9 +404,12 @@ internal fun ReaderOverlayContent(
                                 NavigationAction.PREVIOUS_PAGE -> intentDispatcher(ReaderIntent.GoToPreviousPage)
                             }
                         },
-                        onMiddleTap = {
-                            controlsVisible = !controlsVisible
-                            if (controlsVisible) lastInteractionTime = nowMillis()
+                         onMiddleTap = {
+                             if (searchActive) intentDispatcher(ReaderIntent.ToggleFindBar)
+                             else {
+                                 controlsVisible = !controlsVisible
+                                 if (controlsVisible) lastInteractionTime = nowMillis()
+                             }
                         },
                     ),
             )
@@ -452,7 +466,7 @@ internal fun ReaderOverlayContent(
             }
         }
         AnimatedVisibility(
-            visible = controlsVisible,
+            visible = controlsVisible && !searchActive,
             enter = if (isEink) EnterTransition.None else fadeIn() + slideInVertically { -it },
             exit = if (isEink) ExitTransition.None else fadeOut() + slideOutVertically { -it },
             modifier = Modifier.align(Alignment.TopCenter).padding(top = topInset),
@@ -471,8 +485,12 @@ internal fun ReaderOverlayContent(
         }
 
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+            if (searchActive && viewState.isFindBarVisible && !viewState.isBookSearchVisible) {
+                ReaderFindBar(viewState, { intentDispatcher(it) },
+                    Modifier.then(if (!hasBottomBar) Modifier.navigationBarsPadding() else Modifier))
+            }
             AnimatedVisibility(
-                visible = controlsVisible,
+                visible = controlsVisible && !searchActive,
                 enter = if (isEink) EnterTransition.None else fadeIn() + slideInVertically { it },
                 exit = if (isEink) ExitTransition.None else fadeOut() + slideOutVertically { it },
                 modifier = Modifier
@@ -602,13 +620,8 @@ internal fun ReaderOverlayContent(
 
     if (viewState.isBookSearchVisible) {
         ReaderSearchSheet(
-            query = viewState.bookSearchQuery,
-            results = viewState.bookSearchResults,
-            isLoading = viewState.isBookSearchLoading,
-            failed = viewState.bookSearchFailed,
-            onQueryChange = { intentDispatcher(ReaderIntent.SearchBook(it)) },
-            onResultClick = { intentDispatcher(ReaderIntent.GoToSearchResult(it)) },
-            onDismiss = { intentDispatcher(ReaderIntent.ToggleBookSearch) },
+            state = viewState,
+            dispatch = { intentDispatcher(it) },
             footer = sheetMiniPlayer,
         )
     }
@@ -1491,57 +1504,6 @@ private fun BookmarkRenamePrompt(
         confirmButton = { TextButton(onClick = { onConfirm(title) }) { Text(stringResource(StringRes.reader_bookmark_rename_confirm)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(StringRes.reader_bookmark_rename_cancel)) } },
     )
-}
-
-@Composable
-internal fun ReaderSearchSheet(
-    query: String,
-    results: List<ReaderSearchResult>,
-    isLoading: Boolean,
-    failed: Boolean,
-    onQueryChange: (String) -> Unit,
-    onResultClick: (ReaderSearchResult) -> Unit,
-    onDismiss: () -> Unit,
-    footer: (@Composable () -> Unit)? = null,
-) {
-    EmberBottomSheet(onDismiss = onDismiss, footer = footer) {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            Column(
-                Modifier.fillMaxWidth().heightIn(max = maxHeight * 0.86f)
-                    .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier)
-                    .padding(bottom = 8.dp),
-            ) {
-                SheetTitle(stringResource(StringRes.reader_search_title), onDismiss)
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = onQueryChange,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    placeholder = { Text(stringResource(StringRes.reader_search_hint)) },
-                    leadingIcon = { Icon(Icons.Default.Search, null) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp),
-                )
-                when {
-                    failed -> Text(stringResource(StringRes.reader_search_failed), color = Ember.colors.ink2, modifier = Modifier.padding(24.dp))
-                    isLoading -> Text("Searching…", color = Ember.colors.ink2, modifier = Modifier.padding(24.dp))
-                    query.isBlank() -> Text(stringResource(StringRes.reader_search_empty), color = Ember.colors.ink2, modifier = Modifier.padding(24.dp))
-                    results.isEmpty() -> Text(stringResource(StringRes.reader_search_no_results), color = Ember.colors.ink2, modifier = Modifier.padding(24.dp))
-                    else -> LazyColumn(Modifier.fillMaxWidth().heightIn(max = 580.dp)) {
-                        itemsIndexed(results) { index, result ->
-                            Column(
-                                Modifier.fillMaxWidth().clickable { onResultClick(result) }
-                                    .padding(horizontal = 24.dp, vertical = 14.dp),
-                            ) {
-                                Text(result.title ?: "Result ${index + 1}", color = Ember.colors.ink, fontWeight = FontWeight.Bold)
-                                Text(result.snippet, color = Ember.colors.ink2, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                            }
-                            Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp).height(1.dp).background(Ember.colors.line))
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 internal fun formatSpeed(speed: Float): String = if (speed % 1f == 0f) speed.toInt().toString() else speed.toString()

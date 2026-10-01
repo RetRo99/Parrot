@@ -8,5 +8,20 @@ data class ReaderSearchResult(
     val progression: Double?,
     val position: Int?,
     val totalProgression: Double?,
-    val snippet: String,
+    val before: String?,
+    val match: String?,
+    val after: String?,
+    /** Zero-based reading-order index within this search. */
+    val index: Int,
+    /** Original Readium locator, including all locations and unmodified Locator.Text. */
+    val locatorJson: String,
+    val sessionId: Long = 0,
 )
+
+data class ReaderSearchBatch(
+    val results: List<ReaderSearchResult>,
+    val runningCount: Int,
+    val isComplete: Boolean = false,
+)
+
+class BookNotSearchableException(val noTextLayer: Boolean = false) : IllegalStateException()

@@ -9,7 +9,15 @@ import com.retro99.reader.ui.tts.NeuralVoicePackage
 sealed interface ReaderIntent : BaseIntent {
     data object ToggleBookSearch : ReaderIntent
 
-    data class SearchBook(val query: String) : ReaderIntent
+    data class SearchBook(val query: String, val submitOnly: Boolean = false) : ReaderIntent
+    data object SubmitBookSearch : ReaderIntent
+    data object ClearBookSearchRecents : ReaderIntent
+    data object CloseBookSearch : ReaderIntent
+    data object PreviousSearchResult : ReaderIntent
+    data object NextSearchResult : ReaderIntent
+    data object ReturnToSearchOrigin : ReaderIntent
+    data object ToggleFindBar : ReaderIntent
+    data class UpdateSearchDecorations(val accent: Int, val soft: Int, val onAccent: Int, val eink: Boolean) : ReaderIntent
 
     data class GoToSearchResult(val result: ReaderSearchResult) : ReaderIntent
 

@@ -54,10 +54,13 @@ kotlin {
             implementation(projects.feature.books.ui)
             implementation(projects.feature.statistics.domain)
             implementation(projects.lib.analytics.api)
+            implementation(projects.lib.preferences.api)
+            implementation(projects.lib.preferences.implementation)
             implementation(libs.reorderable)
         }
 
         androidMain.dependencies {
+            implementation("org.jsoup:jsoup:1.23.2")
             implementation(libs.readium.navigator)
             implementation(libs.readium.navigatorMedia)
             implementation(libs.readium.shared)
