@@ -186,11 +186,48 @@ class CopyPositionTranslatorTest {
         val result = assertNotNull(translator.translate(source, position, target, listOf(bridge)))
 
         // Then
+        // The target's file lengths aren't known, so only the book time is set (B3).
         assertEquals(TranslationConfidence.High, result.confidence)
         assertEquals(TranslationStrategy.SmilBridge, result.strategy)
         val clip = timing.clips.first { candidate -> candidate.fragmentId == "r-s6" }
-        val ms = assertNotNull(result.position.audioTimestampMs)
+        val ms = assertNotNull(result.position.bookTimeMs)
         assertTrue(ms >= timing.globalBeginMs(clip) && ms < timing.globalEndMs(clip))
+        assertNull(result.position.audioTimestampMs)
+    }
+
+    @Test
+    fun `text to audio through smil finds the file and offset when the lengths are known`() {
+        // Given: the target's second file starts where the covering clip starts.
+        val readaloudChapters = book("r", listOf(2, 4, 4, 2))
+        val timing = timingFor(readaloudChapters)
+        val clip = timing.clips.first { candidate -> candidate.fragmentId == "r-s6" }
+        val firstFile = timing.globalBeginMs(clip)
+        val bridge = copy(
+            CopySource.Storyteller,
+            "st",
+            chapters = readaloudChapters,
+            timing = timing,
+        )
+        val source = copy(CopySource.Library, "lib", chapters = sourceChapters)
+        val target = copy(
+            CopySource.Audiobookshelf,
+            "abs",
+            kind = ProgressKind.AUDIO,
+            audioDurationMs = timing.totalDurationMs,
+            trackDurationsMs = listOf(firstFile, timing.totalDurationMs - firstFile),
+        )
+        val position = textPosition(sourceChapters, "a-s6")
+
+        // When
+        val result = assertNotNull(translator.translate(source, position, target, listOf(bridge)))
+
+        // Then
+        assertEquals(TranslationConfidence.High, result.confidence)
+        val bookTime = assertNotNull(result.position.bookTimeMs)
+        assertTrue(bookTime >= timing.globalBeginMs(clip) && bookTime < timing.globalEndMs(clip))
+        assertEquals(1, result.position.chapterIndex)
+        assertEquals(bookTime - firstFile, result.position.audioTimestampMs)
+        assertEquals(2, result.position.totalChapters)
     }
 
     @Test
