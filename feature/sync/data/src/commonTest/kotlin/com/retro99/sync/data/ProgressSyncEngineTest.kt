@@ -151,6 +151,35 @@ class ProgressSyncEngineTest {
     }
 
     @Test
+    fun `a conflict marks the entry, stores the remote position and schedules no retry`() =
+        runTest {
+            // Given
+            val entry = outboxEntry(mutationId = "storyteller-409")
+            val outbox = RecordingOutboxDatabase(listOf(entry))
+            val positions = RecordingPositionDatabase()
+            val engine = ProgressSyncEngine(outbox, positions)
+            val transport = RecordingTransport(
+                pushResults = listOf(
+                    ProgressPushResult.Conflict("storyteller-409", remoteSnapshot()),
+                ),
+            )
+
+            // When
+            val summary = engine.push(
+                entries = listOf(entry),
+                transport = transport,
+                codec = ProgressOutboxCodec { pending -> pending.toProgressMutation() },
+            )
+
+            // Then
+            assertEquals(1, summary.conflictCount)
+            assertEquals(0, summary.retryCount)
+            assertEquals(listOf("storyteller-409"), outbox.conflictIds)
+            assertTrue(outbox.failureIds.isEmpty())
+            assertEquals("book-1", positions.remotePositions.single().bookUuid)
+        }
+
+    @Test
     fun `a pulled position is stored as remote reading with its observation time`() = runTest {
         // Given
         val positions = RecordingPositionDatabase()
@@ -275,7 +304,11 @@ private class RecordingOutboxDatabase(
         dispatchedIds += mutationId
     }
 
-    override suspend fun markConflict(mutationId: String, error: String) = Unit
+    val conflictIds = mutableListOf<String>()
+
+    override suspend fun markConflict(mutationId: String, error: String) {
+        conflictIds += mutationId
+    }
 
     override suspend fun delete(mutationId: String) {
         deletedIds += mutationId
