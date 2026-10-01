@@ -368,6 +368,7 @@ internal class BooksDatabaseImpl(
         return PositionSqlDelightEntity(
             bookUuid = bookUuid,
             libraryBookId = libraryBookId,
+            localGeneration = localGeneration,
             remoteRevision = remoteRevision,
             timestamp = timestamp,
             createdAt = createdAt,
