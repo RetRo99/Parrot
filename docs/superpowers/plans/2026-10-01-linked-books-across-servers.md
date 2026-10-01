@@ -26,6 +26,13 @@ project 1's names: `bookId`, `LibraryBook`, `BookHome`, `HomeBadge`, `LOCAL_SERV
 **Next:** project 3 (`2026-10-01-progress-across-linked-copies.md`) uses these links to carry your
 reading position between copies.
 
+**Status (2026-10-01):** implemented on `main` in commits `b47dbef8` (backend), `3304ddc1`
+(linking), `edd9189d` (one card per linked book) and `2ae926cf` (suggestions and review).
+
+A follow-up was still uncommitted at that point: when project 1 merges two library books, links,
+decisions and outbox entries must move from `library:<fromId>` to `library:<intoId>`
+(`dao/links/LibraryCopyLinkMerge.kt`). This plan didn't cover that case.
+
 **Level of detail:** the decisions, rules, schemas, interfaces and pure logic below are final.
 File paths for code that project 1 is still changing may have moved. Check them with `grep`
 before editing, and write each task's test cases as listed before the implementation.
