@@ -23,10 +23,6 @@ class PreferencesLinkedResumeDismissals(
         save((entries() - entry) + entry)
     }
 
-    override suspend fun renameCopy(fromKey: String, intoKey: String) = mutex.withLock {
-        save(entries().map { entry -> renamed(entry, fromKey, intoKey) }.distinct())
-    }
-
     private fun entries(): List<String> =
         getUserPreferenceUseCase<List<String>>(PreferencesKey.DismissedLinkedResume).orEmpty()
 
@@ -36,13 +32,4 @@ class PreferencesLinkedResumeDismissals(
             entries.takeLast(LinkedResumeDismissals.MAX_ENTRIES),
         )
     }
-}
-
-/** [entry] with the target or source copy [fromKey] renamed to [intoKey]. */
-internal fun renamed(entry: String, fromKey: String, intoKey: String): String {
-    val parts = entry.split('|')
-    if (parts.size < 3) return entry
-    val target = if (parts[0] == fromKey) intoKey else parts[0]
-    val source = if (parts[1] == fromKey) intoKey else parts[1]
-    return (listOf(target, source) + parts.drop(2)).joinToString("|")
 }

@@ -2,9 +2,12 @@ package com.retro99.sync.data
 
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
+import com.retro99.database.api.links.LinkedCopyWritesDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.sync.domain.EchoClassifier
 import com.retro99.sync.domain.ObservedTime
+import com.retro99.sync.domain.OwnWrite
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressPushResult
 import com.retro99.sync.domain.ProgressSyncTransport
@@ -14,6 +17,7 @@ import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 import kotlin.math.min
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -29,6 +33,7 @@ import kotlin.time.Duration.Companion.seconds
 class ProgressSyncEngine(
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
     @Provided private val positionDatabase: PositionDatabase,
+    @Provided private val linkedCopyWritesDatabase: LinkedCopyWritesDatabase,
 ) {
 
     suspend fun push(
@@ -47,6 +52,7 @@ class ProgressSyncEngine(
         }
 
         val mutations = progressEntries.map(codec::decode)
+        val mutationsById = mutations.associateBy { mutation -> mutation.mutationId }
         val results = try {
             transport.pushProgress(mutations)
         } catch (exception: CancellationException) {
@@ -62,6 +68,7 @@ class ProgressSyncEngine(
             when (val result = resultsByMutationId[entry.mutationId]) {
                 is ProgressPushResult.Accepted -> {
                     acknowledge(entry, result.version)
+                    recordWriteMarker(mutationsById[entry.mutationId], result.version)
                     acknowledgedCount++
                 }
 
@@ -97,7 +104,6 @@ class ProgressSyncEngine(
         identityResolver: ProgressIdentityResolver = ProgressIdentityResolver.Default,
     ): ProgressPullOutcome {
         val identity = identityResolver.resolve(remote)
-        val remotePosition = remote.toPositionEntity(identity)
         val pending = syncOutboxDatabase.getPending(accountId)
         val hasPendingLocalProgress = pending.any { entry ->
             entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION &&
@@ -107,6 +113,24 @@ class ProgressSyncEngine(
                     remote.remoteBookId,
                 )
         }
+
+        val stored = positionDatabase.getPositionByBookUuid(identity.localBookUuid)
+        // Guard 3: re-pulling the same server snapshot leaves the stored row alone, including
+        // its origin and observation time.
+        if (!hasPendingLocalProgress && stored != null && stored.isSameSnapshotAs(remote)) {
+            return ProgressPullOutcome.AppliedToLocal
+        }
+        // Guard 2: an echo of this device's own write into a linked copy isn't real reading.
+        val ownWrite = linkedCopyWritesDatabase
+            .getWriteForBook(identity.localBookUuid, notBefore = writeLogCutoff())
+            ?.let { write -> OwnWrite(write.marker, write.totalProgression) }
+        val isEcho = EchoClassifier.isEcho(
+            pulledMarker = remote.marker,
+            pulledTotalProgression = remote.snapshot.totalProgression,
+            ownWrite = ownWrite,
+        )
+        val origin = if (isEcho) PositionEntity.ORIGIN_LINKED_COPY else PositionEntity.ORIGIN_REMOTE
+        val remotePosition = remote.toPositionEntity(identity = identity, origin = origin)
 
         return if (hasPendingLocalProgress) {
             positionDatabase.upsertRemotePosition(remotePosition)
@@ -175,6 +199,26 @@ class ProgressSyncEngine(
         syncOutboxDatabase.delete(entry.mutationId)
     }
 
+    /**
+     * Parrot Cloud's marker is the revision acknowledged for our write into a linked copy.
+     * It's recorded only when the acknowledged mutation carries the values we wrote.
+     */
+    private suspend fun recordWriteMarker(mutation: ProgressMutation?, version: String?) {
+        if (mutation == null || version == null) return
+        val write = linkedCopyWritesDatabase
+            .getWriteForBook(mutation.entityId, notBefore = writeLogCutoff())
+            ?: return
+        if (write.marker != null) return
+        val snapshot = mutation.snapshot
+        val sameValues = write.locatorHref == snapshot.locator?.href &&
+            write.totalProgression == snapshot.totalProgression &&
+            write.audioMs == snapshot.audioTimestampMs
+        if (sameValues) linkedCopyWritesDatabase.setMarker(write.targetKey, version)
+    }
+
+    private fun writeLogCutoff(): String =
+        Clock.System.now().minus(WRITE_LOG_DAYS.days).toString()
+
     private suspend fun preserveConflict(
         entry: SyncOutboxEntry,
         remote: RemoteProgressSnapshot,
@@ -208,6 +252,7 @@ class ProgressSyncEngine(
 
     private companion object {
         const val MAX_BACKOFF_POWER = 6
+        const val WRITE_LOG_DAYS = 7
     }
 }
 
@@ -249,8 +294,23 @@ enum class ProgressPullOutcome {
     PreservedLocalProgress,
 }
 
+/** The same server write (timestamp or revision) at the same place. */
+private fun PositionEntity.isSameSnapshotAs(remote: RemoteProgressSnapshot): Boolean {
+    val snapshot = remote.snapshot
+    val revision = remote.version?.toLongOrNull()
+    val sameWrite = (revision != null && revision == remoteRevision) ||
+        (snapshot.timestamp != null && snapshot.timestamp == timestamp)
+    return sameWrite &&
+        locatorHref == snapshot.locator?.href &&
+        cssSelector == snapshot.locator?.cssSelector &&
+        progression == snapshot.progression &&
+        totalProgression == snapshot.totalProgression &&
+        audioTimestampMs == snapshot.audioTimestampMs
+}
+
 private fun RemoteProgressSnapshot.toPositionEntity(
     identity: ProgressIdentity,
+    origin: String,
 ): PositionEntity {
     return EnginePositionEntity(
         bookUuid = identity.localBookUuid,
@@ -271,7 +331,7 @@ private fun RemoteProgressSnapshot.toPositionEntity(
         totalDurationMs = snapshot.totalDurationMs,
         totalProgression = snapshot.totalProgression,
         position = snapshot.position,
-        origin = PositionEntity.ORIGIN_REMOTE,
+        origin = origin,
         observedAt = ObservedTime.normalize(observedAt ?: snapshot.updatedAt),
     )
 }

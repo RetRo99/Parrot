@@ -65,6 +65,7 @@ class BookDetailViewModel(
     @InjectedParam private val onBack: () -> Unit,
     @InjectedParam private val onNavigateToLinkPicker: (serverId: String, bookUuid: String) -> Unit,
     @InjectedParam private val onNavigateToBookDetail: (serverId: String, bookUuid: String) -> Unit,
+    @InjectedParam private val onNavigateToPositions: (serverId: String, bookUuid: String) -> Unit,
     @Provided private val observeBookWithProgressUseCase: ObserveBookWithProgressUseCase,
     @Provided private val downloadMediaUseCase: DownloadMediaUseCase,
     @Provided private val cancelDownloadUseCase: CancelDownloadUseCase,
@@ -252,6 +253,16 @@ class BookDetailViewModel(
 
             BookDetailIntent.OnLinkedResumeStayClicked -> answerLinkedResume(accept = false)
 
+            BookDetailIntent.OnLinkedResumeCompareClicked -> {
+                // Comparing isn't an answer: nothing is recorded, and the book doesn't open.
+                updateState { state ->
+                    state.copy(linkedResumeOffer = null, pendingOpenBookType = null)
+                }
+                onNavigateToPositions(serverId, bookUuid)
+            }
+
+            BookDetailIntent.OnReadingPositionsClicked -> onNavigateToPositions(serverId, bookUuid)
+
             BookDetailIntent.OnSameBookAsClicked -> onNavigateToLinkPicker(serverId, bookUuid)
 
             is BookDetailIntent.OnOpenLinkedCopyClicked ->
@@ -394,12 +405,12 @@ class BookDetailViewModel(
                 val state = viewState.value
                 val hasConflict = state.progressInfo?.hasConflict == true
                 when (bookDetailOpenPrompt(offer, hasConflict)) {
-                    BookDetailOpenPrompt.LinkedResume -> updateState {
-                        it.copy(linkedResumeOffer = offer, pendingOpenBookType = bookType)
+                    BookDetailOpenPrompt.LinkedResume -> updateState { current ->
+                        current.copy(linkedResumeOffer = offer, pendingOpenBookType = bookType)
                     }
                     // Check for conflict - show dialog for user to resolve first
                     BookDetailOpenPrompt.SameCopyConflict -> {
-                        updateState { it.copy(pendingOpenBookType = bookType) }
+                        updateState { current -> current.copy(pendingOpenBookType = bookType) }
                     }
                     BookDetailOpenPrompt.None -> navigateToReader(bookType, state.book?.title ?: "")
                 }
@@ -412,7 +423,7 @@ class BookDetailViewModel(
     private fun answerLinkedResume(accept: Boolean) {
         val offer = viewState.value.linkedResumeOffer ?: return
         val bookType = viewState.value.pendingOpenBookType
-        updateState { it.copy(linkedResumeOffer = null, pendingOpenBookType = null) }
+        updateState { state -> state.copy(linkedResumeOffer = null, pendingOpenBookType = null) }
         viewModelScope.launch {
             if (accept) {
                 resolveLinkedResumeUseCase.continueFrom(offer).onFailure { error ->

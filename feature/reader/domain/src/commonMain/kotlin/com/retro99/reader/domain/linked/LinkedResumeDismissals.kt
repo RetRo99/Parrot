@@ -9,9 +9,6 @@ interface LinkedResumeDismissals {
 
     suspend fun dismiss(entry: String)
 
-    /** Renames a copy in every entry, after two library books were merged into one. */
-    suspend fun renameCopy(fromKey: String, intoKey: String)
-
     companion object {
         const val MAX_ENTRIES = 200
     }

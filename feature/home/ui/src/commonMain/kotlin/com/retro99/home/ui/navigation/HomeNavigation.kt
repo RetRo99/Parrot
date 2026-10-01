@@ -44,6 +44,7 @@ import com.retro99.books.ui.detail.BookDetailScreen
 import com.retro99.books.ui.links.LinkPickerScreen
 import com.retro99.books.ui.links.LinkReviewScreen
 import com.retro99.books.ui.list.BooksListScreen
+import com.retro99.books.ui.positions.PositionsScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
@@ -445,6 +446,16 @@ fun HomeNavigation(
                                 )
                             },
                             onBack = { requestBack("toolbar_back") },
+                            onNavigateToPositions = { serverId, bookUuid ->
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(
+                                        HomeDestination.Positions(
+                                            serverId = serverId,
+                                            bookUuid = bookUuid,
+                                        ),
+                                    ),
+                                )
+                            },
                             onNavigateToLinkPicker = { serverId, bookUuid ->
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(
@@ -470,6 +481,14 @@ fun HomeNavigation(
 
                     entry<HomeDestination.LinkReview> {
                         LinkReviewScreen(onBack = { requestBack("toolbar_back") })
+                    }
+
+                    entry<HomeDestination.Positions> { destination ->
+                        PositionsScreen(
+                            serverId = destination.serverId,
+                            bookUuid = destination.bookUuid,
+                            onBack = { requestBack("toolbar_back") },
+                        )
                     }
 
                     entry<HomeDestination.LinkPicker> { destination ->
@@ -498,6 +517,16 @@ fun HomeNavigation(
                                 readerOpenEntryPoint = destination.readerOpenEntryPoint,
                                 readerOpenCorrelationId = destination.readerOpenCorrelationId,
                                 linkedResumeResolved = destination.linkedResumeResolved,
+                                onComparePositions = {
+                                    intentDispatcher(
+                                        HomeNavigationIntent.NavigateTo(
+                                            HomeDestination.Positions(
+                                                serverId = destination.serverId,
+                                                bookUuid = destination.bookUuid,
+                                            ),
+                                        ),
+                                    )
+                                },
                                 onClose = { closeSource -> requestBack(closeSource.entryPoint) },
                                 onSettingsClick = {
                                     intentDispatcher(

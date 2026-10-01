@@ -9,8 +9,7 @@ data class PositionCandidate(
     val copy: LinkedCopy,
     val position: PositionDomainModel,
 ) {
-    val observedAtMillis: Long? =
-        ObservedTime.toEpochMillis(position.observedAt ?: position.updatedAt)
+    val observedAtMillis: Long? = position.observedAtMillis
 
     val isRealReading: Boolean get() = position.origin.isRealReading
 }
@@ -20,3 +19,7 @@ fun latestRealReading(candidates: List<PositionCandidate>): PositionCandidate? =
     candidates
         .filter { candidate -> candidate.isRealReading && candidate.observedAtMillis != null }
         .maxByOrNull { candidate -> requireNotNull(candidate.observedAtMillis) }
+
+/** When the position's reading happened, in epoch milliseconds. */
+val PositionDomainModel.observedAtMillis: Long?
+    get() = ObservedTime.toEpochMillis(observedAt ?: updatedAt)

@@ -124,6 +124,7 @@ import resources.translations.reader_toc_undo
 import resources.translations.reader_tts_pause
 import resources.translations.reader_tts_read_aloud
 import resources.translations.reader_tts_voice_settings
+import resources.translations.resume_linked_compare
 import resources.translations.settings_changed
 import resources.translations.settings_tts_enabled
 import resources.translations.settings_undo
@@ -146,6 +147,7 @@ fun ReaderScreen(
     readerOpenEntryPoint: String? = null,
     readerOpenCorrelationId: String? = null,
     linkedResumeResolved: Boolean = false,
+    onComparePositions: () -> Unit = {},
     onClose: (ReaderCloseSource) -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -160,6 +162,7 @@ fun ReaderScreen(
             readerOpenEntryPoint,
             readerOpenCorrelationId,
             linkedResumeResolved,
+            onComparePositions,
         )
     },
 ) {
@@ -278,6 +281,13 @@ private fun ReaderScreenContent(
                 model = offer.toUiModel(),
                 onContinue = { intentDispatcher(ReaderIntent.ContinueLinkedResume) },
                 onStay = { intentDispatcher(ReaderIntent.StayLinkedResume) },
+                compareAll = {
+                    TextButton(
+                        onClick = { intentDispatcher(ReaderIntent.CompareLinkedPositions) },
+                    ) {
+                        Text(stringResource(StringRes.resume_linked_compare))
+                    }
+                },
             )
         }
 

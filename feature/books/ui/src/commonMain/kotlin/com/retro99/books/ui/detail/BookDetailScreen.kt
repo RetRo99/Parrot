@@ -196,6 +196,7 @@ import resources.translations.cloud_backup_unknown_state
 import resources.translations.books_reading_progress
 import resources.translations.general_back
 import resources.translations.general_cancel
+import resources.translations.positions_action
 import resources.translations.reader_conflict_use_local
 import resources.translations.reader_conflict_use_remote
 import com.retro99.books.ui.components.LinkedResumeDialog
@@ -205,6 +206,7 @@ import com.retro99.books.ui.components.toUiModel
 import com.retro99.books.ui.links.LinkedCopiesSection
 import com.retro99.books.ui.links.UnlinkCopyConfirmationDialog
 import com.retro99.books.ui.model.LinkedCopyUiModel
+import resources.translations.resume_linked_compare
 
 private val CoverWidth = 120.dp
 private val DescriptionCollapsedMaxHeight = 140.dp
@@ -225,6 +227,7 @@ fun BookDetailScreen(
     onBack: () -> Unit,
     onNavigateToLinkPicker: (serverId: String, bookUuid: String) -> Unit,
     onNavigateToBookDetail: (serverId: String, bookUuid: String) -> Unit,
+    onNavigateToPositions: (serverId: String, bookUuid: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BookDetailViewModel = koinViewModel {
         parametersOf(
@@ -235,6 +238,7 @@ fun BookDetailScreen(
             onBack,
             onNavigateToLinkPicker,
             onNavigateToBookDetail,
+            onNavigateToPositions,
         )
     },
 ) {
@@ -394,6 +398,13 @@ private fun BookDetailScreenContent(
             model = linkedResume,
             onContinue = { intentDispatcher(BookDetailIntent.OnLinkedResumeContinueClicked) },
             onStay = { intentDispatcher(BookDetailIntent.OnLinkedResumeStayClicked) },
+            compareAll = {
+                TextButton(
+                    onClick = { intentDispatcher(BookDetailIntent.OnLinkedResumeCompareClicked) },
+                ) {
+                    Text(stringResource(StringRes.resume_linked_compare))
+                }
+            },
         )
     } else if (pendingOpenBookType != null && progressInfo?.hasConflict == true) {
         PositionConflictDialog(
@@ -586,6 +597,15 @@ private fun BookDetailScreenContent(
                         },
                         onSameBookAs = { intentDispatcher(BookDetailIntent.OnSameBookAsClicked) },
                     )
+                    if (linkedCopies.isNotEmpty()) {
+                        TextButton(
+                            onClick = {
+                                intentDispatcher(BookDetailIntent.OnReadingPositionsClicked)
+                            },
+                        ) {
+                            Text(stringResource(StringRes.positions_action))
+                        }
+                    }
 
                     progressInfo?.displayProgression?.let { progress ->
                         if (progress > 0.0) {

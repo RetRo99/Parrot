@@ -69,6 +69,11 @@ data class RemoteProgressSnapshot(
     val snapshot: ProgressSnapshot,
     val version: String?,
     val observedAt: String?,
+    /**
+     * Identifies the write this snapshot came from, for echo detection (§1.4, guard 2):
+     * Storyteller's `timestamp`, Parrot Cloud's revision, null for Audiobookshelf.
+     */
+    val marker: String? = null,
 )
 
 data class ProgressChangePage(

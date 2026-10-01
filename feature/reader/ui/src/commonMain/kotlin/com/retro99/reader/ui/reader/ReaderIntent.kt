@@ -75,6 +75,9 @@ sealed interface ReaderIntent : BaseIntent {
     /** "Stay here" in the linked resume prompt. */
     data object StayLinkedResume : ReaderIntent
 
+    /** "Compare all" in the linked resume prompt: open the positions panel. */
+    data object CompareLinkedPositions : ReaderIntent
+
     // Table of Contents intents
 
     /**

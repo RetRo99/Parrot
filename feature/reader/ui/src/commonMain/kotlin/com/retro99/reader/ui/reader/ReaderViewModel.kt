@@ -33,6 +33,7 @@ import com.retro99.reader.domain.usecase.GetCustomReaderFontsUseCase
 import com.retro99.reader.domain.usecase.GetReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.FindLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.InitializeReaderUseCase
+import com.retro99.reader.domain.usecase.ObserveAppliedPositionUseCase
 import com.retro99.reader.domain.usecase.ObserveBookmarksUseCase
 import com.retro99.reader.domain.usecase.ReorderBookmarksUseCase
 import com.retro99.reader.domain.usecase.ResolveLinkedResumeUseCase
@@ -110,10 +111,12 @@ class ReaderViewModel(
     @InjectedParam private val readerOpenEntryPoint: String?,
     @InjectedParam private val readerOpenCorrelationId: String?,
     @InjectedParam private val linkedResumeResolved: Boolean,
+    @InjectedParam private val onComparePositions: () -> Unit,
     @Provided private val initializeReaderUseCase: InitializeReaderUseCase,
     @Provided private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
     @Provided private val findLinkedResumeUseCase: FindLinkedResumeUseCase,
     @Provided private val resolveLinkedResumeUseCase: ResolveLinkedResumeUseCase,
+    @Provided private val observeAppliedPositionUseCase: ObserveAppliedPositionUseCase,
     @Provided private val getReaderSettingsUseCase: GetReaderSettingsUseCase,
     @Provided private val getCustomReaderFontsUseCase: GetCustomReaderFontsUseCase,
     @Provided private val saveReaderSettingsUseCase: SaveReaderSettingsUseCase,
@@ -335,6 +338,11 @@ class ReaderViewModel(
             ReaderIntent.UseRemotePosition -> resolveConflictWithRemote()
             ReaderIntent.ContinueLinkedResume -> continueLinkedResume()
             ReaderIntent.StayLinkedResume -> stayLinkedResume()
+            ReaderIntent.CompareLinkedPositions -> {
+                // Comparing isn't an answer: nothing is recorded.
+                updateState { state -> state.copy(linkedResumeOffer = null) }
+                onComparePositions()
+            }
             ReaderIntent.GoToNextPage -> goToNextPage()
             ReaderIntent.GoToPreviousPage -> goToPreviousPage()
             ReaderIntent.TogglePlayback -> togglePlayback()
@@ -677,6 +685,7 @@ class ReaderViewModel(
             }
             // Start observing after publication is ready
             observeBookLocationChanges()
+            observeAppliedPositions()
             observeReadingTimeInfo()
             observeReadingSpeedPersistence()
             observeSettingsChanges()
@@ -1543,10 +1552,11 @@ class ReaderViewModel(
         val offer = viewState.value.linkedResumeOffer ?: return
         val position = offer.translated.position
         viewModelScope.launch {
-            updateState {
-                it.copy(
+            updateState { state ->
+                state.copy(
                     linkedResumeOffer = null,
-                    currentAudioPositionMs = position.audioTimestampMs ?: it.currentAudioPositionMs,
+                    currentAudioPositionMs = position.audioTimestampMs
+                        ?: state.currentAudioPositionMs,
                 )
             }
             resolveLinkedResumeUseCase.continueFrom(offer)
@@ -1563,9 +1573,30 @@ class ReaderViewModel(
         }
     }
 
+    /** Applying a position to this copy from the positions panel moves the reader there. */
+    private fun observeAppliedPositions() {
+        observeAppliedPositionUseCase(serverId, bookUuid, afterMillis = nowMillis())
+            .onEach { position ->
+                updateState { state ->
+                    state.copy(linkedResumeOffer = null, positionConflict = null)
+                }
+                if (position.locatorHref != null) {
+                    bookController.goToPosition(position.toUiModel())
+                } else {
+                    position.totalProgression?.let { progression ->
+                        bookController.goToTotalProgression(progression)
+                    }
+                }
+                if (viewState.value.isReadAloud) {
+                    audioController.setInitialAudioPosition(position.audioTimestampMs)
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
     private fun stayLinkedResume() {
         val offer = viewState.value.linkedResumeOffer ?: return
-        updateState { it.copy(linkedResumeOffer = null) }
+        updateState { state -> state.copy(linkedResumeOffer = null) }
         viewModelScope.launch { resolveLinkedResumeUseCase.stayHere(offer) }
     }
 

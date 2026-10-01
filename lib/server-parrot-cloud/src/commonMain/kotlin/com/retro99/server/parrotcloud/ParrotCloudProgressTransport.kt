@@ -169,6 +169,7 @@ class ParrotCloudProgressTransport(
             snapshot = position.toProgressSyncSnapshot(),
             version = revision?.toString(),
             observedAt = position.updatedAt ?: position.createdAt,
+            marker = revision?.toString(),
         )
     }
 

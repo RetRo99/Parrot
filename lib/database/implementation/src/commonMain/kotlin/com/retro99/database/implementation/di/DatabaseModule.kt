@@ -9,6 +9,7 @@ import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.cloudfiles.CloudFilesDatabase
 import com.retro99.database.api.favorites.FavoritesDatabase
 import com.retro99.database.api.links.BookLinksDatabase
+import com.retro99.database.api.links.LinkedCopyWritesDatabase
 import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBookMergeDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
@@ -28,6 +29,7 @@ import com.retro99.database.implementation.dao.books.BooksSqlDelightDao
 import com.retro99.database.implementation.dao.favorites.FavoritesDatabaseImpl
 import com.retro99.database.implementation.dao.favorites.FavoritesSqlDelightDao
 import com.retro99.database.implementation.dao.links.BookLinksDatabaseImpl
+import com.retro99.database.implementation.dao.links.LinkedCopyWritesDatabaseImpl
 import com.retro99.database.implementation.dao.links.BookLinksSqlDelightDao
 import com.retro99.database.implementation.dao.library.LibraryBooksDatabaseImpl
 import com.retro99.database.implementation.dao.library.LibraryBooksSqlDelightDao
@@ -163,6 +165,13 @@ class DatabaseModule {
         databaseManager: DatabaseManager,
     ): BookLinksSqlDelightDao {
         return BookLinksSqlDelightDao(databaseManager)
+    }
+
+    @Single
+    internal fun provideLinkedCopyWritesDatabase(
+        databaseManager: DatabaseManager,
+    ): LinkedCopyWritesDatabase {
+        return LinkedCopyWritesDatabaseImpl(databaseManager)
     }
 
     @Single

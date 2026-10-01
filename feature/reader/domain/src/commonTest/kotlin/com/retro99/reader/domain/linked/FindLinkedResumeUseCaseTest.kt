@@ -5,6 +5,7 @@ import com.retro99.database.api.books.PositionEntity
 import com.retro99.reader.domain.fakes.FakeCopyFiles
 import com.retro99.reader.domain.fakes.FakeDismissals
 import com.retro99.reader.domain.fakes.FakeLinkedCopiesSource
+import com.retro99.reader.domain.fakes.FakeLinkedCopyWrites
 import com.retro99.reader.domain.fakes.FakePositionDatabase
 import com.retro99.reader.domain.fakes.FakeReaderRepository
 import com.retro99.reader.domain.fakes.FakeRepositoryProvider
@@ -29,13 +30,17 @@ class FindLinkedResumeUseCaseTest {
     private val dismissals = FakeDismissals()
     private val files = FakeCopyFiles()
     private val storytellerServer = FakeReaderRepository(serverId = "st-1")
+    private val writes = FakeLinkedCopyWrites()
 
     private fun useCase() = FindLinkedResumeUseCase(
         linkedCopiesSource = FakeLinkedCopiesSource(listOf(library, storyteller)),
         translatePositionUseCase = files.translateUseCase(positions),
         dismissals = dismissals,
+        remoteCopyPositions = RemoteCopyPositions(
+            repositoryProvider = FakeRepositoryProvider(readers = listOf(storytellerServer)),
+            linkedCopyWritesDatabase = writes,
+        ),
         positionDatabase = positions,
-        repositoryProvider = FakeRepositoryProvider(readers = listOf(storytellerServer)),
     )
 
     private suspend fun store(
@@ -161,6 +166,26 @@ class FindLinkedResumeUseCaseTest {
         // Given
         store("lib", 0.1, "2026-10-01T10:00:00Z")
         store("st", 0.5, "2026-10-01T11:00:00Z", origin = PositionEntity.ORIGIN_LINKED_COPY)
+
+        // When
+        val offer = useCase()("local", "lib")
+
+        // Then
+        assertNull(offer)
+    }
+
+    @Test
+    fun `a fetched echo of our own write is not real reading`() = runTest {
+        // Given
+        store("lib", 0.1, "2026-10-01T10:00:00Z")
+        writes.write(targetKey = "storyteller:st", bookUuid = "st", marker = "1759320000000")
+        storytellerServer.remote["st"] = serverPosition(
+            bookUuid = "st",
+            serverId = "st-1",
+            totalProgression = 0.7,
+            observedAt = "2026-10-01T12:00:00Z",
+            timestamp = 1_759_320_000_000,
+        )
 
         // When
         val offer = useCase()("local", "lib")

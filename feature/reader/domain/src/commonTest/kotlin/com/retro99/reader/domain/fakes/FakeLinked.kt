@@ -17,6 +17,8 @@ import com.retro99.epub.api.ReadaloudTimingReader
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.retro99.base.result.AppError
+import com.retro99.database.api.links.LinkedCopyWriteEntity
+import com.retro99.database.api.links.LinkedCopyWritesDatabase
 
 class FakeLinkedCopiesSource(private val copies: List<LinkedCopy>) : LinkedCopiesSource {
     override suspend fun linkedCopies(serverId: String, bookUuid: String): LinkedCopies? {
@@ -32,10 +34,6 @@ class FakeDismissals : LinkedResumeDismissals {
 
     override suspend fun dismiss(entry: String) {
         entries += entry
-    }
-
-    override suspend fun renameCopy(fromKey: String, intoKey: String) {
-        entries.replaceAll { entry -> entry.replace(fromKey, intoKey) }
     }
 }
 
@@ -68,4 +66,48 @@ class FakeCopyFiles(
         translationCache = TranslationCache(),
         positionDatabase = positions,
     )
+}
+
+class FakeLinkedCopyWrites : LinkedCopyWritesDatabase {
+    val writes = mutableMapOf<String, LinkedCopyWriteEntity>()
+
+    fun write(
+        targetKey: String,
+        bookUuid: String,
+        marker: String? = null,
+        totalProgression: Double? = null,
+        writtenAt: String = kotlin.time.Clock.System.now().toString(),
+    ) {
+        writes[targetKey] = LinkedCopyWriteEntity(
+            targetKey = targetKey,
+            targetBookUuid = bookUuid,
+            sourceKey = null,
+            sourceObservedAt = null,
+            writtenAt = writtenAt,
+            marker = marker,
+            locatorHref = null,
+            progression = null,
+            totalProgression = totalProgression,
+            audioMs = null,
+        )
+    }
+
+    override suspend fun replace(write: LinkedCopyWriteEntity, deleteWrittenBefore: String) {
+        writes.values.removeAll { existing -> existing.writtenAt < deleteWrittenBefore }
+        writes[write.targetKey] = write
+    }
+
+    override suspend fun getWrite(targetKey: String, notBefore: String): LinkedCopyWriteEntity? =
+        writes[targetKey]?.takeIf { write -> write.writtenAt >= notBefore }
+
+    override suspend fun getWriteForBook(
+        bookUuid: String,
+        notBefore: String,
+    ): LinkedCopyWriteEntity? = writes.values
+        .filter { write -> write.targetBookUuid == bookUuid && write.writtenAt >= notBefore }
+        .maxByOrNull { write -> write.writtenAt }
+
+    override suspend fun setMarker(targetKey: String, marker: String) {
+        writes[targetKey]?.let { write -> writes[targetKey] = write.copy(marker = marker) }
+    }
 }

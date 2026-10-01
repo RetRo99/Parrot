@@ -1,0 +1,44 @@
+-- The latest write into each linked copy. Created in 29.sqm.
+
+CREATE TABLE IF NOT EXISTS linked_copy_writes (
+    target_key TEXT NOT NULL PRIMARY KEY,
+    target_book_uuid TEXT NOT NULL,
+    source_key TEXT,
+    source_observed_at TEXT,
+    written_at TEXT NOT NULL,
+    -- Storyteller: the timestamp we sent; Parrot Cloud: the acknowledged revision.
+    marker TEXT,
+    locator_href TEXT,
+    progression REAL,
+    total_progression REAL,
+    audio_ms INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_linked_copy_writes_book ON linked_copy_writes(target_book_uuid);
+
+upsertWrite:
+INSERT OR REPLACE INTO linked_copy_writes(
+    target_key, target_book_uuid, source_key, source_observed_at, written_at, marker,
+    locator_href, progression, total_progression, audio_ms
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getWrite:
+SELECT * FROM linked_copy_writes WHERE target_key = ?;
+
+getWriteForBook:
+SELECT * FROM linked_copy_writes WHERE target_book_uuid = ?
+ORDER BY written_at DESC
+LIMIT 1;
+
+setMarker:
+UPDATE linked_copy_writes SET marker = ? WHERE target_key = ?;
+
+deleteWrittenBefore:
+DELETE FROM linked_copy_writes WHERE written_at < ?;
+
+deleteWrite:
+DELETE FROM linked_copy_writes WHERE target_key = ?;
+
+deleteAllWrites:
+DELETE FROM linked_copy_writes;

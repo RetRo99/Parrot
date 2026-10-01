@@ -64,6 +64,28 @@ class LibraryBookMergerImplTest {
         assertEquals(storyteller, preferences.getStringOrNull(CURRENTLY_READING_KEY))
     }
 
+    @Test
+    fun `merge renames dismissed resume prompts that name the merged book`() = runTest {
+        // Given
+        preferences.putString(
+            DISMISSED_KEY,
+            "[\"library:from|storyteller:st|2026-10-01T10:00:00Z\"," +
+                "\"storyteller:st|library:from|2026-10-01T11:00:00Z\"," +
+                "\"library:other|storyteller:st|2026-10-01T12:00:00Z\"]",
+        )
+
+        // When
+        classUnderTest.merge(fromId = "from", intoId = "into")
+
+        // Then
+        assertEquals(
+            "[\"library:into|storyteller:st|2026-10-01T10:00:00Z\"," +
+                "\"storyteller:st|library:into|2026-10-01T11:00:00Z\"," +
+                "\"library:other|storyteller:st|2026-10-01T12:00:00Z\"]",
+            preferences.getStringOrNull(DISMISSED_KEY),
+        )
+    }
+
     private class MapPreferences : Preferences {
         private val values = mutableMapOf<String, Any>()
         override fun getStringOrNull(key: PreferencesKey) = values[key.name] as? String
@@ -102,5 +124,6 @@ class LibraryBookMergerImplTest {
     private companion object {
         const val PROFILE_ID = "profile-1"
         val CURRENTLY_READING_KEY = PreferencesKey.UserScoped(PROFILE_ID, "CurrentlyReading")
+        val DISMISSED_KEY = PreferencesKey.UserScoped(PROFILE_ID, "DismissedLinkedResume")
     }
 }

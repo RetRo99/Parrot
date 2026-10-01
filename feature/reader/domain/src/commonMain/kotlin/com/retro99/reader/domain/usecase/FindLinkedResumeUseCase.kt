@@ -1,24 +1,18 @@
 package com.retro99.reader.domain.usecase
 
-import com.github.michaelbull.result.get
-import com.retro99.books.domain.model.links.CopySource
-import com.retro99.books.domain.model.links.LinkedCopy
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.reader.domain.linked.LinkedCopiesSource
 import com.retro99.reader.domain.linked.LinkedResumeDismissals
 import com.retro99.reader.domain.linked.LinkedResumeOffer
 import com.retro99.reader.domain.linked.PositionCandidate
+import com.retro99.reader.domain.linked.RemoteCopyPositions
+import com.retro99.reader.domain.linked.RemoteFetch
 import com.retro99.reader.domain.linked.latestRealReading
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.toPositionDomainModel
 import com.retro99.reader.domain.translate.TranslatedPosition
 import com.retro99.reader.domain.translate.progressKind
-import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.PositionOrigin
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
 import kotlin.math.abs
@@ -33,8 +27,8 @@ class FindLinkedResumeUseCase(
     private val linkedCopiesSource: LinkedCopiesSource,
     private val translatePositionUseCase: TranslatePositionUseCase,
     @Provided private val dismissals: LinkedResumeDismissals,
+    private val remoteCopyPositions: RemoteCopyPositions,
     @Provided private val positionDatabase: PositionDatabase,
-    @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
 ) {
 
     suspend operator fun invoke(serverId: String, bookUuid: String): LinkedResumeOffer? {
@@ -55,7 +49,11 @@ class FindLinkedResumeUseCase(
             positionDatabase.getPositionByBookUuid(copy.uuid)?.let { entity ->
                 PositionCandidate(copy, entity.toPositionDomainModel(copy.serverId))
             }
-        } + fetchRemoteCandidates(copies.others)
+        } + remoteCopyPositions.fetch(copies.others).mapNotNull { (copy, fetch) ->
+            (fetch as? RemoteFetch.Fetched)?.position?.let { position ->
+                PositionCandidate(copy, position)
+            }
+        }
 
         val latest = latestRealReading(targetCandidates + otherCandidates) ?: return null
         if (latest.copy.key == target.key) return null
@@ -87,30 +85,6 @@ class FindLinkedResumeUseCase(
         return offer
     }
 
-    /**
-     * The server's own latest position for each linked Storyteller or Audiobookshelf copy,
-     * waiting at most 2 seconds. Copies that fail or time out are skipped.
-     */
-    private suspend fun fetchRemoteCandidates(copies: List<LinkedCopy>): List<PositionCandidate> =
-        coroutineScope {
-            copies
-                .filter { copy -> copy.key.source != CopySource.Library }
-                .map { copy ->
-                    async {
-                        withTimeoutOrNull(REMOTE_BUDGET_MS) {
-                            repositoryProvider.getReaderRepository(copy.serverId)
-                                ?.getRemotePosition(copy.uuid)
-                                ?.get()
-                                ?.toPositionDomainModel()
-                                ?.copy(serverId = copy.serverId, origin = PositionOrigin.Remote)
-                                ?.let { position -> PositionCandidate(copy, position) }
-                        }
-                    }
-                }
-                .awaitAll()
-                .filterNotNull()
-        }
-
     /** A different chapter, or more than 1% apart. No current position counts as the start. */
     private fun isDifferentPlace(
         translated: TranslatedPosition,
@@ -127,7 +101,6 @@ class FindLinkedResumeUseCase(
 
     private companion object {
         const val NEWER_BY_MS = 60_000L
-        const val REMOTE_BUDGET_MS = 2_000L
         const val PLACE_TOLERANCE = 0.01
     }
 }

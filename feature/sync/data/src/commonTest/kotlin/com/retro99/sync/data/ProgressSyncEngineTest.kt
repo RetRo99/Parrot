@@ -2,6 +2,8 @@ package com.retro99.sync.data
 
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
+import com.retro99.database.api.links.LinkedCopyWriteEntity
+import com.retro99.database.api.links.LinkedCopyWritesDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.sync.domain.ProgressChangePage
@@ -38,7 +40,7 @@ class ProgressSyncEngineTest {
                 ),
             ),
         )
-        val engine = ProgressSyncEngine(outbox, positions)
+        val engine = ProgressSyncEngine(outbox, positions, RecordingWrites())
 
         val summary = engine.push(
             entries = listOf(mutation),
@@ -56,7 +58,7 @@ class ProgressSyncEngineTest {
     fun omittedResultRemainsDispatchedAndUnresolved() = runTest {
         val mutation = outboxEntry(mutationId = "mutation-omitted")
         val outbox = RecordingOutboxDatabase(listOf(mutation))
-        val engine = ProgressSyncEngine(outbox, RecordingPositionDatabase())
+        val engine = ProgressSyncEngine(outbox, RecordingPositionDatabase(), RecordingWrites())
 
         val summary = engine.push(
             entries = listOf(mutation),
@@ -77,7 +79,7 @@ class ProgressSyncEngineTest {
         )
         val outbox = RecordingOutboxDatabase(listOf(pending))
         val positions = RecordingPositionDatabase()
-        val engine = ProgressSyncEngine(outbox, positions)
+        val engine = ProgressSyncEngine(outbox, positions, RecordingWrites())
 
         val outcome = engine.applyRemote(
             remote = remoteSnapshot(),
@@ -94,7 +96,7 @@ class ProgressSyncEngineTest {
     fun cleanPullAppliesRemotePositionAndRemovesStaleBaseline() = runTest {
         val outbox = RecordingOutboxDatabase(emptyList())
         val positions = RecordingPositionDatabase()
-        val engine = ProgressSyncEngine(outbox, positions)
+        val engine = ProgressSyncEngine(outbox, positions, RecordingWrites())
 
         val outcome = engine.applyRemote(
             remote = remoteSnapshot(),
@@ -114,7 +116,7 @@ class ProgressSyncEngineTest {
         val transport = RecordingTransport(
             fetchResults = mapOf("remote-book-1" to remoteSnapshot()),
         )
-        val engine = ProgressSyncEngine(outbox, positions)
+        val engine = ProgressSyncEngine(outbox, positions, RecordingWrites())
 
         val refreshed = engine.refreshRemote(
             entries = listOf(mutation),
@@ -136,7 +138,7 @@ class ProgressSyncEngineTest {
         val transport = RecordingTransport(
             fetchResults = mapOf("remote-book-1" to remoteSnapshot()),
         )
-        val engine = ProgressSyncEngine(outbox, positions)
+        val engine = ProgressSyncEngine(outbox, positions, RecordingWrites())
 
         val refreshed = engine.refreshRemoteBookIds(
             remoteBookIds = setOf("remote-book-1"),
@@ -157,7 +159,7 @@ class ProgressSyncEngineTest {
             val entry = outboxEntry(mutationId = "storyteller-409")
             val outbox = RecordingOutboxDatabase(listOf(entry))
             val positions = RecordingPositionDatabase()
-            val engine = ProgressSyncEngine(outbox, positions)
+            val engine = ProgressSyncEngine(outbox, positions, RecordingWrites())
             val transport = RecordingTransport(
                 pushResults = listOf(
                     ProgressPushResult.Conflict("storyteller-409", remoteSnapshot()),
@@ -180,10 +182,169 @@ class ProgressSyncEngineTest {
         }
 
     @Test
+    fun `storyteller - a pull with our write's timestamp is an echo`() = runTest {
+        // Given
+        val (engine, positions) = engineWithWrite(marker = "1700", totalProgression = 0.4)
+
+        // When
+        engine.applyRemote(pull(marker = "1700", totalProgression = 0.4), "account-1")
+
+        // Then
+        assertEquals(PositionEntity.ORIGIN_LINKED_COPY, positions.localPositions.last().origin)
+    }
+
+    @Test
+    fun `storyteller - another timestamp is real reading even at the same progression`() =
+        runTest {
+            // Given
+            val (engine, positions) = engineWithWrite(marker = "1700", totalProgression = 0.4)
+
+            // When
+            engine.applyRemote(pull(marker = "1800", totalProgression = 0.4), "account-1")
+
+            // Then
+            assertEquals(PositionEntity.ORIGIN_REMOTE, positions.localPositions.last().origin)
+        }
+
+    @Test
+    fun `parrot - the same revision is an echo, a newer one is real reading`() = runTest {
+        // Given
+        val (engine, positions) = engineWithWrite(marker = "12", totalProgression = 0.4)
+
+        // When
+        engine.applyRemote(pull(marker = "12", version = "12", totalProgression = 0.4), "a")
+        val first = positions.localPositions.last().origin
+        engine.applyRemote(pull(marker = "13", version = "13", totalProgression = 0.4), "a")
+
+        // Then
+        assertEquals(PositionEntity.ORIGIN_LINKED_COPY, first)
+        assertEquals(PositionEntity.ORIGIN_REMOTE, positions.localPositions.last().origin)
+    }
+
+    @Test
+    fun `audiobookshelf - within 1 percent is an echo, 5 percent further is real`() = runTest {
+        // Given
+        val (engine, positions) = engineWithWrite(marker = null, totalProgression = 0.40)
+
+        // When
+        engine.applyRemote(pull(marker = null, timestamp = 1, totalProgression = 0.405), "a")
+        val first = positions.localPositions.last().origin
+        engine.applyRemote(pull(marker = null, timestamp = 2, totalProgression = 0.45), "a")
+
+        // Then
+        assertEquals(PositionEntity.ORIGIN_LINKED_COPY, first)
+        assertEquals(PositionEntity.ORIGIN_REMOTE, positions.localPositions.last().origin)
+    }
+
+    @Test
+    fun `write log rows older than 7 days don't match`() = runTest {
+        // Given
+        val (engine, positions) = engineWithWrite(
+            marker = "1700",
+            totalProgression = 0.4,
+            writtenAt = "2020-01-01T00:00:00Z",
+        )
+
+        // When
+        engine.applyRemote(pull(marker = "1700", totalProgression = 0.4), "account-1")
+
+        // Then
+        assertEquals(PositionEntity.ORIGIN_REMOTE, positions.localPositions.last().origin)
+    }
+
+    @Test
+    fun `re-pulling an unchanged snapshot leaves the stored row alone`() = runTest {
+        // Given
+        val positions = RecordingPositionDatabase()
+        val engine = ProgressSyncEngine(
+            RecordingOutboxDatabase(emptyList()),
+            positions,
+            RecordingWrites(),
+        )
+        val snapshot = pull(marker = "1700", timestamp = 1700, totalProgression = 0.4)
+        engine.applyRemote(snapshot.copy(observedAt = "2026-10-01T10:00:00Z"), "account-1")
+        val stored = positions.localPositions.single()
+
+        // When
+        engine.applyRemote(snapshot.copy(observedAt = "2026-10-01T11:00:00Z"), "account-1")
+
+        // Then
+        assertEquals(listOf(stored), positions.localPositions)
+        assertEquals("2026-10-01T10:00:00Z", positions.localPositions.single().observedAt)
+    }
+
+    @Test
+    fun `an acknowledged parrot write records its revision as the marker`() = runTest {
+        // Given
+        val writes = RecordingWrites(listOf(write(marker = null, totalProgression = null)))
+        val entry = outboxEntry(mutationId = "m-1")
+        val engine = ProgressSyncEngine(
+            RecordingOutboxDatabase(listOf(entry)),
+            RecordingPositionDatabase(),
+            writes,
+        )
+
+        // When
+        engine.push(
+            entries = listOf(entry),
+            transport = RecordingTransport(
+                pushResults = listOf(ProgressPushResult.Accepted("m-1", "21")),
+            ),
+            codec = ProgressOutboxCodec { pending -> pending.toProgressMutation() },
+        )
+
+        // Then
+        assertEquals("21", writes.writes.getValue("library:book-1").marker)
+    }
+
+    private suspend fun engineWithWrite(
+        marker: String?,
+        totalProgression: Double,
+        writtenAt: String = kotlin.time.Clock.System.now().toString(),
+    ): Pair<ProgressSyncEngine, RecordingPositionDatabase> {
+        val positions = RecordingPositionDatabase()
+        val writes = RecordingWrites(listOf(write(marker, totalProgression, writtenAt)))
+        return ProgressSyncEngine(RecordingOutboxDatabase(emptyList()), positions, writes) to
+            positions
+    }
+
+    private fun write(
+        marker: String?,
+        totalProgression: Double?,
+        writtenAt: String = kotlin.time.Clock.System.now().toString(),
+    ) = LinkedCopyWriteEntity(
+        targetKey = "library:book-1",
+        targetBookUuid = "book-1",
+        sourceKey = "storyteller:st",
+        sourceObservedAt = "2026-10-01T09:00:00Z",
+        writtenAt = writtenAt,
+        marker = marker,
+        locatorHref = null,
+        progression = null,
+        totalProgression = totalProgression,
+        audioMs = null,
+    )
+
+    private fun pull(
+        marker: String?,
+        totalProgression: Double,
+        version: String? = null,
+        timestamp: Long? = marker?.toLongOrNull(),
+    ) = remoteSnapshot().copy(
+        version = version,
+        marker = marker,
+        snapshot = emptySnapshot().copy(timestamp = timestamp, totalProgression = totalProgression),
+    )
+
+    @Test
     fun `a pulled position is stored as remote reading with its observation time`() = runTest {
         // Given
         val positions = RecordingPositionDatabase()
-        val engine = ProgressSyncEngine(RecordingOutboxDatabase(emptyList()), positions)
+        val engine = ProgressSyncEngine(
+            RecordingOutboxDatabase(emptyList()),
+            positions,
+            RecordingWrites(),
+        )
 
         // When
         engine.applyRemote(
@@ -369,7 +530,8 @@ private class RecordingPositionDatabase : PositionDatabase {
         deletedRemoteBookIds += bookUuid
     }
 
-    override suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity? = null
+    override suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity? =
+        localPositions.lastOrNull { position -> position.bookUuid == bookUuid }
 
     override suspend fun getAllPositions(): List<PositionEntity> = localPositions.toList()
 
@@ -380,4 +542,29 @@ private class RecordingPositionDatabase : PositionDatabase {
     override fun observeAllPositions(): Flow<List<PositionEntity>> = emptyFlow()
 
     override suspend fun clearAllData() = Unit
+}
+
+internal class RecordingWrites(
+    initial: List<LinkedCopyWriteEntity> = emptyList(),
+) : LinkedCopyWritesDatabase {
+    val writes = initial.associateBy { write -> write.targetKey }.toMutableMap()
+
+    override suspend fun replace(write: LinkedCopyWriteEntity, deleteWrittenBefore: String) {
+        writes.values.removeAll { existing -> existing.writtenAt < deleteWrittenBefore }
+        writes[write.targetKey] = write
+    }
+
+    override suspend fun getWrite(targetKey: String, notBefore: String): LinkedCopyWriteEntity? =
+        writes[targetKey]?.takeIf { write -> write.writtenAt >= notBefore }
+
+    override suspend fun getWriteForBook(
+        bookUuid: String,
+        notBefore: String,
+    ): LinkedCopyWriteEntity? = writes.values
+        .filter { write -> write.targetBookUuid == bookUuid && write.writtenAt >= notBefore }
+        .maxByOrNull { write -> write.writtenAt }
+
+    override suspend fun setMarker(targetKey: String, marker: String) {
+        writes[targetKey]?.let { write -> writes[targetKey] = write.copy(marker = marker) }
+    }
 }

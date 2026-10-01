@@ -84,6 +84,8 @@ internal fun ServerPosition.toRemoteProgressSnapshot(
             position = position,
         ),
         version = null,
-        observedAt = updatedAt ?: createdAt,
+        observedAt = observedAt ?: updatedAt ?: createdAt,
+        // The timestamp is what the writing client sent; ours is in the write log.
+        marker = timestamp?.toString(),
     )
 }

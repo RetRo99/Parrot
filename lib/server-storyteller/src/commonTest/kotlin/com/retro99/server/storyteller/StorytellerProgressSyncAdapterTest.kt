@@ -6,6 +6,8 @@ import com.retro99.base.result.AppError
 import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
+import com.retro99.database.api.links.LinkedCopyWriteEntity
+import com.retro99.database.api.links.LinkedCopyWritesDatabase
 import com.retro99.database.api.sync.SyncCheckpoint
 import com.retro99.database.api.sync.SyncCheckpointDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
@@ -205,7 +207,7 @@ class StorytellerProgressSyncAdapterTest {
     ): StorytellerProgressSyncAdapter {
         return StorytellerProgressSyncAdapter(
             syncOutboxPreflight = SyncOutboxPreflight(outbox),
-            progressSyncEngine = ProgressSyncEngine(outbox, positions),
+            progressSyncEngine = ProgressSyncEngine(outbox, positions, NoLinkedCopyWrites),
             syncBoundedPass = SyncBoundedPass(
                 SyncPullEngine(RecordingCheckpointDatabase()),
             ),
@@ -515,4 +517,18 @@ private class TestUserRegistry(
     override suspend fun hasProfiles(): Boolean = false
 
     override fun isProfileActive(): Boolean = false
+}
+
+private object NoLinkedCopyWrites : LinkedCopyWritesDatabase {
+    override suspend fun replace(write: LinkedCopyWriteEntity, deleteWrittenBefore: String) = Unit
+
+    override suspend fun getWrite(targetKey: String, notBefore: String): LinkedCopyWriteEntity? =
+        null
+
+    override suspend fun getWriteForBook(
+        bookUuid: String,
+        notBefore: String,
+    ): LinkedCopyWriteEntity? = null
+
+    override suspend fun setMarker(targetKey: String, marker: String) = Unit
 }
