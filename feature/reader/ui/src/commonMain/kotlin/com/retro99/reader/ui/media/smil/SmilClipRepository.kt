@@ -1,5 +1,6 @@
 package com.retro99.reader.ui.media.smil
 
+import com.retro99.epub.api.SmilClip
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -77,6 +77,9 @@ interface ReaderSettingsRepository {
      */
     suspend fun deleteEbookCache(bookUuid: String, bookType: BookType): Boolean
 
+    /** The downloaded file of a server book, or null when it isn't on this device. */
+    suspend fun getCachedMediaPath(bookUuid: String, bookType: BookType): String? = null
+
     /**
      * Gets the currently reading book info.
      * This is the last book that was read for at least the minimum required duration.

@@ -30,6 +30,9 @@ kotlin {
             implementation(projects.feature.books.domain)
             implementation(projects.lib.database.api)
             implementation(projects.lib.server.api)
+            // Domain to domain: TranslatedPosition uses ProgressKind; EchoClassifier lives there.
+            implementation(projects.feature.sync.domain)
+            implementation(projects.lib.epub.api)
         }
 
         commonTest.dependencies {

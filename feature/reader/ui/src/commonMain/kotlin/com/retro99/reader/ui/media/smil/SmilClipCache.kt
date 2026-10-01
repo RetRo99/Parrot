@@ -1,5 +1,6 @@
 package com.retro99.reader.ui.media.smil
 
+import com.retro99.epub.api.SmilClip
 import com.retro99.reader.ui.di.ReaderScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

@@ -1,6 +1,6 @@
 package com.retro99.reader.ui.media
 
-import com.retro99.reader.ui.media.smil.SmilParser
+import com.retro99.epub.implementation.smil.SmilParser
 import com.retro99.reader.ui.media.smil.SmilQuickScanner
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject

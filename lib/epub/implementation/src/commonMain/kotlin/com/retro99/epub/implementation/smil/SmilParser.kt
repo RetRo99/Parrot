@@ -1,23 +1,12 @@
-package com.retro99.reader.ui.media.smil
+package com.retro99.epub.implementation.smil
 
 import com.retro99.analytics.api.Analytics
+import com.retro99.epub.api.SmilClip
 import kotlinx.serialization.Serializable
 import nl.adaptivity.xmlutil.serialization.XML
 import nl.adaptivity.xmlutil.serialization.XmlSerialName
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
-
-/**
- * Represents a single SMIL <par> entry with raw references and clock values.
- * The references are kept as raw strings so platforms can resolve them.
- */
-@Serializable
-data class SmilClip(
-    val textSrc: String,
-    val audioSrc: String,
-    val clipBegin: Double,
-    val clipEnd: Double,
-)
 
 /**
  * Parses SMIL XML and extracts the raw clip list.
