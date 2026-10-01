@@ -6,6 +6,7 @@ import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
 import com.retro99.base.nowMillis
 import com.retro99.reader.domain.model.PositionDomainModel
+import com.retro99.reader.domain.usecase.PropagateToLinkedCopiesUseCase
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.ui.media.HeadlessMediaOverlayPlayer
 import com.retro99.reader.ui.media.smil.SmilLoadingManager
@@ -16,7 +17,6 @@ import com.retro99.sync.domain.SyncScope
 import com.retro99.sync.domain.SyncTriggerReason
 import com.retro99.sync.domain.SyncUrgency
 import com.retro99.sync.domain.usecase.SyncNowUseCase
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -51,6 +51,7 @@ class HeadlessPlaybackSession(
     private val player: HeadlessMediaOverlayPlayer,
     private val smilLoadingManager: SmilLoadingManager,
     private val saveProgressUseCase: SaveReadingProgressUseCase,
+    private val propagateToLinkedCopiesUseCase: PropagateToLinkedCopiesUseCase,
     private val syncNowUseCase: SyncNowUseCase,
     private val analytics: Analytics,
     private val exoPlayer: ExoPlayer,
@@ -73,6 +74,23 @@ class HeadlessPlaybackSession(
             )
         },
     )
+    private val positionSaver = HeadlessPositionSaver(
+        save = { position ->
+            val result = saveProgressUseCase(position)
+                .onSuccess { routineSyncScheduler.markDirty() }
+            Log.d(TAG, "HeadlessSession: Saved position at ${position.audioTimestampMs} ms")
+            result.isOk
+        },
+        // Listening in the car moves the other linked copies too, as the in-app players do.
+        propagate = { position ->
+            propagateToLinkedCopiesUseCase(
+                serverId = position.serverId,
+                bookUuid = position.bookUuid,
+                position = position,
+            )
+        },
+        onError = { exception, message -> analytics.logException(exception, message) },
+    )
     private var positionSaveJob: Job? = null
     private var currentChapterHref: String? = initialChapterHref
 
@@ -85,7 +103,7 @@ class HeadlessPlaybackSession(
             Log.d(TAG, "HeadlessSession: Chapter completed, auto-playing next chapter")
             scope.launch {
                 // Save position before moving to next chapter
-                saveCurrentPosition()
+                saveCurrentPosition(HeadlessSaveReason.ChapterEnd)
                 // Skip to next chapter with audio
                 skipToNextChapter()
             }
@@ -117,7 +135,10 @@ class HeadlessPlaybackSession(
     fun pause() {
         Log.d(TAG, "HeadlessSession: pause()")
         player.pause()
-        saveCurrentPositionAsync()
+        // Outlives close(), which cancels the scope, so the propagation isn't cut short.
+        scope.launch(NonCancellable) {
+            saveCurrentPosition(HeadlessSaveReason.Pause)
+        }
     }
 
     fun resume() {
@@ -181,23 +202,17 @@ class HeadlessPlaybackSession(
             while (isActive) {
                 delay(positionSaveIntervalMs)
                 if (exoPlayer.isPlaying) {
-                    saveCurrentPosition()
+                    saveCurrentPosition(HeadlessSaveReason.Periodic)
                 }
             }
         }
     }
 
-    private fun saveCurrentPositionAsync() {
-        scope.launch {
-            saveCurrentPosition()
-        }
-    }
-
-    private suspend fun saveCurrentPosition() {
+    private suspend fun saveCurrentPosition(reason: HeadlessSaveReason) {
         val chapterHref = currentChapterHref ?: return
         val audioPositionMs = exoPlayer.currentPosition
 
-        savePosition(buildPosition(chapterHref, audioPositionMs))
+        positionSaver.save(buildPosition(chapterHref, audioPositionMs), reason)
     }
 
     private fun buildPosition(
@@ -225,18 +240,6 @@ class HeadlessPlaybackSession(
         )
     }
 
-    private suspend fun savePosition(position: PositionDomainModel) {
-        try {
-            saveProgressUseCase(position)
-                .onSuccess { routineSyncScheduler.markDirty() }
-            Log.d(TAG, "HeadlessSession: Saved position at ${position.audioTimestampMs} ms")
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            analytics.logException(e, "HeadlessSession: Failed to save position")
-        }
-    }
-
     override fun close() {
         Log.d(TAG, "HeadlessSession: close()")
         val finalPosition = currentChapterHref?.let { chapterHref ->
@@ -244,7 +247,9 @@ class HeadlessPlaybackSession(
         }
         // Save final position and request an urgent application-scoped flush.
         scope.launch(NonCancellable) {
-            finalPosition?.let { position -> savePosition(position) }
+            finalPosition?.let { position ->
+                positionSaver.save(position, HeadlessSaveReason.Close)
+            }
             routineSyncScheduler.close()
             syncNowUseCase(
                 SyncRequest(

@@ -7,6 +7,7 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.books.domain.model.BookType
 import com.retro99.epub.implementation.smil.SmilParser
 import com.retro99.reader.data.source.EbookFileDownloader
+import com.retro99.reader.domain.usecase.PropagateToLinkedCopiesUseCase
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.ui.media.DynamicPublicationDataSourceFactory
 import com.retro99.reader.ui.media.HeadlessBookMetadata
@@ -50,6 +51,7 @@ class HeadlessSessionFactory(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
     @Provided private val ebookFileDownloader: EbookFileDownloader,
     @Provided private val saveProgressUseCase: SaveReadingProgressUseCase,
+    @Provided private val propagateToLinkedCopiesUseCase: PropagateToLinkedCopiesUseCase,
     @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val smilParser: SmilParser,
     @Provided private val quickScanner: SmilQuickScanner,
@@ -174,6 +176,7 @@ class HeadlessSessionFactory(
             player = headlessPlayer,
             smilLoadingManager = smilLoadingManager,
             saveProgressUseCase = saveProgressUseCase,
+            propagateToLinkedCopiesUseCase = propagateToLinkedCopiesUseCase,
             syncNowUseCase = syncNowUseCase,
             analytics = analytics,
             exoPlayer = exoPlayer,
