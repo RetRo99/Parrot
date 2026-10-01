@@ -2,6 +2,7 @@ package com.retro99.reader.ui.navigator
 
 import com.retro99.analytics.api.Analytics
 import com.retro99.reader.ui.tts.TtsSentence
+import com.retro99.server.api.TextAnchor
 import com.retro99.reader.ui.tts.TtsSentenceChunker
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -247,7 +248,114 @@ object ChapterSentenceExtractor : KoinComponent {
         })()
     """
 
+    /**
+     * Returns the text before and after the start of the visible page, as
+     * `{status, before, after}` with both texts URI-encoded. Used for the position's text anchor.
+     */
+    private const val TEXT_ANCHOR_JS = """
+        (function() {
+            try {
+                const body = document.body;
+                if (!body) return JSON.stringify({ status: 'error', message: 'no body' });
+                const nodes = [];
+                const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(node) {
+                        if (!node.nodeValue || node.nodeValue.trim().length === 0) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        const parent = node.parentElement;
+                        if (!parent) return NodeFilter.FILTER_REJECT;
+                        const tag = parent.tagName;
+                        if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+                let current;
+                while ((current = walker.nextNode())) nodes.push(current);
+
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                function isVisible(node, start, end) {
+                    const range = document.createRange();
+                    range.setStart(node, start);
+                    range.setEnd(node, end);
+                    const rects = range.getClientRects();
+                    for (let i = 0; i < rects.length; i++) {
+                        const rect = rects[i];
+                        if (rect.width === 0 && rect.height === 0) continue;
+                        if (rect.right > 0 && rect.left < width &&
+                            rect.bottom > 0 && rect.top < height) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                function endsBefore(node, offset) {
+                    const range = document.createRange();
+                    range.setStart(node, offset);
+                    range.setEnd(node, offset + 1);
+                    const rect = range.getBoundingClientRect();
+                    return rect.right <= 0 || rect.bottom <= 0;
+                }
+
+                let index = -1;
+                let offset = 0;
+                for (let i = 0; i < nodes.length; i++) {
+                    const length = nodes[i].nodeValue.length;
+                    if (!isVisible(nodes[i], 0, length)) continue;
+                    index = i;
+                    let low = 0;
+                    let high = length - 1;
+                    while (low < high) {
+                        const middle = Math.floor((low + high) / 2);
+                        if (endsBefore(nodes[i], middle)) low = middle + 1; else high = middle;
+                    }
+                    offset = low;
+                    break;
+                }
+                if (index < 0) {
+                    return JSON.stringify({ status: 'error', message: 'nothing visible' });
+                }
+
+                let before = nodes[index].nodeValue.slice(0, offset);
+                for (let i = index - 1; i >= 0 && before.length < 400; i--) {
+                    before = nodes[i].nodeValue + ' ' + before;
+                }
+                let after = nodes[index].nodeValue.slice(offset);
+                for (let i = index + 1; i < nodes.length && after.length < 600; i++) {
+                    after = after + ' ' + nodes[i].nodeValue;
+                }
+                return JSON.stringify({
+                    status: 'success',
+                    before: encodeURIComponent(before.slice(-400)),
+                    after: encodeURIComponent(after.slice(0, 600))
+                });
+            } catch (e) {
+                return JSON.stringify({ status: 'error', message: String(e) });
+            }
+        })()
+    """
+
     fun getScript(): String = SENTENCE_EXTRACTION_JS.trimIndent()
+
+    fun getTextAnchorScript(): String = TEXT_ANCHOR_JS.trimIndent()
+
+    /** The anchor from [getTextAnchorScript]'s result, trimmed to 20 words before, 30 after. */
+    fun parseTextAnchor(json: String): TextAnchor? {
+        return try {
+            val data = jsonParser.decodeFromString<TextAnchorResult>(json)
+            if (data.status != "success") return null
+            TextAnchor.of(
+                before = percentDecode(data.before),
+                after = percentDecode(data.after),
+            )
+        } catch (e: Exception) {
+            analytics.logException(e, "Failed to parse the text anchor, json: $json")
+            null
+        }
+    }
 
     fun getReadableContentCheckScript(): String = READABLE_CONTENT_CHECK_JS.trimIndent()
 
@@ -311,6 +419,16 @@ internal data class ChapterSentenceJson(
     val id: String? = null,
     @SerialName("t")
     val text: String = "",
+)
+
+@Serializable
+internal data class TextAnchorResult(
+    @SerialName("status")
+    val status: String,
+    @SerialName("before")
+    val before: String = "",
+    @SerialName("after")
+    val after: String = "",
 )
 
 private data class ParsedSentence(

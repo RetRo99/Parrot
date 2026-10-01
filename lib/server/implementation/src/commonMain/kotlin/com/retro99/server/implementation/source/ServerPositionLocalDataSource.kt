@@ -8,8 +8,10 @@ import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.server.api.PositionOrigin
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerPositionLocalSource
+import com.retro99.server.api.TextAnchor
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -167,6 +169,9 @@ private fun PositionEntity.toServerPosition(): ServerPosition {
         totalProgression = totalProgression,
         position = position,
         remoteRevision = remoteRevision,
+        origin = PositionOrigin.fromValue(origin),
+        observedAt = observedAt,
+        textAnchor = TextAnchor.fromJson(textAnchor),
     )
 }
 
@@ -197,6 +202,9 @@ private fun ServerPosition.toPositionEntity(
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        origin = origin.value,
+        observedAt = observedAt,
+        textAnchor = textAnchor?.toJson(),
     )
 }
 
@@ -223,4 +231,7 @@ private data class ServerPositionEntity(
     override val totalDurationMs: Long?,
     override val totalProgression: Double?,
     override val position: Int?,
+    override val origin: String = PositionEntity.ORIGIN_USER,
+    override val observedAt: String? = null,
+    override val textAnchor: String? = null,
 ) : PositionEntity

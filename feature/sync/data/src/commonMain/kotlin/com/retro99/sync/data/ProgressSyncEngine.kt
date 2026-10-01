@@ -4,6 +4,7 @@ import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.sync.domain.ObservedTime
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressPushResult
 import com.retro99.sync.domain.ProgressSyncTransport
@@ -270,6 +271,8 @@ private fun RemoteProgressSnapshot.toPositionEntity(
         totalDurationMs = snapshot.totalDurationMs,
         totalProgression = snapshot.totalProgression,
         position = snapshot.position,
+        origin = PositionEntity.ORIGIN_REMOTE,
+        observedAt = ObservedTime.normalize(observedAt ?: snapshot.updatedAt),
     )
 }
 
@@ -292,4 +295,6 @@ private data class EnginePositionEntity(
     override val totalDurationMs: Long?,
     override val totalProgression: Double?,
     override val position: Int?,
+    override val origin: String,
+    override val observedAt: String?,
 ) : PositionEntity

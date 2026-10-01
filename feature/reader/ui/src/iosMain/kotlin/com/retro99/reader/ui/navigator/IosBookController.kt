@@ -10,6 +10,7 @@ import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.LocatorState
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
+import com.retro99.server.api.TextAnchor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -89,6 +90,7 @@ class IosBookController(
 
                 // Fetch chapter info with page position and word count
                 val chapterInfo = fetchChapterInfo(cachedWordCount)
+                val textAnchor = fetchTextAnchor()
 
                 _currentLocator.emit(
                     LocatorState(
@@ -100,6 +102,7 @@ class IosBookController(
                         totalProgression = locator.totalProgression,
                         fragments = null,
                         chapterInfo = chapterInfo,
+                        textAnchor = textAnchor,
                     ),
                 )
             }
@@ -153,6 +156,17 @@ class IosBookController(
         }
 
         return ChapterPageCalculator.parsePageResult(rawResult, cachedWordCount)
+    }
+
+    /** The text around the start of the visible page, for the position's text anchor. */
+    private suspend fun fetchTextAnchor(): TextAnchor? {
+        val script = ChapterSentenceExtractor.getTextAnchorScript()
+        val rawResult: String? = suspendCancellableCoroutine { continuation ->
+            bridge.evaluateJavaScript(script) { result ->
+                continuation.resume(result)
+            }
+        }
+        return rawResult?.let(ChapterSentenceExtractor::parseTextAnchor)
     }
 
     /**

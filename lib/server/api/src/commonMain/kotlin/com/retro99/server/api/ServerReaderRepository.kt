@@ -3,6 +3,7 @@ package com.retro99.server.api
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * Server-aware reader repository interface for reading progress.
@@ -95,4 +96,12 @@ data class ServerPosition(
     val position: Int?,
     val cssSelector: String? = null,
     val remoteRevision: Long? = null,
+    // Local-only fields. @Transient keeps them out of every payload sent to a server.
+    @Transient
+    val origin: PositionOrigin = PositionOrigin.User,
+    /** When the reading happened, which isn't necessarily when it was saved. */
+    @Transient
+    val observedAt: String? = null,
+    @Transient
+    val textAnchor: TextAnchor? = null,
 )

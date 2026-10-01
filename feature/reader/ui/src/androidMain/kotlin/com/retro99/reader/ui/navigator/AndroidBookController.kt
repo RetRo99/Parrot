@@ -13,6 +13,7 @@ import com.retro99.reader.ui.model.ReaderTextAlignUi
 import com.retro99.reader.ui.model.ReaderThemeUi
 import com.retro99.reader.ui.reader.ReaderSearchResult
 import com.retro99.reader.ui.tts.TtsSentence
+import com.retro99.server.api.TextAnchor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -313,7 +314,13 @@ class AndroidBookController internal constructor() : BookController {
             // Fetch chapter info with page position and word count
             val chapterInfo = fetchChapterInfo(cachedWordCount)
 
-            val cssSelector = fetchFirstVisibleCssSelector(navigator)
+            val visibleLocator = navigator.firstVisibleElementLocator()
+            val cssSelector = visibleLocator?.locations?.otherLocations?.get("cssSelector")
+                as? String
+            // Readium's locator text when it has some, the anchor script otherwise.
+            val textAnchor = visibleLocator?.text?.toTextAnchor()
+                ?: locator.text.toTextAnchor()
+                ?: fetchTextAnchor(navigator)
 
             LocatorState(
                 href = href,
@@ -325,6 +332,7 @@ class AndroidBookController internal constructor() : BookController {
                 fragments = locator.locations.fragments,
                 chapterInfo = chapterInfo,
                 cssSelector = cssSelector,
+                textAnchor = textAnchor,
             )
         } ?: flowOf()
     }.onStart {
@@ -333,10 +341,15 @@ class AndroidBookController internal constructor() : BookController {
         cancelPendingPageTurn()
     }
 
-    private suspend fun fetchFirstVisibleCssSelector(navigator: EpubNavigatorFragment): String? {
-        val enrichedLocator = navigator.firstVisibleElementLocator() ?: return null
-        return enrichedLocator.locations.otherLocations["cssSelector"] as? String
+    private suspend fun fetchTextAnchor(navigator: EpubNavigatorFragment): TextAnchor? {
+        val rawResult = navigator.evaluateJavascript(
+            ChapterSentenceExtractor.getTextAnchorScript(),
+        ) ?: return null
+        return ChapterSentenceExtractor.parseTextAnchor(cleanWebViewJson(rawResult))
     }
+
+    private fun Locator.Text.toTextAnchor(): TextAnchor? =
+        TextAnchor.of(before = before, after = listOfNotNull(highlight, after).joinToString(""))
 
     /**
      * Fetches the chapter info from the WebView.

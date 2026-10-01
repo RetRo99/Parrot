@@ -9,6 +9,7 @@ import com.retro99.database.api.books.PositionEntity
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.server.api.AuthenticatedRepositoryProvider
+import com.retro99.server.api.PositionOrigin
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerReaderRepository
 import kotlinx.coroutines.async
@@ -125,6 +126,9 @@ private fun ServerPosition.toDomain(): PositionDomainModel {
         totalProgression = totalProgression,
         position = position,
         cssSelector = cssSelector,
+        origin = origin,
+        observedAt = observedAt,
+        textAnchor = textAnchor,
     )
 }
 
@@ -147,6 +151,9 @@ private fun PositionEntity.toServerPosition(serverId: String): ServerPosition {
         totalProgression = totalProgression,
         position = position,
         cssSelector = cssSelector,
+        // The remote baseline is a pulled server position.
+        origin = PositionOrigin.Remote,
+        observedAt = observedAt ?: updatedAt ?: createdAt,
     )
 }
 

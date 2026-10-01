@@ -589,6 +589,9 @@ internal class BooksSqlDelightDao(
                 total_duration_ms = position.totalDurationMs,
                 total_progression = position.totalProgression,
                 position = position.position?.toLong(),
+                origin = position.origin,
+                observed_at = position.observedAt,
+                text_anchor = position.textAnchor,
             )
         }
     }
@@ -619,6 +622,9 @@ internal class BooksSqlDelightDao(
                     total_duration_ms = position.totalDurationMs,
                     total_progression = position.totalProgression,
                     position = position.position?.toLong(),
+                    origin = position.origin,
+                    observed_at = position.observedAt,
+                    text_anchor = position.textAnchor,
                 )
                 syncOutboxQueries.enqueue(mutation)
             }
@@ -706,6 +712,9 @@ internal class BooksSqlDelightDao(
                         totalDurationMs = row.total_duration_ms,
                         totalProgression = row.total_progression,
                         position = row.position?.toInt(),
+                        origin = row.origin,
+                        observedAt = row.observed_at,
+                        textAnchor = row.text_anchor,
                     )
                 }
         }
@@ -748,6 +757,9 @@ internal class BooksSqlDelightDao(
                     totalDurationMs = row.total_duration_ms,
                     totalProgression = row.total_progression,
                     position = row.position?.toInt(),
+                    origin = row.origin,
+                    observedAt = row.observed_at,
+                    textAnchor = row.text_anchor,
                 )
             }
         }
@@ -783,6 +795,9 @@ internal class BooksSqlDelightDao(
                         totalDurationMs = it.total_duration_ms,
                         totalProgression = it.total_progression,
                         position = it.position?.toInt(),
+                        origin = it.origin,
+                        observedAt = it.observed_at,
+                        textAnchor = it.text_anchor,
                     )
                 }
             }
@@ -825,6 +840,9 @@ internal class BooksSqlDelightDao(
                         totalDurationMs = row.total_duration_ms,
                         totalProgression = row.total_progression,
                         position = row.position?.toInt(),
+                        origin = row.origin,
+                        observedAt = row.observed_at,
+                        textAnchor = row.text_anchor,
                     )
                 }
             }
@@ -851,6 +869,9 @@ internal class BooksSqlDelightDao(
             totalDurationMs = total_duration_ms,
             totalProgression = total_progression,
             position = position?.toInt(),
+            origin = origin,
+            observedAt = observed_at,
+            textAnchor = text_anchor,
         )
     }
 

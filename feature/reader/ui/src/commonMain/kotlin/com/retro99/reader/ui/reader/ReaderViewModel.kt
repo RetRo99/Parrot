@@ -1542,6 +1542,7 @@ class ReaderViewModel(
             totalProgression = position.totalProgression,
             position = position.position,
             cssSelector = position.cssSelector,
+            textAnchor = position.textAnchor,
         )
     }
 

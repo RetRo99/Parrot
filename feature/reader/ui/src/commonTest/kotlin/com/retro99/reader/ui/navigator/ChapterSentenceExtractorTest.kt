@@ -3,6 +3,7 @@ package com.retro99.reader.ui.navigator
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ChapterSentenceExtractorTest {
@@ -85,4 +86,43 @@ class ChapterSentenceExtractorTest {
         assertTrue(result.all { sentence -> sentence.text.length <= 280 })
     }
 
+
+    @Test
+    fun `parseTextAnchor decodes and trims to 20 words before and 30 after`() {
+        // Given
+        val before = (1..25).joinToString("%20") { index -> "b$index" }
+        val after = (1..35).joinToString("%20%0A") { index -> "a$index" }
+        val json = """{"status":"success","before":"$before","after":"$after"}"""
+
+        // When
+        val anchor = ChapterSentenceExtractor.parseTextAnchor(json)
+
+        // Then
+        assertEquals((6..25).joinToString(" ") { index -> "b$index" }, anchor?.before)
+        assertEquals((1..30).joinToString(" ") { index -> "a$index" }, anchor?.after)
+    }
+
+    @Test
+    fun `parseTextAnchor decodes Unicode and quotes`() {
+        // Given
+        val json = """{"status":"success","before":"%22%C5%BDivjo","after":"svet%21%22"}"""
+
+        // When
+        val anchor = ChapterSentenceExtractor.parseTextAnchor(json)
+
+        // Then
+        assertEquals("\"Živjo", anchor?.before)
+        assertEquals("svet!\"", anchor?.after)
+    }
+
+    @Test
+    fun `parseTextAnchor gives no anchor for a script error`() {
+        // When
+        val anchor = ChapterSentenceExtractor.parseTextAnchor(
+            """{"status":"error","message":"nothing visible"}""",
+        )
+
+        // Then
+        assertNull(anchor)
+    }
 }

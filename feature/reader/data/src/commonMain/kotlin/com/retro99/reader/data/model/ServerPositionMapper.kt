@@ -25,6 +25,9 @@ fun ServerPosition.toDomain(): PositionDomainModel {
         totalProgression = totalProgression,
         position = position,
         cssSelector = cssSelector,
+        origin = origin,
+        observedAt = observedAt,
+        textAnchor = textAnchor,
     )
 }
 
@@ -50,6 +53,9 @@ fun PositionDomainModel.toServerPosition(): ServerPosition {
         totalProgression = totalProgression,
         position = position,
         cssSelector = cssSelector,
+        origin = origin,
+        observedAt = observedAt,
+        textAnchor = textAnchor,
     )
 }
 

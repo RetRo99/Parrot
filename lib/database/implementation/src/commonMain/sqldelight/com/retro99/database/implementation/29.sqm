@@ -1,0 +1,5 @@
+-- Progress across linked copies (project 3). Where each position came from, when the
+-- reading happened, and a short text anchor for ebook positions. Local only.
+ALTER TABLE position ADD COLUMN origin TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE position ADD COLUMN observed_at TEXT;
+ALTER TABLE position ADD COLUMN text_anchor TEXT;

@@ -8,8 +8,10 @@ import com.retro99.base.result.CompletableResult
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.server.api.PositionOrigin
 import com.retro99.server.api.ServerPosition
 import com.retro99.server.api.ServerReaderRepository
+import com.retro99.server.api.TextAnchor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -126,6 +128,9 @@ private fun PositionEntity.toServerPosition(bookUuid: String): ServerPosition {
         totalProgression = totalProgression,
         position = position,
         remoteRevision = remoteRevision,
+        origin = PositionOrigin.fromValue(origin),
+        observedAt = observedAt,
+        textAnchor = TextAnchor.fromJson(textAnchor),
     )
 }
 
@@ -149,6 +154,9 @@ internal fun ServerPosition.toParrotCloudPositionEntity(remoteRevision: Long?): 
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        origin = origin.value,
+        observedAt = observedAt,
+        textAnchor = textAnchor?.toJson(),
     )
 }
 
@@ -176,6 +184,9 @@ internal fun ServerPosition.toParrotCloudPositionEntity(
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        origin = origin.value,
+        observedAt = observedAt,
+        textAnchor = textAnchor?.toJson(),
     )
 }
 
@@ -203,6 +214,9 @@ internal fun ServerPosition.toParrotCloudPositionEntity(
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        origin = origin.value,
+        observedAt = observedAt,
+        textAnchor = textAnchor?.toJson(),
     )
 }
 
@@ -230,6 +244,9 @@ internal fun PositionEntity.toParrotCloudPositionEntity(
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         position = position,
+        origin = origin,
+        observedAt = observedAt,
+        textAnchor = textAnchor,
     )
 }
 
@@ -253,4 +270,7 @@ internal data class ParrotCloudPositionEntity(
     override val totalDurationMs: Long?,
     override val totalProgression: Double?,
     override val position: Int?,
+    override val origin: String = PositionEntity.ORIGIN_USER,
+    override val observedAt: String? = null,
+    override val textAnchor: String? = null,
 ) : PositionEntity

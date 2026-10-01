@@ -7,6 +7,7 @@ import com.retro99.base.nowMillis
 import com.retro99.base.result.AppError
 import com.retro99.base.result.CompletableResult
 import com.retro99.server.api.AuthenticatedRepositoryProvider
+import com.retro99.server.api.PositionOrigin
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
 
@@ -62,6 +63,13 @@ class ResolvePositionConflictUseCase(
 
         // Save remote position to local only - don't sync back to server
         // (the server already has this position, re-posting would cause timestamp conflicts)
-        return serverRepository.saveLocalPosition(remotePosition)
+        return serverRepository.saveLocalPosition(
+            remotePosition.copy(
+                origin = PositionOrigin.Remote,
+                observedAt = remotePosition.observedAt
+                    ?: remotePosition.updatedAt
+                    ?: remotePosition.createdAt,
+            ),
+        )
     }
 }

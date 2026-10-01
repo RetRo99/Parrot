@@ -150,6 +150,24 @@ class ProgressSyncEngineTest {
         assertEquals(listOf("book-1"), positions.deletedRemoteBookIds)
     }
 
+    @Test
+    fun `a pulled position is stored as remote reading with its observation time`() = runTest {
+        // Given
+        val positions = RecordingPositionDatabase()
+        val engine = ProgressSyncEngine(RecordingOutboxDatabase(emptyList()), positions)
+
+        // When
+        engine.applyRemote(
+            remote = remoteSnapshot().copy(observedAt = "1000"),
+            accountId = "account-1",
+        )
+
+        // Then
+        val stored = positions.localPositions.single()
+        assertEquals(PositionEntity.ORIGIN_REMOTE, stored.origin)
+        assertEquals("1970-01-01T00:00:01Z", stored.observedAt)
+    }
+
     private fun outboxEntry(
         mutationId: String,
         entityId: String = "book-1",

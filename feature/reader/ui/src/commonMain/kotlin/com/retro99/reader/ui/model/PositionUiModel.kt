@@ -1,6 +1,7 @@
 package com.retro99.reader.ui.model
 
 import com.retro99.reader.domain.model.PositionDomainModel
+import com.retro99.server.api.TextAnchor
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -17,6 +18,7 @@ data class PositionUiModel(
     val audioTimestampMs: Long? = null,
     val totalDurationMs: Long? = null,
     val cssSelector: String? = null,
+    val textAnchor: TextAnchor? = null,
 )
 
 fun PositionDomainModel.toUiModel(): PositionUiModel {
@@ -33,6 +35,7 @@ fun PositionDomainModel.toUiModel(): PositionUiModel {
         audioTimestampMs = audioTimestampMs,
         totalDurationMs = totalDurationMs,
         cssSelector = cssSelector,
+        textAnchor = textAnchor,
     )
 }
 
@@ -63,5 +66,6 @@ fun LocatorState.toPositionUiModel(
         audioTimestampMs = basePosition?.audioTimestampMs,
         totalDurationMs = basePosition?.totalDurationMs,
         cssSelector = cssSelector,
+        textAnchor = textAnchor,
     )
 }

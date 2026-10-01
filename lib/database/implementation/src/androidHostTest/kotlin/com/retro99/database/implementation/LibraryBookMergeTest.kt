@@ -459,7 +459,7 @@ class LibraryBookMergeTest {
     private fun insertPosition(bookUuid: String, updatedAt: String, progression: Double) {
         database.positionQueries.upsertPosition(
             bookUuid, bookUuid, 0, null, null, updatedAt, updatedAt, "c1", null, null, null,
-            null, null, null, progression, null, null, progression, null,
+            null, null, null, progression, null, null, progression, null, "user", null, null,
         )
     }
 
