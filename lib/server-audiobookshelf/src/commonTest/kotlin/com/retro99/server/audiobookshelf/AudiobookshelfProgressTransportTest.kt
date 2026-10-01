@@ -18,6 +18,7 @@ import retro99.network.api.QueryParamsScope
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class AudiobookshelfProgressTransportTest {
@@ -40,8 +41,132 @@ class AudiobookshelfProgressTransportTest {
 
         assertEquals(listOf("GET:/api/me/progress/book-1"), client.calls)
         assertEquals(42L, result.getValue("book-1").snapshot.timestamp)
-        assertEquals(12_500L, result.getValue("book-1").snapshot.audioTimestampMs)
+        // currentTime is from the start of the book; without file lengths the file is unknown.
+        assertEquals(12_500L, result.getValue("book-1").snapshot.bookTimeMs)
+        assertNull(result.getValue("book-1").snapshot.audioTimestampMs)
         assertEquals("library-book-1", result.getValue("book-1").libraryBookId)
+    }
+
+    @Test
+    fun `a pulled book time lands in the right file when the lengths are cached`() = runTest {
+        // Given
+        val client = RecordingNetworkClient(
+            getResult = Ok(
+                AudiobookshelfMediaProgressApiModel(
+                    libraryItemId = "book-1",
+                    duration = 36_000.0,
+                    progress = 0.5125,
+                    currentTime = 18_450.0,
+                ),
+            ),
+        )
+        val transport = AudiobookshelfProgressTransport(client) { _ -> FORTY_FILES }
+
+        // When
+        val snapshot = transport.fetchProgress(setOf("book-1")).getValue("book-1").snapshot
+
+        // Then
+        assertEquals(18_450_000L, snapshot.bookTimeMs)
+        assertEquals(20, snapshot.chapterIndex)
+        assertEquals(450_000L, snapshot.audioTimestampMs)
+        assertEquals(36_000_000L, snapshot.totalDurationMs)
+        assertEquals(0.5125, snapshot.totalProgression)
+    }
+
+    @Test
+    fun `a pulled single-file position is the book time`() = runTest {
+        // Given
+        val client = RecordingNetworkClient(
+            getResult = Ok(
+                AudiobookshelfMediaProgressApiModel(
+                    duration = 3_600.0,
+                    progress = 0.5,
+                    currentTime = 1_800.0,
+                ),
+            ),
+        )
+        val transport = AudiobookshelfProgressTransport(client) { _ -> listOf(3_600_000L) }
+
+        // When
+        val snapshot = transport.fetchProgress(setOf("book-1")).getValue("book-1").snapshot
+
+        // Then
+        assertEquals(1_800_000L, snapshot.bookTimeMs)
+        assertEquals(0, snapshot.chapterIndex)
+        assertEquals(1_800_000L, snapshot.audioTimestampMs)
+        assertEquals(0.5, snapshot.totalProgression)
+    }
+
+    @Test
+    fun `a multi-file position is pushed as book time and whole-book values`() = runTest {
+        // Given
+        val client = RecordingNetworkClient(patchResult = Ok(Unit))
+        val mutation = audioMutation(
+            offsetMs = 450_000L,
+            trackIndex = 20,
+            trackCount = 40,
+            bookTimeMs = 18_450_000L,
+            totalDurationMs = 36_000_000L,
+            totalProgression = 0.5125,
+        )
+
+        // When
+        val result = AudiobookshelfProgressTransport(client).pushProgress(listOf(mutation))
+
+        // Then
+        val body = assertIs<AudiobookshelfMediaProgressApiModel>(client.patchBody)
+        assertEquals(18_450.0, body.currentTime)
+        assertEquals(36_000.0, body.duration)
+        assertEquals(0.5125, body.progress)
+        assertIs<ProgressPushResult.Accepted>(result.single())
+    }
+
+    @Test
+    fun `a multi-file position without book time is never sent`() = runTest {
+        // Given
+        val client = RecordingNetworkClient(patchResult = Ok(Unit))
+        val mutation = audioMutation(
+            offsetMs = 450_000L,
+            trackIndex = 20,
+            trackCount = 40,
+            bookTimeMs = null,
+            totalDurationMs = null,
+            totalProgression = null,
+        )
+
+        // When
+        val result = AudiobookshelfProgressTransport(client).pushProgress(listOf(mutation))
+
+        // Then
+        assertTrue(client.calls.isEmpty())
+        val rejected = assertIs<ProgressPushResult.Rejected>(result.single())
+        assertEquals(
+            AudiobookshelfProgressTransport.MISSING_BOOK_TIME_RETRY_AFTER_MILLIS,
+            rejected.retryAfterMillis,
+        )
+    }
+
+    @Test
+    fun `a single-file position without book time sends its offset`() = runTest {
+        // Given
+        val client = RecordingNetworkClient(patchResult = Ok(Unit))
+        val mutation = audioMutation(
+            offsetMs = 1_800_000L,
+            trackIndex = 0,
+            trackCount = 1,
+            bookTimeMs = null,
+            totalDurationMs = 3_600_000L,
+            totalProgression = 0.5,
+        )
+
+        // When
+        AudiobookshelfProgressTransport(client).pushProgress(listOf(mutation))
+
+        // Then
+        val body = assertIs<AudiobookshelfMediaProgressApiModel>(client.patchBody)
+        assertEquals(1_800.0, body.currentTime)
+        assertEquals(3_600.0, body.duration)
+        assertEquals(0.5, body.progress)
     }
 
     @Test
@@ -80,6 +205,28 @@ class AudiobookshelfProgressTransportTest {
         assertEquals(null, rejected.retryAfterMillis)
     }
 
+    private fun audioMutation(
+        offsetMs: Long,
+        trackIndex: Int,
+        trackCount: Int,
+        bookTimeMs: Long?,
+        totalDurationMs: Long?,
+        totalProgression: Double?,
+    ) = mutation().let { base ->
+        base.copy(
+            snapshot = base.snapshot.copy(
+                locator = null,
+                audioTimestampMs = offsetMs,
+                chapterIndex = trackIndex,
+                totalChapters = trackCount,
+                progression = totalProgression,
+                totalDurationMs = totalDurationMs,
+                totalProgression = totalProgression,
+                bookTimeMs = bookTimeMs,
+            ),
+        )
+    }
+
     private fun mutation() = ProgressMutation(
         mutationId = "mutation-1",
         entityId = "book-1",
@@ -109,6 +256,8 @@ class AudiobookshelfProgressTransportTest {
         observedAt = "100",
     )
 }
+
+private val FORTY_FILES = List(40) { _ -> 15L * 60 * 1000 }
 
 private class RecordingNetworkClient(
     override val serverId: String = "audiobookshelf-1",

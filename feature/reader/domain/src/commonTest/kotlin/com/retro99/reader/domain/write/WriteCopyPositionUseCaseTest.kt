@@ -115,4 +115,24 @@ class WriteCopyPositionUseCaseTest {
         assertIs<CopyWriteResult.Written>(result)
         assertEquals(60_000L, audiobookshelfServer.syncedSaves.single().audioTimestampMs)
     }
+
+    @Test
+    fun `an audiobookshelf audiobook takes a position known only by its book time`() = runTest {
+        // Given
+        val absAudio = linkedCopy(
+            CopySource.Audiobookshelf,
+            "abs",
+            hasEbook = false,
+            hasAudiobook = true,
+            serverId = "abs-1",
+        )
+        val target = position("abs").copy(bookTimeMs = 3_600_000, totalProgression = 0.4)
+
+        // When
+        val result = useCase(CopyWrite(library, null, absAudio, target, PositionOrigin.Manual))
+
+        // Then
+        assertIs<CopyWriteResult.Written>(result)
+        assertEquals(3_600_000L, audiobookshelfServer.syncedSaves.single().bookTimeMs)
+    }
 }

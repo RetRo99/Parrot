@@ -46,6 +46,8 @@ data class ProgressSnapshot(
     val totalDurationMs: Long?,
     val totalProgression: Double?,
     val position: Int?,
+    /** Audiobooks: time from the start of the book; null when unknown. */
+    val bookTimeMs: Long? = null,
 )
 
 data class ProgressLocator(

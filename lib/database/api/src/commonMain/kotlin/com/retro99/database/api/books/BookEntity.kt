@@ -34,6 +34,8 @@ interface BookEntity {
     val asin: String? get() = null
     /** The length of a server audiobook, when the server reports it. */
     val audioDurationMs: Long? get() = null
+    /** Each audio file's length, in playlist order, when the server reports them. */
+    val audioTrackDurationsMs: List<Long>? get() = null
 }
 
 /**

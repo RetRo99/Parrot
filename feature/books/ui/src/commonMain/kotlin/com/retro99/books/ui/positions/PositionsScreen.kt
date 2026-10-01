@@ -296,7 +296,9 @@ private fun copyLabel(copy: LinkedCopy): String {
 @Composable
 private fun positionText(position: PositionDomainModel): String {
     val percent = ((position.totalProgression ?: 0.0).coerceIn(0.0, 1.0) * 100).toInt()
-    val audio = position.audioTimestampMs
+    // Book-level time: a file offset is only the book's time for a single-file audiobook.
+    val audio = position.bookTimeMs
+        ?: position.audioTimestampMs?.takeIf { _ -> (position.totalChapters ?: 1) <= 1 }
     val duration = position.totalDurationMs
     if (position.locatorHref == null && audio != null && duration != null) {
         val place = stringResource(

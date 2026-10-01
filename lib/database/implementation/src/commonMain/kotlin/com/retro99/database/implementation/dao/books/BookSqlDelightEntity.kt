@@ -22,4 +22,5 @@ data class BookSqlDelightEntity(
     val isbn: String? = null,
     val asin: String? = null,
     val audioDurationMs: Long? = null,
+    val audioTrackDurationsMs: List<Long>? = null,
 )

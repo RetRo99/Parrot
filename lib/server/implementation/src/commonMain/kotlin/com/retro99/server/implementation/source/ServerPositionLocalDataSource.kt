@@ -167,6 +167,7 @@ private fun PositionEntity.toServerPosition(): ServerPosition {
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
         remoteRevision = remoteRevision,
         origin = PositionOrigin.fromValue(origin),
@@ -201,6 +202,7 @@ private fun ServerPosition.toPositionEntity(
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
         origin = origin.value,
         observedAt = observedAt,
@@ -234,4 +236,5 @@ private data class ServerPositionEntity(
     override val origin: String = PositionEntity.ORIGIN_USER,
     override val observedAt: String? = null,
     override val textAnchor: String? = null,
+    override val bookTimeMs: Long? = null,
 ) : PositionEntity

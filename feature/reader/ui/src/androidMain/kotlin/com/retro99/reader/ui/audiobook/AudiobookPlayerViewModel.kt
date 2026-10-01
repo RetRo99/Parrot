@@ -1,10 +1,12 @@
 package com.retro99.reader.ui.audiobook
 
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
 import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.getOrElse
@@ -21,6 +23,11 @@ import com.retro99.analytics.api.diagnosticContext
 import com.retro99.books.domain.model.BookType
 import com.retro99.books.domain.usecase.GetBookByUuidUseCase
 import com.retro99.reader.domain.ReaderSettingsRepository
+import com.retro99.reader.domain.audio.GetAudioTrackDurationsUseCase
+import com.retro99.reader.domain.audio.audioTrackFileOrder
+import com.retro99.reader.domain.audio.audiobookResumeTarget
+import com.retro99.reader.domain.audio.buildAudiobookPosition
+import com.retro99.reader.domain.audio.chooseTrackDurations
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.reader.domain.usecase.GetReadingProgressWithConflictUseCase
@@ -64,6 +71,7 @@ class AudiobookPlayerViewModel(
     @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val getReadingProgressWithConflictUseCase: GetReadingProgressWithConflictUseCase,
     @Provided private val getBookByUuidUseCase: GetBookByUuidUseCase,
+    @Provided private val getAudioTrackDurationsUseCase: GetAudioTrackDurationsUseCase,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<AudiobookPlayerViewState, AudiobookPlayerIntent>(
     AudiobookPlayerViewState(bookUuid = bookUuid)
@@ -74,6 +82,9 @@ class AudiobookPlayerViewModel(
     private var positionUpdateJob: Job? = null
     private var hasRestoredPosition = false
     private var pendingAudioFiles: List<File> = emptyList()
+
+    /** Each file's length from the server, used until the player's timeline knows them all. */
+    private var cachedTrackDurationsMs: List<Long>? = null
     private var continueReadingOpenOperation: ContinueReadingOpenOperation? = createContinueReadingOpenOperation(
         entryPoint = readerOpenEntryPoint,
         mediaType = BookType.AUDIOBOOK.value,
@@ -111,6 +122,7 @@ class AudiobookPlayerViewModel(
                     )
                 }
 
+                cachedTrackDurationsMs = loadCachedTrackDurations(serverId, bookUuid)
                 loadAudioFiles()
 
                 if (viewState.value.trackCount > 0 && viewState.value.error == null) {
@@ -207,9 +219,10 @@ class AudiobookPlayerViewModel(
             return
         }
 
+        // Files are named by their 1-based index; number order keeps file 100 after file 99.
         val audioFiles = dir.listFiles()
             ?.filter { it.isFile }
-            ?.sortedBy { it.name }
+            ?.sortedWith(compareBy<File, String>(audioTrackFileOrder) { file -> file.name })
             ?: emptyList()
 
         if (audioFiles.isEmpty()) {
@@ -314,32 +327,12 @@ class AudiobookPlayerViewModel(
 
         val p = mediaPlaybackController.currentPlayer ?: return
 
-        val position = p.currentPosition.coerceAtLeast(0L)
-        val trackIndex = p.currentMediaItemIndex
-        val totalDuration = p.duration.coerceAtLeast(0L)
-        val totalProgression = if (totalDuration > 0) {
-            position.toDouble() / totalDuration.toDouble()
-        } else {
-            null
-        }
-
-        val progress = PositionDomainModel(
+        val cachedDurations = loadCachedTrackDurations(currentBook.serverId, currentBook.bookUuid)
+        val progress = buildProgressFor(
+            p = p,
             bookUuid = currentBook.bookUuid,
             serverId = currentBook.serverId,
-            timestamp = nowMillis(),
-            createdAt = null,
-            updatedAt = null,
-            locatorHref = null,
-            locatorType = null,
-            locatorTitle = null,
-            locatorTarget = null,
-            audioTimestampMs = position,
-            chapterIndex = trackIndex,
-            progression = totalProgression,
-            totalChapters = p.mediaItemCount,
-            totalDurationMs = if (totalDuration > 0) totalDuration else null,
-            totalProgression = totalProgression,
-            position = null,
+            cachedDurationsMs = cachedDurations,
         )
         withContext(NonCancellable) {
             try {
@@ -408,19 +401,22 @@ class AudiobookPlayerViewModel(
                 val totalDuration = player?.duration ?: return@launch
                 if (totalDuration <= 0) return@launch
 
-                val savedPosition = loadSavedPosition()
-                savedPosition?.audioTimestampMs?.let { timestampMs ->
-                    val trackIndex = savedPosition.chapterIndex ?: 0
-                    val p = player ?: return@launch
-                    if (trackIndex in 0 until p.mediaItemCount) {
-                        p.seekTo(trackIndex, timestampMs)
-                        updateState {
-                            it.copy(
-                                currentTrackIndex = trackIndex,
-                                currentPositionMs = timestampMs,
-                            )
-                        }
-                    }
+                val savedPosition = loadSavedPosition() ?: return@launch
+                val p = player ?: return@launch
+                // The book time wins when the files' lengths are known (positions pulled from
+                // Audiobookshelf may carry only that); otherwise the saved file and offset.
+                val target = audiobookResumeTarget(
+                    saved = savedPosition,
+                    trackDurationsMs = trackDurations(p, cachedTrackDurationsMs),
+                    trackCount = p.mediaItemCount,
+                ) ?: return@launch
+                val (trackIndex, offsetMs) = target
+                p.seekTo(trackIndex, offsetMs)
+                updateState { state ->
+                    state.copy(
+                        currentTrackIndex = trackIndex,
+                        currentPositionMs = offsetMs,
+                    )
                 }
             } catch (e: Exception) {
                 Logger.w(e) { "Failed to restore audiobook progress" }
@@ -466,35 +462,47 @@ class AudiobookPlayerViewModel(
         saveProgress(buildProgress(p))
     }
 
-    private fun buildProgress(p: ExoPlayer): PositionDomainModel {
-        val position = p.currentPosition.coerceAtLeast(0L)
-        val trackIndex = p.currentMediaItemIndex
-        val totalDuration = p.duration.coerceAtLeast(0L)
-        val totalProgression = if (totalDuration > 0) {
-            position.toDouble() / totalDuration.toDouble()
-        } else {
+    private fun buildProgress(p: ExoPlayer): PositionDomainModel =
+        buildProgressFor(p, bookUuid, serverId, cachedTrackDurationsMs)
+
+    /**
+     * The file offset and index (to resume exactly) plus the book-level time, length and
+     * progress, which stay null while the files' lengths aren't known.
+     */
+    private fun buildProgressFor(
+        p: ExoPlayer,
+        bookUuid: String,
+        serverId: String,
+        cachedDurationsMs: List<Long>?,
+    ): PositionDomainModel = buildAudiobookPosition(
+        bookUuid = bookUuid,
+        serverId = serverId,
+        trackIndex = p.currentMediaItemIndex,
+        offsetMs = p.currentPosition.coerceAtLeast(0L),
+        trackCount = p.mediaItemCount,
+        trackDurationsMs = trackDurations(p, cachedDurationsMs),
+        timestamp = nowMillis(),
+    )
+
+    private fun trackDurations(p: ExoPlayer, cachedDurationsMs: List<Long>?): List<Long>? {
+        val timeline = p.currentTimeline
+        val window = Timeline.Window()
+        val timelineDurations = List(timeline.windowCount) { index ->
+            timeline.getWindow(index, window).durationMs
+                .takeIf { durationMs -> durationMs != C.TIME_UNSET && durationMs >= 0 }
+        }
+        return chooseTrackDurations(timelineDurations, cachedDurationsMs, p.mediaItemCount)
+    }
+
+    private suspend fun loadCachedTrackDurations(serverId: String, bookUuid: String): List<Long>? =
+        try {
+            getAudioTrackDurationsUseCase(serverId, bookUuid)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Logger.w(e) { "Failed to read the audiobook's file lengths" }
             null
         }
-
-        return PositionDomainModel(
-            bookUuid = bookUuid,
-            serverId = serverId,
-            timestamp = nowMillis(),
-            createdAt = null,
-            updatedAt = null,
-            locatorHref = null,
-            locatorType = null,
-            locatorTitle = null,
-            locatorTarget = null,
-            audioTimestampMs = position,
-            chapterIndex = trackIndex,
-            progression = totalProgression,
-            totalChapters = p.mediaItemCount,
-            totalDurationMs = if (totalDuration > 0) totalDuration else null,
-            totalProgression = totalProgression,
-            position = null,
-        )
-    }
 
     private fun saveProgress(progress: PositionDomainModel) {
         viewModelScope.launch(NonCancellable) {

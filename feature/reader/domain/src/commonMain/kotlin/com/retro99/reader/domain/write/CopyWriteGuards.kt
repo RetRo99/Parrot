@@ -20,7 +20,8 @@ object CopyWriteGuards {
      */
     fun isWritable(target: LinkedCopy, position: PositionDomainModel?): Boolean {
         if (target.key.source != CopySource.Audiobookshelf) return true
-        return target.progressKind == ProgressKind.AUDIO && position?.audioTimestampMs != null
+        return target.progressKind == ProgressKind.AUDIO &&
+            (position?.bookTimeMs != null || position?.audioTimestampMs != null)
     }
 
     /** Guard 7: a match that fell back to the start would wipe real progress. */

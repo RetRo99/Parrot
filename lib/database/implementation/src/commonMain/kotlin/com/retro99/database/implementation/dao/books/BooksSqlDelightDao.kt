@@ -62,6 +62,7 @@ internal class BooksSqlDelightDao(
                 isbn = book.isbn,
                 asin = book.asin,
                 audio_duration_ms = book.audioDurationMs,
+                audio_track_durations_ms = encodeTrackDurations(book.audioTrackDurationsMs),
             )
         }
     }
@@ -88,6 +89,7 @@ internal class BooksSqlDelightDao(
                     isbn = row.isbn,
                     asin = row.asin,
                     audioDurationMs = row.audio_duration_ms,
+                    audioTrackDurationsMs = decodeTrackDurations(row.audio_track_durations_ms),
                 )
             }
         }
@@ -115,6 +117,7 @@ internal class BooksSqlDelightDao(
                     isbn = row.isbn,
                     asin = row.asin,
                     audioDurationMs = row.audio_duration_ms,
+                    audioTrackDurationsMs = decodeTrackDurations(row.audio_track_durations_ms),
                 )
             }
         }
@@ -142,6 +145,7 @@ internal class BooksSqlDelightDao(
                     isbn = row.isbn,
                     asin = row.asin,
                     audioDurationMs = row.audio_duration_ms,
+                    audioTrackDurationsMs = decodeTrackDurations(row.audio_track_durations_ms),
                 )
             }
         }
@@ -169,6 +173,7 @@ internal class BooksSqlDelightDao(
                     isbn = row.isbn,
                     asin = row.asin,
                     audioDurationMs = row.audio_duration_ms,
+                    audioTrackDurationsMs = decodeTrackDurations(row.audio_track_durations_ms),
                 )
             }
         }
@@ -593,6 +598,7 @@ internal class BooksSqlDelightDao(
                 total_chapters = position.totalChapters?.toLong(),
                 total_duration_ms = position.totalDurationMs,
                 total_progression = position.totalProgression,
+                book_time_ms = position.bookTimeMs,
                 position = position.position?.toLong(),
                 origin = position.origin,
                 observed_at = position.observedAt,
@@ -626,6 +632,7 @@ internal class BooksSqlDelightDao(
                     total_chapters = position.totalChapters?.toLong(),
                     total_duration_ms = position.totalDurationMs,
                     total_progression = position.totalProgression,
+                    book_time_ms = position.bookTimeMs,
                     position = position.position?.toLong(),
                     origin = position.origin,
                     observed_at = position.observedAt,
@@ -674,6 +681,7 @@ internal class BooksSqlDelightDao(
                 total_chapters = position.totalChapters?.toLong(),
                 total_duration_ms = position.totalDurationMs,
                 total_progression = position.totalProgression,
+                book_time_ms = position.bookTimeMs,
                 position = position.position?.toLong(),
             )
         }
@@ -716,6 +724,7 @@ internal class BooksSqlDelightDao(
                         totalChapters = row.total_chapters?.toInt(),
                         totalDurationMs = row.total_duration_ms,
                         totalProgression = row.total_progression,
+                        bookTimeMs = row.book_time_ms,
                         position = row.position?.toInt(),
                         origin = row.origin,
                         observedAt = row.observed_at,
@@ -761,6 +770,7 @@ internal class BooksSqlDelightDao(
                     totalChapters = row.total_chapters?.toInt(),
                     totalDurationMs = row.total_duration_ms,
                     totalProgression = row.total_progression,
+                    bookTimeMs = row.book_time_ms,
                     position = row.position?.toInt(),
                     origin = row.origin,
                     observedAt = row.observed_at,
@@ -799,6 +809,7 @@ internal class BooksSqlDelightDao(
                         totalChapters = it.total_chapters?.toInt(),
                         totalDurationMs = it.total_duration_ms,
                         totalProgression = it.total_progression,
+                        bookTimeMs = it.book_time_ms,
                         position = it.position?.toInt(),
                         origin = it.origin,
                         observedAt = it.observed_at,
@@ -844,6 +855,7 @@ internal class BooksSqlDelightDao(
                         totalChapters = row.total_chapters?.toInt(),
                         totalDurationMs = row.total_duration_ms,
                         totalProgression = row.total_progression,
+                        bookTimeMs = row.book_time_ms,
                         position = row.position?.toInt(),
                         origin = row.origin,
                         observedAt = row.observed_at,
@@ -873,6 +885,7 @@ internal class BooksSqlDelightDao(
             totalChapters = total_chapters?.toInt(),
             totalDurationMs = total_duration_ms,
             totalProgression = total_progression,
+            bookTimeMs = book_time_ms,
             position = position?.toInt(),
             origin = origin,
             observedAt = observed_at,
@@ -899,6 +912,7 @@ internal class BooksSqlDelightDao(
             totalChapters = total_chapters?.toInt(),
             totalDurationMs = total_duration_ms,
             totalProgression = total_progression,
+            bookTimeMs = book_time_ms,
             position = position?.toInt(),
         )
     }

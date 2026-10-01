@@ -25,4 +25,5 @@ data class PositionSqlDelightEntity(
     override val origin: String = PositionEntity.ORIGIN_USER,
     override val observedAt: String? = null,
     override val textAnchor: String? = null,
+    override val bookTimeMs: Long? = null,
 ) : PositionEntity

@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PropagateToLinkedCopiesUseCaseTest {
@@ -313,8 +314,10 @@ class PropagateToLinkedCopiesUseCaseTest {
             linkedCopyWritesDatabase = writes,
         )("st-1", "st", position)
 
-        // Then
-        assertEquals(60_000L, absServer.syncedSaves.single().audioTimestampMs)
+        // Then: the audiobook's file lengths aren't known, so only the book time is set.
+        val saved = absServer.syncedSaves.single()
+        assertEquals(60_000L, saved.bookTimeMs)
+        assertNull(saved.audioTimestampMs)
     }
 
     @Test

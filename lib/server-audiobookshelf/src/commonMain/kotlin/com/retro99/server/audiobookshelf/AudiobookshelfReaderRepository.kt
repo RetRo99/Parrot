@@ -12,9 +12,11 @@ import com.retro99.server.audiobookshelf.model.AudiobookshelfMediaProgressApiMod
 import com.retro99.server.audiobookshelf.model.toServerPosition
 import retro99.network.api.get
 
+/** @param trackDurationsMs each audio file's length cached for a library item, or null. */
 class AudiobookshelfReaderRepository(
     private val networkClient: ServerNetworkClient,
     private val localSource: ServerPositionLocalSource,
+    private val trackDurationsMs: suspend (bookUuid: String) -> List<Long>? = { _ -> null },
 ) : ServerReaderRepository, BaseRepository {
 
     override val serverId: String = networkClient.serverId
@@ -51,10 +53,11 @@ class AudiobookshelfReaderRepository(
     }
 
     override suspend fun getRemotePosition(bookUuid: String): AppResult<ServerPosition?> {
+        val durations = trackDurationsMs(bookUuid)
         return networkClient.get<AudiobookshelfMediaProgressApiModel?>(
             path = "/api/me/progress/$bookUuid",
         ).map { apiModel ->
-            apiModel?.toServerPosition(bookUuid, serverId)
+            apiModel?.toServerPosition(bookUuid, serverId, durations)
         }
     }
 }

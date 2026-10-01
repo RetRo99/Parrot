@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 /**
  * The project 3 migration (29.sqm). There's no v29 schema dump, so this starts from v28 and
- * runs both 28.sqm and 29.sqm.
+ * runs every later migration.
  */
 class PositionOriginMigrationTest {
 
@@ -78,7 +78,7 @@ class PositionOriginMigrationTest {
             database.positionQueries.upsertPosition(
                 "book-1", "book-1", 0, null, null, null, null, "c1", null, null, null,
                 null, null, null, 0.1, null, null, 0.1, null,
-                "linked_copy", "2026-10-01T10:00:00Z", """{"before":"a","after":"b"}""",
+                "linked_copy", "2026-10-01T10:00:00Z", """{"before":"a","after":"b"}""", null,
             )
 
             // Then
@@ -149,6 +149,6 @@ class PositionOriginMigrationTest {
     }
 
     private companion object {
-        const val LATEST = 30L
+        const val LATEST = 31L
     }
 }

@@ -234,7 +234,9 @@ class HeadlessPlaybackSession(
             chapterIndex = null,
             progression = null,
             totalChapters = null,
-            totalDurationMs = exoPlayer.duration.takeIf { it > 0 },
+            // The player holds one chapter's audio, so its duration isn't the book's length,
+            // and audioTimestampMs is the offset in that chapter's audio (with its href).
+            totalDurationMs = null,
             totalProgression = null,
             position = null,
         )

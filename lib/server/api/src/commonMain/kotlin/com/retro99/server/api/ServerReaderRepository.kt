@@ -96,6 +96,12 @@ data class ServerPosition(
     val position: Int?,
     val cssSelector: String? = null,
     val remoteRevision: Long? = null,
+    /**
+     * Audiobooks: time from the start of the book. [audioTimestampMs] and [chapterIndex] are the
+     * offset in the current file and its index; [totalDurationMs] and [totalProgression] are
+     * whole-book. Null when the files' lengths aren't known.
+     */
+    val bookTimeMs: Long? = null,
     // Local-only fields. @Transient keeps them out of every payload sent to a server.
     @Transient
     val origin: PositionOrigin = PositionOrigin.User,

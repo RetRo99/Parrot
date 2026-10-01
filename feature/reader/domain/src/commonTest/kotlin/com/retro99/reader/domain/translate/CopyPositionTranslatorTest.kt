@@ -9,6 +9,7 @@ import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class CopyPositionTranslatorTest {
@@ -300,10 +301,78 @@ class CopyPositionTranslatorTest {
         // When
         val result = assertNotNull(translator.translate(source, position, target))
 
+        // Then: the target's file lengths aren't known, so only the book time is set.
+        assertEquals(TranslationConfidence.High, result.confidence)
+        assertEquals(31_000L, result.position.bookTimeMs)
+        assertNull(result.position.audioTimestampMs)
+        assertEquals(0, matcher.matchCount)
+    }
+
+    @Test
+    fun `audio onto a multi-file audiobook finds the file when its lengths are known`() {
+        // Given
+        val readaloudChapters = book("r", listOf(6, 6))
+        val timing = timingFor(readaloudChapters)
+        val source = copy(
+            CopySource.Storyteller,
+            "st",
+            chapters = readaloudChapters,
+            timing = timing,
+        )
+        val firstFile = timing.totalDurationMs / 2
+        val target = copy(
+            CopySource.Audiobookshelf,
+            "abs",
+            kind = ProgressKind.AUDIO,
+            audioDurationMs = timing.totalDurationMs,
+            trackDurationsMs = listOf(firstFile, timing.totalDurationMs - firstFile),
+        )
+        val position = textPosition(readaloudChapters, "r-s3", bookUuid = "st")
+            .copy(audioTimestampMs = firstFile + 1_000, totalDurationMs = timing.totalDurationMs)
+
+        // When
+        val result = assertNotNull(translator.translate(source, position, target))
+
         // Then
         assertEquals(TranslationConfidence.High, result.confidence)
-        assertEquals(31_000L, result.position.audioTimestampMs)
-        assertEquals(0, matcher.matchCount)
+        assertEquals(firstFile + 1_000, result.position.bookTimeMs)
+        assertEquals(1, result.position.chapterIndex)
+        assertEquals(1_000L, result.position.audioTimestampMs)
+        assertEquals(2, result.position.totalChapters)
+    }
+
+    @Test
+    fun `an audiobook position with its book time maps directly onto a read-aloud`() {
+        // Given: the player's position in file 2 of 2, with its time from the start of the book.
+        val readaloudChapters = book("r", listOf(2, 4, 4, 2))
+        val timing = timingFor(readaloudChapters)
+        val target = copy(
+            CopySource.Storyteller,
+            "st",
+            chapters = readaloudChapters,
+            timing = timing,
+        )
+        val source = copy(
+            CopySource.Audiobookshelf,
+            "abs",
+            kind = ProgressKind.AUDIO,
+            audioDurationMs = timing.totalDurationMs,
+        )
+        val clip = timing.clips.first { candidate -> candidate.fragmentId == "r-s8" }
+        val bookTime = timing.globalBeginMs(clip) + 500
+        val position = audioPosition(5_000, timing.totalDurationMs).copy(
+            chapterIndex = 1,
+            totalChapters = 2,
+            bookTimeMs = bookTime,
+        )
+
+        // When
+        val result = assertNotNull(translator.translate(source, position, target))
+
+        // Then
+        assertEquals(TranslationConfidence.High, result.confidence)
+        assertEquals(TranslationStrategy.SmilBridge, result.strategy)
+        assertEquals("#r-s8", result.position.cssSelector)
     }
 
     @Test
@@ -328,7 +397,7 @@ class CopyPositionTranslatorTest {
 
         // Then
         assertEquals(TranslationConfidence.High, result.confidence)
-        assertEquals(100_000L, result.position.audioTimestampMs)
+        assertEquals(100_000L, result.position.bookTimeMs)
     }
 
     @Test

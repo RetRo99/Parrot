@@ -41,6 +41,7 @@ internal fun ProgressSnapshot.toStorytellerServerPosition(
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
         cssSelector = locator?.cssSelector,
     )
@@ -81,6 +82,7 @@ internal fun ServerPosition.toRemoteProgressSnapshot(
             totalChapters = totalChapters,
             totalDurationMs = totalDurationMs,
             totalProgression = totalProgression,
+            bookTimeMs = bookTimeMs,
             position = position,
         ),
         version = null,

@@ -49,6 +49,14 @@ interface PositionEntity {
     val textAnchor: String?
         get() = null
 
+    /**
+     * Audiobooks: the time from the start of the book. [audioTimestampMs] and [chapterIndex]
+     * stay the offset in the current file and its index; [totalDurationMs] and
+     * [totalProgression] are whole-book. Null when the files' lengths aren't known.
+     */
+    val bookTimeMs: Long?
+        get() = null
+
     companion object {
         const val ORIGIN_USER = "user"
         const val ORIGIN_RESTORE = "restore"

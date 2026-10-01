@@ -79,6 +79,11 @@ data class ServerBook(
     val asin: String? = null,
     /** The length of the audiobook, when the server reports it (Audiobookshelf). */
     val audioDurationMs: Long? = null,
+    /**
+     * Each audio file's length, in the order of [audiobookFilepath]'s files, when the server
+     * reports them (Audiobookshelf). Null when any length is unknown.
+     */
+    val audioTrackDurationsMs: List<Long>? = null,
 )
 
 enum class RemoteFileAvailability {

@@ -63,7 +63,7 @@ class TranslatePositionUseCase(
             .map { copy -> content(copy) }
             .filter { content -> content.readaloud != null }
         val result = translator.translate(
-            source = content(source, knownDurationMs = position.totalDurationMs),
+            source = content(source, knownDurationMs = position.knownBookDurationMs()),
             position = position,
             target = content(target),
             others = bridges,
@@ -76,11 +76,21 @@ class TranslatePositionUseCase(
         val kind = copy.progressKind
         val hasFile = kind != ProgressKind.AUDIO || copy.hasEbook
         val file = if (hasFile) fileLocator.locate(copy) else null
-        // The cached item's length first (P6b): a position may only know its current track's.
+        // The cached item's length first (P6b). Positions saved before book time existed (no
+        // bookTimeMs, several files) only knew their current track's length.
         val audioDuration = if (kind == ProgressKind.AUDIO) {
             audiobookDurations.durationMs(copy)
                 ?: knownDurationMs
-                ?: positionDatabase.getPositionByBookUuid(copy.uuid)?.totalDurationMs
+                ?: positionDatabase.getPositionByBookUuid(copy.uuid)
+                    ?.takeIf { stored ->
+                        stored.bookTimeMs != null || (stored.totalChapters ?: 1) <= 1
+                    }
+                    ?.totalDurationMs
+        } else {
+            null
+        }
+        val trackDurations = if (kind == ProgressKind.AUDIO) {
+            audiobookDurations.trackDurationsMs(copy)
         } else {
             null
         }
@@ -94,6 +104,11 @@ class TranslatePositionUseCase(
             timing = file?.takeIf { found -> found.isReadaloud }
                 ?.let { found -> contentCache.timing(found.path) },
             audioDurationMs = audioDuration,
+            trackDurationsMs = trackDurations,
         )
     }
 }
+
+/** The whole book's length from a position: older multi-file positions only knew a track's. */
+private fun PositionDomainModel.knownBookDurationMs(): Long? =
+    totalDurationMs?.takeIf { _ -> bookTimeMs != null || (totalChapters ?: 1) <= 1 }
