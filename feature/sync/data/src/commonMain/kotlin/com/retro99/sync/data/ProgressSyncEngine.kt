@@ -326,7 +326,8 @@ private fun PositionEntity.isSameSnapshotAs(remote: RemoteProgressSnapshot): Boo
         cssSelector == snapshot.locator?.cssSelector &&
         progression == snapshot.progression &&
         totalProgression == snapshot.totalProgression &&
-        audioTimestampMs == snapshot.audioTimestampMs
+        audioTimestampMs == snapshot.audioTimestampMs &&
+        bookTimeMs == snapshot.bookTimeMs
 }
 
 private fun RemoteProgressSnapshot.toPositionEntity(
@@ -351,6 +352,8 @@ private fun RemoteProgressSnapshot.toPositionEntity(
         totalChapters = snapshot.totalChapters,
         totalDurationMs = snapshot.totalDurationMs,
         totalProgression = snapshot.totalProgression,
+        bookTimeMs = snapshot.bookTimeMs,
+        ebookLocationRaw = snapshot.ebookLocationRaw,
         position = snapshot.position,
         origin = origin,
         observedAt = ObservedTime.normalize(observedAt ?: snapshot.updatedAt),
@@ -378,4 +381,6 @@ private data class EnginePositionEntity(
     override val position: Int?,
     override val origin: String,
     override val observedAt: String?,
+    override val bookTimeMs: Long?,
+    override val ebookLocationRaw: String?,
 ) : PositionEntity

@@ -1,5 +1,7 @@
 package com.retro99.server.audiobookshelf
 
+import com.retro99.database.api.books.BooksDatabase
+import com.retro99.server.api.EbookReadingOrderSource
 import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerPositionLocalSource
 import com.retro99.server.api.ServerReaderRepository
@@ -13,6 +15,8 @@ import org.koin.core.annotation.Single
 class AudiobookshelfReaderRepositoryFactory(
     @Provided private val networkClientFactory: ServerNetworkClientProvider,
     @Provided private val localSource: ServerPositionLocalSource,
+    @Provided private val booksDatabase: BooksDatabase,
+    @Provided private val ebookReadingOrderSource: EbookReadingOrderSource,
 ) : ServerReaderRepositoryFactory {
 
     override val serverType: ServerType = ServerType.Audiobookshelf
@@ -22,6 +26,14 @@ class AudiobookshelfReaderRepositoryFactory(
             "AudiobookshelfReaderRepositoryFactory can only create repositories for Audiobookshelf servers"
         }
         val networkClient = networkClientFactory.create(serverConfig)
-        return AudiobookshelfReaderRepository(networkClient, localSource)
+        return AudiobookshelfReaderRepository(
+            networkClient = networkClient,
+            localSource = localSource,
+            readingOrderHrefs = ebookReadingOrderSource::readingOrderHrefs,
+            trackDurationsMs = { bookUuid ->
+                booksDatabase.getBookByServerAndUuid(networkClient.serverId, bookUuid)
+                    ?.audioTrackDurationsMs
+            },
+        )
     }
 }

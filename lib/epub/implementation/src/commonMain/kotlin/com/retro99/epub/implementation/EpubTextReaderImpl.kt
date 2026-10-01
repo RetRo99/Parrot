@@ -7,6 +7,7 @@ import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.epub.api.EpubChapterText
+import com.retro99.epub.api.EpubSpineReader
 import com.retro99.epub.api.EpubTextReader
 import com.retro99.epub.implementation.text.XhtmlTextExtractor
 import com.retro99.epub.implementation.zip.RandomAccessSource
@@ -28,10 +29,10 @@ private val xhtmlMediaTypes = setOf("application/xhtml+xml", "text/html")
  * Reads chapter text entry by entry through the ZIP central directory: the package document
  * and the spine's XHTML files only, never audio, and never the whole archive (BookBridge #414).
  */
-@Single(binds = [EpubTextReader::class])
+@Single(binds = [EpubTextReader::class, EpubSpineReader::class])
 class EpubTextReaderImpl(
     @Provided private val analytics: Analytics,
-) : EpubTextReader {
+) : EpubTextReader, EpubSpineReader {
 
     internal var openSource: (String) -> RandomAccessSource? = ::openRandomAccessSource
 
@@ -58,6 +59,21 @@ class EpubTextReaderImpl(
                             )
                         }
                     Ok(chapters)
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (exception: Exception) {
+                Err(AppError.UnknownError(exception))
+            }
+        }
+
+    override suspend fun readSpineHrefs(filePath: String): AppResult<List<String>> =
+        withContext(Dispatchers.IO) {
+            try {
+                val source = openSource(filePath)
+                    ?: return@withContext Err(AppError.NotFoundError("EPUB not found"))
+                ZipArchive.open(source).use { archive ->
+                    Ok(EpubPackage.read(archive).spine.map { item -> item.path })
                 }
             } catch (exception: CancellationException) {
                 throw exception

@@ -16,8 +16,10 @@ internal data class ManifestItem(
 /** The parts of an EPUB package document (OPF) that text and timing reading need. */
 internal data class EpubPackage(
     val manifest: Map<String, ManifestItem>,
-    /** Linear spine items in reading order. */
+    /** Linear spine items in reading order, for text reading. */
     val readingOrder: List<ManifestItem>,
+    /** Every spine item in order, `linear="no"` ones included, as EPUB CFIs count them. */
+    val spine: List<ManifestItem>,
     /** The book's `media:duration`, when the package declares one. */
     val mediaDurationText: String?,
 ) {
@@ -43,6 +45,7 @@ internal data class EpubPackage(
         fun parse(opf: String, packagePath: String): EpubPackage {
             val manifest = LinkedHashMap<String, ManifestItem>()
             val spine = mutableListOf<String>()
+            val linearSpine = mutableListOf<String>()
             var mediaDuration: String? = null
             var readingDuration = false
             scanMarkup(opf) { token ->
@@ -62,8 +65,9 @@ internal data class EpubPackage(
                         }
                         "itemref" -> {
                             val idref = token.attributes["idref"]
-                            if (idref != null && token.attributes["linear"] != "no") {
+                            if (idref != null) {
                                 spine += idref
+                                if (token.attributes["linear"] != "no") linearSpine += idref
                             }
                         }
                         "meta" -> {
@@ -79,7 +83,8 @@ internal data class EpubPackage(
             }
             return EpubPackage(
                 manifest = manifest,
-                readingOrder = spine.mapNotNull { idref -> manifest[idref] },
+                readingOrder = linearSpine.mapNotNull { idref -> manifest[idref] },
+                spine = spine.mapNotNull { idref -> manifest[idref] },
                 mediaDurationText = mediaDuration,
             )
         }

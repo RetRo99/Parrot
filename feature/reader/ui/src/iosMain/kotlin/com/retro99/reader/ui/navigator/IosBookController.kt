@@ -234,6 +234,7 @@ class IosBookController(
             type = locator.type,
             progression = locator.progression,
             position = locator.position,
+            totalProgression = locator.totalProgression,
         )
     }
 
@@ -248,6 +249,7 @@ class IosBookController(
             type = position.type,
             progression = position.progression,
             position = position.position,
+            totalProgression = position.totalProgression,
         )
     }
 

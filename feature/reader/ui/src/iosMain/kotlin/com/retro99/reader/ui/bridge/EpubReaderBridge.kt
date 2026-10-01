@@ -122,12 +122,15 @@ interface EpubReaderBridge {
      * @param type The media type of the resource
      * @param progression The progression within the resource (0.0 to 1.0)
      * @param position The position index, if available
+     * @param totalProgression The share of the whole book, used when [href] isn't one of the
+     *   publication's resources (e.g. an Audiobookshelf CFI) instead of the start of the book
      */
     fun goToPosition(
         href: String,
         type: String,
         progression: Double?,
         position: Int?,
+        totalProgression: Double?,
     )
 
     /**

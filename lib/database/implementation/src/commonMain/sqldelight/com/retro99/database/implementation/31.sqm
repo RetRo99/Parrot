@@ -1,0 +1,5 @@
+-- Audiobookshelf ebook location (open bugs B4). The raw ebookLocation Audiobookshelf returned
+-- (an EPUB CFI from its web reader, a JSON Readium locator from its mobile apps), so a push
+-- writes the same shape back. Local only.
+ALTER TABLE position ADD COLUMN ebook_location_raw TEXT;
+ALTER TABLE remote_position ADD COLUMN ebook_location_raw TEXT;

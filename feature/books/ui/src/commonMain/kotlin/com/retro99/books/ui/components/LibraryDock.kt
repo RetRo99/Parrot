@@ -5,9 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.ime
@@ -19,6 +17,8 @@ import androidx.compose.foundation.text.input.placeCursorAtEnd
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
@@ -63,6 +63,15 @@ private val DockHeight = 56.dp
 private val DockShape = RoundedCornerShape(18.dp)
 private val EinkBorder = 2.dp
 private val ActiveBorder = 1.5.dp
+private val KeyboardShownBottomPadding = 8.dp
+private val KeyboardHiddenBottomPadding = 20.dp
+
+/**
+ * Gap under the active search dock: tight above the keyboard, roomier above the screen edge.
+ * Uses the IME inset in pixels, which works on every platform (`isImeVisible` is Android-only).
+ */
+internal fun searchDockBottomPadding(imeBottomPx: Int): Dp =
+    if (imeBottomPx > 0) KeyboardShownBottomPadding else KeyboardHiddenBottomPadding
 private val ActiveEinkBorder = 2.5.dp
 
 /**
@@ -70,7 +79,6 @@ private val ActiveEinkBorder = 2.5.dp
  * While [isSearchActive] the field is outlined in the accent color, Add becomes a close button and
  * the dock rides above the keyboard (or 20dp above the screen edge when it is hidden).
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun LibraryDock(
     searchFieldState: TextFieldState,
@@ -85,7 +93,11 @@ fun LibraryDock(
     val insetsModifier = if (isSearchActive) {
         Modifier
             .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
-            .padding(bottom = if (WindowInsets.isImeVisible) 8.dp else 20.dp)
+            .padding(
+                bottom = searchDockBottomPadding(
+                    imeBottomPx = WindowInsets.ime.getBottom(LocalDensity.current),
+                ),
+            )
     } else {
         Modifier.padding(bottom = 16.dp)
     }

@@ -44,6 +44,7 @@ internal data class ServerBookEntityImpl(
     override val isbn: String? = null,
     override val asin: String? = null,
     override val audioDurationMs: Long? = null,
+    override val audioTrackDurationsMs: List<Long>? = null,
 ) : BookEntity
 
 internal data class SimplePersonEntity(
@@ -134,6 +135,7 @@ internal fun ServerBook.toEntity(): BookEntity {
         isbn = isbn,
         asin = asin,
         audioDurationMs = audioDurationMs,
+        audioTrackDurationsMs = audioTrackDurationsMs,
     )
 }
 
@@ -209,5 +211,6 @@ internal fun BookEntity.toServerBook(baseUrl: String?): ServerBook {
         isbn = isbn,
         asin = asin,
         audioDurationMs = audioDurationMs,
+        audioTrackDurationsMs = audioTrackDurationsMs,
     )
 }

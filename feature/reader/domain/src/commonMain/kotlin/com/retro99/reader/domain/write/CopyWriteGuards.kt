@@ -15,12 +15,17 @@ object CopyWriteGuards {
     private const val MIN_CHARACTER_DELTA = 2_000
 
     /**
-     * Guard 11: each server gets the locator format its own apps read. Until Parrot can build
-     * an EPUB CFI, ebook positions are never written to Audiobookshelf; audio positions are.
+     * Guard 11: each server gets the locator format its own apps read. Audiobookshelf takes
+     * audio positions with a time, and ebook positions with a chapter or a progress: its
+     * transport writes the CFI or JSON locator its readers stored (B4), never a bare href.
      */
     fun isWritable(target: LinkedCopy, position: PositionDomainModel?): Boolean {
         if (target.key.source != CopySource.Audiobookshelf) return true
-        return target.progressKind == ProgressKind.AUDIO && position?.audioTimestampMs != null
+        if (position == null) return false
+        return when (target.progressKind) {
+            ProgressKind.AUDIO -> position.bookTimeMs != null || position.audioTimestampMs != null
+            ProgressKind.EBOOK -> position.locatorHref != null || position.totalProgression != null
+        }
     }
 
     /** Guard 7: a match that fell back to the start would wipe real progress. */

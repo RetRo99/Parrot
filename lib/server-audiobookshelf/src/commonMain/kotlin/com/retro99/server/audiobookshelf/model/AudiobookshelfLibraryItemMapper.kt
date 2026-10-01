@@ -3,6 +3,7 @@ package com.retro99.server.audiobookshelf.model
 import com.retro99.server.api.ServerBook
 import com.retro99.server.api.ServerBookSeries
 import com.retro99.server.api.ServerType
+import kotlin.math.roundToLong
 
 fun AudiobookshelfLibraryItemApiModel.toDomain(
     serverId: String,
@@ -19,8 +20,8 @@ fun AudiobookshelfLibraryItemApiModel.toDomain(
         "/api/items/$id/file/$ino"
     }
 
-    val audiobookDownloadPaths = media?.audioFiles
-        ?.filter { it.ino != null }
+    val downloadableAudioFiles = media?.audioFiles?.filter { audioFile -> audioFile.ino != null }
+    val audiobookDownloadPaths = downloadableAudioFiles
         ?.joinToString("|") { audioFile -> "/api/items/$id/file/${audioFile.ino}" }
         ?.takeIf { it.isNotEmpty() }
 
@@ -56,7 +57,20 @@ fun AudiobookshelfLibraryItemApiModel.toDomain(
         isbn = metadata?.isbn?.takeIf { value -> value.isNotBlank() },
         asin = metadata?.asin?.takeIf { value -> value.isNotBlank() },
         audioDurationMs = audioDurationMs(),
+        audioTrackDurationsMs = downloadableAudioFiles?.trackDurationsMs(),
     )
+}
+
+/**
+ * Each downloaded file's length, in the same order as the download paths (the player's
+ * playlist). Null when any length is missing: a partial list would misplace every later file.
+ */
+internal fun List<AudiobookshelfAudioFileApiModel>.trackDurationsMs(): List<Long>? {
+    if (isEmpty()) return null
+    return map { file ->
+        val seconds = file.duration?.takeIf { value -> value >= 0 } ?: return null
+        (seconds * 1000).roundToLong()
+    }
 }
 
 /** The item's total audio length: the media duration, or the sum of its audio files. */

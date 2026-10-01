@@ -20,7 +20,9 @@ CREATE TABLE IF NOT EXISTS books (
     updated_at TEXT,
     isbn TEXT,
     asin TEXT,
-    audio_duration_ms INTEGER
+    audio_duration_ms INTEGER,
+    -- Each audio file's length in ms, comma-separated in playlist order, when known.
+    audio_track_durations_ms TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
@@ -30,8 +32,8 @@ CREATE INDEX IF NOT EXISTS idx_books_server_id ON books(server_id);
 
 -- Queries for books
 upsertBook:
-INSERT OR REPLACE INTO books(uuid, server_id, server_type, id, title, subtitle, language, publication_date, description, rating, suffix, status_uuid, cover_url, created_at, updated_at, isbn, asin, audio_duration_ms)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO books(uuid, server_id, server_type, id, title, subtitle, language, publication_date, description, rating, suffix, status_uuid, cover_url, created_at, updated_at, isbn, asin, audio_duration_ms, audio_track_durations_ms)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getAllBooks:
 SELECT * FROM books ORDER BY title ASC;

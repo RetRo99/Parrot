@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PropagateToLinkedCopiesUseCaseTest {
@@ -261,21 +262,22 @@ class PropagateToLinkedCopiesUseCaseTest {
     }
 
     @Test
-    fun `an ebook position never goes to an audiobookshelf ebook, audio does to its audiobook`() =
-        runTest {
-            // Given
-            read(0.4)
-            translations["abse"] = 0.42 to TranslationConfidence.High
-            translations["absa"] = 0.42 to TranslationConfidence.High
-            audioMs = 42_000
+    fun `reading updates an audiobookshelf ebook and its audiobook`() = runTest {
+        // Given
+        read(0.4)
+        translations["abse"] = 0.42 to TranslationConfidence.High
+        translations["absa"] = 0.42 to TranslationConfidence.High
+        audioMs = 42_000
 
-            // When
-            useCase(copies = listOf(library, absEbook, absAudio))("local", "lib")
+        // When
+        useCase(copies = listOf(library, absEbook, absAudio))("local", "lib")
 
-            // Then
-            assertEquals(listOf("absa"), absServer.syncedSaves.map { saved -> saved.bookUuid })
-            assertEquals(42_000L, absServer.syncedSaves.single().audioTimestampMs)
-        }
+        // Then
+        val saves = absServer.syncedSaves.associateBy { saved -> saved.bookUuid }
+        assertEquals(setOf("abse", "absa"), saves.keys)
+        assertEquals("c.xhtml", saves.getValue("abse").locatorHref)
+        assertEquals(42_000L, saves.getValue("absa").audioTimestampMs)
+    }
 
     @Test
     fun `a read-aloud's audio maps straight onto a linked audiobook`() = runTest {
@@ -313,8 +315,10 @@ class PropagateToLinkedCopiesUseCaseTest {
             linkedCopyWritesDatabase = writes,
         )("st-1", "st", position)
 
-        // Then
-        assertEquals(60_000L, absServer.syncedSaves.single().audioTimestampMs)
+        // Then: the audiobook's file lengths aren't known, so only the book time is set.
+        val saved = absServer.syncedSaves.single()
+        assertEquals(60_000L, saved.bookTimeMs)
+        assertNull(saved.audioTimestampMs)
     }
 
     @Test

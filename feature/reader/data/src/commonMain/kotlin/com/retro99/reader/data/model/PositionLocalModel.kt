@@ -27,6 +27,7 @@ data class PositionLocalModel(
     override val origin: String = PositionEntity.ORIGIN_USER,
     override val observedAt: String? = null,
     override val textAnchor: String? = null,
+    override val bookTimeMs: Long? = null,
 ) : PositionEntity
 
 fun PositionLocalModel.toDomain(serverId: String): PositionDomainModel {
@@ -47,6 +48,7 @@ fun PositionLocalModel.toDomain(serverId: String): PositionDomainModel {
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
         origin = PositionOrigin.fromValue(origin),
         observedAt = observedAt,
@@ -73,6 +75,7 @@ fun PositionDomainModel.toLocal(): PositionLocalModel {
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
         origin = origin.value,
         observedAt = observedAt,
@@ -99,6 +102,7 @@ fun PositionEntity.toLocalModel(): PositionLocalModel {
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
         origin = origin,
         observedAt = observedAt,

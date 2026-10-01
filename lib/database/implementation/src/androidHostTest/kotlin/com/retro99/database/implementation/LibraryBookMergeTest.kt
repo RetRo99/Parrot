@@ -97,7 +97,7 @@ class LibraryBookMergeTest {
         // Given
         database.positionQueries.upsertRemotePosition(
             FROM, FROM, 1, null, null, null, null, null, null, null, null, null, null, 0.5, null,
-            null, null, null,
+            null, null, null, null, null,
         )
 
         // When
@@ -460,6 +460,7 @@ class LibraryBookMergeTest {
         database.positionQueries.upsertPosition(
             bookUuid, bookUuid, 0, null, null, updatedAt, updatedAt, "c1", null, null, null,
             null, null, null, progression, null, null, progression, null, "user", null, null,
+            null, null,
         )
     }
 

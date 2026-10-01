@@ -459,8 +459,22 @@ class AndroidBookController internal constructor() : BookController {
     }
 
     override fun goToPosition(position: PositionUiModel) {
-        val locator = position.toAndroidLocator() ?: return
-        withNavigator { it.go(locator) }
+        val readingOrder = publication?.readingOrderHrefs().orEmpty()
+        when (val target = position.openTarget(readingOrder)) {
+            ReaderOpenTarget.Locator -> {
+                val locator = position.toAndroidLocator() ?: return
+                withNavigator { navigator -> navigator.go(locator) }
+            }
+            // An href this publication doesn't have (e.g. an Audiobookshelf CFI): go by the
+            // share of the book instead of staying put or jumping to the start.
+            is ReaderOpenTarget.TotalProgression -> goToTotalProgressionLater(target.progression)
+            ReaderOpenTarget.Start -> Unit
+        }
+    }
+
+    /** Moves to [progression] of the whole book once the publication's positions are ready. */
+    fun goToTotalProgressionLater(progression: Double) {
+        controllerScope.launch { goToTotalProgression(progression) }
     }
 
     /**
@@ -730,6 +744,10 @@ private fun ReaderSettingsUiModel.calculatePageMargins(): Double {
     // Baseline is 16dp, so 16dp = 1.0 factor
     return (marginHorizontal / 16.0).coerceIn(0.0, 4.0)
 }
+
+/** The publication's reading-order hrefs, as its locators name them. */
+internal fun Publication.readingOrderHrefs(): List<String> =
+    readingOrder.map { link -> link.href.toString() }
 
 /**
  * Extension function to convert PositionUiModel to Readium Locator.

@@ -32,5 +32,11 @@ data class PositionDomainModel(
     val observedAt: String? = null,
     /** Text around an ebook position, captured by the reader. Stored on this device only. */
     val textAnchor: TextAnchor? = null,
+    /**
+     * Audiobooks: time from the start of the book. [audioTimestampMs] and [chapterIndex] are the
+     * offset in the current file and its index; [totalDurationMs] and [totalProgression] are
+     * whole-book. Null when the files' lengths aren't known.
+     */
+    val bookTimeMs: Long? = null,
 )
 

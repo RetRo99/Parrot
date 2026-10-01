@@ -1,13 +1,10 @@
 package com.retro99.reader.domain.usecase
 
-import com.retro99.books.domain.model.links.CopySource
 import com.retro99.reader.domain.positions.ApplyDisabledReason
 import com.retro99.reader.domain.positions.ApplyPreview
 import com.retro99.reader.domain.positions.ApplyWarning
 import com.retro99.reader.domain.positions.CopyPositionRow
-import com.retro99.reader.domain.translate.progressKind
 import com.retro99.reader.domain.write.CopyWriteGuards
-import com.retro99.sync.domain.ProgressKind
 import org.koin.core.annotation.Factory
 
 /**
@@ -29,15 +26,13 @@ class PreviewApplyPositionUseCase(
             .filter { row -> row.copy.key != source.copy.key }
             .map { row ->
                 val target = row.copy
-                val ebookOnAudiobookshelf = target.key.source == CopySource.Audiobookshelf &&
-                    target.progressKind == ProgressKind.EBOOK
-                val translated = if (ebookOnAudiobookshelf) {
-                    null
-                } else {
-                    translatePositionUseCase(source.copy, sourcePosition, target, copies)
-                }
+                val translated = translatePositionUseCase(
+                    source.copy,
+                    sourcePosition,
+                    target,
+                    copies,
+                )
                 val disabledReason = when {
-                    ebookOnAudiobookshelf -> ApplyDisabledReason.NotSupported
                     translated == null -> ApplyDisabledReason.NoTranslation
                     !CopyWriteGuards.isWritable(target, translated.position) ->
                         ApplyDisabledReason.NotSupported

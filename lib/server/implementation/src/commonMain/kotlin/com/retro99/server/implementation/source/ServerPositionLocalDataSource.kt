@@ -54,7 +54,10 @@ class ServerPositionLocalDataSource(
                     ),
                 )
             } else {
-                positionDatabase.upsertPosition(position.toPositionEntity(storedPosition?.remoteRevision))
+                positionDatabase.upsertPosition(
+                    position.keepingEbookLocationOf(storedPosition)
+                        .toPositionEntity(storedPosition?.remoteRevision),
+                )
             }
         }
     }
@@ -69,7 +72,7 @@ class ServerPositionLocalDataSource(
             val storedPosition = positionDatabase.getPositionByBookUuid(position.bookUuid)
             val localGeneration = (storedPosition?.localGeneration ?: 0L) + 1L
             positionDatabase.upsertPositionWithMutation(
-                position = position.toPositionEntity(
+                position = position.keepingEbookLocationOf(storedPosition).toPositionEntity(
                     remoteRevision = storedPosition?.remoteRevision,
                     localGeneration = localGeneration,
                 ),
@@ -81,6 +84,13 @@ class ServerPositionLocalDataSource(
             )
         }
     }
+
+    /**
+     * Reading in this app doesn't know Audiobookshelf's `ebookLocation` shape, so a save keeps
+     * the stored one: the next push writes that shape back (B4).
+     */
+    private fun ServerPosition.keepingEbookLocationOf(stored: PositionEntity?): ServerPosition =
+        if (ebookLocationRaw != null) this else copy(ebookLocationRaw = stored?.ebookLocationRaw)
 
     /** I4: the library book id is set only for books in your library. */
     private suspend fun ServerPosition.withLibraryBookId(): ServerPosition = copy(
@@ -167,6 +177,8 @@ private fun PositionEntity.toServerPosition(): ServerPosition {
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
+        ebookLocationRaw = ebookLocationRaw,
         position = position,
         remoteRevision = remoteRevision,
         origin = PositionOrigin.fromValue(origin),
@@ -201,6 +213,8 @@ private fun ServerPosition.toPositionEntity(
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
+        ebookLocationRaw = ebookLocationRaw,
         position = position,
         origin = origin.value,
         observedAt = observedAt,
@@ -234,4 +248,6 @@ private data class ServerPositionEntity(
     override val origin: String = PositionEntity.ORIGIN_USER,
     override val observedAt: String? = null,
     override val textAnchor: String? = null,
+    override val bookTimeMs: Long? = null,
+    override val ebookLocationRaw: String? = null,
 ) : PositionEntity

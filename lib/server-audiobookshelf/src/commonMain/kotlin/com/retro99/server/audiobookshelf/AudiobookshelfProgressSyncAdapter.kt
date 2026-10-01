@@ -1,6 +1,9 @@
 package com.retro99.server.audiobookshelf
 
 import com.retro99.database.api.ProfileDatabaseSession
+import com.retro99.database.api.books.BooksDatabase
+import com.retro99.database.api.books.PositionDatabase
+import com.retro99.server.api.EbookReadingOrderSource
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.server.api.ServerNetworkClientProvider
 import com.retro99.server.api.ServerRegistry
@@ -36,6 +39,9 @@ class AudiobookshelfProgressSyncAdapter(
     @Provided private val networkClientProvider: ServerNetworkClientProvider,
     @Provided private val profileDatabaseSession: ProfileDatabaseSession,
     @Provided private val userRegistry: UserRegistry,
+    @Provided private val booksDatabase: BooksDatabase,
+    @Provided private val positionDatabase: PositionDatabase,
+    @Provided private val ebookReadingOrderSource: EbookReadingOrderSource,
 ) : SyncDestination {
     private val json = Json {
         encodeDefaults = true
@@ -77,7 +83,19 @@ class AudiobookshelfProgressSyncAdapter(
         networkClient: com.retro99.server.api.ServerNetworkClient,
         reportPhase: SyncPhaseReporter = { _, _, _ -> },
     ): SyncResult.Completed {
-        val transport = AudiobookshelfProgressTransport(networkClient)
+        val transport = AudiobookshelfProgressTransport(
+            networkClient = networkClient,
+            // The ebook location shape Audiobookshelf stored, so a push writes it back.
+            storedEbookLocation = { bookUuid ->
+                positionDatabase.getPositionByBookUuid(bookUuid)?.ebookLocationRaw
+            },
+            readingOrderHrefs = ebookReadingOrderSource::readingOrderHrefs,
+            // Each file's length cached with the item, to place a pulled book time in its file.
+            trackDurationsMs = { remoteBookId ->
+                booksDatabase.getBookByServerAndUuid(networkClient.serverId, remoteBookId)
+                    ?.audioTrackDurationsMs
+            },
+        )
         val capability = SyncOutboxCapability(
             unsupportedEntityTypes = setOf(
                 // Links sync through Parrot Cloud only; nothing is written to this server.

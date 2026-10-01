@@ -203,6 +203,7 @@ internal fun ProgressSnapshot.toServerPosition(
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
         cssSelector = locator?.cssSelector,
     )
@@ -226,6 +227,7 @@ internal fun ServerPosition.toProgressSyncSnapshot(): ProgressSnapshot {
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
     )
 }

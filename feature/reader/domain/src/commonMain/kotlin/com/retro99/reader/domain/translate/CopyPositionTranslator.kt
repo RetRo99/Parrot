@@ -4,6 +4,7 @@ import com.retro99.books.domain.model.links.CopyKey
 import com.retro99.epub.api.EpubChapterText
 import com.retro99.epub.api.ReadaloudTiming
 import com.retro99.reader.domain.model.PositionDomainModel
+import com.retro99.server.api.audio.trackPosition
 import com.retro99.sync.domain.ProgressKind
 
 /** What the translator knows about one copy of a linked book. */
@@ -21,6 +22,8 @@ data class CopyContent(
     /** The length of the copy's audio, when known. */
     val audioDurationMs: Long? = null,
     val chapterCount: Int? = null,
+    /** An audiobook's file lengths in playlist order, when known. */
+    val trackDurationsMs: List<Long>? = null,
 ) {
     val isAudio: Boolean get() = kind == ProgressKind.AUDIO
 
@@ -68,14 +71,16 @@ class CopyPositionTranslator(
         /**
          * The audiobook player keeps time within the current track, with the track as the
          * chapter. Such a time isn't on the book's global timeline, so it never maps directly.
+         * Positions saved with their book time ([PositionDomainModel.bookTimeMs]) don't need it.
          */
-        val trackRelative: Boolean = source.isAudio && position.chapterIndex != null &&
-            (position.totalChapters ?: 1) > 1
+        val trackRelative: Boolean = source.isAudio && position.bookTimeMs == null &&
+            position.chapterIndex != null && (position.totalChapters ?: 1) > 1
 
         /** The source's time on its book's global timeline, when it has one. */
-        val audioMs: Long? = position.audioTimestampMs
-            ?.takeIf { _ -> source.isAudio || source.timing != null }
-            ?.takeIf { _ -> !trackRelative }
+        val audioMs: Long? = position.bookTimeMs?.takeIf { _ -> source.isAudio }
+            ?: position.audioTimestampMs
+                ?.takeIf { _ -> source.isAudio || source.timing != null }
+                ?.takeIf { _ -> !trackRelative }
 
         /** How far through the current track a track-relative position is. */
         val trackFraction: Double? = if (trackRelative) {
@@ -286,8 +291,7 @@ class CopyPositionTranslator(
             }
             return TranslatedPosition(
                 target = target.key,
-                position = emptyPosition(target).copy(
-                    audioTimestampMs = ms,
+                position = audiobookPlace(target, ms).copy(
                     totalDurationMs = duration,
                     progression = totalProgression,
                     totalProgression = totalProgression,
@@ -371,11 +375,11 @@ class CopyPositionTranslator(
         val duration = target.durationMs
         val progression = duration?.takeIf { length -> length > 0 }
             ?.let { length -> (audioMs.toDouble() / length).coerceIn(0.0, 1.0) }
+        val bookTimeMs = duration?.let { length -> audioMs.coerceIn(0L, length) }
+            ?: audioMs.coerceAtLeast(0L)
         return TranslatedPosition(
             target = target.key,
-            position = emptyPosition(target).copy(
-                audioTimestampMs = duration?.let { length -> audioMs.coerceIn(0L, length) }
-                    ?: audioMs.coerceAtLeast(0L),
+            position = audiobookPlace(target, bookTimeMs).copy(
                 totalDurationMs = duration,
                 progression = progression,
                 totalProgression = progression,
@@ -383,6 +387,26 @@ class CopyPositionTranslator(
             kind = target.kind,
             confidence = confidence,
             strategy = strategy,
+        )
+    }
+
+    /**
+     * An audiobook target at [bookTimeMs] from the start of the book: the book time, plus the
+     * file and the offset in it when the target's file lengths are known (null otherwise, as
+     * the player and Audiobookshelf resolve the book time themselves).
+     */
+    private fun audiobookPlace(target: CopyContent, bookTimeMs: Long?): PositionDomainModel {
+        val durations = target.trackDurationsMs?.takeIf { lengths -> lengths.isNotEmpty() }
+        val place = if (bookTimeMs != null && durations != null) {
+            trackPosition(durations, bookTimeMs)
+        } else {
+            null
+        }
+        return emptyPosition(target).copy(
+            bookTimeMs = bookTimeMs,
+            chapterIndex = place?.first,
+            audioTimestampMs = place?.second,
+            totalChapters = durations?.size,
         )
     }
 

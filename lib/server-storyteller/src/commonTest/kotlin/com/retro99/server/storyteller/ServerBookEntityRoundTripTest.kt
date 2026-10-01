@@ -72,6 +72,21 @@ class ServerBookEntityRoundTripTest {
     }
 
     @Test
+    fun `per-file audio lengths survive the cache round trip`() {
+        // Given
+        val fromRemote = StorytellerBookApiModel(uuid = "book-4", title = "Dune")
+            .toDomain(serverId = "server-1", baseUrl = "http://example.com")
+            .copy(audioTrackDurationsMs = listOf(600_500L, 900_000L))
+
+        // When
+        val roundTripped = fromRemote.toEntity().toServerBook(baseUrl = null)
+
+        // Then
+        assertEquals(listOf(600_500L, 900_000L), roundTripped.audioTrackDurationsMs)
+        assertEquals(fromRemote, roundTripped)
+    }
+
+    @Test
     fun publicationDateSurvivesTheCacheRoundTrip() {
         val apiModel = StorytellerBookApiModel(
             uuid = "book-2",

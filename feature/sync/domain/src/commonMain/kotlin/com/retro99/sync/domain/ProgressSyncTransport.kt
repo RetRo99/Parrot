@@ -46,6 +46,10 @@ data class ProgressSnapshot(
     val totalDurationMs: Long?,
     val totalProgression: Double?,
     val position: Int?,
+    /** Audiobooks: time from the start of the book; null when unknown. */
+    val bookTimeMs: Long? = null,
+    /** Audiobookshelf's raw `ebookLocation`, stored so a push can mirror its shape. */
+    val ebookLocationRaw: String? = null,
 )
 
 data class ProgressLocator(

@@ -99,6 +99,7 @@ fun copy(
     timing: ReadaloudTiming? = null,
     contentHash: String? = null,
     audioDurationMs: Long? = null,
+    trackDurationsMs: List<Long>? = null,
 ) = CopyContent(
     key = CopyKey(source, id),
     serverId = "${source.prefix}-server",
@@ -108,6 +109,7 @@ fun copy(
     chapters = chapters,
     timing = timing,
     audioDurationMs = audioDurationMs,
+    trackDurationsMs = trackDurationsMs,
 )
 
 fun textPosition(

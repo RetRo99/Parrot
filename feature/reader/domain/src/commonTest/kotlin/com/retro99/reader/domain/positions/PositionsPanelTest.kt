@@ -175,9 +175,10 @@ class PositionsPanelTest {
         assertTrue(approximate.enabled)
         val percent = (approximate.translated?.position?.totalProgression ?: 0.0) * 100
         assertEquals(42, percent.toInt())
-        val disabled = previews.getValue("abse")
-        assertFalse(disabled.enabled)
-        assertEquals(ApplyDisabledReason.NotSupported, disabled.disabledReason)
+        // An Audiobookshelf ebook can be written since B4, as an approximate target here.
+        val audiobookshelfEbook = previews.getValue("abse")
+        assertTrue(audiobookshelfEbook.enabled)
+        assertFalse(audiobookshelfEbook.defaultChecked)
     }
 
     @Test

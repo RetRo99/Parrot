@@ -1,0 +1,9 @@
+-- Audiobook positions saved per file (open bugs B3). The time from the start of the book,
+-- next to the file offset (audio_timestamp_ms) and file index (chapter_index) the player
+-- resumes from. NULL when the files' lengths aren't known.
+ALTER TABLE position ADD COLUMN book_time_ms INTEGER;
+ALTER TABLE remote_position ADD COLUMN book_time_ms INTEGER;
+
+-- Each audio file's length in milliseconds, comma-separated in playlist order, when the
+-- server reports them (Audiobookshelf's audioFiles[].duration).
+ALTER TABLE books ADD COLUMN audio_track_durations_ms TEXT;

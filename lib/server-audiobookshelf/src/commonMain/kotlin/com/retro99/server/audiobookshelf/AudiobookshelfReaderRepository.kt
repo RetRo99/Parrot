@@ -1,5 +1,8 @@
 package com.retro99.server.audiobookshelf
 
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.map
 import com.retro99.base.repository.BaseRepository
 import com.retro99.base.result.AppResult
@@ -12,9 +15,15 @@ import com.retro99.server.audiobookshelf.model.AudiobookshelfMediaProgressApiMod
 import com.retro99.server.audiobookshelf.model.toServerPosition
 import retro99.network.api.get
 
+/**
+ * @param readingOrderHrefs a book's EPUB reading order when it's on this device, or null.
+ * @param trackDurationsMs each audio file's length cached for a library item, or null.
+ */
 class AudiobookshelfReaderRepository(
     private val networkClient: ServerNetworkClient,
     private val localSource: ServerPositionLocalSource,
+    private val readingOrderHrefs: suspend (bookUuid: String) -> List<String>? = { _ -> null },
+    private val trackDurationsMs: suspend (bookUuid: String) -> List<Long>? = { _ -> null },
 ) : ServerReaderRepository, BaseRepository {
 
     override val serverId: String = networkClient.serverId
@@ -51,10 +60,16 @@ class AudiobookshelfReaderRepository(
     }
 
     override suspend fun getRemotePosition(bookUuid: String): AppResult<ServerPosition?> {
-        return networkClient.get<AudiobookshelfMediaProgressApiModel?>(
+        val apiModel = networkClient.get<AudiobookshelfMediaProgressApiModel?>(
             path = "/api/me/progress/$bookUuid",
-        ).map { apiModel ->
-            apiModel?.toServerPosition(bookUuid, serverId)
-        }
+        ).getOrElse { error -> return Err(error) }
+        return Ok(
+            apiModel?.toServerPosition(
+                bookUuid = bookUuid,
+                serverId = serverId,
+                trackDurationsMs = trackDurationsMs(bookUuid),
+                readingOrderHrefs = { readingOrderHrefs(bookUuid) },
+            ),
+        )
     }
 }

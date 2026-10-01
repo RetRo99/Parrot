@@ -124,6 +124,7 @@ private fun ServerPosition.toDomain(): PositionDomainModel {
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
         cssSelector = cssSelector,
         origin = origin,
@@ -149,6 +150,7 @@ private fun PositionEntity.toServerPosition(serverId: String): ServerPosition {
         totalChapters = totalChapters,
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
+        bookTimeMs = bookTimeMs,
         position = position,
         cssSelector = cssSelector,
         // The remote baseline is a pulled server position.
