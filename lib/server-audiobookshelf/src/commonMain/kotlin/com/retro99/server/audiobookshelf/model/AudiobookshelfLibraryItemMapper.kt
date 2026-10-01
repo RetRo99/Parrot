@@ -55,5 +55,17 @@ fun AudiobookshelfLibraryItemApiModel.toDomain(
         language = metadata?.language?.takeIf { value -> value.isNotBlank() },
         isbn = metadata?.isbn?.takeIf { value -> value.isNotBlank() },
         asin = metadata?.asin?.takeIf { value -> value.isNotBlank() },
+        audioDurationMs = audioDurationMs(),
     )
+}
+
+/** The item's total audio length: the media duration, or the sum of its audio files. */
+internal fun AudiobookshelfLibraryItemApiModel.audioDurationMs(): Long? {
+    val seconds = media?.duration?.takeIf { value -> value > 0 }
+        ?: media?.audioFiles.orEmpty()
+            .mapNotNull { file -> file.duration }
+            .sum()
+            .takeIf { sum -> sum > 0 }
+        ?: return null
+    return (seconds * 1000).toLong()
 }

@@ -48,6 +48,18 @@ class SmilBridge {
         return TextPoint(chapterIndex, offset)
     }
 
+    /**
+     * The global time [fraction] of the way through the read-aloud's [trackIndex]th audio file,
+     * for audiobook positions kept per track. Null when the read-aloud has no such file.
+     */
+    fun trackToGlobalMs(timing: ReadaloudTiming, trackIndex: Int, fraction: Double): Long? {
+        val starts = timing.audioFileOffsetsMs.values.sorted()
+        if (trackIndex !in starts.indices) return null
+        val start = starts[trackIndex]
+        val end = starts.getOrNull(trackIndex + 1) ?: timing.totalDurationMs
+        return start + (fraction.coerceIn(0.0, 1.0) * (end - start)).toLong()
+    }
+
     /** Maps a time between two timelines when their lengths agree within 1%, else null. */
     fun mapTime(timeMs: Long, sourceDurationMs: Long?, targetDurationMs: Long?): Long? {
         if (sourceDurationMs == null || targetDurationMs == null) return null

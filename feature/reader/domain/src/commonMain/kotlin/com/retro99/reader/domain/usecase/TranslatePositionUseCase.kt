@@ -3,6 +3,7 @@ package com.retro99.reader.domain.usecase
 import com.retro99.books.domain.model.links.LinkedCopy
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.reader.domain.model.PositionDomainModel
+import com.retro99.reader.domain.translate.AudiobookDurations
 import com.retro99.reader.domain.translate.CopyContent
 import com.retro99.reader.domain.translate.CopyContentCache
 import com.retro99.reader.domain.translate.CopyFileLocator
@@ -34,6 +35,7 @@ class TranslatePositionUseCase(
     private val fileLocator: CopyFileLocator,
     private val contentCache: CopyContentCache,
     private val translationCache: TranslationCache,
+    private val audiobookDurations: AudiobookDurations,
     @Provided private val positionDatabase: PositionDatabase,
 ) : PositionTranslation {
     private val translator = CopyPositionTranslator()
@@ -74,8 +76,11 @@ class TranslatePositionUseCase(
         val kind = copy.progressKind
         val hasFile = kind != ProgressKind.AUDIO || copy.hasEbook
         val file = if (hasFile) fileLocator.locate(copy) else null
+        // The cached item's length first (P6b): a position may only know its current track's.
         val audioDuration = if (kind == ProgressKind.AUDIO) {
-            knownDurationMs ?: positionDatabase.getPositionByBookUuid(copy.uuid)?.totalDurationMs
+            audiobookDurations.durationMs(copy)
+                ?: knownDurationMs
+                ?: positionDatabase.getPositionByBookUuid(copy.uuid)?.totalDurationMs
         } else {
             null
         }

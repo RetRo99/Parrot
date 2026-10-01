@@ -4,6 +4,7 @@ import com.retro99.books.domain.model.links.LinkedCopy
 import com.retro99.reader.domain.linked.LinkedCopies
 import com.retro99.reader.domain.linked.LinkedCopiesSource
 import com.retro99.reader.domain.linked.LinkedResumeDismissals
+import com.retro99.reader.domain.translate.AudiobookDurations
 import com.retro99.reader.domain.translate.CopyContentCache
 import com.retro99.reader.domain.translate.CopyFile
 import com.retro99.reader.domain.translate.CopyFileLocator
@@ -60,10 +61,14 @@ class FakeCopyFiles(
 
     private fun uuidOf(path: String) = path.removePrefix("/").removeSuffix(".epub")
 
+    /** Audiobook lengths from cached server items, by copy uuid. */
+    val durations = mutableMapOf<String, Long>()
+
     fun translateUseCase(positions: FakePositionDatabase) = TranslatePositionUseCase(
         fileLocator = this,
         contentCache = CopyContentCache(this, this),
         translationCache = TranslationCache(),
+        audiobookDurations = AudiobookDurations { copy -> durations[copy.uuid] },
         positionDatabase = positions,
     )
 }

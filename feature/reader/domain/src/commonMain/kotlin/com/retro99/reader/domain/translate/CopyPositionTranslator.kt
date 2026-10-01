@@ -53,6 +53,7 @@ class CopyPositionTranslator(
         return sameFile(request)
             ?: textAnchor(request)
             ?: smil(request)
+            ?: trackToText(request).takeIf { _ -> !target.isAudio }
             ?: proportional(request)
     }
 
@@ -63,8 +64,28 @@ class CopyPositionTranslator(
         val others: List<CopyContent>,
     ) {
         val hasText: Boolean = !source.isAudio && position.locatorHref != null
+
+        /**
+         * The audiobook player keeps time within the current track, with the track as the
+         * chapter. Such a time isn't on the book's global timeline, so it never maps directly.
+         */
+        val trackRelative: Boolean = source.isAudio && position.chapterIndex != null &&
+            (position.totalChapters ?: 1) > 1
+
+        /** The source's time on its book's global timeline, when it has one. */
         val audioMs: Long? = position.audioTimestampMs
             ?.takeIf { _ -> source.isAudio || source.timing != null }
+            ?.takeIf { _ -> !trackRelative }
+
+        /** How far through the current track a track-relative position is. */
+        val trackFraction: Double? = if (trackRelative) {
+            position.progression ?: position.audioTimestampMs?.let { ms ->
+                position.totalDurationMs?.takeIf { length -> length > 0 }
+                    ?.let { length -> ms.toDouble() / length }
+            }
+        } else {
+            null
+        }
         val sourceDurationMs: Long? = source.durationMs ?: position.totalDurationMs
 
         /** A read-aloud on this device that bridges text and audio, if any copy has one. */
@@ -125,6 +146,46 @@ class CopyPositionTranslator(
             request.hasText && request.target.isAudio -> textToAudio(request)
             else -> null
         }
+    }
+
+    /**
+     * P6b fallback: an audiobook position kept per track, against a read-aloud with as many
+     * audio files. The same track and the same fraction through it: Approximate.
+     */
+    private fun trackToText(request: Request): TranslatedPosition? {
+        val position = request.position
+        val chapterIndex = position.chapterIndex ?: return null
+        val fraction = request.trackFraction ?: return null
+        val bridge = request.bridge ?: return null
+        val readaloud = requireNotNull(bridge.readaloud)
+        if (readaloud.timing.audioFileOffsetsMs.size != position.totalChapters) return null
+        val globalMs = smilBridge.trackToGlobalMs(readaloud.timing, chapterIndex, fraction)
+            ?: return null
+        val point = smilBridge.audioToText(readaloud, globalMs) ?: return null
+        if (bridge.key == request.target.key) {
+            return textResult(
+                target = request.target,
+                chapters = readaloud.chapters,
+                point = point,
+                confidence = TranslationConfidence.Approximate,
+                strategy = TranslationStrategy.Proportional,
+                audioMs = globalMs,
+            )
+        }
+        val targetChapters = request.target.chapters ?: return null
+        val anchor = readaloud.chapters.anchorAt(point) ?: return null
+        val match = matcher.match(
+            anchor,
+            targetChapters,
+            readaloud.chapters.totalProgressionAt(point),
+        ) ?: return null
+        return textResult(
+            target = request.target,
+            chapters = targetChapters,
+            point = match,
+            confidence = TranslationConfidence.Approximate,
+            strategy = TranslationStrategy.Proportional,
+        )
     }
 
     private fun audioToAudio(request: Request, audioMs: Long): TranslatedPosition? {
@@ -205,11 +266,18 @@ class CopyPositionTranslator(
 
     private fun proportional(request: Request): TranslatedPosition? {
         val position = request.position
-        val totalProgression = proportional.sourceProgression(
-            totalProgression = position.totalProgression,
-            audioMs = request.audioMs ?: position.audioTimestampMs,
-            durationMs = request.sourceDurationMs,
-        ) ?: return null
+        val trackFraction = request.trackFraction
+        val chapters = position.totalChapters
+        val totalProgression = if (trackFraction != null && chapters != null) {
+            // A track-relative position: whole tracks before it, plus the way through it.
+            ((requireNotNull(position.chapterIndex) + trackFraction) / chapters).coerceIn(0.0, 1.0)
+        } else {
+            proportional.sourceProgression(
+                totalProgression = position.totalProgression,
+                audioMs = request.audioMs ?: position.audioTimestampMs,
+                durationMs = request.sourceDurationMs,
+            )
+        } ?: return null
         val target = request.target
         if (target.isAudio) {
             val duration = target.durationMs

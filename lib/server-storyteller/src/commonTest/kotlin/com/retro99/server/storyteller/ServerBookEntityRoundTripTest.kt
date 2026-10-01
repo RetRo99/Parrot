@@ -57,11 +57,11 @@ class ServerBookEntityRoundTripTest {
     }
 
     @Test
-    fun `language isbn and asin survive the cache round trip`() {
+    fun `language, isbn, asin and audio length survive the cache round trip`() {
         // Given
         val fromRemote = StorytellerBookApiModel(uuid = "book-3", title = "Dune", language = "en")
             .toDomain(serverId = "server-1", baseUrl = "http://example.com")
-            .copy(isbn = "9780441013593", asin = "B00B7NPRY8")
+            .copy(isbn = "9780441013593", asin = "B00B7NPRY8", audioDurationMs = 3_600_000)
 
         // When
         val roundTripped = fromRemote.toEntity().toServerBook(baseUrl = null)

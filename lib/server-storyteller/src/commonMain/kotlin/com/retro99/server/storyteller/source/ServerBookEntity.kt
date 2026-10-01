@@ -43,6 +43,7 @@ internal data class ServerBookEntityImpl(
     override val readaloud: ReadaloudEntity?,
     override val isbn: String? = null,
     override val asin: String? = null,
+    override val audioDurationMs: Long? = null,
 ) : BookEntity
 
 internal data class SimplePersonEntity(
@@ -132,6 +133,7 @@ internal fun ServerBook.toEntity(): BookEntity {
         readaloud = if (hasReadaloud) SimpleReadaloudEntity(uuid, readaloudFilepath) else null,
         isbn = isbn,
         asin = asin,
+        audioDurationMs = audioDurationMs,
     )
 }
 
@@ -206,5 +208,6 @@ internal fun BookEntity.toServerBook(baseUrl: String?): ServerBook {
         language = language,
         isbn = isbn,
         asin = asin,
+        audioDurationMs = audioDurationMs,
     )
 }

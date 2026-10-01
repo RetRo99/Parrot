@@ -35,6 +35,7 @@ class TranslatePositionUseCaseTest {
         ),
         contentCache = CopyContentCache(textReader, NoTiming),
         translationCache = TranslationCache(),
+        audiobookDurations = AudiobookDurations { _ -> null },
         positionDatabase = FakePositionDatabase(),
     )
     private val library = linkedCopy(CopySource.Library, "lib")

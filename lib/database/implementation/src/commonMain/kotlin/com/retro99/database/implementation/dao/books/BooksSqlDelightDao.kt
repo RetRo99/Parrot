@@ -61,6 +61,7 @@ internal class BooksSqlDelightDao(
                 updated_at = book.updatedAt,
                 isbn = book.isbn,
                 asin = book.asin,
+                audio_duration_ms = book.audioDurationMs,
             )
         }
     }
@@ -86,6 +87,7 @@ internal class BooksSqlDelightDao(
                     updatedAt = row.updated_at,
                     isbn = row.isbn,
                     asin = row.asin,
+                    audioDurationMs = row.audio_duration_ms,
                 )
             }
         }
@@ -112,6 +114,7 @@ internal class BooksSqlDelightDao(
                     updatedAt = row.updated_at,
                     isbn = row.isbn,
                     asin = row.asin,
+                    audioDurationMs = row.audio_duration_ms,
                 )
             }
         }
@@ -138,6 +141,7 @@ internal class BooksSqlDelightDao(
                     updatedAt = row.updated_at,
                     isbn = row.isbn,
                     asin = row.asin,
+                    audioDurationMs = row.audio_duration_ms,
                 )
             }
         }
@@ -164,6 +168,7 @@ internal class BooksSqlDelightDao(
                     updatedAt = row.updated_at,
                     isbn = row.isbn,
                     asin = row.asin,
+                    audioDurationMs = row.audio_duration_ms,
                 )
             }
         }

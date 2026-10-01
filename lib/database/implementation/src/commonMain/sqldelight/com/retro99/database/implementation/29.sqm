@@ -4,6 +4,9 @@ ALTER TABLE position ADD COLUMN origin TEXT NOT NULL DEFAULT 'user';
 ALTER TABLE position ADD COLUMN observed_at TEXT;
 ALTER TABLE position ADD COLUMN text_anchor TEXT;
 
+-- The length of a cached server audiobook, to line it up with a read-aloud (P6b).
+ALTER TABLE books ADD COLUMN audio_duration_ms INTEGER;
+
 -- The latest write this device made into each linked copy (one row per target copy), so a
 -- pulled position can be recognised as an echo of our own write (§1.4, guards 1, 2 and 6).
 CREATE TABLE linked_copy_writes (
