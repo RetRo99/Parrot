@@ -1,7 +1,9 @@
 package com.retro99.database.implementation
 
 import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlCursor
 import app.cash.sqldelight.db.SqlDriver
+import app.cash.sqldelight.db.SqlPreparedStatement
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AnalyticsEvent
@@ -197,11 +199,23 @@ class SafeDatabaseOpenerTest {
                     identifier: Int?,
                     sql: String,
                     parameters: Int,
-                    binders: (app.cash.sqldelight.db.SqlPreparedStatement.() -> Unit)?,
+                    binders: (SqlPreparedStatement.() -> Unit)?,
                 ): QueryResult<Long> {
+                    // Android execute uses executeUpdateDelete, not a row-returning query API.
+                    check(!sql.startsWith("PRAGMA") && !sql.startsWith("SELECT"))
+                    return driver.execute(identifier, sql, parameters, binders)
+                }
+
+                override fun <R> executeQuery(
+                    identifier: Int?,
+                    sql: String,
+                    mapper: (SqlCursor) -> QueryResult<R>,
+                    parameters: Int,
+                    binders: (SqlPreparedStatement.() -> Unit)?,
+                ): QueryResult<R> {
                     events += "force"
                     if (failForcedOpens-- > 0) throw failure
-                    return driver.execute(identifier, sql, parameters, binders)
+                    return driver.executeQuery(identifier, sql, mapper, parameters, binders)
                 }
 
                 override fun close() {

@@ -1,5 +1,6 @@
 package com.retro99.database.implementation
 
+import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import com.retro99.analytics.api.Analytics
 import com.retro99.preferences.api.Preferences
@@ -43,7 +44,15 @@ internal class SafeDatabaseOpener(
         val driver = fileOps.createDriver()
         try {
             // Android opens lazily; this triggers onCreate/onUpgrade before recording the version.
-            driver.execute(null, "PRAGMA user_version", 0).value
+            driver.executeQuery(
+                identifier = null,
+                sql = "SELECT 1",
+                mapper = { cursor ->
+                    check(cursor.next().value) { "Database open returned no row" }
+                    QueryResult.Unit
+                },
+                parameters = 0,
+            ).value
         } catch (exception: Exception) {
             closeAfterFailure(driver)
             throw exception
