@@ -551,3 +551,11 @@ With Storyteller and Audiobookshelf both connected and sharing some titles:
   Check that `library_book` entries are sent before a `book_link` that references `library:<id>`.
 - **Monetization:** linking is free for everyone, and syncing links needs Parrot Cloud. This was
   decided on 2026-10-01; see the top of this plan.
+- **Database wipe on upgrade:** the app deletes the local database whenever the schema version
+  changes (`PlatformDatabaseModule.android.kt` and `.ios.kt`), so `.sqm` migrations never run on a
+  device today.
+  - Adding `28.sqm` therefore wipes all local data on update, including links that haven't synced
+    yet.
+  - Still write the migration and its test: it becomes real once the wipe is replaced with actual
+    migrations, which is a pre-launch item the user still has to decide on.
+  - Don't change the wipe behaviour in this project.

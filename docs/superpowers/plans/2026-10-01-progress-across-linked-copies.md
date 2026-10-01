@@ -397,6 +397,10 @@ position.
   app. The "different place" threshold (§1.3) avoids ping-pong prompts caused by rounding.
 - **Privacy:** anchors are short excerpts of the user's own book, stored only on the device and
   never sent anywhere.
+- **Database wipe on upgrade:** the app deletes the local database whenever the schema version
+  changes (`PlatformDatabaseModule.android.kt` and `.ios.kt`), so `29.sqm` won't run on a device
+  until that's replaced with real migrations. Write the migration and its test anyway, and don't
+  change the wipe behaviour in this project.
 - **Later, not now:**
   - server-side transcripts, such as Storyteller forced-alignment assets, for audiobooks without
     a read-aloud,
