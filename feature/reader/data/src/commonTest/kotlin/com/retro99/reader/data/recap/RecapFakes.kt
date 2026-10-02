@@ -137,9 +137,18 @@ class FakeSessionRecapDatabase : SessionRecapDatabase {
         if (dropText) failed.copy(excerpt = null, lastSentence = null, nextAttemptAt = null) else failed
     }
 
-    override suspend fun recoverStaleRunning(staleBefore: Long, now: Long): Long {
+    override suspend fun recoverStaleRunning(staleBefore: Long, now: Long, maxAttempts: Int): Long {
         val stale = rows.value.values.filter { it.status == "RUNNING" && it.updatedAt < staleBefore }
-        stale.forEach { put(it.copy(status = "PENDING", updatedAt = now)) }
+        stale.forEach { row ->
+            val spent = row.attemptCount >= maxAttempts
+            put(
+                row.copy(
+                    status = if (spent) "FAILED_PERMANENT" else "PENDING",
+                    lastError = if (spent) "MAX_ATTEMPTS" else row.lastError,
+                    updatedAt = now,
+                ),
+            )
+        }
         return stale.size.toLong()
     }
 

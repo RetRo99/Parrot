@@ -96,6 +96,21 @@ class RecapJobRunnerTest {
     }
 
     @Test
+    fun aRowThatKeepsDyingMidRequestStopsAtTheAttemptCap() = runTest {
+        val staleAt = clock.nowMs - RecapJobPolicy.STALE_RUNNING_AFTER.inWholeMilliseconds - 1
+        database.put(
+            pendingRow("dead", status = "RUNNING", attemptCount = RecapJobPolicy.MAX_ATTEMPTS)
+                .copy(updatedAt = staleAt),
+        )
+
+        assertEquals(0, runner().runPending())
+
+        assertEquals("FAILED_PERMANENT", database["dead"]!!.status)
+        assertEquals("MAX_ATTEMPTS", database["dead"]!!.lastError)
+        assertEquals(0, engine.inputs.size)
+    }
+
+    @Test
     fun retryableFailureBacksOffAndStopsThePass() = runTest {
         database.put(pendingRow("s1", createdAt = 1))
         database.put(pendingRow("s2", createdAt = 2))

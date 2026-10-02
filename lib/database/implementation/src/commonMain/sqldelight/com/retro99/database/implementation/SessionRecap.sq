@@ -180,9 +180,11 @@ UPDATE session_recap SET
     updated_at = :now
 WHERE session_id = :sessionId AND status = 'RUNNING';
 
+-- A process that died mid-request already counted the attempt; respect the cap.
 recoverStaleRunning:
 UPDATE session_recap SET
-    status = 'PENDING',
+    status = CASE WHEN attempt_count >= :maxAttempts THEN 'FAILED_PERMANENT' ELSE 'PENDING' END,
+    last_error = CASE WHEN attempt_count >= :maxAttempts THEN 'MAX_ATTEMPTS' ELSE last_error END,
     updated_at = :now
 WHERE status = 'RUNNING' AND updated_at < :staleBefore;
 

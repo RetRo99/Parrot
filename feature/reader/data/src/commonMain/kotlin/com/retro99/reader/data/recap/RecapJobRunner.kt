@@ -97,7 +97,11 @@ class RecapJobRunner(
             startupDone = true
         }
         val now = clock.now().toEpochMilliseconds()
-        database.recoverStaleRunning(now - RecapJobPolicy.STALE_RUNNING_AFTER.inWholeMilliseconds, now)
+        database.recoverStaleRunning(
+            staleBefore = now - RecapJobPolicy.STALE_RUNNING_AFTER.inWholeMilliseconds,
+            now = now,
+            maxAttempts = RecapJobPolicy.MAX_ATTEMPTS,
+        )
         var sent = 0
         var guard = 0
         while (guard++ < MAX_ROWS_PER_PASS) {

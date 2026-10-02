@@ -73,8 +73,11 @@ interface SessionRecapDatabase : DataClearable {
         dropText: Boolean = false,
     ): Boolean
 
-    /** Returns RUNNING rows last touched before [staleBefore] to PENDING. */
-    suspend fun recoverStaleRunning(staleBefore: Long, now: Long): Long
+    /**
+     * Returns RUNNING rows last touched before [staleBefore] to PENDING, or
+     * to FAILED_PERMANENT once they have used [maxAttempts].
+     */
+    suspend fun recoverStaleRunning(staleBefore: Long, now: Long, maxAttempts: Int): Long
 
     /** A failed row back to PENDING with fresh attempts, if it has text. */
     suspend fun requeue(sessionId: String, now: Long): Boolean

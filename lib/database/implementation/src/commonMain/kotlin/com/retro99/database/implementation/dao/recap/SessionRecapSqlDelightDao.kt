@@ -170,8 +170,10 @@ internal class SessionRecapSqlDelightDao(
         }
     }
 
-    override suspend fun recoverStaleRunning(staleBefore: Long, now: Long): Long = io {
-        database.changed { recoverStaleRunning(now, staleBefore) }
+    override suspend fun recoverStaleRunning(staleBefore: Long, now: Long, maxAttempts: Int): Long = io {
+        database.changed {
+            recoverStaleRunning(maxAttempts = maxAttempts.toLong(), now = now, staleBefore = staleBefore)
+        }
     }
 
     override suspend fun requeue(sessionId: String, now: Long): Boolean = io {

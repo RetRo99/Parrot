@@ -92,9 +92,25 @@ class SessionRecapQueriesTest {
         queries.claim("cloud", 100, "old")
         queries.claim("cloud", 900, "fresh")
 
-        assertEquals(1L, database.changed { recoverStaleRunning(now = 1000, staleBefore = 500) })
+        assertEquals(
+            1L,
+            database.changed { recoverStaleRunning(maxAttempts = 5, now = 1000, staleBefore = 500) },
+        )
         assertEquals("PENDING", queries.getRecap("old").executeAsOne().status)
         assertEquals("RUNNING", queries.getRecap("fresh").executeAsOne().status)
+    }
+
+    @Test
+    fun `a stale row that used all attempts fails for good`() {
+        database.insertCapturingRow(row("s1", createdAt = 1))
+        pending("s1")
+        queries.claim("cloud", 100, "s1")
+
+        database.changed { recoverStaleRunning(maxAttempts = 1, now = 1000, staleBefore = 500) }
+
+        val stored = queries.getRecap("s1").executeAsOne()
+        assertEquals("FAILED_PERMANENT", stored.status)
+        assertEquals("MAX_ATTEMPTS", stored.last_error)
     }
 
     @Test
