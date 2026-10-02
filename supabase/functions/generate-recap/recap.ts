@@ -114,8 +114,12 @@ export type PromptInput = { excerpt: string; lastSentence?: string; language: st
 
 const NAMES_RULE = 'Keep character and place names exactly as spelled in the text ' +
   '(normal grammatical case endings are fine; do not translate names).'
-const NOT_ENOUGH_RULE = 'If almost nothing happens (description only, or too short), ' +
-  `output exactly: ${NOT_ENOUGH}`
+// "Almost nothing happens" alone let hy3 paraphrase sparse passages; the
+// definition plus "do not paraphrase" got them refused in live tests.
+const NOT_ENOUGH_RULE = 'Something happens only if there are events, decisions, ' +
+  'dialogue or revelations; description, mood, weather or a character just ' +
+  'waiting or looking around is nothing. If almost nothing happens, or the ' +
+  `text is too short, do not paraphrase it: reply exactly ${NOT_ENOUGH} and nothing else.`
 
 function hintTag(lastSentence?: string): string {
   const hint = sanitizeUntrusted(lastSentence ?? '').trim()

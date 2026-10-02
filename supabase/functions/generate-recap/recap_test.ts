@@ -111,11 +111,24 @@ Deno.test('prompt puts rules in system and data in delimiters', () => {
   assertMatch(system.content, /2-3 sentences/)
   assertMatch(system.content, /in English/)
   assertMatch(system.content, /names exactly as spelled/)
-  assertMatch(system.content, new RegExp(`output exactly: ${NOT_ENOUGH}$`))
+  assertMatch(system.content, new RegExp(`reply exactly ${NOT_ENOUGH} and nothing else\\.$`))
   assert(user.content.startsWith(`<excerpt>\n${EXCERPT}\n</excerpt>`))
   assertMatch(user.content, /Write the recap now in English\.$/)
   assertFalse(user.content.includes('<stopped_at>'))
   assertFalse(system.content.includes(EXCERPT))
+})
+
+Deno.test('prompt defines "nothing happens" and forbids paraphrasing it', () => {
+  const prompts = [
+    buildMessages({ excerpt: EXCERPT, language: 'en' }),
+    buildMapMessages({ excerpt: EXCERPT, language: 'en', part: 1, parts: 2 }),
+    buildReduceMessages({ partials: ['Jim left.'], language: 'en' }),
+  ]
+  for (const [system] of prompts) {
+    assert(system.content.includes('events, decisions, dialogue or revelations'))
+    assert(system.content.includes('do not paraphrase it'))
+    assert(system.content.includes(`reply exactly ${NOT_ENOUGH} and nothing else`))
+  }
 })
 
 Deno.test('prompt uses the requested output language', () => {
