@@ -28,6 +28,7 @@ data class BooksListViewState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val isImporting: Boolean = false,
+    val importedBookToOpen: String? = null,
     val supportsCloudBackup: Boolean = false,
     val showBackupAllConfirmation: Boolean = false,
     val backupAllRightsAttested: Boolean = false,

@@ -19,7 +19,8 @@ sealed interface BooksListIntent : BaseIntent {
     data object OnRecentSearchesCleared : BooksListIntent
     data class OnBookClicked(val book: BookUiModel) : BooksListIntent
     data class OnFavoriteClicked(val bookUuid: String) : BooksListIntent
-    data class OnImportBook(val file: PlatformFile) : BooksListIntent
+    data class OnImportBook(val file: PlatformFile, val openAfterImport: Boolean = false) : BooksListIntent
+    data object OnImportedBookOpened : BooksListIntent
     data object OnBackupAllClicked : BooksListIntent
     data class OnBackupAllAttestationChanged(val attested: Boolean) : BooksListIntent
     data object OnBackupAllConfirmed : BooksListIntent

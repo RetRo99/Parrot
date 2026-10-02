@@ -288,7 +288,8 @@ private fun WelcomeSignInLink(
     ) {
         Text(
             text = stringResource(StringRes.welcome_have_account),
-            style = Ember.type.meta.copy(fontSize = 14.sp),
+            modifier = Modifier.alignByBaseline(),
+            style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 20.sp),
             color = colors.ink2,
             maxLines = 1,
             softWrap = false,
@@ -297,6 +298,7 @@ private fun WelcomeSignInLink(
         Text(
             text = stringResource(StringRes.welcome_sign_in_link),
             modifier = Modifier
+                .alignByBaseline()
                 .heightIn(min = 48.dp)
                 .clickable(role = Role.Button, onClick = onCloudSignInClick)
                 .semantics(mergeDescendants = true) {
@@ -304,7 +306,7 @@ private fun WelcomeSignInLink(
                     traversalIndex = cloudSignInOrder
                 }
                 .padding(horizontal = 4.dp, vertical = 12.dp),
-            style = Ember.type.label.copy(fontSize = 14.sp),
+            style = Ember.type.label.copy(fontSize = 14.sp, lineHeight = 20.sp),
             color = colors.accentText,
             maxLines = 1,
             softWrap = false,
