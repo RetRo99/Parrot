@@ -191,7 +191,12 @@ export type RecapLog = {
 }
 
 export type RecapOutcome =
-  | { status: 200; body: { kind: 'recap' | 'not_enough'; summary: string | null }; log: RecapLog }
+  | {
+    status: 200
+    // model is informational; clients must tolerate it missing.
+    body: { kind: 'recap' | 'not_enough'; summary: string | null; model: string }
+    log: RecapLog
+  }
   | { status: number; body: { error: string }; retryAfter?: string; log: RecapLog }
 
 type Attempt =
@@ -341,7 +346,7 @@ export async function requestRecap(
   }
   return {
     status: 200,
-    body: { kind: check.kind, summary: check.summary },
+    body: { kind: check.kind, summary: check.summary, model: req.model },
     log: log(status, tokens),
   }
 }

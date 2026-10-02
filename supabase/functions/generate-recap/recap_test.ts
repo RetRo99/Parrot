@@ -257,7 +257,7 @@ Deno.test('provider: sends the fixed URL, headers and body', async () => {
   const f = fakeFetch([ok('Jim found a map.')])
   const out = await requestRecap(deps(f.fn), REQ)
   assertEquals(out.status, 200)
-  assertEquals(out.body, { kind: 'recap', summary: 'Jim found a map.' })
+  assertEquals(out.body, { kind: 'recap', summary: 'Jim found a map.', model: 'hy3' })
   assertEquals(out.log.pt, 900)
   assertEquals(out.log.ct, 80)
   assertEquals(out.log.attempts, 1)
@@ -291,7 +291,7 @@ Deno.test('provider: sends the fixed URL, headers and body', async () => {
 Deno.test('provider: NOT_ENOUGH maps to kind not_enough', async () => {
   const out = await requestRecap(deps(fakeFetch([ok('NOT_ENOUGH')]).fn), REQ)
   assertEquals(out.status, 200)
-  assertEquals(out.body, { kind: 'not_enough', summary: null })
+  assertEquals(out.body, { kind: 'not_enough', summary: null, model: 'hy3' })
 })
 
 Deno.test('provider: bad output maps to 502 without content', async () => {

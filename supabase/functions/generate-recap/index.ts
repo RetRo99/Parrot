@@ -10,7 +10,7 @@
 // deploy commands are in README.md next to this file.
 //
 // Request:  { excerpt: string, language?: "en" | "sl" | …, lastSentence? }
-// Response: { kind: "recap" | "not_enough", summary: string | null }
+// Response: { kind: "recap" | "not_enough", summary: string | null, model }
 //
 // Callers must be signed-in, non-anonymous users; see guards.ts. Each call
 // consumes one unit of a per-user daily quota (consume_recap_quota RPC).
