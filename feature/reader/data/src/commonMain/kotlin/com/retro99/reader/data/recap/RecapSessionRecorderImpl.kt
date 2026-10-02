@@ -6,6 +6,7 @@ import com.retro99.database.api.recap.SessionRecapEntity
 import com.retro99.reader.domain.recap.RecapChapter
 import com.retro99.reader.domain.recap.RecapEligibility
 import com.retro99.reader.domain.recap.RecapEligibilityDecision
+import com.retro99.reader.domain.recap.RecapErrorCode
 import com.retro99.reader.domain.recap.RecapExcerptBuffer
 import com.retro99.reader.domain.recap.RecapLimits
 import com.retro99.reader.domain.recap.RecapPosition
@@ -137,6 +138,8 @@ class RecapSessionRecorderImpl(
         val done = CompletableDeferred<Unit>()
         enqueue {
             val result = runCatching {
+                // Backstop for a purge that failed when consent was turned off.
+                if (!consentGiven()) database.withdrawText(clock.now().toEpochMilliseconds())
                 database.getCapturing()
                     .filter { row -> row.sessionId !in live }
                     .forEach { row ->
@@ -166,6 +169,10 @@ class RecapSessionRecorderImpl(
         lastSentence: String?,
         activeReadingMs: Long,
     ) {
+        if (row.lastError == RecapErrorCode.CONSENT_WITHDRAWN.name || !consentGiven()) {
+            finishWithdrawn(row, capture, activeReadingMs)
+            return
+        }
         val excerpt = capture.excerpt?.trim()?.takeIf { it.isNotEmpty() }
         val previous = database.getPreviousEnded(row.bookUuid, row.sessionId, row.createdAt)
         val decision = RecapEligibility.evaluate(
@@ -202,6 +209,40 @@ class RecapSessionRecorderImpl(
             reasonCode = reason?.name,
         )
         if (eligible) onSessionReady()
+    }
+
+    /** Consent was withdrawn during the session: end it with no text. */
+    private suspend fun finishWithdrawn(
+        row: SessionRecapEntity,
+        capture: SessionRecapCapture,
+        activeReadingMs: Long,
+    ) {
+        val finished = database.finishCapture(
+            sessionId = row.sessionId,
+            status = RecapStatus.SKIPPED_INELIGIBLE.name,
+            capture = capture.copy(excerpt = null),
+            excerptHash = null,
+            lastSentence = null,
+            activeReadingMs = activeReadingMs.coerceAtLeast(0),
+            lastError = RecapErrorCode.CONSENT_WITHDRAWN.name,
+            endedAt = clock.now().toEpochMilliseconds(),
+        )
+        if (finished) {
+            diagnostics.breadcrumb(
+                stage = "session_end",
+                outcome = "skipped",
+                reasonCode = RecapErrorCode.CONSENT_WITHDRAWN.name,
+            )
+        }
+    }
+
+    // Unreadable consent counts as no consent.
+    private suspend fun consentGiven(): Boolean = try {
+        settings.isCloudRecapsEnabled()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        false
     }
 
     private fun enqueue(command: suspend () -> Unit) {

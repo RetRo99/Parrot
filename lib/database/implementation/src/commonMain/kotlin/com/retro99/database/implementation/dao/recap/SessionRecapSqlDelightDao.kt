@@ -184,6 +184,10 @@ internal class SessionRecapSqlDelightDao(
         database.changedOne { requeue(now, sessionId) }
     }
 
+    override suspend fun withdrawText(now: Long) {
+        io { database.sessionRecapQueries.withdrawText(now) }
+    }
+
     override suspend fun applyRetention(excerptCutoff: Long, rowCutoff: Long, now: Long): Long = io {
         database.applyRecapRetention(excerptCutoff, rowCutoff, now)
     }

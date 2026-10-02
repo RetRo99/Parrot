@@ -88,6 +88,12 @@ interface SessionRecapDatabase : DataClearable {
      */
     suspend fun requeue(sessionId: String, now: Long): Boolean
 
+    /**
+     * Consent withdrawn: drops all queued or captured text. Waiting rows
+     * become FAILED_PERMANENT, capturing rows are marked CONSENT_WITHDRAWN.
+     */
+    suspend fun withdrawText(now: Long)
+
     /** Applies retention; returns the number of rows deleted. */
     suspend fun applyRetention(excerptCutoff: Long, rowCutoff: Long, now: Long): Long
 

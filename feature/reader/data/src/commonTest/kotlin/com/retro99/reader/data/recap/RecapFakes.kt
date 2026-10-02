@@ -45,7 +45,9 @@ class FakeSessionRecapDatabase : SessionRecapDatabase {
     }
 
     override suspend fun updateCapture(sessionId: String, capture: SessionRecapCapture, now: Long) =
-        update(sessionId, { it.status == "CAPTURING" }) { it.withCapture(capture).copy(updatedAt = now) }
+        update(sessionId, { it.status == "CAPTURING" && it.lastError == null }) {
+            it.withCapture(capture).copy(updatedAt = now)
+        }
 
     override suspend fun finishCapture(
         sessionId: String,
@@ -163,6 +165,25 @@ class FakeSessionRecapDatabase : SessionRecapDatabase {
             )
         }
 
+    override suspend fun withdrawText(now: Long) {
+        rows.value.values
+            .filter { it.status in WITHDRAWABLE }
+            .filter { it.excerpt != null || it.lastSentence != null || it.status == "CAPTURING" }
+            .forEach { row ->
+                val waiting = row.status in setOf("PENDING", "FAILED_RETRYABLE", "FAILED_PERMANENT")
+                put(
+                    row.copy(
+                        excerpt = null,
+                        lastSentence = null,
+                        status = if (waiting) "FAILED_PERMANENT" else row.status,
+                        lastError = if (row.status == "RUNNING") row.lastError else "CONSENT_WITHDRAWN",
+                        nextAttemptAt = null,
+                        updatedAt = now,
+                    ),
+                )
+            }
+    }
+
     override suspend fun applyRetention(excerptCutoff: Long, rowCutoff: Long, now: Long): Long {
         retentionCalls += Triple(excerptCutoff, rowCutoff, now)
         return 0
@@ -191,6 +212,7 @@ class FakeSessionRecapDatabase : SessionRecapDatabase {
     private companion object {
         val HIDDEN = setOf("CAPTURING", "SKIPPED_INELIGIBLE")
         val DUE = setOf("PENDING", "FAILED_RETRYABLE")
+        val WITHDRAWABLE = setOf("CAPTURING", "PENDING", "RUNNING", "FAILED_RETRYABLE", "FAILED_PERMANENT")
     }
 }
 

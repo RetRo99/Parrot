@@ -67,6 +67,64 @@ class RecapSessionRecorderTest {
     }
 
     @Test
+    fun withdrawingConsentMidSessionKeepsNoText() = runTest {
+        val recorder = recorder()
+        recorder.onSessionStarted("s1", "server", "book", RecapPosition("ch3.xhtml", 0.0, 0.10), null, "sl")
+        recorder.readPages("s1", pages = 3)
+        testScheduler.advanceUntilIdle()
+
+        settings.enabled.value = false
+        database.withdrawText(clock.nowMs)
+        // Consent back on before the session ends: old text still can't go.
+        settings.enabled.value = true
+        recorder.readPages("s1", pages = 2)
+        recorder.onSessionEnded("s1", null, "Last line.", 600_000)
+        testScheduler.advanceUntilIdle()
+
+        val row = database["s1"]!!
+        assertEquals("SKIPPED_INELIGIBLE", row.status)
+        assertEquals("CONSENT_WITHDRAWN", row.lastError)
+        assertNull(row.excerpt)
+        assertNull(row.lastSentence)
+        assertEquals(0, readyCount)
+    }
+
+    @Test
+    fun withdrawingConsentDropsQueuedText() = runTest {
+        database.put(pendingRow("queued"))
+        database.put(pendingRow("waiting", status = "FAILED_RETRYABLE", nextAttemptAt = clock.nowMs + 1))
+        database.put(pendingRow("done", status = "SUCCEEDED", excerpt = null).copy(lastSentence = null))
+
+        database.withdrawText(clock.nowMs)
+
+        listOf("queued", "waiting").forEach { id ->
+            val row = database[id]!!
+            assertEquals("FAILED_PERMANENT", row.status)
+            assertEquals("CONSENT_WITHDRAWN", row.lastError)
+            assertNull(row.excerpt)
+            assertNull(row.lastSentence)
+        }
+        assertEquals("SUCCEEDED", database["done"]!!.status)
+    }
+
+    @Test
+    fun anAbandonedSessionIsDroppedWhenConsentIsOff() = runTest {
+        val recorder = recorder()
+        recorder.onSessionStarted("s1", "server", "book", RecapPosition("ch3.xhtml", 0.0, 0.10), null, "sl")
+        recorder.readPages("s1", pages = 3)
+        testScheduler.advanceUntilIdle()
+        settings.enabled.value = false
+
+        // A new process finds the row still CAPTURING.
+        val next = recorder()
+        next.recoverAbandoned()
+
+        val row = database["s1"]!!
+        assertEquals("SKIPPED_INELIGIBLE", row.status)
+        assertNull(row.excerpt)
+    }
+
+    @Test
     fun shortSessionIsSkippedAndKeepsNoText() = runTest {
         val recorder = recorder()
         recorder.onSessionStarted("s1", "server", "book", RecapPosition(totalProgression = 0.1), null)

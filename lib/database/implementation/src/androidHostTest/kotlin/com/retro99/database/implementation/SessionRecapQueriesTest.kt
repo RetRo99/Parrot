@@ -236,6 +236,44 @@ class SessionRecapQueriesTest {
     }
 
     @Test
+    fun `withdrawing consent drops queued and captured text`() {
+        listOf("pending", "running", "capturing", "done").forEachIndexed { index, id ->
+            database.insertCapturingRow(row(id, createdAt = index.toLong()))
+        }
+        pending("pending")
+        pending("running")
+        pending("done")
+        queries.claim("cloud", 10, "running")
+        queries.claim("cloud", 10, "done")
+        queries.complete("SUCCEEDED", "Summary.", null, 10, "done")
+        queries.updateCapture(
+            "Captured.", null, null, null, null, null, null, 1, 0, 10, "capturing",
+        )
+
+        queries.withdrawText(20)
+
+        val pendingRow = queries.getRecap("pending").executeAsOne()
+        assertEquals("FAILED_PERMANENT", pendingRow.status)
+        assertEquals("CONSENT_WITHDRAWN", pendingRow.last_error)
+        assertNull(pendingRow.excerpt)
+        assertNull(pendingRow.last_sentence)
+        val running = queries.getRecap("running").executeAsOne()
+        assertEquals("RUNNING", running.status)
+        assertNull(running.excerpt)
+        val capturing = queries.getRecap("capturing").executeAsOne()
+        assertEquals("CAPTURING", capturing.status)
+        assertEquals("CONSENT_WITHDRAWN", capturing.last_error)
+        assertNull(capturing.excerpt)
+        // Later appends can't bring the text back.
+        assertFalse(
+            database.changedOne {
+                updateCapture("Again.", null, null, null, null, null, null, 2, 0, 30, "capturing")
+            },
+        )
+        assertEquals("Summary.", queries.getRecap("done").executeAsOne().summary)
+    }
+
+    @Test
     fun `merging library books moves recaps`() {
         database.insertCapturingRow(row("s1", createdAt = 1, bookUuid = "from"))
 

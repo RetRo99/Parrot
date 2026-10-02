@@ -67,7 +67,7 @@ UPDATE session_recap SET
     page_advances = :pageAdvances,
     tts_sentences = :ttsSentences,
     updated_at = :updatedAt
-WHERE session_id = :sessionId AND status = 'CAPTURING';
+WHERE session_id = :sessionId AND status = 'CAPTURING' AND last_error IS NULL;
 
 finishCapture:
 UPDATE session_recap SET
@@ -202,6 +202,21 @@ UPDATE session_recap SET
 WHERE session_id = :sessionId
   AND status = 'FAILED_PERMANENT'
   AND excerpt IS NOT NULL;
+
+-- Consent turned off: no queued text may be sent later. RUNNING rows keep
+-- their status (the request is out); CAPTURING rows are marked so the
+-- recorder ends them without text.
+withdrawText:
+UPDATE session_recap SET
+    excerpt = NULL,
+    last_sentence = NULL,
+    status = CASE WHEN status IN ('PENDING', 'FAILED_RETRYABLE', 'FAILED_PERMANENT')
+        THEN 'FAILED_PERMANENT' ELSE status END,
+    last_error = CASE WHEN status = 'RUNNING' THEN last_error ELSE 'CONSENT_WITHDRAWN' END,
+    next_attempt_at = NULL,
+    updated_at = :now
+WHERE status IN ('CAPTURING', 'PENDING', 'RUNNING', 'FAILED_RETRYABLE', 'FAILED_PERMANENT')
+  AND (excerpt IS NOT NULL OR last_sentence IS NOT NULL OR status = 'CAPTURING');
 
 -- Retention: drop finished excerpts, expire old ones, then delete old rows.
 clearFinishedExcerpts:

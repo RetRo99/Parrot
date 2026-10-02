@@ -51,8 +51,16 @@ next start with the text persisted so far.
 
 `ReaderViewModel` creates one `ReaderRecapCapture` per session, and only when
 `isCloudRecapsEnabled()` is true at open (a read failure counts as off). Turning consent
-off mid-session stops capture for that session; the row still ends with what was
-captured so far. With consent off no script runs and nothing is appended. Text is
+off mid-session stops capture for that session, and the session ends
+`SKIPPED_INELIGIBLE/CONSENT_WITHDRAWN` with no text, even if consent is back on by
+then. With consent off no script runs and nothing is appended.
+
+**Withdrawal:** turning Cloud recaps off (`PreferencesRecapSettings`) runs
+`withdrawText`: every queued row (`PENDING`, `FAILED_*`) loses its excerpt and last
+sentence and becomes `FAILED_PERMANENT/CONSENT_WITHDRAWN`; a `RUNNING` row loses its
+text but keeps its status; a `CAPTURING` row is marked so later appends are ignored.
+Turning consent on again sends nothing captured before. If the purge fails, the next
+app start repeats it while consent is off; abandoned sessions are then dropped too. Text is
 appended **at the event**, never at close, because `close()` tears down the WebView.
 
 | Source | When it counts | What is appended |
@@ -127,7 +135,8 @@ CAPTURING ─► SKIPPED_INELIGIBLE
   row is sent until that row's next attempt time (retryable) or an auth backoff of
   1, 2, 4 … min (`AuthRequired`). Sign-in or consent turned on lifts the auth pause.
   A 403 is a retryable `UNKNOWN`, not `AuthRequired`. The pause lives in memory.
-- No engine available (consent off or signed out) → rows stay `PENDING`.
+- No engine available → rows stay `PENDING` (signed out). With consent off there
+  are no queued rows: withdrawal dropped them.
 - Triggers: app start, sign-in or consent turned on, session end, foreground and
   connectivity (`SyncTriggerBridge` / `RecapTriggerBridge`), user retry, scheduled
   retry. Android also runs `RecapWorker` (periodic 60 min plus one-off on background).

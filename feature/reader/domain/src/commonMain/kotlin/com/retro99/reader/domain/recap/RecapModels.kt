@@ -45,6 +45,9 @@ enum class RecapErrorCode {
     TOO_LITTLE_READING,
     REREAD_ONLY,
     DUPLICATE_OF_PREVIOUS,
+
+    /** Cloud recaps was turned off; the session's text was dropped. */
+    CONSENT_WITHDRAWN,
     ;
 
     /** Retrying the same input can't succeed. */
