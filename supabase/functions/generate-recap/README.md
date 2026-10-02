@@ -31,7 +31,11 @@ Turn recaps off: `supabase secrets set RECAP_ENABLED=false --project-ref <projec
 
 The function needs the `consume_recap_quota` RPC from
 `supabase/migrations/20261002000000_parrot_cloud_recap_usage.sql`, so apply
-migrations first:
+migrations first. Since `20261003000000_parrot_cloud_security_hardening.sql`,
+only accounts in `cloud_feature_allowlist` (feature `recap`) get recaps, and
+`recap_settings.global_daily_limit` caps all users together (default 500/day).
+`recap_settings.per_user_daily_limit` (default 30) caps `RECAP_DAILY_LIMIT`;
+the lower one wins. All refusals return the same 429 as the per-user limit.
 
 ```sh
 supabase db push
@@ -57,11 +61,13 @@ default `en`. Any other fields, such as `bookTitle`, are ignored.
 | 429 | `daily recap limit reached`, or provider rate limit (both send `Retry-After`) |
 | 502 | Provider error or unusable output |
 | 503 | Disabled, not configured, or `recap provider unavailable` (Go key rejected) |
-| 504 | Provider timed out (20 s) |
+| 504 | Provider timed out (60 s per attempt) |
+
+A revoked (signed-out) session or a deleted user also gets 401.
 
 ## Tests
 
 ```sh
 cd supabase/functions
-deno test --node-modules-dir=none generate-recap/
+deno test generate-recap/
 ```

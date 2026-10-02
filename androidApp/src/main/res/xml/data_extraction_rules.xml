@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+. SecureSettings is keyed to this device's Keystore, so a
+     restored copy is unreadable; downloads and models are re-fetchable. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="SecureSettings.xml" />
+        <exclude domain="file" path="tts-models" />
+        <exclude domain="file" path="ebooks" />
+        <!-- Book files would blow the 25 MB cloud quota and fail the backup. -->
+        <exclude domain="file" path="library" />
+        <exclude domain="file" path="parrot_logs.txt" />
+        <exclude domain="file" path="parrot_logs_old.txt" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="SecureSettings.xml" />
+        <exclude domain="file" path="tts-models" />
+        <exclude domain="file" path="ebooks" />
+        <exclude domain="file" path="parrot_logs.txt" />
+        <exclude domain="file" path="parrot_logs_old.txt" />
+    </device-transfer>
+</data-extraction-rules>

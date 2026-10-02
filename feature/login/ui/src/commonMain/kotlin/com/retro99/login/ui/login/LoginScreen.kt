@@ -122,6 +122,7 @@ import resources.translations.login_signing_in
 import resources.translations.login_type_audiobookshelf_description
 import resources.translations.login_type_storyteller_description
 import resources.translations.login_username_label
+import resources.translations.servers_not_encrypted
 
 private val ScreenPadding = 22.dp
 private val FieldHeight = 54.dp
@@ -449,8 +450,8 @@ private fun addressStatus(viewState: LoginViewState): AddressStatus {
         )
         check == AddressCheck.NotSupported ->
             AddressStatus(notSupported, MessageTone.Warning, isError = false)
-        check is AddressCheck.Found -> AddressStatus(
-            if (check.switched) {
+        check is AddressCheck.Found -> {
+            val found = if (check.switched) {
                 stringResource(StringRes.login_address_found_switched, check.serverType.displayName)
             } else {
                 stringResource(
@@ -458,10 +459,17 @@ private fun addressStatus(viewState: LoginViewState): AddressStatus {
                     check.serverType.displayName,
                     check.host,
                 )
-            },
-            MessageTone.Success,
-            isError = false,
-        )
+            }
+            if (check.isInsecure) {
+                AddressStatus(
+                    "$found · ${stringResource(StringRes.servers_not_encrypted)}",
+                    MessageTone.Warning,
+                    isError = false,
+                )
+            } else {
+                AddressStatus(found, MessageTone.Success, isError = false)
+            }
+        }
         check == AddressCheck.Checking -> AddressStatus(checking, MessageTone.Neutral, isError = false)
         else -> AddressStatus(helper, MessageTone.Neutral, isError = false)
     }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and lower; mirrors cloud-backup in data_extraction_rules. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="SecureSettings.xml" />
+    <exclude domain="file" path="tts-models" />
+    <exclude domain="file" path="ebooks" />
+    <exclude domain="file" path="library" />
+    <exclude domain="file" path="parrot_logs.txt" />
+    <exclude domain="file" path="parrot_logs_old.txt" />
+</full-backup-content>

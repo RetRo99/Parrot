@@ -61,8 +61,20 @@ class CoilInitializer(
     private suspend fun resolveTokenForUrl(url: Url): String? {
         val servers = serverRegistry.getAllServers()
         val matchingServer = servers.firstOrNull { server ->
-            Url(server.baseUrl).host == url.host
+            isSameOrigin(server.baseUrl, url)
         } ?: return null
         return serverTokenProvider.getToken(matchingServer.id)
     }
+}
+
+/**
+ * Scheme, host and port must all match, so a token for an https server is
+ * never sent over http or to another port on the same host.
+ */
+internal fun isSameOrigin(serverBaseUrl: String, url: Url): Boolean {
+    val base = runCatching { Url(serverBaseUrl) }.getOrNull() ?: return false
+    // Url.port already falls back to the scheme's default port.
+    return base.protocol.name.equals(url.protocol.name, ignoreCase = true) &&
+        base.host.equals(url.host, ignoreCase = true) &&
+        base.port == url.port
 }

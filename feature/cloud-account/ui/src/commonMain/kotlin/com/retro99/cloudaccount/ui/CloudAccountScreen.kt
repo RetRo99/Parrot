@@ -78,6 +78,7 @@ import resources.translations.cloud_account_description
 import resources.translations.cloud_account_delete
 import resources.translations.cloud_account_delete_confirm
 import resources.translations.cloud_account_delete_message
+import resources.translations.cloud_account_delete_reauthentication_required
 import resources.translations.cloud_account_delete_title
 import resources.translations.cloud_account_error_could_not_connect
 import resources.translations.cloud_account_error_generic
@@ -1024,5 +1025,7 @@ private val CloudAccountError.stringRes: StringResource
     get() = when (this) {
         CloudAccountError.ProfileAlreadyLinked -> StringRes.cloud_account_profile_already_linked
         CloudAccountError.NotConfigured -> StringRes.cloud_account_not_configured
+        CloudAccountError.DeleteReauthenticationRequired ->
+            StringRes.cloud_account_delete_reauthentication_required
         CloudAccountError.Generic -> StringRes.cloud_account_generic_error
     }

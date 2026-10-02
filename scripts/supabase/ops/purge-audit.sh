@@ -20,10 +20,10 @@ fi
 : "${SUPABASE_SERVICE_ROLE_KEY:?Set SUPABASE_SERVICE_ROLE_KEY}"
 
 base_url="${SUPABASE_URL%/}"
+source "$(dirname "${BASH_SOURCE[0]}")/lib/auth-headers.sh"
 response="$(curl --silent --show-error --fail-with-body \
     -X POST "$base_url/rest/v1/rpc/purge_expired_cloud_file_audit_events" \
-    -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-    -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+    "${auth_headers[@]}" \
     -H 'Content-Type: application/json' \
     --data '{}')"
 

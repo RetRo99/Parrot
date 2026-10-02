@@ -49,3 +49,67 @@ data class TtsModelFile(
     /** When set, this entry is a zip extracted into a directory with this name. */
     val extractTo: String? = null,
 )
+
+/**
+ * Guards against a tampered manifest writing outside the model directory or
+ * pulling files from an unexpected host. The manifest itself is not signed.
+ */
+object TtsModelManifestValidator {
+
+    const val TRUSTED_URL_PREFIX = "https://github.com/RetRo99/tts-models/releases/download/"
+
+    private val segment = Regex("^[A-Za-z0-9._-]+$")
+    private val relativePath = Regex("^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$")
+    private val releaseAsset = Regex("^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+    private val sha256 = Regex("^[0-9A-Fa-f]{64}$")
+
+    /** Largest single asset and whole model we accept; keeps size sums exact. */
+    const val MAX_FILE_BYTES = 4L * 1024L * 1024L * 1024L
+    const val MAX_TOTAL_BYTES = 8L * 1024L * 1024L * 1024L
+
+    /** Returns why [entry] is unsafe, or null when every field is safe to use. */
+    fun violation(entry: TtsModelManifestEntry): String? {
+        if (!isSafeFolderName(entry.version)) return "unsafe version '${entry.version}'"
+        if (entry.files.isEmpty()) return "no files"
+        val paths = entry.files.map { file -> file.path }
+        if (paths.toSet().size != paths.size) return "duplicate file paths"
+        var totalBytes = 0L
+        entry.files.forEach { file ->
+            if (!isSafeRelativePath(file.path)) return "unsafe path '${file.path}'"
+            val extractTo = file.extractTo
+            if (extractTo != null && !isSafeFolderName(extractTo)) {
+                return "unsafe extractTo '$extractTo'"
+            }
+            if (!isTrustedUrl(file.url)) return "untrusted url '${file.url}'"
+            if (file.size !in 0L..MAX_FILE_BYTES) return "bad size for '${file.path}'"
+            if (!sha256.matches(file.sha256)) return "bad sha256 for '${file.path}'"
+            // Each size is capped, so this sum cannot overflow.
+            totalBytes += file.size
+            if (totalBytes > MAX_TOTAL_BYTES) return "model too large"
+        }
+        return null
+    }
+
+    fun isSafeFolderName(name: String): Boolean = isSafeSegment(name)
+
+    fun isSafeRelativePath(path: String): Boolean =
+        relativePath.matches(path) && path.split('/').all(::isSafeSegment)
+
+    /**
+     * Hosts a download may be redirected to: GitHub itself and its release
+     * asset CDN. Checked on every hop because redirects are not signed.
+     */
+    fun isTrustedRedirectHost(host: String): Boolean {
+        val normalized = host.lowercase()
+        return normalized == "github.com" || normalized.endsWith(".githubusercontent.com")
+    }
+
+    fun isTrustedUrl(url: String): Boolean {
+        if (!url.startsWith(TRUSTED_URL_PREFIX)) return false
+        val asset = url.removePrefix(TRUSTED_URL_PREFIX)
+        return releaseAsset.matches(asset) && asset.split('/').all(::isSafeSegment)
+    }
+
+    private fun isSafeSegment(value: String): Boolean =
+        segment.matches(value) && value != "." && value != ".."
+}

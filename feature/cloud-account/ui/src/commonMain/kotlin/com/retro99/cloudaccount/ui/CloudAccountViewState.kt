@@ -34,5 +34,6 @@ enum class CloudAccountMode {
 enum class CloudAccountError {
     ProfileAlreadyLinked,
     NotConfigured,
+    DeleteReauthenticationRequired,
     Generic,
 }

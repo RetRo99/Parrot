@@ -8,6 +8,11 @@ insert into auth.users (id, instance_id, aud, role, email, encrypted_password, e
 values
     ('10000000-0000-0000-0000-000000000051', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'client-ids-a@example.invalid', '', now()),
     ('10000000-0000-0000-0000-000000000052', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'client-ids-b@example.invalid', '', now());
+-- Uploads are allowlist-only (20261003000000).
+insert into public.cloud_feature_allowlist (cloud_user_id, feature)
+values
+    ('10000000-0000-0000-0000-000000000051', 'uploads'),
+    ('10000000-0000-0000-0000-000000000052', 'uploads');
 
 create temporary table push_results (case_name text primary key, result jsonb);
 grant select, insert on push_results to authenticated;
@@ -209,7 +214,7 @@ insert into public.cloud_book_files (
     '6f1c0000-0000-4000-8000-000000000001',
     '10000000-0000-0000-0000-000000000051',
     'users/10000000-0000-0000-0000-000000000051/books/6f1c0000-0000-4000-8000-000000000001/30000000-0000-0000-0000-000000000051',
-    '', 'file.epub', 100, 'bbbb', 'sha-256-v1', 'ebook', 'available'
+    '', 'file.epub', 100, repeat('b', 64), 'sha-256-v1', 'ebook', 'available'
 );
 insert into public.cloud_user_storage (cloud_user_id, quota_bytes, used_bytes)
 values ('10000000-0000-0000-0000-000000000051', 10000, 100);
@@ -233,7 +238,7 @@ select is(
             "library_book_id": "6f1c0000-0000-4000-8000-000000000004",
             "title": "Same File",
             "format": "epub",
-            "source_content_hash": "bbbb",
+            "source_content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             "source_content_hash_algorithm": "sha-256-v1"
         }
     }]'::jsonb, 0)->0->>'existing_book_id'),
@@ -261,7 +266,7 @@ select public.complete_book_file_deletion('30000000-0000-0000-0000-000000000051'
 create temporary table replace_upload as
 select (public.reserve_book_upload(
     '6f1c0000-0000-4000-8000-000000000001', 'ebook', '', 'new.epub',
-    120, 'sha-256-v1', 'cccc',
+    120, 'sha-256-v1', repeat('c', 64),
     '{"attested_at":"2026-09-30T00:00:00Z","tos_version":"test","attestation_version":"test"}'::jsonb
 )) as result;
 reset role;
@@ -272,7 +277,7 @@ set local request.jwt.claim.sub = '10000000-0000-0000-0000-000000000051';
 set local request.jwt.claim.role = 'authenticated';
 select is(
     (public.finalize_book_upload(
-        (select (result->>'upload_id')::uuid from replace_upload), 120, 'cccc'
+        (select (result->>'upload_id')::uuid from replace_upload), 120, repeat('c', 64)
     )->>'status'),
     'available', 'the replacement file with a different hash is finalized'
 );
@@ -281,7 +286,7 @@ select is(
     (select cloud_book_id::text || ':' || content_hash from public.cloud_book_files
      where cloud_user_id = '10000000-0000-0000-0000-000000000051'
        and status = 'available'),
-    '6f1c0000-0000-4000-8000-000000000001:cccc', 'the replaced file belongs to the same book id'
+    '6f1c0000-0000-4000-8000-000000000001:' || repeat('c', 64), 'the replaced file belongs to the same book id'
 );
 
 select * from finish();

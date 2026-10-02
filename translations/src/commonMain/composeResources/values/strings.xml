@@ -532,6 +532,7 @@
     <string name="cloud_account_delete_title" tools:ignore="MissingTranslation">Delete your Parrot Cloud account?</string>
     <string name="cloud_account_delete_message" tools:ignore="MissingTranslation">This permanently deletes your cloud account, backups, and cloud sync data. Imported files already on this device are kept. A redacted abuse-history record may be retained for up to 180 days.</string>
     <string name="cloud_account_delete_confirm" tools:ignore="MissingTranslation">Delete account</string>
+    <string name="cloud_account_delete_reauthentication_required" tools:ignore="MissingTranslation">For your security, sign out and sign in again, then delete your account within 10 minutes.</string>
     <string name="cloud_account_reauthentication_required" tools:ignore="MissingTranslation">Please sign in again to resume cloud access.</string>
     <string name="cloud_account_refresh_unavailable" tools:ignore="MissingTranslation">Cloud access is temporarily unavailable. Your local reading remains available.</string>
     <string name="cloud_account_sign_in_hint" tools:ignore="MissingTranslation">Enter your email and password, then sign in. New here? Create an account below.</string>
@@ -586,6 +587,8 @@
     <string name="cloud_backup_reason_attestation_required" tools:ignore="MissingTranslation">Confirm you have the rights to this file, then try again.</string>
     <string name="cloud_backup_reason_verify_failed" tools:ignore="MissingTranslation">The file could not be verified.</string>
     <string name="cloud_backup_reason_generic" tools:ignore="MissingTranslation">Please try again. If the problem continues, check your connection and account.</string>
+    <string name="cloud_backup_reason_uploads_not_enabled" tools:ignore="MissingTranslation">Parrot Cloud backups aren\'t available for your account yet.</string>
+    <string name="cloud_backup_reason_file_too_large" tools:ignore="MissingTranslation">This file is too large for Parrot Cloud.</string>
     <string name="cloud_backup_cancel" tools:ignore="MissingTranslation">Cancel upload</string>
     <string name="cloud_backup_cancelled" tools:ignore="MissingTranslation">Upload cancelled</string>
     <string name="cloud_backup_retry" tools:ignore="MissingTranslation">Retry upload</string>

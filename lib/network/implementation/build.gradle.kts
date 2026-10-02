@@ -38,6 +38,8 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.coroutines.test)
+            implementation(libs.ktor.client.mock)
         }
         named("androidHostTest") {
             dependencies {
