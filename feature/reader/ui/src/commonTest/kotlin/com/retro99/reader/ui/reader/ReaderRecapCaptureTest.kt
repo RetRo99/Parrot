@@ -227,6 +227,23 @@ class ReaderRecapCaptureTest {
     }
 
     @Test
+    fun textFromAPageTheLocatorHasNotReachedIsDropped() = runTest {
+        val h = Harness(this)
+        // The WebView already shows page 3 while the locator still says 2.
+        h.screen = visible(0, 24).copy(page = 3)
+        h.capture.onPageShown(page(0.1).copy(chapterPage = 2))
+        advanceTimeBy(5_001)
+        runCurrent()
+        assertTrue(h.appended.isEmpty())
+
+        h.screen = visible(24, 48).copy(page = 3)
+        h.capture.onPageShown(page(0.2).copy(chapterPage = 3))
+        advanceTimeBy(5_001)
+        runCurrent()
+        assertEquals(1, h.appended.size)
+    }
+
+    @Test
     fun aPageChangeDuringTheReadDropsIt() = runTest {
         val h = Harness(this)
         val gate = CompletableDeferred<Unit>()

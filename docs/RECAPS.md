@@ -77,7 +77,10 @@ appended **at the event**, never at close, because `close()` tears down the WebV
   index. A sentence heard on a page already captured as text can appear twice; the two
   sources don't share coordinates.
 - **Skipped pages:** a page left before the dwell time is never read. A page that
-  changes while its text is being read is dropped.
+  changes while its text is being read is dropped. The read also returns the page
+  number (same formula as `ChapterPageCalculator`); text from a page other than the
+  one the locator reported is dropped, since the locator lags the WebView. Scroll
+  mode and chapter changes between two pages with the same number aren't caught.
 - **Chapters:** each chunk carries its chapter (index, title) and position (href,
   progression, totalProgression). A heard sentence from another chapter goes without.
 - **Foreground:** `ReaderScreen` forwards ON_START/ON_STOP as

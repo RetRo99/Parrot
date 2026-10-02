@@ -18,6 +18,11 @@ import org.koin.core.component.inject
 data class VisibleTextRange(
     /** In reading order; offsets are into the chapter's text. */
     val pieces: List<RecapTextPiece>,
+    /**
+     * Page within the chapter when the text was read, computed like
+     * [ChapterPageCalculator] so it can be matched against the locator.
+     */
+    val page: Int? = null,
 ) {
     /** Offset of the first visible character in the chapter. */
     val startOffset: Int get() = pieces.first().start
@@ -26,7 +31,7 @@ data class VisibleTextRange(
     val endOffset: Int get() = pieces.last().end
 
     override fun toString(): String =
-        "VisibleTextRange(start=$startOffset, end=$endOffset, pieces=${pieces.size})"
+        "VisibleTextRange(start=$startOffset, end=$endOffset, pieces=${pieces.size}, page=$page)"
 }
 
 object VisibleTextRangeDetector : KoinComponent {
@@ -149,7 +154,17 @@ object VisibleTextRangeDetector : KoinComponent {
                     if (total >= maxChars) break;
                 }
                 if (pieces.length === 0) return JSON.stringify({ status: 'none' });
-                return JSON.stringify({ status: 'found', pieces: pieces });
+                // Same formula as ChapterPageCalculator: identifies the page.
+                const html = document.documentElement;
+                const scrollX = Math.max(html ? html.scrollLeft : 0, body.scrollLeft,
+                    window.scrollX || window.pageXOffset || 0);
+                const totalWidth = Math.max(html ? html.scrollWidth : 0, body.scrollWidth);
+                let page = null;
+                if (width > 0 && totalWidth > 0) {
+                    const totalPages = Math.max(1, Math.ceil(totalWidth / width));
+                    page = Math.min(totalPages, Math.floor(scrollX / width) + 1);
+                }
+                return JSON.stringify({ status: 'found', pieces: pieces, pg: page });
             } catch (e) {
                 return JSON.stringify({ status: 'error' });
             }
@@ -174,7 +189,7 @@ object VisibleTextRangeDetector : KoinComponent {
                         startsBlock = piece.startsBlock == 1,
                     )
                 }
-            pieces.takeIf { it.isNotEmpty() }?.let(::VisibleTextRange)
+            pieces.takeIf { it.isNotEmpty() }?.let { VisibleTextRange(it, data.page) }
         } catch (e: Exception) {
             // Never pass the payload on: it holds book text.
             analytics.logException(e, "Failed to parse the visible text range")
@@ -189,6 +204,8 @@ internal data class VisibleTextRangeResult(
     val status: String,
     @SerialName("pieces")
     val pieces: List<VisibleTextPieceJson> = emptyList(),
+    @SerialName("pg")
+    val page: Int? = null,
 )
 
 @Serializable

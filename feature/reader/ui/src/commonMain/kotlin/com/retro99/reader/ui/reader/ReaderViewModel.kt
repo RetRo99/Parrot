@@ -596,7 +596,8 @@ class ReaderViewModel(
                     createdAt = now().toString(),
                 )
                 updatePosition(positionUiModel)
-                positionUiModel.toRecapPage()?.let { page -> recapCapture?.onPageShown(page) }
+                positionUiModel.toRecapPage(locator.chapterInfo?.currentPage)
+                    ?.let { page -> recapCapture?.onPageShown(page) }
 
                 // Update chapter info from the enriched locator state
                 // (word count is used internally by ReadingSpeedTracker via the locator flow)
@@ -3073,7 +3074,9 @@ class ReaderViewModel(
                 capture.setBlocked(prompted)
             }
             .launchIn(viewModelScope)
-        viewState.value.currentPosition?.toRecapPage()?.let(capture::onPageShown)
+        viewState.value.currentPosition
+            ?.toRecapPage(viewState.value.chapterInfo?.currentPage)
+            ?.let(capture::onPageShown)
         recapSettings.observeCloudRecapsEnabled().first { enabled -> !enabled }
         capture.stop()
     }
@@ -3097,12 +3100,13 @@ class ReaderViewModel(
         )
     }
 
-    private fun PositionUiModel.toRecapPage(): RecapPage? {
+    private fun PositionUiModel.toRecapPage(chapterPage: Int?): RecapPage? {
         if (href.isEmpty()) return null
         return RecapPage(
             href = href.substringBefore('#'),
             chapter = RecapChapter(chapterIndex, title),
             position = toRecapPosition(),
+            chapterPage = chapterPage,
         )
     }
 

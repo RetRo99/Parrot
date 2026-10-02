@@ -46,6 +46,14 @@ class VisibleTextRangeDetectorTest {
         )
         assertEquals(120, range?.startOffset)
         assertEquals(153, range?.endOffset)
+        assertNull(range?.page)
+    }
+
+    @Test
+    fun `parseResult keeps the page the text was read on`() {
+        val json = """{"status":"found","pieces":[{"s":0,"e":5,"t":"Hello"}],"pg":4}"""
+
+        assertEquals(4, VisibleTextRangeDetector.parseResult(json)?.page)
     }
 
     @Test

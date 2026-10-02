@@ -23,6 +23,8 @@ internal data class RecapPage(
     val href: String,
     val chapter: RecapChapter?,
     val position: RecapPosition,
+    /** Page within the chapter, from the locator's page calculation. */
+    val chapterPage: Int? = null,
 ) {
     /** Two emissions at the same place are the same page. */
     val key: Pair<String, Double?> get() = href to position.progression
@@ -173,6 +175,9 @@ internal class ReaderRecapCapture(
         } ?: return
         // The reader moved on while the page was read: its text is unsure.
         if (summary != null || generation != pageGeneration) return
+        // The screen is already on another page whose locator hasn't
+        // arrived yet (the locator lags the WebView by several JS calls).
+        if (dwelt.chapterPage != null && range.page != null && dwelt.chapterPage != range.page) return
         val text = tracker.takeUnreadPageText(dwelt.href, range.pieces) ?: return
         append(text, dwelt.chapter, dwelt.position, RecapTextSource.PAGE)
     }
