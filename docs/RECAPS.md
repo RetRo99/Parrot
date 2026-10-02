@@ -178,7 +178,11 @@ Observing never triggers generation. `SessionRecap` exposes no excerpt text.
   eligible, waiting for opt-in, generating, done (summary, engine, model), not enough
   read, failed with Retry, failed for good, sign-in required (also for a `PENDING` row
   parked with `AUTH_REQUIRED` while the client still looks signed in).
-- **Settings:** App settings → Reading → Cloud recaps.
+- **Settings:** App settings → Reading → Cloud recaps. Turning it on needs a live
+  Parrot Cloud session (`CloudAuthState.SignedIn`, as the runner checks). Signed
+  out, the row says "Sign in to Parrot Cloud to use recaps" and is disabled, unless
+  consent is on: then it can still be turned off. Signing out keeps consent; rows
+  wait as `PENDING` until sign-in (`CloudRecapsToggle.kt` in home ui).
 
 ## Long sessions (`generate-recap`)
 
@@ -237,11 +241,14 @@ The runner, retention, eligibility and UI need no changes.
 The API receives only `excerpt`, `language` and `lastSentence`: no titles, ids or
 chapter names. A long excerpt's earlier parts are held server-side in
 `recap_upload_parts` (owner-only, no client table access) until the last part
-arrives, then deleted; abandoned parts are deleted after an hour. Summaries and excerpts are kept in the profile database on the device and
-never synced to Parrot Cloud. That database is part of OS backups (Android Auto Backup
-with `allowBackup="true"` and no exclusion rules; iOS iCloud/device backup), so recap
-rows go wherever the user's backups go; the settings copy says so. Excluding them
-would mean excluding the whole profile database or moving recaps to their own file.
-Logs carry status
-and error codes only (`RecapDiagnostics`); `toString()` of inputs, results and capture
+arrives, then deleted; abandoned parts are deleted after an hour. Otherwise the
+function stores none of it (only a per-user daily count).
+Recaps are not part of Parrot Cloud sync or backup: sync is row-based
+(`SyncOutboxEntry` types: library books, book links, positions, bookmarks, reader
+settings, reading sessions without `recap_session_id`) and backups upload book
+files only. There is no
+`session_recap` table on the server. Recap rows live in the profile database,
+which OS backups (Android Auto Backup, iCloud/device backup) still include; the
+Android backup rules exclude secrets, models and book files, not databases.
+Logs carry status and error codes only (`RecapDiagnostics`); `toString()` of inputs, results and capture
 types omits the text. `recap_session_id` is not part of the synced statistics payload.

@@ -338,6 +338,15 @@ fun HomeNavigation(
                         BooksListScreen(
                             initialImportRequestId = openPhoneFilesRequestId,
                             onInitialImportRequestConsumed = onPhoneFilesRequestConsumed,
+                            onOpenImportedBook = { bookUuid ->
+                                intentDispatcher(
+                                    HomeNavigationIntent.RequestOpenReader(
+                                        serverId = com.retro99.base.server.LOCAL_SERVER_ID,
+                                        bookUuid = bookUuid,
+                                        bookType = BookType.EBOOK,
+                                    ),
+                                )
+                            },
                             onSearchActiveChanged = { active -> isLibrarySearchActive = active },
                             onNavigateToLinkReview = {
                                 intentDispatcher(

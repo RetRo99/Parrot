@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -88,7 +89,7 @@ fun WelcomeScreen(
 
         // Reserve enough room for the title and choices first; let the illustration
         // shrink proportionally on short phones instead of making the page scroll.
-        val heroHeight = (maxHeight - 330.dp).coerceIn(230.dp, 450.dp)
+        val heroHeight = (maxHeight - 396.dp).coerceIn(230.dp, 450.dp)
 
         Column(modifier = Modifier.fillMaxSize()) {
             WelcomeHeroPanel(
@@ -177,13 +178,26 @@ fun WelcomeScreen(
                         orderIndex = 5f,
                     )
 
-                    BottomWelcomeLinks(
-                        onPhoneFilesClick = onPhoneFilesClick,
+                    WelcomeChoiceButton(
+                        label = stringResource(StringRes.welcome_phone_files),
+                        accessibilityLabel = stringResource(StringRes.welcome_phone_files_accessibility),
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Filled.Folder,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        onClick = onPhoneFilesClick,
+                        orderIndex = 6f,
+                    )
+
+                    WelcomeSignInLink(
                         onCloudSignInClick = onCloudSignInClick,
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 48.dp)
-                            .semantics { traversalIndex = 6f },
+                            .semantics { traversalIndex = 7f },
                     )
                 }
             }
@@ -260,15 +274,12 @@ private fun CompositionLocalProviderContentColor(icon: @Composable () -> Unit, c
 }
 
 @Composable
-private fun BottomWelcomeLinks(
-    onPhoneFilesClick: () -> Unit,
+private fun WelcomeSignInLink(
     onCloudSignInClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = Ember.colors
-    val phoneFilesAccessibility = stringResource(StringRes.welcome_phone_files_accessibility)
     val cloudSignInAccessibility = stringResource(StringRes.welcome_cloud_sign_in_accessibility)
-    val phoneFilesOrder = 6f
     val cloudSignInOrder = 7f
     Row(
         modifier = modifier,
@@ -276,24 +287,9 @@ private fun BottomWelcomeLinks(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = stringResource(StringRes.welcome_phone_files),
-            modifier = Modifier
-                .heightIn(min = 48.dp)
-                .clickable(role = Role.Button, onClick = onPhoneFilesClick)
-                .semantics(mergeDescendants = true) {
-                    contentDescription = phoneFilesAccessibility
-                    traversalIndex = phoneFilesOrder
-                }
-                .padding(horizontal = 4.dp, vertical = 12.dp),
-            style = Ember.type.label.copy(fontSize = 14.sp),
-            color = colors.ink,
-            maxLines = 1,
-            softWrap = false,
-        )
-        Text("·", color = colors.ink2, modifier = Modifier.padding(horizontal = 6.dp))
-        Text(
             text = stringResource(StringRes.welcome_have_account),
-            style = Ember.type.meta.copy(fontSize = 14.sp),
+            modifier = Modifier.alignByBaseline(),
+            style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 20.sp),
             color = colors.ink2,
             maxLines = 1,
             softWrap = false,
@@ -302,6 +298,7 @@ private fun BottomWelcomeLinks(
         Text(
             text = stringResource(StringRes.welcome_sign_in_link),
             modifier = Modifier
+                .alignByBaseline()
                 .heightIn(min = 48.dp)
                 .clickable(role = Role.Button, onClick = onCloudSignInClick)
                 .semantics(mergeDescendants = true) {
@@ -309,7 +306,7 @@ private fun BottomWelcomeLinks(
                     traversalIndex = cloudSignInOrder
                 }
                 .padding(horizontal = 4.dp, vertical = 12.dp),
-            style = Ember.type.label.copy(fontSize = 14.sp),
+            style = Ember.type.label.copy(fontSize = 14.sp, lineHeight = 20.sp),
             color = colors.accentText,
             maxLines = 1,
             softWrap = false,

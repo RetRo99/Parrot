@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalFocusManager
@@ -171,6 +172,7 @@ fun BooksListScreen(
     initialImportRequestId: Long? = null,
     onInitialImportRequestConsumed: (Long) -> Unit = {},
     onNavigateToLinkReview: () -> Unit = {},
+    onOpenImportedBook: (String) -> Unit = {},
     viewModel: BooksListViewModel = koinViewModel { parametersOf(onNavigateToBookDetail) },
 ) {
     BaseScreen(
@@ -187,6 +189,7 @@ fun BooksListScreen(
             initialImportRequestId = initialImportRequestId,
             onInitialImportRequestConsumed = onInitialImportRequestConsumed,
             onNavigateToLinkReview = onNavigateToLinkReview,
+            onOpenImportedBook = onOpenImportedBook,
         )
     }
 }
@@ -203,20 +206,30 @@ private fun BooksListScreenContent(
     initialImportRequestId: Long? = null,
     onInitialImportRequestConsumed: (Long) -> Unit = {},
     onNavigateToLinkReview: () -> Unit = {},
+    onOpenImportedBook: (String) -> Unit = {},
 ) {
+    var openAfterImport by rememberSaveable { mutableStateOf(false) }
     val filePickerLauncher = rememberFilePickerLauncher(
         type = PickerType.File(extensions = listOf("epub")),
         mode = PickerMode.Single,
     ) { file ->
         file?.let {
-            intentDispatcher(BooksListIntent.OnImportBook(it))
+            intentDispatcher(BooksListIntent.OnImportBook(it, openAfterImport = openAfterImport))
         }
+        openAfterImport = false
     }
 
     LaunchedEffect(initialImportRequestId) {
         val requestId = initialImportRequestId ?: return@LaunchedEffect
+        openAfterImport = true
         filePickerLauncher.launch()
         onInitialImportRequestConsumed(requestId)
+    }
+
+    LaunchedEffect(viewState.importedBookToOpen) {
+        val bookUuid = viewState.importedBookToOpen ?: return@LaunchedEffect
+        intentDispatcher(BooksListIntent.OnImportedBookOpened)
+        onOpenImportedBook(bookUuid)
     }
 
     val listState = rememberLazyListState()

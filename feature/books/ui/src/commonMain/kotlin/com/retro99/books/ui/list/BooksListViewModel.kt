@@ -110,7 +110,8 @@ class BooksListViewModel(
                 onNavigateToBookDetail(intent.book)
             }
             is BooksListIntent.OnFavoriteClicked -> toggleFavorite(intent.bookUuid)
-            is BooksListIntent.OnImportBook -> importBook(intent.file)
+            is BooksListIntent.OnImportBook -> importBook(intent.file, intent.openAfterImport)
+            BooksListIntent.OnImportedBookOpened -> updateState { it.copy(importedBookToOpen = null) }
             BooksListIntent.OnBackupAllClicked -> updateState {
                 it.copy(
                     showBackupAllConfirmation = true,
@@ -362,12 +363,17 @@ class BooksListViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun importBook(file: io.github.vinceglb.filekit.core.PlatformFile) {
+    private fun importBook(file: io.github.vinceglb.filekit.core.PlatformFile, openAfterImport: Boolean) {
         viewModelScope.launch {
             updateState { it.copy(isImporting = true) }
             importEpubUseCase(file)
                 .onSuccess { imported ->
                     analytics.logEvent(BookAnalyticsEvent.BookImported(bookUuid = imported.libraryBookId))
+                    if (openAfterImport) {
+                        updateState {
+                            it.copy(isImporting = false, importedBookToOpen = imported.libraryBookId)
+                        }
+                    }
                     viewModelScope.launch {
                         maybeQueueImportedBookBackup(imported.libraryBookId, imported.mediaType)
                     }
