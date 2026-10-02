@@ -306,6 +306,20 @@ class RecapJobRunnerTest {
     }
 
     @Test
+    fun retentionRunsAgainInALongLivedProcess() = runTest {
+        val runner = runner()
+        runner.runPending()
+        runner.runPending()
+        assertEquals(1, database.retentionCalls.size)
+
+        clock.nowMs += RecapJobPolicy.CLEANUP_INTERVAL.inWholeMilliseconds
+        runner.runPending()
+
+        assertEquals(2, database.retentionCalls.size)
+        assertEquals(clock.nowMs, database.retentionCalls.last().third)
+    }
+
+    @Test
     fun cleanupAppliesTheRetentionWindows() = runTest {
         runner().runCleanup()
 

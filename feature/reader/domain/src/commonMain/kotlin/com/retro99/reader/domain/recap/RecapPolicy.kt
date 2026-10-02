@@ -31,6 +31,9 @@ object RecapJobPolicy {
     /** Whole recap rows are deleted after this long. */
     val ROW_RETENTION: Duration = 180.days
 
+    /** Retention runs again after this long; processes can live for days. */
+    val CLEANUP_INTERVAL: Duration = 1.hours
+
     /**
      * Quota and outage answers say nothing about the row, so they never
      * use up its attempts; backoff and excerpt expiry still bound them.

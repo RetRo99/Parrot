@@ -175,7 +175,7 @@ produced it. To add an on-device engine:
 
 The runner, retention, eligibility and UI need no changes.
 
-## Retention (`RecapStartupInitializer`, at app start)
+## Retention (`RecapJobRunner.runCleanup`, at app start, then at most hourly before a pass)
 
 - The excerpt and last sentence are dropped as soon as a result is stored, when the
   server rejects the input, or at skip time (only a hash stays for the repeat check).

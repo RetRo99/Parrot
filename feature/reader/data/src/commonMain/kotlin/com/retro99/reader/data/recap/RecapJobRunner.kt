@@ -55,6 +55,7 @@ class RecapJobRunner(
     private val passMutex = Mutex()
     private var started = false
     private var startupDone = false
+    private var lastCleanupAt = Long.MIN_VALUE / 2
     private var startupWork: suspend () -> Unit = {}
     private var timer: Job? = null
 
@@ -112,6 +113,7 @@ class RecapJobRunner(
             startupDone = true
         }
         val now = clock.now().toEpochMilliseconds()
+        if (now - lastCleanupAt >= RecapJobPolicy.CLEANUP_INTERVAL.inWholeMilliseconds) runCleanup()
         database.recoverStaleRunning(
             staleBefore = now - RecapJobPolicy.STALE_RUNNING_AFTER.inWholeMilliseconds,
             now = now,
@@ -148,10 +150,11 @@ class RecapJobRunner(
         sent
     }
 
-    /** Retention: run at app start, never on the request path. */
+    /** Retention: at app start, then at most hourly before a pass. */
     suspend fun runCleanup() {
         try {
             val now = clock.now().toEpochMilliseconds()
+            lastCleanupAt = now
             database.applyRetention(
                 excerptCutoff = now - RecapJobPolicy.EXCERPT_RETENTION.inWholeMilliseconds,
                 rowCutoff = now - RecapJobPolicy.ROW_RETENTION.inWholeMilliseconds,
