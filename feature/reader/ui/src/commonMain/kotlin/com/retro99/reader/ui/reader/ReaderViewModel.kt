@@ -3028,7 +3028,16 @@ class ReaderViewModel(
             chapter = position?.let { RecapChapter(it.chapterIndex, it.title) },
             language = RecapLanguages.resolve(bookLanguage, Locale.current.language),
         )
-        viewModelScope.launch { startRecapCapture(sessionId) }
+        viewModelScope.launch {
+            try {
+                startRecapCapture(sessionId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Unreadable consent means no consent: stop capturing.
+                recapCapture?.stop()
+            }
+        }
     }
 
     /** Capture runs only with consent, and stops for good if it's withdrawn. */
