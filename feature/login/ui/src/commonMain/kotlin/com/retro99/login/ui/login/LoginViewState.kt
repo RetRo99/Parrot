@@ -41,6 +41,7 @@ sealed interface AddressCheck {
         val host: String,
         val switched: Boolean,
         val supportsBrowserSignIn: Boolean,
+        val isInsecure: Boolean = false,
     ) : AddressCheck
 
     data class Unreachable(val host: String) : AddressCheck

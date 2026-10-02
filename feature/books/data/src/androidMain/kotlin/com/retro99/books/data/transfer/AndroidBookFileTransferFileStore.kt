@@ -1,6 +1,7 @@
 package com.retro99.books.data.transfer
 
 import android.content.Context
+import com.retro99.base.file.safeFileName
 import com.retro99.books.data.calculateFileContentHash
 import java.io.File
 import java.io.FileOutputStream
@@ -13,10 +14,10 @@ class AndroidBookFileTransferFileStore(
     @Provided private val context: Context,
 ) : BookFileTransferFileStore {
     override fun stagingPath(transferId: String): String =
-        File(stagingDirectory, "${transferId.safeName()}.part").absolutePath
+        File(stagingDirectory, "${transferId.safeFileName()}.part").absolutePath
 
     override fun libraryFilePath(libraryBookId: String, mediaType: String): String =
-        File(libraryDirectory, "${libraryBookId.safeName()}_${mediaType.safeName()}.epub")
+        File(libraryDirectory, "${libraryBookId.safeFileName()}_${mediaType.safeFileName()}.epub")
             .absolutePath
 
     override suspend fun exists(path: String): Boolean = File(path).exists()
@@ -57,7 +58,7 @@ class AndroidBookFileTransferFileStore(
     }
 
     override suspend fun writeCover(libraryBookId: String, bytes: ByteArray): String {
-        val cover = File(coversDirectory, "${libraryBookId.safeName()}.png")
+        val cover = File(coversDirectory, "${libraryBookId.safeFileName()}.png")
         cover.writeBytes(bytes)
         return cover.absolutePath
     }
@@ -79,7 +80,3 @@ class AndroidBookFileTransferFileStore(
     private val coversDirectory: File
         get() = File(context.filesDir, "imported_covers").apply { mkdirs() }
 }
-
-private fun String.safeName(): String = map { character ->
-    if (character.isLetterOrDigit() || character == '-' || character == '_') character else '_'
-}.joinToString("")

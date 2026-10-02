@@ -586,6 +586,8 @@
     <string name="cloud_backup_reason_attestation_required" tools:ignore="MissingTranslation">Confirm you have the rights to this file, then try again.</string>
     <string name="cloud_backup_reason_verify_failed" tools:ignore="MissingTranslation">The file could not be verified.</string>
     <string name="cloud_backup_reason_generic" tools:ignore="MissingTranslation">Please try again. If the problem continues, check your connection and account.</string>
+    <string name="cloud_backup_reason_uploads_not_enabled" tools:ignore="MissingTranslation">Parrot Cloud backups aren\'t available for your account yet.</string>
+    <string name="cloud_backup_reason_file_too_large" tools:ignore="MissingTranslation">This file is too large for Parrot Cloud.</string>
     <string name="cloud_backup_cancel" tools:ignore="MissingTranslation">Cancel upload</string>
     <string name="cloud_backup_cancelled" tools:ignore="MissingTranslation">Upload cancelled</string>
     <string name="cloud_backup_retry" tools:ignore="MissingTranslation">Retry upload</string>

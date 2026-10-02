@@ -14,6 +14,18 @@ val keystoreProperties = Properties().apply {
         keystorePropertiesFile.inputStream().use(::load)
     }
 }
+val releaseSigningKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+val missingSigningKeys = releaseSigningKeys.filter { key ->
+    keystoreProperties.getProperty(key).isNullOrBlank()
+}
+val releaseStoreFile = keystoreProperties.getProperty("storeFile")?.let(rootProject::file)
+val releaseSigningProblem: String? = when {
+    !keystorePropertiesFile.exists() -> "keystore.properties is missing at the repo root"
+    missingSigningKeys.isNotEmpty() -> "keystore.properties lacks ${missingSigningKeys.joinToString()}"
+    releaseStoreFile?.isFile != true -> "keystore file $releaseStoreFile does not exist"
+    else -> null
+}
+val hasReleaseSigning = releaseSigningProblem == null
 
 android {
     namespace = "com.retro99.parrot.android"
@@ -32,9 +44,9 @@ android {
         }
     }
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (hasReleaseSigning) {
             create("release") {
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storeFile = releaseStoreFile
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
@@ -50,13 +62,34 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            // Never fall back to the debug key; see the release signing gate.
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.toVersion(libs.versions.jdk.get().toInt())
         targetCompatibility = JavaVersion.toVersion(libs.versions.jdk.get().toInt())
         isCoreLibraryDesugaringEnabled = true
+    }
+}
+
+// Runs inside the release packaging tasks themselves, so `-x` cannot skip it,
+// while debug builds, tests and IDE sync keep working without a keystore.
+val releasePackagingTasks = setOf(
+    "packageRelease",
+    "packageReleaseBundle",
+    "signReleaseBundle",
+    "bundleRelease",
+)
+tasks.matching { task -> task.name in releasePackagingTasks }.configureEach {
+    val problem = releaseSigningProblem
+    doFirst {
+        if (problem != null) {
+            throw GradleException(
+                "Release signing is not configured: $problem. Provide storeFile, " +
+                    "storePassword, keyAlias and keyPassword in keystore.properties.",
+            )
+        }
     }
 }
 

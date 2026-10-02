@@ -43,6 +43,17 @@ class ServerAddressTest {
     }
 
     @Test
+    fun `displayHost keeps http scheme so plain servers stand out`() {
+        assertEquals(
+            "http://192.168.1.20:8001",
+            ServerAddress.displayHost("http://192.168.1.20:8001/library"),
+        )
+        assertTrue(ServerAddress.isInsecure("http://192.168.1.20:8001"))
+        assertFalse(ServerAddress.isInsecure("https://books.example.com"))
+        assertTrue(ServerAddress.isValid("http://192.168.1.20:8001"))
+    }
+
+    @Test
     fun `isValid requires http or https and a host`() {
         assertTrue(ServerAddress.isValid("https://books.example.com"))
         assertTrue(ServerAddress.isValid("http://[::1]:8001"))

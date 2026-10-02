@@ -27,6 +27,14 @@ iosApp/Pods/
 *.keystore
 keystore.properties
 signing_key.txt
+*.p12
+*.p8
+*.pem
+*.mobileprovision
+
+# Local secrets
+.env*
+!.env.example
 supabase/.temp/
 supabase/.branches/
 
