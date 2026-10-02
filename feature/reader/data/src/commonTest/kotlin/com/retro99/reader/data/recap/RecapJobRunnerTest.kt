@@ -154,6 +154,9 @@ class RecapJobRunnerTest {
 
         assertEquals("FAILED_PERMANENT", database["s1"]!!.status)
         assertEquals(1, engine.inputs.size)
+        // Rejected input can never be retried, so no text is kept for it.
+        assertNull(database["s1"]!!.excerpt)
+        assertNull(database["s1"]!!.lastSentence)
     }
 
     @Test

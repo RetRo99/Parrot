@@ -166,8 +166,8 @@ The runner, retention, eligibility and UI need no changes.
 
 ## Retention (`RecapStartupInitializer`, at app start)
 
-- The excerpt and last sentence are dropped as soon as a result is stored, or at skip
-  time (only a hash stays for the repeat check).
+- The excerpt and last sentence are dropped as soon as a result is stored, when the
+  server rejects the input, or at skip time (only a hash stays for the repeat check).
 - Excerpts and last sentences older than 14 days are nulled; pending rows then become
   `FAILED_PERMANENT/EXCERPT_EXPIRED`.
 - Rows older than 180 days are deleted, as are rows whose book is in neither `books`

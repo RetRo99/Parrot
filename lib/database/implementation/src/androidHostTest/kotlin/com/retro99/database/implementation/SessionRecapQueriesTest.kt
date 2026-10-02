@@ -129,6 +129,22 @@ class SessionRecapQueriesTest {
     }
 
     @Test
+    fun `a rejected row loses its text`() {
+        database.insertCapturingRow(row("s1", createdAt = 1))
+        pending("s1")
+        queries.claim("cloud", 10, "s1")
+
+        assertTrue(
+            database.changedOne { failDroppingText("FAILED_PERMANENT", 1, "BAD_REQUEST", 20, "s1") },
+        )
+        val stored = queries.getRecap("s1").executeAsOne()
+        assertEquals("FAILED_PERMANENT", stored.status)
+        assertNull(stored.excerpt)
+        assertNull(stored.last_sentence)
+        assertEquals("h", stored.excerpt_hash)
+    }
+
+    @Test
     fun `latest for book prefers a succeeded recap`() {
         database.insertCapturingRow(row("done", createdAt = 1))
         database.insertCapturingRow(row("newer", createdAt = 2))

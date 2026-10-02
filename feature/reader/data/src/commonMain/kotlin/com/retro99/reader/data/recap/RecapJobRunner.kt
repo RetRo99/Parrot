@@ -152,7 +152,11 @@ class RecapJobRunner(
                 true
             }
             is RecapResult.Permanent -> {
-                database.fail(id, RecapStatus.FAILED_PERMANENT.name, attempt, null, result.code.name, now)
+                database.fail(
+                    id, RecapStatus.FAILED_PERMANENT.name, attempt, null, result.code.name, now,
+                    // Rejected input can't be retried; keep no text for it.
+                    dropText = result.code.isInputError,
+                )
                 true
             }
             is RecapResult.Retryable -> {

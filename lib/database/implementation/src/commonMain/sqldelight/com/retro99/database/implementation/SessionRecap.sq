@@ -168,6 +168,18 @@ UPDATE session_recap SET
     updated_at = :now
 WHERE session_id = :sessionId AND status = 'RUNNING';
 
+-- Rejected input can never be retried, so its text goes at once.
+failDroppingText:
+UPDATE session_recap SET
+    status = :status,
+    attempt_count = :attemptCount,
+    next_attempt_at = NULL,
+    last_error = :lastError,
+    excerpt = NULL,
+    last_sentence = NULL,
+    updated_at = :now
+WHERE session_id = :sessionId AND status = 'RUNNING';
+
 recoverStaleRunning:
 UPDATE session_recap SET
     status = 'PENDING',

@@ -128,11 +128,13 @@ class FakeSessionRecapDatabase : SessionRecapDatabase {
         nextAttemptAt: Long?,
         lastError: String?,
         now: Long,
+        dropText: Boolean,
     ) = update(sessionId, { it.status == "RUNNING" }) {
-        it.copy(
+        val failed = it.copy(
             status = status, attemptCount = attemptCount, nextAttemptAt = nextAttemptAt,
             lastError = lastError, updatedAt = now,
         )
+        if (dropText) failed.copy(excerpt = null, lastSentence = null, nextAttemptAt = null) else failed
     }
 
     override suspend fun recoverStaleRunning(staleBefore: Long, now: Long): Long {

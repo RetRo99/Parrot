@@ -146,8 +146,19 @@ internal class SessionRecapSqlDelightDao(
         nextAttemptAt: Long?,
         lastError: String?,
         now: Long,
+        dropText: Boolean,
     ): Boolean = io {
         database.changedOne {
+            if (dropText) {
+                failDroppingText(
+                    status = status,
+                    attemptCount = attemptCount.toLong(),
+                    lastError = lastError,
+                    now = now,
+                    sessionId = sessionId,
+                )
+                return@changedOne
+            }
             fail(
                 status = status,
                 attemptCount = attemptCount.toLong(),

@@ -59,7 +59,10 @@ interface SessionRecapDatabase : DataClearable {
         now: Long,
     ): Boolean
 
-    /** RUNNING to [status] with an error code and an optional retry time. */
+    /**
+     * RUNNING to [status] with an error code and an optional retry time.
+     * [dropText] nulls the excerpt and last sentence (rejected input).
+     */
     suspend fun fail(
         sessionId: String,
         status: String,
@@ -67,6 +70,7 @@ interface SessionRecapDatabase : DataClearable {
         nextAttemptAt: Long?,
         lastError: String?,
         now: Long,
+        dropText: Boolean = false,
     ): Boolean
 
     /** Returns RUNNING rows last touched before [staleBefore] to PENDING. */
