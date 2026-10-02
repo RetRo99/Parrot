@@ -14,6 +14,8 @@ val keystoreProperties = Properties().apply {
         keystorePropertiesFile.inputStream().use(::load)
     }
 }
+val releaseStoreFile = keystoreProperties.getProperty("storeFile")?.let(rootProject::file)
+val hasReleaseSigning = releaseStoreFile?.isFile == true
 
 android {
     namespace = "com.retro99.parrot.android"
@@ -32,9 +34,9 @@ android {
         }
     }
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (hasReleaseSigning) {
             create("release") {
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storeFile = releaseStoreFile
                 storePassword = keystoreProperties.getProperty("storePassword")
                 keyAlias = keystoreProperties.getProperty("keyAlias")
                 keyPassword = keystoreProperties.getProperty("keyPassword")
@@ -50,7 +52,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            // Never fall back to the debug key; see verifyReleaseSigning.
+            signingConfig = signingConfigs.findByName("release")
         }
     }
     compileOptions {
@@ -59,6 +62,22 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 }
+
+// Fails only when a release artifact is packaged, so debug builds, tests
+// and IDE sync keep working without a keystore.
+val verifyReleaseSigning by tasks.registering {
+    val signingAvailable = hasReleaseSigning
+    doLast {
+        if (!signingAvailable) {
+            throw GradleException(
+                "Release signing is not configured: add keystore.properties " +
+                    "(storeFile, storePassword, keyAlias, keyPassword) at the repo root.",
+            )
+        }
+    }
+}
+tasks.matching { task -> task.name == "packageRelease" || task.name == "bundleRelease" }
+    .configureEach { dependsOn(verifyReleaseSigning) }
 
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
