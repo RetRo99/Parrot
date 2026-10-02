@@ -204,6 +204,11 @@ The runner, retention, eligibility and UI need no changes.
 ## Privacy
 
 The API receives only `excerpt`, `language` and `lastSentence`: no titles, ids or
-chapter names. Summaries and excerpts are stored only on the device. Logs carry status
+chapter names. Summaries and excerpts are kept in the profile database on the device and
+never synced to Parrot Cloud. That database is part of OS backups (Android Auto Backup
+with `allowBackup="true"` and no exclusion rules; iOS iCloud/device backup), so recap
+rows go wherever the user's backups go; the settings copy says so. Excluding them
+would mean excluding the whole profile database or moving recaps to their own file.
+Logs carry status
 and error codes only (`RecapDiagnostics`); `toString()` of inputs, results and capture
 types omits the text. `recap_session_id` is not part of the synced statistics payload.
