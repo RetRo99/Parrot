@@ -100,6 +100,14 @@ class SessionRecapUiStateTest {
     }
 
     @Test
+    fun aRowTheServerWontAcceptAsksForSignInEvenWhenSignedIn() {
+        assertEquals(
+            SessionRecapUiState.SignInRequired,
+            sessionRecap(RecapStatus.PENDING, lastError = RecapErrorCode.AUTH_REQUIRED).state(),
+        )
+    }
+
+    @Test
     fun succeededStateNeverPrintsTheSummary() {
         val state = SessionRecapUiState.Succeeded("Secret plot.", engineId = "cloud", model = null)
 

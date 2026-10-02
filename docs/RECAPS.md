@@ -168,7 +168,8 @@ Observing never triggers generation. `SessionRecap` exposes no excerpt text.
 - **Statistics detail:** tapping a session opens time, speed, progress and its recap
   state (`toSessionRecapUiState(cloudRecapsEnabled, engineAvailable)`): none, not
   eligible, waiting for opt-in, generating, done (summary, engine, model), not enough
-  read, failed with Retry, failed for good, sign-in required.
+  read, failed with Retry, failed for good, sign-in required (also for a `PENDING` row
+  parked with `AUTH_REQUIRED` while the client still looks signed in).
 - **Settings:** App settings → Reading → Cloud recaps.
 
 ## Offline engine extension point

@@ -1,5 +1,6 @@
 package com.retro99.statistics.ui
 
+import com.retro99.reader.domain.recap.RecapErrorCode
 import com.retro99.reader.domain.recap.RecapStatus
 import com.retro99.reader.domain.recap.SessionRecap
 
@@ -59,6 +60,9 @@ fun SessionRecap?.toSessionRecapUiState(
         -> when {
             !cloudRecapsEnabled -> SessionRecapUiState.WaitingForOptIn
             !engineAvailable -> SessionRecapUiState.SignInRequired
+            // The server refused the session even though it looks signed in.
+            recap.status == RecapStatus.PENDING && recap.lastError == RecapErrorCode.AUTH_REQUIRED ->
+                SessionRecapUiState.SignInRequired
             recap.status == RecapStatus.FAILED_RETRYABLE ->
                 SessionRecapUiState.FailedRetryable(recap.canRetry)
             else -> SessionRecapUiState.Generating
