@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 set search_path = extensions, public;
-select plan(8);
+select plan(11);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at)
 values
@@ -46,9 +46,29 @@ select is(
     'deletion request blocks the owning account'
 );
 
+-- delete-cloud-account retries call this again after a partial failure.
+select lives_ok(
+    $$select public.request_cloud_account_deletion()$$,
+    'repeating the deletion request is idempotent'
+);
+
+select throws_ok(
+    $$select 1 from public.cloud_account_deletion_requests$$,
+    '42501',
+    null,
+    'accounts cannot read deletion requests directly'
+);
+
 reset role;
 set local role service_role;
 set local request.jwt.claim.role = 'service_role';
+-- The edge function reads this row to resume without a fresh sign-in.
+select is(
+    (select count(*)::integer from public.cloud_account_deletion_requests
+     where cloud_user_id = '11000000-0000-0000-0000-000000000001'),
+    1,
+    'service role sees exactly one deletion request for the account'
+);
 select is(
     public.redact_cloud_account_audit_events('11000000-0000-0000-0000-000000000001'::uuid),
     2,
