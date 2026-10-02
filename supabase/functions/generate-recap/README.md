@@ -30,7 +30,8 @@ Turn recaps off: `supabase secrets set RECAP_ENABLED=false --project-ref <projec
 ## Deploy
 
 The function needs the `consume_recap_quota` RPC from
-`supabase/migrations/20261002000000_parrot_cloud_recap_usage.sql`, so apply
+`supabase/migrations/20261002000000_parrot_cloud_recap_usage.sql` and the
+upload RPCs from `20261004000000_parrot_cloud_recap_uploads.sql`, so apply
 migrations first. Since `20261003000000_parrot_cloud_security_hardening.sql`,
 only accounts in `cloud_feature_allowlist` (feature `recap`) get recaps, and
 `recap_settings.global_daily_limit` caps all users together (default 500/day).
@@ -50,6 +51,27 @@ supabase functions deploy generate-recap --project-ref <project-ref>
 { "excerpt": "…at least 80 chars…", "language": "sl", "lastSentence": "optional" }
 ```
 
+Bodies over 256 KiB get 413: bodies of ~1 MB+ hang or fail at the Edge gateway
+(measured 2026-10-02: 200 KB fine; 1-10 MB no response; 20 MB+ gateway 502).
+Every early reply first drains the body (up to 16 MB) so it isn't stalled.
+A longer excerpt is uploaded in parts of at most 200k chars (the app keeps
+each body under 180 KB), all with one random upload id:
+
+```json
+{ "upload": { "id": "<uuid>", "index": 0, "total": 3 }, "text": "…part…" }
+{ "upload": { "id": "<uuid>", "index": 1, "total": 3 }, "text": "…part…" }
+{ "upload": { "id": "<uuid>", "index": 2, "total": 3 }, "text": "…last…", "language": "sl", "lastSentence": "optional" }
+```
+
+Parts before the last are stored by `put_recap_upload_part` (202, no quota,
+no model call) in `recap_upload_parts`: owned by the user, no client table
+access, at most 64 parts per upload and 128 held per user. The last part is
+sent after the others: `take_recap_upload` returns the stored parts joined in
+order and deletes them, then the request continues as a plain `{ excerpt }`
+one. A missing part gives 409 and the parts are dropped, so the app starts a
+new upload. Abandoned parts are deleted after an hour (on the user's next
+upload and by `purge_cloud_retention`).
+
 The excerpt is everything the user read in the session; there is no cap.
 
 - Up to 250k chars (`CHUNK_CHARS`, ~57k English / ~100k dense Slovenian tokens,
@@ -64,9 +86,6 @@ The excerpt is everything the user read in the session; there is no cap.
   Any failed part fails the recap with that part's status.
 - Time budget: past 2M chars (`MAX_INPUT_CHARS`, ~20 h of reading, ~9 parts) the
   most recent 2M are used and the log line says `trimmed`.
-- Bodies over `MAX_BODY_BYTES` (2M chars as 3-byte UTF-8 plus 64 KiB, ~6 MB)
-  get 413. It is a memory guard: Supabase documents no smaller request limit
-  and the function has 256 MB. The body is counted while streaming.
 - One recap uses one quota unit however many model calls it takes.
 
 Measured on `hy3` via Go (2026-10-02): 8k chars 3.2 s; 40k 4.0 s; 300k chars in
@@ -79,10 +98,13 @@ default `en`. Any other fields, such as `bookTitle`, are ignored.
 | Status | Body |
 |---|---|
 | 200 | `{ "kind": "recap", "summary": "…", "model": "hy3" }` or `{ "kind": "not_enough", "summary": null, "model": "hy3" }` (`model` is informational and optional for clients) |
+| 202 | Upload part stored: `{ "stored": <index> }` |
+| 400 | Invalid JSON, or an invalid upload part |
 | 401 | Not a verified, non-anonymous user |
-| 413 | Body over `MAX_BODY_BYTES` |
+| 409 | `Upload incomplete`: a stored part is missing; upload again |
+| 413 | Body over 256 KiB |
 | 422 | Excerpt too short, or unsupported language |
-| 429 | `daily recap limit reached`, or provider rate limit (both send `Retry-After`) |
+| 429 | `daily recap limit reached`, provider rate limit, or `recap upload refused` (all send `Retry-After`) |
 | 502 | Provider error or unusable output |
 | 503 | Disabled, not configured, or `recap provider unavailable` (Go key rejected) |
 | 504 | Provider timed out (60 s per attempt, 135 s per recap) |

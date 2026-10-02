@@ -20,6 +20,7 @@ import io.ktor.http.content.TextContent
 import io.ktor.http.fromHttpToGmtDate
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
@@ -31,6 +32,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Calls the generate-recap Edge Function as the signed-in user. All auth,
@@ -53,17 +56,24 @@ class CloudRecapEngine(
         if (excerpt.trim().length < MIN_EXCERPT_CHARS) {
             return RecapResult.Permanent(RecapErrorCode.EXCERPT_TOO_SHORT)
         }
-        val body = requestBody(excerpt, input)
-
+        val parts = splitForUpload(excerpt)
         val token = auth.accessToken() ?: return RecapResult.AuthRequired
+        val session = Session(token)
         return try {
-            var response = post(body, token)
-            if (response.status.value == 401) {
-                // Expired access token: refresh once, then give up until sign-in.
-                val refreshed = auth.refreshedAccessToken() ?: return RecapResult.AuthRequired
-                response = post(body, refreshed)
-                if (response.status.value == 401) return RecapResult.AuthRequired
+            if (parts.size == 1) {
+                val response = send(requestBody(input, excerpt = excerpt), session)
+                    ?: return RecapResult.AuthRequired
+                return map(response)
             }
+            // Long excerpt: earlier parts are stored, the last one generates.
+            val upload = UploadRef(newUploadId(), parts.size)
+            parts.dropLast(1).forEachIndexed { index, part ->
+                val response = send(partBody(upload, index, part), session)
+                    ?: return RecapResult.AuthRequired
+                if (response.status.value != 202) return map(response)
+            }
+            val response = send(requestBody(input, upload = upload, last = parts.last()), session)
+                ?: return RecapResult.AuthRequired
             map(response)
         } catch (e: CancellationException) {
             throw e
@@ -76,6 +86,20 @@ class CloudRecapEngine(
                 RecapResult.Retryable(RecapErrorCode.NETWORK)
             }
         }
+    }
+
+    private class Session(var token: String)
+
+    private class UploadRef(val id: String, val total: Int)
+
+    /** Posts with the session's token; null once a refresh can't help. */
+    private suspend fun send(body: String, session: Session): HttpResponse? {
+        val response = post(body, session.token)
+        if (response.status.value != 401) return response
+        // Expired access token: refresh once, then give up until sign-in.
+        val refreshed = auth.refreshedAccessToken() ?: return null
+        session.token = refreshed
+        return post(body, refreshed).takeIf { it.status.value != 401 }
     }
 
     private suspend fun post(body: String, token: String): HttpResponse =
@@ -91,6 +115,8 @@ class CloudRecapEngine(
         return when (status) {
             200 -> parseSuccess(response.bodyAsText())
             400, 405, 413 -> RecapResult.Permanent(RecapErrorCode.BAD_REQUEST)
+            // A stored part expired or was lost; the next attempt re-uploads.
+            409 -> RecapResult.Retryable(RecapErrorCode.UNKNOWN)
             // Not a token problem (the function never sends it): back off.
             403 -> RecapResult.Retryable(RecapErrorCode.UNKNOWN, retryAfter(response))
             422 -> RecapResult.Permanent(unprocessableCode(response.bodyAsText()))
@@ -141,13 +167,39 @@ class CloudRecapEngine(
         return delay.coerceIn(Duration.ZERO, MAX_RETRY_AFTER)
     }
 
-    private fun requestBody(excerpt: String, input: RecapInput): String = buildJsonObject {
-        put("excerpt", excerpt)
+    private fun requestBody(
+        input: RecapInput,
+        excerpt: String? = null,
+        upload: UploadRef? = null,
+        last: String? = null,
+    ): String = buildJsonObject {
+        excerpt?.let { put("excerpt", it) }
+        if (upload != null && last != null) {
+            putUpload(upload, upload.total - 1)
+            put("text", last)
+        }
         supportedLanguage(input.language)?.let { put("language", it) }
         input.lastSentence?.trim()?.takeIf { it.isNotEmpty() }?.let {
             put("lastSentence", it.take(RecapLimits.MAX_LAST_SENTENCE_CHARS))
         }
     }.toString()
+
+    private fun partBody(upload: UploadRef, index: Int, text: String): String =
+        buildJsonObject {
+            putUpload(upload, index)
+            put("text", text)
+        }.toString()
+
+    private fun JsonObjectBuilder.putUpload(upload: UploadRef, index: Int) {
+        put(
+            "upload",
+            buildJsonObject {
+                put("id", upload.id)
+                put("index", index)
+                put("total", upload.total)
+            },
+        )
+    }
 
     private fun JsonObject.string(key: String): String? =
         (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
@@ -166,6 +218,47 @@ class CloudRecapEngine(
 
         /** The server's minimum after trim. */
         const val MIN_EXCERPT_CHARS = 80
+
+        /**
+         * Bodies of ~1 MB+ fail at the Edge gateway, so a request carries
+         * at most this much excerpt (as a JSON string, UTF-8); the server
+         * accepts 256 KiB per body.
+         */
+        const val MAX_PART_BYTES = 180_000
+
+        /** The server's limits per upload part and per upload. */
+        const val MAX_PART_CHARS = 200_000
+        const val MAX_UPLOAD_PARTS = 64
+
+        /**
+         * Splits [text] into parts whose JSON-escaped UTF-8 size is at most
+         * [maxBytes]; joined, they are exactly [text]. Over [MAX_UPLOAD_PARTS]
+         * (~11M chars) only the newest parts go: the server reads 2M at most.
+         */
+        fun splitForUpload(text: String, maxBytes: Int = MAX_PART_BYTES): List<String> {
+            val parts = mutableListOf<String>()
+            var start = 0
+            while (start < text.length) {
+                var end = minOf(text.length, start + minOf(maxBytes, MAX_PART_CHARS))
+                while (true) {
+                    // Never split a surrogate pair.
+                    if (end < text.length && end > start + 1 && text[end - 1].isHighSurrogate()) end--
+                    val size = jsonBytes(text.substring(start, end))
+                    if (size <= maxBytes) break
+                    end = start + ((end - start).toLong() * maxBytes / size * 95 / 100).toInt()
+                        .coerceAtLeast(1)
+                }
+                parts += text.substring(start, end)
+                start = end
+            }
+            return if (parts.size > MAX_UPLOAD_PARTS) parts.takeLast(MAX_UPLOAD_PARTS) else parts
+        }
+
+        private fun jsonBytes(text: String): Int =
+            JsonPrimitive(text).toString().encodeToByteArray().size
+
+        @OptIn(ExperimentalUuidApi::class)
+        private fun newUploadId(): String = Uuid.random().toString()
 
         private val MAX_RETRY_AFTER = 24.hours
 
