@@ -27,6 +27,7 @@ import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.github.michaelbull.result.onFailure
 import com.retro99.base.deeplink.DeepLinkUriBuilder
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.ui.media.MediaOverlayClip
@@ -39,9 +40,12 @@ import com.retro99.reader.ui.playback.auto.AutoMediaIds
 import com.retro99.reader.ui.playback.auto.HeadlessPlaybackSession
 import com.retro99.reader.ui.playback.auto.HeadlessSessionFactory
 import com.retro99.reader.ui.tts.TtsChapterTimeline
+import com.retro99.statistics.domain.AudiobookSessionTracker
+import com.retro99.statistics.domain.usecase.SaveReadingSessionUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -91,6 +95,20 @@ class MediaPlaybackService : MediaLibraryService() {
     private val clipRepository: SmilClipRepository by inject()
     private val autoMediaBrowser: AutoMediaBrowser by inject()
     private val headlessSessionFactory: HeadlessSessionFactory by inject()
+    private val saveReadingSessionUseCase: SaveReadingSessionUseCase by inject()
+    private val audiobookStatistics = AudiobookSessionTracker(saveSession = { session ->
+        serviceScope.launch(NonCancellable) {
+            saveReadingSessionUseCase(
+                bookUuid = session.bookUuid,
+                bookTitle = session.bookTitle,
+                bookType = session.bookType,
+                startTime = session.startTime,
+                endTime = session.endTime,
+                durationMs = session.durationMs,
+                readingSpeedWpm = 0,
+            ).onFailure { error -> Log.e(TAG, "Failed to save audiobook statistics: $error") }
+        }
+    })
 
     // Service owns these - they survive ReaderScope destruction
     private var player: ExoPlayer? = null
@@ -230,6 +248,7 @@ class MediaPlaybackService : MediaLibraryService() {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             Log.d(TAG, "SERVICE onIsPlayingChanged: isPlaying=$isPlaying, clipsCount=${currentChapterClips.size}")
             _isPlaying.value = isPlaying
+            audiobookStatistics.setPlaying(isPlaying)
             synchronized(stateLock) {
                 wasPlaying = isPlaying
             }
@@ -370,6 +389,7 @@ class MediaPlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        audiobookStatistics.finish()
         Log.d(TAG, "onDestroy() called", Exception("stack trace"))
         handler.removeCallbacks(stopSelfRunnable)
         stopPositionUpdates()
@@ -413,12 +433,22 @@ class MediaPlaybackService : MediaLibraryService() {
         bookUuid: String? = null,
         bookType: BookType? = null,
     ) {
+        if ((bookUuid != null && bookUuid != this.bookUuid) ||
+            (bookType != null && bookType != this.bookType)
+        ) {
+            audiobookStatistics.finish()
+        }
         if (bookTitle != null) this.bookTitle = bookTitle
         if (chapterTitle != null) this.chapterTitle = chapterTitle
         if (coverArtwork != null) this.coverArtwork = coverArtwork
         if (serverId != null) this.serverId = serverId
         if (bookUuid != null) this.bookUuid = bookUuid
         if (bookType != null) this.bookType = bookType
+        audiobookStatistics.setBook(
+            this.bookUuid.takeIf { this.bookType == BookType.AUDIOBOOK },
+            this.bookTitle,
+        )
+        audiobookStatistics.setPlaying(player?.isPlaying == true)
 
         // Update session activity for deep link
         updateSessionActivity()

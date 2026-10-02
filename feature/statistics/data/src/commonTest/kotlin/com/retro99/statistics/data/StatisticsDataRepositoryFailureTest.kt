@@ -34,9 +34,9 @@ class StatisticsDataRepositoryFailureTest {
     }
 
     @Test
-    fun readingDaysFailureIsPropagatedInsteadOfBecomingAnEmptyStreak() = runTest {
+    fun sessionQueryFailureIsPropagatedInsteadOfBecomingAnEmptyStreak() = runTest {
         val repository = StatisticsDataRepository(
-            localSource = FakeStatisticsLocalSource(failAt = Query.READING_DAYS),
+            localSource = FakeStatisticsLocalSource(failAt = Query.ALL_SESSIONS),
         )
 
         val result = repository.getReadingStreak()
@@ -63,11 +63,23 @@ class StatisticsDataRepositoryFailureTest {
         assertEquals(0, statistics.currentStreak)
         assertEquals(0, statistics.longestStreak)
     }
+
+    @Test
+    fun localCalendarQueryFailureIsPropagatedFromTheDashboard() = runTest {
+        val repository = StatisticsDataRepository(
+            localSource = FakeStatisticsLocalSource(failAt = Query.ALL_SESSIONS),
+        )
+        repository.getReadingStatistics().first().fold(
+            success = { error("Expected the session query failure to propagate") },
+            failure = { assertIs<AppError.DatabaseError>(it) },
+        )
+    }
 }
 
 private enum class Query {
     TOTAL_TIME,
     READING_DAYS,
+    ALL_SESSIONS,
 }
 
 private class FakeStatisticsLocalSource(
@@ -83,7 +95,8 @@ private class FakeStatisticsLocalSource(
 
     override suspend fun insertSession(session: ReadingSessionDomainModel): CompletableResult = Ok(Unit)
 
-    override suspend fun getAllSessions(): AppResult<List<ReadingSessionDomainModel>> = Ok(emptyList())
+    override suspend fun getAllSessions(): AppResult<List<ReadingSessionDomainModel>> =
+        result(Query.ALL_SESSIONS, emptyList())
 
     override suspend fun getSessionsByBookUuid(
         bookUuid: String,

@@ -73,6 +73,7 @@ import com.retro99.reader.ui.tts.SupertonicTermsStore
 import com.retro99.reader.ui.tts.TtsPreparationProgress
 import com.retro99.reader.ui.tts.TtsVoicePreparationState
 import com.retro99.reader.ui.tts.neuralVoicePackage
+import com.retro99.statistics.domain.ActiveSessionTimer
 import com.retro99.statistics.domain.usecase.SaveReadingSessionUseCase
 import com.retro99.sync.domain.RoutineSyncScheduler
 import com.retro99.sync.domain.SyncRequest
@@ -250,8 +251,9 @@ class ReaderViewModel(
     /** Serializes full reader-settings updates so concurrent controls cannot lose changes. */
     private val readerSettingsSaveMutex = Mutex()
 
-    /** Timestamp when the book was opened, used for calculating reading duration */
+    /** Wall-clock start for the saved session; active duration uses a monotonic timer. */
     private var bookOpenedTimestamp: Long = 0L
+    private val statisticsTimer = ActiveSessionTimer()
 
     /** Recap session id, minted when the book opens; null until then. */
     private var recapSessionId: String? = null
@@ -714,6 +716,7 @@ class ReaderViewModel(
         ).onSuccess { publication ->
             // Track book opened event
             bookOpenedTimestamp = nowMillis()
+            statisticsTimer.setActive(isReaderVisible)
             startRecapSession(data.serverId, data.bookUuid, position, publication.language)
             analytics.logEvent(
                 ReaderAnalyticsEvent.BookOpened(
@@ -2622,6 +2625,9 @@ class ReaderViewModel(
         hasRequestedClose = true
         // Kept for the statistics row; endRecapSession() clears it.
         val closedRecapSessionId = recapSessionId
+        val readingDurationMs = statisticsTimer.finish() ?: 0L
+        val endTime = nowMillis()
+        saveStatisticsSession(readingDurationMs, endTime, closedRecapSessionId)
         endRecapSession()
         completeContinueReadingOpen(
             outcome = ContinueReadingOpenOutcome.Cancelled,
@@ -2643,17 +2649,8 @@ class ReaderViewModel(
 
             // Track book closed event with reading duration and progress
             val currentState = viewState.value
-            val endTime = nowMillis()
-            val readingDurationMs = if (bookOpenedTimestamp > 0) {
-                endTime - bookOpenedTimestamp
-            } else {
-                0L
-            }
             val progressPercent = currentState.currentPosition?.totalProgression
                 ?.let { (it * 100).toInt() } ?: 0
-            val sessionReadingSpeedWpm = readingSpeedTracker.establishedReadingSpeedWpm.value
-                ?: currentState.currentSettings?.readingSpeedWpm
-                ?: 250
 
             analytics.logEvent(
                 ReaderAnalyticsEvent.BookClosed(
@@ -2662,21 +2659,6 @@ class ReaderViewModel(
                     progressPercent = progressPercent,
                 )
             )
-
-            // Save reading session for statistics (only if we have a valid session)
-            if (bookOpenedTimestamp > 0 && readingDurationMs > 0 && currentState.bookTitle.isNotEmpty()) {
-                saveReadingSessionUseCase(
-                    bookUuid = bookUuid,
-                    bookTitle = currentState.bookTitle,
-                    bookType = currentState.bookType,
-                    startTime = bookOpenedTimestamp,
-                    endTime = endTime,
-                    durationMs = readingDurationMs,
-                    endProgression = currentState.currentPosition?.totalProgression,
-                    readingSpeedWpm = sessionReadingSpeedWpm,
-                    recapSessionId = closedRecapSessionId,
-                )
-            }
 
             // The reading session ended: move the other linked copies here too (slice 4).
             finalPosition?.let { position -> propagateToLinkedCopies(position) }
@@ -2908,6 +2890,7 @@ class ReaderViewModel(
         wasPlaying = isPlaying
 
         updateState { it.copy(isPlaying = isPlaying) }
+        if (bookOpenedTimestamp > 0L) statisticsTimer.setActive(isReaderVisible || isPlaying)
         if (!isPlaying) {
             saveCurrentAudioPosition()
         }
@@ -3006,6 +2989,9 @@ class ReaderViewModel(
     }
 
     override fun onCleared() {
+        statisticsTimer.finish()?.let { durationMs ->
+            saveStatisticsSession(durationMs, nowMillis(), recapSessionId)
+        }
         // Left without close(): still end the recap session.
         endRecapSession()
         currentBookTargetCheckpoint?.cancel()
@@ -3083,7 +3069,30 @@ class ReaderViewModel(
 
     private fun setReaderVisible(visible: Boolean) {
         isReaderVisible = visible
+        if (bookOpenedTimestamp > 0L) {
+            statisticsTimer.setActive(visible || viewState.value.isPlaying)
+        }
         recapCapture?.setForeground(visible)
+    }
+
+    private fun saveStatisticsSession(durationMs: Long, endTime: Long, recapId: String?) {
+        val state = viewState.value
+        if (bookOpenedTimestamp <= 0L || durationMs <= 0L || state.bookTitle.isEmpty()) return
+        val speed = readingSpeedTracker.establishedReadingSpeedWpm.value
+            ?: state.currentSettings?.readingSpeedWpm ?: 250
+        viewModelScope.launch(NonCancellable) {
+            saveReadingSessionUseCase(
+                bookUuid = bookUuid,
+                bookTitle = state.bookTitle,
+                bookType = state.bookType,
+                startTime = bookOpenedTimestamp,
+                endTime = endTime,
+                durationMs = durationMs,
+                endProgression = state.currentPosition?.totalProgression,
+                readingSpeedWpm = speed,
+                recapSessionId = recapId,
+            ).onFailure { error -> error.log(analytics, "ReaderViewModel: Failed to save statistics") }
+        }
     }
 
     private fun endRecapSession() {

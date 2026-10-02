@@ -11,6 +11,7 @@ import com.retro99.base.result.CompletableResult
 import com.retro99.books.domain.model.BookType
 import com.retro99.statistics.data.source.StatisticsLocalSource
 import com.retro99.statistics.domain.StatisticsRepository
+import com.retro99.statistics.domain.StatisticsSessionCalendar
 import com.retro99.statistics.domain.model.BookReadingStatsDomainModel
 import com.retro99.statistics.domain.model.DailyReadingTimeDomainModel
 import com.retro99.statistics.domain.model.ReadingSessionDomainModel
@@ -18,9 +19,15 @@ import com.retro99.statistics.domain.model.ReadingStatisticsDomainModel
 import com.retro99.statistics.domain.model.ReadingStreakDomainModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 import kotlin.collections.mapKeys
+import kotlin.time.Instant
 
 @Single(binds = [StatisticsRepository::class])
 internal class StatisticsDataRepository(
@@ -28,9 +35,7 @@ internal class StatisticsDataRepository(
 ) : StatisticsRepository {
 
     companion object {
-        private const val MS_PER_DAY = 86400000L
         private const val DAYS_IN_WEEK = 7
-        private const val DAYS_IN_MONTH = 30
         private const val DAYS_FOR_CHART = 30
         private const val TOP_BOOKS_LIMIT = 5
     }
@@ -67,9 +72,8 @@ internal class StatisticsDataRepository(
 
         val now = nowMillis()
         val todayStart = getStartOfDay(now)
-        val weekStart = todayStart - (DAYS_IN_WEEK * MS_PER_DAY)
-        val monthStart = todayStart - (DAYS_IN_MONTH * MS_PER_DAY)
-        val chartStart = todayStart - (DAYS_FOR_CHART * MS_PER_DAY)
+        val weekStart = getPeriodStart(now, DAYS_IN_WEEK, DateTimeUnit.DAY)
+        val monthStart = getPeriodStart(now, 1, DateTimeUnit.MONTH)
 
         val totalTime = valueOrEmitError(localSource.getTotalReadingTimeMs()) ?: return@flow
         val todayTime = valueOrEmitError(
@@ -85,7 +89,7 @@ internal class StatisticsDataRepository(
             ?: return@flow
         val totalBooks = valueOrEmitError(localSource.getDistinctBooksReadInDateRange(0, now))
             ?: return@flow
-        val dailyReadingTime = valueOrEmitError(localSource.getDailyReadingTime(chartStart))
+        val dailyReadingTime = valueOrEmitError(getDailyReadingTime(DAYS_FOR_CHART))
             ?: return@flow
         val mostReadBooks = valueOrEmitError(localSource.getMostReadBooks(0, now, TOP_BOOKS_LIMIT))
             ?: return@flow
@@ -124,13 +128,13 @@ internal class StatisticsDataRepository(
 
     override suspend fun getWeekReadingTimeMs(): AppResult<Long> {
         val now = nowMillis()
-        val weekStart = getStartOfDay(now) - (DAYS_IN_WEEK * MS_PER_DAY)
+        val weekStart = getPeriodStart(now, DAYS_IN_WEEK, DateTimeUnit.DAY)
         return localSource.getTotalReadingTimeMsInDateRange(weekStart, now)
     }
 
     override suspend fun getMonthReadingTimeMs(): AppResult<Long> {
         val now = nowMillis()
-        val monthStart = getStartOfDay(now) - (DAYS_IN_MONTH * MS_PER_DAY)
+        val monthStart = getPeriodStart(now, 1, DateTimeUnit.MONTH)
         return localSource.getTotalReadingTimeMsInDateRange(monthStart, now)
     }
 
@@ -138,8 +142,12 @@ internal class StatisticsDataRepository(
         days: Int,
     ): AppResult<List<DailyReadingTimeDomainModel>> {
         val now = nowMillis()
-        val sinceTimestamp = getStartOfDay(now) - (days * MS_PER_DAY)
-        return localSource.getDailyReadingTime(sinceTimestamp)
+        require(days >= 0)
+        val sinceTimestamp = getPeriodStart(now, days, DateTimeUnit.DAY)
+        val timeZone = TimeZone.currentSystemDefault()
+        return localSource.getAllSessions().map { sessions ->
+            StatisticsSessionCalendar.dailyTime(sessions, sinceTimestamp, timeZone)
+        }
     }
 
     override suspend fun getMostReadBooks(
@@ -174,78 +182,21 @@ internal class StatisticsDataRepository(
     }
 
     private suspend fun calculateStreak(now: Long): AppResult<ReadingStreakDomainModel> {
-        val yearAgo = now - (365 * MS_PER_DAY)
-        return localSource.getReadingDays(yearAgo).fold(
-            success = { Ok(calculateStreak(it, now)) },
-            failure = { Err(it) },
-        )
-    }
-
-    private fun calculateStreak(readingDays: List<Long>, now: Long): ReadingStreakDomainModel {
-        if (readingDays.isEmpty()) {
-            return ReadingStreakDomainModel(0, 0, null)
+        val timeZone = TimeZone.currentSystemDefault()
+        val today = Instant.fromEpochMilliseconds(now).toLocalDateTime(timeZone).date
+        return localSource.getAllSessions().map { sessions ->
+            StatisticsSessionCalendar.streak(sessions, today, timeZone)
         }
-
-        val todayDayNumber = now / MS_PER_DAY
-        val sortedDays = readingDays.sorted().reversed()
-        var currentStreak = 0
-        var longestStreak = 0
-        var tempStreak = 1
-        var lastDay = sortedDays.first()
-
-        // Track days for each streak
-        var currentStreakDays = mutableListOf<Long>()
-        var longestStreakDays = mutableListOf<Long>()
-        var tempStreakDays = mutableListOf(sortedDays.first())
-
-        // Check if the most recent reading day is today or yesterday
-        val isCurrentStreakActive = lastDay == todayDayNumber || lastDay == todayDayNumber - 1
-
-        for (i in 1 until sortedDays.size) {
-            val currentDay = sortedDays[i]
-            if (lastDay - currentDay == 1L) {
-                tempStreak++
-                tempStreakDays.add(currentDay)
-            } else {
-                if (isCurrentStreakActive && currentStreak == 0) {
-                    currentStreak = tempStreak
-                    currentStreakDays = tempStreakDays.toMutableList()
-                }
-                if (tempStreak > longestStreak) {
-                    longestStreak = tempStreak
-                    longestStreakDays = tempStreakDays.toMutableList()
-                }
-                tempStreak = 1
-                tempStreakDays = mutableListOf(currentDay)
-            }
-            lastDay = currentDay
-        }
-
-        // Handle the last streak
-        if (isCurrentStreakActive && currentStreak == 0) {
-            currentStreak = tempStreak
-            currentStreakDays = tempStreakDays.toMutableList()
-        }
-        if (tempStreak > longestStreak) {
-            longestStreak = tempStreak
-            longestStreakDays = tempStreakDays.toMutableList()
-        }
-
-        // Convert day numbers to timestamps (start of day)
-        val currentStreakTimestamps = currentStreakDays.map { it * MS_PER_DAY }.sorted()
-        val longestStreakTimestamps = longestStreakDays.map { it * MS_PER_DAY }.sorted()
-
-        return ReadingStreakDomainModel(
-            currentStreak = currentStreak,
-            longestStreak = longestStreak,
-            lastReadingDay = sortedDays.first() * MS_PER_DAY,
-            currentStreakDays = currentStreakTimestamps,
-            longestStreakDays = longestStreakTimestamps,
-        )
     }
 
     private fun getStartOfDay(timestamp: Long): Long {
-        return (timestamp / MS_PER_DAY) * MS_PER_DAY
+        return getPeriodStart(timestamp, 0, DateTimeUnit.DAY)
+    }
+
+    private fun getPeriodStart(timestamp: Long, amount: Int, unit: DateTimeUnit.DateBased): Long {
+        val timeZone = TimeZone.currentSystemDefault()
+        return Instant.fromEpochMilliseconds(timestamp).toLocalDateTime(timeZone).date
+            .minus(amount, unit).atStartOfDayIn(timeZone).toEpochMilliseconds()
     }
 }
 
