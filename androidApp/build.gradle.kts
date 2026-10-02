@@ -14,8 +14,18 @@ val keystoreProperties = Properties().apply {
         keystorePropertiesFile.inputStream().use(::load)
     }
 }
+val releaseSigningKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+val missingSigningKeys = releaseSigningKeys.filter { key ->
+    keystoreProperties.getProperty(key).isNullOrBlank()
+}
 val releaseStoreFile = keystoreProperties.getProperty("storeFile")?.let(rootProject::file)
-val hasReleaseSigning = releaseStoreFile?.isFile == true
+val releaseSigningProblem: String? = when {
+    !keystorePropertiesFile.exists() -> "keystore.properties is missing at the repo root"
+    missingSigningKeys.isNotEmpty() -> "keystore.properties lacks ${missingSigningKeys.joinToString()}"
+    releaseStoreFile?.isFile != true -> "keystore file $releaseStoreFile does not exist"
+    else -> null
+}
+val hasReleaseSigning = releaseSigningProblem == null
 
 android {
     namespace = "com.retro99.parrot.android"
@@ -52,7 +62,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // Never fall back to the debug key; see verifyReleaseSigning.
+            // Never fall back to the debug key; see the release signing gate.
             signingConfig = signingConfigs.findByName("release")
         }
     }
@@ -63,21 +73,25 @@ android {
     }
 }
 
-// Fails only when a release artifact is packaged, so debug builds, tests
-// and IDE sync keep working without a keystore.
-val verifyReleaseSigning by tasks.registering {
-    val signingAvailable = hasReleaseSigning
-    doLast {
-        if (!signingAvailable) {
+// Runs inside the release packaging tasks themselves, so `-x` cannot skip it,
+// while debug builds, tests and IDE sync keep working without a keystore.
+val releasePackagingTasks = setOf(
+    "packageRelease",
+    "packageReleaseBundle",
+    "signReleaseBundle",
+    "bundleRelease",
+)
+tasks.matching { task -> task.name in releasePackagingTasks }.configureEach {
+    val problem = releaseSigningProblem
+    doFirst {
+        if (problem != null) {
             throw GradleException(
-                "Release signing is not configured: add keystore.properties " +
-                    "(storeFile, storePassword, keyAlias, keyPassword) at the repo root.",
+                "Release signing is not configured: $problem. Provide storeFile, " +
+                    "storePassword, keyAlias and keyPassword in keystore.properties.",
             )
         }
     }
 }
-tasks.matching { task -> task.name == "packageRelease" || task.name == "bundleRelease" }
-    .configureEach { dependsOn(verifyReleaseSigning) }
 
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
