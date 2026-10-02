@@ -1,6 +1,7 @@
 services:
   storyteller:
-    image: registry.gitlab.com/storyteller-platform/storyteller:latest
+    # Pinned: same image as :latest on 2026-10-02. Bump deliberately.
+    image: registry.gitlab.com/storyteller-platform/storyteller:web-v2.14.23
     restart: unless-stopped
     environment:
       STORYTELLER_SECRET_KEY_FILE: /run/secrets/secret_key

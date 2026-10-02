@@ -56,16 +56,16 @@ default `en`. Any other fields, such as `bookTitle`, are ignored.
 | Status | Body |
 |---|---|
 | 200 | `{ "kind": "recap", "summary": "…" }` or `{ "kind": "not_enough", "summary": null }` |
-| 401 | Not a verified, non-anonymous user |
+| 401 | Not a verified, non-anonymous user, or the session was revoked |
 | 422 | Excerpt too short, or unsupported language |
 | 429 | `daily recap limit reached`, or provider rate limit (both send `Retry-After`) |
 | 502 | Provider error or unusable output |
 | 503 | Disabled, not configured, or `recap provider unavailable` (Go key rejected) |
-| 504 | Provider timed out (20 s) |
+| 504 | Provider timed out (60 s per attempt) |
 
 ## Tests
 
 ```sh
 cd supabase/functions
-deno test --node-modules-dir=none generate-recap/
+deno test generate-recap/
 ```
