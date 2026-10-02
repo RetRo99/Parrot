@@ -41,6 +41,7 @@ kotlin {
             implementation(projects.feature.books.domain)
             implementation(projects.feature.books.data)
             implementation(projects.lib.cloud.implementation)
+            implementation(projects.lib.user.api)
             implementation(libs.supabase.auth)
             implementation(libs.ktor.client.core)
         }

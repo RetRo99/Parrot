@@ -20,6 +20,7 @@ import com.retro99.reader.domain.recap.RecapEngineSelector
 import com.retro99.reader.domain.recap.RecapRepository
 import com.retro99.reader.domain.recap.RecapSessionRecorder
 import com.retro99.reader.domain.recap.RecapSettings
+import com.retro99.user.api.UserRegistry
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngineFactory
 import io.ktor.client.plugins.HttpTimeout
@@ -69,7 +70,13 @@ class ReaderDataModule {
         database: SessionRecapDatabase,
         selector: RecapEngineSelector,
         analytics: Analytics,
-    ): RecapJobRunner = RecapJobRunner(database, selector, RecapDiagnostics(analytics))
+        userRegistry: UserRegistry,
+    ): RecapJobRunner = RecapJobRunner(
+        database = database,
+        selector = selector,
+        diagnostics = RecapDiagnostics(analytics),
+        activeProfileId = userRegistry::getActiveProfileIdOrDefault,
+    )
 
     @Single
     internal fun provideRecapSessionRecorderImpl(

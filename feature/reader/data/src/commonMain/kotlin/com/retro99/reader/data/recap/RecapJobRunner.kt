@@ -49,6 +49,9 @@ class RecapJobRunner(
     private val diagnostics: RecapDiagnostics,
     private val clock: Clock = Clock.System,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    // The database and token follow the active profile; a pass must not
+    // span a switch.
+    private val activeProfileId: () -> String? = { null },
 ) {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val wakeups = Channel<RecapTrigger>(Channel.CONFLATED)
@@ -119,6 +122,7 @@ class RecapJobRunner(
             now = now,
             maxAttempts = RecapJobPolicy.MAX_ATTEMPTS,
         )
+        val profile = activeProfileId()
         var sent = 0
         var guard = 0
         while (guard++ < MAX_ROWS_PER_PASS) {
@@ -129,6 +133,9 @@ class RecapJobRunner(
             if (!database.claim(row.sessionId, engine.id, clock.now().toEpochMilliseconds())) {
                 continue
             }
+            // Never send one profile's text with another's token; the row
+            // is recovered as stale in its own profile later.
+            if (profileChanged(profile)) break
             sent++
             val result = try {
                 engine.generate(RecapInput(excerpt, row.language, row.lastSentence))
@@ -136,14 +143,18 @@ class RecapJobRunner(
                 // e.g. WorkManager stopped the worker: back off instead of
                 // leaving the row RUNNING until stale recovery.
                 withContext(NonCancellable) {
-                    record(row, attempt = row.attemptCount + 1, RecapResult.Retryable(RecapErrorCode.NETWORK))
-                    scheduleNext()
+                    if (!profileChanged(profile)) {
+                        record(row, attempt = row.attemptCount + 1, RecapResult.Retryable(RecapErrorCode.NETWORK))
+                        scheduleNext()
+                    }
                 }
                 throw e
             } catch (e: Exception) {
                 diagnostics.failure(e, stage = "generate")
                 RecapResult.Retryable(RecapErrorCode.UNKNOWN)
             }
+            // The result belongs to a database that is no longer open.
+            if (profileChanged(profile)) break
             if (!record(row, attempt = row.attemptCount + 1, result)) break
         }
         scheduleNext()
@@ -171,19 +182,20 @@ class RecapJobRunner(
     private suspend fun record(row: SessionRecapEntity, attempt: Int, result: RecapResult): Boolean {
         val now = clock.now().toEpochMilliseconds()
         val id = row.sessionId
+        var stored = true
         val keepGoing = when (result) {
             is RecapResult.Success -> {
-                database.complete(id, RecapStatus.SUCCEEDED.name, result.summary, result.model, now)
+                stored = database.complete(id, RecapStatus.SUCCEEDED.name, result.summary, result.model, now)
                 authFailures = 0
                 true
             }
             RecapResult.NotEnough -> {
-                database.complete(id, RecapStatus.NOT_ENOUGH.name, null, null, now)
+                stored = database.complete(id, RecapStatus.NOT_ENOUGH.name, null, null, now)
                 authFailures = 0
                 true
             }
             is RecapResult.Permanent -> {
-                database.fail(
+                stored = database.fail(
                     id, RecapStatus.FAILED_PERMANENT.name, attempt, null, result.code.name, now,
                     // Rejected input can't be retried; keep no text for it.
                     dropText = result.code.isInputError,
@@ -194,7 +206,7 @@ class RecapJobRunner(
                 val next = RecapJobPolicy.nextAttemptAt(now, attempt, result.retryAfter)
                 val capped = RecapJobPolicy.countsTowardCap(result.code) &&
                     attempt >= RecapJobPolicy.MAX_ATTEMPTS
-                if (capped) {
+                stored = if (capped) {
                     // The time is kept so a user retry still honours it.
                     database.fail(id, RecapStatus.FAILED_PERMANENT.name, attempt, next, result.code.name, now)
                 } else {
@@ -207,7 +219,7 @@ class RecapJobRunner(
             RecapResult.AuthRequired -> {
                 // Not billed: undo the attempt. Back off, since the server
                 // can keep refusing a session the client thinks is valid.
-                database.fail(
+                stored = database.fail(
                     id, RecapStatus.PENDING.name, attempt - 1, null, RecapErrorCode.AUTH_REQUIRED.name, now,
                 )
                 authFailures++
@@ -216,7 +228,18 @@ class RecapJobRunner(
             }
         }
         diagnostics.breadcrumb(stage = "result", outcome = result.outcomeName(), reasonCode = result.code()?.name)
+        if (!stored) {
+            // The row changed under us (e.g. deleted); stop rather than guess.
+            diagnostics.breadcrumb(stage = "result", outcome = "not_stored", reasonCode = null)
+            return false
+        }
         return keepGoing
+    }
+
+    private fun profileChanged(profile: String?): Boolean {
+        if (activeProfileId() == profile) return false
+        diagnostics.breadcrumb(stage = "pass", outcome = "profile_changed", reasonCode = null)
+        return true
     }
 
     private suspend fun scheduleNext() {

@@ -24,12 +24,15 @@ class RecapJobRunnerTest {
     private val selector = FakeRecapSelector(engine)
     private val analytics = RecordingAnalytics()
 
+    private var profile = "a"
+
     private fun runner() = RecapJobRunner(
         database = database,
         selector = selector,
         diagnostics = RecapDiagnostics(analytics),
         clock = clock,
         dispatcher = StandardTestDispatcher(),
+        activeProfileId = { profile },
     )
 
     @Test
@@ -129,6 +132,23 @@ class RecapJobRunnerTest {
         assertEquals("NETWORK", row.lastError)
         assertEquals(1, row.attemptCount)
         assertEquals(clock.nowMs + RecapJobPolicy.backoff(1).inWholeMilliseconds, row.nextAttemptAt)
+    }
+
+    @Test
+    fun aProfileSwitchMidRequestStoresNothingAndStopsThePass() = runTest {
+        database.put(pendingRow("s1", createdAt = 1))
+        database.put(pendingRow("s2", createdAt = 2))
+        engine.next = {
+            profile = "b"
+            RecapResult.Success("Wrong place.", null)
+        }
+
+        assertEquals(1, runner().runPending())
+
+        // Left for stale recovery in its own profile, not written elsewhere.
+        assertEquals("RUNNING", database["s1"]!!.status)
+        assertNull(database["s1"]!!.summary)
+        assertEquals("PENDING", database["s2"]!!.status)
     }
 
     @Test

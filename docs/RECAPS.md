@@ -113,6 +113,9 @@ CAPTURING ─► SKIPPED_INELIGIBLE
 
 - App-scoped, one row at a time, oldest first. Each row is claimed by a conditional
   `UPDATE … WHERE status IN (PENDING, FAILED_RETRYABLE)` before any request.
+- A pass stops if the active profile changes after the claim (the database and token
+  follow it): nothing is sent with the other profile's token, and a result that
+  arrives after a switch is dropped; the row is recovered as stale later.
 - `RUNNING` rows untouched for 3 min are reset to `PENDING` (process death), or to
   `FAILED_PERMANENT/MAX_ATTEMPTS` once they have used all attempts. The runner
   schedules a wake-up for that moment. A cancelled request (e.g. WorkManager stopped
