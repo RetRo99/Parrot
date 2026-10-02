@@ -37,6 +37,7 @@ import com.retro99.books.ui.links.label
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.reader.domain.model.DownloadState
 import com.retro99.translations.StringRes
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.pluralStringResource
 import resources.translations.Res
@@ -78,6 +79,8 @@ import resources.translations.cloud_backup_reason_file_exists
 import resources.translations.cloud_backup_reason_generic
 import resources.translations.cloud_backup_reason_quota_exceeded
 import resources.translations.cloud_backup_reason_verify_failed
+import resources.translations.cloud_backup_reason_uploads_not_enabled
+import resources.translations.cloud_backup_reason_file_too_large
 import resources.translations.cloud_download_reason_generic
 import resources.translations.cloud_download_reason_unavailable
 import resources.translations.cloud_download_reason_verify_failed
@@ -344,7 +347,10 @@ internal fun LocationRow(
 
 @Composable
 private fun localizedTransferFailureReason(download: Boolean, reason: String?): String =
-    stringResource(when {
+    stringResource(transferFailureReasonRes(download, reason))
+
+internal fun transferFailureReasonRes(download: Boolean, reason: String?): StringResource =
+    when {
         download && reason == "verify_failed" -> StringRes.cloud_download_reason_verify_failed
         download && reason in setOf("cloud_file_unavailable", "cloud_file_changed") ->
             StringRes.cloud_download_reason_unavailable
@@ -354,5 +360,8 @@ private fun localizedTransferFailureReason(download: Boolean, reason: String?): 
         reason == "content_blocked" -> StringRes.cloud_backup_reason_content_blocked
         reason == "attestation_required" -> StringRes.cloud_backup_reason_attestation_required
         reason == "verify_failed" -> StringRes.cloud_backup_reason_verify_failed
+        // Server gates (allowlist, size cap): retrying won't help.
+        reason == "uploads_not_enabled" -> StringRes.cloud_backup_reason_uploads_not_enabled
+        reason == "file_too_large" -> StringRes.cloud_backup_reason_file_too_large
         else -> StringRes.cloud_backup_reason_generic
-    })
+    }
