@@ -11,6 +11,7 @@ import io.ktor.http.headersOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
@@ -474,6 +475,94 @@ class TusUploadClientTest {
         assertEquals(bytes.size.toLong(), retryHashedBytes)
         assertEquals(1, createCount)
         client.httpClient.close()
+    }
+
+    @Test
+    fun foreignAbsoluteLocationFailsBeforeAnyChunkIsSent() = runTest {
+        val seenHosts = mutableListOf<String>()
+        val client = newClient(byteArrayOf(1, 2, 3, 4)) { request ->
+            seenHosts += request.url.host
+            respond(
+                content = "",
+                status = HttpStatusCode.Created,
+                headers = headersOf(HttpHeaders.Location, "https://evil.example/upload/1"),
+            )
+        }
+
+        assertFailsWith<IllegalStateException> {
+            client.upload(
+                uploadEndpoint = "/storage/v1/upload/resumable",
+                storagePath = "users/u/books/b/f.epub",
+                localPath = "local.epub",
+                sizeBytes = 4,
+                contentHash = "abcd",
+                resumeUrl = null,
+                resumeOffset = 0,
+                onSession = { _, _ -> error("Foreign session must not be stored") },
+                onHashReset = {},
+                onChunkHashed = {},
+                onProgress = {},
+            )
+        }
+
+        assertEquals(listOf("cloud.example"), seenHosts)
+        client.httpClient.close()
+    }
+
+    @Test
+    fun offOriginResumeUrlIsDroppedForFreshSession() = runTest {
+        val seen = mutableListOf<Pair<HttpMethod, String>>()
+        val client = newClient(byteArrayOf(1, 2, 3, 4)) { request ->
+            seen += request.method to request.url.host
+            when (request.method) {
+                HttpMethod.Post -> respond(
+                    content = "",
+                    status = HttpStatusCode.Created,
+                    headers = headersOf(HttpHeaders.Location, "/storage/v1/upload/resumable/s"),
+                )
+
+                HttpMethod.Patch -> respond(
+                    content = "",
+                    status = HttpStatusCode.NoContent,
+                    headers = headersOf("Upload-Offset", "4"),
+                )
+
+                else -> error("Unexpected TUS method ${request.method}")
+            }
+        }
+
+        client.upload(
+            uploadEndpoint = "/storage/v1/upload/resumable",
+            storagePath = "users/u/books/b/f.epub",
+            localPath = "local.epub",
+            sizeBytes = 4,
+            contentHash = "abcd",
+            resumeUrl = "http://cloud.example/session-1",
+            resumeOffset = 0,
+            onSession = { _, _ -> },
+            onHashReset = {},
+            onChunkHashed = {},
+            onProgress = {},
+        )
+
+        assertEquals(
+            listOf(HttpMethod.Post to "cloud.example", HttpMethod.Patch to "cloud.example"),
+            seen,
+        )
+        client.httpClient.close()
+    }
+
+    @Test
+    fun trustedUploadUrlRequiresSameOriginOrSameSupabaseProject() {
+        val endpoint = "https://ref.supabase.co/storage/v1/upload/resumable"
+        assertTrue(isTrustedUploadUrl(endpoint, "https://ref.supabase.co:443/storage/v1/x"))
+        assertTrue(isTrustedUploadUrl(endpoint, "https://ref.storage.supabase.co/storage/v1/x"))
+        assertFalse(isTrustedUploadUrl(endpoint, "http://ref.supabase.co/storage/v1/x"))
+        assertFalse(isTrustedUploadUrl(endpoint, "https://other.supabase.co/storage/v1/x"))
+        assertFalse(isTrustedUploadUrl(endpoint, "https://ref.supabase.co:8443/x"))
+        assertFalse(isTrustedUploadUrl(endpoint, "https://ref.supabase.co.evil.example/x"))
+        assertTrue(isTrustedUploadUrl("http://10.0.0.2:8001/u", "http://10.0.0.2:8001/u/1"))
+        assertFalse(isTrustedUploadUrl("http://10.0.0.2:8001/u", "http://10.0.0.2:9000/u/1"))
     }
 
     private fun newClient(
