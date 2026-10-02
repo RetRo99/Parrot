@@ -27,6 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import com.retro99.base.ui.compose.stringTextWrapper
 import com.retro99.statistics.ui.model.ReadingSessionUiModel
 import com.retro99.translations.StringRes
@@ -55,6 +58,11 @@ fun SessionsDetailBottomSheet(
     ) {
         val selected = sessionsDetailState.selected
         if (selected != null) {
+            // Back leaves the detail for the list, not the whole sheet.
+            NavigationBackHandler(
+                state = rememberNavigationEventState(NavigationEventInfo.None),
+                onBackCompleted = onSessionDetailBack,
+            )
             SessionDetailContent(
                 detail = selected,
                 onBack = onSessionDetailBack,
