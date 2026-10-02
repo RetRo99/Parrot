@@ -44,7 +44,6 @@ import resources.translations.book_detail_format_quantity
 import resources.translations.book_detail_phone
 import resources.translations.book_detail_phone_only
 import resources.translations.book_detail_phone_missing
-import resources.translations.book_detail_offline_hint
 import resources.translations.book_detail_action_size
 import resources.translations.book_detail_remove
 import resources.translations.book_detail_manage
@@ -105,7 +104,10 @@ internal fun BookLocationsCard(
                 Res.plurals.book_detail_format_quantity, summary.formatCount, summary.formatCount,
             )
         val description = when {
-            cached.isEmpty() -> stringResource(StringRes.book_detail_offline_hint)
+            cached.isEmpty() -> media.map { item ->
+                val name = mediaLabel(item.type)
+                item.size?.let { "$name ${byteCount(it)}" } ?: name
+            }.joinToString(" · ")
             summary.size != null -> stringResource(
                 StringRes.book_detail_action_size, format, byteCount(summary.size),
             )

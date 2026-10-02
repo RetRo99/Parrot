@@ -1,6 +1,7 @@
 package com.retro99.books.ui.detail
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
@@ -42,7 +43,7 @@ internal fun BookDetailAbout(description: String?) {
             onTextLayout = { result -> if (!expanded) overflows = result.hasVisualOverflow },
         )
         if (expanded || overflows) {
-            TextButton(onClick = { expanded = !expanded }) {
+            TextButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(0.dp)) {
                 Text(stringResource(if (expanded) StringRes.books_detail_show_less
                     else StringRes.book_detail_read_more), color = Ember.colors.accentText)
             }

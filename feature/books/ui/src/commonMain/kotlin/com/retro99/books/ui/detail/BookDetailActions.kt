@@ -2,7 +2,6 @@ package com.retro99.books.ui.detail
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
@@ -23,6 +22,10 @@ import resources.translations.book_detail_continue_reading
 import resources.translations.book_detail_continue_listening
 import resources.translations.book_detail_download_read
 import resources.translations.book_detail_download_listen
+import resources.translations.book_detail_download_readalong
+import resources.translations.book_detail_download_ebook
+import resources.translations.book_detail_download_audiobook
+import resources.translations.book_detail_ebook_only
 import resources.translations.book_detail_action_size
 import resources.translations.book_detail_upload_wait
 import resources.translations.book_detail_downloading
@@ -42,7 +45,8 @@ internal fun BookDetailActions(
     media: List<DetailMedia>,
     dispatch: IntentDispatcher<BookDetailIntent>,
 ) {
-    val primary = media.firstOrNull { item -> !item.preparing } ?: media.firstOrNull() ?: return
+    val actions = detailActionMedia(media)
+    val primary = actions.firstOrNull() ?: return
     val audioOnly = primary.type == BookType.AUDIOBOOK
     val downloading = primary.state as? DownloadState.Downloading
     val label = when {
@@ -62,15 +66,14 @@ internal fun BookDetailActions(
         primary.state is DownloadState.Failed ->
             stringResource(StringRes.books_detail_action_download_failed)
         else -> {
-            val action = stringResource(if (audioOnly) StringRes.book_detail_download_listen
-                else StringRes.book_detail_download_read)
+            val action = downloadLabel(primary, ebookOnly = false)
             primary.size?.let { size ->
                 stringResource(StringRes.book_detail_action_size, action, byteCount(size))
             } ?: action
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             DetailButton(
                 label,
                 onClick = {
@@ -85,23 +88,40 @@ internal fun BookDetailActions(
                     audioOnly -> Icons.Outlined.Headphones
                     else -> Icons.AutoMirrored.Outlined.MenuBook
                 },
-                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
             )
-            val listen = media.firstOrNull { item ->
-                item.type == BookType.READALOUD && item.canOpen
-            } ?: media.firstOrNull { item -> item.type == BookType.AUDIOBOOK && item.canOpen }
-            if (listen != null && !audioOnly && primary.canOpen) {
+            val secondary = actions.getOrNull(1)
+            if (secondary != null) {
+                val transfer = secondary.state as? DownloadState.Downloading
+                val action = when {
+                    transfer != null -> transfer.progress?.let {
+                        stringResource(StringRes.book_detail_downloading, (it * 100).toInt())
+                    } ?: stringResource(StringRes.book_detail_downloading_unknown)
+                    secondary.canOpen -> stringResource(StringRes.books_detail_action_listen)
+                    primary.canOpen -> stringResource(if (audioOnly)
+                        StringRes.book_detail_download_read else StringRes.book_detail_download_listen)
+                    else -> downloadLabel(secondary, ebookOnly = primary.type == BookType.READALOUD)
+                }
+                val secondaryLabel = if (!secondary.canOpen && transfer == null) {
+                    secondary.size?.let { stringResource(StringRes.book_detail_action_size,
+                        action, byteCount(it)) } ?: action
+                } else action
                 DetailButton(
-                    stringResource(StringRes.books_detail_action_listen),
-                    onClick = { dispatch(BookDetailIntent.OnListenClicked(listen.type)) },
-                    icon = Icons.Outlined.Headphones,
-                    secondary = true,
-                    modifier = Modifier.heightIn(min = 56.dp),
+                    secondaryLabel,
+                    onClick = { dispatch(if (secondary.canOpen)
+                        BookDetailIntent.OnListenClicked(secondary.type)
+                        else BookDetailIntent.OnDownloadClicked(secondary.type)) },
+                    icon = if (secondary.canOpen) Icons.Outlined.Headphones else Icons.Outlined.Download,
+                    enabled = transfer == null && (secondary.canOpen || secondary.canDownload),
+                    loading = transfer != null,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                 )
             }
         }
         val caption = when {
-            downloading != null -> StringRes.book_detail_download_continues
+            actions.any { it.state is DownloadState.Downloading } -> StringRes.book_detail_download_continues
+            media.any { it.type == BookType.READALOUD && it.canDownload } ->
+                StringRes.book_detail_download_readalong_caption
             primary.canOpen || !primary.canDownload -> null
             primary.type == BookType.READALOUD -> StringRes.book_detail_download_readalong_caption
             audioOnly -> StringRes.book_detail_download_audio_caption
@@ -113,3 +133,13 @@ internal fun BookDetailActions(
         }
     }
 }
+
+@Composable
+private fun downloadLabel(media: DetailMedia, ebookOnly: Boolean): String = stringResource(
+    when (media.type) {
+        BookType.READALOUD -> StringRes.book_detail_download_readalong
+        BookType.EBOOK -> if (ebookOnly) StringRes.book_detail_ebook_only
+            else StringRes.book_detail_download_ebook
+        BookType.AUDIOBOOK -> StringRes.book_detail_download_audiobook
+    },
+)

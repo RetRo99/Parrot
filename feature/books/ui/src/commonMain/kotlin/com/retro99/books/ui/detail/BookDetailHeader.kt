@@ -98,6 +98,8 @@ internal fun BookDetailHeader(
                         ),
                         style = Ember.type.label,
                         color = Ember.colors.accentText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

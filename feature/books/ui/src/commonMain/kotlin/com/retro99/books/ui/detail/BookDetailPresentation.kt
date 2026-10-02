@@ -22,6 +22,34 @@ internal data class PhoneMediaSummary(
     val size: Long?,
 )
 
+/** Open a usable local format first; otherwise prefer the complete read-and-listen EPUB. */
+internal fun detailActionMedia(media: List<DetailMedia>): List<DetailMedia> {
+    val priority = listOf(BookType.READALOUD, BookType.EBOOK, BookType.AUDIOBOOK)
+    val ready = media.filter { !it.preparing }.sortedBy { priority.indexOf(it.type) }
+    val primary = ready.firstOrNull { it.canOpen }
+        ?: ready.firstOrNull { it.canDownload || it.state is DownloadState.Downloading }
+        ?: ready.firstOrNull() ?: media.firstOrNull() ?: return emptyList()
+    val others = ready.filter { it.type != primary.type }
+    // A downloaded read-along already supplies both capabilities; don't hide Listen
+    // behind an unnecessary download of the text-only or audio-only copy.
+    val missing = others.takeUnless { primary.canOpen && primary.type == BookType.READALOUD }
+        ?.firstOrNull {
+            !it.canOpen && (it.canDownload || it.state is DownloadState.Downloading)
+        }
+    val listen = if (primary.type != BookType.AUDIOBOOK) ready.firstOrNull {
+        it.type != BookType.EBOOK && it.canOpen
+    } else null
+    return listOfNotNull(primary, missing ?: listen?.takeIf { primary.canOpen })
+}
+
+internal fun detailTags(tags: List<String>): List<String> = tags
+    .flatMap { it.split(',') }.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+
+internal fun gigabyteCount(bytes: Long): String {
+    val tenths = (bytes.toDouble() / (1024L * 1024L * 1024L) * 10).toLong()
+    return "${tenths / 10}.${tenths % 10}"
+}
+
 internal fun phoneMediaSummary(media: List<DetailMedia>): PhoneMediaSummary {
     val cached = media.filter { item -> item.state is DownloadState.Cached }
     val sizes = cached.mapNotNull { item -> item.size }

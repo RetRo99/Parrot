@@ -37,6 +37,7 @@ import resources.translations.book_detail_audiobook
 import resources.translations.book_detail_size_bytes
 import resources.translations.book_detail_size_kb
 import resources.translations.book_detail_size_mb
+import resources.translations.book_detail_size_gb
 
 @Composable
 internal fun mediaLabel(type: BookType): String = stringResource(when (type) {
@@ -47,6 +48,9 @@ internal fun mediaLabel(type: BookType): String = stringResource(when (type) {
 
 @Composable
 internal fun byteCount(bytes: Long): String = when {
+    bytes >= 1024L * 1024L * 1024L -> stringResource(
+        StringRes.book_detail_size_gb, gigabyteCount(bytes),
+    )
     bytes >= 1024L * 1024L -> stringResource(
         StringRes.book_detail_size_mb, bytes / (1024L * 1024L),
     )

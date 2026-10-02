@@ -17,6 +17,76 @@ import kotlin.test.assertTrue
 
 class BookDetailPresentationTest {
     @Test
+    fun `readalong is the first download regardless of size or incoming order`() {
+        val ebook = media(BookType.EBOOK)
+        val readalong = media(BookType.READALOUD).copy(size = 1_288_490_189L)
+        assertEquals(listOf(readalong, ebook), detailActionMedia(listOf(ebook, readalong)))
+        assertEquals("1.2", gigabyteCount(readalong.size!!))
+    }
+
+    @Test
+    fun `ebook and audiobook downloads put text first`() {
+        val ebook = media(BookType.EBOOK)
+        val audio = media(BookType.AUDIOBOOK)
+        assertEquals(listOf(ebook, audio), detailActionMedia(listOf(audio, ebook)))
+    }
+
+    @Test
+    fun `local format opens first and missing narration remains offered`() {
+        val ebook = media(BookType.EBOOK).copy(state = DownloadState.Cached, canOpen = true)
+        val readalong = media(BookType.READALOUD)
+        assertEquals(listOf(ebook, readalong), detailActionMedia(listOf(ebook, readalong)))
+        val downloading = readalong.copy(state = DownloadState.Downloading(0.3f))
+        assertEquals(listOf(ebook, downloading), detailActionMedia(listOf(ebook, downloading)))
+    }
+
+    @Test
+    fun `downloaded audiobook keeps missing text available`() {
+        val audio = media(BookType.AUDIOBOOK).copy(state = DownloadState.Cached, canOpen = true)
+        val ebook = media(BookType.EBOOK)
+        assertEquals(listOf(audio, ebook), detailActionMedia(listOf(ebook, audio)))
+    }
+
+    @Test
+    fun `downloaded readalong supports both reading and listening without another download`() {
+        val readalong = media(BookType.READALOUD).copy(state = DownloadState.Cached, canOpen = true)
+        assertEquals(listOf(readalong, readalong), detailActionMedia(listOf(readalong)))
+        assertEquals(listOf(readalong, readalong),
+            detailActionMedia(listOf(media(BookType.EBOOK), readalong)))
+    }
+
+    @Test
+    fun `preparing and unavailable formats do not displace a usable download`() {
+        val ebook = media(BookType.EBOOK)
+        val preparing = media(BookType.READALOUD).copy(preparing = true, canDownload = false)
+        assertEquals(listOf(ebook), detailActionMedia(listOf(ebook, preparing)))
+        assertEquals(listOf(ebook), detailActionMedia(listOf(ebook,
+            preparing.copy(preparing = false))))
+    }
+
+    @Test
+    fun `comma separated tags become individual trimmed chips`() {
+        assertEquals(listOf("Novela", "Fantástico"),
+            detailTags(listOf("Novela, Fantástico", "", " Novela ")))
+    }
+
+    @Test
+    fun `known chapter and duration reach detail progress unchanged`() {
+        val ui = BookProgressInfoDomainModel("book", 0.72, null, true, false, false,
+            chapterIndex = 4, totalChapters = 10, totalDurationMs = 3_600_000L,
+            bookTimeMs = 2_592_000L).toUiModel()
+        assertEquals(72, ui.progressPercent)
+        assertEquals(4, ui.chapterIndex)
+        assertEquals(10, ui.totalChapters)
+        assertEquals(3_600_000L, ui.totalDurationMs)
+        assertEquals(2_592_000L, ui.bookTimeMs)
+    }
+
+    private fun media(type: BookType) = DetailMedia(type, DownloadState.Idle, 3_145_728L,
+        canOpen = false, canDownload = true, canRemove = false,
+        awaitingUpload = false, preparing = false)
+
+    @Test
     fun `download permission and remove permission respect each cloud availability`() {
         // Given
         val cases = listOf("None", "UploadPending", "Uploading", "UploadFailed", "Available")

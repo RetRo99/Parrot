@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.CalendarDateLabel
 import com.retro99.base.calendarDateLabel
+import com.retro99.base.languageDisplayName
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.book_detail_length
@@ -74,7 +75,7 @@ internal fun BookDetailFacts(state: BookDetailViewState) {
             stringResource(StringRes.books_detail_publication_date) to year
         },
         book.language?.takeIf { value -> value.isNotBlank() }?.let { value ->
-            stringResource(StringRes.book_detail_language) to value
+            stringResource(StringRes.book_detail_language) to languageDisplayName(value)
         },
         factDate(book.dateAdded)?.let { value ->
             stringResource(StringRes.book_detail_added) to value
@@ -106,7 +107,7 @@ internal fun BookDetailFacts(state: BookDetailViewState) {
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        book.tags.forEach { tag ->
+        detailTags(book.tags).forEach { tag ->
             Text(tag, style = Ember.type.meta, color = Ember.colors.ink2,
                 modifier = Modifier.background(Ember.colors.chip, RoundedCornerShape(50))
                     .padding(horizontal = 12.dp, vertical = 7.dp))
