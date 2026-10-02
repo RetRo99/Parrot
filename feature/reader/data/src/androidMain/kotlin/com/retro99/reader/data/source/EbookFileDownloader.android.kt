@@ -3,7 +3,7 @@ package com.retro99.reader.data.source
 import android.content.Context
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
-import com.retro99.base.file.safeFileName
+import com.retro99.base.file.encodeFileNameSegment
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.books.domain.model.BookType
@@ -169,10 +169,11 @@ actual class EbookFileDownloader(
     private fun formatFileIndex(index: Int): String =
         (index + 1).toString().padStart(2, '0')
 
-    // Ids come from the server; sanitise so they cannot traverse paths.
+    // Server ids: encode so they cannot traverse or collide; safe ids keep
+    // their existing cache names.
     private fun getSingleFileName(bookUuid: String, bookType: BookType): String =
-        "${bookUuid.safeFileName()}_${bookType.value}.epub"
+        "${bookUuid.encodeFileNameSegment()}_${bookType.value}.epub"
 
     private fun getDirectoryName(bookUuid: String, bookType: BookType): String =
-        "${bookUuid.safeFileName()}_${bookType.value}"
+        "${bookUuid.encodeFileNameSegment()}_${bookType.value}"
 }
