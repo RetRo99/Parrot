@@ -30,7 +30,7 @@ function bearer(authAgeSeconds: number | null, sub = USER_ID): string {
 
 type Fake = DeletionDeps & { calls: string[] }
 
-function fake(lookup: UserLookup, opts: { requested?: boolean; failAt?: string } = {}): Fake {
+function fake(lookup: UserLookup, opts: { confirmed?: boolean; failAt?: string } = {}): Fake {
   const calls: string[] = []
   const step = (name: string) => {
     calls.push(name)
@@ -40,13 +40,13 @@ function fake(lookup: UserLookup, opts: { requested?: boolean; failAt?: string }
   return {
     calls,
     lookupUser: () => Promise.resolve(lookup),
-    deletionRequested: () => {
-      calls.push('requested?')
-      return Promise.resolve(opts.requested ?? false)
+    deletionConfirmed: () => {
+      calls.push('confirmed?')
+      return Promise.resolve(opts.confirmed ?? false)
     },
-    requestDeletion: () => step('request'),
-    deleteObjects: () => step('objects'),
-    redactAudit: () => step('redact'),
+    requestDeletion: (id) => step(`request:${id}`),
+    deleteObjects: (id) => step(id === USER_ID ? 'objects' : `objects:${id}`),
+    redactAudit: (id) => step(id === USER_ID ? 'redact' : `redact:${id}`),
     purgeAudit: () => step('purge'),
     deleteUser: () => step('deleteUser'),
     nowSeconds: () => NOW,
@@ -54,7 +54,7 @@ function fake(lookup: UserLookup, opts: { requested?: boolean; failAt?: string }
 }
 
 const user: UserLookup = { kind: 'user', user: { id: USER_ID, is_anonymous: false } }
-const FULL = ['requested?', 'request', 'objects', 'redact', 'purge', 'deleteUser']
+const FULL = ['confirmed?', `request:${USER_ID}`, 'objects', 'redact', 'purge', 'deleteUser']
 
 Deno.test('fresh sign-in runs the whole sequence in order', async () => {
   const deps = fake(user)
@@ -107,14 +107,14 @@ Deno.test('stale sign-in needs reauthentication and changes nothing', async () =
     status: 403,
     body: { error: 'Sign in again to delete this account', code: 'reauthentication_required' },
   })
-  assertEquals(deps.calls, ['requested?'])
+  assertEquals(deps.calls, ['confirmed?'])
 })
 
 Deno.test('token without amr timestamps needs reauthentication', async () => {
   const deps = fake(user)
   const out = await deleteCloudAccount(bearer(null), deps)
   assertEquals(out.status, 403)
-  assertEquals(deps.calls, ['requested?'])
+  assertEquals(deps.calls, ['confirmed?'])
 })
 
 Deno.test('custom max auth age is honoured', async () => {
@@ -123,11 +123,22 @@ Deno.test('custom max auth age is honoured', async () => {
   assertEquals(out.status, 200)
 })
 
-Deno.test('a recorded request resumes without a fresh sign-in', async () => {
-  const deps = fake(user, { requested: true })
+Deno.test('an unconfirmed request row still needs a fresh sign-in', async () => {
+  // e.g. a row created through the old client RPC with a stale token.
+  const deps = fake(user, { confirmed: false })
+  const out = await deleteCloudAccount(bearer(86_400), deps)
+  assertEquals(out, {
+    status: 403,
+    body: { error: 'Sign in again to delete this account', code: 'reauthentication_required' },
+  })
+  assertEquals(deps.calls, ['confirmed?'])
+})
+
+Deno.test('a confirmed request resumes without a fresh sign-in', async () => {
+  const deps = fake(user, { confirmed: true })
   const out = await deleteCloudAccount(bearer(86_400), deps)
   assertEquals(out.status, 200)
-  assertEquals(deps.calls, ['requested?', 'objects', 'redact', 'purge', 'deleteUser'])
+  assertEquals(deps.calls, ['confirmed?', 'objects', 'redact', 'purge', 'deleteUser'])
 })
 
 Deno.test('a failed step throws and a retry resumes', async () => {
@@ -136,16 +147,28 @@ Deno.test('a failed step throws and a retry resumes', async () => {
   assertEquals(first.calls, FULL)
 
   // Retry an hour later: the request row exists, so no reauth is needed.
-  const retry = fake(user, { requested: true })
+  const retry = fake(user, { confirmed: true })
   const out = await deleteCloudAccount(bearer(3600), retry)
   assertEquals(out.status, 200)
-  assertEquals(retry.calls, ['requested?', 'objects', 'redact', 'purge', 'deleteUser'])
+  assertEquals(retry.calls, ['confirmed?', 'objects', 'redact', 'purge', 'deleteUser'])
 })
 
-Deno.test('already deleted user reports success without side effects', async () => {
+Deno.test('already deleted user still gets storage and audit cleanup', async () => {
   const deps = fake({ kind: 'deleted' })
   const out = await deleteCloudAccount(bearer(86_400), deps)
   assertEquals(out, { status: 200, body: { status: 'deleted' } })
+  assertEquals(deps.calls, ['objects', 'redact'])
+})
+
+Deno.test('already deleted user: a failed cleanup is retryable', async () => {
+  const deps = fake({ kind: 'deleted' }, { failAt: 'objects' })
+  await assertRejects(() => deleteCloudAccount(bearer(60), deps), Error, 'objects failed')
+})
+
+Deno.test('already deleted user with a non-uuid subject touches nothing', async () => {
+  const deps = fake({ kind: 'deleted' })
+  const out = await deleteCloudAccount(bearer(60, 'users/../x'), deps)
+  assertEquals(out.status, 401)
   assertEquals(deps.calls, [])
 })
 

@@ -25,9 +25,10 @@ export type UserLookup =
 export type DeletionDeps = {
   // Throws only on infrastructure failures (e.g. Auth unreachable).
   lookupUser(token: string): Promise<UserLookup>
-  deletionRequested(accountId: string): Promise<boolean>
-  // Runs as the caller, so the RPC's auth.uid() is the account.
-  requestDeletion(token: string): Promise<void>
+  // True only for a request this function recorded after a fresh sign-in.
+  deletionConfirmed(accountId: string): Promise<boolean>
+  // Service role only; clients cannot create the request row themselves.
+  requestDeletion(accountId: string): Promise<void>
   deleteObjects(accountId: string): Promise<void>
   redactAudit(accountId: string): Promise<void>
   purgeAudit(): Promise<void>
@@ -39,6 +40,8 @@ export type DeletionDeps = {
 export type Outcome =
   | { status: 200; body: { status: 'deleted' } }
   | { status: 401 | 403; body: { error: string; code: ErrorCode } }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const BEARER_JWT = /^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/i
 
@@ -115,9 +118,17 @@ export async function deleteCloudAccount(
   if (!token) return reject(401, 'auth_required', 'Authentication required')
 
   const lookup = await deps.lookupUser(token)
-  // A valid token whose user is gone means an earlier call finished but
-  // its response was lost; report success so the app clears local state.
-  if (lookup.kind === 'deleted') return { status: 200, body: { status: 'deleted' } }
+  if (lookup.kind === 'deleted') {
+    // Auth checked the signature before saying the user is gone, so sub is
+    // theirs. Finish cleanup: Storage and audit rows do not cascade.
+    const sub = decodePayload(token)?.sub
+    if (typeof sub !== 'string' || !UUID.test(sub)) {
+      return reject(401, 'auth_required', 'A valid signed-in account is required')
+    }
+    await deps.deleteObjects(sub)
+    await deps.redactAudit(sub)
+    return { status: 200, body: { status: 'deleted' } }
+  }
   if (lookup.kind === 'invalid') {
     return reject(401, 'auth_required', 'A valid signed-in account is required')
   }
@@ -131,14 +142,14 @@ export async function deleteCloudAccount(
     return reject(401, 'auth_required', 'A valid signed-in account is required')
   }
 
-  // A recorded request was already made with a fresh sign-in, so a retry
-  // may finish it with an older session instead of forcing a new sign-in.
-  if (!(await deps.deletionRequested(user.id))) {
+  // Only this function confirms a request, after a fresh sign-in, so a
+  // retry may finish it with an older session.
+  if (!(await deps.deletionConfirmed(user.id))) {
     const authAt = authenticatedAt(claims)
     if (authAt === null || deps.nowSeconds() - authAt > maxAuthAgeSeconds) {
       return reject(403, 'reauthentication_required', 'Sign in again to delete this account')
     }
-    await deps.requestDeletion(token)
+    await deps.requestDeletion(user.id)
   }
 
   await deps.deleteObjects(user.id)

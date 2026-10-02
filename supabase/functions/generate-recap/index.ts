@@ -16,6 +16,7 @@
 // consumes one unit of a per-user daily quota (consume_recap_quota RPC).
 
 import { createClient, isAuthRetryableFetchError } from 'npm:@supabase/supabase-js@2.117.2'
+import { classifyAuthError } from '../_shared/auth_errors.ts'
 import { authenticate, bearerToken, type Claims, readJsonBody } from './guards.ts'
 import {
   buildMessages,
@@ -59,8 +60,8 @@ async function verifyClaims(token: string): Promise<Claims | null> {
   // JWKS checks are local, so also ask Auth: rejects signed-out (revoked)
   // sessions and deleted users. One round trip vs a multi-second call.
   const { data: live, error: liveError } = await authClient!.auth.getUser(token)
-  if (liveError && isAuthRetryableFetchError(liveError)) throw liveError
-  if (liveError && (liveError.status ?? 0) >= 500) throw liveError
+  // Rate limits and outages throw (500) so clients never see a false 401.
+  if (liveError && classifyAuthError(liveError) === 'unavailable') throw liveError
   if (liveError || live.user?.id !== data.claims.sub) return null
   return data.claims as Claims
 }

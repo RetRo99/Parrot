@@ -1,10 +1,9 @@
 import {
-  type AuthError,
   createClient,
   isAuthApiError,
-  isAuthRetryableFetchError,
   type SupabaseClient,
 } from 'npm:@supabase/supabase-js@2.117.2'
+import { classifyAuthError } from '../_shared/auth_errors.ts'
 import {
   apiKey,
   deleteCloudAccount,
@@ -29,21 +28,16 @@ function errorResponse(status: number, code: ErrorCode, error: string): Response
 }
 
 // 403 user_not_found only comes after Auth verified the token signature.
+// Rate limits and outages throw (retryable 500), never a 401.
 async function lookupUser(admin: SupabaseClient, token: string): Promise<UserLookup> {
   const { data, error } = await admin.auth.getUser(token)
   if (error) {
-    if (isAuthRetryableFetchError(error) || isServerError(error)) throw error
-    if (isAuthApiError(error) && error.code === 'user_not_found') {
-      return { kind: 'deleted' }
-    }
-    return { kind: 'invalid' }
+    const kind = classifyAuthError(error)
+    if (kind === 'unavailable') throw error
+    return { kind }
   }
   if (!data.user) return { kind: 'invalid' }
   return { kind: 'user', user: { id: data.user.id, is_anonymous: data.user.is_anonymous } }
-}
-
-function isServerError(error: AuthError): boolean {
-  return typeof error.status === 'number' && error.status >= 500
 }
 
 async function listAccountObjects(
@@ -114,9 +108,8 @@ Deno.serve(async (request: Request) => {
 
   const env = (name: string) => Deno.env.get(name)
   const supabaseUrl = env('SUPABASE_URL')
-  const publicKey = apiKey(env, 'SUPABASE_PUBLISHABLE_KEYS', 'SUPABASE_ANON_KEY')
   const secretKey = apiKey(env, 'SUPABASE_SECRET_KEYS', 'SUPABASE_SERVICE_ROLE_KEY')
-  if (!supabaseUrl || !publicKey || !secretKey) {
+  if (!supabaseUrl || !secretKey) {
     return errorResponse(500, 'server_misconfigured', 'Server configuration is incomplete')
   }
 
@@ -125,21 +118,19 @@ Deno.serve(async (request: Request) => {
 
   const deps: DeletionDeps = {
     lookupUser: (token) => lookupUser(admin, token),
-    async deletionRequested(accountId) {
+    async deletionConfirmed(accountId) {
       const { data, error } = await admin
         .from('cloud_account_deletion_requests')
-        .select('cloud_user_id')
+        .select('confirmed_at')
         .eq('cloud_user_id', accountId)
         .maybeSingle()
       if (error) throw error
-      return data !== null
+      return data?.confirmed_at != null
     },
-    async requestDeletion(token) {
-      const userClient = createClient(supabaseUrl, publicKey, {
-        ...clientOptions,
-        global: { headers: { Authorization: `Bearer ${token}` } },
+    async requestDeletion(accountId) {
+      const { error } = await admin.rpc('request_cloud_account_deletion_for', {
+        account_id: accountId,
       })
-      const { error } = await userClient.rpc('request_cloud_account_deletion')
       if (error) throw error
     },
     deleteObjects: (accountId) => deleteAccountObjects(admin, accountId),
