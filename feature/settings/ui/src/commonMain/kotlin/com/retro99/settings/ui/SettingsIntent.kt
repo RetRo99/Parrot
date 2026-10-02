@@ -79,6 +79,9 @@ sealed interface SettingsIntent : BaseIntent {
     // Keep screen awake during ReadAloud audio intent
     data class OnKeepScreenOnDuringAudioChanged(val enabled: Boolean) : SettingsIntent
 
+    /** Hide matches past the furthest page read in book search. */
+    data class OnHideSearchAheadChanged(val enabled: Boolean) : SettingsIntent
+
     // Enable on-device text-to-speech read-aloud
     data class OnTtsEnabledChanged(val enabled: Boolean) : SettingsIntent
 }

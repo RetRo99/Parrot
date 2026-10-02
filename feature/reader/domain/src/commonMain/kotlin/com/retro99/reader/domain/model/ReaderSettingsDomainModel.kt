@@ -69,6 +69,8 @@ data class ReaderSettingsDomainModel(
     val showAudioProgressBar: Boolean? = null,
     // Whether to keep the screen awake while ReadAloud audio is playing
     val keepScreenOnDuringAudio: Boolean = true,
+    // Whether book search hides matches past the furthest page read (spoiler protection)
+    val hideSearchResultsAhead: Boolean = true,
 ) {
     companion object {
         /** Default reading speed in words per minute (average adult reading speed) */

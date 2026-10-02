@@ -39,7 +39,6 @@ import com.retro99.reader.domain.usecase.InitializeReaderUseCase
 import com.retro99.reader.domain.usecase.ObserveAppliedPositionUseCase
 import com.retro99.reader.domain.usecase.PropagateToLinkedCopiesUseCase
 import com.retro99.reader.domain.usecase.ObserveBookmarksUseCase
-import com.retro99.reader.domain.usecase.ReorderBookmarksUseCase
 import com.retro99.reader.domain.usecase.ResolveLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.SaveReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
@@ -136,7 +135,6 @@ class ReaderViewModel(
     @Provided private val observeBookmarksUseCase: ObserveBookmarksUseCase,
     @Provided private val deleteBookmarkUseCase: DeleteBookmarkUseCase,
     @Provided private val updateBookmarkTitleUseCase: UpdateBookmarkTitleUseCase,
-    @Provided private val reorderBookmarksUseCase: ReorderBookmarksUseCase,
     @Provided private val publicationService: EpubPublicationService,
     @Provided private val analytics: Analytics,
     @Provided private val supertonicTermsStore: SupertonicTermsStore,
@@ -220,6 +218,19 @@ class ReaderViewModel(
     private var searchOnAccent = 0
     private var searchEink = false
     private var searchBoundaries: List<SearchChapterBoundary>? = null
+    private var contentsGroupsInitialized = false
+
+    /** Job for the second scan that reveals matches past the spoiler boundary. */
+    private var bookSearchAheadJob: Job? = null
+
+    /** Furthest point reached in this book: the search spoiler boundary. */
+    private var furthestReadMark: SearchBoundaryMark? = null
+
+    /** True when the reveal was asked for while the first scan is still running. */
+    private var revealAfterScan = false
+
+    /** Steps to the first revealed match once the rest of the book has been scanned. */
+    private var stepAfterReveal = false
 
     /** Job for downloading and loading the selected neural voice model. */
     private var ttsPreparationJob: Job? = null
@@ -289,6 +300,9 @@ class ReaderViewModel(
     init {
         initializeReader()
         observeShowCurrentTimeSetting()
+        furthestReadMark = getUserPreferenceUseCase<SearchBoundaryMark>(
+            PreferencesKey.FurthestReadPosition(serverId, bookUuid),
+        )
     }
 
     /**
@@ -350,14 +364,19 @@ class ReaderViewModel(
                 navigateKeepingAudio { bookController.goToPosition(origin); closeBookSearch() }
             }
             ReaderIntent.ToggleFindBar -> updateState { it.copy(isFindBarVisible = !it.isFindBarVisible) }
+            is ReaderIntent.RevealSearchAhead -> revealSearchAhead(intent.stepNext)
+            ReaderIntent.DismissSearchContinuePrompt -> updateState { it.copy(showSearchContinuePrompt = false) }
             is ReaderIntent.UpdateSearchDecorations -> {
                 searchAccent = intent.accent; searchSoft = intent.soft; searchOnAccent = intent.onAccent; searchEink = intent.eink
                 refreshSearchDecorations()
             }
             is ReaderIntent.GoToSearchResult -> navigateKeepingAudio(searchResult = intent.result) { goToSearchResult(intent.result) }
             is ReaderIntent.SeekToChapterProgress -> seekToChapterProgress(intent.progression)
-            is ReaderIntent.JumpToBookProgress -> navigateKeepingAudio {
-                jumpToBookProgress(intent.progression)
+            ReaderIntent.ReturnToJumpOrigin -> viewState.value.jumpOrigin?.let { origin ->
+                navigateKeepingAudio {
+                    bookController.goToPosition(origin)
+                    updateState { it.copy(jumpOrigin = null, jumpOriginPageTurns = 0) }
+                }
             }
             is ReaderIntent.StartListening -> startListening(intent.source, intent.autoPlay)
             is ReaderIntent.SwitchListenSource -> switchListenSource(intent.source)
@@ -422,6 +441,7 @@ class ReaderViewModel(
             is ReaderIntent.SkipForward -> skipForward(intent.milliseconds)
             is ReaderIntent.SkipBackward -> skipBackward(intent.milliseconds)
             ReaderIntent.ToggleToc -> toggleToc()
+            is ReaderIntent.ToggleContentsGroup -> toggleContentsGroup(intent.flatIndex)
             is ReaderIntent.GoToChapter -> navigateKeepingAudio {
                 goToChapter(intent.href, intent.currentPosition)
             }
@@ -430,8 +450,6 @@ class ReaderViewModel(
             is ReaderIntent.GoToChapterAndPlay -> goToChapterAndPlay(intent.href, intent.currentPosition)
             ReaderIntent.GoToNextChapterAndPlay -> goToNextChapterAndPlay()
             ReaderIntent.GoToPreviousChapterAndPlay -> goToPreviousChapterAndPlay()
-            is ReaderIntent.UndoChapterNavigation -> undoChapterNavigation(intent.position)
-            ReaderIntent.DismissChapterNavigationUndo -> dismissChapterNavigationUndo()
             is ReaderIntent.SetHighlightColor -> setHighlightColor(intent.colorArgb)
             ReaderIntent.Retry -> retry()
             ReaderIntent.DismissNoAudioMessage -> dismissNoAudioMessage()
@@ -445,7 +463,8 @@ class ReaderViewModel(
             ReaderIntent.DismissBookmarkAlreadyExists -> dismissBookmarkAlreadyExists()
             is ReaderIntent.UndoBookmark -> undoBookmark(intent.id)
             is ReaderIntent.RenameBookmark -> renameBookmark(intent.id, intent.newTitle)
-            is ReaderIntent.ReorderBookmarks -> reorderBookmarks(intent.bookmarkIds)
+            is ReaderIntent.RestoreBookmark -> restoreBookmark(intent.bookmark)
+            ReaderIntent.DismissBookmarkDeleted -> dismissBookmarkDeleted()
             ReaderIntent.GoToPreviousBookmark -> goToPreviousBookmark()
             ReaderIntent.GoToNextBookmark -> goToNextBookmark()
             ReaderIntent.DismissNoMoreBookmarks -> dismissNoMoreBookmarks()
@@ -510,12 +529,12 @@ class ReaderViewModel(
     }
 
     private fun goToNextPage() {
-        searchPageTurned()
+        pageTurned()
         bookController.goToNextPage()
     }
 
     private fun goToPreviousPage() {
-        searchPageTurned()
+        pageTurned()
         bookController.goToPreviousPage()
     }
 
@@ -693,6 +712,7 @@ class ReaderViewModel(
                 position = position,
                 customFonts = customFonts,
             )
+            position?.let(::trackFurthestPosition)
 
             updateState { state ->
                 state.copy(
@@ -1639,6 +1659,7 @@ class ReaderViewModel(
     private fun updatePosition(position: PositionUiModel) {
         // Nothing is saved until the person has answered a prompt, so an unanswered prompt
         // can't make this copy look like the latest reading.
+        trackFurthestPosition(position)
         if (viewState.value.positionConflict != null) return
         if (viewState.value.linkedResumeOffer != null) return
 
@@ -1647,6 +1668,32 @@ class ReaderViewModel(
         val currentState = viewState.value
         val audioTimestamp = currentState.currentAudioPositionMs.takeIf { it > 0 }
         positionSaveCoordinator.submit(createPositionDomainModel(position, audioTimestamp))
+    }
+
+    private fun PositionUiModel.toBoundaryMark() = SearchBoundaryMark(href, progression, totalProgression)
+
+    /**
+     * Remembers the furthest point reached in this book, so search never hides what has
+     * already been read when the reader flips back to an earlier chapter.
+     */
+    private fun trackFurthestPosition(position: PositionUiModel) {
+        val total = position.totalProgression ?: return
+        val known = furthestReadMark?.totalProgression
+        if (known != null && known >= total) return
+        val mark = position.toBoundaryMark()
+        furthestReadMark = mark
+        saveUserPreferenceUseCase(PreferencesKey.FurthestReadPosition(serverId, bookUuid), mark)
+    }
+
+    /**
+     * Spoiler boundary for this book's search: the furthest point reached, falling back to
+     * the current position. Finished books and the "Hide search results ahead of my page"
+     * setting being off mean no boundary — nothing is hidden.
+     */
+    private fun spoilerBoundary(): SearchBoundaryMark? {
+        if (viewState.value.currentSettings?.hideSearchResultsAhead == false) return null
+        val current = viewState.value.currentPosition?.toBoundaryMark()
+        return resolveSearchBoundary(furthestReadMark, current)
     }
 
     private fun createPositionDomainModel(
@@ -1850,18 +1897,73 @@ class ReaderViewModel(
     }
 
     private fun toggleToc() {
-        val willBeVisible = !viewState.value.isTocVisible
-        if (willBeVisible) {
-            analytics.logEvent(ReaderAnalyticsEvent.TocOpened(bookUuid = bookUuid))
+        openContentsSheet(ContentsTab.CHAPTERS)
+    }
+
+    private fun toggleBookmarks() {
+        openContentsSheet(ContentsTab.BOOKMARKS)
+    }
+
+    /**
+     * The Chapters and Bookmarks tabs share one sheet. ToggleToc closes it from either tab
+     * (that is what the close button and mini-player dispatch); ToggleBookmarks always
+     * brings up the Bookmarks tab, opening or switching as needed.
+     */
+    private fun openContentsSheet(tab: ContentsTab) {
+        val state = viewState.value
+        val show = if (tab == ContentsTab.CHAPTERS) {
+            !state.isContentsVisible
+        } else {
+            !state.isContentsVisible || state.contentsInitialTab != ContentsTab.BOOKMARKS
         }
-        updateState { it.copy(isTocVisible = willBeVisible) }
-        if (willBeVisible) loadChapterTicks()
+        if (show) {
+            analytics.logEvent(
+                if (tab == ContentsTab.CHAPTERS) ReaderAnalyticsEvent.TocOpened(bookUuid = bookUuid)
+                else ReaderAnalyticsEvent.BookmarksOpened(bookUuid = bookUuid),
+            )
+        }
+        if (viewState.value.bookSearchReadingOrder.isEmpty()) {
+            updateState { it.copy(bookSearchReadingOrder = bookController.searchReadingOrder()) }
+        }
+        if (!show) {
+            updateState { it.copy(isContentsVisible = false) }
+            return
+        }
+        updateState {
+            val current = findTocLocation(
+                it.tableOfContents,
+                it.currentPosition?.href,
+                it.currentPosition?.progression,
+                it.bookSearchReadingOrder,
+            )
+            val expanded = it.contentsExpandedGroups.toMutableSet()
+            if (!contentsGroupsInitialized && it.tableOfContents.isNotEmpty()) {
+                contentsGroupsInitialized = true
+                expanded += defaultExpandedGroups(it.tableOfContents, current?.flatIndex)
+            }
+            // The part you're in is always open when Contents opens.
+            current?.let { location -> expanded += tocAncestors(it.tableOfContents, location.flatIndex) }
+            it.copy(
+                isContentsVisible = true,
+                contentsInitialTab = tab,
+                contentsExpandedGroups = expanded,
+            )
+        }
+    }
+
+    private fun toggleContentsGroup(flatIndex: Int) {
+        updateState { state ->
+            val expanded = state.contentsExpandedGroups.toMutableSet()
+            if (!expanded.add(flatIndex)) expanded.remove(flatIndex)
+            state.copy(contentsExpandedGroups = expanded)
+        }
     }
 
     private fun toggleBookSearch() {
         val show = !viewState.value.isBookSearchVisible
         if (!show) {
             bookSearchJob?.cancel()
+            bookSearchAheadJob?.cancel()
             bookSearchGeneration++
         }
         updateState { state ->
@@ -1871,10 +1973,14 @@ class ReaderViewModel(
                 bookSearchAvailable = bookController.isSearchable,
                 bookSearchIgnoresCaseAndAccents = bookController.searchIgnoresCaseAndAccents,
                 bookSearchReadingOrder = bookController.searchReadingOrder(),
-                bookSearchReferencePosition = if (state.selectedSearchIndex != null) state.bookSearchReferencePosition
-                    ?: state.searchOrigin ?: state.currentPosition else state.currentPosition,
-                bookSearchRecents = getUserPreferenceUseCase<List<RecentBookSearch>>(
-                    PreferencesKey.RecentBookSearches(serverId, bookUuid)).orEmpty(),
+                showSearchContinuePrompt = false,
+                bookSearchRecents = if (show) {
+                    getUserPreferenceUseCase<List<RecentBookSearch>>(
+                        PreferencesKey.RecentBookSearches(serverId, bookUuid),
+                    ).orEmpty()
+                } else {
+                    state.bookSearchRecents
+                },
             )
         }
         if (!show && viewState.value.selectedSearchIndex == null) bookController.clearSearchDecorations()
@@ -1883,9 +1989,13 @@ class ReaderViewModel(
     private fun searchBook(query: String, submitOnly: Boolean = false, submitted: Boolean = false) {
         val normalizedQuery = query.trim()
         bookSearchJob?.cancel()
+        bookSearchAheadJob?.cancel()
         val generation = ++bookSearchGeneration
         bookController.clearSearchDecorations()
         val shouldSearch = normalizedQuery.length >= 2 && (!submitOnly || submitted) && bookController.isSearchable
+        val boundary = if (shouldSearch) spoilerBoundary() else null
+        revealAfterScan = false
+        stepAfterReveal = false
         updateState {
             it.copy(
                 bookSearchQuery = query,
@@ -1894,12 +2004,18 @@ class ReaderViewModel(
                 isBookSearchLoading = shouldSearch,
                 bookSearchFailed = false,
                 bookSearchCount = 0,
-                bookSearchChapterCounts = emptyMap(),
+                bookSearchCapped = false,
                 bookSearchComplete = false,
                 bookSearchAvailable = bookController.isSearchable,
                 selectedSearchIndex = null,
                 isFindBarVisible = false,
                 searchOrigin = null,
+                searchBoundary = boundary,
+                searchAheadRevealed = false,
+                searchAheadSplitIndex = null,
+                isSearchAheadLoading = false,
+                searchAheadComplete = false,
+                showSearchContinuePrompt = false,
             )
         }
         if (!shouldSearch) return
@@ -1907,49 +2023,24 @@ class ReaderViewModel(
             try {
                 if (!submitted) delay(300L)
                 val boundaries = searchBoundaries ?: bookController.searchChapterBoundaries().also { searchBoundaries = it }
-                if (generation != bookSearchGeneration) return@launch
+                if (generation != viewState.value.bookSearchSessionId) return@launch
                 updateState { it.copy(bookSearchBoundaries = boundaries) }
-                val resolver = SearchChapterResolver(viewState.value.tableOfContents, viewState.value.bookSearchReadingOrder, boundaries)
                 bookController.search(normalizedQuery).collect { batch ->
-                    val chapterCounts = withContext(Dispatchers.Default) {
-                        val context = currentCoroutineContext()
-                        batch.results.groupingBy { result ->
-                            context.ensureActive()
-                            resolver.resolve(result).key
-                        }.eachCount()
-                    }
-                    if (generation == bookSearchGeneration) {
-                        val previousSize = viewState.value.bookSearchResults.size
-                        updateState { state ->
-                            state.copy(
-                                bookSearchResults = state.bookSearchResults + batch.results.take(
-                                    (SEARCH_RESULT_LIMIT - state.bookSearchResults.size).coerceAtLeast(0)).map { it.copy(sessionId = generation) },
-                                bookSearchCount = batch.runningCount,
-                                bookSearchChapterCounts = state.bookSearchChapterCounts.toMutableMap().apply {
-                                    chapterCounts.forEach { (chapter, count) ->
-                                        this[chapter] = (this[chapter] ?: 0) + count
-                                    }
-                                },
-                                bookSearchComplete = batch.isComplete,
-                                isBookSearchLoading = !batch.isComplete,
-                            )
-                        }
-                        if (viewState.value.bookSearchResults.size != previousSize) refreshSearchDecorations()
-                        if (batch.isComplete && viewState.value.selectedSearchIndex != null) {
-                            val current = viewState.value
-                            val recents = current.bookSearchRecents.map { recent ->
-                                if (recent.query == normalizedQuery) recent.copy(count = batch.runningCount, complete = true) else recent
-                            }
-                            saveUserPreferenceUseCase(PreferencesKey.RecentBookSearches(serverId, bookUuid), recents)
-                            updateState { it.copy(bookSearchRecents = recents) }
-                        }
-                    }
+                    if (generation != viewState.value.bookSearchSessionId) return@collect
+                    // The scan stops at the spoiler boundary: nothing past it is searched,
+                    // counted or kept until the reader asks for the rest of the book.
+                    val split = splitAtBoundary(batch.results, boundary, viewState.value.bookSearchReadingOrder)
+                    val capped = appendSearchResults(generation, split.kept)
+                    if (split.passedBoundary || capped) throw SearchScanStopped()
                 }
+                completeSearchScan(generation)
+            } catch (stopped: SearchScanStopped) {
+                completeSearchScan(generation)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
                 updateState { state ->
-                    if (generation == bookSearchGeneration) {
+                    if (generation == viewState.value.bookSearchSessionId) {
                         state.copy(isBookSearchLoading = false, bookSearchFailed = error !is BookNotSearchableException,
                             bookSearchAvailable = error !is BookNotSearchableException,
                             bookSearchNoTextLayer = (error as? BookNotSearchableException)?.noTextLayer == true)
@@ -1961,14 +2052,123 @@ class ReaderViewModel(
         }
     }
 
+    /** The scan up to the boundary is done: mark it complete and start any pending reveal. */
+    private fun completeSearchScan(generation: Long) {
+        updateState { state ->
+            if (generation == viewState.value.bookSearchSessionId) {
+                state.copy(isBookSearchLoading = false, bookSearchComplete = true)
+            } else {
+                state
+            }
+        }
+        if (revealAfterScan) revealSearchAhead()
+    }
+
+    /**
+     * Reveals the matches past the spoiler boundary: scans the rest of the book and shows
+     * those results under "After your page". The reveal applies to the current query only.
+     */
+    private fun revealSearchAhead(stepNext: Boolean = false) {
+        val state = viewState.value
+        val boundary = state.searchBoundary ?: return
+        stepAfterReveal = stepAfterReveal || stepNext
+        updateState { it.copy(showSearchContinuePrompt = false) }
+        if (!state.bookSearchComplete) {
+            // Still scanning up to the boundary; reveal once it finishes.
+            revealAfterScan = true
+            return
+        }
+        if (state.searchAheadRevealed) {
+            if (stepAfterReveal) {
+                stepAfterReveal = false
+                stepSearchResult(1)
+            }
+            return
+        }
+        revealAfterScan = false
+        val generation = state.bookSearchSessionId
+        updateState {
+            it.copy(
+                searchAheadRevealed = true,
+                searchAheadSplitIndex = it.bookSearchResults.size,
+                isSearchAheadLoading = true,
+                searchAheadComplete = false,
+            )
+        }
+        bookSearchAheadJob = viewModelScope.launch {
+            try {
+                bookController.search(state.bookSearchQuery.trim()).collect { batch ->
+                    if (generation != viewState.value.bookSearchSessionId) return@collect
+                    val rest = batch.results.filter { result ->
+                        searchHitIsBefore(result, boundary, viewState.value.bookSearchReadingOrder) != true
+                    }
+                    val capped = appendSearchResults(generation, rest)
+                    if (stepAfterReveal) {
+                        stepAfterReveal = false
+                        stepToFirstRevealedResult()
+                    }
+                    if (capped) throw SearchScanStopped()
+                }
+                completeSearchAheadScan(generation)
+            } catch (stopped: SearchScanStopped) {
+                completeSearchAheadScan(generation)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                updateState { state ->
+                    if (generation == viewState.value.bookSearchSessionId) state.copy(isSearchAheadLoading = false) else state
+                }
+            }
+        }
+    }
+
+    private fun completeSearchAheadScan(generation: Long) {
+        updateState { state ->
+            if (generation == viewState.value.bookSearchSessionId) {
+                state.copy(isSearchAheadLoading = false, searchAheadComplete = true)
+            } else {
+                state
+            }
+        }
+    }
+
+    /** Appends kept matches with contiguous indices; true when the result limit was hit. */
+    private fun appendSearchResults(generation: Long, results: List<ReaderSearchResult>): Boolean {
+        if (results.isEmpty()) return false
+        var capped = false
+        updateState { state ->
+            if (generation != viewState.value.bookSearchSessionId) return@updateState state
+            val capacity = SEARCH_RESULT_LIMIT - state.bookSearchResults.size
+            val kept = results.take(capacity)
+            capped = kept.size < results.size
+            val startIndex = state.bookSearchResults.size
+            state.copy(
+                bookSearchResults = state.bookSearchResults + kept.mapIndexed { offset, result ->
+                    result.copy(index = startIndex + offset, sessionId = generation)
+                },
+                bookSearchCount = startIndex + kept.size,
+                bookSearchCapped = state.bookSearchCapped || capped,
+            )
+        }
+        refreshSearchDecorations()
+        return capped
+    }
+
+    private fun stepToFirstRevealedResult() {
+        val state = viewState.value
+        val split = state.searchAheadSplitIndex ?: return
+        val result = state.bookSearchResults.firstOrNull { it.index >= split } ?: return
+        navigateKeepingAudio(searchResult = result) { goToSearchResult(result) }
+    }
+
     private fun goToSearchResult(result: ReaderSearchResult) {
         val state = viewState.value
         if (result.sessionId != state.bookSearchSessionId) return
-        val recent = RecentBookSearch(state.bookSearchQuery.trim(), state.bookSearchCount, state.bookSearchComplete)
+        // Recent searches store no match counts: while hidden, a count would leak the rest.
+        val recent = RecentBookSearch(state.bookSearchQuery.trim(), 0, state.bookSearchComplete)
         val recents = (listOf(recent) + state.bookSearchRecents.filterNot { it.query == recent.query }).take(8)
         saveUserPreferenceUseCase(PreferencesKey.RecentBookSearches(serverId, bookUuid), recents)
         updateState { it.copy(isBookSearchVisible = false, selectedSearchIndex = result.index,
-            bookSearchReferencePosition = it.bookSearchReferencePosition ?: it.currentPosition,
             isFindBarVisible = true, searchOrigin = if (it.selectedSearchIndex == null) it.currentPosition else it.searchOrigin,
             searchPageTurns = if (it.selectedSearchIndex == null) 0 else it.searchPageTurns, bookSearchRecents = recents) }
         bookController.goToSearchResult(result)
@@ -1978,7 +2178,15 @@ class ReaderViewModel(
     private fun stepSearchResult(delta: Int) {
         val state = viewState.value
         val current = state.bookSearchResults.indexOfFirst { it.index == state.selectedSearchIndex }
-        val result = state.bookSearchResults.getOrNull(current + delta) ?: return
+        val result = state.bookSearchResults.getOrNull(current + delta)
+        if (result == null) {
+            // Stepping past the last read match offers to search the rest of the book.
+            if (delta > 0 && state.searchBoundary != null && !state.searchAheadRevealed) {
+                updateState { it.copy(showSearchContinuePrompt = true) }
+            }
+            return
+        }
+        updateState { it.copy(showSearchContinuePrompt = false) }
         navigateKeepingAudio(searchResult = result) { goToSearchResult(result) }
     }
 
@@ -1990,33 +2198,27 @@ class ReaderViewModel(
 
     private fun closeBookSearch() {
         bookSearchJob?.cancel()
+        bookSearchAheadJob?.cancel()
         bookSearchGeneration++
         bookController.clearSearchDecorations()
         updateState { it.copy(isBookSearchVisible = false, isBookSearchLoading = false,
-            selectedSearchIndex = null, isFindBarVisible = false, searchOrigin = null, bookSearchReferencePosition = null) }
+            selectedSearchIndex = null, isFindBarVisible = false, searchOrigin = null,
+            searchAheadRevealed = false, searchAheadSplitIndex = null, showSearchContinuePrompt = false) }
     }
 
-    private fun searchPageTurned() {
+    /**
+     * Search and jump origins are temporary: they fade after a few page turns.
+     */
+    private fun pageTurned() {
         updateState { state ->
             val turns = state.searchPageTurns + 1
-            state.copy(searchPageTurns = turns, searchOrigin = if (turns >= 3) null else state.searchOrigin)
-        }
-    }
-
-    private fun jumpToBookProgress(progression: Double) {
-        val previous = viewState.value.currentPosition
-        viewModelScope.launch {
-            if (bookController.goToTotalProgression(progression)) {
-                updateState { it.copy(isTocVisible = false, previousTocPosition = previous) }
-            }
-        }
-    }
-
-    private fun loadChapterTicks() {
-        if (viewState.value.chapterTickProgressions.isNotEmpty()) return
-        viewModelScope.launch {
-            val ticks = bookController.chapterStartProgressions()
-            if (ticks.isNotEmpty()) updateState { it.copy(chapterTickProgressions = ticks) }
+            val jumpTurns = state.jumpOriginPageTurns + 1
+            state.copy(
+                searchPageTurns = turns,
+                searchOrigin = if (turns >= 3) null else state.searchOrigin,
+                jumpOriginPageTurns = jumpTurns,
+                jumpOrigin = if (jumpTurns >= 3) null else state.jumpOrigin,
+            )
         }
     }
 
@@ -2159,8 +2361,9 @@ class ReaderViewModel(
         bookController.goToChapter(href)
         updateState {
             it.copy(
-                isTocVisible = false,
-                previousTocPosition = currentPosition,
+                isContentsVisible = false,
+                jumpOrigin = currentPosition ?: it.currentPosition,
+                jumpOriginPageTurns = 0,
             )
         }
     }
@@ -2213,33 +2416,14 @@ class ReaderViewModel(
         goToChapterAndPlay(previousChapter.href, state.currentPosition)
     }
 
-    private fun undoChapterNavigation(position: PositionUiModel) {
-        bookController.goToPosition(position)
-        updateState { it.copy(previousTocPosition = null) }
-    }
-
-    private fun dismissChapterNavigationUndo() {
-        updateState { it.copy(previousTocPosition = null) }
-    }
-
-    private fun toggleBookmarks() {
-        val willBeVisible = !viewState.value.isBookmarksVisible
-        if (willBeVisible) {
-            analytics.logEvent(ReaderAnalyticsEvent.BookmarksOpened(bookUuid = bookUuid))
-        }
-        updateState { it.copy(isBookmarksVisible = willBeVisible) }
-    }
-
     private fun addBookmark() {
         val currentPosition = viewState.value.currentPosition ?: return
         val existing = viewState.value.bookmarks.find { bookmark ->
-            bookmark.locatorHref == currentPosition.href &&
-                bookmark.position == currentPosition.position
+            bookmarkMatchesPosition(bookmark, currentPosition)
         }
         if (existing != null) {
             updateState {
                 it.copy(
-                    isBookmarksVisible = false,
                     showBookmarkAlreadyExists = true,
                 )
             }
@@ -2264,7 +2448,6 @@ class ReaderViewModel(
                     analytics.logEvent(ReaderAnalyticsEvent.BookmarkAdded(bookUuid = bookUuid))
                     updateState {
                         it.copy(
-                            isBookmarksVisible = false,
                             showBookmarkAdded = true,
                             lastAddedBookmarkId = bookmark.id,
                         )
@@ -2304,9 +2487,39 @@ class ReaderViewModel(
 
     private fun deleteBookmark(id: String) {
         analytics.logEvent(ReaderAnalyticsEvent.BookmarkDeleted(bookUuid = bookUuid))
+        val deleted = viewState.value.bookmarks.firstOrNull { it.id == id }
+        if (deleted != null) {
+            updateState { it.copy(showBookmarkDeleted = true, lastDeletedBookmark = deleted) }
+        }
         viewModelScope.launch {
             deleteBookmarkUseCase(id)
         }
+    }
+
+    /** Undoes a deletion from the Contents sheet, keeping the bookmark's id and date. */
+    private fun restoreBookmark(bookmark: BookmarkUiModel) {
+        viewModelScope.launch {
+            addBookmarkUseCase(
+                BookmarkDomainModel(
+                    id = bookmark.id,
+                    bookUuid = bookUuid,
+                    locatorHref = bookmark.locatorHref,
+                    locatorType = bookmark.locatorType,
+                    locatorTitle = bookmark.locatorTitle,
+                    progression = bookmark.progression,
+                    totalProgression = bookmark.totalProgression,
+                    chapterIndex = bookmark.chapterIndex,
+                    position = bookmark.position,
+                    createdAt = bookmark.createdAt,
+                    sortOrder = bookmark.sortOrder,
+                ),
+            )
+        }
+        updateState { it.copy(showBookmarkDeleted = false, lastDeletedBookmark = null) }
+    }
+
+    private fun dismissBookmarkDeleted() {
+        updateState { it.copy(showBookmarkDeleted = false, lastDeletedBookmark = null) }
     }
 
     private fun renameBookmark(id: String, newTitle: String) {
@@ -2315,13 +2528,6 @@ class ReaderViewModel(
             updateBookmarkTitleUseCase(id, newTitle)
         }
         updateState { it.copy(renamingBookmark = null) }
-    }
-
-    private fun reorderBookmarks(bookmarkIds: List<String>) {
-        val orders = bookmarkIds.mapIndexed { index, id -> id to index }
-        viewModelScope.launch {
-            reorderBookmarksUseCase(orders)
-        }
     }
 
     private fun goToPreviousBookmark() {
@@ -2363,7 +2569,13 @@ class ReaderViewModel(
             totalChapters = viewState.value.currentPosition?.totalChapters,
         )
         bookController.goToPosition(position)
-        updateState { it.copy(isBookmarksVisible = false) }
+        updateState {
+            it.copy(
+                isContentsVisible = false,
+                jumpOrigin = it.currentPosition,
+                jumpOriginPageTurns = 0,
+            )
+        }
     }
 
     private fun observeBookmarks() {
@@ -2825,3 +3037,6 @@ class ReaderViewModel(
         private const val SLEEP_TIMER_WARNING_THRESHOLD_MS = 60_000L
     }
 }
+
+/** Ends a scan early at the spoiler boundary or the result limit; not a failure. */
+private class SearchScanStopped : Exception()

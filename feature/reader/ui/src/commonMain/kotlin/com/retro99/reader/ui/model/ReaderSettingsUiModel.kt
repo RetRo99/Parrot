@@ -80,6 +80,8 @@ data class ReaderSettingsUiModel(
     val showAudioProgressBar: Boolean? = null,
     // Whether to keep the screen awake while ReadAloud audio is playing
     val keepScreenOnDuringAudio: Boolean = true,
+    // Whether book search hides matches past the furthest page read (spoiler protection)
+    val hideSearchResultsAhead: Boolean = true,
 )
 
 enum class ReaderThemeUi {
@@ -164,6 +166,7 @@ fun ReaderSettingsDomainModel.toUiModel(): ReaderSettingsUiModel = ReaderSetting
     doubleTapTimeoutMs = doubleTapTimeoutMs,
     showAudioProgressBar = showAudioProgressBar,
     keepScreenOnDuringAudio = keepScreenOnDuringAudio,
+    hideSearchResultsAhead = hideSearchResultsAhead,
 )
 
 fun ReaderSettingsUiModel.toDomainModel(): ReaderSettingsDomainModel = ReaderSettingsDomainModel(
@@ -206,6 +209,7 @@ fun ReaderSettingsUiModel.toDomainModel(): ReaderSettingsDomainModel = ReaderSet
     doubleTapTimeoutMs = doubleTapTimeoutMs,
     showAudioProgressBar = showAudioProgressBar,
     keepScreenOnDuringAudio = keepScreenOnDuringAudio,
+    hideSearchResultsAhead = hideSearchResultsAhead,
 )
 
 private fun ReaderTheme.toUiTheme(): ReaderThemeUi = when (this) {

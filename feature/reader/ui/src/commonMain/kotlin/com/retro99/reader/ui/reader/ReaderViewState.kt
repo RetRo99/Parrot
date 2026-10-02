@@ -39,11 +39,15 @@ data class ReaderViewState(
     val isAudioPlayerReady: Boolean = false,
     // Table of contents
     val tableOfContents: List<TocItemUiModel> = emptyList(),
-    val isTocVisible: Boolean = false,
-    // Start of each chapter as a fraction of the whole book, for the jump slider ticks.
-    val chapterTickProgressions: List<Double> = emptyList(),
-    // TOC navigation undo - stores the position before navigating to a chapter
-    val previousTocPosition: PositionUiModel? = null,
+    // Contents sheet (Chapters / Bookmarks share one visibility flag)
+    val isContentsVisible: Boolean = false,
+    // Tab the sheet opens on; the tab switch itself is local to the sheet.
+    val contentsInitialTab: ContentsTab = ContentsTab.CHAPTERS,
+    // Flat indices of the expanded TOC groups; kept for the reading session.
+    val contentsExpandedGroups: Set<Int> = emptySet(),
+    // "Back to where I was" after a chapter or bookmark jump; ages out after a few page turns.
+    val jumpOrigin: PositionUiModel? = null,
+    val jumpOriginPageTurns: Int = 0,
     // Current chapter info (page position and word count) based on actual viewport display
     val chapterInfo: ChapterInfo? = null,
     // Estimated reading time for the current chapter
@@ -65,7 +69,9 @@ data class ReaderViewState(
     // Shows a one-time prompt when the sleep timer is close to ending.
     val showSleepTimerWarningPrompt: Boolean = false,
     val bookmarks: List<BookmarkUiModel> = emptyList(),
-    val isBookmarksVisible: Boolean = false,
+    // Undo for bookmark deletion from the Contents sheet (restore within the snackbar window).
+    val showBookmarkDeleted: Boolean = false,
+    val lastDeletedBookmark: BookmarkUiModel? = null,
     val renamingBookmark: BookmarkUiModel? = null,
     val showNoMoreBookmarks: Boolean = false,
     // When true, shows the audiobook-style audio-only UI instead of the EPUB text view
@@ -94,7 +100,6 @@ data class ReaderViewState(
     val ttsSentenceIndex: Int = 0,
     val ttsSentenceCount: Int = 0,
     val isListenSheetVisible: Boolean = false,
-    val isContentsSearchVisible: Boolean = false,
     val isBookSearchVisible: Boolean = false,
     val bookSearchQuery: String = "",
     val bookSearchSessionId: Long = 0,
@@ -102,19 +107,31 @@ data class ReaderViewState(
     val isBookSearchLoading: Boolean = false,
     val bookSearchFailed: Boolean = false,
     val bookSearchComplete: Boolean = false,
+    /** Number of kept matches; equals [bookSearchResults].size. */
     val bookSearchCount: Int = 0,
-    val bookSearchChapterCounts: Map<String, Int> = emptyMap(),
+    /** True when matches were dropped at the result limit. */
+    val bookSearchCapped: Boolean = false,
     val bookSearchAvailable: Boolean = true,
     val bookSearchNoTextLayer: Boolean = false,
     val bookSearchIgnoresCaseAndAccents: Boolean = false,
     val bookSearchRecents: List<RecentBookSearch> = emptyList(),
     val bookSearchReadingOrder: List<String> = emptyList(),
-    val bookSearchReferencePosition: PositionUiModel? = null,
     val bookSearchBoundaries: List<SearchChapterBoundary> = emptyList(),
     val selectedSearchIndex: Int? = null,
     val isFindBarVisible: Boolean = false,
     val searchOrigin: PositionUiModel? = null,
     val searchPageTurns: Int = 0,
+    // Spoiler protection: everything beyond the boundary is hidden until explicitly revealed.
+    /** The furthest point reached in this book; null means nothing is hidden. */
+    val searchBoundary: SearchBoundaryMark? = null,
+    /** Reveal applies to the current query only. */
+    val searchAheadRevealed: Boolean = false,
+    /** Book-search results index where the "After your page" section starts, once revealed. */
+    val searchAheadSplitIndex: Int? = null,
+    val isSearchAheadLoading: Boolean = false,
+    val searchAheadComplete: Boolean = false,
+    /** Find-bar prompt offering to search past the boundary. */
+    val showSearchContinuePrompt: Boolean = false,
 ) {
     /**
      * Whether this is a ReadAloud book with media overlay support.
@@ -144,3 +161,6 @@ data class ReaderViewState(
      */
     val currentPosition get() = publicationState?.position
 }
+
+/** Tabs of the reader Contents sheet. */
+enum class ContentsTab { CHAPTERS, BOOKMARKS }

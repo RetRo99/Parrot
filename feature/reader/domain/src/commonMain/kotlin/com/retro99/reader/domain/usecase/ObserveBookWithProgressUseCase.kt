@@ -85,6 +85,7 @@ class ObserveBookWithProgressUseCase(
         // Fetch remote position (one-time per emission)
         val remotePosition = readerRepository?.getRemotePosition(bookUuid)?.getOrElse { null }
         val remoteProgression = remotePosition?.totalProgression
+        val displayPosition = if (localPosition?.totalProgression != null) localPosition else remotePosition
 
         // Library books are "cached" when they have a device copy; never ask the reader
         // cache about them (I6).
@@ -104,10 +105,10 @@ class ObserveBookWithProgressUseCase(
             isEbookCached = isEbookCached,
             isAudiobookCached = isAudiobookCached,
             isReadaloudCached = isReadaloudCached,
-            chapterIndex = localPosition?.chapterIndex,
-            totalChapters = localPosition?.totalChapters,
-            totalDurationMs = localPosition?.totalDurationMs,
-            bookTimeMs = localPosition?.bookTimeMs,
+            chapterIndex = displayPosition?.chapterIndex,
+            totalChapters = displayPosition?.totalChapters,
+            totalDurationMs = displayPosition?.totalDurationMs,
+            bookTimeMs = displayPosition?.bookTimeMs,
             remoteObservedAt = remotePosition?.observedAt ?: remotePosition?.updatedAt,
         )
 

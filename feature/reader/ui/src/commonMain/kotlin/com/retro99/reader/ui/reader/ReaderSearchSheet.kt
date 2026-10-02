@@ -1,5 +1,6 @@
 package com.retro99.reader.ui.reader
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -55,7 +56,9 @@ private sealed interface SearchRow {
     val key: String
     data class Header(val chapter: SearchChapter, val count: Int, val firstIndex: Int) : SearchRow { override val key = "chapter-${chapter.key}-$firstIndex" }
     data class Hit(val hit: SearchHit) : SearchRow { override val key = "hit-${hit.result.sessionId}-${hit.result.index}" }
-    data object Ahead : SearchRow { override val key = "ahead" }
+    /** Always the same offer to search past the spoiler boundary, matches or not. */
+    data object SearchRest : SearchRow { override val key = "search-rest" }
+    data class RestDivider(val firstIndex: Int) : SearchRow { override val key = "rest-$firstIndex" }
 }
 
 @Composable
@@ -69,50 +72,68 @@ internal fun ReaderSearchSheet(
     val hits = remember(state.bookSearchResults, state.tableOfContents, state.bookSearchReadingOrder, state.bookSearchBoundaries) {
         presentSearchHits(state.bookSearchResults, state.tableOfContents, state.bookSearchReadingOrder, state.bookSearchBoundaries)
     }
-    val referencePosition = state.bookSearchReferencePosition ?: state.searchOrigin ?: state.currentPosition
-    val split = searchPositionSplit(hits.map { it.result }, referencePosition, state.bookSearchReadingOrder)
-    var showAhead by remember(state.bookSearchQuery) { mutableStateOf(state.selectedSearchIndex?.let { selected ->
-        split != null && hits.indexOfFirst { it.result.index == selected } >= split
-    } == true) }
-    var nearestRequested by remember(state.bookSearchQuery) { mutableStateOf(false) }
-    // A closed ahead section must not disclose even whether later matches exist.
-    // If the position cannot be compared, keep all snippets behind explicit reveal.
-    val visibleHits = if (showAhead) hits else hits.take(split ?: 0)
-    val counts = if (showAhead) state.bookSearchChapterCounts.ifEmpty { hits.groupingBy { it.chapter.key }.eachCount() }
-        else visibleHits.groupingBy { it.chapter.key }.eachCount()
+    // Spoiler protection: until the reader asks, only the matches up to the boundary exist.
+    val boundary = state.searchBoundary
+    val hidden = boundary != null && !state.searchAheadRevealed
+    val splitIndex = state.searchAheadSplitIndex
+    val preHits = if (splitIndex == null) hits else hits.take(splitIndex)
+    val afterHits = if (splitIndex == null) emptyList() else hits.drop(splitIndex)
     val rows = buildList {
         var previous: String? = null
-        hits.forEachIndexed { index, hit ->
-            if (index >= (split ?: 0) && !showAhead) return@forEachIndexed
-            if (hit.chapter.key != previous) add(SearchRow.Header(hit.chapter, counts.getValue(hit.chapter.key), hit.result.index))
+        val preCounts = preHits.groupingBy { it.chapter.key }.eachCount()
+        preHits.forEach { hit ->
+            if (hit.chapter.key != previous) add(SearchRow.Header(hit.chapter, preCounts.getValue(hit.chapter.key), hit.result.index))
             add(SearchRow.Hit(hit))
             previous = hit.chapter.key
         }
-        add(SearchRow.Ahead)
-    }
-    val listState = rememberLazyListState()
-    var scrolled by remember(state.bookSearchQuery) { mutableStateOf(false) }
-    LaunchedEffect(rows.size, split, state.bookSearchComplete, nearestRequested) {
-        if (nearestRequested && split != null && split < hits.size) {
-            val target = rows.indexOfFirst { it is SearchRow.Hit && it.hit.result.index == hits[split].result.index }
-            if (target >= 0) { listState.scrollToItem(target); nearestRequested = false; scrolled = true }
-            return@LaunchedEffect
-        }
-        if (!scrolled && hits.isNotEmpty()) {
-            val target = state.selectedSearchIndex?.let { selected -> rows.indexOfFirst { it is SearchRow.Hit && it.hit.result.index == selected } }
-                ?: rows.indexOfFirst { it == SearchRow.Ahead }
-            if (target >= 0 && (state.selectedSearchIndex != null || (split != null && split < hits.size) || state.bookSearchComplete)) {
-                listState.scrollToItem(target); scrolled = true
+        if (hidden) add(SearchRow.SearchRest)
+        if (state.searchAheadRevealed) {
+            add(SearchRow.RestDivider(splitIndex ?: 0))
+            previous = null
+            val afterCounts = afterHits.groupingBy { it.chapter.key }.eachCount()
+            afterHits.forEach { hit ->
+                if (hit.chapter.key != previous) add(SearchRow.Header(hit.chapter, afterCounts.getValue(hit.chapter.key), hit.result.index))
+                add(SearchRow.Hit(hit))
+                previous = hit.chapter.key
             }
         }
     }
+    val chapterCount = hits.map { it.chapter.key }.toSet().size
+    val fullySearched = state.bookSearchComplete && (boundary == null || state.searchAheadComplete)
     val summary = when {
-        !showAhead -> stringResource(StringRes.reader_find_earlier_summary, searchMatchCount(visibleHits.size))
         state.isBookSearchLoading -> stringResource(StringRes.reader_find_running, state.bookSearchCount)
-        state.bookSearchComplete -> stringResource(StringRes.reader_find_summary, searchMatchCount(state.bookSearchCount),
-            pluralStringResource(PluralRes.reader_find_chapter_quantity, counts.size, counts.size))
-        else -> stringResource(StringRes.reader_find_partial, searchMatchCount(state.bookSearchCount),
-            pluralStringResource(PluralRes.reader_find_chapter_quantity, counts.size, counts.size))
+        // Nothing found and nothing searched past the boundary yet says exactly that.
+        hidden && state.bookSearchComplete && state.bookSearchCount == 0 -> stringResource(StringRes.reader_find_upto_none)
+        hidden -> stringResource(
+            StringRes.reader_find_upto_summary,
+            searchMatchCount(state.bookSearchCount),
+            boundary?.percent() ?: 0,
+        )
+
+        fullySearched -> stringResource(
+            StringRes.reader_find_summary,
+            searchMatchCount(state.bookSearchCount),
+            pluralStringResource(PluralRes.reader_find_chapter_quantity, chapterCount, chapterCount),
+        )
+
+        else -> stringResource(
+            StringRes.reader_find_partial,
+            searchMatchCount(state.bookSearchCount),
+            pluralStringResource(PluralRes.reader_find_chapter_quantity, chapterCount, chapterCount),
+        )
+    }
+    val listState = rememberLazyListState()
+    var scrolled by remember(state.bookSearchQuery) { mutableStateOf(false) }
+    LaunchedEffect(rows.size, state.bookSearchComplete) {
+        if (!scrolled) {
+            val target = state.selectedSearchIndex?.let { selected ->
+                rows.indexOfFirst { it is SearchRow.Hit && it.hit.result.index == selected }
+            } ?: -1
+            if (target >= 0) {
+                listState.scrollToItem(target)
+                scrolled = true
+            }
+        }
     }
     EmberBottomSheet(onDismiss = { dispatch(ReaderIntent.ToggleBookSearch) }, footer = footer) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -156,62 +177,84 @@ internal fun ReaderSearchSheet(
                     else -> {
                         Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(summary, color = colors.ink, style = Ember.type.label, modifier = Modifier.weight(1f)
-                                .semantics { if (state.bookSearchComplete) liveRegion = LiveRegionMode.Polite })
-                            if (showAhead && hits.isNotEmpty() && split != null && split < hits.size) {
-                                OutlinedButton(onClick = {
-                                    showAhead = true
-                                    nearestRequested = true
-                                }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp), border = androidx.compose.foundation.BorderStroke(1.dp, colors.chipBorder)) {
-                                    Text(stringResource(StringRes.reader_find_nearest), color = colors.accentText, style = Ember.type.label)
-                                }
-                            }
-                        }
-                        if (referencePosition != null) {
-                            val percent = referencePosition?.totalProgression
-                            Text(if (percent != null) stringResource(StringRes.reader_find_position, (percent * 100).roundToInt())
-                                else stringResource(StringRes.reader_find_position_no_percent), color = colors.ink2, style = Ember.type.meta)
-                            val capped = state.bookSearchCount > SEARCH_RESULT_LIMIT
-                            val direction = if (!showAhead) null else when (split) {
-                                hits.size -> if (capped) StringRes.reader_find_before_capped else StringRes.reader_find_before
-                                0 -> if (capped) StringRes.reader_find_after_capped else StringRes.reader_find_after
-                                else -> null
-                            }
-                            direction?.let { Text(stringResource(it), color = colors.ink2, style = Ember.type.meta, modifier = Modifier.padding(top = 3.dp, bottom = 8.dp)) }
+                                .semantics { if (fullySearched) liveRegion = LiveRegionMode.Polite })
                         }
                         if (state.bookSearchFailed) Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(stringResource(StringRes.reader_find_failed), color = colors.ink2, modifier = Modifier.weight(1f))
                             TextButton(onClick = { dispatch(ReaderIntent.SubmitBookSearch) }) { Text(stringResource(StringRes.reader_find_retry)) }
                         }
-                        if (showAhead && state.bookSearchCount > SEARCH_RESULT_LIMIT) Text(stringResource(StringRes.reader_find_cap, SEARCH_RESULT_LIMIT), color = colors.ink2, style = Ember.type.meta, modifier = Modifier.padding(bottom = 8.dp))
-                        if (showAhead && state.bookSearchComplete && hits.isEmpty()) {
+                        if (state.bookSearchCapped) Text(stringResource(StringRes.reader_find_cap, SEARCH_RESULT_LIMIT), color = colors.ink2, style = Ember.type.meta, modifier = Modifier.padding(bottom = 8.dp))
+                        // With nothing hidden left to look for, the plain empty state is enough.
+                        if (boundary == null && fullySearched && hits.isEmpty()) {
                             SearchMessage(stringResource(StringRes.reader_find_empty, state.bookSearchQuery.trim()), stringResource(StringRes.reader_find_empty_hint))
                         } else {
                             LazyColumn(state = listState, modifier = Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 items(rows, key = { it.key }) { row -> when (row) {
-                                    is SearchRow.Header -> Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Text((row.chapter.number?.let { "$it · " } ?: "") + searchChapterLabel(row.chapter), color = colors.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                                        Text(searchMatchCount(row.count), color = colors.ink2, style = Ember.type.meta)
+                                    is SearchRow.Header -> Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp), verticalAlignment = Alignment.Top) {
+                                        // Chapter title only: the TOC ordinal told readers nothing.
+                                        Text(searchChapterLabel(row.chapter), color = colors.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                                            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                        Text(searchMatchCount(row.count), color = colors.ink2, style = Ember.type.meta, modifier = Modifier.padding(start = 8.dp, top = 2.dp))
                                     }
                                     is SearchRow.Hit -> SearchResultCard(row.hit) { dispatch(ReaderIntent.GoToSearchResult(row.hit.result)) }
-                                    SearchRow.Ahead -> {
-                                        OutlinedButton(onClick = { showAhead = !showAhead }, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                            shape = RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(if (eink) 1.5.dp else 1.dp, colors.chipBorder),
-                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
-                                            Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                                                Text(stringResource(StringRes.reader_find_ahead), color = colors.ink, style = Ember.type.label)
-                                                Text(stringResource(if (showAhead) StringRes.reader_find_hide_ahead else StringRes.reader_find_spoilers),
-                                                    color = colors.ink2, style = Ember.type.meta, modifier = Modifier.padding(top = 3.dp))
-                                            }
-                                            Icon(if (showAhead) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                                stringResource(if (showAhead) StringRes.reader_find_hide_ahead else StringRes.reader_find_show_ahead), tint = colors.accentText)
-                                        }
-                                    }
+                                    SearchRow.SearchRest -> SearchRestRow { dispatch(ReaderIntent.RevealSearchAhead()) }
+                                    is SearchRow.RestDivider -> RestDividerRow(
+                                        afterCount = afterHits.size,
+                                        loading = state.isSearchAheadLoading,
+                                        complete = state.searchAheadComplete,
+                                        eink = eink,
+                                    )
                                 } }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The one neutral offer to search past the spoiler boundary. It looks exactly the same
+ * whether the rest of the book holds zero matches or five hundred: its presence, or any
+ * count near it, must never tell the reader what is coming.
+ */
+@Composable
+private fun SearchRestRow(onClick: () -> Unit) {
+    val colors = Ember.colors
+    val eink = Ember.style.isEink
+    OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        shape = RoundedCornerShape(14.dp), border = BorderStroke(if (eink) 1.5.dp else 1.dp, colors.chipBorder),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
+        Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+            Text(stringResource(StringRes.reader_find_search_rest), color = colors.ink, style = Ember.type.label)
+            Text(stringResource(StringRes.reader_find_spoiler_warning),
+                color = colors.ink2, style = Ember.type.meta, modifier = Modifier.padding(top = 3.dp))
+        }
+        Icon(Icons.Default.KeyboardArrowDown, stringResource(StringRes.reader_find_search_rest), tint = colors.accentText)
+    }
+}
+
+/** Everything below this line is past the reader's page; shown only after the reveal. */
+@Composable
+private fun RestDividerRow(afterCount: Int, loading: Boolean, complete: Boolean, eink: Boolean) {
+    val colors = Ember.colors
+    Column(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(StringRes.reader_find_after_page), color = colors.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            if (loading) {
+                Text(stringResource(StringRes.reader_find_running, afterCount), color = colors.ink2, style = Ember.type.meta)
+            } else if (afterCount > 0) {
+                Text(searchMatchCount(afterCount), color = colors.ink2, style = Ember.type.meta)
+            }
+        }
+        HorizontalDivider(
+            color = colors.line,
+            thickness = if (eink) 1.5.dp else 1.dp,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        if (!loading && complete && afterCount == 0) {
+            Text(stringResource(StringRes.reader_find_rest_none), color = colors.ink2, style = Ember.type.meta, modifier = Modifier.padding(top = 6.dp))
         }
     }
 }
@@ -271,7 +314,7 @@ private fun SearchResultCard(hit: SearchHit, onClick: () -> Unit) {
         if (result.after.orEmpty().length > after.length) append("…")
     }
     val percent = result.totalProgression?.let { (it * 100).roundToInt() }
-    val chapter = hit.chapter.number?.let { stringResource(StringRes.reader_find_chapter, it) } ?: searchChapterLabel(hit.chapter)
+    val chapter = searchChapterLabel(hit.chapter)
     val description = if (percent != null) stringResource(StringRes.reader_find_row, chapter, percent, snippet.text)
         else stringResource(StringRes.reader_find_row_no_percent, chapter, snippet.text)
     Row(Modifier.fillMaxWidth().clip(shape).background(cardFill)
@@ -290,14 +333,20 @@ internal fun ReaderFindBar(state: ReaderViewState, dispatch: (ReaderIntent) -> U
     val colors = Ember.colors
     val eink = Ember.style.isEink
     val chapter = resolveSearchChapter(result, state.tableOfContents, state.bookSearchReadingOrder, state.bookSearchBoundaries)
+    val hidden = state.searchBoundary != null && !state.searchAheadRevealed
+    val fullySearched = state.bookSearchComplete && (state.searchBoundary == null || state.searchAheadComplete)
     Column(modifier.padding(horizontal = 12.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         state.searchOrigin?.let { origin ->
-            OutlinedButton(onClick = { dispatch(ReaderIntent.ReturnToSearchOrigin) }, shape = CircleShape,
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = colors.surface), border = androidx.compose.foundation.BorderStroke(if (eink) 2.dp else 1.dp, colors.chipBorder)) {
-                Icon(Icons.Default.Undo, null, tint = colors.ink, modifier = Modifier.size(18.dp))
-                Text(origin.totalProgression?.let { stringResource(StringRes.reader_find_back, (it * 100).roundToInt()) }
-                    ?: stringResource(StringRes.reader_find_back_no_percent), color = colors.ink, style = Ember.type.label, modifier = Modifier.padding(start = 8.dp))
-            }
+            BackToOriginPill(
+                origin = origin,
+                onClick = { dispatch(ReaderIntent.ReturnToSearchOrigin) },
+            )
+        }
+        if (state.showSearchContinuePrompt) {
+            ContinueRestRow(
+                onContinue = { dispatch(ReaderIntent.RevealSearchAhead(stepNext = true)) },
+                onDismiss = { dispatch(ReaderIntent.DismissSearchContinuePrompt) },
+            )
         }
         Row(Modifier.fillMaxWidth().height(60.dp).background(colors.surface, RoundedCornerShape(20.dp))
             .border(if (eink) 2.dp else 1.dp, colors.chipBorder, RoundedCornerShape(20.dp)).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -306,7 +355,13 @@ internal fun ReaderFindBar(state: ReaderViewState, dispatch: (ReaderIntent) -> U
                 Icon(Icons.Default.Search, null, tint = colors.ink2, modifier = Modifier.size(20.dp))
                 Column(Modifier.padding(start = 10.dp)) {
                     Text("“${state.bookSearchQuery.trim()}”", color = colors.ink, style = Ember.type.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(stringResource(if (state.bookSearchComplete) StringRes.reader_find_selected else StringRes.reader_find_selected_partial,
+                    // While hidden the count is a running "so far": the rest of the book is unsearched.
+                    Text(stringResource(
+                        when {
+                            hidden -> StringRes.reader_find_selected_so_far
+                            fullySearched -> StringRes.reader_find_selected
+                            else -> StringRes.reader_find_selected_partial
+                        },
                         result.index + 1, state.bookSearchCount, searchChapterLabel(chapter)), color = colors.ink2, style = Ember.type.meta, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -315,11 +370,33 @@ internal fun ReaderFindBar(state: ReaderViewState, dispatch: (ReaderIntent) -> U
                 Icon(Icons.Default.KeyboardArrowUp, stringResource(StringRes.reader_find_previous), tint = colors.ink)
             }
             Spacer(Modifier.width(6.dp))
-            IconButton(onClick = { dispatch(ReaderIntent.NextSearchResult) }, enabled = result.index < state.bookSearchResults.lastIndex,
+            // Next on the last read match offers to search the rest of the book instead of stopping.
+            IconButton(onClick = { dispatch(ReaderIntent.NextSearchResult) },
+                enabled = result.index < state.bookSearchResults.lastIndex || (hidden && state.bookSearchComplete),
                 modifier = Modifier.size(48.dp).background(if (eink) Color.Black else colors.accent, CircleShape)) {
                 Icon(Icons.Default.KeyboardArrowDown, stringResource(StringRes.reader_find_next), tint = if (eink) Color.White else colors.onAccent)
             }
             IconButton(onClick = { dispatch(ReaderIntent.CloseBookSearch) }) { Icon(Icons.Default.Close, stringResource(StringRes.reader_find_close), tint = colors.ink2) }
         }
+    }
+}
+
+/** "Continue into the rest of the book?" — offered instead of stepping past the boundary. */
+@Composable
+private fun ContinueRestRow(onContinue: () -> Unit, onDismiss: () -> Unit) {
+    val colors = Ember.colors
+    val shape = RoundedCornerShape(20.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(colors.surface, shape)
+            .border(1.dp, colors.chipBorder, shape)
+            .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stringResource(StringRes.reader_find_continue_rest), color = colors.ink, style = Ember.type.label,
+            maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(end = 4.dp))
+        TextButton(onClick = onDismiss) { Text(stringResource(StringRes.reader_find_not_now), color = colors.ink2) }
+        TextButton(onClick = onContinue) { Text(stringResource(StringRes.reader_find_continue), color = colors.accentText, fontWeight = FontWeight.Bold) }
     }
 }

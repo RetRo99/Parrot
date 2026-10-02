@@ -303,6 +303,13 @@ class SettingsViewModel(
                 it.copy(keepScreenOnDuringAudio = intent.enabled)
             }
 
+            is SettingsIntent.OnHideSearchAheadChanged -> updateReaderSetting(
+                "hide_search_results_ahead",
+                intent.enabled.toString(),
+            ) {
+                it.copy(hideSearchResultsAhead = intent.enabled)
+            }
+
             is SettingsIntent.OnTtsEnabledChanged -> {
                 analytics.logEvent(
                     ReaderAnalyticsEvent.TtsEnabledChanged(isEnabled = intent.enabled),

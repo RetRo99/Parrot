@@ -64,6 +64,8 @@ data class ReaderSettingsUiModel(
     val showAudioProgressBar: Boolean? = null,
     // Whether to keep the screen awake while ReadAloud audio is playing
     val keepScreenOnDuringAudio: Boolean = true,
+    // Whether book search hides matches past the furthest page read (spoiler protection)
+    val hideSearchResultsAhead: Boolean = true,
     val ttsVoiceId: String? = null,
     val ttsRate: Float = 1.0f,
     val ttsPitch: Float = 1.0f,

@@ -54,6 +54,8 @@ import resources.translations.reader_eink_underline_hint
 import resources.translations.reader_font
 import resources.translations.reader_full_screen
 import resources.translations.reader_full_screen_sub
+import resources.translations.reader_hide_search_ahead
+import resources.translations.reader_hide_search_ahead_sub
 import resources.translations.reader_keep_formatting
 import resources.translations.reader_keep_formatting_sub
 import resources.translations.reader_keep_screen_on
@@ -533,6 +535,12 @@ internal fun ProgressTab(
             onCheckedChange = { enabled ->
                 intentDispatcher(SettingsIntent.OnUpdateLinkedCopiesChanged(enabled))
             },
+        )
+        SwitchRow(
+            title = stringResource(StringRes.reader_hide_search_ahead),
+            subtitle = stringResource(StringRes.reader_hide_search_ahead_sub),
+            checked = viewState.hideSearchResultsAhead,
+            onCheckedChange = { intentDispatcher(SettingsIntent.OnHideSearchAheadChanged(it)) },
         )
     }
 }

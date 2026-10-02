@@ -119,8 +119,6 @@ import resources.translations.reader_tts_playback_failed
 import resources.translations.reader_tts_playback_retry
 import resources.translations.reader_time_remaining_less_than_minute
 import resources.translations.reader_time_remaining_minutes
-import resources.translations.reader_toc_jumped_to_chapter
-import resources.translations.reader_toc_undo
 import resources.translations.reader_tts_pause
 import resources.translations.reader_tts_read_aloud
 import resources.translations.reader_tts_voice_settings
@@ -560,6 +558,7 @@ internal fun AnimatedProgressBar(
     areControlsVisible: Boolean,
     position: ProgressBarPosition,
     lastKnownPosition: PositionUiModel?,
+    chapterTitle: String? = null,
     chapterReadingTimeInfo: ChapterReadingTimeInfo?,
     chapterInfo: ChapterInfo?,
     currentTime: String,
@@ -579,7 +578,7 @@ internal fun AnimatedProgressBar(
             totalProgression = lastKnownPosition?.totalProgression,
             chapterInfo = chapterInfo,
             chapterReadingTimeInfo = chapterReadingTimeInfo,
-            chapterTitle = lastKnownPosition?.title,
+            chapterTitle = chapterTitle ?: lastKnownPosition?.title,
             chapterProgressDisplayMode = settings.chapterProgressDisplayMode,
             chapterProgression = lastKnownPosition?.progression,
             fixedPosition = lastKnownPosition?.position,
@@ -762,53 +761,6 @@ internal fun FontSizeUndoSnackbarHost(
 ) {
     SnackbarHost(
         hostState = hostState,
-        modifier = modifier,
-    ) { snackbarData ->
-        val dismissState = rememberSwipeToDismissBoxState()
-        LaunchedEffect(dismissState.currentValue) {
-            if (dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
-                snackbarData.dismiss()
-            }
-        }
-        SwipeToDismissBox(
-            state = dismissState,
-            backgroundContent = {},
-        ) {
-            Snackbar(snackbarData = snackbarData)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun ChapterNavigationUndoSnackbar(
-    previousTocPosition: PositionUiModel?,
-    onUndo: (PositionUiModel) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    val jumpedToChapterMessage = stringResource(StringRes.reader_toc_jumped_to_chapter)
-    val undoLabel = stringResource(StringRes.reader_toc_undo)
-
-    LaunchedEffect(previousTocPosition) {
-        if (previousTocPosition != null) {
-            val result = snackbarHostState.showSnackbar(
-                message = jumpedToChapterMessage,
-                actionLabel = undoLabel,
-                duration = SnackbarDuration.Short,
-            )
-            when (result) {
-                SnackbarResult.ActionPerformed -> onUndo(previousTocPosition)
-                SnackbarResult.Dismissed -> onDismiss()
-            }
-        } else {
-            snackbarHostState.currentSnackbarData?.dismiss()
-        }
-    }
-
-    SnackbarHost(
-        hostState = snackbarHostState,
         modifier = modifier,
     ) { snackbarData ->
         val dismissState = rememberSwipeToDismissBoxState()

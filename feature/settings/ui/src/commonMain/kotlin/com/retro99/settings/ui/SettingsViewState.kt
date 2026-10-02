@@ -57,6 +57,7 @@ data class SettingsViewState(
     val doubleTapTimeoutMs: Int get() = readerSettings.doubleTapTimeoutMs
     val showAudioProgressBar: Boolean? get() = readerSettings.showAudioProgressBar
     val keepScreenOnDuringAudio: Boolean get() = readerSettings.keepScreenOnDuringAudio
+    val hideSearchResultsAhead: Boolean get() = readerSettings.hideSearchResultsAhead
     val ttsEnabled: Boolean get() = readerSettings.ttsEnabled
 
     fun isSectionExpanded(section: SettingsSection): Boolean = section in expandedSections

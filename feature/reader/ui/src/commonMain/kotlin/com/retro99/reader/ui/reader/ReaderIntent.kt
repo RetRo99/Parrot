@@ -17,14 +17,22 @@ sealed interface ReaderIntent : BaseIntent {
     data object NextSearchResult : ReaderIntent
     data object ReturnToSearchOrigin : ReaderIntent
     data object ToggleFindBar : ReaderIntent
+
+    /**
+     * Reveals the matches after the spoiler boundary. With [stepNext], continues stepping
+     * from the find bar's "Continue into the rest of the book?" prompt.
+     */
+    data class RevealSearchAhead(val stepNext: Boolean = false) : ReaderIntent
+
+    data object DismissSearchContinuePrompt : ReaderIntent
     data class UpdateSearchDecorations(val accent: Int, val soft: Int, val onAccent: Int, val eink: Boolean) : ReaderIntent
 
     data class GoToSearchResult(val result: ReaderSearchResult) : ReaderIntent
 
     data class SeekToChapterProgress(val progression: Double) : ReaderIntent
 
-    /** Jumps to a fraction (0..1) of the whole book from the Contents sheet. */
-    data class JumpToBookProgress(val progression: Double) : ReaderIntent
+    /** Returns to where the reader was before the last chapter or bookmark jump. */
+    data object ReturnToJumpOrigin : ReaderIntent
 
     /** Shows the now-playing card for [source]; starts playback only when [autoPlay] is set. */
     data class StartListening(
@@ -89,32 +97,23 @@ sealed interface ReaderIntent : BaseIntent {
     // Table of Contents intents
 
     /**
-     * Toggle the table of contents visibility.
+     * Toggle the Contents sheet on the Chapters tab (closes it when already open).
      */
     data object ToggleToc : ReaderIntent
+
+    /** Expands or collapses a TOC group in the Contents sheet. */
+    data class ToggleContentsGroup(val flatIndex: Int) : ReaderIntent
 
     /**
      * Navigate to a specific chapter from the TOC.
      *
      * @param href The href of the chapter to navigate to
-     * @param currentPosition The current position before navigation (for undo functionality)
+     * @param currentPosition The current position before navigation (for the jump origin)
      */
     data class GoToChapter(
         val href: String,
         val currentPosition: PositionUiModel?,
     ) : ReaderIntent
-
-    /**
-     * Undo the last chapter navigation and return to the previous position.
-     *
-     * @param position The position to navigate back to
-     */
-    data class UndoChapterNavigation(val position: PositionUiModel) : ReaderIntent
-
-    /**
-     * Dismiss the chapter navigation undo snackbar.
-     */
-    data object DismissChapterNavigationUndo : ReaderIntent
 
     data object GoToNextChapter : ReaderIntent
 
@@ -249,6 +248,7 @@ sealed interface ReaderIntent : BaseIntent {
 
     // Bookmarks
 
+    /** Toggle the Contents sheet on the Bookmarks tab (closes it when already open). */
     data object ToggleBookmarks : ReaderIntent
 
     data object AddBookmark : ReaderIntent
@@ -257,11 +257,14 @@ sealed interface ReaderIntent : BaseIntent {
 
     data object DismissBookmarkAlreadyExists : ReaderIntent
 
+    /** Undo of a bookmark deletion: puts the deleted bookmark back. */
+    data class RestoreBookmark(val bookmark: BookmarkUiModel) : ReaderIntent
+
+    data object DismissBookmarkDeleted : ReaderIntent
+
     data class UndoBookmark(val id: String) : ReaderIntent
 
     data class RenameBookmark(val id: String, val newTitle: String) : ReaderIntent
-
-    data class ReorderBookmarks(val bookmarkIds: List<String>) : ReaderIntent
 
     data object GoToPreviousBookmark : ReaderIntent
 

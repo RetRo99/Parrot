@@ -72,6 +72,9 @@ sealed class PreferencesKey(val name: String) {
     data object RecentLibrarySearches : PreferencesKey("RecentLibrarySearches")
     data class RecentBookSearches(val serverId: String, val bookUuid: String) :
         PreferencesKey("RecentBookSearches_${serverId}_$bookUuid")
+    data class FurthestReadPosition(val serverId: String, val bookUuid: String) :
+        PreferencesKey("FurthestReadPosition_${serverId}_$bookUuid")
+
     data object StatisticsRange : PreferencesKey("StatisticsRange")
     data object ThemeMode : PreferencesKey("ThemeMode")
 

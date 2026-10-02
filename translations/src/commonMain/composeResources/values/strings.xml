@@ -179,8 +179,6 @@
     <string name="reader_toc_title">Table of Contents</string>
 
     <!-- Reader TOC Navigation -->
-    <string name="reader_toc_jumped_to_chapter">Jumped to chapter</string>
-    <string name="reader_toc_undo">Undo</string>
 
     <!-- Reader ReadAloud -->
     <string name="reader_readaloud_no_audio">This book has no audio narration available</string>
@@ -393,8 +391,6 @@
     <string name="reader_toc_previous_chapter" tools:ignore="MissingTranslation">Previous chapter</string>
     <string name="reader_toc_no_results" tools:ignore="MissingTranslation">No matching chapters found</string>
     <string name="reader_toc_no_chapters" tools:ignore="MissingTranslation">No table of contents available</string>
-    <string name="reader_toc_reading" tools:ignore="MissingTranslation">Reading</string>
-    <string name="reader_toc_chapter_number" tools:ignore="MissingTranslation">%1$d</string>
     <string name="reader_overlay_contents" tools:ignore="MissingTranslation">Contents</string>
     <string name="reader_overlay_search" tools:ignore="MissingTranslation">Search</string>
     <string name="reader_overlay_listen" tools:ignore="MissingTranslation">Listen</string>
@@ -407,16 +403,12 @@
     <string name="reader_overlay_device_voice_description" tools:ignore="MissingTranslation">Reads the text with your phone’s voice</string>
     <string name="reader_overlay_narration_unavailable" tools:ignore="MissingTranslation">Not available for this book</string>
     <string name="reader_overlay_start_listening" tools:ignore="MissingTranslation">Start listening</string>
-    <string name="reader_overlay_chapter_page_count" tools:ignore="MissingTranslation">%1$d p</string>
-    <string name="reader_overlay_current_chapter" tools:ignore="MissingTranslation">You’re here · %1$d%%</string>
-    <string name="reader_overlay_bookmark_location" tools:ignore="MissingTranslation">Ch. %1$d · page %2$d</string>
     <string name="reader_search_title" tools:ignore="MissingTranslation">Search this book</string>
     <string name="reader_search_hint" tools:ignore="MissingTranslation">Find in book</string>
     <string name="reader_search_empty" tools:ignore="MissingTranslation">Search the text of this book</string>
     <string name="reader_search_no_results" tools:ignore="MissingTranslation">No matches found</string>
     <string name="reader_search_failed" tools:ignore="MissingTranslation">Search isn’t available for this book</string>
     <string name="reader_search_result_count" tools:ignore="MissingTranslation">%1$d results</string>
-    <string name="reader_bookmarks_empty_overlay" tools:ignore="MissingTranslation">No bookmarks yet — tap the bookmark icon at the top to save a page.</string>
     <string name="reader_overflow_more" tools:ignore="MissingTranslation">More</string>
     <string name="login_error_invalid_url" tools:ignore="MissingTranslation">Enter a valid http(s) URL</string>
     <string name="login_error_required_url" tools:ignore="MissingTranslation">Server URL is required</string>
@@ -923,6 +915,8 @@
     <string name="reader_tts_sub" tools:ignore="MissingTranslation">For books without narration</string>
     <string name="reader_keep_screen_on" tools:ignore="MissingTranslation">Keep screen on while listening</string>
     <string name="reader_keep_screen_on_sub" tools:ignore="MissingTranslation">Pages turn by themselves as audio plays</string>
+    <string name="reader_hide_search_ahead" tools:ignore="MissingTranslation">Hide search results ahead of my page</string>
+    <string name="reader_hide_search_ahead_sub" tools:ignore="MissingTranslation">Search stops at the furthest page you’ve read, so results can’t spoil what comes next</string>
     <string name="reader_audio_progress_bar" tools:ignore="MissingTranslation">Audio progress bar</string>
     <string name="reader_on_tap" tools:ignore="MissingTranslation">On tap</string>
     <string name="reader_never" tools:ignore="MissingTranslation">Never</string>
@@ -954,15 +948,39 @@
     <string name="reader_overlay_pause" tools:ignore="MissingTranslation">Pause</string>
     <string name="reader_overlay_narration_progress" tools:ignore="MissingTranslation">%1$s / %2$s · %3$s×</string>
     <string name="reader_overlay_device_voice_progress" tools:ignore="MissingTranslation">%1$s · sentence %2$d of %3$d</string>
-    <string name="reader_overlay_now_playing_narration" tools:ignore="MissingTranslation">Narration, chapter %1$d, %2$s</string>
-    <string name="reader_overlay_now_playing_device_voice" tools:ignore="MissingTranslation">Device voice, chapter %1$d, %2$s</string>
+    <string name="reader_overlay_now_playing_narration" tools:ignore="MissingTranslation">Narration, %1$s, %2$s</string>
+    <string name="reader_overlay_now_playing_device_voice" tools:ignore="MissingTranslation">Device voice, %1$s, %2$s</string>
     <string name="reader_overlay_mini_narration" tools:ignore="MissingTranslation">Narration · %1$s / %2$s</string>
     <string name="reader_overlay_mini_device_voice" tools:ignore="MissingTranslation">Device voice · %1$s</string>
-    <string name="reader_jump_title" tools:ignore="MissingTranslation">Jump to position</string>
-    <string name="reader_jump_location" tools:ignore="MissingTranslation">Chapter %1$d · %2$d%%</string>
-    <string name="reader_jump_go" tools:ignore="MissingTranslation">Go</string>
-    <string name="reader_jump_minus" tools:ignore="MissingTranslation">− %1$d%%</string>
-    <string name="reader_jump_plus" tools:ignore="MissingTranslation">+ %1$d%%</string>
+    <!-- Reader Contents sheet -->
+    <string name="reader_contents_chapters" tools:ignore="MissingTranslation">Chapters</string>
+    <string name="reader_contents_bookmarks_count" tools:ignore="MissingTranslation">Bookmarks · %1$d</string>
+    <string name="reader_contents_book_percent" tools:ignore="MissingTranslation">%1$d% of the book</string>
+    <string name="reader_contents_find" tools:ignore="MissingTranslation">Find a chapter</string>
+    <string name="reader_contents_you_are_here" tools:ignore="MissingTranslation">You’re here</string>
+    <string name="reader_contents_chapter_page_of" tools:ignore="MissingTranslation">Page %1$d of %2$d in this chapter</string>
+    <string name="reader_contents_about_min_left" tools:ignore="MissingTranslation">about %1$d min left</string>
+    <string name="reader_contents_in_book_order" tools:ignore="MissingTranslation">In book order</string>
+    <string name="reader_contents_done" tools:ignore="MissingTranslation">Done</string>
+    <string name="reader_contents_saved_relative" tools:ignore="MissingTranslation">saved %1$s</string>
+    <string name="reader_contents_saved_yesterday" tools:ignore="MissingTranslation">yesterday</string>
+    <string name="reader_contents_bookmark_here" tools:ignore="MissingTranslation">This page is bookmarked</string>
+    <string name="reader_contents_empty_body" tools:ignore="MissingTranslation">Save places you want to come back to. You can also tap the bookmark icon at the top of the page.</string>
+    <string name="reader_bookmark_deleted" tools:ignore="MissingTranslation">Bookmark deleted</string>
+    <string name="reader_contents_rename_bookmark" tools:ignore="MissingTranslation">Rename %1$s</string>
+    <string name="reader_contents_delete_bookmark" tools:ignore="MissingTranslation">Delete %1$s</string>
+    <string name="reader_contents_current_row" tools:ignore="MissingTranslation">Current chapter, %1$s, page %2$d of %3$d</string>
+    <string name="reader_contents_current_row_no_pages" tools:ignore="MissingTranslation">Current chapter, %1$s</string>
+    <string name="reader_contents_group_row" tools:ignore="MissingTranslation">%1$s, %2$s, %3$s</string>
+    <string name="reader_contents_group_row_here" tools:ignore="MissingTranslation">%1$s, %2$s, %3$s, %4$s</string>
+    <string name="reader_contents_here_suffix" tools:ignore="MissingTranslation">you’re here</string>
+    <string name="reader_contents_go_to" tools:ignore="MissingTranslation">Go to %1$s</string>
+    <string name="reader_contents_expanded" tools:ignore="MissingTranslation">expanded</string>
+    <string name="reader_contents_collapsed" tools:ignore="MissingTranslation">collapsed</string>
+    <plurals name="reader_contents_chapter_quantity">
+        <item quantity="one">%1$d chapter</item>
+        <item quantity="other">%1$d chapters</item>
+    </plurals>
     <string name="reader_audio_no_narration" tools:ignore="MissingTranslation">This book has no narration — reading with your device voice.</string>
     <string name="reader_audio_left_in_chapter" tools:ignore="MissingTranslation">−%1$s left in chapter</string>
     <string name="reader_audio_sentence_of" tools:ignore="MissingTranslation">Sentence %1$d of %2$d</string>
@@ -1205,25 +1223,30 @@
     <string name="book_detail_size_bytes" tools:ignore="MissingTranslation">%1$d B</string>
     <string name="book_detail_size_kb" tools:ignore="MissingTranslation">%1$d KB</string>
     <string name="book_detail_size_mb" tools:ignore="MissingTranslation">%1$d MB</string>
-    <string name="book_detail_chapter_progress" tools:ignore="MissingTranslation">%1$d%% · Chapter %2$d of %3$d</string>
+    <string name="book_detail_chapter_progress" tools:ignore="MissingTranslation">%1$d% · Chapter %2$d of %3$d</string>
     <string name="book_detail_progress_announcement" tools:ignore="MissingTranslation">%1$d percent</string>
-    <string name="book_detail_percent" tools:ignore="MissingTranslation">%1$d%%</string>
-    <string name="book_detail_remote_further" tools:ignore="MissingTranslation">Another device is further: %1$d%%.</string>
-    <string name="book_detail_remote_position" tools:ignore="MissingTranslation">Another device is at %1$d%%.</string>
-    <string name="book_detail_go_remote" tools:ignore="MissingTranslation">Go to %1$d%%</string>
-    <string name="book_detail_use_remote" tools:ignore="MissingTranslation">Use %1$d%%</string>
+    <string name="book_detail_percent" tools:ignore="MissingTranslation">%1$d%</string>
+    <string name="book_detail_remote_further" tools:ignore="MissingTranslation">Another device is further: %1$d%.</string>
+    <string name="book_detail_remote_position" tools:ignore="MissingTranslation">Another device is at %1$d%.</string>
+    <string name="book_detail_go_remote" tools:ignore="MissingTranslation">Go to %1$d%</string>
+    <string name="book_detail_use_remote" tools:ignore="MissingTranslation">Use %1$d%</string>
     <string name="book_detail_keep_local" tools:ignore="MissingTranslation">Keep this device’s position</string>
     <string name="book_detail_time_left" tools:ignore="MissingTranslation">about %1$s left</string>
     <string name="book_detail_continue_reading" tools:ignore="MissingTranslation">Continue reading</string>
     <string name="book_detail_continue_listening" tools:ignore="MissingTranslation">Continue listening</string>
     <string name="book_detail_download_read" tools:ignore="MissingTranslation">Download to read</string>
     <string name="book_detail_download_listen" tools:ignore="MissingTranslation">Download to listen</string>
+    <string name="book_detail_download_readalong" tools:ignore="MissingTranslation">Download read-along</string>
+    <string name="book_detail_download_ebook" tools:ignore="MissingTranslation">Download eBook</string>
+    <string name="book_detail_download_audiobook" tools:ignore="MissingTranslation">Download audiobook</string>
+    <string name="book_detail_ebook_only" tools:ignore="MissingTranslation">eBook only</string>
+    <string name="book_detail_size_gb" tools:ignore="MissingTranslation">%1$s GB</string>
     <string name="book_detail_action_size" tools:ignore="MissingTranslation">%1$s · %2$s</string>
     <string name="book_detail_upload_wait" tools:ignore="MissingTranslation">Available after upload finishes</string>
-    <string name="book_detail_downloading" tools:ignore="MissingTranslation">Downloading… %1$d%%</string>
+    <string name="book_detail_downloading" tools:ignore="MissingTranslation">Downloading… %1$d%</string>
     <string name="book_detail_downloading_unknown" tools:ignore="MissingTranslation">Downloading…</string>
     <string name="book_detail_download_caption" tools:ignore="MissingTranslation">Downloads the eBook. Works offline after download.</string>
-    <string name="book_detail_download_readalong_caption" tools:ignore="MissingTranslation">Includes the read-along narration. Works offline after download.</string>
+    <string name="book_detail_download_readalong_caption" tools:ignore="MissingTranslation">Read-along includes the text and narration.</string>
     <string name="book_detail_download_audio_caption" tools:ignore="MissingTranslation">Downloads the audiobook. Works offline after download.</string>
     <string name="book_detail_download_continues" tools:ignore="MissingTranslation">You can leave this screen — the download continues.</string>
     <string name="book_detail_about" tools:ignore="MissingTranslation">ABOUT</string>
@@ -1251,7 +1274,7 @@
     <string name="book_detail_also_on" tools:ignore="MissingTranslation">Also on %1$s</string>
     <string name="book_detail_open" tools:ignore="MissingTranslation">Open</string>
     <string name="book_detail_preparation" tools:ignore="MissingTranslation">Narration is being prepared on the server.</string>
-    <string name="book_detail_preparation_stage" tools:ignore="MissingTranslation">Narration is being prepared on the server (%1$s · %2$d%%).</string>
+    <string name="book_detail_preparation_stage" tools:ignore="MissingTranslation">Narration is being prepared on the server (%1$s · %2$d%).</string>
     <string name="book_detail_transferred_bytes" tools:ignore="MissingTranslation">%1$s of %2$s</string>
     <string name="book_detail_replace" tools:ignore="MissingTranslation">Replace…</string>
     <string name="book_detail_elsewhere" tools:ignore="MissingTranslation">SAME BOOK ELSEWHERE</string>
@@ -1296,19 +1319,15 @@
         <item quantity="one">%1$d chapter</item>
         <item quantity="other">%1$d chapters</item>
     </plurals>
-    <string name="reader_find_count_partial">%1$d+ matches</string>
-    <string name="reader_find_nearest">Nearest to me</string>
-    <string name="reader_find_position">Your reading position · %1$d%</string>
-    <string name="reader_find_position_no_percent">Your reading position</string>
-    <string name="reader_find_before">These matches are earlier in the book.</string>
-    <string name="reader_find_after">These matches are later in the book.</string>
-    <string name="reader_find_before_capped">The shown matches are earlier in the book.</string>
-    <string name="reader_find_after_capped">The shown matches are later in the book.</string>
-    <string name="reader_find_ahead">Search ahead in the book</string>
-    <string name="reader_find_earlier_summary">%1$s before your reading position</string>
-    <string name="reader_find_spoilers">Hidden to avoid spoilers</string>
-    <string name="reader_find_show_ahead">Show later matches</string>
-    <string name="reader_find_hide_ahead">Hide later matches</string>
+    <string name="reader_find_upto_summary" tools:ignore="MissingTranslation">%1$s up to your page (%2$d%)</string>
+    <string name="reader_find_upto_none" tools:ignore="MissingTranslation">No matches up to your page</string>
+    <string name="reader_find_search_rest" tools:ignore="MissingTranslation">Search the rest of the book</string>
+    <string name="reader_find_spoiler_warning" tools:ignore="MissingTranslation">May contain spoilers</string>
+    <string name="reader_find_after_page" tools:ignore="MissingTranslation">After your page</string>
+    <string name="reader_find_rest_none" tools:ignore="MissingTranslation">No matches in the rest of the book</string>
+    <string name="reader_find_continue_rest" tools:ignore="MissingTranslation">Continue into the rest of the book?</string>
+    <string name="reader_find_continue" tools:ignore="MissingTranslation">Continue</string>
+    <string name="reader_find_not_now" tools:ignore="MissingTranslation">Not now</string>
     <string name="reader_find_empty">No matches for “%1$s”</string>
     <string name="reader_find_empty_hint">Check the spelling or try a shorter word. Search looks for the exact letters you type, in order.</string>
     <string name="reader_find_unavailable">This book can’t be searched</string>
@@ -1319,7 +1338,6 @@
     <string name="reader_find_cap">Showing the first %1$d matches — refine your search</string>
     <string name="reader_find_beginning">Beginning of book</string>
     <string name="reader_find_other">Other</string>
-    <string name="reader_find_chapter">Chapter %1$d</string>
     <string name="reader_find_row">%1$s, %2$d percent: %3$s</string>
     <string name="reader_find_row_no_percent">%1$s: %2$s</string>
     <string name="reader_find_previous">Previous match</string>
@@ -1328,6 +1346,7 @@
     <string name="reader_find_reopen">Show search results</string>
     <string name="reader_find_selected">%1$d of %2$d · %3$s</string>
     <string name="reader_find_selected_partial">%1$d of %2$d+ · %3$s</string>
+    <string name="reader_find_selected_so_far" tools:ignore="MissingTranslation">%1$d of %2$d so far · %3$s</string>
     <string name="reader_find_back">Back to where I was · %1$d%</string>
     <string name="reader_find_back_no_percent">Back to where I was</string>
 </resources>

@@ -109,6 +109,9 @@ data class ReaderSettingsLocalModel(
     // Whether to keep the screen awake while ReadAloud audio is playing
     @SerialName("keep_screen_on_during_audio")
     val keepScreenOnDuringAudio: Boolean = true,
+    // Whether book search hides matches past the furthest page read (spoiler protection)
+    @SerialName("hide_search_results_ahead")
+    val hideSearchResultsAhead: Boolean = true,
 )
 
 fun ReaderSettingsLocalModel.toDomain(): ReaderSettingsDomainModel {
@@ -201,6 +204,7 @@ fun ReaderSettingsLocalModel.toDomain(): ReaderSettingsDomainModel {
         doubleTapTimeoutMs = doubleTapTimeoutMs,
         showAudioProgressBar = showAudioProgressBar,
         keepScreenOnDuringAudio = keepScreenOnDuringAudio,
+        hideSearchResultsAhead = hideSearchResultsAhead,
     )
 }
 
@@ -245,5 +249,6 @@ fun ReaderSettingsDomainModel.toLocal(): ReaderSettingsLocalModel {
         doubleTapTimeoutMs = doubleTapTimeoutMs,
         showAudioProgressBar = showAudioProgressBar,
         keepScreenOnDuringAudio = keepScreenOnDuringAudio,
+        hideSearchResultsAhead = hideSearchResultsAhead,
     )
 }

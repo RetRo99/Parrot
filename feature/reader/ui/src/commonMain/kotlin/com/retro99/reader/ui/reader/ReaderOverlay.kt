@@ -142,7 +142,6 @@ import resources.translations.reader_bookmark_rename
 import resources.translations.reader_bookmark_rename_cancel
 import resources.translations.reader_bookmark_rename_confirm
 import resources.translations.reader_bookmark_rename_label
-import resources.translations.reader_bookmarks_empty_overlay
 import resources.translations.reader_audio_sentence_of
 import resources.translations.reader_overlay_audio
 import resources.translations.reader_overlay_open_player
@@ -154,10 +153,7 @@ import resources.translations.reader_overlay_now_playing_narration
 import resources.translations.reader_overlay_now_playing_device_voice
 import resources.translations.reader_overlay_mini_narration
 import resources.translations.reader_overlay_mini_device_voice
-import resources.translations.reader_overlay_bookmark_location
-import resources.translations.reader_overlay_chapter_page_count
 import resources.translations.reader_overlay_contents
-import resources.translations.reader_overlay_current_chapter
 import resources.translations.reader_overlay_device_voice
 import resources.translations.reader_overlay_device_voice_description
 import resources.translations.reader_overlay_display
@@ -221,7 +217,7 @@ internal fun ReaderOverlayContent(
     val fontUndoState = androidx.compose.material3.SnackbarHostState()
     val snackbarMessage = stringResource(StringRes.settings_changed)
     val undoLabel = stringResource(StringRes.settings_undo)
-    val openSheet = viewState.isTocVisible || viewState.isBookmarksVisible ||
+    val openSheet = viewState.isContentsVisible ||
         viewState.isListenSheetVisible || viewState.isBookSearchVisible ||
         viewState.showSleepTimerWarningPrompt
 
@@ -239,16 +235,23 @@ internal fun ReaderOverlayContent(
         lastInteractionTime = nowMillis()
     }
     val currentBookmark = currentPosition?.let { position ->
-        viewState.bookmarks.firstOrNull { bookmark ->
-            bookmark.locatorHref == position.href && bookmark.position == position.position
-        }
+        viewState.bookmarks.firstOrNull { bookmark -> bookmarkMatchesPosition(bookmark, position) }
     }
-    val currentChapterIndex = currentPosition?.chapterIndex
-        ?: viewState.tableOfContents.indexOfFirst { it.href == currentPosition?.href }.takeIf { it >= 0 }
-        ?: 0
-    val chapterNumber = (currentChapterIndex + 1).coerceAtLeast(1)
-    val chapterTitle = currentPosition?.title
-        ?: viewState.tableOfContents.getOrNull(currentChapterIndex)?.title.orEmpty()
+    // One resolver feeds the header, the sheet and the progress strip, so they always agree.
+    val currentLocation = remember(
+        viewState.tableOfContents,
+        currentPosition?.href,
+        currentPosition?.progression,
+        viewState.bookSearchReadingOrder,
+    ) {
+        findTocLocation(
+            viewState.tableOfContents,
+            currentPosition?.href,
+            currentPosition?.progression,
+            viewState.bookSearchReadingOrder,
+        )
+    }
+    val chapterTitle = currentLocation?.item?.title ?: currentPosition?.title.orEmpty()
     val selectedVoice = viewState.ttsVoices.firstOrNull { it.id == viewState.selectedTtsVoiceId }
     val voiceDetail = selectedVoice?.let { "${it.locale} · ${it.name.substringBefore('(').trim()}" }
         ?: "System voice"
@@ -294,7 +297,7 @@ internal fun ReaderOverlayContent(
         }
         NowPlayingUi(
             isNarration = isNarration,
-            title = chapterTitle.ifBlank { "$chapterNumber" },
+            title = chapterTitle,
             subtitle = subtitle,
             stripLabel = if (isNarration) {
                 "$positionText / $totalText"
@@ -312,7 +315,7 @@ internal fun ReaderOverlayContent(
             description = stringResource(
                 if (isNarration) StringRes.reader_overlay_now_playing_narration
                 else StringRes.reader_overlay_now_playing_device_voice,
-                chapterNumber,
+                chapterTitle,
                 "$subtitle, $stateText",
             ),
         )
@@ -326,8 +329,7 @@ internal fun ReaderOverlayContent(
                 nowPlaying = playing,
                 onOpen = {
                     // Swap the open sheet for the audio sheet; playback is untouched either way.
-                    if (viewState.isTocVisible) intentDispatcher(ReaderIntent.ToggleToc)
-                    if (viewState.isBookmarksVisible) intentDispatcher(ReaderIntent.ToggleBookmarks)
+                    if (viewState.isContentsVisible) intentDispatcher(ReaderIntent.ToggleToc)
                     if (viewState.isBookSearchVisible) intentDispatcher(ReaderIntent.ToggleBookSearch)
                     openAudioSheet()
                 },
@@ -430,10 +432,9 @@ internal fun ReaderOverlayContent(
                 }
             }
 
-            ChapterNavigationUndoSnackbar(
-                previousTocPosition = viewState.previousTocPosition,
-                onUndo = { intentDispatcher(ReaderIntent.UndoChapterNavigation(it)) },
-                onDismiss = { intentDispatcher(ReaderIntent.DismissChapterNavigationUndo) },
+            BackToOriginPill(
+                origin = viewState.jumpOrigin,
+                onClick = { intentDispatcher(ReaderIntent.ReturnToJumpOrigin) },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
             FontSizeUndoSnackbarHost(
@@ -458,6 +459,7 @@ internal fun ReaderOverlayContent(
                     areControlsVisible = true,
                     position = ProgressBarPosition.TOP,
                     lastKnownPosition = currentPosition,
+                    chapterTitle = chapterTitle,
                     chapterReadingTimeInfo = viewState.chapterReadingTimeInfo,
                     chapterInfo = viewState.chapterInfo,
                     currentTime = progressBarTime,
@@ -564,6 +566,7 @@ internal fun ReaderOverlayContent(
                                     areControlsVisible = true,
                                     position = ProgressBarPosition.BOTTOM,
                                     lastKnownPosition = currentPosition,
+                                    chapterTitle = chapterTitle,
                                     chapterReadingTimeInfo = viewState.chapterReadingTimeInfo,
                                     chapterInfo = viewState.chapterInfo,
                                     currentTime = progressBarTime,
@@ -590,30 +593,20 @@ internal fun ReaderOverlayContent(
         )
     }
 
-    if (viewState.isTocVisible || viewState.isBookmarksVisible) {
+    if (viewState.isContentsVisible) {
         ReaderContentsSheet(
-            tableOfContents = viewState.tableOfContents,
-            currentHref = currentPosition?.href,
-            currentProgress = currentPosition?.progression,
-            currentPage = viewState.chapterInfo?.currentPage,
-            currentChapterPages = viewState.chapterInfo?.totalPages,
-            bookmarks = viewState.bookmarks,
-            bookProgress = currentPosition?.totalProgression,
-            chapterTicks = viewState.chapterTickProgressions,
-            currentChapterNumber = chapterNumber,
-            isEink = isEink,
-            onJump = { progress -> intentDispatcher(ReaderIntent.JumpToBookProgress(progress)) },
-            onChapterClick = { chapter ->
-                intentDispatcher(ReaderIntent.GoToChapter(chapter.href, currentPosition))
+            state = viewState,
+            onChapterClick = { href ->
+                intentDispatcher(ReaderIntent.GoToChapter(href, currentPosition))
             },
             onBookmarkClick = { intentDispatcher(ReaderIntent.GoToBookmark(it)) },
+            onAddBookmark = { intentDispatcher(ReaderIntent.AddBookmark) },
             onBookmarkDelete = { intentDispatcher(ReaderIntent.DeleteBookmark(it)) },
             onBookmarkRename = { id, title -> intentDispatcher(ReaderIntent.RenameBookmark(id, title)) },
-            onBookmarkReorder = { intentDispatcher(ReaderIntent.ReorderBookmarks(it)) },
-            onDismiss = {
-                if (viewState.isTocVisible) intentDispatcher(ReaderIntent.ToggleToc)
-                if (viewState.isBookmarksVisible) intentDispatcher(ReaderIntent.ToggleBookmarks)
-            },
+            onRestoreBookmark = { intentDispatcher(ReaderIntent.RestoreBookmark(it)) },
+            onBookmarkDeletedDismissed = { intentDispatcher(ReaderIntent.DismissBookmarkDeleted) },
+            onToggleGroup = { intentDispatcher(ReaderIntent.ToggleContentsGroup(it)) },
+            onDismiss = { intentDispatcher(ReaderIntent.ToggleToc) },
             footer = sheetMiniPlayer,
         )
     }
@@ -631,7 +624,7 @@ internal fun ReaderOverlayContent(
         ReaderAudioSheet(
             ui = AudioSheetUi(
                 isNarration = isNarration,
-                chapterLabel = "$chapterNumber · $chapterTitle",
+                chapterLabel = chapterTitle,
                 isPlaying = viewState.isPlaying,
                 isLoading = viewState.isNarrationLoading,
                 positionMs = viewState.currentAudioPositionMs,
@@ -1135,375 +1128,6 @@ internal fun ReaderMiniPlayer(
             }
         }
     }
-}
-
-@Composable
-internal fun ReaderContentsSheet(
-    tableOfContents: List<TocItemUiModel>,
-    currentHref: String?,
-    currentProgress: Double?,
-    currentPage: Int?,
-    currentChapterPages: Int?,
-    bookmarks: List<BookmarkUiModel>,
-    bookProgress: Double?,
-    chapterTicks: List<Double>,
-    currentChapterNumber: Int,
-    isEink: Boolean,
-    onJump: (Double) -> Unit,
-    onChapterClick: (TocItemUiModel) -> Unit,
-    onBookmarkClick: (BookmarkUiModel) -> Unit,
-    onBookmarkDelete: (String) -> Unit,
-    onBookmarkRename: (String, String) -> Unit,
-    onBookmarkReorder: (List<String>) -> Unit,
-    onDismiss: () -> Unit,
-    footer: (@Composable () -> Unit)? = null,
-) {
-    var selectedTab by remember { mutableStateOf(ContentsTab.CHAPTERS) }
-    EmberBottomSheet(onDismiss = onDismiss, footer = footer) {
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val maxSheetHeight = maxHeight * 0.88f
-            Column(
-                Modifier.fillMaxWidth().heightIn(max = maxSheetHeight)
-                    .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier)
-                    .padding(bottom = 8.dp),
-            ) {
-                SheetTitle(
-                    title = stringResource(StringRes.reader_overlay_contents),
-                    onDismiss = onDismiss,
-                )
-                JumpToPositionCard(
-                    currentProgress = bookProgress ?: 0.0,
-                    chapterTicks = chapterTicks,
-                    fallbackChapterNumber = currentChapterNumber,
-                    isEink = isEink,
-                    onGo = onJump,
-                )
-                SegmentedContentsTabs(
-                    selectedTab = selectedTab,
-                    bookmarkCount = bookmarks.size,
-                    onSelect = { selectedTab = it },
-                )
-                when (selectedTab) {
-                    ContentsTab.CHAPTERS -> ChaptersTab(
-                        tableOfContents = tableOfContents,
-                        currentHref = currentHref,
-                        currentProgress = currentProgress,
-                        currentPage = currentPage,
-                        currentChapterPages = currentChapterPages,
-                        onChapterClick = onChapterClick,
-                    )
-
-                    ContentsTab.BOOKMARKS -> BookmarksTab(
-                        bookmarks = bookmarks,
-                        onBookmarkClick = onBookmarkClick,
-                        onDelete = onBookmarkDelete,
-                        onRename = onBookmarkRename,
-                        onReorder = onBookmarkReorder,
-                    )
-                }
-            }
-        }
-    }
-}
-
-private enum class ContentsTab { CHAPTERS, BOOKMARKS }
-
-@Composable
-private fun SheetTitle(title: String, onDismiss: () -> Unit) {
-    val colors = Ember.colors
-    Row(
-        Modifier.fillMaxWidth().padding(start = 24.dp, end = 14.dp, top = 2.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, color = colors.ink)
-        IconButton(onClick = onDismiss, modifier = Modifier.size(44.dp)) {
-            Icon(Icons.Default.Close, stringResource(StringRes.general_close), tint = colors.ink)
-        }
-    }
-}
-
-@Composable
-private fun SegmentedContentsTabs(
-    selectedTab: ContentsTab,
-    bookmarkCount: Int,
-    onSelect: (ContentsTab) -> Unit,
-) {
-    val colors = Ember.colors
-    val shape = RoundedCornerShape(28.dp)
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp)
-            .clip(shape).background(colors.bg).border(1.dp, colors.chipBorder, shape).padding(3.dp),
-    ) {
-        Segment(
-            text = "Chapters",
-            selected = selectedTab == ContentsTab.CHAPTERS,
-            onClick = { onSelect(ContentsTab.CHAPTERS) },
-            modifier = Modifier.weight(1f),
-        )
-        Segment(
-            text = "Bookmarks · $bookmarkCount",
-            selected = selectedTab == ContentsTab.BOOKMARKS,
-            onClick = { onSelect(ContentsTab.BOOKMARKS) },
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
-
-@Composable
-private fun Segment(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val colors = Ember.colors
-    Box(
-        modifier.height(40.dp).clip(CircleShape)
-            .background(if (selected) colors.accent else androidx.compose.ui.graphics.Color.Transparent)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = text,
-            color = if (selected) colors.onAccent else colors.ink2,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            fontSize = 14.sp,
-        )
-    }
-}
-
-@Composable
-private fun ChaptersTab(
-    tableOfContents: List<TocItemUiModel>,
-    currentHref: String?,
-    currentProgress: Double?,
-    currentPage: Int?,
-    currentChapterPages: Int?,
-    onChapterClick: (TocItemUiModel) -> Unit,
-) {
-    val colors = Ember.colors
-    var query by remember { mutableStateOf("") }
-    val filtered = remember(tableOfContents, query) {
-        if (query.isBlank()) tableOfContents
-        else tableOfContents.filter { it.title.contains(query, ignoreCase = true) }
-    }
-    val listState = rememberLazyListState()
-    val currentIndex = tableOfContents.indexOfFirst { it.href == currentHref }
-    val visibleCurrentIndex = filtered.indexOfFirst { it.href == currentHref }
-    LaunchedEffect(currentHref, visibleCurrentIndex, query) {
-        if (query.isBlank() && visibleCurrentIndex >= 0) listState.scrollToItem(visibleCurrentIndex)
-    }
-    Column(Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp),
-            placeholder = { Text(stringResource(StringRes.reader_toc_search_hint)) },
-            leadingIcon = { Icon(Icons.Default.Search, null) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-            shape = RoundedCornerShape(14.dp),
-        )
-        if (tableOfContents.isEmpty()) {
-            Text(stringResource(StringRes.reader_toc_no_chapters), color = colors.ink2, modifier = Modifier.padding(24.dp))
-        } else if (filtered.isEmpty()) {
-            Text(stringResource(StringRes.reader_toc_no_results), color = colors.ink2, modifier = Modifier.padding(24.dp))
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp),
-            ) {
-                itemsIndexed(filtered, key = { _, item -> item.href }) { _, chapter ->
-                    val index = tableOfContents.indexOfFirst { it.href == chapter.href }
-                    val isCurrent = chapter.href == currentHref
-                    val shape = RoundedCornerShape(16.dp)
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp)
-                            .clip(shape)
-                            .background(if (isCurrent && !Ember.style.isEink) colors.navActive.copy(alpha = 0.62f) else colors.surface)
-                            .then(if (isCurrent && Ember.style.isEink) Modifier.border(2.dp, colors.line, shape) else Modifier)
-                            .clickable { onChapterClick(chapter) }
-                            .padding(horizontal = 18.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = "${index + 1}",
-                            modifier = Modifier.width(42.dp),
-                            color = if (isCurrent) colors.accentText else colors.ink2,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Column(Modifier.weight(1f).padding(start = (chapter.level * 10).dp)) {
-                            Text(
-                                chapter.title,
-                                color = colors.ink,
-                                fontSize = 16.sp,
-                                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            if (isCurrent) {
-                                val percent = bookPercent(currentProgress)
-                                Text(
-                                    stringResource(StringRes.reader_overlay_current_chapter, percent),
-                                    color = colors.accentText,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                            }
-                        }
-                        val pageCount = if (isCurrent && currentChapterPages != null) {
-                            stringResource(StringRes.reader_overlay_chapter_page_count, currentChapterPages)
-                        } else {
-                            "— p"
-                        }
-                        Text(pageCount, color = colors.ink2, fontSize = 13.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BookmarksTab(
-    bookmarks: List<BookmarkUiModel>,
-    onBookmarkClick: (BookmarkUiModel) -> Unit,
-    onDelete: (String) -> Unit,
-    onRename: (String, String) -> Unit,
-    onReorder: (List<String>) -> Unit,
-) {
-    var renameTarget by remember { mutableStateOf<BookmarkUiModel?>(null) }
-    var localBookmarks by remember { mutableStateOf(bookmarks) }
-    var dragInProgress by remember { mutableStateOf(false) }
-    var pendingOrder by remember { mutableStateOf<List<String>?>(null) }
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(bookmarks, pendingOrder) {
-        if (pendingOrder != null && bookmarks.map { it.id } == pendingOrder) {
-            pendingOrder = null
-            dragInProgress = false
-        }
-    }
-    if (!dragInProgress && pendingOrder == null && localBookmarks != bookmarks) localBookmarks = bookmarks
-
-    renameTarget?.let { bookmark ->
-        BookmarkRenamePrompt(
-            bookmark = bookmark,
-            onConfirm = { newTitle -> onRename(bookmark.id, newTitle); renameTarget = null },
-            onDismiss = { renameTarget = null },
-        )
-    }
-    if (localBookmarks.isEmpty()) {
-        Text(
-            stringResource(StringRes.reader_bookmarks_empty_overlay),
-            color = Ember.colors.ink2,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 28.dp),
-        )
-        return
-    }
-
-    val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
-        localBookmarks = localBookmarks.toMutableList().apply { add(to.index, removeAt(from.index)) }
-    }
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxWidth().heightIn(max = 620.dp),
-    ) {
-        itemsIndexed(localBookmarks, key = { _, bookmark -> bookmark.id }) { _, bookmark ->
-            ReorderableItem(reorderableState, key = bookmark.id) {
-                BookmarkOverlayRow(
-                    bookmark = bookmark,
-                    onClick = { onBookmarkClick(bookmark) },
-                    onDelete = { onDelete(bookmark.id) },
-                    onRename = { renameTarget = bookmark },
-                    dragHandleModifier = Modifier.draggableHandle(
-                        onDragStarted = { dragInProgress = true },
-                        onDragStopped = {
-                            val order = localBookmarks.map { it.id }
-                            pendingOrder = order
-                            onReorder(order)
-                        },
-                    ),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BookmarkOverlayRow(
-    bookmark: BookmarkUiModel,
-    onClick: () -> Unit,
-    onDelete: () -> Unit,
-    onRename: () -> Unit,
-    dragHandleModifier: Modifier,
-) {
-    val colors = Ember.colors
-    val createdTime = remember(bookmark.createdAt) { relativeTimeFromIso(bookmark.createdAt, nowMillis()) }
-    val timeAgo = when (val time = createdTime) {
-        RelativeTime.JustNow -> stringResource(StringRes.reader_bookmark_just_now)
-        is RelativeTime.MinutesAgo -> stringResource(StringRes.reader_bookmark_minutes_ago, time.minutes)
-        is RelativeTime.HoursAgo -> stringResource(StringRes.reader_bookmark_hours_ago, time.hours)
-        is RelativeTime.DaysAgo -> stringResource(StringRes.reader_bookmark_days_ago, time.days)
-    }
-    val chapter = (bookmark.chapterIndex ?: 0) + 1
-    val page = bookmark.position ?: 1
-    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 13.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(Icons.Default.Bookmark, null, tint = colors.accentText, modifier = Modifier.size(22.dp))
-            Column(Modifier.weight(1f).padding(start = 16.dp, end = 8.dp)) {
-                Text(
-                    stringResource(StringRes.reader_overlay_bookmark_location, chapter, page),
-                    color = colors.ink2,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    bookmark.locatorTitle ?: "Saved page",
-                    color = colors.ink,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = Ember.type.bookTitle.fontFamily),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(timeAgo, color = colors.ink2, style = MaterialTheme.typography.bodySmall)
-            }
-            IconButton(onClick = onRename, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.Edit, stringResource(StringRes.reader_bookmark_rename), tint = colors.ink2, modifier = Modifier.size(20.dp))
-            }
-            IconButton(onClick = onDelete, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.Delete, stringResource(StringRes.action_delete), tint = colors.ink2, modifier = Modifier.size(20.dp))
-            }
-            IconButton(onClick = {}, modifier = dragHandleModifier.size(32.dp)) {
-                Text("⋮", color = colors.ink2, fontSize = 24.sp)
-            }
-        }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line))
-    }
-}
-
-@Composable
-private fun BookmarkRenamePrompt(
-    bookmark: BookmarkUiModel,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var title by remember(bookmark.id) { mutableStateOf(bookmark.locatorTitle.orEmpty()) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(StringRes.reader_bookmark_rename)) },
-        text = {
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text(stringResource(StringRes.reader_bookmark_rename_label)) },
-                singleLine = true,
-            )
-        },
-        confirmButton = { TextButton(onClick = { onConfirm(title) }) { Text(stringResource(StringRes.reader_bookmark_rename_confirm)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(StringRes.reader_bookmark_rename_cancel)) } },
-    )
 }
 
 internal fun formatSpeed(speed: Float): String = if (speed % 1f == 0f) speed.toInt().toString() else speed.toString()
