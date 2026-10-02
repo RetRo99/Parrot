@@ -8,6 +8,8 @@ data class AppSettingsViewState(
     val isLoggingEnabled: Boolean = false,
     val openLastBookOnLaunch: Boolean = false,
     val showContinueReading: Boolean = true,
+    /** Consent to send read text for cloud recaps; off until turned on. */
+    val cloudRecapsEnabled: Boolean = false,
     val appSettingSaveFailureCount: Int = 0,
     val themeMode: ThemeMode = ThemeMode.Night,
     val hasCurrentlyReadingBook: Boolean = false,

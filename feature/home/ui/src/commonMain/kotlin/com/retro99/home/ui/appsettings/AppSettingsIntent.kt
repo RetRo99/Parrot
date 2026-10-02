@@ -6,6 +6,7 @@ import com.retro99.base.ui.compose.ThemeMode
 sealed interface AppSettingsIntent : BaseIntent {
     data class OnOpenLastBookToggled(val enabled: Boolean) : AppSettingsIntent
     data class OnShowContinueReadingToggled(val enabled: Boolean) : AppSettingsIntent
+    data class OnCloudRecapsToggled(val enabled: Boolean) : AppSettingsIntent
     data class OnThemeModeSelected(val themeMode: ThemeMode) : AppSettingsIntent
     data object OnClearCurrentBookClicked : AppSettingsIntent
     data object OnCurrentBookClearedMessageShown : AppSettingsIntent
