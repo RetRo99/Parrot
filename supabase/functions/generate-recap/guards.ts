@@ -7,7 +7,7 @@ export type Claims = Record<string, unknown>
 // Throws only on infrastructure failures (e.g. Auth unreachable).
 export type ClaimsVerifier = (token: string) => Promise<Claims | null>
 
-// Above the current contract (8k-char excerpt + titles) even as 3-byte UTF-8.
+// Above the current contract (8k-char excerpt + hint) even as 3-byte UTF-8.
 export const MAX_BODY_BYTES = 64 * 1024
 
 // Exactly one bearer that looks like a JWT (three base64url segments).
@@ -15,15 +15,20 @@ export const MAX_BODY_BYTES = 64 * 1024
 const BEARER_JWT = /^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/i
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+/** The bearer JWT, or null if the header is missing or not JWT-shaped. */
+export function bearerToken(req: Request): string | null {
+  return req.headers.get('Authorization')?.trim().match(BEARER_JWT)?.[1] ?? null
+}
+
 /** Resolves the caller's user id from a verified token, or null (→ 401). */
 export async function authenticate(
   req: Request,
   verify: ClaimsVerifier,
 ): Promise<string | null> {
-  const match = req.headers.get('Authorization')?.trim().match(BEARER_JWT)
-  if (!match) return null
+  const token = bearerToken(req)
+  if (!token) return null
 
-  const claims = await verify(match[1])
+  const claims = await verify(token)
   if (!claims) return null
 
   // The anon key and service JWTs carry other roles; anonymous sign-ins
