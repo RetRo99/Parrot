@@ -3,6 +3,7 @@ package com.retro99.reader.data.recap
 import com.retro99.reader.domain.recap.RecapEngine
 import com.retro99.reader.domain.recap.RecapErrorCode
 import com.retro99.reader.domain.recap.RecapInput
+import com.retro99.reader.domain.recap.RecapLanguages
 import com.retro99.reader.domain.recap.RecapLimits
 import com.retro99.reader.domain.recap.RecapResult
 import io.ktor.client.HttpClient
@@ -165,12 +166,9 @@ class CloudRecapEngine(
         private val MAX_RETRY_AFTER = 24.hours
 
         /** Languages the function writes in; others fall back to its default. */
-        val SUPPORTED_LANGUAGES = setOf("en", "sl", "de", "fr", "es", "it", "hr")
+        val SUPPORTED_LANGUAGES: Set<String> = RecapLanguages.SUPPORTED
 
         /** "sl-SI" → "sl"; null when unsupported. */
-        fun supportedLanguage(tag: String?): String? {
-            val base = tag?.trim()?.split('-', '_')?.firstOrNull()?.lowercase()
-            return base?.takeIf { it in SUPPORTED_LANGUAGES }
-        }
+        fun supportedLanguage(tag: String?): String? = RecapLanguages.normalize(tag)
     }
 }
