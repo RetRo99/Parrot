@@ -15,7 +15,7 @@
 // Callers must be signed-in, non-anonymous users; see guards.ts. Each call
 // consumes one unit of a per-user daily quota (consume_recap_quota RPC).
 
-import { createClient, isAuthRetryableFetchError } from 'npm:@supabase/supabase-js@2'
+import { createClient, isAuthRetryableFetchError } from 'npm:@supabase/supabase-js@2.117.2'
 import { authenticate, bearerToken, type Claims, readJsonBody } from './guards.ts'
 import {
   buildMessages,
@@ -28,12 +28,6 @@ import {
   requestRecap,
   sessionId,
 } from './recap.ts'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Expose-Headers': 'retry-after',
-}
 
 // Legacy anon key, else the default new publishable key. Only used so
 // getClaims can reach Auth for HS256 tokens; it grants no access itself.
@@ -62,6 +56,12 @@ async function verifyClaims(token: string): Promise<Claims | null> {
   const { data, error } = await authClient!.auth.getClaims(token)
   if (error && isAuthRetryableFetchError(error)) throw error
   if (error || !data) return null
+  // JWKS checks are local, so also ask Auth: rejects signed-out (revoked)
+  // sessions and deleted users. One round trip vs a multi-second call.
+  const { data: live, error: liveError } = await authClient!.auth.getUser(token)
+  if (liveError && isAuthRetryableFetchError(liveError)) throw liveError
+  if (liveError && (liveError.status ?? 0) >= 500) throw liveError
+  if (liveError || live.user?.id !== data.claims.sub) return null
   return data.claims as Claims
 }
 
@@ -84,14 +84,16 @@ function secondsToUtcMidnight(now: Date): number {
 function json(body: unknown, status = 200, extra: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...extra },
+    headers: { 'Content-Type': 'application/json', ...extra },
   })
 }
 
 const env = (name: string) => Deno.env.get(name)
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  // Only the native app calls this, so no CORS: browsers get no
+  // Allow-Origin and cannot read responses. Preflights just end here.
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
 
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 

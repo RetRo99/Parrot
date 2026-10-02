@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from 'jsr:@std/assert@1'
+import { assertEquals, assertRejects } from 'jsr:@std/assert@1.0.19'
 import { authenticate, type Claims, type ClaimsVerifier, readJsonBody } from './guards.ts'
 
 const USER_ID = '6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b'
