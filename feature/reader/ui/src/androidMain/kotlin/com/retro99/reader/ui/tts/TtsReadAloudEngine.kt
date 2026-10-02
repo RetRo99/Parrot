@@ -106,6 +106,10 @@ class TtsReadAloudEngine(
     private val _chapterCompleted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val chapterCompleted: SharedFlow<Unit> = _chapterCompleted.asSharedFlow()
 
+    /** Sentences whose audio played to the end; not skipped or stopped ones. */
+    private val _finishedSentences = MutableSharedFlow<TtsSentence>(extraBufferCapacity = 16)
+    val finishedSentences: SharedFlow<TtsSentence> = _finishedSentences.asSharedFlow()
+
     private val playerListener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             if (mediaItem != null && !mediaItem.mediaId.startsWith(TTS_MEDIA_ID_PREFIX)) {
@@ -114,6 +118,10 @@ class TtsReadAloudEngine(
             }
 
             val index = mediaItem?.let(::sentenceIndexForMediaItem) ?: return
+            // AUTO: the previous item played out; seeks and new playlists don't.
+            if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && currentIndex != index) {
+                emitFinished(currentIndex)
+            }
             onSentenceStarted(index)
         }
 
@@ -560,6 +568,7 @@ class TtsReadAloudEngine(
 
     private fun onSentenceCompleted() {
         if (player?.hasNextMediaItem() == true) return
+        emitFinished(currentIndex)
 
         val next = currentIndex + 1
         if (next <= sentences.lastIndex) {
@@ -648,6 +657,10 @@ class TtsReadAloudEngine(
         }
         updatePlaybackTimeline()
         prefetch(index + 1)
+    }
+
+    private fun emitFinished(index: Int) {
+        sentences.getOrNull(index)?.let(_finishedSentences::tryEmit)
     }
 
     private fun updateSentenceDuration(index: Int, durationMs: Long) {
