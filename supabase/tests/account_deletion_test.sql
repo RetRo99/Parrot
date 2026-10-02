@@ -10,6 +10,11 @@ values
      'authenticated', 'authenticated', 'delete-one@example.invalid', '', now()),
     ('11000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000',
      'authenticated', 'authenticated', 'delete-two@example.invalid', '', now());
+-- Uploads are allowlist-only (20261003000000).
+insert into public.cloud_feature_allowlist (cloud_user_id, feature)
+values
+    ('11000000-0000-0000-0000-000000000001', 'uploads'),
+    ('11000000-0000-0000-0000-000000000002', 'uploads');
 
 insert into public.cloud_books (
     id, cloud_user_id, source_content_hash, source_content_hash_algorithm, title, format
