@@ -6,6 +6,7 @@ import com.retro99.reader.ui.tts.TtsSentence
 import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.reader.ui.tts.TtsVoicePreparationState
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 
 sealed interface TtsPlaybackOperation {
@@ -67,6 +68,15 @@ enum class TtsPlaybackFailureReason(val analyticsValue: String) {
 
 const val TTS_SYSTEM_VOICE_KEY = "system"
 
+/** A sentence spoken to its end, and the chapter it belongs to. */
+data class FinishedTtsSentence(
+    val chapterHref: String?,
+    val sentence: TtsSentence,
+) {
+    override fun toString(): String =
+        "FinishedTtsSentence(index=${sentence.index}, chars=${sentence.text.length})"
+}
+
 enum class TtsPreviewState {
     IDLE,
     LOADING,
@@ -84,6 +94,10 @@ interface TtsController : NarrationController {
     override val chapterCompleted: Flow<String>
 
     val currentSentence: Flow<TtsSentence?>
+
+    /** Emits each sentence once its audio has finished, never on start. */
+    val finishedSentences: Flow<FinishedTtsSentence>
+        get() = emptyFlow()
 
     /** Number of sentences in the chapter currently loaded for playback; 0 when none. */
     val sentenceCount: Flow<Int>

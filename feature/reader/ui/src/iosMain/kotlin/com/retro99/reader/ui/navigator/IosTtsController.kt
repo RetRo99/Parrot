@@ -12,6 +12,10 @@ import kotlinx.coroutines.flow.flowOf
 import org.koin.core.annotation.Scope
 import org.koin.core.annotation.Scoped
 
+/**
+ * Device read-aloud isn't built on iOS yet, so there are no sentence
+ * callbacks and recaps capture iOS reading from settled pages only.
+ */
 @Scope(ReaderScope::class)
 @Scoped(binds = [TtsController::class])
 class IosTtsController : TtsController {
