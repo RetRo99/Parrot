@@ -6,8 +6,9 @@ export const GO_CHAT_URL = 'https://opencode.ai/zen/go/v1/chat/completions'
 export const USER_AGENT = 'parrot-recap/1.0'
 
 // Only Go models served on /chat/completions; others use other formats.
-export const ALLOWED_MODELS: readonly string[] = ['mimo-v2.6-flash', 'glm-5.3-flash']
-export const DEFAULT_MODEL = 'mimo-v2.6-flash'
+// hy3: fastest worst case + best Slovenian in the 2026-10-02 bench.
+export const ALLOWED_MODELS: readonly string[] = ['hy3', 'glm-5.3-flash', 'mimo-v2.6-flash']
+export const DEFAULT_MODEL = 'hy3'
 export const DEFAULT_DAILY_LIMIT = 30
 const MAX_DAILY_LIMIT = 1000
 
