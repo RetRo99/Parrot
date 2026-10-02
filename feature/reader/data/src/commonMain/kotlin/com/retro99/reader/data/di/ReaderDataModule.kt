@@ -48,7 +48,7 @@ class ReaderDataModule {
     ): CloudRecapEngine = CloudRecapEngine(
         endpoint = RecapEndpoint.from(configuration),
         auth = auth,
-        // Own client: this call alone needs a ~90 s timeout.
+        // Own client: this call alone needs a ~150 s timeout.
         httpClient = HttpClient(engineFactory) {
             install(HttpTimeout) {
                 connectTimeoutMillis = RECAP_CONNECT_TIMEOUT_MS

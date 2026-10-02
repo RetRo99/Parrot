@@ -47,8 +47,31 @@ supabase functions deploy generate-recap --project-ref <project-ref>
 `POST` with a signed-in, non-anonymous user's JWT:
 
 ```json
-{ "excerpt": "…80-8000 chars…", "language": "sl", "lastSentence": "optional" }
+{ "excerpt": "…at least 80 chars…", "language": "sl", "lastSentence": "optional" }
 ```
+
+The excerpt is everything the user read in the session; there is no cap.
+
+- Up to 250k chars (`CHUNK_CHARS`, ~57k English / ~100k dense Slovenian tokens,
+  well inside `hy3`'s 192k input) it is one model call.
+- Longer excerpts are split at line or sentence breaks into parts of up to 250k
+  chars. Each part gets short factual notes (map, 4 calls at a time), then one
+  call merges the notes, in reading order, into the 2-3 sentence recap with the
+  same rules (map-reduce). Notes are internal and never returned or logged.
+- All calls share a 135 s budget (`DEADLINE_MS`; the Edge gateway answers 504
+  at 150 s). Each call has a 60 s timeout and retries once only on 5xx/network
+  with at least 10 s left; part calls stop 35 s early to leave time to merge.
+  Any failed part fails the recap with that part's status.
+- Time budget: past 2M chars (`MAX_INPUT_CHARS`, ~20 h of reading, ~9 parts) the
+  most recent 2M are used and the log line says `trimmed`.
+- Bodies over `MAX_BODY_BYTES` (2M chars as 3-byte UTF-8 plus 64 KiB, ~6 MB)
+  get 413. It is a memory guard: Supabase documents no smaller request limit
+  and the function has 256 MB. The body is counted while streaming.
+- One recap uses one quota unit however many model calls it takes.
+
+Measured on `hy3` via Go (2026-10-02): 8k chars 3.2 s; 40k 4.0 s; 300k chars in
+one call 11.4 s; a whole novel (690k chars, 3 parts + merge) 14.2 s; 2M chars
+(9 parts + merge) 31.2 s.
 
 `language` is one of `en sl de fr es it hr` (region subtags are ignored),
 default `en`. Any other fields, such as `bookTitle`, are ignored.
@@ -57,17 +80,18 @@ default `en`. Any other fields, such as `bookTitle`, are ignored.
 |---|---|
 | 200 | `{ "kind": "recap", "summary": "…", "model": "hy3" }` or `{ "kind": "not_enough", "summary": null, "model": "hy3" }` (`model` is informational and optional for clients) |
 | 401 | Not a verified, non-anonymous user |
+| 413 | Body over `MAX_BODY_BYTES` |
 | 422 | Excerpt too short, or unsupported language |
 | 429 | `daily recap limit reached`, or provider rate limit (both send `Retry-After`) |
 | 502 | Provider error or unusable output |
 | 503 | Disabled, not configured, or `recap provider unavailable` (Go key rejected) |
-| 504 | Provider timed out (60 s per attempt) |
+| 504 | Provider timed out (60 s per attempt, 135 s per recap) |
 
 A revoked (signed-out) session or a deleted user also gets 401.
 
 ## Tests
 
 ```sh
-cd supabase/functions
-deno test generate-recap/
+cd supabase/functions/generate-recap
+deno test --node-modules-dir=none
 ```

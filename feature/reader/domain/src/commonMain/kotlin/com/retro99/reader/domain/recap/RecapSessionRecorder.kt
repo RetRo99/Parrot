@@ -19,7 +19,7 @@ interface RecapSessionRecorder {
 
     /**
      * Adds text the reader has demonstrably read or heard, in reading order.
-     * Keeps only the most recent [RecapLimits.MAX_EXCERPT_CHARS] chars.
+     * All of it is kept; nothing is dropped however long the session.
      */
     fun appendReadText(
         sessionId: String,

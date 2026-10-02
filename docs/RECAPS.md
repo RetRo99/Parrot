@@ -92,10 +92,15 @@ appended **at the event**, never at close, because `close()` tears down the WebV
     turn or heard sentence.
   - `language` (`RecapLanguages.resolve`): book metadata language if supported, else
     the system locale, else null. Allow-list: en, sl, de, fr, es, it, hr.
-- **Recorder buffer:** appends are non-blocking and queued in order. It keeps the most
-  recent 8,000 chars (`RecapLimits.MAX_EXCERPT_CHARS`) and ignores a segment equal to
-  the previous one. A forward `PAGE` counts as a page advance; each `TTS_SENTENCE` as
+- **Recorder buffer:** appends are non-blocking and queued in order. There is no
+  excerpt cap: it keeps everything read in the session and only ignores a segment equal
+  to the previous one. A forward `PAGE` counts as a page advance; each `TTS_SENTENCE` as
   one sentence.
+- **Saving:** each save rewrites the whole `excerpt` column. Up to 16k chars it is saved
+  on every append; past that at most every 30 s, so a long session doesn't rewrite
+  megabytes per sentence. Session end always saves the full in-memory text; a crash
+  loses at most the last 30 s. On Android the SQLite cursor window is raised to 16 MB
+  (default 2 MB) so a long session's row stays readable.
 - **iOS:** pages are captured as on Android. iOS device TTS is a stub with no sentence
   callbacks, so there is no TTS capture. Locator callbacks run one at a time so pages
   arrive in order.
@@ -175,13 +180,31 @@ Observing never triggers generation. `SessionRecap` exposes no excerpt text.
   parked with `AUTH_REQUIRED` while the client still looks signed in).
 - **Settings:** App settings → Reading → Cloud recaps.
 
+## Long sessions (`generate-recap`)
+
+The client sends the whole excerpt in one request (no chunked upload: Supabase sets
+no body limit below the function's ~6 MB guard, and a full novel is ~0.7 MB).
+The function makes one model call for up to 250k chars. Longer excerpts are split
+at line or sentence breaks into parts of up to 250k chars; each part gets a short
+factual note (4 calls in parallel), then one merge call turns the notes, in order,
+into the 2-3 sentence recap with the same rules. Notes are never returned. One
+recap uses one quota unit however many calls it needs.
+
+Everything runs within a 135 s budget (the Edge gateway answers 504 at 150 s): each
+call has a 60 s timeout, one retry only on 5xx/network and only with ≥ 10 s left,
+and part calls stop 35 s early so the merge has time. Past 2M chars (~20 h of
+reading) the function keeps the most recent 2M, which is about 9 parts, three map
+rounds. Measured on hy3 (2026-10-02): 8k chars 3.2 s, 300k chars 11 s in one call,
+a whole novel (690k chars, 3 parts) 14 s, and 2M chars (9 parts) 31 s. The client
+waits up to 150 s (`CloudRecapEngine.REQUEST_TIMEOUT_MS`).
+
 ## Offline engine extension point
 
 `RecapEngine` is provider-neutral; each row stores the `engineId` and `model` that
 produced it. To add an on-device engine:
 
 1. Implement `RecapEngine` in reader data with its own `id` (e.g. `"local"`). It gets a
-   bounded `RecapInput` (excerpt, language, lastSentence) and maps its own failures to
+   `RecapInput` (the whole excerpt, language, lastSentence) and maps its own failures to
    `RecapResult` (`Retryable`/`Permanent`; never `AuthRequired`).
 2. Add a separate setting for it in `RecapSettings` (do not reuse cloud consent).
 3. Choose it in `DefaultRecapEngineSelector.select()` when cloud isn't usable, and

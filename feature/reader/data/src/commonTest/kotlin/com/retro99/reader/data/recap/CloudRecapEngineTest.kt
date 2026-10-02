@@ -95,6 +95,17 @@ class CloudRecapEngineTest {
     }
 
     @Test
+    fun sendsALongExcerptWhole() = runTest {
+        // Far past the old 8,000-char cap: nothing is cut.
+        val long = "Sentence of a long reading session. ".repeat(30_000)
+        engine { json(HttpStatusCode.OK, """{"kind":"recap","summary":"Ana left."}""") }
+            .generate(input.copy(excerpt = long))
+
+        val body = Json.parseToJsonElement(requests.single().body.toByteArray().decodeToString()).jsonObject
+        assertEquals(long, body["excerpt"]!!.jsonPrimitive.content)
+    }
+
+    @Test
     fun readsTheOptionalModel() = runTest {
         val result = engine {
             json(HttpStatusCode.OK, """{"kind":"recap","summary":"Ana left.","model":"hy3"}""")

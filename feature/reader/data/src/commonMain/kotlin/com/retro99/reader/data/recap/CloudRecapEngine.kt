@@ -48,7 +48,7 @@ class CloudRecapEngine(
 
     override suspend fun generate(input: RecapInput): RecapResult {
         if (!endpoint.isConfigured) return RecapResult.Retryable(RecapErrorCode.SERVICE_UNAVAILABLE)
-        val excerpt = input.excerpt.take(RecapLimits.MAX_EXCERPT_CHARS)
+        val excerpt = input.excerpt
         // The server answers 422 below this; don't spend a request on it.
         if (excerpt.trim().length < MIN_EXCERPT_CHARS) {
             return RecapResult.Permanent(RecapErrorCode.EXCERPT_TOO_SHORT)
@@ -158,8 +158,11 @@ class CloudRecapEngine(
         }
 
     companion object {
-        /** Server latency reaches ~60 s; leave room for one provider retry. */
-        const val REQUEST_TIMEOUT_MS = 90_000L
+        /**
+         * The server answers within its 135 s budget (long sessions are
+         * summarised in parts); the Edge gateway gives up at 150 s anyway.
+         */
+        const val REQUEST_TIMEOUT_MS = 150_000L
 
         /** The server's minimum after trim. */
         const val MIN_EXCERPT_CHARS = 80

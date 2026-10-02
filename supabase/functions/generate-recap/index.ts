@@ -19,14 +19,14 @@ import { createClient, isAuthRetryableFetchError } from 'npm:@supabase/supabase-
 import { classifyAuthError } from '../_shared/auth_errors.ts'
 import { authenticate, bearerToken, type Claims, readJsonBody } from './guards.ts'
 import {
-  buildMessages,
+  DEADLINE_MS,
+  generateRecap,
   isEnabled,
   loadConfig,
-  MAX_EXCERPT_CHARS,
   MAX_HINT_CHARS,
+  MAX_INPUT_CHARS,
   MIN_EXCERPT_CHARS,
   parseLanguage,
-  requestRecap,
   sessionId,
 } from './recap.ts'
 
@@ -92,6 +92,7 @@ function json(body: unknown, status = 200, extra: Record<string, string> = {}): 
 const env = (name: string) => Deno.env.get(name)
 
 Deno.serve(async (req) => {
+  const receivedAt = Date.now()
   // Only the native app calls this, so no CORS: browsers get no
   // Allow-Origin and cannot read responses. Preflights just end here.
   if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
@@ -127,7 +128,10 @@ Deno.serve(async (req) => {
     }
     const payload = (body.value ?? {}) as Record<string, unknown>
     // bookTitle and chapterTitles are ignored on purpose; see buildMessages.
-    const excerpt = String(payload?.excerpt ?? '').slice(0, MAX_EXCERPT_CHARS)
+    const raw = String(payload?.excerpt ?? '')
+    // Past the time budget, the most recent text matters most.
+    const trimmed = raw.length > MAX_INPUT_CHARS
+    const excerpt = trimmed ? raw.slice(-MAX_INPUT_CHARS) : raw
     if (excerpt.trim().length < MIN_EXCERPT_CHARS) {
       // Do not pay for a model call on unusable input.
       return json({ error: 'Excerpt too short to summarise' }, 422)
@@ -146,14 +150,19 @@ Deno.serve(async (req) => {
       })
     }
 
-    const outcome = await requestRecap({ fetch }, {
+    // The budget counts from receipt, so auth and quota time is included.
+    const deadlineMs = DEADLINE_MS - (Date.now() - receivedAt)
+    const outcome = await generateRecap({ fetch, deadlineMs }, {
       apiKey,
       model,
       sessionId: await sessionId(userId, now),
-      messages: buildMessages({ excerpt, lastSentence, language }),
+      excerpt,
+      lastSentence,
+      language,
     })
     // Metadata only — never the excerpt, prompt, summary or key.
-    console.log(JSON.stringify({ ev: 'recap', status: outcome.status, model, ...outcome.log }))
+    const meta = { chars: excerpt.length, ...(trimmed ? { trimmed } : {}) }
+    console.log(JSON.stringify({ ev: 'recap', status: outcome.status, model, ...meta, ...outcome.log }))
 
     if (outcome.status === 200) return json(outcome.body)
     const extra: Record<string, string> = 'retryAfter' in outcome && outcome.retryAfter

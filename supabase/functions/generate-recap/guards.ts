@@ -1,14 +1,17 @@
 // Request guards for generate-recap, kept free of Deno.serve and env reads
 // so they can be unit tested with an injected verifier.
 
+import { MAX_INPUT_CHARS } from './recap.ts'
+
 export type Claims = Record<string, unknown>
 
 // Returns the verified claims, or null when the token is not valid.
 // Throws only on infrastructure failures (e.g. Auth unreachable).
 export type ClaimsVerifier = (token: string) => Promise<Claims | null>
 
-// Above the current contract (8k-char excerpt + hint) even as 3-byte UTF-8.
-export const MAX_BODY_BYTES = 64 * 1024
+// Memory guard: the time budget as 3-byte UTF-8, plus hint and JSON slack
+// (~6 MB). Supabase documents no smaller body limit; memory is 256 MB.
+export const MAX_BODY_BYTES = MAX_INPUT_CHARS * 3 + 64 * 1024
 
 // Exactly one bearer that looks like a JWT (three base64url segments).
 // Rejects sb_publishable_/sb_secret_ keys, which have no dots.

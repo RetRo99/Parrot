@@ -1,5 +1,12 @@
 import { assertEquals, assertRejects } from 'jsr:@std/assert@1.0.19'
-import { authenticate, type Claims, type ClaimsVerifier, readJsonBody } from './guards.ts'
+import {
+  authenticate,
+  type Claims,
+  type ClaimsVerifier,
+  MAX_BODY_BYTES,
+  readJsonBody,
+} from './guards.ts'
+import { MAX_INPUT_CHARS } from './recap.ts'
 
 const USER_ID = '6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b'
 const JWT = 'eyJhbGciOiJFUzI1NiJ9.eyJzdWIiOiJ4In0.c2ln'
@@ -131,4 +138,20 @@ Deno.test('rejects oversized streamed body with 413', async () => {
   })
   const r = req(undefined, { body: stream })
   assertEquals(await readJsonBody(r, 1024), { ok: false, status: 413 })
+})
+
+Deno.test('default cap admits a full-budget excerpt of 3-byte chars', async () => {
+  const body = JSON.stringify({
+    excerpt: '€'.repeat(MAX_INPUT_CHARS),
+    language: 'sl',
+    lastSentence: '€'.repeat(300),
+  })
+  const r = req(undefined, { body })
+  const result = await readJsonBody(r)
+  assertEquals(result.ok, true)
+})
+
+Deno.test('default cap still rejects a body above the memory guard', async () => {
+  const r = req(undefined, { body: JSON.stringify({ excerpt: 'a'.repeat(MAX_BODY_BYTES) }) })
+  assertEquals(await readJsonBody(r), { ok: false, status: 413 })
 })

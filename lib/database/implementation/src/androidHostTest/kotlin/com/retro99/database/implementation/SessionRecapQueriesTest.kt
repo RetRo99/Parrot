@@ -289,6 +289,15 @@ class SessionRecapQueriesTest {
         )
     }
 
+    @Test
+    fun `a multi-megabyte excerpt is stored and read back whole`() {
+        val excerpt = "Prebral je še eno poglavje o Krpanu. ".repeat(100_000)
+        database.insertCapturingRow(row("s1", createdAt = 1))
+        queries.updateCapture(excerpt, null, null, null, null, null, null, 0, 0, 2, "s1")
+
+        assertEquals(excerpt, queries.getRecap("s1").executeAsOne().excerpt)
+    }
+
     private fun pending(sessionId: String) = finish(sessionId, "PENDING")
 
     private fun finish(sessionId: String, status: String) {
