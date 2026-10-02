@@ -123,6 +123,29 @@ class StatisticsSessionDetailTest {
     }
 
     @Test
+    fun aRefusedRetryClearsOnceTheRecapMovesOn() = runDetailTest { viewModel ->
+        recaps.retryResult = RecapRetryResult.NOT_RETRYABLE
+        recaps.recaps.value = mapOf(
+            "r1" to sessionRecap(RecapStatus.FAILED_PERMANENT, sessionId = "r1", canRetry = true),
+        )
+        viewModel.onIntent(StatisticsIntent.OnSessionClicked(LINKED))
+        advanceUntilIdle()
+        // Refused because the runner had just claimed the row.
+        viewModel.onIntent(StatisticsIntent.OnRetryRecap)
+        advanceUntilIdle()
+        assertTrue(viewModel.selected()!!.retryUnavailable)
+
+        recaps.recaps.value = mapOf("r1" to sessionRecap(RecapStatus.RUNNING, sessionId = "r1"))
+        advanceUntilIdle()
+        recaps.recaps.value = mapOf(
+            "r1" to sessionRecap(RecapStatus.FAILED_PERMANENT, sessionId = "r1", canRetry = true),
+        )
+        advanceUntilIdle()
+
+        assertFalse(viewModel.selected()!!.retryUnavailable)
+    }
+
+    @Test
     fun goingBackReturnsToTheList() = runDetailTest { viewModel ->
         viewModel.onIntent(StatisticsIntent.OnSessionClicked(LINKED))
         advanceUntilIdle()

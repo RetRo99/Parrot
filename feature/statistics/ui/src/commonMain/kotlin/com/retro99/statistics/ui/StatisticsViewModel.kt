@@ -397,7 +397,15 @@ class StatisticsViewModel(
         ) { stored, enabled, available ->
             stored.toSessionRecapUiState(cloudRecapsEnabled = enabled, engineAvailable = available)
         }
-            .onEach { state -> updateSessionDetail { it?.copy(recap = state) } }
+            .onEach { state ->
+                updateSessionDetail { detail ->
+                    // A refused retry only holds for the state it was refused in.
+                    detail?.copy(
+                        recap = state,
+                        retryUnavailable = detail.retryUnavailable && detail.recap == state,
+                    )
+                }
+            }
             .catch { error ->
                 analytics.logException(error, sessionRecapContext(stage = "observe"))
                 updateSessionDetail { it?.copy(recap = SessionRecapUiState.None(cloudRecapsEnabled = true)) }
@@ -423,13 +431,14 @@ class StatisticsViewModel(
                 throw cancellation
             } catch (error: Exception) {
                 analytics.logException(error, sessionRecapContext(stage = "retry"))
-                RecapRetryResult.NOT_RETRYABLE
+                // Unknown outcome: leave the button so the user can try again.
+                null
             }
             updateSessionDetail { current ->
                 // The user may have opened another session meanwhile.
                 current?.takeIf { it.session.recapSessionId == recapSessionId }?.copy(
                     isRetrying = false,
-                    retryUnavailable = result != RecapRetryResult.QUEUED,
+                    retryUnavailable = result != null && result != RecapRetryResult.QUEUED,
                 ) ?: current
             }
         }
