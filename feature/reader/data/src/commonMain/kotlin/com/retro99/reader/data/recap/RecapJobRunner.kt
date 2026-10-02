@@ -58,6 +58,12 @@ class RecapJobRunner(
     private var startupWork: suspend () -> Unit = {}
     private var timer: Job? = null
 
+    // Runner-wide pauses: a quota, outage or auth answer applies to every
+    // row, so no other row is sent until they end.
+    private var blockedUntil = 0L
+    private var authBlockedUntil = 0L
+    private var authFailures = 0
+
     /**
      * Starts the loop and listens for sign-in. [startupWork] and retention
      * run before the first pass that can reach the database.
@@ -81,9 +87,16 @@ class RecapJobRunner(
         // Consent turned on or a user signed in: send what is waiting.
         selector.observeAvailable()
             .filter { available -> available }
-            .onEach { trigger(RecapTrigger.SIGN_IN) }
+            .onEach { onEngineAvailable() }
             .launchIn(scope)
         trigger(RecapTrigger.APP_START)
+    }
+
+    /** Sign-in or consent turned on: a new session may fix auth. */
+    internal fun onEngineAvailable() {
+        authBlockedUntil = 0L
+        authFailures = 0
+        trigger(RecapTrigger.SIGN_IN)
     }
 
     /** Non-blocking; repeated triggers collapse into one pass. */
@@ -107,6 +120,7 @@ class RecapJobRunner(
         var sent = 0
         var guard = 0
         while (guard++ < MAX_ROWS_PER_PASS) {
+            if (clock.now().toEpochMilliseconds() < blockEnd()) break
             val engine = selector.select() ?: break
             val row = database.getNextDue(clock.now().toEpochMilliseconds()) ?: break
             val excerpt = row.excerpt ?: break
@@ -157,10 +171,12 @@ class RecapJobRunner(
         val keepGoing = when (result) {
             is RecapResult.Success -> {
                 database.complete(id, RecapStatus.SUCCEEDED.name, result.summary, result.model, now)
+                authFailures = 0
                 true
             }
             RecapResult.NotEnough -> {
                 database.complete(id, RecapStatus.NOT_ENOUGH.name, null, null, now)
+                authFailures = 0
                 true
             }
             is RecapResult.Permanent -> {
@@ -172,20 +188,26 @@ class RecapJobRunner(
                 true
             }
             is RecapResult.Retryable -> {
-                if (attempt >= RecapJobPolicy.MAX_ATTEMPTS) {
+                val next = RecapJobPolicy.nextAttemptAt(now, attempt, result.retryAfter)
+                val capped = RecapJobPolicy.countsTowardCap(result.code) &&
+                    attempt >= RecapJobPolicy.MAX_ATTEMPTS
+                if (capped) {
                     database.fail(id, RecapStatus.FAILED_PERMANENT.name, attempt, null, result.code.name, now)
                 } else {
-                    val next = RecapJobPolicy.nextAttemptAt(now, attempt, result.retryAfter)
                     database.fail(id, RecapStatus.FAILED_RETRYABLE.name, attempt, next, result.code.name, now)
                 }
                 // Quota, outage or network: the next row would fail the same way.
+                blockedUntil = maxOf(blockedUntil, next)
                 false
             }
             RecapResult.AuthRequired -> {
-                // Not billed: undo the attempt and wait for sign-in.
+                // Not billed: undo the attempt. Back off, since the server
+                // can keep refusing a session the client thinks is valid.
                 database.fail(
                     id, RecapStatus.PENDING.name, attempt - 1, null, RecapErrorCode.AUTH_REQUIRED.name, now,
                 )
+                authFailures++
+                authBlockedUntil = now + RecapJobPolicy.backoff(authFailures).inWholeMilliseconds
                 false
             }
         }
@@ -199,12 +221,17 @@ class RecapJobRunner(
         // A row left RUNNING by a dead process is recovered once it is stale.
         val staleAt = database.getOldestRunningUpdate()
             ?.let { it + RecapJobPolicy.STALE_RUNNING_AFTER.inWholeMilliseconds + 1 }
-        val at = listOfNotNull(database.getEarliestScheduled(now), staleAt).minOrNull() ?: return
+        val block = blockEnd().takeIf { it > now }
+        val at = listOfNotNull(database.getEarliestScheduled(now), staleAt, block).minOrNull()
+            ?.coerceAtLeast(block ?: 0L)
+            ?: return
         timer = scope.launch {
             delay(at - now)
             trigger(RecapTrigger.SCHEDULED)
         }
     }
+
+    private fun blockEnd(): Long = maxOf(blockedUntil, authBlockedUntil)
 
     private fun RecapResult.outcomeName(): String = when (this) {
         is RecapResult.Success -> "succeeded"

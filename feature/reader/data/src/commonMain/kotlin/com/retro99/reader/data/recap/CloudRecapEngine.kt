@@ -91,7 +91,8 @@ class CloudRecapEngine(
         return when (status) {
             200 -> parseSuccess(response.bodyAsText())
             400, 405, 413 -> RecapResult.Permanent(RecapErrorCode.BAD_REQUEST)
-            403 -> RecapResult.AuthRequired
+            // Not a token problem (the function never sends it): back off.
+            403 -> RecapResult.Retryable(RecapErrorCode.UNKNOWN, retryAfter(response))
             422 -> RecapResult.Permanent(unprocessableCode(response.bodyAsText()))
             429 -> RecapResult.Retryable(RecapErrorCode.RATE_LIMITED, retryAfter(response))
             502 -> RecapResult.Retryable(RecapErrorCode.PROVIDER_ERROR, retryAfter(response))

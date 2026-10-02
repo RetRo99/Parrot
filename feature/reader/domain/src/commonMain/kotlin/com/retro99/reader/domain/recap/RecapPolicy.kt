@@ -31,6 +31,13 @@ object RecapJobPolicy {
     /** Whole recap rows are deleted after this long. */
     val ROW_RETENTION: Duration = 180.days
 
+    /**
+     * Quota and outage answers say nothing about the row, so they never
+     * use up its attempts; backoff and excerpt expiry still bound them.
+     */
+    fun countsTowardCap(code: RecapErrorCode): Boolean =
+        code != RecapErrorCode.RATE_LIMITED && code != RecapErrorCode.SERVICE_UNAVAILABLE
+
     /** 1, 2, 4, 8 ... minutes, capped; [attempt] starts at 1. */
     fun backoff(attempt: Int): Duration {
         val exponent = (attempt - 1).coerceIn(0, 20)

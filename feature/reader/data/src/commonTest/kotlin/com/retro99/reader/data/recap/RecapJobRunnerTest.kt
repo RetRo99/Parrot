@@ -147,6 +147,58 @@ class RecapJobRunnerTest {
     }
 
     @Test
+    fun aRetryableFailureHoldsBackEveryOtherRow() = runTest {
+        database.put(pendingRow("s1", createdAt = 1))
+        database.put(pendingRow("s2", createdAt = 2))
+        engine.next = { RecapResult.Retryable(RecapErrorCode.SERVICE_UNAVAILABLE, retryAfter = 10.minutes) }
+        val runner = runner()
+
+        assertEquals(1, runner.runPending())
+        // s2 is due, but the outage applies to it too.
+        assertEquals(0, runner.runPending())
+        assertEquals("PENDING", database["s2"]!!.status)
+
+        clock.nowMs += 10.minutes.inWholeMilliseconds
+        engine.next = { RecapResult.Success("Back.", null) }
+        assertEquals(2, runner.runPending())
+    }
+
+    @Test
+    fun quotaAndOutageAnswersDontUseUpAttempts() = runTest {
+        database.put(pendingRow("s1", attemptCount = RecapJobPolicy.MAX_ATTEMPTS - 1))
+        engine.next = { RecapResult.Retryable(RecapErrorCode.RATE_LIMITED, retryAfter = 1.hours) }
+
+        runner().runPending()
+
+        val row = database["s1"]!!
+        assertEquals("FAILED_RETRYABLE", row.status)
+        assertEquals(RecapJobPolicy.MAX_ATTEMPTS, row.attemptCount)
+        assertEquals(clock.nowMs + 1.hours.inWholeMilliseconds, row.nextAttemptAt)
+    }
+
+    @Test
+    fun repeatedAuthFailuresBackOffUntilSignIn() = runTest {
+        database.put(pendingRow("s1"))
+        engine.next = { RecapResult.AuthRequired }
+        val runner = runner()
+
+        assertEquals(1, runner.runPending())
+        assertEquals(0, runner.runPending())
+
+        clock.nowMs += RecapJobPolicy.backoff(1).inWholeMilliseconds
+        assertEquals(1, runner.runPending())
+        // The second refusal waits longer.
+        clock.nowMs += RecapJobPolicy.backoff(1).inWholeMilliseconds
+        assertEquals(0, runner.runPending())
+
+        // A new sign-in lifts the pause at once.
+        runner.onEngineAvailable()
+        assertEquals(1, runner.runPending())
+        assertEquals(3, engine.inputs.size)
+        assertEquals(0, database["s1"]!!.attemptCount)
+    }
+
+    @Test
     fun retryAfterIsHonouredWhenLongerThanBackoff() = runTest {
         database.put(pendingRow("s1"))
         engine.next = { RecapResult.Retryable(RecapErrorCode.RATE_LIMITED, retryAfter = 5.hours) }

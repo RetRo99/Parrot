@@ -118,7 +118,12 @@ CAPTURING ─► SKIPPED_INELIGIBLE
   schedules a wake-up for that moment. A cancelled request (e.g. WorkManager stopped
   the worker) is stored as a retryable `NETWORK` failure with backoff.
 - Backoff 1, 2, 4, 8 min … capped at 6 h; `Retry-After` wins when longer. After 5
-  attempts → `FAILED_PERMANENT`. A retryable error or `AuthRequired` ends the pass.
+  attempts → `FAILED_PERMANENT`, except that `RATE_LIMITED` and `SERVICE_UNAVAILABLE`
+  never use up attempts (backoff and excerpt expiry still bound them).
+- A retryable error or `AuthRequired` ends the pass and pauses the whole runner: no
+  row is sent until that row's next attempt time (retryable) or an auth backoff of
+  1, 2, 4 … min (`AuthRequired`). Sign-in or consent turned on lifts the auth pause.
+  A 403 is a retryable `UNKNOWN`, not `AuthRequired`. The pause lives in memory.
 - No engine available (consent off or signed out) → rows stay `PENDING`.
 - Triggers: app start, sign-in or consent turned on, session end, foreground and
   connectivity (`SyncTriggerBridge` / `RecapTriggerBridge`), user retry, scheduled

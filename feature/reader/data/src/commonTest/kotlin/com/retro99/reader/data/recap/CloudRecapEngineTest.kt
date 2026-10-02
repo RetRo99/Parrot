@@ -192,6 +192,8 @@ class CloudRecapEngineTest {
         assertEquals(RecapResult.Retryable(RecapErrorCode.PROVIDER_ERROR), mapped(502))
         assertEquals(RecapResult.Retryable(RecapErrorCode.TIMEOUT), mapped(504))
         assertEquals(RecapResult.Retryable(RecapErrorCode.UNKNOWN), mapped(500))
+        // A gateway 403 isn't fixed by signing in; it backs off.
+        assertEquals(RecapResult.Retryable(RecapErrorCode.UNKNOWN), mapped(403))
     }
 
     @Test
