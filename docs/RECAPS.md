@@ -18,31 +18,45 @@ Status: `CAPTURING → PENDING → RUNNING → SUCCEEDED | NOT_ENOUGH | FAILED_R
 FAILED_PERMANENT`, or `CAPTURING → SKIPPED_INELIGIBLE`. `FAILED_RETRYABLE` goes back to
 `RUNNING` when due. `AuthRequired` returns the row to `PENDING` (error `AUTH_REQUIRED`).
 
-## Stage 2 — capture (`feature/reader/domain/.../recap/RecapSessionRecorder.kt`)
+## Stage 2 — capture (`feature/reader/ui/.../reader/ReaderRecapCapture.kt`)
 
-Inject `RecapSessionRecorder` (Koin). The session id is `ReaderViewModel.recapSessionId`
-(random UUID minted when the publication opens); start and end are already wired.
+`ReaderViewModel` creates one `ReaderRecapCapture` per session, and only when
+`isCloudRecapsEnabled()` is true at open. Withdrawing consent stops it for good. With
+consent off, no script runs and nothing is appended. Text is appended **at the event**,
+never at close, because `close()` tears down the WebView. The recorder persists each
+append, so an app kill still leaves the text read so far.
 
-```kotlin
-fun appendReadText(
-    sessionId: String,
-    text: String,                 // only text demonstrably read or heard
-    chapter: RecapChapter?,       // index + title; titles never leave the device
-    position: RecapPosition?,     // href, progression, totalProgression
-    source: RecapTextSource = PAGE, // PAGE per settled page, TTS_SENTENCE per heard sentence
-)
-```
+| Source | When it counts | What is appended |
+|---|---|---|
+| Manual reading (`PAGE`) | the page has been visible ≥ `RecapCapturePolicy.PAGE_DWELL_MS` (5 s) in the foreground, with no startup prompt open and device TTS not speaking | `BookController.getVisibleTextRange()`: first to last visible word |
+| Device TTS (`TTS_SENTENCE`) | `TtsController.finishedSentences`: the sentence's audio played to its end (ExoPlayer AUTO transition or end of playlist). Skips, seeks and stops don't count | that sentence |
 
-- Calls are non-blocking and applied in order on an app-scoped queue.
-- The buffer keeps the most recent 8,000 chars and drops the oldest at a sentence or word
-  boundary. A segment equal to the previous one is ignored.
-- `PAGE` appends whose `totalProgression` moves forward count as page advances.
-  Each new `TTS_SENTENCE` counts as one sentence.
-- `onSessionEnded(sessionId, endPosition, lastSentence, activeReadingMs)`: the VM passes
-  `lastSentence = null` and wall-clock time today. Stage 2 should pass the last confirmed
-  sentence and foreground reading time.
-- `onSessionStarted(..., language)`: the VM passes no language yet, so the server writes
-  English. Stage 2/3 should pass the book language or the UI locale (`sl`, `en`, ...).
+- **No chapter-end fallback.** `VisibleTextRangeDetector` returns null when no text is
+  visible (image page, blank page), so nothing is captured. It reads the DOM and never
+  changes it. Offsets count all text outside script and style, so the read-aloud
+  sentence spans don't move them.
+- **Dedupe** (`RecapReadTracker`): pages by chapter character range (rereading or going
+  back adds nothing; a relaid-out page adds only the new part); sentences by chapter
+  href plus sentence index. A sentence heard on a page that was already captured as
+  text can still appear twice. The two sources don't share coordinates.
+- **Skipped pages:** a page left before the dwell time is never read. A page that changes
+  while its text is being read is dropped.
+- **Chapters:** each chunk carries the chapter (index, title) and position (href,
+  progression, totalProgression) of the page it came from. A heard sentence from another
+  chapter goes without them.
+- **Session end:** `lastSentence` is the last sentence of the last appended chunk (≤ 300
+  chars; a fragment if reading stopped mid-sentence). `activeReadingMs` comes from
+  `RecapActiveReadingClock`. It counts while the reader is started, or while narration or
+  TTS plays in the background, and stops 3 min after the last page turn or heard sentence.
+- **Language** (`RecapLanguages.resolve`): the book's metadata language when the API
+  supports it, else the system locale, else null. Allow-list: en, sl, de, fr, es, it, hr.
+- **Recorder** (`RecapSessionRecorder.appendReadText`): calls are non-blocking and
+  queued in order. The buffer keeps the most recent 8,000 chars and ignores a segment
+  equal to the previous one. A `PAGE` append whose `totalProgression` moves forward
+  counts as a page advance, and each new `TTS_SENTENCE` as one sentence.
+- **iOS:** pages are captured as on Android. iOS device TTS is a stub with no sentence
+  callbacks, so there's no TTS capture there. Narration (media overlays) is captured
+  through the pages it turns on both platforms.
 
 ## Stage 3 — UI (`feature/reader/domain/.../recap/`)
 
