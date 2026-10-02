@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import androidx.browser.customtabs.CustomTabsIntent
 import com.retro99.base.result.AppResult
 
 class AndroidStorytellerOAuthSessionLauncher(
@@ -20,6 +21,7 @@ class AndroidStorytellerOAuthSessionLauncher(
         val mainHandler = Handler(Looper.getMainLooper())
         var browserWasOpened = false
         var appWasBackgrounded = false
+        var attemptId: Long? = null
 
         val callbacks = object : Application.ActivityLifecycleCallbacks {
             override fun onActivityPaused(activity: Activity) {
@@ -33,11 +35,11 @@ class AndroidStorytellerOAuthSessionLauncher(
 
                 mainHandler.postDelayed(
                     {
-                        if (StorytellerOAuthCallbackRegistry.isPendingActive) {
-                            StorytellerOAuthCallbackRegistry.cancelPending(
-                                "OAuth sign-in was cancelled",
-                            )
-                        }
+                        // Only cancel our own attempt, never a newer one.
+                        StorytellerOAuthCallbackRegistry.cancelPending(
+                            "OAuth sign-in was cancelled",
+                            attemptId = attemptId ?: return@postDelayed,
+                        )
                     },
                     OAUTH_RETURN_CANCEL_DELAY_MS,
                 )
@@ -52,12 +54,14 @@ class AndroidStorytellerOAuthSessionLauncher(
 
         application?.registerActivityLifecycleCallbacks(callbacks)
         return try {
-            StorytellerOAuthCallbackRegistry.awaitToken {
+            StorytellerOAuthCallbackRegistry.awaitToken { id ->
+                attemptId = id
                 browserWasOpened = true
-                val intent = Intent(Intent.ACTION_VIEW, tokenUrl).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // Custom Tabs fall back to a plain ACTION_VIEW without a provider.
+                val customTab = CustomTabsIntent.Builder().build().apply {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                context.startActivity(intent)
+                customTab.launchUrl(context, tokenUrl)
             }
         } finally {
             application?.unregisterActivityLifecycleCallbacks(callbacks)

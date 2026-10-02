@@ -29,6 +29,10 @@ kotlin {
             implementation(projects.feature.login.domain)
         }
 
+        androidMain.dependencies {
+            implementation(libs.androidx.browser)
+        }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotlin.result)
