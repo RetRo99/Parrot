@@ -145,6 +145,7 @@ internal fun AppDatabase.mergeLibraryBookRows(fromId: String, intoId: String): L
         favoriteQueries.deleteFavorite(fromId)
         bookmarkQueries.moveBookmarks(intoId, fromId)
         readingSessionQueries.moveReadingSessions(intoId, fromId)
+        sessionRecapQueries.moveRecaps(intoId, fromId)
 
         val redundantPaths = mutableListOf<String>()
         val intoMediaTypes = deviceFileQueries.getDeviceFilesForBook(intoId)
