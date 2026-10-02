@@ -60,4 +60,17 @@ data class SessionsDetailState(
     val isLoading: Boolean = false,
     val error: AppError? = null,
     val isCancelled: Boolean = false,
+    /** The tapped session; the sheet shows its detail instead of the list. */
+    val selected: SessionDetailState? = null,
+)
+
+/**
+ * One session's statistics and recap. Viewing never generates a recap.
+ */
+data class SessionDetailState(
+    val session: ReadingSessionUiModel,
+    val recap: SessionRecapUiState = SessionRecapUiState.Loading,
+    val isRetrying: Boolean = false,
+    /** Retry was refused, e.g. the stored text has expired. */
+    val retryUnavailable: Boolean = false,
 )

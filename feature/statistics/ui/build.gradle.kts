@@ -39,6 +39,7 @@ kotlin {
             implementation(projects.baseUi)
             implementation(projects.translations)
             implementation(projects.feature.statistics.domain)
+            implementation(projects.feature.reader.domain)
             implementation(projects.feature.books.domain)
             implementation(projects.lib.analytics.api)
             implementation(projects.lib.preferences.api)

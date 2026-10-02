@@ -15,6 +15,10 @@ import com.retro99.statistics.domain.usecase.GetStatisticsOverviewUseCase
 import com.retro99.base.ui.platform.firstDayOfWeek
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
+import com.retro99.reader.domain.recap.RecapEngineSelector
+import com.retro99.reader.domain.recap.RecapRepository
+import com.retro99.reader.domain.recap.RecapRetryResult
+import com.retro99.reader.domain.recap.RecapSettings
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
@@ -27,7 +31,12 @@ import com.retro99.statistics.ui.model.toSessionUiModel
 import com.retro99.statistics.ui.model.toUiModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
@@ -45,6 +54,9 @@ class StatisticsViewModel(
     @Provided private val getStatisticsOverviewUseCase: GetStatisticsOverviewUseCase,
     @Provided private val preferences: Preferences,
     @Provided private val analytics: Analytics,
+    @Provided private val recapRepository: RecapRepository,
+    @Provided private val recapSettings: RecapSettings,
+    @Provided private val recapEngineSelector: RecapEngineSelector,
 ) : BaseViewModel<StatisticsViewState, StatisticsIntent>(StatisticsViewState()) {
 
     private var statisticsLoadInProgress = false
@@ -54,6 +66,7 @@ class StatisticsViewModel(
     private var detailLoadJob: Job? = null
 
     private var overviewJob: Job? = null
+    private var sessionRecapJob: Job? = null
 
     init {
         val storedRange = StatisticsRange.entries.firstOrNull { range ->
@@ -108,6 +121,9 @@ class StatisticsViewModel(
             }
             StatisticsIntent.OnRetryDetail -> retryDetailLoad()
             StatisticsIntent.OnDismissDetail -> dismissDetail()
+            is StatisticsIntent.OnSessionClicked -> showSessionDetail(intent.sessionId)
+            StatisticsIntent.OnSessionDetailClosed -> closeSessionDetail()
+            StatisticsIntent.OnRetryRecap -> retryRecap()
         }
     }
 
@@ -366,6 +382,75 @@ class StatisticsViewModel(
         )
     }
 
+    /** Observes the stored recap only; generation is the job runner's job. */
+    private fun showSessionDetail(sessionId: Long) {
+        val sessions = viewState.value.sessionsDetailState ?: return
+        val session = sessions.sessions.firstOrNull { it.id == sessionId } ?: return
+        analytics.logEvent(StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "session"))
+        updateSessionDetail { SessionDetailState(session) }
+        sessionRecapJob?.cancel()
+        val recap = session.recapSessionId?.let(recapRepository::observeRecap) ?: flowOf(null)
+        sessionRecapJob = combine(
+            recap,
+            recapSettings.observeCloudRecapsEnabled(),
+            recapEngineSelector.observeAvailable(),
+        ) { stored, enabled, available ->
+            stored.toSessionRecapUiState(cloudRecapsEnabled = enabled, engineAvailable = available)
+        }
+            .onEach { state -> updateSessionDetail { it?.copy(recap = state) } }
+            .catch { error ->
+                analytics.logException(error, sessionRecapContext(stage = "observe"))
+                updateSessionDetail { it?.copy(recap = SessionRecapUiState.None(cloudRecapsEnabled = true)) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun closeSessionDetail() {
+        sessionRecapJob?.cancel()
+        sessionRecapJob = null
+        updateSessionDetail { null }
+    }
+
+    private fun retryRecap() {
+        val detail = viewState.value.sessionsDetailState?.selected ?: return
+        val recapSessionId = detail.session.recapSessionId ?: return
+        if (detail.isRetrying) return
+        updateSessionDetail { it?.copy(isRetrying = true, retryUnavailable = false) }
+        viewModelScope.launch {
+            val result = try {
+                recapRepository.retry(recapSessionId)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                analytics.logException(error, sessionRecapContext(stage = "retry"))
+                RecapRetryResult.NOT_RETRYABLE
+            }
+            updateSessionDetail { current ->
+                // The user may have opened another session meanwhile.
+                current?.takeIf { it.session.recapSessionId == recapSessionId }?.copy(
+                    isRetrying = false,
+                    retryUnavailable = result != RecapRetryResult.QUEUED,
+                ) ?: current
+            }
+        }
+    }
+
+    private fun updateSessionDetail(transform: (SessionDetailState?) -> SessionDetailState?) {
+        updateState { state ->
+            val sessions = state.sessionsDetailState ?: return@updateState state
+            state.copy(sessionsDetailState = sessions.copy(selected = transform(sessions.selected)))
+        }
+    }
+
+    private fun sessionRecapContext(stage: String) = DiagnosticContext(
+        screen = "statistics",
+        action = "session_recap",
+        operation = "session_recap",
+        stage = stage,
+        outcome = "failed",
+        reasonCode = "recap_${stage}_failed",
+    )
+
     private fun retryDetailLoad() {
         if (activeDetailRequest != null) return
         val state = viewState.value
@@ -489,6 +574,8 @@ class StatisticsViewModel(
 
     private fun dismissDetail() {
         cancelActiveDetailRequest("detail_dismissed")
+        sessionRecapJob?.cancel()
+        sessionRecapJob = null
         updateState {
             it.copy(
                 detailState = null,
