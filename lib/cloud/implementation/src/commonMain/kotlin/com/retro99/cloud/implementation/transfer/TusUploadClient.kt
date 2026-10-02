@@ -7,6 +7,7 @@ import io.ktor.client.request.setBody
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Url
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -33,7 +34,10 @@ class TusUploadClient(
             throw TusUploadVerificationException("Upload file size changed")
         }
 
-        var url = resumeUrl
+        // A stored URL from an older build may point off-origin; start fresh.
+        var url = resumeUrl?.takeIf { candidate ->
+            isTrustedUploadUrl(absoluteUrl(profile.baseUrl, uploadEndpoint), candidate)
+        }
         var expiresAt: String? = null
         var offset = 0L
         var hashedOffset = 0L
@@ -169,7 +173,7 @@ class TusUploadClient(
         val location = response.headers[HttpHeaders.Location]
             ?: error("TUS create response omitted Location")
         return TusCreatedSession(
-            url = resolveLocation(profile.baseUrl, location),
+            url = resolveLocation(absoluteUrl(profile.baseUrl, endpoint), location),
             offset = response.headers[HEADER_UPLOAD_OFFSET]?.toLongOrNull() ?: 0L,
             expiresAt = response.headers[HEADER_UPLOAD_EXPIRES],
         )
@@ -210,10 +214,13 @@ class TusUploadClient(
             setBody(bytes)
         }
 
-    suspend fun cancel(uploadUrl: String, requestHeaderPolicy: TusRequestHeaderPolicy) {
+    /** Returns false, without sending anything, when [uploadUrl] is off-origin. */
+    suspend fun cancel(profile: TusUploadProfile, uploadUrl: String): Boolean {
+        // Persisted URLs from older builds may be foreign; DELETE carries auth.
+        if (!isTrustedUploadUrl(profile.baseUrl, uploadUrl)) return false
         val response = httpClient.request(uploadUrl) {
             method = HttpMethod.Delete
-            tusHeaders(TusRequestType.Delete, requestHeaderPolicy)
+            tusHeaders(TusRequestType.Delete, profile.requestHeaderPolicy)
         }
         if (response.status.value !in 200..299 && response.status != HttpStatusCode.NotFound &&
             response.status != HttpStatusCode.Gone && response.status != HttpStatusCode.BadRequest
@@ -223,6 +230,7 @@ class TusUploadClient(
                 statusCode = response.status.value,
             )
         }
+        return true
     }
 
     private fun io.ktor.client.request.HttpRequestBuilder.tusHeaders(
@@ -238,9 +246,16 @@ class TusUploadClient(
         else -> "${baseUrl.trimEnd('/')}/${endpoint.trimStart('/')}"
     }
 
-    private fun resolveLocation(baseUrl: String, location: String): String = when {
-        location.startsWith("https://") || location.startsWith("http://") -> location
-        else -> "${baseUrl.trimEnd('/')}/${location.trimStart('/')}"
+    private fun resolveLocation(endpointUrl: String, location: String): String {
+        val resolved = if (location.startsWith("https://") || location.startsWith("http://")) {
+            location
+        } else {
+            // Relative to the endpoint's origin, which may be the storage host.
+            "${originOf(endpointUrl)}/${location.trimStart('/')}"
+        }
+        // Chunks carry the auth headers, so they may only go where we created.
+        check(isTrustedUploadUrl(endpointUrl, resolved)) { "TUS server returned a foreign Location" }
+        return resolved
     }
 
     private data class TusCreatedSession(val url: String, val offset: Long, val expiresAt: String?)
@@ -287,4 +302,43 @@ private fun ByteArray.encodeBase64(): String {
             index += 3
         }
     }
+}
+
+private val SUPABASE_DOMAINS = listOf("supabase.co", "supabase.in")
+
+/**
+ * Same scheme, host and port as [endpoint], so https never downgrades to
+ * http. Supabase may answer on the project's storage host
+ * (`ref.storage.supabase.co` for `ref.supabase.co`), which is allowed too.
+ */
+internal fun isTrustedUploadUrl(endpoint: String, candidate: String): Boolean {
+    val expected = runCatching { Url(endpoint) }.getOrNull() ?: return false
+    val actual = runCatching { Url(candidate) }.getOrNull() ?: return false
+    // Url.port already falls back to the scheme's default port.
+    if (!expected.protocol.name.equals(actual.protocol.name, ignoreCase = true)) return false
+    if (expected.port != actual.port) return false
+    val expectedHost = expected.host.lowercase()
+    val actualHost = actual.host.lowercase()
+    if (expectedHost == actualHost) return true
+    return SUPABASE_DOMAINS.any { domain ->
+        expectedHost.supabaseProjectRef(domain)?.let { ref ->
+            ref == actualHost.supabaseProjectRef(domain)
+        } == true
+    }
+}
+
+private fun originOf(url: String): String {
+    val parsed = Url(url)
+    val port = if (parsed.port == parsed.protocol.defaultPort) "" else ":${parsed.port}"
+    return "${parsed.protocol.name}://${parsed.host}$port"
+}
+
+/** `ref` for `ref.supabase.co` or `ref.storage.supabase.co`, else null. */
+private fun String.supabaseProjectRef(domain: String): String? {
+    val labels = removeSuffix(".$domain").takeIf { it != this }?.split('.') ?: return null
+    return when {
+        labels.size == 1 -> labels[0]
+        labels.size == 2 && labels[1] == "storage" -> labels[0]
+        else -> null
+    }?.takeIf { it.isNotEmpty() }
 }

@@ -57,11 +57,7 @@ class ParrotCloudBookFileTransferTransport(
         var expiry: String? = null
         val finalUrl = try {
             tusUploadClient.upload(
-                profile = TusUploadProfile(
-                    baseUrl = configuration.supabaseUrl,
-                    metadataEncoder = metadataEncoder,
-                    requestHeaderPolicy = requestHeaderPolicy,
-                ),
+                profile = tusProfile(),
                 uploadEndpoint = reservation.uploadEndpoint,
                 metadata = TusUploadMetadata(
                     targetPath = reservation.storagePath,
@@ -116,9 +112,15 @@ class ParrotCloudBookFileTransferTransport(
 
     override suspend fun cancel(reservation: UploadReservation?, resumeUrl: String?) {
         try {
-            if (resumeUrl != null) tusUploadClient.cancel(resumeUrl, requestHeaderPolicy)
+            if (resumeUrl != null) tusUploadClient.cancel(tusProfile(), resumeUrl)
         } finally {
             if (reservation != null) service.cancel(reservation)
         }
     }
+
+    private fun tusProfile() = TusUploadProfile(
+        baseUrl = configuration.supabaseUrl,
+        metadataEncoder = metadataEncoder,
+        requestHeaderPolicy = requestHeaderPolicy,
+    )
 }

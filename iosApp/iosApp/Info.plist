@@ -28,7 +28,6 @@
 			<string>storyteller-oauth</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>storyteller</string>
 				<string>parrot</string>
 			</array>
 		</dict>
