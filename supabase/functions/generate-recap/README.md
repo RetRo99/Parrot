@@ -1,7 +1,7 @@
 # generate-recap
 
 Turns a reading-session excerpt into a 2-3 sentence recap through
-[OpenCode Go](https://opencode.ai/docs/go/) (`mimo-v2.6-flash` by default).
+[OpenCode Go](https://opencode.ai/docs/go/) (`hy3` by default).
 The provider URL and the model allow-list are fixed in `recap.ts`.
 
 > Terms caveat: OpenCode Go is designed for coding-agent traffic and
@@ -13,7 +13,7 @@ The provider URL and the model allow-list are fixed in `recap.ts`.
 |---|---|---|---|
 | `OPENCODE_GO_API_KEY` | yes | — | Missing → 503 |
 | `RECAP_ENABLED` | yes | off | Kill switch; anything but `true` → 503 |
-| `RECAP_MODEL` | no | `mimo-v2.6-flash` | Only `mimo-v2.6-flash` or `glm-5.3-flash`; else 503 |
+| `RECAP_MODEL` | no | `hy3` | Only `hy3`, `glm-5.3-flash` or `mimo-v2.6-flash`; else 503 |
 | `RECAP_DAILY_LIMIT` | no | `30` | Recaps per user per UTC day, 1-1000; else 503 |
 
 All four are read per request, so changes apply without a redeploy.
@@ -21,7 +21,7 @@ All four are read per request, so changes apply without a redeploy.
 ```sh
 supabase secrets set OPENCODE_GO_API_KEY=<your-opencode-go-key> --project-ref <project-ref>
 supabase secrets set RECAP_ENABLED=true --project-ref <project-ref>
-supabase secrets set RECAP_MODEL=<mimo-v2.6-flash|glm-5.3-flash> --project-ref <project-ref>
+supabase secrets set RECAP_MODEL=<hy3|glm-5.3-flash|mimo-v2.6-flash> --project-ref <project-ref>
 supabase secrets set RECAP_DAILY_LIMIT=<n> --project-ref <project-ref>
 ```
 

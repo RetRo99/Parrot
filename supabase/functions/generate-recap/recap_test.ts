@@ -41,7 +41,7 @@ Deno.test('kill switch is on only for the exact string "true"', () => {
 Deno.test('config defaults model and daily limit', () => {
   assertEquals(loadConfig(envOf({ OPENCODE_GO_API_KEY: FAKE_KEY })), {
     ok: true,
-    config: { apiKey: FAKE_KEY, model: 'mimo-v2.6-flash', dailyLimit: 30 },
+    config: { apiKey: FAKE_KEY, model: 'hy3', dailyLimit: 30 },
   })
 })
 
@@ -237,7 +237,7 @@ function goError(status: number, type: string, headers: Record<string, string> =
 
 const REQ: RecapRequest = {
   apiKey: FAKE_KEY,
-  model: 'mimo-v2.6-flash',
+  model: 'hy3',
   sessionId: 'recap-abc',
   messages: buildMessages({ excerpt: EXCERPT, language: 'en' }),
 }
@@ -276,7 +276,7 @@ Deno.test('provider: sends the fixed URL, headers and body', async () => {
 
   const body = JSON.parse(String(init.body))
   assertEquals(body, {
-    model: 'mimo-v2.6-flash',
+    model: 'hy3',
     messages: REQ.messages,
     temperature: TEMPERATURE,
     max_tokens: MAX_OUTPUT_TOKENS,
