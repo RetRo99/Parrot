@@ -33,6 +33,7 @@ plugins {
 }
 
 include(":androidApp")
+include(":tools:tts-bench")
 include(":composeApp")
 include(":base")
 include(":base-ui")
