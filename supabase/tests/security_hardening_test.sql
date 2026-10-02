@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 set search_path = extensions, public;
-select plan(45);
+select plan(56);
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at)
 values
@@ -165,33 +165,102 @@ select is(
     'sha-256-v1:' || repeat('ab', 32), 'the stored hash and algorithm are normalized'
 );
 select ok(
-    (select expires_at between now() + interval '119 minutes' and now() + interval '121 minutes'
+    (select expires_at between now() + interval '719 minutes' and now() + interval '721 minutes'
      from public.cloud_book_uploads
      where upload_id = (select (result->>'upload_id')::uuid from upper_upload)),
-    'reservations expire after two hours'
+    'reservations expire after twelve hours'
 );
 
--- Pending-reservation cap: 19 more slots reach 20, the 21st is refused.
 set local role authenticated;
 set local request.jwt.claim.sub = '17000000-0000-0000-0000-000000000001';
 set local request.jwt.claim.role = 'authenticated';
 select is(
+    public.reserve_book_upload(
+        '27000000-0000-0000-0000-000000000001', 'ebook', 'huge', 'huge.m4b',
+        2147483649, 'sha-256-v1', repeat('a', 64), (select value from attestation)
+    )->>'reason',
+    'file_too_large', 'a file over the 2 GiB bucket limit cannot be reserved'
+);
+
+-- Storage refuses an object larger than its reservation when it knows the
+-- size, and the client's upper-case hash still finalizes.
+select throws_ok(
+    $$insert into storage.objects (bucket_id, name, metadata)
+      select 'book-files', u.storage_path, '{"size":11}'::jsonb
+      from public.cloud_book_uploads u
+      where u.upload_id = (select (result->>'upload_id')::uuid from upper_upload)$$,
+    '42501', null, 'an object larger than its reservation is refused'
+);
+select lives_ok(
+    $$insert into storage.objects (bucket_id, name, metadata)
+      select 'book-files', u.storage_path, '{"size":10}'::jsonb
+      from public.cloud_book_uploads u
+      where u.upload_id = (select (result->>'upload_id')::uuid from upper_upload)$$,
+    'an object of the reserved size is stored'
+);
+select is(
+    public.finalize_book_upload(
+        (select (result->>'upload_id')::uuid from upper_upload), 10, repeat('AB', 32)
+    )->>'status',
+    'available', 'an upper-case hash reserved and finalized as sent succeeds'
+);
+
+-- Losing the upload allowlist stops writes and finalize of a live reservation.
+create temporary table revoked_upload as
+select public.reserve_book_upload(
+    '27000000-0000-0000-0000-000000000001', 'ebook', 'revoked', 'revoked.epub',
+    10, 'sha-256-v1', repeat('d', 64), (select value from attestation)
+) as result;
+reset role;
+delete from public.cloud_feature_allowlist
+where cloud_user_id = '17000000-0000-0000-0000-000000000001' and feature = 'uploads';
+set local role authenticated;
+select throws_ok(
+    $$insert into storage.objects (bucket_id, name, metadata)
+      select 'book-files', u.storage_path, '{"size":10}'::jsonb
+      from public.cloud_book_uploads u
+      where u.upload_id = (select (result->>'upload_id')::uuid from revoked_upload)$$,
+    '42501', null, 'Storage refuses writes once the account is off the allowlist'
+);
+select is(
+    public.finalize_book_upload(
+        (select (result->>'upload_id')::uuid from revoked_upload), 10, repeat('d', 64)
+    )->>'reason',
+    'uploads_not_enabled', 'finalize refuses a reservation once uploads are revoked'
+);
+reset role;
+insert into public.cloud_feature_allowlist (cloud_user_id, feature)
+values ('17000000-0000-0000-0000-000000000001', 'uploads');
+
+-- Pending-reservation cap. "Back up all" reserves every file at once, so 30
+-- in a row must pass; 199 more slots reach 200 and the 201st is refused.
+set local role authenticated;
+select is(
     (select count(*)::integer
-     from generate_series(1, 19) as slot(n)
+     from generate_series(1, 29) as slot(n)
      where public.reserve_book_upload(
          '27000000-0000-0000-0000-000000000001', 'ebook', 'cap/' || slot.n, 'cap.epub',
          10, 'sha-256-v1', lpad(to_hex(slot.n), 64, '0'), (select value from attestation)
      )->>'status' = 'reserved'),
-    19, 'reservations up to the cap succeed'
+    29, 'a backup of 30 files reserves every file'
+);
+select is(
+    (select count(*)::integer
+     from generate_series(30, 199) as slot(n)
+     where public.reserve_book_upload(
+         '27000000-0000-0000-0000-000000000001', 'ebook', 'cap/' || slot.n, 'cap.epub',
+         10, 'sha-256-v1', lpad(to_hex(slot.n), 64, '0'), (select value from attestation)
+     )->>'status' = 'reserved'),
+    170, 'reservations up to the cap succeed'
 );
 create temporary table capped_upload as
 select public.reserve_book_upload(
-    '27000000-0000-0000-0000-000000000001', 'ebook', 'cap/21', 'cap.epub',
+    '27000000-0000-0000-0000-000000000001', 'ebook', 'cap/201', 'cap.epub',
     10, 'sha-256-v1', repeat('c', 64), (select value from attestation)
 ) as result;
 select is(
     (select result->>'reason' from capped_upload),
-    'too_many_pending_uploads', 'a 21st live reservation is refused'
+    'too_many_pending_uploads', 'a 201st live reservation is refused'
 );
 select is(
     (select result->>'retry_after_ms' from capped_upload),
@@ -199,10 +268,10 @@ select is(
 );
 select is(
     public.reserve_book_upload(
-        '27000000-0000-0000-0000-000000000001', 'ebook', 'upper', 'upper.epub',
-        10, 'sha-256-v1', repeat('ab', 32), (select value from attestation)
+        '27000000-0000-0000-0000-000000000001', 'ebook', 'revoked', 'revoked.epub',
+        10, 'sha-256-v1', repeat('d', 64), (select value from attestation)
     )->>'upload_id',
-    (select result->>'upload_id' from upper_upload),
+    (select result->>'upload_id' from revoked_upload),
     'repeating a live reservation is not blocked by the cap'
 );
 reset role;
@@ -277,6 +346,17 @@ set local role authenticated;
 set local request.jwt.claim.sub = '17000000-0000-0000-0000-000000000002';
 set local request.jwt.claim.role = 'authenticated';
 select is(public.consume_recap_quota(5), false, 'a zero global limit turns recaps off');
+reset role;
+
+-- A direct call can't raise its own limit past per_user_daily_limit.
+update public.recap_settings set value = 500 where key = 'global_daily_limit';
+update public.recap_settings set value = 1 where key = 'per_user_daily_limit';
+set local role authenticated;
+select is(public.consume_recap_quota(1000000), true, 'the clamped limit grants one unit');
+select is(
+    public.consume_recap_quota(1000000), false,
+    'a caller-supplied limit cannot exceed per_user_daily_limit'
+);
 
 -- Sync payload limits.
 select throws_ok(
@@ -307,6 +387,31 @@ select is(
         )
     )), 0)->0->>'reason',
     'payload_too_large', 'a single oversized mutation is rejected, not raised'
+);
+select is(
+    public.push_sync_changes(jsonb_build_array(jsonb_build_object(
+        'mutation_id', '57000000-0000-0000-0000-000000000004',
+        'entity_type', 'library_book',
+        'entity_id', '67000000-0000-4000-8000-000000000004',
+        'operation', 'upsert',
+        'base_revision', repeat('9', 9000),
+        'payload', jsonb_build_object('library_book_id', '67000000-0000-4000-8000-000000000004')
+    )), 0)->0->>'reason',
+    'payload_too_large', 'size is checked before any cast of an oversized mutation'
+);
+select is(
+    public.push_sync_changes(jsonb_build_array(jsonb_build_object(
+        'mutation_id', '57000000-0000-0000-0000-000000000005',
+        'entity_type', 'library_book',
+        'entity_id', '67000000-0000-4000-8000-000000000005',
+        'operation', 'upsert',
+        'base_revision', 'abc',
+        'payload', jsonb_build_object(
+            'library_book_id', '67000000-0000-4000-8000-000000000005',
+            'title', 'T'
+        )
+    )), 0)->0->>'reason',
+    'invalid_base_revision', 'a malformed base revision is rejected, not raised'
 );
 select is(
     public.push_sync_changes('[{

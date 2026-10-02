@@ -34,7 +34,8 @@ The function needs the `consume_recap_quota` RPC from
 migrations first. Since `20261003000000_parrot_cloud_security_hardening.sql`,
 only accounts in `cloud_feature_allowlist` (feature `recap`) get recaps, and
 `recap_settings.global_daily_limit` caps all users together (default 500/day).
-Both refusals return the same 429 as the per-user limit.
+`recap_settings.per_user_daily_limit` (default 30) caps `RECAP_DAILY_LIMIT`;
+the lower one wins. All refusals return the same 429 as the per-user limit.
 
 ```sh
 supabase db push

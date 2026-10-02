@@ -17,7 +17,7 @@ begin;
 create table if not exists public.cloud_feature_allowlist (
     cloud_user_id uuid not null references auth.users(id) on delete cascade,
     feature text not null check (feature in ('uploads', 'recap')),
-    added_at timestamptz not null default timezone('utc', now()),
+    added_at timestamptz not null default now(),
     note text,
     primary key (cloud_user_id, feature)
 );
@@ -74,6 +74,12 @@ select count(*) from public.cloud_book_links where cardinality(members) > 64;
 - Tune the global recap cap without a deploy:
   `update public.recap_settings set value = <n> where key = 'global_daily_limit';`
   (`0` turns recaps off for everyone).
+- `per_user_daily_limit` (default 30) caps the Edge Function's
+  `RECAP_DAILY_LIMIT`: the lower of the two wins. Raise both together.
+- Uploads: reservations now expire after 12 h (was 24 h) and an account may
+  hold at most 200 live reservations. Storage writes and
+  `finalize_book_upload` also need the `uploads` allowlist entry, so removing
+  one stops in-flight uploads too.
 - Allow another account:
   `insert into public.cloud_feature_allowlist (cloud_user_id, feature) values ('<uuid>', 'uploads');`
 
@@ -85,10 +91,12 @@ Never edit the applied migration; roll forward with a new one.
   `insert into public.cloud_feature_allowlist (cloud_user_id, feature) select id, f from auth.users, unnest(array['uploads','recap']) f on conflict do nothing;`
 - Lift the global recap cap: set `global_daily_limit` to a large value.
 - Full revert, in a new migration: restore `reserve_book_upload` from
-  `20260924000007`, `consume_recap_quota` from `20261002000000` and
-  `push_sync_changes` from `20261001000001`; re-patch
-  `reserve_book_upload_before_orphan_gc` from `interval '2 hours'` back to
-  `interval '24 hours'`; set the `book-files` bucket limits back to null;
+  `20260924000007`, `consume_recap_quota` from `20261002000000`,
+  `push_sync_changes` from `20261001000001`, `finalize_book_upload` from
+  `20260925000004` and the `book_files_reserved_upload_insert`/`_update`
+  Storage policies from `20260923000000`; re-patch
+  `reserve_book_upload_before_orphan_gc` from `now() + interval '12 hours'`
+  back to a 24 hour expiry; set the `book-files` bucket limits back to null;
   set the `quota_bytes` default back to `5368709120`; drop the new
   `*_check` constraints. The new tables can stay.
 - Quotas of existing rows were never changed, so nothing to restore there.

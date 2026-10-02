@@ -12,13 +12,32 @@
 create table if not exists public.cloud_feature_allowlist (
     cloud_user_id uuid not null references auth.users(id) on delete cascade,
     feature text not null check (feature in ('uploads', 'recap')),
-    added_at timestamptz not null default timezone('utc', now()),
+    added_at timestamptz not null default now(),
     note text,
     primary key (cloud_user_id, feature)
 );
 
 alter table public.cloud_feature_allowlist enable row level security;
 revoke all on public.cloud_feature_allowlist from anon, authenticated;
+
+-- Definer so Storage RLS policies, which run as the client, can use it.
+create or replace function public.cloud_feature_enabled(feature text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+    select exists (
+        select 1 from public.cloud_feature_allowlist a
+        where a.cloud_user_id = auth.uid()
+          and a.feature = cloud_feature_enabled.feature
+    );
+$$;
+
+revoke execute on function public.cloud_feature_enabled(text)
+from public, anon, service_role;
+grant execute on function public.cloud_feature_enabled(text) to authenticated;
 
 -- Lets the client hide features the account can't use.
 create or replace function public.get_cloud_feature_access()
@@ -29,14 +48,8 @@ security definer
 set search_path = public
 as $$
     select jsonb_build_object(
-        'uploads', exists (
-            select 1 from public.cloud_feature_allowlist a
-            where a.cloud_user_id = auth.uid() and a.feature = 'uploads'
-        ),
-        'recap', exists (
-            select 1 from public.cloud_feature_allowlist a
-            where a.cloud_user_id = auth.uid() and a.feature = 'recap'
-        )
+        'uploads', public.cloud_feature_enabled('uploads'),
+        'recap', public.cloud_feature_enabled('recap')
     );
 $$;
 
@@ -133,26 +146,121 @@ begin
 end;
 $$;
 
--- 5. Reservations expire after 2 hours instead of 24. The client re-reserves
--- on every attempt and keeps its TUS session, so an expired reservation only
--- costs a fresh reserve call. Patch the literal in the core RPC in place.
+-- 5. Reservations expire after 12 hours instead of 24. Storage RLS needs a
+-- live reservation until the last TUS PATCH, and re-reserving returns the
+-- same expiry, so slow audiobook uploads need the margin. now() replaces
+-- timezone('utc', now()), which shifted the expiry in non-UTC sessions.
 do $$
 declare
     definition text;
+    old_literal constant text := $l$timezone('utc', now()) + interval '24 hours'$l$;
 begin
     definition := pg_get_functiondef(
         'public.reserve_book_upload_before_orphan_gc(uuid,text,text,text,bigint,text,text,jsonb)'::regprocedure
     );
-    if position($l$interval '24 hours'$l$ in definition) = 0 then
+    if position(old_literal in definition) = 0 then
         raise exception 'reservation expiry literal not found';
     end if;
-    execute replace(
-        definition,
-        $l$interval '24 hours'$l$,
-        $l$interval '2 hours'$l$
-    );
+    execute replace(definition, old_literal, $l$now() + interval '12 hours'$l$);
 end;
 $$;
+
+-- finalize_book_upload: the same upload allowlist, so a reservation made
+-- before an account lost access can't be committed, and the caller's hash
+-- is compared case-insensitively since reserve stores it lowercase.
+do $$
+declare
+    definition text;
+    status_check constant text := $l$    if upload_row.status <> 'reserved' then
+        return jsonb_build_object('status', 'rejected', 'reason', 'upload_not_reserved');
+    end if;
+$l$;
+    hash_check constant text :=
+        $l$if content_hash is distinct from upload_row.content_hash then$l$;
+begin
+    definition := pg_get_functiondef(
+        'public.finalize_book_upload(uuid,bigint,text)'::regprocedure
+    );
+    if (length(definition) - length(replace(definition, status_check, '')))
+            / length(status_check) <> 1
+        or (length(definition) - length(replace(definition, hash_check, '')))
+            / length(hash_check) <> 1
+    then
+        raise exception 'finalize_book_upload anchors not found exactly once';
+    end if;
+    definition := replace(
+        definition,
+        status_check,
+        status_check || $l$    if not public.cloud_feature_enabled('uploads') then
+        return jsonb_build_object('status', 'rejected', 'reason', 'uploads_not_enabled');
+    end if;
+$l$
+    );
+    definition := replace(
+        definition,
+        hash_check,
+        $l$if lower(btrim(content_hash)) is distinct from lower(upload_row.content_hash) then$l$
+    );
+    execute definition;
+end;
+$$;
+
+-- Storage writes need the upload allowlist too, and an object may not be
+-- larger than its reservation when Storage reports the size on the write.
+-- Otherwise orphan GC is the backstop for oversized leftovers.
+drop policy if exists book_files_reserved_upload_insert on storage.objects;
+create policy book_files_reserved_upload_insert
+on storage.objects for insert to authenticated
+with check (
+    bucket_id = 'book-files'
+    and not public.cloud_account_deletion_in_progress()
+    and public.cloud_feature_enabled('uploads')
+    and exists (
+        select 1 from public.cloud_book_uploads u
+        where u.cloud_user_id = auth.uid()
+          and u.storage_path = objects.name
+          and u.status = 'reserved'
+          and u.expires_at > now()
+          and case
+              when objects.metadata ->> 'size' ~ '^[0-9]{1,18}$'
+              then (objects.metadata ->> 'size')::bigint <= u.size_bytes
+              else true
+          end
+    )
+);
+
+drop policy if exists book_files_reserved_upload_update on storage.objects;
+create policy book_files_reserved_upload_update
+on storage.objects for update to authenticated
+using (
+    bucket_id = 'book-files'
+    and not public.cloud_account_deletion_in_progress()
+    and public.cloud_feature_enabled('uploads')
+    and exists (
+        select 1 from public.cloud_book_uploads u
+        where u.cloud_user_id = auth.uid()
+          and u.storage_path = objects.name
+          and u.status = 'reserved'
+          and u.expires_at > now()
+    )
+)
+with check (
+    bucket_id = 'book-files'
+    and not public.cloud_account_deletion_in_progress()
+    and public.cloud_feature_enabled('uploads')
+    and exists (
+        select 1 from public.cloud_book_uploads u
+        where u.cloud_user_id = auth.uid()
+          and u.storage_path = objects.name
+          and u.status = 'reserved'
+          and u.expires_at > now()
+          and case
+              when objects.metadata ->> 'size' ~ '^[0-9]{1,18}$'
+              then (objects.metadata ->> 'size')::bigint <= u.size_bytes
+              else true
+          end
+    )
+);
 
 -- 6. reserve_book_upload: the definition from 20260924000007 plus the upload
 -- allowlist, hash/size/length validation and a pending-reservation cap.
@@ -186,10 +294,7 @@ begin
     -- pending count below can't race a concurrent reservation.
     perform pg_advisory_xact_lock(hashtextextended(actor::text, 0));
 
-    if not exists (
-        select 1 from public.cloud_feature_allowlist a
-        where a.cloud_user_id = actor and a.feature = 'uploads'
-    ) then
+    if not public.cloud_feature_enabled('uploads') then
         return jsonb_build_object('status', 'rejected', 'reason', 'uploads_not_enabled');
     end if;
 
@@ -203,6 +308,12 @@ begin
         return jsonb_build_object('status', 'rejected', 'reason', 'invalid_upload_metadata');
     end if;
 
+    -- Matches the book-files bucket file_size_limit; Storage would refuse
+    -- the bytes anyway and the reservation would hold quota until expiry.
+    if size_bytes > 2147483648 then
+        return jsonb_build_object('status', 'rejected', 'reason', 'file_too_large');
+    end if;
+
     -- Re-reserving a slot that already has a live reservation is not new.
     select count(*) into pending_count
     from public.cloud_book_uploads u
@@ -214,7 +325,9 @@ begin
           and u.media_type = reserve_book_upload.media_type
           and u.relative_path = coalesce(reserve_book_upload.relative_path, '')
       );
-    if pending_count >= 20 then
+    -- Quota already bounds reserved bytes; this only stops floods of tiny
+    -- reservations. "Back up all" reserves every file at once, so keep it high.
+    if pending_count >= 200 then
         return jsonb_build_object(
             'status', 'rejected',
             'reason', 'too_many_pending_uploads',
@@ -277,14 +390,17 @@ grant execute on function public.reserve_book_upload(
 ) to authenticated;
 
 -- 7. Recaps: allowlist gate plus a global daily cap on provider spend. The
--- cap lives in recap_settings so it can change without a deploy.
+-- caps live in recap_settings so they can change without a deploy.
+-- per_user_daily_limit bounds the caller-supplied p_limit (the Edge
+-- Function's RECAP_DAILY_LIMIT, default 30), so a direct RPC call can't
+-- drain the global cap.
 create table public.recap_settings (
     key text primary key,
     value integer not null check (value >= 0)
 );
 
 insert into public.recap_settings (key, value)
-values ('global_daily_limit', 500)
+values ('global_daily_limit', 500), ('per_user_daily_limit', 30)
 on conflict (key) do nothing;
 
 create table public.recap_global_usage (
@@ -309,6 +425,7 @@ declare
     actor uuid := auth.uid();
     today date := timezone('utc', now())::date;
     global_limit integer;
+    user_limit integer;
     new_count integer;
 begin
     if actor is null then
@@ -324,10 +441,17 @@ begin
         return false;
     end if;
 
-    if not exists (
-        select 1 from public.cloud_feature_allowlist a
-        where a.cloud_user_id = actor and a.feature = 'recap'
-    ) then
+    if not public.cloud_feature_enabled('recap') then
+        return false;
+    end if;
+
+    -- A missing setting falls back to the seeded default.
+    select s.value into user_limit
+    from public.recap_settings s
+    where s.key = 'per_user_daily_limit';
+    user_limit := least(p_limit, coalesce(user_limit, 30));
+
+    if user_limit < 1 then
         return false;
     end if;
 
@@ -336,14 +460,13 @@ begin
     values (actor, today, 1)
     on conflict (user_id, day) do update
         set count = ru.count + 1
-        where ru.count < p_limit
+        where ru.count < user_limit
     returning ru.count into new_count;
 
     if new_count is null then
         return false;
     end if;
 
-    -- A missing setting falls back to the seeded default.
     select s.value into global_limit
     from public.recap_settings s
     where s.key = 'global_daily_limit';
@@ -425,6 +548,7 @@ declare
     decided_at_value timestamptz;
     current_decided_at_value timestamptz;
     results jsonb := '[]'::jsonb;
+    item_rejection text;
 begin
     if actor is null then
         raise exception 'Authentication required';
@@ -465,12 +589,25 @@ begin
         conflicting_link_id_value := null;
         decided_at_value := null;
         current_decided_at_value := null;
+        base_revision_value := null;
+        item_rejection := null;
+        -- The id is the idempotency key, so a malformed one still raises.
         mutation_id_value := (mutation_item ->> 'mutation_id')::uuid;
         entity_type_value := mutation_item ->> 'entity_type';
         operation_value := mutation_item ->> 'operation';
         entity_id_value := mutation_item ->> 'entity_id';
         mutation_payload := mutation_item -> 'payload';
-        base_revision_value := nullif(mutation_item ->> 'base_revision', '')::bigint;
+        -- Size first, then the remaining casts, so neither a bloated nor a
+        -- malformed entry can abort the whole batch.
+        if octet_length(mutation_item::text) > 8192 then
+            item_rejection := 'payload_too_large';
+        else
+            begin
+                base_revision_value := nullif(mutation_item ->> 'base_revision', '')::bigint;
+            exception when invalid_text_representation or numeric_value_out_of_range then
+                item_rejection := 'invalid_base_revision';
+            end;
+        end if;
 
         select response
         into existing_response
@@ -489,12 +626,11 @@ begin
             'reason', 'unsupported_mutation'
         );
 
-        if octet_length(mutation_item::text) > 8192 then
-            -- Rejected, not raised, so one bloated entry can't wedge the batch.
+        if item_rejection is not null then
             result := jsonb_build_object(
                 'mutation_id', mutation_id_value,
                 'status', 'rejected',
-                'reason', 'payload_too_large'
+                'reason', item_rejection
             );
             entity_type_value := left(entity_type_value, 64);
             entity_id_value := left(entity_id_value, 256);
@@ -1181,7 +1317,7 @@ begin
     if retain_days is null or retain_days < 30 then
         raise exception 'retain_days must be at least 30';
     end if;
-    cutoff := timezone('utc', now()) - make_interval(days => retain_days);
+    cutoff := now() - make_interval(days => retain_days);
 
     delete from public.sync_changes as sc
     using (
