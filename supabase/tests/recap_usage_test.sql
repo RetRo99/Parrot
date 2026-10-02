@@ -8,6 +8,11 @@ insert into auth.users (id, instance_id, aud, role, email, encrypted_password, e
 values
     ('10000000-0000-0000-0000-000000000061', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'recap-a@example.invalid', '', now()),
     ('10000000-0000-0000-0000-000000000062', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'recap-b@example.invalid', '', now());
+-- Recaps are allowlist-only (20261003000000).
+insert into public.cloud_feature_allowlist (cloud_user_id, feature)
+values
+    ('10000000-0000-0000-0000-000000000061', 'recap'),
+    ('10000000-0000-0000-0000-000000000062', 'recap');
 
 -- Access control.
 select ok(

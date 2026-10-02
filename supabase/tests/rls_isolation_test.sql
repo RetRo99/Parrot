@@ -8,6 +8,11 @@ insert into auth.users (id, instance_id, aud, role, email, encrypted_password, e
 values
     ('10000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rls-a@example.invalid', '', now()),
     ('10000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'rls-b@example.invalid', '', now());
+-- Uploads are allowlist-only (20261003000000).
+insert into public.cloud_feature_allowlist (cloud_user_id, feature)
+values
+    ('10000000-0000-0000-0000-000000000011', 'uploads'),
+    ('10000000-0000-0000-0000-000000000012', 'uploads');
 
 insert into public.cloud_books (
     id, cloud_user_id, source_content_hash, source_content_hash_algorithm, title, format

@@ -16,12 +16,16 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.user.UserSession
+import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.functions.functions
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
@@ -141,7 +145,14 @@ class SupabaseCloudAccountDataRepository(
             "A signed-in cloud account is required for deletion"
         }
 
-        client.functions("delete-cloud-account")
+        try {
+            client.functions("delete-cloud-account")
+        } catch (exception: RestException) {
+            if (isDeleteReauthenticationRequired(exception.statusCode, exception.error)) {
+                throw CloudAccountException.ReauthenticationRequired(exception)
+            }
+            throw exception
+        }
 
         withContext(NonCancellable) {
             try {
@@ -167,4 +178,12 @@ class SupabaseCloudAccountDataRepository(
         clientProvider.replaceCurrentProfileSession(localProfileId, previousSession)
         throw CloudAccountException.ProfileAlreadyLinked()
     }
+}
+
+// delete-cloud-account answers 403 with this code when the last sign-in is
+// too old; the user must sign in again before deleting.
+internal fun isDeleteReauthenticationRequired(statusCode: Int, body: String): Boolean {
+    if (statusCode != 403) return false
+    val json = runCatching { Json.parseToJsonElement(body) }.getOrNull() as? JsonObject
+    return (json?.get("code") as? JsonPrimitive)?.content == "reauthentication_required"
 }

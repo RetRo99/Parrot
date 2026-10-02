@@ -28,7 +28,7 @@ fi
 : "${SUPABASE_SERVICE_ROLE_KEY:?Set SUPABASE_SERVICE_ROLE_KEY}"
 
 base_url="${SUPABASE_URL%/}"
-auth_headers=(-H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+source "$(dirname "${BASH_SOURCE[0]}")/lib/auth-headers.sh"
 
 # Never run two workers concurrently: a stale claim must not delete an object a
 # user re-reserved in the meantime.

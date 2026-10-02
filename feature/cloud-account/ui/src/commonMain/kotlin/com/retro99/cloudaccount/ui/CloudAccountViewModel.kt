@@ -717,7 +717,13 @@ class CloudAccountViewModel(
                     reportUnexpectedFailure = { error ->
                         error is CloudAccountException.LocalStatePersistence
                     },
-                    failureReasonCode = { "account_deletion_failed" },
+                    failureReasonCode = { error ->
+                        if (error is CloudAccountException.ReauthenticationRequired) {
+                            "reauthentication_required"
+                        } else {
+                            "account_deletion_failed"
+                        }
+                    },
                 ) {
                     stage("delete_cloud_account", "started")
                     deleteCloudAccountUseCase()
@@ -1007,6 +1013,8 @@ private fun Throwable.toCloudAccountError(): CloudAccountError {
     return when (this) {
         is CloudAccountException.NotConfigured -> CloudAccountError.NotConfigured
         is CloudAccountException.ProfileAlreadyLinked -> CloudAccountError.ProfileAlreadyLinked
+        is CloudAccountException.ReauthenticationRequired ->
+            CloudAccountError.DeleteReauthenticationRequired
         else -> CloudAccountError.Generic
     }
 }

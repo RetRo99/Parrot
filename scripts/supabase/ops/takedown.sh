@@ -47,7 +47,7 @@ if [[ "$unblock" == "true" && -n "$file_id" ]]; then
 fi
 
 base_url="${SUPABASE_URL%/}"
-auth_headers=(-H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY")
+source "$(dirname "${BASH_SOURCE[0]}")/lib/auth-headers.sh"
 
 rpc() {
     local name="$1"
