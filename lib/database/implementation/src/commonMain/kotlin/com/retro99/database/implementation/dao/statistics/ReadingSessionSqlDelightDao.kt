@@ -30,6 +30,7 @@ internal class ReadingSessionSqlDelightDao(
                 start_progression = session.startProgression,
                 end_progression = session.endProgression,
                 reading_speed_wpm = session.readingSpeedWpm?.toLong(),
+                recap_session_id = session.recapSessionId,
             )
         }
     }
@@ -49,6 +50,7 @@ internal class ReadingSessionSqlDelightDao(
                     startProgression = row.start_progression,
                     endProgression = row.end_progression,
                     readingSpeedWpm = row.reading_speed_wpm?.toInt(),
+                    recapSessionId = row.recap_session_id,
                 )
             }
         }
@@ -69,6 +71,7 @@ internal class ReadingSessionSqlDelightDao(
                     startProgression = row.start_progression,
                     endProgression = row.end_progression,
                     readingSpeedWpm = row.reading_speed_wpm?.toInt(),
+                    recapSessionId = row.recap_session_id,
                 )
             }
         }
@@ -89,6 +92,7 @@ internal class ReadingSessionSqlDelightDao(
                     startProgression = row.start_progression,
                     endProgression = row.end_progression,
                     readingSpeedWpm = row.reading_speed_wpm?.toInt(),
+                    recapSessionId = row.recap_session_id,
                 )
             }
         }
@@ -133,6 +137,7 @@ internal class ReadingSessionSqlDelightDao(
                     startProgression = row.start_progression,
                     endProgression = row.end_progression,
                     readingSpeedWpm = row.reading_speed_wpm?.toInt(),
+                    recapSessionId = row.recap_session_id,
                 )
             }
         }
@@ -204,13 +209,19 @@ internal class ReadingSessionSqlDelightDao(
 
     suspend fun deleteSession(id: Long) {
         withContext(Dispatchers.IO) {
-            queries.deleteSession(id)
+            queries.transaction {
+                queries.deleteRecapOfSession(id)
+                queries.deleteSession(id)
+            }
         }
     }
 
     suspend fun deleteAllSessions() {
         withContext(Dispatchers.IO) {
-            queries.deleteAllSessions()
+            queries.transaction {
+                queries.deleteLinkedRecaps()
+                queries.deleteAllSessions()
+            }
         }
     }
 }
@@ -228,6 +239,7 @@ private fun Reading_session.toEntity(): ReadingSessionEntity {
         startProgression = start_progression,
         endProgression = end_progression,
         readingSpeedWpm = reading_speed_wpm?.toInt(),
+        recapSessionId = recap_session_id,
     )
 }
 

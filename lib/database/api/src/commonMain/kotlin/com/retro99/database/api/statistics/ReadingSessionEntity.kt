@@ -16,5 +16,9 @@ interface ReadingSessionEntity {
     val startProgression: Double?
     val endProgression: Double?
     val readingSpeedWpm: Int?
+
+    /** Recap session of the same reader session; local only, never synced. */
+    val recapSessionId: String?
+        get() = null
 }
 

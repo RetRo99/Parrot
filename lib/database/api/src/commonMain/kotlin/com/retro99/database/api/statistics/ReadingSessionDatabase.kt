@@ -100,12 +100,12 @@ interface ReadingSessionDatabase : DataClearable {
     ): ReadingSessionEntity?
 
     /**
-     * Deletes a reading session by ID.
+     * Deletes a reading session by ID, with its linked recap.
      */
     suspend fun deleteSession(id: Long)
 
     /**
-     * Deletes all reading sessions.
+     * Deletes all reading sessions and the recaps linked to them.
      */
     suspend fun deleteAllSessions()
 
