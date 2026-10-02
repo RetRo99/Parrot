@@ -107,6 +107,7 @@ import resources.translations.app_settings_theme_night
 import resources.translations.app_settings_title
 import resources.translations.app_settings_version
 import resources.translations.settings_app_name
+import resources.translations.settings_cloud_recaps_sign_in_hint
 import resources.translations.settings_cloud_recaps_subtitle
 import resources.translations.settings_cloud_recaps_title
 import resources.translations.settings_continue_reading_subtitle
@@ -291,11 +292,17 @@ private fun AppSettingsScreenContent(
                     },
                 )
                 EmberRowDivider()
+                val recapsToggle = viewState.cloudRecapsToggle
                 EmberSwitchRow(
                     title = stringResource(StringRes.settings_cloud_recaps_title),
-                    subtitle = stringResource(StringRes.settings_cloud_recaps_subtitle),
+                    subtitle = if (recapsToggle.showSignInHint) {
+                        stringResource(StringRes.settings_cloud_recaps_sign_in_hint)
+                    } else {
+                        stringResource(StringRes.settings_cloud_recaps_subtitle)
+                    },
                     icon = Icons.Outlined.AutoAwesome,
-                    checked = viewState.cloudRecapsEnabled,
+                    checked = recapsToggle.checked,
+                    enabled = recapsToggle.enabled,
                     onCheckedChange = { enabled ->
                         intentDispatcher(AppSettingsIntent.OnCloudRecapsToggled(enabled))
                     },

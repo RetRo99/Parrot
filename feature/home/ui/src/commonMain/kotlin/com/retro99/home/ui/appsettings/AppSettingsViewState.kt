@@ -10,6 +10,7 @@ data class AppSettingsViewState(
     val showContinueReading: Boolean = true,
     /** Consent to send read text for cloud recaps; off until turned on. */
     val cloudRecapsEnabled: Boolean = false,
+    val cloudRecapsAccess: CloudRecapsAccess = CloudRecapsAccess.Restoring,
     val appSettingSaveFailureCount: Int = 0,
     val themeMode: ThemeMode = ThemeMode.Night,
     val hasCurrentlyReadingBook: Boolean = false,
@@ -28,6 +29,9 @@ data class AppSettingsViewState(
 ) {
     val canDeleteSelectedProfile: Boolean
         get() = userProfiles.size > 1
+
+    val cloudRecapsToggle: CloudRecapsToggle
+        get() = cloudRecapsToggle(cloudRecapsEnabled, cloudRecapsAccess)
 }
 
 internal fun AppSettingsViewState.withCurrentlyReading(
