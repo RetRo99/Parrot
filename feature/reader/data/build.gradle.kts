@@ -40,6 +40,9 @@ kotlin {
             implementation(projects.feature.reader.domain)
             implementation(projects.feature.books.domain)
             implementation(projects.feature.books.data)
+            implementation(projects.lib.cloud.implementation)
+            implementation(libs.supabase.auth)
+            implementation(libs.ktor.client.core)
         }
 
         androidMain.dependencies {
@@ -52,6 +55,8 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.coroutines.test)
+            implementation(libs.ktor.client.mock)
         }
 
         named("androidHostTest") {
