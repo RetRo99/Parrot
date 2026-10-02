@@ -170,9 +170,6 @@ class TtsModelManager(
                     Log.w(TAG, "No manifest available for $modelId, using local files if complete")
                     return@withContext activeFiles ?: adoptLocalModel(modelId, files, isComplete)
                 }
-                if (!entry.version.isSafeVersionName()) {
-                    throw IOException("Unsafe model version name: ${entry.version}")
-                }
                 if (activeFiles != null && activeVersion(modelId) == entry.version) {
                     return@withContext activeFiles
                 }
@@ -272,11 +269,11 @@ class TtsModelManager(
         targetDir: File,
     ): Boolean {
         if (file.extractTo != null) return false
-        val source = File(sourceDir, file.path)
+        val source = sourceDir.resolveInside(file.path)
         if (!source.isFile || source.length() != file.size) return false
         if (!sha256(source).equals(file.sha256, ignoreCase = true)) return false
 
-        val destination = File(targetDir, file.path)
+        val destination = targetDir.resolveInside(file.path)
         destination.delete()
         return try {
             Os.link(source.absolutePath, destination.absolutePath)
@@ -422,7 +419,7 @@ class TtsModelManager(
     private suspend fun install(file: TtsModelFile, targetDir: File, partial: File) {
         val extractTo = file.extractTo
         if (extractTo == null) {
-            val destination = File(targetDir, file.path)
+            val destination = targetDir.resolveInside(file.path)
             destination.delete()
             if (!partial.renameTo(destination)) {
                 partial.copyTo(destination, overwrite = true)
@@ -433,10 +430,10 @@ class TtsModelManager(
 
         // Extract to a staging directory and rename it into place so an interrupted
         // extraction is never mistaken for an installed one.
-        val stagingDir = File(targetDir, "$extractTo.tmp")
+        val stagingDir = targetDir.resolveInside("$extractTo.tmp")
         stagingDir.deleteRecursively()
         unzip(partial, stagingDir, stripPrefix = extractTo)
-        val outputDir = File(targetDir, extractTo)
+        val outputDir = targetDir.resolveInside(extractTo)
         outputDir.deleteRecursively()
         if (!stagingDir.renameTo(outputDir)) {
             stagingDir.copyRecursively(outputDir, overwrite = true)
@@ -492,9 +489,9 @@ class TtsModelManager(
     private fun isInstalled(file: TtsModelFile, targetDir: File): Boolean {
         val extractTo = file.extractTo
         return if (extractTo != null) {
-            File(targetDir, extractTo).isDirectory
+            targetDir.resolveInside(extractTo).isDirectory
         } else {
-            val destination = File(targetDir, file.path)
+            val destination = targetDir.resolveInside(file.path)
             destination.isFile && destination.length() == file.size
         }
     }
@@ -516,7 +513,7 @@ class TtsModelManager(
     ): Boolean {
         val activeVersion = activeVersion(modelId) ?: return false
         if (activeModelFiles(modelId, files, isComplete) == null) return false
-        val latestVersion = cachedManifest()?.model(modelId)?.version ?: return false
+        val latestVersion = cachedManifest()?.trustedModel(modelId)?.version ?: return false
         return latestVersion != activeVersion
     }
 
@@ -524,7 +521,7 @@ class TtsModelManager(
         File(File(context.filesDir, MODELS_DIR_NAME), modelId)
 
     private fun versionDir(modelId: String, version: String): File =
-        File(modelRoot(modelId), version)
+        modelRoot(modelId).resolveInside(version)
 
     private fun activeMarker(modelId: String): File =
         File(modelRoot(modelId), ACTIVE_MARKER_NAME)
@@ -534,7 +531,7 @@ class TtsModelManager(
             .takeIf { marker -> marker.isFile }
             ?.readText()
             ?.trim()
-            ?.takeIf { version -> version.isNotEmpty() }
+            ?.takeIf { version -> version.isSafeVersionName() }
 
     private fun writeActiveVersion(modelId: String, version: String) {
         val marker = activeMarker(modelId)
@@ -551,16 +548,16 @@ class TtsModelManager(
     }
 
     private fun partialFile(targetDir: File, file: TtsModelFile): File =
-        File(targetDir, "${file.path}.part")
+        targetDir.resolveInside("${file.path}.part")
 
     private val manifestCacheFile: File
         get() = File(File(context.filesDir, MODELS_DIR_NAME), MANIFEST_CACHE_FILE_NAME)
 
     private fun manifestDownloadSizeBytes(modelId: String): Long? =
-        cachedManifest()?.model(modelId)?.totalBytes
+        cachedManifest()?.trustedModel(modelId)?.totalBytes
 
     private fun manifestUpdateSizeBytes(modelId: String): Long? =
-        cachedManifest()?.model(modelId)?.updateSizeBytes
+        cachedManifest()?.trustedModel(modelId)?.updateSizeBytes
 
     private suspend fun deleteModel(
         modelId: String,
@@ -606,7 +603,15 @@ class TtsModelManager(
 
     private fun loadManifestEntry(modelId: String): TtsModelManifestEntry? {
         val manifest = fetchManifest() ?: return null
-        return manifest.model(modelId)
+        return manifest.trustedModel(modelId)
+    }
+
+    /** Drops a manifest entry whose paths or URLs fail validation. */
+    private fun TtsModelManifest.trustedModel(modelId: String): TtsModelManifestEntry? {
+        val entry = model(modelId) ?: return null
+        val violation = TtsModelManifestValidator.violation(entry) ?: return entry
+        Log.w(TAG, "Rejected manifest entry for $modelId: $violation")
+        return null
     }
 
     private fun fetchManifest(): TtsModelManifest? {
@@ -715,9 +720,7 @@ class TtsModelManager(
     private fun File.hasContent(): Boolean = isFile && length() > 0
 
     private fun String.isSafeVersionName(): Boolean =
-        isNotEmpty() && all { character ->
-            character.isLetterOrDigit() || character == '.' || character == '_' || character == '-'
-        }
+        TtsModelManifestValidator.isSafeFolderName(this)
 
     private class ProgressReporter(
         private val totalBytes: Long,

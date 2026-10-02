@@ -49,3 +49,45 @@ data class TtsModelFile(
     /** When set, this entry is a zip extracted into a directory with this name. */
     val extractTo: String? = null,
 )
+
+/**
+ * Guards against a tampered manifest writing outside the model directory or
+ * pulling files from an unexpected host. The manifest itself is not signed.
+ */
+object TtsModelManifestValidator {
+
+    const val TRUSTED_URL_PREFIX = "https://github.com/RetRo99/tts-models/releases/download/"
+
+    private val segment = Regex("^[A-Za-z0-9._-]+$")
+    private val relativePath = Regex("^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$")
+    private val releaseAsset = Regex("^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+
+    /** Returns why [entry] is unsafe, or null when every field is safe to use. */
+    fun violation(entry: TtsModelManifestEntry): String? {
+        if (!isSafeFolderName(entry.version)) return "unsafe version '${entry.version}'"
+        entry.files.forEach { file ->
+            if (!isSafeRelativePath(file.path)) return "unsafe path '${file.path}'"
+            val extractTo = file.extractTo
+            if (extractTo != null && !isSafeFolderName(extractTo)) {
+                return "unsafe extractTo '$extractTo'"
+            }
+            if (!isTrustedUrl(file.url)) return "untrusted url '${file.url}'"
+            if (file.size < 0L) return "negative size for '${file.path}'"
+        }
+        return null
+    }
+
+    fun isSafeFolderName(name: String): Boolean = isSafeSegment(name)
+
+    fun isSafeRelativePath(path: String): Boolean =
+        relativePath.matches(path) && path.split('/').all(::isSafeSegment)
+
+    fun isTrustedUrl(url: String): Boolean {
+        if (!url.startsWith(TRUSTED_URL_PREFIX)) return false
+        val asset = url.removePrefix(TRUSTED_URL_PREFIX)
+        return releaseAsset.matches(asset) && asset.split('/').all(::isSafeSegment)
+    }
+
+    private fun isSafeSegment(value: String): Boolean =
+        segment.matches(value) && value != "." && value != ".."
+}
