@@ -114,7 +114,9 @@ CAPTURING ─► SKIPPED_INELIGIBLE
 - App-scoped, one row at a time, oldest first. Each row is claimed by a conditional
   `UPDATE … WHERE status IN (PENDING, FAILED_RETRYABLE)` before any request.
 - `RUNNING` rows untouched for 3 min are reset to `PENDING` (process death), or to
-  `FAILED_PERMANENT/MAX_ATTEMPTS` once they have used all attempts.
+  `FAILED_PERMANENT/MAX_ATTEMPTS` once they have used all attempts. The runner
+  schedules a wake-up for that moment. A cancelled request (e.g. WorkManager stopped
+  the worker) is stored as a retryable `NETWORK` failure with backoff.
 - Backoff 1, 2, 4, 8 min … capped at 6 h; `Retry-After` wins when longer. After 5
   attempts → `FAILED_PERMANENT`. A retryable error or `AuthRequired` ends the pass.
 - No engine available (consent off or signed out) → rows stay `PENDING`.

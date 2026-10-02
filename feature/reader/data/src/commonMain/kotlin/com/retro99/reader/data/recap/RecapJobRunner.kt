@@ -12,6 +12,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 
@@ -115,6 +117,12 @@ class RecapJobRunner(
             val result = try {
                 engine.generate(RecapInput(excerpt, row.language, row.lastSentence))
             } catch (e: CancellationException) {
+                // e.g. WorkManager stopped the worker: back off instead of
+                // leaving the row RUNNING until stale recovery.
+                withContext(NonCancellable) {
+                    record(row, attempt = row.attemptCount + 1, RecapResult.Retryable(RecapErrorCode.NETWORK))
+                    scheduleNext()
+                }
                 throw e
             } catch (e: Exception) {
                 diagnostics.failure(e, stage = "generate")
@@ -188,7 +196,10 @@ class RecapJobRunner(
     private suspend fun scheduleNext() {
         timer?.cancel()
         val now = clock.now().toEpochMilliseconds()
-        val at = database.getEarliestScheduled(now) ?: return
+        // A row left RUNNING by a dead process is recovered once it is stale.
+        val staleAt = database.getOldestRunningUpdate()
+            ?.let { it + RecapJobPolicy.STALE_RUNNING_AFTER.inWholeMilliseconds + 1 }
+        val at = listOfNotNull(database.getEarliestScheduled(now), staleAt).minOrNull() ?: return
         timer = scope.launch {
             delay(at - now)
             trigger(RecapTrigger.SCHEDULED)

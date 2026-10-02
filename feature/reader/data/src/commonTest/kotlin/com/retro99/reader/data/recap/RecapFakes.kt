@@ -107,6 +107,9 @@ class FakeSessionRecapDatabase : SessionRecapDatabase {
             .mapNotNull { it.nextAttemptAt }
             .minOrNull()
 
+    override suspend fun getOldestRunningUpdate() =
+        rows.value.values.filter { it.status == "RUNNING" }.minOfOrNull { it.updatedAt }
+
     override suspend fun claim(sessionId: String, engineId: String, now: Long) =
         update(sessionId, { isDue(it, now) }) {
             it.copy(status = "RUNNING", attemptCount = it.attemptCount + 1, engineId = engineId, updatedAt = now)

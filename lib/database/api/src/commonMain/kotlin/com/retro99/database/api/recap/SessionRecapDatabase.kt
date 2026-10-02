@@ -47,6 +47,9 @@ interface SessionRecapDatabase : DataClearable {
 
     suspend fun getEarliestScheduled(now: Long): Long?
 
+    /** Last update of the oldest RUNNING row, to know when it goes stale. */
+    suspend fun getOldestRunningUpdate(): Long?
+
     /** Moves a due row to RUNNING and counts the attempt; false if lost. */
     suspend fun claim(sessionId: String, engineId: String, now: Long): Boolean
 

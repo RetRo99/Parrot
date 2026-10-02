@@ -5,6 +5,9 @@ import com.retro99.reader.domain.recap.RecapJobPolicy
 import com.retro99.reader.domain.recap.RecapResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -108,6 +111,24 @@ class RecapJobRunnerTest {
         assertEquals("FAILED_PERMANENT", database["dead"]!!.status)
         assertEquals("MAX_ATTEMPTS", database["dead"]!!.lastError)
         assertEquals(0, engine.inputs.size)
+    }
+
+    @Test
+    fun aCancelledRequestBacksOffInsteadOfStayingRunning() = runTest {
+        database.put(pendingRow("s1"))
+        engine.next = { awaitCancellation() }
+        val runner = runner()
+
+        val pass = launch { runner.runPending() }
+        testScheduler.runCurrent()
+        assertEquals("RUNNING", database["s1"]!!.status)
+        pass.cancelAndJoin()
+
+        val row = database["s1"]!!
+        assertEquals("FAILED_RETRYABLE", row.status)
+        assertEquals("NETWORK", row.lastError)
+        assertEquals(1, row.attemptCount)
+        assertEquals(clock.nowMs + RecapJobPolicy.backoff(1).inWholeMilliseconds, row.nextAttemptAt)
     }
 
     @Test

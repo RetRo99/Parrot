@@ -125,6 +125,10 @@ internal class SessionRecapSqlDelightDao(
         database.sessionRecapQueries.getEarliestScheduled(now).executeAsOneOrNull()?.MIN
     }
 
+    override suspend fun getOldestRunningUpdate(): Long? = io {
+        database.sessionRecapQueries.getOldestRunningUpdate().executeAsOneOrNull()?.MIN
+    }
+
     override suspend fun claim(sessionId: String, engineId: String, now: Long): Boolean = io {
         database.changedOne { claim(engineId, now, sessionId) }
     }

@@ -133,6 +133,9 @@ WHERE status IN ('PENDING', 'FAILED_RETRYABLE')
   AND excerpt IS NOT NULL
   AND next_attempt_at > :now;
 
+getOldestRunningUpdate:
+SELECT MIN(updated_at) FROM session_recap WHERE status = 'RUNNING';
+
 -- Conditional claim: only one caller can move a due row to RUNNING.
 claim:
 UPDATE session_recap SET
