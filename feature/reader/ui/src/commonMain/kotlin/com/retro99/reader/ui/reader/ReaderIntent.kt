@@ -9,6 +9,9 @@ import com.retro99.reader.ui.tts.NeuralVoicePackage
 sealed interface ReaderIntent : BaseIntent {
     data object ToggleBookSearch : ReaderIntent
 
+    /** The reader screen started or stopped (app foreground or background). */
+    data class ReaderVisibilityChanged(val visible: Boolean) : ReaderIntent
+
     data class SearchBook(val query: String, val submitOnly: Boolean = false) : ReaderIntent
     data object SubmitBookSearch : ReaderIntent
     data object ClearBookSearchRecents : ReaderIntent

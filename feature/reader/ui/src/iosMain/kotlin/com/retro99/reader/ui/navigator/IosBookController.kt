@@ -26,6 +26,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.koin.core.annotation.Scope
 import org.koin.core.annotation.Scoped
 import kotlin.coroutines.resume
@@ -60,6 +62,7 @@ class IosBookController(
 
     private var controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var pendingPageTurnJob: Job? = null
+    private val locatorMutex = Mutex()
 
     /**
      * Tracks the last sentence that triggered a page turn to avoid duplicate turns.
@@ -89,27 +92,30 @@ class IosBookController(
 
     private fun setupCallbacks() {
         bridge.setOnPositionChangedCallback { locator ->
+            // The fair lock keeps emissions in page-turn order under fast flips.
             controllerScope.launch {
-                // Get or fetch chapter word count (cached per chapter)
-                val cachedWordCount = getOrFetchChapterWordCount(locator.href)
+                locatorMutex.withLock {
+                    // Get or fetch chapter word count (cached per chapter)
+                    val cachedWordCount = getOrFetchChapterWordCount(locator.href)
 
-                // Fetch chapter info with page position and word count
-                val chapterInfo = fetchChapterInfo(cachedWordCount)
-                val textAnchor = fetchTextAnchor()
+                    // Fetch chapter info with page position and word count
+                    val chapterInfo = fetchChapterInfo(cachedWordCount)
+                    val textAnchor = fetchTextAnchor()
 
-                _currentLocator.emit(
-                    LocatorState(
-                        href = locator.href,
-                        type = locator.type,
-                        title = locator.title,
-                        progression = locator.progression,
-                        position = locator.position,
-                        totalProgression = locator.totalProgression,
-                        fragments = null,
-                        chapterInfo = chapterInfo,
-                        textAnchor = textAnchor,
-                    ),
-                )
+                    _currentLocator.emit(
+                        LocatorState(
+                            href = locator.href,
+                            type = locator.type,
+                            title = locator.title,
+                            progression = locator.progression,
+                            position = locator.position,
+                            totalProgression = locator.totalProgression,
+                            fragments = null,
+                            chapterInfo = chapterInfo,
+                            textAnchor = textAnchor,
+                        ),
+                    )
+                }
             }
         }
 
@@ -410,6 +416,16 @@ class IosBookController(
         }
 
         return VisibleSentenceDetector.parseResult(rawResult)
+    }
+
+    override suspend fun getVisibleTextRange(): VisibleTextRange? {
+        val script = VisibleTextRangeDetector.getScript()
+        val rawResult: String? = suspendCancellableCoroutine { continuation ->
+            bridge.evaluateJavaScript(script) { result ->
+                continuation.resume(result)
+            }
+        }
+        return rawResult?.let(VisibleTextRangeDetector::parseResult)
     }
 
     override fun close() {

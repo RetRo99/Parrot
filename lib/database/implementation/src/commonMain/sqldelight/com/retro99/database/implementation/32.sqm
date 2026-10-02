@@ -1,0 +1,39 @@
+-- Per-session reading recaps. One row per reader session, kept as history,
+-- never overwritten per book. Local only; excerpt text is short-lived.
+CREATE TABLE session_recap (
+    session_id TEXT NOT NULL PRIMARY KEY,
+    server_id TEXT NOT NULL,
+    book_uuid TEXT NOT NULL,
+    status TEXT NOT NULL,
+    start_href TEXT,
+    start_progression REAL,
+    start_total_progression REAL,
+    end_href TEXT,
+    end_progression REAL,
+    end_total_progression REAL,
+    start_chapter_index INTEGER,
+    start_chapter_title TEXT,
+    end_chapter_index INTEGER,
+    end_chapter_title TEXT,
+    furthest_total_progression REAL,
+    page_advances INTEGER NOT NULL DEFAULT 0,
+    tts_sentences INTEGER NOT NULL DEFAULT 0,
+    active_reading_ms INTEGER NOT NULL DEFAULT 0,
+    excerpt TEXT,
+    excerpt_hash TEXT,
+    last_sentence TEXT,
+    language TEXT,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at INTEGER,
+    last_error TEXT,
+    summary TEXT,
+    engine_id TEXT,
+    model TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    ended_at INTEGER,
+    generated_at INTEGER
+);
+
+CREATE INDEX idx_session_recap_book ON session_recap(book_uuid, created_at);
+CREATE INDEX idx_session_recap_status ON session_recap(status, next_attempt_at);

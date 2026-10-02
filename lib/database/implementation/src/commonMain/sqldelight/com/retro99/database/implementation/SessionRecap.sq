@@ -1,0 +1,273 @@
+-- ============================================
+-- SESSION_RECAP TABLE (created in 32.sqm)
+-- One AI recap per reading session. History is kept; a new session never
+-- overwrites an older one. Status values: see RecapStatus in reader domain.
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS session_recap (
+    session_id TEXT NOT NULL PRIMARY KEY,
+    server_id TEXT NOT NULL,
+    book_uuid TEXT NOT NULL,
+    status TEXT NOT NULL,
+    start_href TEXT,
+    start_progression REAL,
+    start_total_progression REAL,
+    end_href TEXT,
+    end_progression REAL,
+    end_total_progression REAL,
+    start_chapter_index INTEGER,
+    -- Chapter titles stay on the device; they are never sent to the API.
+    start_chapter_title TEXT,
+    end_chapter_index INTEGER,
+    end_chapter_title TEXT,
+    furthest_total_progression REAL,
+    page_advances INTEGER NOT NULL DEFAULT 0,
+    tts_sentences INTEGER NOT NULL DEFAULT 0,
+    active_reading_ms INTEGER NOT NULL DEFAULT 0,
+    -- Bounded read text (most recent chars). Nulled after a result or expiry.
+    excerpt TEXT,
+    -- Fingerprint of the normalised excerpt, kept for the next session's dedupe.
+    excerpt_hash TEXT,
+    last_sentence TEXT,
+    language TEXT,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at INTEGER,
+    -- An error code (RecapErrorCode), never raw server text.
+    last_error TEXT,
+    summary TEXT,
+    engine_id TEXT,
+    model TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    ended_at INTEGER,
+    generated_at INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_recap_book ON session_recap(book_uuid, created_at);
+CREATE INDEX IF NOT EXISTS idx_session_recap_status ON session_recap(status, next_attempt_at);
+
+insertCapturing:
+INSERT OR IGNORE INTO session_recap(
+    session_id, server_id, book_uuid, status,
+    start_href, start_progression, start_total_progression,
+    start_chapter_index, start_chapter_title, furthest_total_progression,
+    language, created_at, updated_at
+)
+VALUES (?, ?, ?, 'CAPTURING', ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateCapture:
+UPDATE session_recap SET
+    excerpt = :excerpt,
+    end_href = :endHref,
+    end_progression = :endProgression,
+    end_total_progression = :endTotalProgression,
+    end_chapter_index = :endChapterIndex,
+    end_chapter_title = :endChapterTitle,
+    furthest_total_progression = :furthestTotalProgression,
+    page_advances = :pageAdvances,
+    tts_sentences = :ttsSentences,
+    updated_at = :updatedAt
+WHERE session_id = :sessionId AND status = 'CAPTURING' AND last_error IS NULL;
+
+finishCapture:
+UPDATE session_recap SET
+    status = :status,
+    excerpt = :excerpt,
+    excerpt_hash = :excerptHash,
+    last_sentence = :lastSentence,
+    end_href = :endHref,
+    end_progression = :endProgression,
+    end_total_progression = :endTotalProgression,
+    end_chapter_index = :endChapterIndex,
+    end_chapter_title = :endChapterTitle,
+    furthest_total_progression = :furthestTotalProgression,
+    page_advances = :pageAdvances,
+    tts_sentences = :ttsSentences,
+    active_reading_ms = :activeReadingMs,
+    last_error = :lastError,
+    ended_at = :endedAt,
+    updated_at = :endedAt
+WHERE session_id = :sessionId AND status = 'CAPTURING';
+
+getRecap:
+SELECT * FROM session_recap WHERE session_id = ?;
+
+getCapturing:
+SELECT * FROM session_recap WHERE status = 'CAPTURING';
+
+-- The latest ended session of a book before the given one, for dedupe.
+getPreviousEnded:
+SELECT * FROM session_recap
+WHERE book_uuid = :bookUuid
+  AND session_id != :sessionId
+  AND status != 'CAPTURING'
+  AND created_at <= :createdAt
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- A succeeded recap wins; otherwise the latest session that was not skipped.
+observeLatestForBook:
+SELECT * FROM session_recap
+WHERE book_uuid = ?
+  AND status NOT IN ('CAPTURING', 'SKIPPED_INELIGIBLE')
+ORDER BY CASE status WHEN 'SUCCEEDED' THEN 0 ELSE 1 END, created_at DESC
+LIMIT 1;
+
+observeForBook:
+SELECT * FROM session_recap
+WHERE book_uuid = ?
+  AND status NOT IN ('CAPTURING', 'SKIPPED_INELIGIBLE')
+ORDER BY created_at DESC;
+
+getNextDueId:
+SELECT session_id FROM session_recap
+WHERE status IN ('PENDING', 'FAILED_RETRYABLE')
+  AND excerpt IS NOT NULL
+  AND (next_attempt_at IS NULL OR next_attempt_at <= :now)
+ORDER BY created_at ASC
+LIMIT 1;
+
+getEarliestScheduled:
+SELECT MIN(next_attempt_at) FROM session_recap
+WHERE status IN ('PENDING', 'FAILED_RETRYABLE')
+  AND excerpt IS NOT NULL
+  AND next_attempt_at > :now;
+
+getOldestRunningUpdate:
+SELECT MIN(updated_at) FROM session_recap WHERE status = 'RUNNING';
+
+-- Conditional claim: only one caller can move a due row to RUNNING.
+claim:
+UPDATE session_recap SET
+    status = 'RUNNING',
+    attempt_count = attempt_count + 1,
+    engine_id = :engineId,
+    updated_at = :now
+WHERE session_id = :sessionId
+  AND status IN ('PENDING', 'FAILED_RETRYABLE')
+  AND excerpt IS NOT NULL
+  AND (next_attempt_at IS NULL OR next_attempt_at <= :now);
+
+-- A finished result drops the read text; only the summary is kept.
+complete:
+UPDATE session_recap SET
+    status = :status,
+    summary = :summary,
+    model = :model,
+    excerpt = NULL,
+    last_sentence = NULL,
+    last_error = NULL,
+    next_attempt_at = NULL,
+    generated_at = :now,
+    updated_at = :now
+WHERE session_id = :sessionId AND status = 'RUNNING';
+
+fail:
+UPDATE session_recap SET
+    status = :status,
+    attempt_count = :attemptCount,
+    next_attempt_at = :nextAttemptAt,
+    last_error = :lastError,
+    updated_at = :now
+WHERE session_id = :sessionId AND status = 'RUNNING';
+
+-- Rejected input can never be retried, so its text goes at once.
+failDroppingText:
+UPDATE session_recap SET
+    status = :status,
+    attempt_count = :attemptCount,
+    next_attempt_at = NULL,
+    last_error = :lastError,
+    excerpt = NULL,
+    last_sentence = NULL,
+    updated_at = :now
+WHERE session_id = :sessionId AND status = 'RUNNING';
+
+-- A process that died mid-request already counted the attempt; respect the cap.
+recoverStaleRunning:
+UPDATE session_recap SET
+    status = CASE WHEN attempt_count >= :maxAttempts THEN 'FAILED_PERMANENT' ELSE 'PENDING' END,
+    last_error = CASE WHEN attempt_count >= :maxAttempts THEN 'MAX_ATTEMPTS' ELSE last_error END,
+    updated_at = :now
+WHERE status = 'RUNNING' AND updated_at < :staleBefore;
+
+-- User retry of a row that stopped for good; a pending Retry-After stays.
+requeue:
+UPDATE session_recap SET
+    status = 'PENDING',
+    attempt_count = 0,
+    next_attempt_at = CASE WHEN next_attempt_at > :now THEN next_attempt_at ELSE NULL END,
+    last_error = NULL,
+    updated_at = :now
+WHERE session_id = :sessionId
+  AND status = 'FAILED_PERMANENT'
+  AND excerpt IS NOT NULL;
+
+-- Consent turned off: no queued text may be sent later. RUNNING rows keep
+-- their status (the request is out); CAPTURING rows are marked so the
+-- recorder ends them without text.
+withdrawText:
+UPDATE session_recap SET
+    excerpt = NULL,
+    last_sentence = NULL,
+    status = CASE WHEN status IN ('PENDING', 'FAILED_RETRYABLE', 'FAILED_PERMANENT')
+        THEN 'FAILED_PERMANENT' ELSE status END,
+    last_error = CASE WHEN status = 'RUNNING' THEN last_error ELSE 'CONSENT_WITHDRAWN' END,
+    next_attempt_at = NULL,
+    updated_at = :now
+WHERE status IN ('CAPTURING', 'PENDING', 'RUNNING', 'FAILED_RETRYABLE', 'FAILED_PERMANENT')
+  AND (excerpt IS NOT NULL OR last_sentence IS NOT NULL OR status = 'CAPTURING');
+
+-- Retention: drop finished excerpts, expire old ones, then delete old rows.
+clearFinishedExcerpts:
+UPDATE session_recap SET excerpt = NULL, last_sentence = NULL
+WHERE (excerpt IS NOT NULL OR last_sentence IS NOT NULL)
+  AND status IN ('SUCCEEDED', 'NOT_ENOUGH', 'SKIPPED_INELIGIBLE');
+
+expireExcerpts:
+UPDATE session_recap SET
+    excerpt = NULL,
+    last_sentence = NULL,
+    status = CASE WHEN status IN ('PENDING', 'FAILED_RETRYABLE', 'FAILED_PERMANENT')
+        THEN 'FAILED_PERMANENT' ELSE status END,
+    last_error = CASE WHEN status IN ('PENDING', 'FAILED_RETRYABLE')
+        THEN 'EXCERPT_EXPIRED' ELSE last_error END,
+    updated_at = :now
+WHERE (excerpt IS NOT NULL OR last_sentence IS NOT NULL)
+  AND status NOT IN ('CAPTURING', 'RUNNING')
+  AND created_at < :cutoff;
+
+deleteOlderThan:
+DELETE FROM session_recap
+WHERE created_at < :cutoff AND status NOT IN ('CAPTURING', 'RUNNING');
+
+-- A recap whose book is in neither book table is an orphan.
+deleteOrphans:
+DELETE FROM session_recap
+WHERE status NOT IN ('CAPTURING', 'RUNNING')
+  AND book_uuid NOT IN (SELECT uuid FROM books)
+  AND book_uuid NOT IN (
+      SELECT library_book_id FROM library_books WHERE deleted_at IS NULL
+  );
+
+deleteRecap:
+DELETE FROM session_recap WHERE session_id = ?;
+
+deleteForBook:
+DELETE FROM session_recap WHERE book_uuid = ?;
+
+-- A book removed from the device; a server copy of it keeps its recaps.
+deleteForRemovedBook:
+DELETE FROM session_recap
+WHERE book_uuid = :bookUuid
+  AND book_uuid NOT IN (SELECT uuid FROM books);
+
+moveRecaps:
+UPDATE session_recap SET book_uuid = ? WHERE book_uuid = ?;
+
+deleteAllRecaps:
+DELETE FROM session_recap;
+
+-- Rows touched by the previous statement on this connection.
+rowsChanged:
+SELECT changes();

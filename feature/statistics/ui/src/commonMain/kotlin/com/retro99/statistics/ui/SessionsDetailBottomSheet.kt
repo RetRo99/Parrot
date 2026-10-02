@@ -1,5 +1,6 @@
 package com.retro99.statistics.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import com.retro99.base.ui.compose.stringTextWrapper
 import com.retro99.statistics.ui.model.ReadingSessionUiModel
 import com.retro99.translations.StringRes
@@ -40,6 +44,9 @@ fun SessionsDetailBottomSheet(
     sessionsDetailState: SessionsDetailState,
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
+    onSessionClick: (Long) -> Unit,
+    onSessionDetailBack: () -> Unit,
+    onRetryRecap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -49,6 +56,20 @@ fun SessionsDetailBottomSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) {
+        val selected = sessionsDetailState.selected
+        if (selected != null) {
+            // Back leaves the detail for the list, not the whole sheet.
+            NavigationBackHandler(
+                state = rememberNavigationEventState(NavigationEventInfo.None),
+                onBackCompleted = onSessionDetailBack,
+            )
+            SessionDetailContent(
+                detail = selected,
+                onBack = onSessionDetailBack,
+                onRetryRecap = onRetryRecap,
+            )
+            return@ModalBottomSheet
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -106,7 +127,10 @@ fun SessionsDetailBottomSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         itemsIndexed(sessionsDetailState.sessions) { index, session ->
-                            SessionItem(session = session)
+                            SessionItem(
+                                session = session,
+                                modifier = Modifier.clickable { onSessionClick(session.id) },
+                            )
                             if (index < sessionsDetailState.sessions.lastIndex) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 4.dp),

@@ -683,6 +683,14 @@ class AndroidBookController internal constructor() : BookController {
         }
     }
 
+    override suspend fun getVisibleTextRange(): VisibleTextRange? {
+        return withNavigatorOrNull { nav ->
+            val rawResult = nav.evaluateJavascript(VisibleTextRangeDetector.getScript())
+                ?: return@withNavigatorOrNull null
+            VisibleTextRangeDetector.parseResult(cleanWebViewJson(rawResult))
+        }
+    }
+
     override suspend fun hasReadableContent(): Boolean {
         return withNavigatorOrNull { nav ->
             val rawResult = nav.evaluateJavascript(

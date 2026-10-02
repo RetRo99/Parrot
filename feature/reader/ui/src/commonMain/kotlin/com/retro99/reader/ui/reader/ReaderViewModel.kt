@@ -1,5 +1,6 @@
 package com.retro99.reader.ui.reader
 
+import androidx.compose.ui.text.intl.Locale
 import androidx.lifecycle.viewModelScope
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.preferences.implementation.usecase.GetUserPreferenceUseCase
@@ -30,6 +31,11 @@ import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReaderInitializationData
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel
+import com.retro99.reader.domain.recap.RecapChapter
+import com.retro99.reader.domain.recap.RecapLanguages
+import com.retro99.reader.domain.recap.RecapPosition
+import com.retro99.reader.domain.recap.RecapSessionRecorder
+import com.retro99.reader.domain.recap.RecapSettings
 import com.retro99.reader.domain.usecase.AddBookmarkUseCase
 import com.retro99.reader.domain.usecase.DeleteBookmarkUseCase
 import com.retro99.reader.domain.usecase.GetCustomReaderFontsUseCase
@@ -140,6 +146,8 @@ class ReaderViewModel(
     @Provided private val supertonicTermsStore: SupertonicTermsStore,
     @Provided private val getUserPreferenceUseCase: GetUserPreferenceUseCase,
     @Provided private val saveUserPreferenceUseCase: SaveUserPreferenceUseCase,
+    @Provided private val recapSessionRecorder: RecapSessionRecorder,
+    @Provided private val recapSettings: RecapSettings,
 ) : BaseViewModel<ReaderViewState, ReaderIntent>(
     ReaderViewState(
         bookUuid = bookUuid,
@@ -244,6 +252,15 @@ class ReaderViewModel(
 
     /** Timestamp when the book was opened, used for calculating reading duration */
     private var bookOpenedTimestamp: Long = 0L
+
+    /** Recap session id, minted when the book opens; null until then. */
+    private var recapSessionId: String? = null
+
+    /** Feeds read text to the recap; null unless cloud recaps are on. */
+    private var recapCapture: ReaderRecapCapture? = null
+
+    /** False while the app is in the background (reader stopped). */
+    private var isReaderVisible = true
 
     /** Checkpoints the auto-open target before process death can bypass the Reader close action. */
     private var currentBookTargetCheckpoint: CurrentBookTargetCheckpoint? = null
@@ -352,6 +369,7 @@ class ReaderViewModel(
         when (intent) {
             ReaderIntent.ToggleBookSearch -> toggleBookSearch()
             is ReaderIntent.SearchBook -> searchBook(intent.query, intent.submitOnly)
+            is ReaderIntent.ReaderVisibilityChanged -> setReaderVisible(intent.visible)
             ReaderIntent.SubmitBookSearch -> searchBook(viewState.value.bookSearchQuery, submitted = true)
             ReaderIntent.ClearBookSearchRecents -> {
                 saveUserPreferenceUseCase(PreferencesKey.RecentBookSearches(serverId, bookUuid), emptyList<RecentBookSearch>())
@@ -578,6 +596,8 @@ class ReaderViewModel(
                     createdAt = now().toString(),
                 )
                 updatePosition(positionUiModel)
+                positionUiModel.toRecapPage(locator.chapterInfo?.currentPage)
+                    ?.let { page -> recapCapture?.onPageShown(page) }
 
                 // Update chapter info from the enriched locator state
                 // (word count is used internally by ReadingSpeedTracker via the locator flow)
@@ -694,6 +714,7 @@ class ReaderViewModel(
         ).onSuccess { publication ->
             // Track book opened event
             bookOpenedTimestamp = nowMillis()
+            startRecapSession(data.serverId, data.bookUuid, position, publication.language)
             analytics.logEvent(
                 ReaderAnalyticsEvent.BookOpened(
                     bookUuid = data.bookUuid,
@@ -1493,6 +1514,9 @@ class ReaderViewModel(
             .launchIn(viewModelScope)
         ttsController.sentenceCount
             .onEach { count -> updateState { state -> state.copy(ttsSentenceCount = count) } }
+            .launchIn(viewModelScope)
+        ttsController.finishedSentences
+            .onEach { finished -> recapCapture?.onSentenceFinished(finished) }
             .launchIn(viewModelScope)
     }
 
@@ -2596,6 +2620,9 @@ class ReaderViewModel(
         // outbox holds the reading position even if the checkpoint below never runs.
         if (hasRequestedClose) return
         hasRequestedClose = true
+        // Kept for the statistics row; endRecapSession() clears it.
+        val closedRecapSessionId = recapSessionId
+        endRecapSession()
         completeContinueReadingOpen(
             outcome = ContinueReadingOpenOutcome.Cancelled,
             reasonCode = ContinueReadingOpenReasonCode.ClosedBeforeContent,
@@ -2647,6 +2674,7 @@ class ReaderViewModel(
                     durationMs = readingDurationMs,
                     endProgression = currentState.currentPosition?.totalProgression,
                     readingSpeedWpm = sessionReadingSpeedWpm,
+                    recapSessionId = closedRecapSessionId,
                 )
             }
 
@@ -2978,11 +3006,115 @@ class ReaderViewModel(
     }
 
     override fun onCleared() {
+        // Left without close(): still end the recap session.
+        endRecapSession()
         currentBookTargetCheckpoint?.cancel()
         routineSyncScheduler.close()
         super.onCleared()
         readerScope.close()
     }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun startRecapSession(
+        serverId: String,
+        bookUuid: String,
+        position: PositionUiModel?,
+        bookLanguage: String?,
+    ) {
+        if (recapSessionId != null) return
+        val sessionId = Uuid.random().toString()
+        recapSessionId = sessionId
+        recapSessionRecorder.onSessionStarted(
+            sessionId = sessionId,
+            serverId = serverId,
+            bookId = bookUuid,
+            startPosition = position.toRecapPosition(),
+            chapter = position?.let { RecapChapter(it.chapterIndex, it.title) },
+            language = RecapLanguages.resolve(bookLanguage, Locale.current.language),
+        )
+        viewModelScope.launch {
+            try {
+                startRecapCapture(sessionId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Unreadable consent means no consent: stop capturing.
+                recapCapture?.stop()
+            }
+        }
+    }
+
+    /** Capture runs only with consent, and stops for good if it's withdrawn. */
+    private suspend fun startRecapCapture(sessionId: String) {
+        if (!recapSettings.isCloudRecapsEnabled()) return
+        if (recapSessionId != sessionId || recapCapture != null) return
+        val capture = ReaderRecapCapture(
+            sessionId = sessionId,
+            recorder = recapSessionRecorder,
+            scope = viewModelScope,
+            readVisibleText = { bookController.getVisibleTextRange() },
+        )
+        recapCapture = capture
+        capture.setForeground(isReaderVisible)
+        viewState
+            .map { state ->
+                val deviceVoice = state.listenSource == ListenSource.DEVICE_VOICE
+                // Extraction and synthesis gaps are still read-aloud, not reading.
+                val readAloudActive = deviceVoice &&
+                    (state.isNarrationLoading || state.isNarrationStartPending)
+                Triple(
+                    state.isPlaying || readAloudActive,
+                    deviceVoice,
+                    state.positionConflict != null || state.linkedResumeOffer != null,
+                )
+            }
+            .distinctUntilChanged()
+            .onEach { (playing, deviceVoice, prompted) ->
+                capture.setPlayback(playing, deviceVoice)
+                capture.setBlocked(prompted)
+            }
+            .launchIn(viewModelScope)
+        viewState.value.currentPosition
+            ?.toRecapPage(viewState.value.chapterInfo?.currentPage)
+            ?.let(capture::onPageShown)
+        recapSettings.observeCloudRecapsEnabled().first { enabled -> !enabled }
+        capture.stop()
+    }
+
+    private fun setReaderVisible(visible: Boolean) {
+        isReaderVisible = visible
+        recapCapture?.setForeground(visible)
+    }
+
+    private fun endRecapSession() {
+        val sessionId = recapSessionId ?: return
+        recapSessionId = null
+        val summary = recapCapture?.stop()
+        recapCapture = null
+        recapSessionRecorder.onSessionEnded(
+            sessionId = sessionId,
+            endPosition = viewState.value.currentPosition.toRecapPosition(),
+            lastSentence = summary?.lastSentence,
+            activeReadingMs = summary?.activeReadingMs
+                ?: (nowMillis() - bookOpenedTimestamp).coerceAtLeast(0L),
+        )
+    }
+
+    private fun PositionUiModel.toRecapPage(chapterPage: Int?): RecapPage? {
+        if (href.isEmpty()) return null
+        return RecapPage(
+            href = href.substringBefore('#'),
+            chapter = RecapChapter(chapterIndex, title),
+            position = toRecapPosition(),
+            chapterPage = chapterPage,
+        )
+    }
+
+    private fun PositionUiModel?.toRecapPosition(): RecapPosition = RecapPosition(
+        href = this?.href?.takeIf { it.isNotEmpty() },
+        progression = this?.progression,
+        totalProgression = this?.totalProgression,
+    )
 
     private fun scheduleCurrentBookTargetCheckpoint() {
         if (hasRequestedClose || bookOpenedTimestamp <= 0L) return

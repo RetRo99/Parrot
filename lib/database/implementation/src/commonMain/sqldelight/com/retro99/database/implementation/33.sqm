@@ -1,0 +1,3 @@
+-- Links a statistics session to the recap of the same reader session.
+-- Local only: never part of the synced reading-session payload.
+ALTER TABLE reading_session ADD COLUMN recap_session_id TEXT;

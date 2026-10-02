@@ -19,6 +19,7 @@ data class ReadingSessionLocalModel(
     override val startProgression: Double?,
     override val endProgression: Double?,
     override val readingSpeedWpm: Int?,
+    override val recapSessionId: String? = null,
 ) : ReadingSessionEntity
 
 private const val DEFAULT_SESSION_READING_SPEED_WPM = 250
@@ -36,6 +37,7 @@ fun ReadingSessionLocalModel.toDomain(): ReadingSessionDomainModel {
         startProgression = startProgression,
         endProgression = endProgression,
         readingSpeedWpm = readingSpeedWpm ?: DEFAULT_SESSION_READING_SPEED_WPM,
+        recapSessionId = recapSessionId,
     )
 }
 
@@ -52,6 +54,7 @@ fun ReadingSessionDomainModel.toLocal(): ReadingSessionLocalModel {
         startProgression = startProgression,
         endProgression = endProgression,
         readingSpeedWpm = readingSpeedWpm,
+        recapSessionId = recapSessionId,
     )
 }
 
@@ -68,6 +71,7 @@ fun ReadingSessionEntity.toDomain(): ReadingSessionDomainModel {
         startProgression = startProgression,
         endProgression = endProgression,
         readingSpeedWpm = readingSpeedWpm ?: DEFAULT_SESSION_READING_SPEED_WPM,
+        recapSessionId = recapSessionId,
     )
 }
 

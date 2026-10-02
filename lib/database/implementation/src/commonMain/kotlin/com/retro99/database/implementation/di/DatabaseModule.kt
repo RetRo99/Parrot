@@ -14,6 +14,7 @@ import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBookMergeDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.reader.ReaderSettingsDatabase
+import com.retro99.database.api.recap.SessionRecapDatabase
 import com.retro99.database.api.statistics.ReadingSessionDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncCheckpointDatabase
@@ -35,6 +36,7 @@ import com.retro99.database.implementation.dao.library.LibraryBooksDatabaseImpl
 import com.retro99.database.implementation.dao.library.LibraryBooksSqlDelightDao
 import com.retro99.database.implementation.dao.reader.ReaderSettingsDatabaseImpl
 import com.retro99.database.implementation.dao.reader.ReaderSettingsSqlDelightDao
+import com.retro99.database.implementation.dao.recap.SessionRecapSqlDelightDao
 import com.retro99.database.implementation.dao.statistics.ReadingSessionDatabaseImpl
 import com.retro99.database.implementation.dao.statistics.ReadingSessionSqlDelightDao
 import com.retro99.database.implementation.dao.sync.SyncOutboxDatabaseImpl
@@ -239,6 +241,13 @@ class DatabaseModule {
     }
 
     @Single
+    internal fun provideSessionRecapDatabase(
+        databaseManager: DatabaseManager,
+    ): SessionRecapDatabase {
+        return SessionRecapSqlDelightDao(databaseManager)
+    }
+
+    @Single
     internal fun provideDataClearables(
         booksDatabase: BooksDatabase,
         bookmarksDatabase: BookmarksDatabase,
@@ -248,6 +257,7 @@ class DatabaseModule {
         syncOutboxDatabase: SyncOutboxDatabase,
         syncCheckpointDatabase: SyncCheckpointDatabase,
         cloudFilesDatabase: CloudFilesDatabase,
+        sessionRecapDatabase: SessionRecapDatabase,
     ): List<DataClearable> {
         return listOf(
             booksDatabase,
@@ -258,6 +268,7 @@ class DatabaseModule {
             syncOutboxDatabase,
             syncCheckpointDatabase,
             cloudFilesDatabase,
+            sessionRecapDatabase,
         )
     }
 }

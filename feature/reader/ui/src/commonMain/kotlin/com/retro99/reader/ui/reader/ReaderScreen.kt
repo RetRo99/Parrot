@@ -45,6 +45,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentOf
@@ -67,6 +68,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -97,6 +101,7 @@ import com.retro99.translations.StringRes
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import com.retro99.reader.ui.recap.ReaderRecapBannerHost
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import resources.translations.general_close
@@ -132,6 +137,9 @@ import resources.translations.sleep_timer_postpone
 import kotlin.math.abs
 
 private val logger = Logger.withTag("ReaderScreen")
+
+/** Clears the reader toolbar so the recap chip never covers it. */
+private val RECAP_BANNER_TOP_PADDING = 64.dp
 
 /** Duration in milliseconds before auto-hiding the media controls */
 private const val CONTROLS_AUTO_HIDE_DELAY_MS = 5000L
@@ -171,6 +179,22 @@ fun ReaderScreen(
         state = backHandlerState,
         onBackCompleted = { viewModel.close(ReaderCloseSource.SystemBack) },
     )
+
+    // Recaps count only foreground reading time and pages.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START ->
+                    viewModel.onIntent(ReaderIntent.ReaderVisibilityChanged(visible = true))
+                Lifecycle.Event.ON_STOP ->
+                    viewModel.onIntent(ReaderIntent.ReaderVisibilityChanged(visible = false))
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
 
     BaseScreen(
         modifier = modifier,
@@ -281,6 +305,21 @@ private fun ReaderScreenContent(
                     .align(Alignment.TopStart)
                     .statusBarsPadding()
                     .padding(start = 8.dp, top = 4.dp),
+            )
+        }
+
+        // Offered on reopen; stays out of the way of the startup prompts.
+        if (
+            viewState.publicationState != null &&
+            viewState.linkedResumeOffer == null &&
+            viewState.positionConflict == null
+        ) {
+            ReaderRecapBannerHost(
+                bookUuid = bookUuid,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = RECAP_BANNER_TOP_PADDING, start = 16.dp, end = 16.dp),
             )
         }
 

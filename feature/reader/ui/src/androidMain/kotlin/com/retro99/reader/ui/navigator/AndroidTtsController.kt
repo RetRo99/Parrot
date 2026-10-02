@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -78,6 +79,9 @@ class AndroidTtsController(
 
     private var sentences: List<TtsSentence> = emptyList()
     private var sentencesChapterHref: String? = null
+
+    /** Chapter of the sentences last handed to the engine. */
+    private var engineChapterHref: String? = null
     private var lastLocator: LocatorState? = null
     private var rate: Float = 1f
     private var pitch: Float = 1f
@@ -127,6 +131,9 @@ class AndroidTtsController(
         .mapNotNull { lastLocator?.href }
 
     override val currentSentence: Flow<TtsSentence?> = engine.currentSentence
+
+    override val finishedSentences: Flow<FinishedTtsSentence> = engine.finishedSentences
+        .map { sentence -> FinishedTtsSentence(engineChapterHref, sentence) }
 
     override val sentenceCount: Flow<Int> = engine.sentenceCount
 
@@ -544,6 +551,7 @@ class AndroidTtsController(
         engine.setPlaybackOperationCorrelationId(attempt.correlationId)
         engine.setPlaybackInfo(createPlaybackInfo())
         engine.setSentences(sentences)
+        engineChapterHref = sentencesChapterHref
         engine.playFrom(
             index = sentenceIndex ?: resolveStartIndex(),
             voiceId = voiceId,

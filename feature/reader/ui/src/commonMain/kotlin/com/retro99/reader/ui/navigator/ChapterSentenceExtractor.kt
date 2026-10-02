@@ -385,7 +385,7 @@ object ChapterSentenceExtractor : KoinComponent {
         }
     }
 
-    private fun percentDecode(input: String): String {
+    internal fun percentDecode(input: String): String {
         val bytes = ArrayList<Byte>(input.length)
         var index = 0
         while (index < input.length) {

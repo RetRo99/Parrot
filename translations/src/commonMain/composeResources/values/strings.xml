@@ -1352,4 +1352,35 @@
     <string name="reader_find_selected_so_far" tools:ignore="MissingTranslation">%1$d of %2$d so far · %3$s</string>
     <string name="reader_find_back">Back to where I was · %1$d%</string>
     <string name="reader_find_back_no_percent">Back to where I was</string>
+    <!-- Session recaps -->
+    <string name="settings_cloud_recaps_title">Cloud recaps</string>
+    <string name="settings_cloud_recaps_subtitle">After each reading session, excerpts of the text you read are sent to Parrot's server and an AI provider to write a short summary. Summaries and excerpts are kept on this device, and in its backups if device backup is on. They are never synced to Parrot Cloud.</string>
+    <string name="reader_recap_last_session">Recap of your last session</string>
+    <string name="reader_recap_earlier_session">Recap of an earlier session</string>
+    <string name="reader_recap_show">Show recap</string>
+    <string name="reader_recap_hide">Hide recap</string>
+    <string name="reader_recap_dismiss">Dismiss recap</string>
+    <string name="statistics_session_detail_title">Reading session</string>
+    <string name="statistics_session_detail_back">Back to sessions</string>
+    <string name="statistics_session_detail_time">%1$s – %2$s</string>
+    <string name="statistics_session_detail_duration">Time read</string>
+    <string name="statistics_session_detail_speed">Reading speed</string>
+    <string name="statistics_session_detail_progress">Progress</string>
+    <string name="statistics_session_detail_progress_range">%1$d% → %2$d%</string>
+    <string name="statistics_session_detail_progress_end">Ended at %1$d%</string>
+    <string name="statistics_session_detail_wpm">%1$d wpm</string>
+    <string name="statistics_session_recap_title">Recap</string>
+    <string name="statistics_recap_none">No recap for this session.</string>
+    <string name="statistics_recap_turn_on_hint">Turn on Cloud recaps in Settings to get recaps of future sessions.</string>
+    <string name="statistics_recap_ineligible">Not enough new reading in this session for a recap.</string>
+    <string name="statistics_recap_waiting_opt_in">This recap is waiting. Turn on Cloud recaps in Settings to generate it.</string>
+    <string name="statistics_recap_generating">Generating recap…</string>
+    <string name="statistics_recap_engine_cloud">Cloud recap</string>
+    <string name="statistics_recap_engine_model">%1$s · %2$s</string>
+    <string name="statistics_recap_not_enough">Too little happened in this session to summarize.</string>
+    <string name="statistics_recap_failed_retryable">Couldn't generate the recap yet. Parrot will try again automatically.</string>
+    <string name="statistics_recap_failed_permanent">Couldn't generate a recap for this session.</string>
+    <string name="statistics_recap_retry">Retry</string>
+    <string name="statistics_recap_retry_unavailable">This recap can no longer be retried.</string>
+    <string name="statistics_recap_sign_in">Sign in to Parrot Cloud to generate this recap.</string>
 </resources>

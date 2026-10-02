@@ -145,6 +145,7 @@ internal fun AppDatabase.mergeLibraryBookRows(fromId: String, intoId: String): L
         favoriteQueries.deleteFavorite(fromId)
         bookmarkQueries.moveBookmarks(intoId, fromId)
         readingSessionQueries.moveReadingSessions(intoId, fromId)
+        sessionRecapQueries.moveRecaps(intoId, fromId)
 
         val redundantPaths = mutableListOf<String>()
         val intoMediaTypes = deviceFileQueries.getDeviceFilesForBook(intoId)
@@ -210,6 +211,7 @@ internal fun AppDatabase.deleteBookFromDeviceRows(libraryBookId: String) {
         cloudBookFileStateQueries.deleteCloudBookFileStatesForBook(libraryBookId)
         cloudFileTransferQueries.deleteTransfersForBook(libraryBookId)
         libraryBookQueries.deleteLibraryBook(libraryBookId)
+        sessionRecapQueries.deleteForRemovedBook(libraryBookId)
         syncOutboxQueries.deletePendingMutationsForEntityAnyUser(
             entity_type = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
             entity_id = libraryBookId,

@@ -159,6 +159,12 @@ interface BookController : AutoCloseable {
     suspend fun getVisibleSentenceId(): String?
 
     /**
+     * The text on screen from the first visible word to the last, for
+     * recaps. Null when no text is visible: never a chapter-end fallback.
+     */
+    suspend fun getVisibleTextRange(): VisibleTextRange? = null
+
+    /**
      * Returns whether the current chapter contains readable text without modifying its content.
      */
     suspend fun hasReadableContent(): Boolean = false

@@ -55,7 +55,7 @@ default `en`. Any other fields, such as `bookTitle`, are ignored.
 
 | Status | Body |
 |---|---|
-| 200 | `{ "kind": "recap", "summary": "…" }` or `{ "kind": "not_enough", "summary": null }` |
+| 200 | `{ "kind": "recap", "summary": "…", "model": "hy3" }` or `{ "kind": "not_enough", "summary": null, "model": "hy3" }` (`model` is informational and optional for clients) |
 | 401 | Not a verified, non-anonymous user |
 | 422 | Excerpt too short, or unsupported language |
 | 429 | `daily recap limit reached`, or provider rate limit (both send `Retry-After`) |

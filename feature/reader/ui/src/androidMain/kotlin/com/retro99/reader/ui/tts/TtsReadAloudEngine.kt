@@ -80,6 +80,12 @@ class TtsReadAloudEngine(
     private var pendingSentenceProgress: Double? = null
     private var playbackOperationCorrelationId: String? = null
 
+    private val heard = TtsHeardSentenceTracker()
+
+    // Set while startSentence synthesises its target and the old playlist
+    // may still be playing; the old one must not advance past it.
+    private var pendingStartToken: Int? = null
+
     private val readyFiles = mutableMapOf<Int, File>()
     private val queuedSentenceIndices = linkedSetOf<Int>()
     private val prefetchJobs = mutableMapOf<Int, Job>()
@@ -106,6 +112,10 @@ class TtsReadAloudEngine(
     private val _chapterCompleted = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val chapterCompleted: SharedFlow<Unit> = _chapterCompleted.asSharedFlow()
 
+    /** Sentences whose audio played to the end; not skipped or stopped ones. */
+    private val _finishedSentences = MutableSharedFlow<TtsSentence>(extraBufferCapacity = 16)
+    val finishedSentences: SharedFlow<TtsSentence> = _finishedSentences.asSharedFlow()
+
     private val playerListener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             if (mediaItem != null && !mediaItem.mediaId.startsWith(TTS_MEDIA_ID_PREFIX)) {
@@ -114,7 +124,25 @@ class TtsReadAloudEngine(
             }
 
             val index = mediaItem?.let(::sentenceIndexForMediaItem) ?: return
+            // AUTO: the previous item played out; seeks and new playlists don't.
+            val auto = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
+            heard.onTransition(index, auto)?.let(::emitFinished)
+            // The old playlist moving on mustn't steal the pending target.
+            if (auto && pendingStartToken != null) return
             onSentenceStarted(index)
+        }
+
+        override fun onPositionDiscontinuity(
+            oldPosition: Player.PositionInfo,
+            newPosition: Player.PositionInfo,
+            reason: Int,
+        ) {
+            if (
+                reason == Player.DISCONTINUITY_REASON_SEEK ||
+                reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT
+            ) {
+                heard.onSeek(newPosition.positionMs)
+            }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -200,6 +228,8 @@ class TtsReadAloudEngine(
 
     fun setSentences(list: List<TtsSentence>) {
         generation++
+        pendingStartToken = null
+        heard.reset()
         sentences = list
         _sentenceCount.value = list.size
         currentIndex = -1
@@ -303,6 +333,7 @@ class TtsReadAloudEngine(
         }
 
         val token = ++generation
+        pendingStartToken = token
         cancelActiveSynthesis()
         cancelPrefetch(exceptIndex = index)
         currentIndex = index
@@ -355,6 +386,8 @@ class TtsReadAloudEngine(
         val playlist = buildPlaylist(index)
         queuedSentenceIndices.clear()
         queuedSentenceIndices.addAll(index until index + playlist.size)
+        if (pendingStartToken == token) pendingStartToken = null
+        heard.onPlaylistStarted(index, sentenceProgress)
         playbackPlayer.setMediaItems(playlist)
         playbackPlayer.prepare()
         playbackPlayer.play()
@@ -560,6 +593,9 @@ class TtsReadAloudEngine(
 
     private fun onSentenceCompleted() {
         if (player?.hasNextMediaItem() == true) return
+        heard.onEnded()?.let(::emitFinished)
+        // A seek or skip target is being prepared; it starts on its own.
+        if (pendingStartToken != null) return
 
         val next = currentIndex + 1
         if (next <= sentences.lastIndex) {
@@ -600,6 +636,8 @@ class TtsReadAloudEngine(
 
     private fun stopInternal() {
         generation++
+        pendingStartToken = null
+        heard.reset()
         currentIndex = -1
         _isPlaying.value = false
         _isLoading.value = false
@@ -620,6 +658,8 @@ class TtsReadAloudEngine(
 
     private fun detachForExternalPlayback() {
         generation++
+        pendingStartToken = null
+        heard.reset()
         currentIndex = -1
         _isPlaying.value = false
         _isLoading.value = false
@@ -648,6 +688,10 @@ class TtsReadAloudEngine(
         }
         updatePlaybackTimeline()
         prefetch(index + 1)
+    }
+
+    private fun emitFinished(index: Int) {
+        sentences.getOrNull(index)?.let(_finishedSentences::tryEmit)
     }
 
     private fun updateSentenceDuration(index: Int, durationMs: Long) {
