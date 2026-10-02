@@ -159,10 +159,31 @@ class ReaderRecapCaptureTest {
         runCurrent()
         assertTrue(h.appended.isEmpty())
 
+        // After read-aloud the page needs a full dwell of its own.
         h.capture.setPlayback(isPlaying = false, isDeviceVoice = true)
         advanceTimeBy(2_001)
         runCurrent()
+        assertTrue(h.appended.isEmpty())
+        advanceTimeBy(3_000)
+        runCurrent()
         assertEquals(1, h.appended.size)
+    }
+
+    @Test
+    fun gapsInReadAloudDontAddUpToADwell() = runTest {
+        val h = Harness(this)
+        h.screen = visible(0, 24)
+        h.capture.onPageShown(page(0.1))
+        repeat(4) {
+            // Synthesis gap between sentences, then speaking again.
+            advanceTimeBy(2_000)
+            h.capture.setPlayback(isPlaying = true, isDeviceVoice = true)
+            advanceTimeBy(4_000)
+            h.capture.setPlayback(isPlaying = false, isDeviceVoice = true)
+        }
+        runCurrent()
+
+        assertTrue(h.appended.isEmpty())
     }
 
     @Test

@@ -49,6 +49,12 @@ class RecapPageDwell<P : Any>(
         counting = enabled
     }
 
+    /** The current page starts its dwell over (its text wasn't being read). */
+    fun restart(nowMs: Long) {
+        visibleMs = 0L
+        countingSinceMs = if (counting) nowMs else null
+    }
+
     /** Time until the page is due; null when nothing is pending. */
     fun remainingMs(nowMs: Long): Long? {
         if (page == null || taken || !counting) return null

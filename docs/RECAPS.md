@@ -65,7 +65,7 @@ appended **at the event**, never at close, because `close()` tears down the WebV
 
 | Source | When it counts | What is appended |
 |---|---|---|
-| Manual reading (`PAGE`) | the page has been visible ≥ `PAGE_DWELL_MS` (5 s) in the foreground, with no startup prompt open and device TTS not speaking | `BookController.getVisibleTextRange()`: first to last visible word, with chapter offsets |
+| Manual reading (`PAGE`) | the page has been visible ≥ `PAGE_DWELL_MS` (5 s) in the foreground, with no startup prompt open and device read-aloud not active (playing, loading, extracting or synthesising); after read-aloud stops the page starts a fresh dwell | `BookController.getVisibleTextRange()`: first to last visible word, with chapter offsets |
 | Device TTS (`TTS_SENTENCE`, Android) | `TtsController.finishedSentences`: the sentence's audio played to its end. Skips, seeks, stops and unsynthesised sentences don't count | that sentence |
 | Narration (media overlays) | through the pages it turns, foreground only | as `PAGE` |
 

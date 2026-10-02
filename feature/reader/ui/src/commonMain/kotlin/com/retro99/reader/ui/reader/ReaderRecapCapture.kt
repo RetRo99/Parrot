@@ -64,6 +64,7 @@ internal class ReaderRecapCapture(
     private var playing = false
     private var deviceVoice = false
     private var blocked = false
+    private var readingAloud = false
 
     init {
         clock.setActive(true, nowMs())
@@ -84,7 +85,10 @@ internal class ReaderRecapCapture(
         updateCounting()
     }
 
-    /** Device read-aloud captures sentences itself, so pages pause meanwhile. */
+    /**
+     * Device read-aloud captures sentences itself, so pages pause meanwhile.
+     * [isPlaying] must stay true while it loads or synthesises, too.
+     */
     fun setPlayback(isPlaying: Boolean, isDeviceVoice: Boolean) {
         playing = isPlaying
         deviceVoice = isDeviceVoice
@@ -130,7 +134,11 @@ internal class ReaderRecapCapture(
         if (summary != null) return
         val now = nowMs()
         clock.setActive(foreground || playing, now)
-        dwell.setCounting(foreground && !blocked && !(playing && deviceVoice), now)
+        val aloud = playing && deviceVoice
+        dwell.setCounting(foreground && !blocked && !aloud, now)
+        // Time on the page before or during read-aloud wasn't reading it.
+        if (readingAloud && !aloud) dwell.restart(now)
+        readingAloud = aloud
         scheduleDwell()
     }
 

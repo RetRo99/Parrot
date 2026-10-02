@@ -3057,9 +3057,13 @@ class ReaderViewModel(
         capture.setForeground(isReaderVisible)
         viewState
             .map { state ->
+                val deviceVoice = state.listenSource == ListenSource.DEVICE_VOICE
+                // Extraction and synthesis gaps are still read-aloud, not reading.
+                val readAloudActive = deviceVoice &&
+                    (state.isNarrationLoading || state.isNarrationStartPending)
                 Triple(
-                    state.isPlaying,
-                    state.listenSource == ListenSource.DEVICE_VOICE,
+                    state.isPlaying || readAloudActive,
+                    deviceVoice,
                     state.positionConflict != null || state.linkedResumeOffer != null,
                 )
             }

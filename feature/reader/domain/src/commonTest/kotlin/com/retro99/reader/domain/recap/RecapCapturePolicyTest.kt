@@ -19,6 +19,18 @@ class RecapPageDwellTest {
     }
 
     @Test
+    fun restartDropsTheTimeAlreadySpent() {
+        val dwell = RecapPageDwell<String>(dwellMs = 5_000)
+        dwell.show("p1", 0)
+        dwell.setCounting(false, 4_000)
+        dwell.setCounting(true, 10_000)
+        dwell.restart(10_000)
+
+        assertNull(dwell.takeDue(14_999))
+        assertEquals("p1", dwell.takeDue(15_000))
+    }
+
+    @Test
     fun fastFlipsAreNeverDue() {
         val dwell = RecapPageDwell<String>(dwellMs = 5_000)
         dwell.show("p1", 0)
