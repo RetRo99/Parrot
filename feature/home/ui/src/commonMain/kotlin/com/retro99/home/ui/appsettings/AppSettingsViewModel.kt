@@ -9,10 +9,12 @@ import com.retro99.base.ui.BaseViewModel
 import com.retro99.base.ui.compose.ThemeMode
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
+import com.retro99.reader.domain.recap.RecapSettings
 import com.retro99.reader.domain.usecase.ClearCurrentlyReadingUseCase
 import com.retro99.reader.domain.usecase.ObserveCurrentlyReadingUseCase
 import com.retro99.server.api.ServerRegistry
 import com.retro99.user.api.UserRegistry
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
@@ -31,6 +33,7 @@ class AppSettingsViewModel(
     @Provided private val observeCurrentlyReadingUseCase: ObserveCurrentlyReadingUseCase,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val analytics: Analytics,
+    @Provided private val recapSettings: RecapSettings,
 ) : BaseViewModel<AppSettingsViewState, AppSettingsIntent>(
     AppSettingsViewState(),
 ) {
@@ -56,6 +59,10 @@ class AppSettingsViewModel(
         observeBooleanPref(PreferencesKey.ShowContinueReading, defaultValue = true) { enabled ->
             updateState { it.copy(showContinueReading = enabled) }
         }
+        recapSettings.observeCloudRecapsEnabled()
+            .onEach { enabled -> updateState { it.copy(cloudRecapsEnabled = enabled) } }
+            .catch { error -> logCloudRecapsFailure(error, stage = "observe") }
+            .launchIn(viewModelScope)
         preferences.observeStringOrNull(PreferencesKey.ThemeMode)
             .onEach { storedKey ->
                 val themeMode = ThemeMode.fromKey(storedKey) ?: ThemeMode.Night
@@ -149,6 +156,7 @@ class AppSettingsViewModel(
                 updateState { it.copy(themeMode = intent.themeMode) }
             }
             is AppSettingsIntent.OnShowContinueReadingToggled -> setShowContinueReading(intent.enabled)
+            is AppSettingsIntent.OnCloudRecapsToggled -> setCloudRecapsEnabled(intent.enabled)
             AppSettingsIntent.OnClearCurrentBookClicked -> clearCurrentBook()
             AppSettingsIntent.OnCurrentBookClearedMessageShown -> onCurrentBookClearedMessageShown()
             AppSettingsIntent.OnCurrentBookClearFailedMessageShown -> onCurrentBookClearFailedMessageShown()
@@ -496,6 +504,34 @@ class AppSettingsViewModel(
         ) {
             updateState { it.copy(showContinueReading = enabled) }
         }
+    }
+
+    private fun setCloudRecapsEnabled(enabled: Boolean) {
+        updateState { it.copy(cloudRecapsEnabled = enabled) }
+        viewModelScope.launch {
+            try {
+                recapSettings.setCloudRecapsEnabled(enabled)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                logCloudRecapsFailure(error, stage = "save")
+                updateState { it.copy(cloudRecapsEnabled = !enabled).withAppSettingSaveFailure() }
+            }
+        }
+    }
+
+    private fun logCloudRecapsFailure(error: Throwable, stage: String) {
+        analytics.logException(
+            error,
+            DiagnosticContext(
+                screen = "app_settings",
+                action = "cloud_recaps",
+                operation = "cloud_recaps_setting",
+                stage = stage,
+                outcome = "failed",
+                reasonCode = if (stage == "save") "preference_write_failed" else "preference_observe_failed",
+            ),
+        )
     }
 
     private fun runAppSettingToggle(

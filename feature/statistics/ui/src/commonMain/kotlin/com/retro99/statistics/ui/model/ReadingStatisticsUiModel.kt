@@ -54,6 +54,12 @@ data class ReadingSessionUiModel(
     val durationFormatted: TextWrapper,
     val dateFormatted: String,
     val readingSpeedFormatted: TextWrapper,
+    val endTimeFormatted: String = "",
+    val readingSpeedWpm: Int = 0,
+    val startProgression: Double? = null,
+    val endProgression: Double? = null,
+    /** Links to the recap of the same reader session; null when none was recorded. */
+    val recapSessionId: String? = null,
 )
 
 fun ReadingStatisticsDomainModel.toUiModel(): ReadingStatisticsUiModel {
@@ -127,6 +133,11 @@ fun ReadingSessionDomainModel.toSessionUiModel(): ReadingSessionUiModel {
         durationFormatted = formatDuration(durationMs),
         dateFormatted = formatSessionDate(startTime),
         readingSpeedFormatted = formatReadingSpeed(readingSpeedWpm),
+        endTimeFormatted = formatSessionTime(endTime),
+        readingSpeedWpm = readingSpeedWpm,
+        startProgression = startProgression,
+        endProgression = endProgression,
+        recapSessionId = recapSessionId,
     )
 }
 
@@ -139,6 +150,12 @@ private fun formatSessionDate(timestamp: Long): String {
     val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     val month = localDateTime.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
     val day = localDateTime.dayOfMonth
+    return "$month $day, ${formatSessionTime(timestamp)}"
+}
+
+private fun formatSessionTime(timestamp: Long): String {
+    val instant = Instant.fromEpochMilliseconds(timestamp)
+    val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
     val hour = localDateTime.hour
     val minute = localDateTime.minute.toString().padStart(2, '0')
     val amPm = if (hour < 12) "AM" else "PM"
@@ -147,5 +164,5 @@ private fun formatSessionDate(timestamp: Long): String {
         hour > 12 -> hour - 12
         else -> hour
     }
-    return "$month $day, $displayHour:$minute $amPm"
+    return "$displayHour:$minute $amPm"
 }

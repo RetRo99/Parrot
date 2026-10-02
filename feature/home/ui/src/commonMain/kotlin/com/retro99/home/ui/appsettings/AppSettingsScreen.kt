@@ -31,6 +31,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Cloud
 import androidx.compose.material.icons.outlined.DeleteSweep
@@ -106,6 +107,8 @@ import resources.translations.app_settings_theme_night
 import resources.translations.app_settings_title
 import resources.translations.app_settings_version
 import resources.translations.settings_app_name
+import resources.translations.settings_cloud_recaps_subtitle
+import resources.translations.settings_cloud_recaps_title
 import resources.translations.settings_continue_reading_subtitle
 import resources.translations.settings_continue_reading_title
 import resources.translations.settings_diagnostics_subtitle
@@ -285,6 +288,16 @@ private fun AppSettingsScreenContent(
                     checked = viewState.showContinueReading,
                     onCheckedChange = { enabled ->
                         intentDispatcher(AppSettingsIntent.OnShowContinueReadingToggled(enabled))
+                    },
+                )
+                EmberRowDivider()
+                EmberSwitchRow(
+                    title = stringResource(StringRes.settings_cloud_recaps_title),
+                    subtitle = stringResource(StringRes.settings_cloud_recaps_subtitle),
+                    icon = Icons.Outlined.AutoAwesome,
+                    checked = viewState.cloudRecapsEnabled,
+                    onCheckedChange = { enabled ->
+                        intentDispatcher(AppSettingsIntent.OnCloudRecapsToggled(enabled))
                     },
                 )
                 if (viewState.hasCurrentlyReadingBook) {

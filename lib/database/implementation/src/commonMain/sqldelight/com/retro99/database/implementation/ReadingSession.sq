@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS reading_session (
     pages_read INTEGER,
     start_progression REAL,
     end_progression REAL,
-    reading_speed_wpm INTEGER
+    reading_speed_wpm INTEGER,
+    -- session_recap.session_id of the same reader session (33.sqm). Local only.
+    recap_session_id TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_reading_session_book ON reading_session(book_uuid);
@@ -24,9 +26,10 @@ CREATE INDEX IF NOT EXISTS idx_reading_session_start_time ON reading_session(sta
 insertSession:
 INSERT INTO reading_session(
     book_uuid, book_title, book_type, start_time, end_time, duration_ms,
-    pages_read, start_progression, end_progression, reading_speed_wpm
+    pages_read, start_progression, end_progression, reading_speed_wpm,
+    recap_session_id
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getAllSessions:
 SELECT * FROM reading_session ORDER BY start_time DESC;
@@ -108,6 +111,17 @@ DELETE FROM reading_session WHERE id = ?;
 
 deleteAllSessions:
 DELETE FROM reading_session;
+
+-- A deleted statistics session takes its recap with it.
+deleteRecapOfSession:
+DELETE FROM session_recap WHERE session_id = (
+    SELECT recap_session_id FROM reading_session WHERE id = ?
+);
+
+deleteLinkedRecaps:
+DELETE FROM session_recap WHERE session_id IN (
+    SELECT recap_session_id FROM reading_session WHERE recap_session_id IS NOT NULL
+);
 
 
 moveReadingSessions:

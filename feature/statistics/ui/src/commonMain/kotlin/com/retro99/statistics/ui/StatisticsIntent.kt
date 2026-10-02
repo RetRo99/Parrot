@@ -17,4 +17,7 @@ sealed interface StatisticsIntent : BaseIntent {
     data object OnTotalSessionsClicked : StatisticsIntent
     data object OnRetryDetail : StatisticsIntent
     data object OnDismissDetail : StatisticsIntent
+    data class OnSessionClicked(val sessionId: Long) : StatisticsIntent
+    data object OnSessionDetailClosed : StatisticsIntent
+    data object OnRetryRecap : StatisticsIntent
 }

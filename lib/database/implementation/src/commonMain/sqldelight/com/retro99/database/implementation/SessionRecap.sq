@@ -221,6 +221,12 @@ DELETE FROM session_recap WHERE session_id = ?;
 deleteForBook:
 DELETE FROM session_recap WHERE book_uuid = ?;
 
+-- A book removed from the device; a server copy of it keeps its recaps.
+deleteForRemovedBook:
+DELETE FROM session_recap
+WHERE book_uuid = :bookUuid
+  AND book_uuid NOT IN (SELECT uuid FROM books);
+
 moveRecaps:
 UPDATE session_recap SET book_uuid = ? WHERE book_uuid = ?;
 

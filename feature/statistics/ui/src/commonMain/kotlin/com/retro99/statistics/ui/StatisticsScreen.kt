@@ -180,6 +180,9 @@ private fun StatisticsScreenContent(
                 sessionsDetailState = sessionsDetailState,
                 onDismiss = { intentDispatcher(StatisticsIntent.OnDismissDetail) },
                 onRetry = { intentDispatcher(StatisticsIntent.OnRetryDetail) },
+                onSessionClick = { id -> intentDispatcher(StatisticsIntent.OnSessionClicked(id)) },
+                onSessionDetailBack = { intentDispatcher(StatisticsIntent.OnSessionDetailClosed) },
+                onRetryRecap = { intentDispatcher(StatisticsIntent.OnRetryRecap) },
             )
         }
     }

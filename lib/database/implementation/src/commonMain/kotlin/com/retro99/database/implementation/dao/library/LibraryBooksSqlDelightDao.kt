@@ -211,6 +211,7 @@ internal fun AppDatabase.deleteBookFromDeviceRows(libraryBookId: String) {
         cloudBookFileStateQueries.deleteCloudBookFileStatesForBook(libraryBookId)
         cloudFileTransferQueries.deleteTransfersForBook(libraryBookId)
         libraryBookQueries.deleteLibraryBook(libraryBookId)
+        sessionRecapQueries.deleteForRemovedBook(libraryBookId)
         syncOutboxQueries.deletePendingMutationsForEntityAnyUser(
             entity_type = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
             entity_id = libraryBookId,

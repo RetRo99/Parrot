@@ -127,7 +127,7 @@ class LibraryBookMergeTest {
             "b1", FROM, "c1", null, null, null, null, null, null, "2026-09-01", 0, null, null,
         )
         database.readingSessionQueries.insertSession(
-            FROM, "Book", "ebook", 1, 2, 1, null, null, null, null,
+            FROM, "Book", "ebook", 1, 2, 1, null, null, null, null, null,
         )
 
         // When

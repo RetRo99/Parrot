@@ -18,5 +18,7 @@ data class ReadingSessionDomainModel(
     val startProgression: Double?,
     val endProgression: Double?,
     val readingSpeedWpm: Int,
+    /** Recap of the same reader session, if one was recorded. Local only. */
+    val recapSessionId: String? = null,
 )
 

@@ -100,6 +100,8 @@ data class SessionRecap(
     val updatedAt: Long,
     val endedAt: Long?,
     val generatedAt: Long?,
+    /** A failed recap whose text is still stored and wasn't rejected. */
+    val canRetry: Boolean = false,
 ) {
     /** True while a result may still arrive without user action. */
     val isInProgress: Boolean

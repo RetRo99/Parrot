@@ -265,12 +265,15 @@ class StatisticsLoadFailureTest {
         ),
         preferences = InMemoryPreferences(),
         analytics = analytics,
+        recapRepository = FakeRecapRepository(),
+        recapSettings = FakeRecapSettings(),
+        recapEngineSelector = FakeRecapEngineSelector(),
     )
 }
 
 private const val OVERVIEW_LOADS = 10
 
-private class InMemoryPreferences : Preferences {
+internal class InMemoryPreferences : Preferences {
     private val values = mutableMapOf<String, String>()
 
     override fun getStringOrNull(key: PreferencesKey): String? = values[key.name]
@@ -291,7 +294,7 @@ private class InMemoryPreferences : Preferences {
     }
 }
 
-private class RecordingAnalytics : Analytics {
+internal class RecordingAnalytics : Analytics {
     val events = mutableListOf<AnalyticsEvent>()
     val breadcrumbs = mutableListOf<DiagnosticContext>()
     val exceptionContexts = mutableListOf<DiagnosticContext>()
@@ -313,7 +316,7 @@ private class RecordingAnalytics : Analytics {
     override fun setUserId(userId: String?) = Unit
 }
 
-private class FakeStatisticsRepository(
+internal class FakeStatisticsRepository(
     private val statisticsResults: MutableList<AppResult<ReadingStatisticsDomainModel>>,
     private val periodBookResults: MutableList<AppResult<List<BookReadingStatsDomainModel>>> =
         mutableListOf(Ok(emptyList())),
@@ -362,7 +365,7 @@ private class FakeStatisticsRepository(
     override suspend fun clearAllSessions(): CompletableResult = Ok(Unit)
 }
 
-private fun emptyStatistics() = ReadingStatisticsDomainModel(
+internal fun emptyStatistics() = ReadingStatisticsDomainModel(
     totalReadingTimeMs = 0,
     todayReadingTimeMs = 0,
     weekReadingTimeMs = 0,

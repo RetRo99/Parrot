@@ -2619,6 +2619,8 @@ class ReaderViewModel(
         // outbox holds the reading position even if the checkpoint below never runs.
         if (hasRequestedClose) return
         hasRequestedClose = true
+        // Kept for the statistics row; endRecapSession() clears it.
+        val closedRecapSessionId = recapSessionId
         endRecapSession()
         completeContinueReadingOpen(
             outcome = ContinueReadingOpenOutcome.Cancelled,
@@ -2671,6 +2673,7 @@ class ReaderViewModel(
                     durationMs = readingDurationMs,
                     endProgression = currentState.currentPosition?.totalProgression,
                     readingSpeedWpm = sessionReadingSpeedWpm,
+                    recapSessionId = closedRecapSessionId,
                 )
             }
 

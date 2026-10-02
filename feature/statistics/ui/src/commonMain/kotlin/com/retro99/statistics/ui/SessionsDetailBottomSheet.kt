@@ -1,5 +1,6 @@
 package com.retro99.statistics.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +41,9 @@ fun SessionsDetailBottomSheet(
     sessionsDetailState: SessionsDetailState,
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
+    onSessionClick: (Long) -> Unit,
+    onSessionDetailBack: () -> Unit,
+    onRetryRecap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -49,6 +53,15 @@ fun SessionsDetailBottomSheet(
         sheetState = sheetState,
         modifier = modifier,
     ) {
+        val selected = sessionsDetailState.selected
+        if (selected != null) {
+            SessionDetailContent(
+                detail = selected,
+                onBack = onSessionDetailBack,
+                onRetryRecap = onRetryRecap,
+            )
+            return@ModalBottomSheet
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -106,7 +119,10 @@ fun SessionsDetailBottomSheet(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         itemsIndexed(sessionsDetailState.sessions) { index, session ->
-                            SessionItem(session = session)
+                            SessionItem(
+                                session = session,
+                                modifier = Modifier.clickable { onSessionClick(session.id) },
+                            )
                             if (index < sessionsDetailState.sessions.lastIndex) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 4.dp),
