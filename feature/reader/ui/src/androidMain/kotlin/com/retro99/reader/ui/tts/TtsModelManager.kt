@@ -178,13 +178,18 @@ class TtsModelManager(
                 if (!installVersion(entry, modelId, onProgress)) {
                     return@withContext null
                 }
+                // Only move .active to a version the engine can load, so a bad
+                // manifest never replaces a working model.
+                val modelFiles = files(versionDir(modelId, entry.version))
+                if (!isComplete(modelFiles)) {
+                    throw IOException("Installed $modelId ${entry.version} is incomplete")
+                }
                 writeActiveVersion(modelId, entry.version)
                 deleteOutdatedVersions(
                     modelId = modelId,
                     keepVersions = listOfNotNull(previousVersion, entry.version),
                 )
-                val modelFiles = files(versionDir(modelId, entry.version))
-                modelFiles.takeIf(isComplete)
+                modelFiles
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -275,6 +280,7 @@ class TtsModelManager(
 
         val destination = targetDir.resolveInside(file.path)
         destination.delete()
+        destination.parentFile?.mkdirs()
         return try {
             Os.link(source.absolutePath, destination.absolutePath)
             true
@@ -294,7 +300,7 @@ class TtsModelManager(
         files: (File) -> T,
         isComplete: (T) -> Boolean,
     ): T? {
-        val completeVersion = modelRoot(modelId)
+        val completeVersion = (trustedModelRoot(modelId) ?: return null)
             .listFiles()
             ?.filter { child -> child.isDirectory && child.name.isSafeVersionName() }
             ?.sortedByDescending { child -> child.name }
@@ -350,10 +356,7 @@ class TtsModelManager(
             }
         }
 
-        val connection = (URL(file.url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
-            instanceFollowRedirects = true
+        val connection = openTrustedConnection(file.url) {
             setRequestProperty("Accept-Encoding", "identity")
             if (offset > 0L) {
                 setRequestProperty("Range", "bytes=$offset-")
@@ -421,6 +424,7 @@ class TtsModelManager(
         if (extractTo == null) {
             val destination = targetDir.resolveInside(file.path)
             destination.delete()
+            destination.parentFile?.mkdirs()
             if (!partial.renameTo(destination)) {
                 partial.copyTo(destination, overwrite = true)
                 partial.delete()
@@ -431,13 +435,13 @@ class TtsModelManager(
         // Extract to a staging directory and rename it into place so an interrupted
         // extraction is never mistaken for an installed one.
         val stagingDir = targetDir.resolveInside("$extractTo.tmp")
-        stagingDir.deleteRecursively()
+        stagingDir.deleteRecursivelyNoFollow()
         unzip(partial, stagingDir, stripPrefix = extractTo)
         val outputDir = targetDir.resolveInside(extractTo)
-        outputDir.deleteRecursively()
+        outputDir.deleteRecursivelyNoFollow()
         if (!stagingDir.renameTo(outputDir)) {
             stagingDir.copyRecursively(outputDir, overwrite = true)
-            stagingDir.deleteRecursively()
+            stagingDir.deleteRecursivelyNoFollow()
         }
         partial.delete()
     }
@@ -520,35 +524,42 @@ class TtsModelManager(
     private fun modelRoot(modelId: String): File =
         File(File(context.filesDir, MODELS_DIR_NAME), modelId)
 
-    private fun versionDir(modelId: String, version: String): File =
-        modelRoot(modelId).resolveInside(version)
+    /** [modelRoot] anchored to the real filesDir; null if a symlink was planted. */
+    private fun trustedModelRoot(modelId: String): File? =
+        trustedDirectory(context.filesDir, MODELS_DIR_NAME, modelId)
 
-    private fun activeMarker(modelId: String): File =
-        File(modelRoot(modelId), ACTIVE_MARKER_NAME)
+    private fun requireTrustedModelRoot(modelId: String): File =
+        trustedModelRoot(modelId) ?: throw IOException("Untrusted $modelId model directory")
+
+    private fun versionDir(modelId: String, version: String): File =
+        requireTrustedModelRoot(modelId).resolveInside(version)
 
     private fun activeVersion(modelId: String): String? =
-        activeMarker(modelId)
-            .takeIf { marker -> marker.isFile }
+        trustedModelRoot(modelId)
+            ?.let { root -> File(root, ACTIVE_MARKER_NAME) }
+            ?.takeIf { marker -> marker.isFile }
             ?.readText()
             ?.trim()
             ?.takeIf { version -> version.isSafeVersionName() }
 
     private fun writeActiveVersion(modelId: String, version: String) {
-        val marker = activeMarker(modelId)
+        val marker = File(requireTrustedModelRoot(modelId), ACTIVE_MARKER_NAME)
         marker.parentFile?.mkdirs()
         marker.writeText(version)
     }
 
     private fun deleteOutdatedVersions(modelId: String, keepVersions: List<String>) {
-        modelRoot(modelId).listFiles()?.forEach { child ->
+        trustedModelRoot(modelId)?.listFiles()?.forEach { child ->
             if (child.isDirectory && child.name !in keepVersions) {
-                child.deleteRecursively()
+                child.deleteRecursivelyNoFollow()
             }
         }
     }
 
     private fun partialFile(targetDir: File, file: TtsModelFile): File =
-        targetDir.resolveInside("${file.path}.part")
+        targetDir.resolveInside("${file.path}.part").also { partial ->
+            partial.parentFile?.mkdirs()
+        }
 
     private val manifestCacheFile: File
         get() = File(File(context.filesDir, MODELS_DIR_NAME), MANIFEST_CACHE_FILE_NAME)
@@ -567,7 +578,7 @@ class TtsModelManager(
         try {
             var deleted = true
             paths.forEach { path ->
-                if (path.exists() && !path.deleteRecursively()) {
+                if (!path.deleteRecursivelyNoFollow()) {
                     deleted = false
                 }
             }
@@ -615,10 +626,11 @@ class TtsModelManager(
     }
 
     private fun fetchManifest(): TtsModelManifest? {
-        val connection = (URL(MANIFEST_URL).openConnection() as HttpURLConnection).apply {
-            connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
-            instanceFollowRedirects = true
+        val connection = try {
+            openTrustedConnection(MANIFEST_URL) {}
+        } catch (error: IOException) {
+            Log.w(TAG, "Manifest fetch failed", error)
+            return cachedManifest()
         }
         try {
             if (connection.responseCode !in HTTP_SUCCESS_RANGE) {
@@ -642,6 +654,41 @@ class TtsModelManager(
         } finally {
             connection.disconnect()
         }
+    }
+
+    /**
+     * Follows redirects by hand so every hop must be https on a GitHub host;
+     * automatic following would let a redirect hand us any server's bytes.
+     */
+    private fun openTrustedConnection(
+        url: String,
+        configure: HttpURLConnection.() -> Unit,
+    ): HttpURLConnection {
+        var current = URL(url)
+        repeat(MAX_REDIRECTS + 1) {
+            if (current.protocol != "https" ||
+                !TtsModelManifestValidator.isTrustedRedirectHost(current.host)
+            ) {
+                throw IOException("Untrusted download location: ${current.host}")
+            }
+            val connection = (current.openConnection() as HttpURLConnection).apply {
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
+                instanceFollowRedirects = false
+                configure()
+            }
+            val location = try {
+                connection
+                    .takeIf { redirect -> redirect.responseCode in HTTP_REDIRECT_CODES }
+                    ?.getHeaderField("Location")
+            } catch (error: IOException) {
+                connection.disconnect()
+                throw error
+            } ?: return connection
+            connection.disconnect()
+            current = URL(current, location)
+        }
+        throw IOException("Too many redirects for $url")
     }
 
     private fun cacheManifest(body: String) {
@@ -765,5 +812,7 @@ class TtsModelManager(
         private const val HTTP_RANGE_NOT_SATISFIABLE = 416
         private const val TAG = "TtsModelManager"
         private val HTTP_SUCCESS_RANGE = 200..299
+        private val HTTP_REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
+        private const val MAX_REDIRECTS = 5
     }
 }

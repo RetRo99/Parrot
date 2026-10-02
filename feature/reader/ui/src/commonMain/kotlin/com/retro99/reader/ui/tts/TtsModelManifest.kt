@@ -61,10 +61,19 @@ object TtsModelManifestValidator {
     private val segment = Regex("^[A-Za-z0-9._-]+$")
     private val relativePath = Regex("^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$")
     private val releaseAsset = Regex("^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$")
+    private val sha256 = Regex("^[0-9A-Fa-f]{64}$")
+
+    /** Largest single asset and whole model we accept; keeps size sums exact. */
+    const val MAX_FILE_BYTES = 4L * 1024L * 1024L * 1024L
+    const val MAX_TOTAL_BYTES = 8L * 1024L * 1024L * 1024L
 
     /** Returns why [entry] is unsafe, or null when every field is safe to use. */
     fun violation(entry: TtsModelManifestEntry): String? {
         if (!isSafeFolderName(entry.version)) return "unsafe version '${entry.version}'"
+        if (entry.files.isEmpty()) return "no files"
+        val paths = entry.files.map { file -> file.path }
+        if (paths.toSet().size != paths.size) return "duplicate file paths"
+        var totalBytes = 0L
         entry.files.forEach { file ->
             if (!isSafeRelativePath(file.path)) return "unsafe path '${file.path}'"
             val extractTo = file.extractTo
@@ -72,7 +81,11 @@ object TtsModelManifestValidator {
                 return "unsafe extractTo '$extractTo'"
             }
             if (!isTrustedUrl(file.url)) return "untrusted url '${file.url}'"
-            if (file.size < 0L) return "negative size for '${file.path}'"
+            if (file.size !in 0L..MAX_FILE_BYTES) return "bad size for '${file.path}'"
+            if (!sha256.matches(file.sha256)) return "bad sha256 for '${file.path}'"
+            // Each size is capped, so this sum cannot overflow.
+            totalBytes += file.size
+            if (totalBytes > MAX_TOTAL_BYTES) return "model too large"
         }
         return null
     }
@@ -81,6 +94,15 @@ object TtsModelManifestValidator {
 
     fun isSafeRelativePath(path: String): Boolean =
         relativePath.matches(path) && path.split('/').all(::isSafeSegment)
+
+    /**
+     * Hosts a download may be redirected to: GitHub itself and its release
+     * asset CDN. Checked on every hop because redirects are not signed.
+     */
+    fun isTrustedRedirectHost(host: String): Boolean {
+        val normalized = host.lowercase()
+        return normalized == "github.com" || normalized.endsWith(".githubusercontent.com")
+    }
 
     fun isTrustedUrl(url: String): Boolean {
         if (!url.startsWith(TRUSTED_URL_PREFIX)) return false

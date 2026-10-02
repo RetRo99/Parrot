@@ -7,6 +7,9 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class TtsModelPathsTest {
 
@@ -57,6 +60,47 @@ class TtsModelPathsTest {
 
             // Then
             assertFailsWith<IOException> { root.resolveInside("link/file") }
+        } finally {
+            outside.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `trusted directory rejects a symlinked model root`() {
+        // Given
+        val outside = Files.createTempDirectory("tts-outside").toFile()
+        try {
+            File(root, "tts-models").mkdirs()
+            Files.createSymbolicLink(File(root, "tts-models/kokoro").toPath(), outside.toPath())
+
+            // Then
+            assertNull(trustedDirectory(root, "tts-models", "kokoro"))
+            assertEquals(
+                File(root.canonicalFile, "tts-models/supertonic"),
+                trustedDirectory(root, "tts-models", "supertonic"),
+            )
+        } finally {
+            outside.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `no-follow delete removes links without touching their targets`() {
+        // Given
+        val outside = Files.createTempDirectory("tts-outside").toFile()
+        val victim = File(outside, "keep.txt").apply { writeText("keep") }
+        try {
+            val dir = File(root, "v1").apply { mkdirs() }
+            File(dir, "model.bin").writeText("x")
+            Files.createSymbolicLink(File(dir, "link").toPath(), outside.toPath())
+
+            // When
+            val deleted = dir.deleteRecursivelyNoFollow()
+
+            // Then
+            assertTrue(deleted)
+            assertFalse(dir.exists())
+            assertTrue(victim.isFile)
         } finally {
             outside.deleteRecursively()
         }
