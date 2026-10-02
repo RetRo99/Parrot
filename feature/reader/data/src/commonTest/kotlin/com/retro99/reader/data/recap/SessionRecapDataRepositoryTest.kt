@@ -58,4 +58,18 @@ class SessionRecapDataRepositoryTest {
         assertEquals(RecapRetryResult.NOT_RETRYABLE, repository.retry("gone"))
         assertEquals(RecapRetryResult.NOT_FOUND, repository.retry("missing"))
     }
+
+    @Test
+    fun canRetryMatchesWhatRetryAccepts() = runTest {
+        database.put(pendingRow("ok", status = "FAILED_RETRYABLE").copy(lastError = "NETWORK"))
+        database.put(pendingRow("bad", status = "FAILED_PERMANENT").copy(lastError = "EXCERPT_TOO_SHORT"))
+        database.put(pendingRow("gone", status = "FAILED_PERMANENT", excerpt = null))
+        database.put(pendingRow("wait", status = "PENDING"))
+
+        val canRetry = listOf("ok", "bad", "gone", "wait").associateWith { id ->
+            repository.observeRecap(id).first()!!.canRetry
+        }
+
+        assertEquals(mapOf("ok" to true, "bad" to false, "gone" to false, "wait" to false), canRetry)
+    }
 }
