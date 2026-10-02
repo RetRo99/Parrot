@@ -3,6 +3,12 @@ package com.retro99.base
 import java.text.DateFormat
 import java.util.Date
 import java.util.Calendar
+import java.util.Locale
+
+actual fun languageDisplayName(code: String): String {
+    val locale = Locale.forLanguageTag(code.trim().replace('_', '-'))
+    return locale.getDisplayLanguage(Locale.getDefault()).takeIf { it.isNotBlank() } ?: code
+}
 
 /**
  * Android implementation of formatCurrentTime.

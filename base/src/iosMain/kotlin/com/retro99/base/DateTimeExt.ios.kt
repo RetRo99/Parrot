@@ -8,6 +8,14 @@ import platform.Foundation.NSDateFormatterMediumStyle
 import platform.Foundation.NSCalendar
 import platform.Foundation.NSCalendarIdentifierGregorian
 import platform.Foundation.NSDateComponents
+import platform.Foundation.NSLocale
+import platform.Foundation.currentLocale
+
+actual fun languageDisplayName(code: String): String =
+    NSLocale.currentLocale.displayNameForKey(
+        platform.Foundation.NSLocaleLanguageCode,
+        code.trim().replace('_', '-').substringBefore('-'),
+    ) ?: code
 
 /**
  * iOS implementation of formatCurrentTime.

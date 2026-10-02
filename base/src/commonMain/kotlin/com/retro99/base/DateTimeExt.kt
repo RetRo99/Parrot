@@ -22,6 +22,9 @@ expect fun formatCurrentTime(): String
 /** Native medium date style, respecting the current locale. */
 expect fun formatMediumDate(year: Int, month: Int, day: Int): String
 
+/** Language codes (including region tags) displayed in the user's locale. */
+expect fun languageDisplayName(code: String): String
+
 sealed interface CalendarDateLabel {
     data object Today : CalendarDateLabel
     data object Yesterday : CalendarDateLabel
