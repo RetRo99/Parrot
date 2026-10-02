@@ -14,6 +14,11 @@
 //   RECAP_MODEL      optional, defaults per provider
 //   RECAP_BASE_URL   optional, for openai provider (default api.openai.com)
 //   RECAP_PROVIDER   optional, "openai" | "gemini"
+//
+// Callers must be signed-in, non-anonymous users; see guards.ts.
+
+import { createClient, isAuthRetryableFetchError } from 'npm:@supabase/supabase-js@2'
+import { authenticate, type Claims, readJsonBody } from './guards.ts'
 
 const MAX_EXCERPT_CHARS = 8_000
 const MIN_EXCERPT_CHARS = 80
@@ -31,6 +36,36 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Legacy anon key, else the default new publishable key. Only used so
+// getClaims can reach Auth for HS256 tokens; it grants no access itself.
+function clientKey(): string | undefined {
+  const anon = Deno.env.get('SUPABASE_ANON_KEY')
+  if (anon) return anon
+  try {
+    const keys = JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') ?? '{}')
+    return typeof keys?.default === 'string' ? keys.default : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
+const CLIENT_KEY = clientKey()
+const authClient = SUPABASE_URL && CLIENT_KEY
+  ? createClient(SUPABASE_URL, CLIENT_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+  : null
+
+// getClaims checks the signature against JWKS (asymmetric keys) or asks
+// Auth (HS256). Invalid tokens → null; Auth outages throw → 500, not 401.
+async function verifyClaims(token: string): Promise<Claims | null> {
+  const { data, error } = await authClient!.auth.getClaims(token)
+  if (error && isAuthRetryableFetchError(error)) throw error
+  if (error || !data) return null
+  return data.claims as Claims
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -41,14 +76,25 @@ function json(body: unknown, status = 200): Response {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
-  try {
-    // NOTE: verify_jwt = true does NOT mean "signed-in users only" — the anon
-    // key is a valid JWT and passes gateway verification. Resolve the caller
-    // here if you need to require an authenticated account.
-    const token = req.headers.get('Authorization')?.replace('Bearer ', '')
-    if (!token) return json({ error: 'Unauthorized' }, 401)
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
-    const payload = await req.json()
+  try {
+    if (!authClient) {
+      console.error('generate-recap: Supabase URL or key env missing')
+      return json({ error: 'Server configuration is incomplete' }, 500)
+    }
+
+    // verify_jwt = true is not auth: it also admits the publishable key.
+    // The user id comes only from the verified token, never the body.
+    const userId = await authenticate(req, verifyClaims)
+    if (!userId) return json({ error: 'Unauthorized' }, 401)
+
+    const body = await readJsonBody(req)
+    if (!body.ok) {
+      const error = body.status === 413 ? 'Request too large' : 'Invalid JSON body'
+      return json({ error }, body.status)
+    }
+    const payload = (body.value ?? {}) as Record<string, unknown>
     const excerpt = String(payload?.excerpt ?? '').slice(0, MAX_EXCERPT_CHARS)
     if (excerpt.trim().length < MIN_EXCERPT_CHARS) {
       // Do not pay for a model call on unusable input.
