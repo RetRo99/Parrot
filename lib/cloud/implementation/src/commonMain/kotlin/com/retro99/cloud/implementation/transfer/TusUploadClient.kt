@@ -173,7 +173,7 @@ class TusUploadClient(
         val location = response.headers[HttpHeaders.Location]
             ?: error("TUS create response omitted Location")
         return TusCreatedSession(
-            url = resolveLocation(profile.baseUrl, absoluteUrl(profile.baseUrl, endpoint), location),
+            url = resolveLocation(absoluteUrl(profile.baseUrl, endpoint), location),
             offset = response.headers[HEADER_UPLOAD_OFFSET]?.toLongOrNull() ?: 0L,
             expiresAt = response.headers[HEADER_UPLOAD_EXPIRES],
         )
@@ -214,10 +214,13 @@ class TusUploadClient(
             setBody(bytes)
         }
 
-    suspend fun cancel(uploadUrl: String, requestHeaderPolicy: TusRequestHeaderPolicy) {
+    /** Returns false, without sending anything, when [uploadUrl] is off-origin. */
+    suspend fun cancel(profile: TusUploadProfile, uploadUrl: String): Boolean {
+        // Persisted URLs from older builds may be foreign; DELETE carries auth.
+        if (!isTrustedUploadUrl(profile.baseUrl, uploadUrl)) return false
         val response = httpClient.request(uploadUrl) {
             method = HttpMethod.Delete
-            tusHeaders(TusRequestType.Delete, requestHeaderPolicy)
+            tusHeaders(TusRequestType.Delete, profile.requestHeaderPolicy)
         }
         if (response.status.value !in 200..299 && response.status != HttpStatusCode.NotFound &&
             response.status != HttpStatusCode.Gone && response.status != HttpStatusCode.BadRequest
@@ -227,6 +230,7 @@ class TusUploadClient(
                 statusCode = response.status.value,
             )
         }
+        return true
     }
 
     private fun io.ktor.client.request.HttpRequestBuilder.tusHeaders(
@@ -242,13 +246,16 @@ class TusUploadClient(
         else -> "${baseUrl.trimEnd('/')}/${endpoint.trimStart('/')}"
     }
 
-    private fun resolveLocation(baseUrl: String, endpointUrl: String, location: String): String {
-        if (!location.startsWith("https://") && !location.startsWith("http://")) {
-            return "${baseUrl.trimEnd('/')}/${location.trimStart('/')}"
+    private fun resolveLocation(endpointUrl: String, location: String): String {
+        val resolved = if (location.startsWith("https://") || location.startsWith("http://")) {
+            location
+        } else {
+            // Relative to the endpoint's origin, which may be the storage host.
+            "${originOf(endpointUrl)}/${location.trimStart('/')}"
         }
         // Chunks carry the auth headers, so they may only go where we created.
-        check(isTrustedUploadUrl(endpointUrl, location)) { "TUS server returned a foreign Location" }
-        return location
+        check(isTrustedUploadUrl(endpointUrl, resolved)) { "TUS server returned a foreign Location" }
+        return resolved
     }
 
     private data class TusCreatedSession(val url: String, val offset: Long, val expiresAt: String?)
@@ -318,6 +325,12 @@ internal fun isTrustedUploadUrl(endpoint: String, candidate: String): Boolean {
             ref == actualHost.supabaseProjectRef(domain)
         } == true
     }
+}
+
+private fun originOf(url: String): String {
+    val parsed = Url(url)
+    val port = if (parsed.port == parsed.protocol.defaultPort) "" else ":${parsed.port}"
+    return "${parsed.protocol.name}://${parsed.host}$port"
 }
 
 /** `ref` for `ref.supabase.co` or `ref.storage.supabase.co`, else null. */

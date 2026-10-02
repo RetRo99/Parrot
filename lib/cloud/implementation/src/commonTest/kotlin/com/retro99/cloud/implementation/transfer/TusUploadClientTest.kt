@@ -553,6 +553,65 @@ class TusUploadClientTest {
     }
 
     @Test
+    fun relativeLocationResolvesAgainstStorageHostEndpoint() = runTest {
+        val seen = mutableListOf<Pair<HttpMethod, String>>()
+        val client = newClient(byteArrayOf(1, 2, 3, 4)) { request ->
+            seen += request.method to request.url.toString()
+            when (request.method) {
+                HttpMethod.Post -> respond(
+                    content = "",
+                    status = HttpStatusCode.Created,
+                    headers = headersOf(HttpHeaders.Location, "/storage/v1/upload/resumable/s"),
+                )
+
+                HttpMethod.Patch -> respond(
+                    content = "",
+                    status = HttpStatusCode.NoContent,
+                    headers = headersOf("Upload-Offset", "4"),
+                )
+
+                else -> error("Unexpected TUS method ${request.method}")
+            }
+        }
+
+        val url = client.upload(
+            uploadEndpoint = "https://cloud.storage.example:8443/storage/v1/upload/resumable",
+            storagePath = "users/u/books/b/f.epub",
+            localPath = "local.epub",
+            sizeBytes = 4,
+            contentHash = "abcd",
+            resumeUrl = null,
+            resumeOffset = 0,
+            onSession = { _, _ -> },
+            onHashReset = {},
+            onChunkHashed = {},
+            onProgress = {},
+        )
+
+        val session = "https://cloud.storage.example:8443/storage/v1/upload/resumable/s"
+        assertEquals(session, url)
+        assertEquals(HttpMethod.Patch to session, seen.last())
+        client.httpClient.close()
+    }
+
+    @Test
+    fun cancelSkipsAuthenticatedDeleteForOffOriginUrl() = runTest {
+        val seen = mutableListOf<String>()
+        val client = newClient(byteArrayOf(1)) { request ->
+            seen += request.url.toString()
+            assertEquals("Bearer test-jwt", request.headers[HttpHeaders.Authorization])
+            respond(content = "", status = HttpStatusCode.NoContent)
+        }
+
+        assertFalse(client.tus.cancel(client.profile, "https://evil.example/upload/1"))
+        assertFalse(client.tus.cancel(client.profile, "http://cloud.example/upload/1"))
+        assertTrue(client.tus.cancel(client.profile, "https://cloud.example/upload/1"))
+
+        assertEquals(listOf("https://cloud.example/upload/1"), seen)
+        client.httpClient.close()
+    }
+
+    @Test
     fun trustedUploadUrlRequiresSameOriginOrSameSupabaseProject() {
         val endpoint = "https://ref.supabase.co/storage/v1/upload/resumable"
         assertTrue(isTrustedUploadUrl(endpoint, "https://ref.supabase.co:443/storage/v1/x"))
