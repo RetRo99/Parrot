@@ -1,5 +1,6 @@
 package com.retro99.books.data.transfer
 
+import com.retro99.base.file.safeFileName
 import com.retro99.books.data.calculateFileContentHash
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
@@ -26,11 +27,11 @@ class IosBookFileTransferFileStore : BookFileTransferFileStore {
         // D4: partial transfers belong in the purgeable temporary directory,
         // never in Documents. A vanished staging file simply restarts the
         // transfer.
-        "${NSTemporaryDirectory()}book_file_transfers/${transferId.safeName()}.part"
+        "${NSTemporaryDirectory()}book_file_transfers/${transferId.safeFileName()}.part"
 
     // Documents/library holds your library; the reader cache lives in Caches/ebooks (I6).
     override fun libraryFilePath(libraryBookId: String, mediaType: String): String =
-        "${documentsDirectory()}/library/${libraryBookId.safeName()}_${mediaType.safeName()}.epub"
+        "${documentsDirectory()}/library/${libraryBookId.safeFileName()}_${mediaType.safeFileName()}.epub"
 
     override suspend fun exists(path: String): Boolean = NSFileManager.defaultManager.fileExistsAtPath(path)
 
@@ -95,7 +96,7 @@ class IosBookFileTransferFileStore : BookFileTransferFileStore {
     }
 
     override suspend fun writeCover(libraryBookId: String, bytes: ByteArray): String {
-        val path = "${documentsDirectory()}/imported_covers/${libraryBookId.safeName()}.png"
+        val path = "${documentsDirectory()}/imported_covers/${libraryBookId.safeFileName()}.png"
         ensureParent(path)
         val fileManager = NSFileManager.defaultManager
         if (!fileManager.createFileAtPath(path, contents = null, attributes = null) &&
@@ -136,7 +137,3 @@ class IosBookFileTransferFileStore : BookFileTransferFileStore {
         }
     }
 }
-
-private fun String.safeName(): String = map { character ->
-    if (character.isLetterOrDigit() || character == '-' || character == '_') character else '_'
-}.joinToString("")
