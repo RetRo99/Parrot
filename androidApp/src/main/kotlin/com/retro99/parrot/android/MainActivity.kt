@@ -17,6 +17,7 @@ import com.retro99.login.data.oauth.StorytellerOAuthCallbackRegistry
 import com.retro99.parrot.App
 import com.retro99.parrot.lifecycle.AppVisibilityReporter
 import com.retro99.parrot.CloudOAuthCallbackBridge
+import com.retro99.parrot.RecapTriggerBridge
 import com.retro99.parrot.SyncTriggerBridge
 import com.retro99.reader.ui.fragment.EpubFragmentFactoryHelper
 import com.retro99.reader.ui.playback.NotificationPermissionHandler
@@ -43,6 +44,7 @@ class MainActivity : FragmentActivity() {
             if (wasUnavailable && hasStarted) {
                 SyncWorkScheduler.enqueue(this@MainActivity)
                 requestConnectivitySync()
+                RecapTriggerBridge.onConnectivityRestored()
             }
         }
 
@@ -121,6 +123,8 @@ class MainActivity : FragmentActivity() {
         if (!isChangingConfigurations) {
             SyncTriggerBridge.shared.onBackground()
             SyncWorkScheduler.enqueue(this)
+            // Finish recaps of a session that just ended.
+            RecapWorkScheduler.enqueue(this)
         }
         appVisibilityReporter.onActivityStopped(
             isChangingConfigurations = isChangingConfigurations,
@@ -133,6 +137,7 @@ class MainActivity : FragmentActivity() {
         super.onResume()
         SyncWorkScheduler.enqueue(this)
         val reason = if (hasStarted) {
+            RecapTriggerBridge.onForeground()
             SyncTriggerReason.LIFECYCLE
         } else {
             hasStarted = true

@@ -15,5 +15,6 @@ class ParrotApplication : Application() {
         }
         SyncWorkScheduler.enqueue(this)
         SyncWorkScheduler.ensurePeriodic(this)
+        RecapWorkScheduler.ensurePeriodic(this)
     }
 }

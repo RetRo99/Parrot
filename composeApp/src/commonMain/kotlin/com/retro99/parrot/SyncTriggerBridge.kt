@@ -27,14 +27,20 @@ object SyncTriggerBridge {
 
     fun onStartup() = request(SyncTriggerReason.STARTUP)
 
-    fun onForeground() = request(SyncTriggerReason.LIFECYCLE)
+    fun onForeground() {
+        request(SyncTriggerReason.LIFECYCLE)
+        RecapTriggerBridge.onForeground()
+    }
 
     fun onBackground() = request(
         reason = SyncTriggerReason.LIFECYCLE,
         urgency = SyncUrgency.URGENT,
     )
 
-    fun onConnectivityRestored() = request(SyncTriggerReason.CONNECTIVITY)
+    fun onConnectivityRestored() {
+        request(SyncTriggerReason.CONNECTIVITY)
+        RecapTriggerBridge.onConnectivityRestored()
+    }
 
     /** Runs one persisted-background recovery pass and reports completion to the platform. */
     fun onRecovery(onComplete: (Boolean) -> Unit) {
