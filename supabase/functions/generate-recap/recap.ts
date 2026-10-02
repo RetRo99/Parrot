@@ -267,6 +267,9 @@ export async function requestRecap(
     messages: req.messages,
     temperature: TEMPERATURE,
     max_tokens: MAX_OUTPUT_TOKENS,
+    // Recaps don't need thinking; both allowed models accept this and it
+    // cut median latency ~4.7 s -> ~2.9 s in live tests (2026-10-02).
+    reasoning_effort: 'none',
     stream: false,
   })
 

@@ -280,6 +280,7 @@ Deno.test('provider: sends the fixed URL, headers and body', async () => {
     messages: REQ.messages,
     temperature: TEMPERATURE,
     max_tokens: MAX_OUTPUT_TOKENS,
+    reasoning_effort: 'none',
     stream: false,
   })
   assertEquals(body.temperature, 0.3)
