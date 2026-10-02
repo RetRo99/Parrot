@@ -157,7 +157,7 @@ CAPTURING ─► SKIPPED_INELIGIBLE
 | `RecapRepository.observeHistory(bookId)` | history, newest first |
 | `RecapRepository.retry(sessionId): RecapRetryResult` | explicit user retry |
 | `RecapSettings.observeCloudRecapsEnabled()` / `setCloudRecapsEnabled()` | consent toggle |
-| `RecapEngineSelector.observeAvailable()` | consent on **and** signed in |
+| `RecapEngineSelector.observeAvailable()` | consent on **and** signed in; emits nothing while the session is still loading |
 
 Observing never triggers generation. `SessionRecap` exposes no excerpt text.
 

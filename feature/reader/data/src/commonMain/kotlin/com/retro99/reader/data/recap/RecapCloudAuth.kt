@@ -7,7 +7,7 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlin.coroutines.cancellation.CancellationException
 
 /** Where the recap function lives. */
@@ -53,7 +53,7 @@ class SupabaseRecapAuthTokens(
     override fun observeSignedIn(): Flow<Boolean> {
         if (!clientProvider.isConfigured) return flowOf(false)
         return clientProvider.observeActiveSessionState()
-            .map { state -> state.status is SessionStatus.Authenticated }
+            .mapNotNull { state -> signedInOrUnknown(state.status) }
             .distinctUntilChanged()
     }
 
@@ -65,6 +65,18 @@ class SupabaseRecapAuthTokens(
         val auth = clientProvider.client.auth
         auth.refreshCurrentSession()
         auth.currentAccessTokenOrNull()
+    }
+
+    internal companion object {
+        /**
+         * Null while the session is still loading: a signed-in user would
+         * otherwise flash "sign in" on every cold start.
+         */
+        fun signedInOrUnknown(status: SessionStatus): Boolean? = when (status) {
+            is SessionStatus.Initializing -> null
+            is SessionStatus.Authenticated -> true
+            else -> false
+        }
     }
 
     // The client throws after a profile switch; treat it as signed out.
