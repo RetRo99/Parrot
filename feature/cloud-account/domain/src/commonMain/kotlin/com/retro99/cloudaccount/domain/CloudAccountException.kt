@@ -14,6 +14,10 @@ sealed class CloudAccountException(message: String, cause: Throwable? = null) : 
     class OAuthCancelled : CloudAccountException("Google sign-in was cancelled")
 
     class OAuthFailure(val reason: OAuthFailureReason) : CloudAccountException("Google sign-in failed")
+
+    // The server wants a recent sign-in before deleting the account.
+    class ReauthenticationRequired(cause: Throwable? = null) :
+        CloudAccountException("Sign in again to delete the cloud account", cause)
 }
 
 enum class OAuthFailureReason(val analyticsCode: String) {
