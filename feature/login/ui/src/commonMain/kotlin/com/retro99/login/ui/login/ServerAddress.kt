@@ -19,8 +19,19 @@ internal object ServerAddress {
         return withScheme.trimEnd('/')
     }
 
-    /** `books.example.com:8001` for `https://books.example.com:8001/path`. */
+    /**
+     * `books.example.com:8001` for `https://books.example.com:8001/path`. Keeps
+     * `http://` so an unencrypted server is never shown like a secure one.
+     */
     fun displayHost(url: String): String {
+        val authority = authority(url)
+        return if (isInsecure(url)) HTTP + authority else authority
+    }
+
+    /** True for plain `http://` addresses, which send credentials unencrypted. */
+    fun isInsecure(url: String): Boolean = url.trim().startsWith(HTTP, ignoreCase = true)
+
+    private fun authority(url: String): String {
         return url.trim()
             .substringAfter("://")
             .substringBefore('/')
@@ -36,7 +47,7 @@ internal object ServerAddress {
         val scheme = trimmedUrl.substring(0, schemeSeparator).lowercase()
         if (scheme != "http" && scheme != "https") return false
 
-        val authority = displayHost(trimmedUrl)
+        val authority = authority(trimmedUrl)
         if (authority.isBlank()) return false
 
         val host = when {

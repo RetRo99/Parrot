@@ -243,6 +243,7 @@ class LoginViewModel(
                 host = host,
                 switched = result.serverType != preferredType,
                 supportsBrowserSignIn = result.supportsBrowserSignIn,
+                isInsecure = ServerAddress.isInsecure(url),
             )
             ServerProbeResult.Unreachable -> AddressCheck.Unreachable(host)
             ServerProbeResult.NotSupported -> AddressCheck.NotSupported
