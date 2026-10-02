@@ -21,7 +21,9 @@ export const NOT_ENOUGH = 'NOT_ENOUGH'
 // reasoning, so leave headroom well above a 2-3 sentence answer.
 export const MAX_OUTPUT_TOKENS = 600
 export const TEMPERATURE = 0.3
-export const TIMEOUT_MS = 20_000
+// Go queues: measured 12-52 s for ~60 output tokens on 2026-10-02.
+// Two attempts still fit the 150 s Edge Function wall clock.
+export const TIMEOUT_MS = 60_000
 const RETRY_DELAY_MS = 400
 
 export const LANGUAGES: Readonly<Record<string, string>> = {
