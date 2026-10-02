@@ -14,6 +14,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TestTimeSource
 import kotlin.time.TimeSource
 
@@ -30,6 +31,7 @@ class StorytellerOAuthCallbackRegistryTest {
     @AfterTest
     fun tearDown() {
         registry.cancelPending("test cleanup")
+        registry.lastAbandonedAt = null
         registry.timeSource = TimeSource.Monotonic
     }
 
@@ -136,5 +138,75 @@ class StorytellerOAuthCallbackRegistryTest {
         registry.handleRedirect("storyteller://settings")
 
         assertIs<AppError.AuthError>(pending.await().getError())
+    }
+
+    @Test
+    fun malformedOrEmptyTokenFailsAttemptWithoutThrowing() = runTest {
+        listOf(
+            "storyteller://settings?token=%",
+            "storyteller://settings?token=%zz",
+            "storyteller://settings?token=",
+            "storyteller://settings?token=%E0%A4%A",
+        ).forEach { uri ->
+            val pending = async(start = CoroutineStart.UNDISPATCHED) {
+                registry.awaitToken {}
+            }
+
+            assertTrue(registry.handleRedirect(uri))
+
+            assertIs<AppError.AuthError>(pending.await().getError(), uri)
+        }
+    }
+
+    @Test
+    fun tokenIsReadFromQueryNotFragment() = runTest {
+        val pending = async(start = CoroutineStart.UNDISPATCHED) {
+            registry.awaitToken {}
+        }
+
+        registry.handleRedirect("storyteller://settings?a=1&token=q#token=frag")
+
+        assertEquals(Ok("q"), pending.await())
+    }
+
+    @Test
+    fun sessionRedirectOnlyCompletesItsOwnAttempt() = runTest {
+        var attemptId = -1L
+        val pending = async(start = CoroutineStart.UNDISPATCHED) {
+            registry.awaitToken { attemptId = it }
+        }
+
+        assertTrue(registry.handleSessionRedirect("storyteller://settings?token=old", attemptId - 1))
+        assertTrue(registry.isPendingActive)
+        registry.handleSessionRedirect("storyteller://settings?token=mine", attemptId)
+
+        assertEquals(Ok("mine"), pending.await())
+    }
+
+    @Test
+    fun unboundCallbackRightAfterAbandonedAttemptFailsClosed() = runTest {
+        var firstId = -1L
+        val first = async(start = CoroutineStart.UNDISPATCHED) {
+            registry.awaitToken { firstId = it }
+        }
+        registry.cancelPending("user went back", firstId)
+        first.await()
+
+        val second = async(start = CoroutineStart.UNDISPATCHED) {
+            registry.awaitToken {}
+        }
+        clock += 1.seconds
+        registry.handleRedirect("storyteller://settings?token=late-from-first")
+
+        val error = assertIs<AppError.AuthError>(second.await().getError())
+        assertFalse(error.isCancellation)
+
+        // The rejection itself does not extend the quiet period.
+        val third = async(start = CoroutineStart.UNDISPATCHED) {
+            registry.awaitToken {}
+        }
+        clock += 3.seconds
+        registry.handleRedirect("storyteller://settings?token=fresh")
+        assertEquals(Ok("fresh"), third.await())
     }
 }

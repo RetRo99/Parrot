@@ -13,7 +13,9 @@ import platform.AuthenticationServices.ASWebAuthenticationSessionErrorCodeCancel
 import platform.AuthenticationServices.ASWebAuthenticationSessionErrorDomain
 import platform.Foundation.NSURL
 import platform.UIKit.UIApplication
+import platform.UIKit.UISceneActivationStateForegroundActive
 import platform.UIKit.UIWindow
+import platform.UIKit.UIWindowScene
 import platform.darwin.NSObject
 
 private const val CALLBACK_SCHEME = "storyteller"
@@ -36,6 +38,8 @@ class IosStorytellerOAuthSessionLauncher : StorytellerOAuthSessionLauncher {
             }
         } finally {
             withContext(NonCancellable + Dispatchers.Main) {
+                // The session holds the provider weakly; keep ours alive until here.
+                session?.let { anchorProvider.detachFrom(it) }
                 session?.cancel()
             }
         }
@@ -51,19 +55,17 @@ class IosStorytellerOAuthSessionLauncher : StorytellerOAuthSessionLauncher {
             callbackURLScheme = CALLBACK_SCHEME,
         ) { callbackUrl, error ->
             val uri = callbackUrl?.absoluteString
-            when {
-                uri != null -> StorytellerOAuthCallbackRegistry.handleRedirect(uri)
-                error?.domain == ASWebAuthenticationSessionErrorDomain &&
-                    error?.code == ASWebAuthenticationSessionErrorCodeCanceledLogin ->
-                    StorytellerOAuthCallbackRegistry.cancelPending(
-                        "OAuth sign-in was cancelled",
-                        attemptId = attemptId,
-                    )
-                else -> StorytellerOAuthCallbackRegistry.cancelPending(
-                    "OAuth sign-in failed",
-                    attemptId = attemptId,
-                )
+            val cancelledByUser = error?.domain == ASWebAuthenticationSessionErrorDomain &&
+                error?.code == ASWebAuthenticationSessionErrorCodeCanceledLogin
+            if (uri != null) {
+                StorytellerOAuthCallbackRegistry.handleSessionRedirect(uri, attemptId)
             }
+            // The sheet is gone either way; end the attempt if nothing did,
+            // e.g. a storyteller:// URL other than the settings callback.
+            StorytellerOAuthCallbackRegistry.cancelPending(
+                if (cancelledByUser) "OAuth sign-in was cancelled" else "OAuth sign-in failed",
+                attemptId = attemptId,
+            )
         }
         // Shared cookies keep existing SSO sessions working.
         session.prefersEphemeralWebBrowserSession = false
@@ -82,10 +84,23 @@ private class PresentationAnchorProvider :
     NSObject(),
     ASWebAuthenticationPresentationContextProvidingProtocol {
 
-    @Suppress("DEPRECATION")
     override fun presentationAnchorForWebAuthenticationSession(
         session: ASWebAuthenticationSession,
     ): ASPresentationAnchor {
-        return UIApplication.sharedApplication.keyWindow ?: UIWindow()
+        // keyWindow is deprecated and can be nil under the scene lifecycle.
+        val scenes = UIApplication.sharedApplication.connectedScenes
+            .filterIsInstance<UIWindowScene>()
+        val scene = scenes.firstOrNull {
+            it.activationState == UISceneActivationStateForegroundActive
+        } ?: scenes.firstOrNull()
+        scene?.keyWindow?.let { return it }
+        scene?.windows?.filterIsInstance<UIWindow>()?.firstOrNull()?.let { return it }
+        return scene?.let { UIWindow(windowScene = it) } ?: UIWindow()
+    }
+
+    fun detachFrom(session: ASWebAuthenticationSession) {
+        if (session.presentationContextProvider === this) {
+            session.presentationContextProvider = null
+        }
     }
 }
