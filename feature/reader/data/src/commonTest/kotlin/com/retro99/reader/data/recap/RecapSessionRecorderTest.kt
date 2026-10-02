@@ -2,7 +2,6 @@ package com.retro99.reader.data.recap
 
 import com.retro99.reader.domain.recap.RecapChapter
 import com.retro99.reader.domain.recap.RecapEligibility
-import com.retro99.reader.domain.recap.RecapLimits
 import com.retro99.reader.domain.recap.RecapPosition
 import com.retro99.reader.domain.recap.RecapTextSource
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -186,15 +185,36 @@ class RecapSessionRecorderTest {
     }
 
     @Test
-    fun excerptIsBoundedToTheMostRecentText() = runTest {
+    fun aLongSessionKeepsEverythingItRead() = runTest {
         val recorder = recorder()
         recorder.onSessionStarted("s1", "server", "book", RecapPosition(totalProgression = 0.0), null)
-        recorder.readPages("s1", pages = 200, from = 0.0)
+        recorder.readPages("s1", pages = 300, from = 0.0)
+        recorder.onSessionEnded("s1", null, null, 600_000)
         testScheduler.advanceUntilIdle()
 
-        val excerpt = database["s1"]!!.excerpt!!
-        assertTrue(excerpt.length <= RecapLimits.MAX_EXCERPT_CHARS)
-        assertTrue(excerpt.endsWith("Page 199."))
+        val row = database["s1"]!!
+        assertEquals("PENDING", row.status)
+        assertTrue(row.excerpt!!.length > 8_000)
+        assertTrue(row.excerpt!!.startsWith(page.trim()))
+        assertTrue(row.excerpt!!.contains("Page 0."))
+        assertTrue(row.excerpt!!.endsWith("Page 299."))
+    }
+
+    @Test
+    fun aLongExcerptIsSavedAtMostEveryInterval() = runTest {
+        val recorder = recorder()
+        recorder.onSessionStarted("s1", "server", "book", RecapPosition(totalProgression = 0.0), null)
+        // ~25k chars: past the size where every append is saved.
+        recorder.readPages("s1", pages = 100, from = 0.0)
+        testScheduler.advanceUntilIdle()
+        val saved = database["s1"]!!.excerpt!!
+        assertTrue(saved.length in 15_500..16_000, "length ${saved.length}")
+
+        clock.nowMs += 30_000
+        recorder.readPages("s1", pages = 1, from = 0.5)
+        testScheduler.advanceUntilIdle()
+        assertTrue(database["s1"]!!.excerpt!!.endsWith("Page 0."))
+        assertTrue(database["s1"]!!.excerpt!!.length > 25_000)
     }
 
     @Test

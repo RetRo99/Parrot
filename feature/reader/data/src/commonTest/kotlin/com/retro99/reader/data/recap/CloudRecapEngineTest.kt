@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
@@ -92,6 +94,74 @@ class CloudRecapEngineTest {
         assertEquals("sl", body["language"]!!.jsonPrimitive.content)
         assertEquals("The last sentence.", body["lastSentence"]!!.jsonPrimitive.content)
         assertEquals(setOf("excerpt", "language", "lastSentence"), body.keys)
+    }
+
+    private suspend fun HttpRequestData.json() =
+        Json.parseToJsonElement(body.toByteArray().decodeToString()).jsonObject
+
+    @Test
+    fun aLongExcerptIsUploadedInPartsThenGenerated() = runTest {
+        // Far past the old 8,000-char cap, in 3-byte chars: nothing is cut.
+        val long = "Dolga seja \u20ac branja. ".repeat(40_000)
+        val result = engine { request ->
+            if (request.json()["text"] != null && request.json()["language"] == null) {
+                json(HttpStatusCode.Accepted, """{"stored":0}""")
+            } else {
+                json(HttpStatusCode.OK, """{"kind":"recap","summary":"Ana left."}""")
+            }
+        }.generate(input.copy(excerpt = long))
+
+        assertEquals(RecapResult.Success("Ana left.", null), result)
+        assertTrue(requests.size > 2)
+        val bodies = requests.map { it.json() }
+        requests.forEach { assertTrue(it.body.toByteArray().size < 256 * 1024) }
+        val ids = bodies.map { it["upload"]!!.jsonObject["id"]!!.jsonPrimitive.content }.toSet()
+        assertEquals(1, ids.size)
+        bodies.forEachIndexed { index, body ->
+            val upload = body["upload"]!!.jsonObject
+            assertEquals(index, upload["index"]!!.jsonPrimitive.int)
+            assertEquals(requests.size, upload["total"]!!.jsonPrimitive.int)
+            assertNull(body["excerpt"])
+        }
+        assertEquals(long, bodies.joinToString("") { it["text"]!!.jsonPrimitive.content })
+        assertEquals("sl", bodies.last()["language"]!!.jsonPrimitive.content)
+        assertEquals("The last sentence.", bodies.last()["lastSentence"]!!.jsonPrimitive.content)
+        assertNull(bodies.first()["language"])
+    }
+
+    @Test
+    fun aRefusedPartStopsTheUpload() = runTest {
+        val result = engine { json(HttpStatusCode.TooManyRequests, "{}", "3600") }
+            .generate(input.copy(excerpt = "x".repeat(400_000)))
+
+        assertEquals(RecapResult.Retryable(RecapErrorCode.RATE_LIMITED, 3600.seconds), result)
+        assertEquals(1, requests.size)
+    }
+
+    @Test
+    fun anIncompleteUploadIsRetriedLater() = runTest {
+        val result = engine { request ->
+            if (request.json()["language"] == null) {
+                json(HttpStatusCode.Accepted, "{}")
+            } else {
+                json(HttpStatusCode.Conflict, """{"error":"Upload incomplete"}""")
+            }
+        }.generate(input.copy(excerpt = "x".repeat(400_000)))
+
+        assertEquals(RecapResult.Retryable(RecapErrorCode.UNKNOWN), result)
+    }
+
+    @Test
+    fun splitForUploadBoundsBytesAndLosesNothing() {
+        val text = "a\"\n\u20ac\uD83D\uDE00".repeat(50_000)
+        val parts = CloudRecapEngine.splitForUpload(text, maxBytes = 10_000)
+
+        assertEquals(text, parts.joinToString(""))
+        for (part in parts) {
+            assertTrue(JsonPrimitive(part).toString().encodeToByteArray().size <= 10_000)
+            assertFalse(part.last().isHighSurrogate())
+        }
+        assertEquals(listOf("short"), CloudRecapEngine.splitForUpload("short"))
     }
 
     @Test
@@ -176,6 +246,7 @@ class CloudRecapEngineTest {
         assertEquals(RecapResult.Permanent(RecapErrorCode.BAD_REQUEST), mapped(400))
         assertEquals(RecapResult.Permanent(RecapErrorCode.BAD_REQUEST), mapped(405))
         assertEquals(RecapResult.Permanent(RecapErrorCode.BAD_REQUEST), mapped(413))
+        assertEquals(RecapResult.Retryable(RecapErrorCode.UNKNOWN), mapped(409))
         assertEquals(
             RecapResult.Permanent(RecapErrorCode.EXCERPT_TOO_SHORT),
             mapped(422, """{"error":"Excerpt too short to summarise"}"""),

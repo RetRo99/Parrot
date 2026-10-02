@@ -114,7 +114,11 @@ class RecapSessionRecorderImpl(
         }
         position?.let(session::moveTo)
         chapter?.let { session.endChapter = it }
-        database.updateCapture(sessionId, session.capture(), clock.now().toEpochMilliseconds())
+        val now = clock.now().toEpochMilliseconds()
+        if (session.shouldSave(now)) {
+            database.updateCapture(sessionId, session.capture(), now)
+            session.savedAt = now
+        }
     }
 
     override fun onSessionEnded(
@@ -249,6 +253,12 @@ class RecapSessionRecorderImpl(
         commands.trySend(command)
     }
 
+    private companion object {
+        // Rewriting up to ~16k chars per append is cheap (2x the old cap).
+        const val EAGER_SAVE_CHARS = 16_000
+        const val SAVE_INTERVAL_MS = 30_000L
+    }
+
     private sealed interface LiveSession {
         /** Consent was off at start; ignore the session entirely. */
         data object Disabled : LiveSession
@@ -261,6 +271,16 @@ class RecapSessionRecorderImpl(
             val buffer = RecapExcerptBuffer()
             var pageAdvances = 0
             var ttsSentences = 0
+            var savedAt: Long? = null
+
+            /**
+             * Each save rewrites the whole excerpt, so long ones are saved at
+             * most every [SAVE_INTERVAL_MS]; only a crash can lose that tail.
+             */
+            fun shouldSave(now: Long): Boolean {
+                val last = savedAt ?: return true
+                return buffer.length <= EAGER_SAVE_CHARS || now - last >= SAVE_INTERVAL_MS
+            }
 
             /** A forward move to a new place counts as one page advance. */
             fun isAdvance(position: RecapPosition): Boolean {

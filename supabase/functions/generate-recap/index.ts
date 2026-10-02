@@ -1,15 +1,17 @@
 // generate-recap — Supabase Edge Function
 //
 // Turns a reading-session excerpt into a 2-3 sentence "welcome back" recap.
-// This function is a thin, auditable proxy: it never persists the excerpt,
-// never logs content, and hard-caps output tokens so the cost per call is
-// bounded. See docs/reading-session-recap-implementation-plan.md §7.
+// This function is a thin, auditable proxy: it never logs content and
+// hard-caps output tokens. A long excerpt is uploaded in parts, held in
+// recap_upload_parts only until its last part arrives (at most an hour).
+// See docs/reading-session-recap-implementation-plan.md §7 and README.md.
 //
 // Provider: OpenCode Go (OpenAI-compatible /chat/completions) at a fixed
 // URL with a server-side model allow-list; see recap.ts. Secrets and
 // deploy commands are in README.md next to this file.
 //
-// Request:  { excerpt: string, language?: "en" | "sl" | …, lastSentence? }
+// Request:  { excerpt: string, language?: "en" | "sl" | …, lastSentence? },
+//           or upload parts { upload: { id, index, total }, text, … }
 // Response: { kind: "recap" | "not_enough", summary: string | null, model }
 //
 // Callers must be signed-in, non-anonymous users; see guards.ts. Each call
@@ -17,16 +19,24 @@
 
 import { createClient, isAuthRetryableFetchError } from 'npm:@supabase/supabase-js@2.117.2'
 import { classifyAuthError } from '../_shared/auth_errors.ts'
-import { authenticate, bearerToken, type Claims, readJsonBody } from './guards.ts'
 import {
-  buildMessages,
+  authenticate,
+  bearerToken,
+  type Claims,
+  discardBody,
+  parseUploadPart,
+  readJsonBody,
+  type UploadPart,
+} from './guards.ts'
+import {
+  DEADLINE_MS,
+  generateRecap,
   isEnabled,
   loadConfig,
-  MAX_EXCERPT_CHARS,
   MAX_HINT_CHARS,
+  MAX_INPUT_CHARS,
   MIN_EXCERPT_CHARS,
   parseLanguage,
-  requestRecap,
   sessionId,
 } from './recap.ts'
 
@@ -67,14 +77,37 @@ async function verifyClaims(token: string): Promise<Claims | null> {
 }
 
 // Runs as the caller (their JWT), so the RPC's auth.uid() is the user.
-async function consumeQuota(token: string, limit: number): Promise<boolean> {
+async function rpc(token: string, name: string, args: Record<string, unknown>) {
   const userClient = createClient(SUPABASE_URL!, CLIENT_KEY!, {
     auth: { autoRefreshToken: false, persistSession: false },
     global: { headers: { Authorization: `Bearer ${token}` } },
   })
-  const { data, error } = await userClient.rpc('consume_recap_quota', { p_limit: limit })
-  if (error) throw new Error(`quota rpc failed: ${error.code ?? 'unknown'}`)
-  return data === true
+  const { data, error } = await userClient.rpc(name, args)
+  if (error) throw new Error(`${name} failed: ${error.code ?? 'unknown'}`)
+  return data
+}
+
+async function consumeQuota(token: string, limit: number): Promise<boolean> {
+  return (await rpc(token, 'consume_recap_quota', { p_limit: limit })) === true
+}
+
+async function putPart(token: string, part: UploadPart): Promise<boolean> {
+  const stored = await rpc(token, 'put_recap_upload_part', {
+    p_upload_id: part.id,
+    p_part_index: part.index,
+    p_part_count: part.total,
+    p_content: part.text,
+  })
+  return stored === true
+}
+
+/** The earlier parts joined in order (and deleted), or null if incomplete. */
+async function takeParts(token: string, part: UploadPart): Promise<string | null> {
+  const joined = await rpc(token, 'take_recap_upload', {
+    p_upload_id: part.id,
+    p_part_count: part.total,
+  })
+  return typeof joined === 'string' ? joined : null
 }
 
 function secondsToUtcMidnight(now: Date): number {
@@ -92,6 +125,14 @@ function json(body: unknown, status = 200, extra: Record<string, string> = {}): 
 const env = (name: string) => Deno.env.get(name)
 
 Deno.serve(async (req) => {
+  const res = await handle(req)
+  // Every early exit drains the body: an unread one can stall the reply.
+  await discardBody(req)
+  return res
+})
+
+async function handle(req: Request): Promise<Response> {
+  const receivedAt = Date.now()
   // Only the native app calls this, so no CORS: browsers get no
   // Allow-Origin and cannot read responses. Preflights just end here.
   if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
@@ -125,15 +166,36 @@ Deno.serve(async (req) => {
       const error = body.status === 413 ? 'Request too large' : 'Invalid JSON body'
       return json({ error }, body.status)
     }
-    const payload = (body.value ?? {}) as Record<string, unknown>
+    const value = body.value
+    const payload = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>
+    const upload = parseUploadPart(payload)
+    if (upload.kind === 'invalid') return json({ error: 'Invalid upload part' }, 400)
+    if (upload.kind === 'part' && upload.part.index < upload.part.total - 1) {
+      // Earlier parts are only stored; no quota, no model call.
+      if (!(await putPart(token, upload.part))) {
+        return json({ error: 'recap upload refused' }, 429, { 'Retry-After': '3600' })
+      }
+      return json({ stored: upload.part.index }, 202)
+    }
+
+    const language = parseLanguage(payload?.language)
+    if (!language) return json({ error: 'Unsupported language' }, 422)
+
+    let raw = String(payload?.excerpt ?? '')
+    if (upload.kind === 'part') {
+      const head = await takeParts(token, upload.part)
+      // A lost or expired part: the client uploads again with a new id.
+      if (head === null) return json({ error: 'Upload incomplete' }, 409)
+      raw = head + upload.part.text
+    }
     // bookTitle and chapterTitles are ignored on purpose; see buildMessages.
-    const excerpt = String(payload?.excerpt ?? '').slice(0, MAX_EXCERPT_CHARS)
+    // Past the time budget, the most recent text matters most.
+    const trimmed = raw.length > MAX_INPUT_CHARS
+    const excerpt = trimmed ? raw.slice(-MAX_INPUT_CHARS) : raw
     if (excerpt.trim().length < MIN_EXCERPT_CHARS) {
       // Do not pay for a model call on unusable input.
       return json({ error: 'Excerpt too short to summarise' }, 422)
     }
-    const language = parseLanguage(payload?.language)
-    if (!language) return json({ error: 'Unsupported language' }, 422)
     const lastSentence = typeof payload?.lastSentence === 'string'
       ? payload.lastSentence.slice(0, MAX_HINT_CHARS)
       : undefined
@@ -146,14 +208,19 @@ Deno.serve(async (req) => {
       })
     }
 
-    const outcome = await requestRecap({ fetch }, {
+    // The budget counts from receipt, so auth and quota time is included.
+    const deadlineMs = DEADLINE_MS - (Date.now() - receivedAt)
+    const outcome = await generateRecap({ fetch, deadlineMs }, {
       apiKey,
       model,
       sessionId: await sessionId(userId, now),
-      messages: buildMessages({ excerpt, lastSentence, language }),
+      excerpt,
+      lastSentence,
+      language,
     })
     // Metadata only — never the excerpt, prompt, summary or key.
-    console.log(JSON.stringify({ ev: 'recap', status: outcome.status, model, ...outcome.log }))
+    const meta = { chars: excerpt.length, ...(trimmed ? { trimmed } : {}) }
+    console.log(JSON.stringify({ ev: 'recap', status: outcome.status, model, ...meta, ...outcome.log }))
 
     if (outcome.status === 200) return json(outcome.body)
     const extra: Record<string, string> = 'retryAfter' in outcome && outcome.retryAfter
@@ -165,4 +232,4 @@ Deno.serve(async (req) => {
     console.error('generate-recap failed:', e instanceof Error ? e.message : e)
     return json({ error: 'Recap generation failed' }, 500)
   }
-})
+}
