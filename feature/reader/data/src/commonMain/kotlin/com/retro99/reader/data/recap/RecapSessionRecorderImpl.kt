@@ -131,11 +131,12 @@ class RecapSessionRecorderImpl(
     /**
      * Ends rows left CAPTURING by a previous process (killed or crashed).
      * Uses only what was persisted; queued so it can't race a new session.
+     * Throws when the database isn't available yet.
      */
     suspend fun recoverAbandoned() {
         val done = CompletableDeferred<Unit>()
         enqueue {
-            try {
+            val result = runCatching {
                 database.getCapturing()
                     .filter { row -> row.sessionId !in live }
                     .forEach { row ->
@@ -153,9 +154,8 @@ class RecapSessionRecorderImpl(
                         // Last persisted write approximates the end of reading.
                         finish(row, capture, null, row.updatedAt - row.createdAt)
                     }
-            } finally {
-                done.complete(Unit)
             }
+            result.exceptionOrNull()?.let { done.completeExceptionally(it) } ?: done.complete(Unit)
         }
         done.await()
     }

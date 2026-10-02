@@ -52,15 +52,29 @@ class RecapJobRunner(
     private val wakeups = Channel<RecapTrigger>(Channel.CONFLATED)
     private val passMutex = Mutex()
     private var started = false
+    private var startupDone = false
+    private var startupWork: suspend () -> Unit = {}
     private var timer: Job? = null
 
-    /** Starts the loop, runs retention once, and listens for sign-in. */
-    fun start() {
+    /**
+     * Starts the loop and listens for sign-in. [startupWork] and retention
+     * run before the first pass that can reach the database.
+     */
+    fun start(startupWork: suspend () -> Unit = {}) {
         if (started) return
         started = true
+        this.startupWork = startupWork
         scope.launch {
-            runCleanup()
-            for (trigger in wakeups) runPending()
+            for (trigger in wakeups) {
+                try {
+                    runPending()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // e.g. no profile database yet at app start; next trigger retries.
+                    diagnostics.breadcrumb(stage = "pass", outcome = "failed", reasonCode = e::class.simpleName)
+                }
+            }
         }
         // Consent turned on or a user signed in: send what is waiting.
         selector.observeAvailable()
@@ -77,6 +91,11 @@ class RecapJobRunner(
 
     /** One pass over due rows. Safe to call from background work too. */
     suspend fun runPending(): Int = passMutex.withLock {
+        if (!startupDone) {
+            startupWork()
+            runCleanup()
+            startupDone = true
+        }
         val now = clock.now().toEpochMilliseconds()
         database.recoverStaleRunning(now - RecapJobPolicy.STALE_RUNNING_AFTER.inWholeMilliseconds, now)
         var sent = 0

@@ -191,6 +191,25 @@ class RecapJobRunnerTest {
     }
 
     @Test
+    fun startupWorkRunsBeforeTheFirstPassAndRetriesAfterAFailure() = runTest {
+        var calls = 0
+        val runner = runner()
+        runner.start(startupWork = {
+            calls++
+            if (calls == 1) error("no profile database yet")
+        })
+        database.put(pendingRow("s1"))
+
+        kotlin.test.assertFails { runner.runPending() }
+        assertEquals("PENDING", database["s1"]!!.status)
+
+        assertEquals(1, runner.runPending())
+        runner.runPending()
+        assertEquals(2, calls)
+        assertEquals(1, database.retentionCalls.size)
+    }
+
+    @Test
     fun cleanupAppliesTheRetentionWindows() = runTest {
         runner().runCleanup()
 
