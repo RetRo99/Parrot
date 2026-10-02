@@ -192,7 +192,8 @@ class RecapJobRunner(
                 val capped = RecapJobPolicy.countsTowardCap(result.code) &&
                     attempt >= RecapJobPolicy.MAX_ATTEMPTS
                 if (capped) {
-                    database.fail(id, RecapStatus.FAILED_PERMANENT.name, attempt, null, result.code.name, now)
+                    // The time is kept so a user retry still honours it.
+                    database.fail(id, RecapStatus.FAILED_PERMANENT.name, attempt, next, result.code.name, now)
                 } else {
                     database.fail(id, RecapStatus.FAILED_RETRYABLE.name, attempt, next, result.code.name, now)
                 }

@@ -193,6 +193,23 @@ class SessionRecapQueriesTest {
     }
 
     @Test
+    fun `requeue keeps a future retry time and skips rows that retry on their own`() {
+        database.insertCapturingRow(row("stopped", createdAt = 1))
+        database.insertCapturingRow(row("auto", createdAt = 2))
+        pending("stopped")
+        pending("auto")
+        queries.claim("cloud", 10, "stopped")
+        queries.claim("cloud", 10, "auto")
+        queries.fail("FAILED_PERMANENT", 5, 500, "RATE_LIMITED", 10, "stopped")
+        queries.fail("FAILED_RETRYABLE", 1, 500, "NETWORK", 10, "auto")
+
+        assertTrue(database.changedOne { requeue(20, "stopped") })
+        assertFalse(database.changedOne { requeue(20, "auto") })
+        assertEquals(500L, queries.getRecap("stopped").executeAsOne().next_attempt_at)
+        assertNull(queries.getNextDueId(100).executeAsOneOrNull())
+    }
+
+    @Test
     fun `retention expires old excerpts and deletes old or orphaned rows`() {
         upsertBook("book")
         database.insertCapturingRow(row("ancient", createdAt = 10))

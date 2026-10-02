@@ -82,7 +82,10 @@ interface SessionRecapDatabase : DataClearable {
      */
     suspend fun recoverStaleRunning(staleBefore: Long, now: Long, maxAttempts: Int): Long
 
-    /** A failed row back to PENDING with fresh attempts, if it has text. */
+    /**
+     * A FAILED_PERMANENT row with text back to PENDING with fresh attempts;
+     * a next attempt time still in the future is kept.
+     */
     suspend fun requeue(sessionId: String, now: Long): Boolean
 
     /** Applies retention; returns the number of rows deleted. */

@@ -30,10 +30,11 @@ class SessionRecapDataRepository(
 
     override suspend fun retry(sessionId: String): RecapRetryResult {
         val row = database.getRecap(sessionId) ?: return RecapRetryResult.NOT_FOUND
-        val status = RecapStatus.fromName(row.status)
-        val failed = status == RecapStatus.FAILED_RETRYABLE || status == RecapStatus.FAILED_PERMANENT
+        // FAILED_RETRYABLE already retries on its own schedule; a tap there
+        // would skip the backoff and Retry-After.
+        val stopped = RecapStatus.fromName(row.status) == RecapStatus.FAILED_PERMANENT
         val inputRejected = RecapErrorCode.fromName(row.lastError)?.isInputError == true
-        if (!failed || inputRejected || row.excerpt == null) return RecapRetryResult.NOT_RETRYABLE
+        if (!stopped || inputRejected || row.excerpt == null) return RecapRetryResult.NOT_RETRYABLE
         if (!database.requeue(sessionId, clock.now().toEpochMilliseconds())) {
             return RecapRetryResult.NOT_RETRYABLE
         }

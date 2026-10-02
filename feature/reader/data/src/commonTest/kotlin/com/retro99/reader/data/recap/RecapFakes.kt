@@ -156,8 +156,11 @@ class FakeSessionRecapDatabase : SessionRecapDatabase {
     }
 
     override suspend fun requeue(sessionId: String, now: Long) =
-        update(sessionId, { it.status in setOf("FAILED_RETRYABLE", "FAILED_PERMANENT") && it.excerpt != null }) {
-            it.copy(status = "PENDING", attemptCount = 0, nextAttemptAt = null, lastError = null, updatedAt = now)
+        update(sessionId, { it.status == "FAILED_PERMANENT" && it.excerpt != null }) {
+            it.copy(
+                status = "PENDING", attemptCount = 0, lastError = null, updatedAt = now,
+                nextAttemptAt = it.nextAttemptAt?.takeIf { at -> at > now },
+            )
         }
 
     override suspend fun applyRetention(excerptCutoff: Long, rowCutoff: Long, now: Long): Long {

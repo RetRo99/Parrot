@@ -227,7 +227,11 @@ class RecapJobRunnerTest {
         val row = database["s1"]!!
         assertEquals("FAILED_PERMANENT", row.status)
         assertEquals(RecapJobPolicy.MAX_ATTEMPTS, row.attemptCount)
-        assertNull(row.nextAttemptAt)
+        // Kept so a user retry still waits for it.
+        assertEquals(
+            RecapJobPolicy.nextAttemptAt(clock.nowMs, RecapJobPolicy.MAX_ATTEMPTS, 1.minutes),
+            row.nextAttemptAt,
+        )
     }
 
     @Test

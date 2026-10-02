@@ -191,15 +191,16 @@ UPDATE session_recap SET
     updated_at = :now
 WHERE status = 'RUNNING' AND updated_at < :staleBefore;
 
+-- User retry of a row that stopped for good; a pending Retry-After stays.
 requeue:
 UPDATE session_recap SET
     status = 'PENDING',
     attempt_count = 0,
-    next_attempt_at = NULL,
+    next_attempt_at = CASE WHEN next_attempt_at > :now THEN next_attempt_at ELSE NULL END,
     last_error = NULL,
     updated_at = :now
 WHERE session_id = :sessionId
-  AND status IN ('FAILED_RETRYABLE', 'FAILED_PERMANENT')
+  AND status = 'FAILED_PERMANENT'
   AND excerpt IS NOT NULL;
 
 -- Retention: drop finished excerpts, expire old ones, then delete old rows.

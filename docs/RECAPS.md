@@ -129,9 +129,12 @@ CAPTURING ─► SKIPPED_INELIGIBLE
   connectivity (`SyncTriggerBridge` / `RecapTriggerBridge`), user retry, scheduled
   retry. Android also runs `RecapWorker` (periodic 60 min plus one-off on background).
   iOS uses foreground triggers only.
-- **User retry** (`RecapRepository.retry`): a `FAILED_*` row that still has its excerpt
-  and wasn't rejected for its input goes back to `PENDING` with attempts reset.
-  `SessionRecap.canRetry` mirrors these rules, so the UI only offers Retry when it works.
+- **User retry** (`RecapRepository.retry`): a `FAILED_PERMANENT` row that still has
+  its excerpt and wasn't rejected for its input goes back to `PENDING` with attempts
+  reset. A next attempt time still in the future (e.g. `Retry-After`) is kept, and the
+  runner-wide pause still applies. `FAILED_RETRYABLE` rows retry on their own and
+  can't be retried by hand. `SessionRecap.canRetry` mirrors these rules, so the UI
+  only offers Retry when it works.
 
 ## UI contracts
 

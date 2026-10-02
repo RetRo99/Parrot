@@ -48,6 +48,27 @@ class SessionRecapDataRepositoryTest {
     }
 
     @Test
+    fun retryKeepsAPendingRetryAfter() = runTest {
+        val later = clock.nowMs + 60_000
+        database.put(
+            pendingRow("s1", status = "FAILED_PERMANENT", attemptCount = 5, nextAttemptAt = later)
+                .copy(lastError = "RATE_LIMITED"),
+        )
+
+        assertEquals(RecapRetryResult.QUEUED, repository.retry("s1"))
+        assertEquals(later, database["s1"]!!.nextAttemptAt)
+        assertEquals(null, database.getNextDue(clock.nowMs))
+    }
+
+    @Test
+    fun aRowThatRetriesOnItsOwnCantBeRetriedByHand() = runTest {
+        database.put(pendingRow("s1", status = "FAILED_RETRYABLE", nextAttemptAt = clock.nowMs + 60_000))
+
+        assertEquals(RecapRetryResult.NOT_RETRYABLE, repository.retry("s1"))
+        assertEquals("FAILED_RETRYABLE", database["s1"]!!.status)
+    }
+
+    @Test
     fun retryRefusesRejectedInputAndFinishedRows() = runTest {
         database.put(pendingRow("bad", status = "FAILED_PERMANENT").copy(lastError = "EXCERPT_TOO_SHORT"))
         database.put(pendingRow("done", status = "SUCCEEDED", excerpt = null))
@@ -61,15 +82,18 @@ class SessionRecapDataRepositoryTest {
 
     @Test
     fun canRetryMatchesWhatRetryAccepts() = runTest {
-        database.put(pendingRow("ok", status = "FAILED_RETRYABLE").copy(lastError = "NETWORK"))
+        database.put(pendingRow("ok", status = "FAILED_PERMANENT").copy(lastError = "NETWORK"))
+        database.put(pendingRow("auto", status = "FAILED_RETRYABLE").copy(lastError = "NETWORK"))
         database.put(pendingRow("bad", status = "FAILED_PERMANENT").copy(lastError = "EXCERPT_TOO_SHORT"))
         database.put(pendingRow("gone", status = "FAILED_PERMANENT", excerpt = null))
         database.put(pendingRow("wait", status = "PENDING"))
 
-        val canRetry = listOf("ok", "bad", "gone", "wait").associateWith { id ->
-            repository.observeRecap(id).first()!!.canRetry
-        }
+        val ids = listOf("ok", "auto", "bad", "gone", "wait")
+        val canRetry = ids.associateWith { id -> repository.observeRecap(id).first()!!.canRetry }
 
-        assertEquals(mapOf("ok" to true, "bad" to false, "gone" to false, "wait" to false), canRetry)
+        assertEquals(
+            mapOf("ok" to true, "auto" to false, "bad" to false, "gone" to false, "wait" to false),
+            canRetry,
+        )
     }
 }

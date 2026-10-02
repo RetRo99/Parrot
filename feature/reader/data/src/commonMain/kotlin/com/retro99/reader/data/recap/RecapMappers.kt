@@ -10,7 +10,7 @@ import com.retro99.reader.domain.recap.SessionRecap
 internal fun SessionRecapEntity.toDomain(): SessionRecap {
     val status = RecapStatus.fromName(status)
     val lastError = RecapErrorCode.fromName(lastError)
-    val failed = status == RecapStatus.FAILED_RETRYABLE || status == RecapStatus.FAILED_PERMANENT
+    val stopped = status == RecapStatus.FAILED_PERMANENT
     return SessionRecap(
         sessionId = sessionId,
         serverId = serverId,
@@ -31,6 +31,6 @@ internal fun SessionRecapEntity.toDomain(): SessionRecap {
         endedAt = endedAt,
         generatedAt = generatedAt,
         // Same rule as SessionRecapDataRepository.retry.
-        canRetry = failed && excerpt != null && lastError?.isInputError != true,
+        canRetry = stopped && excerpt != null && lastError?.isInputError != true,
     )
 }
