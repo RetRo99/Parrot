@@ -58,6 +58,22 @@ fun appendReadText(
 Observing never triggers generation. `SessionRecap` exposes no excerpt text. Show
 `summary` for `SUCCEEDED`; use `status`, `lastError` and `isInProgress` for the rest.
 
+### Stage 3 — what's built
+
+- **Statistics link.** `reading_session.recap_session_id` (33.sqm, local only; the synced
+  payload maps fields explicitly and doesn't carry it). The reader passes its recap session
+  id to `SaveReadingSessionUseCase` at close. Deleting a statistics session, or all of them,
+  deletes the linked recaps. Removing a book from the device deletes its recaps unless a
+  server copy (`books`) still has the id.
+- **Settings.** App settings → Reading → "Cloud recaps" (`RecapSettings`, default off).
+- **Reader.** `ReaderRecapBannerHost` (reader/ui `recap/`): a chip that expands into the
+  newest `SUCCEEDED` recap of the book, only while cloud recaps are on. Pending and failed
+  recaps aren't shown. Dismissal is stored per recap (`RecapBannerDismissals`) and
+  triggers nothing else.
+- **Statistics.** Tapping a session in the sessions sheet opens its detail. The recap state
+  comes from `toSessionRecapUiState(cloudRecapsEnabled, engineAvailable)`. Retry is shown
+  only when `SessionRecap.canRetry` is true, and it calls `RecapRepository.retry`.
+
 ## Eligibility (`RecapEligibility`)
 
 A session gets a recap only if all of these hold:
