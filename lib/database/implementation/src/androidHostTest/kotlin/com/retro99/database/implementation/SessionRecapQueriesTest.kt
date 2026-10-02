@@ -107,9 +107,25 @@ class SessionRecapQueriesTest {
 
         val stored = queries.getRecap("s1").executeAsOne()
         assertNull(stored.excerpt)
+        assertNull(stored.last_sentence)
         assertEquals("Summary.", stored.summary)
         assertEquals("hy3", stored.model)
         assertEquals(20L, stored.generated_at)
+    }
+
+    @Test
+    fun `retention drops the last sentence of finished rows`() {
+        upsertBook("book")
+        database.insertCapturingRow(row("s1", createdAt = 1_000))
+        pending("s1")
+        queries.claim("cloud", 1_000, "s1")
+        // A row finished before last_sentence was cleared on completion.
+        queries.complete("NOT_ENOUGH", null, null, 1_000, "s1")
+        driver.execute(null, "UPDATE session_recap SET last_sentence = 'Old.'", 0)
+
+        database.applyRecapRetention(excerptCutoff = 500, rowCutoff = 50, now = 2_000)
+
+        assertNull(queries.getRecap("s1").executeAsOne().last_sentence)
     }
 
     @Test
@@ -146,10 +162,7 @@ class SessionRecapQueriesTest {
 
     @Test
     fun `retention expires old excerpts and deletes old or orphaned rows`() {
-        database.bookQueries.upsertBook(
-            "book", "server", null, 1, "Title", null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null,
-        )
+        upsertBook("book")
         database.insertCapturingRow(row("ancient", createdAt = 10))
         database.insertCapturingRow(row("stale", createdAt = 100))
         database.insertCapturingRow(row("fresh", createdAt = 1_000))
@@ -164,9 +177,11 @@ class SessionRecapQueriesTest {
         assertNull(queries.getRecap("orphan").executeAsOneOrNull())
         val stale = queries.getRecap("stale").executeAsOne()
         assertNull(stale.excerpt)
+        assertNull(stale.last_sentence)
         assertEquals("FAILED_PERMANENT", stale.status)
         assertEquals("EXCERPT_EXPIRED", stale.last_error)
         assertNotNull(queries.getRecap("fresh").executeAsOne().excerpt)
+        assertNotNull(queries.getRecap("fresh").executeAsOne().last_sentence)
         // A session still capturing is never touched.
         assertEquals("CAPTURING", queries.getRecap("live").executeAsOne().status)
     }
@@ -180,6 +195,13 @@ class SessionRecapQueriesTest {
         assertEquals("into", queries.getRecap("s1").executeAsOne().book_uuid)
     }
 
+    private fun upsertBook(uuid: String) {
+        database.bookQueries.upsertBook(
+            uuid, "server", null, 1, "Title", null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null,
+        )
+    }
+
     private fun pending(sessionId: String) = finish(sessionId, "PENDING")
 
     private fun finish(sessionId: String, status: String) {
@@ -187,7 +209,7 @@ class SessionRecapQueriesTest {
             status = status,
             excerpt = "Some read text.",
             excerptHash = "h",
-            lastSentence = null,
+            lastSentence = "She stopped here.",
             endHref = null,
             endProgression = null,
             endTotalProgression = null,

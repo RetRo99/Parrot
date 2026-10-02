@@ -145,13 +145,14 @@ WHERE session_id = :sessionId
   AND excerpt IS NOT NULL
   AND (next_attempt_at IS NULL OR next_attempt_at <= :now);
 
--- A finished result drops the excerpt; only the summary is kept.
+-- A finished result drops the read text; only the summary is kept.
 complete:
 UPDATE session_recap SET
     status = :status,
     summary = :summary,
     model = :model,
     excerpt = NULL,
+    last_sentence = NULL,
     last_error = NULL,
     next_attempt_at = NULL,
     generated_at = :now,
@@ -186,19 +187,20 @@ WHERE session_id = :sessionId
 
 -- Retention: drop finished excerpts, expire old ones, then delete old rows.
 clearFinishedExcerpts:
-UPDATE session_recap SET excerpt = NULL
-WHERE excerpt IS NOT NULL
+UPDATE session_recap SET excerpt = NULL, last_sentence = NULL
+WHERE (excerpt IS NOT NULL OR last_sentence IS NOT NULL)
   AND status IN ('SUCCEEDED', 'NOT_ENOUGH', 'SKIPPED_INELIGIBLE');
 
 expireExcerpts:
 UPDATE session_recap SET
     excerpt = NULL,
+    last_sentence = NULL,
     status = CASE WHEN status IN ('PENDING', 'FAILED_RETRYABLE', 'FAILED_PERMANENT')
         THEN 'FAILED_PERMANENT' ELSE status END,
     last_error = CASE WHEN status IN ('PENDING', 'FAILED_RETRYABLE')
         THEN 'EXCERPT_EXPIRED' ELSE last_error END,
     updated_at = :now
-WHERE excerpt IS NOT NULL
+WHERE (excerpt IS NOT NULL OR last_sentence IS NOT NULL)
   AND status NOT IN ('CAPTURING', 'RUNNING')
   AND created_at < :cutoff;
 

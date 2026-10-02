@@ -115,7 +115,8 @@ class FakeSessionRecapDatabase : SessionRecapDatabase {
     override suspend fun complete(sessionId: String, status: String, summary: String?, model: String?, now: Long) =
         update(sessionId, { it.status == "RUNNING" }) {
             it.copy(
-                status = status, summary = summary, model = model, excerpt = null, lastError = null,
+                status = status, summary = summary, model = model, excerpt = null, lastSentence = null,
+                lastError = null,
                 nextAttemptAt = null, generatedAt = now, updatedAt = now,
             )
         }

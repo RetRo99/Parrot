@@ -40,6 +40,7 @@ class RecapJobRunnerTest {
         assertEquals("A summary.", row.summary)
         assertEquals("hy3", row.model)
         assertNull(row.excerpt)
+        assertNull(row.lastSentence)
         assertEquals(1, row.attemptCount)
         assertEquals("sl", engine.inputs.single().language)
         assertEquals("She stopped here.", engine.inputs.single().lastSentence)
