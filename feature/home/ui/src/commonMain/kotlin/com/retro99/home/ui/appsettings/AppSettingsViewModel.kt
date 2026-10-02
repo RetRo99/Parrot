@@ -7,6 +7,7 @@ import com.retro99.analytics.api.AppSettingsAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.base.ui.compose.ThemeMode
+import com.retro99.cloudaccount.domain.usecase.ObserveCloudAuthStateUseCase
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.reader.domain.recap.RecapSettings
@@ -34,6 +35,7 @@ class AppSettingsViewModel(
     @Provided private val userRegistry: UserRegistry,
     @Provided private val analytics: Analytics,
     @Provided private val recapSettings: RecapSettings,
+    @Provided private val observeCloudAuthState: ObserveCloudAuthStateUseCase,
 ) : BaseViewModel<AppSettingsViewState, AppSettingsIntent>(
     AppSettingsViewState(),
 ) {
@@ -62,6 +64,11 @@ class AppSettingsViewModel(
         recapSettings.observeCloudRecapsEnabled()
             .onEach { enabled -> updateState { it.copy(cloudRecapsEnabled = enabled) } }
             .catch { error -> logCloudRecapsFailure(error, stage = "observe") }
+            .launchIn(viewModelScope)
+        observeCloudAuthState()
+            .onEach { auth -> updateState { it.copy(cloudRecapsAccess = auth.toCloudRecapsAccess()) } }
+            // A failed observation leaves the toggle unusable to turn on.
+            .catch { updateState { it.copy(cloudRecapsAccess = CloudRecapsAccess.SignedOut) } }
             .launchIn(viewModelScope)
         preferences.observeStringOrNull(PreferencesKey.ThemeMode)
             .onEach { storedKey ->
@@ -507,6 +514,8 @@ class AppSettingsViewModel(
     }
 
     private fun setCloudRecapsEnabled(enabled: Boolean) {
+        // The row is disabled too; this guards a stale tap after sign-out.
+        if (!canSetCloudRecaps(enabled, viewState.value.cloudRecapsAccess)) return
         updateState { it.copy(cloudRecapsEnabled = enabled) }
         viewModelScope.launch {
             try {
