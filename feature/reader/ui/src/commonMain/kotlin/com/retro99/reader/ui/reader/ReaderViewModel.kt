@@ -30,6 +30,9 @@ import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReaderInitializationData
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel
+import com.retro99.reader.domain.recap.RecapChapter
+import com.retro99.reader.domain.recap.RecapPosition
+import com.retro99.reader.domain.recap.RecapSessionRecorder
 import com.retro99.reader.domain.usecase.AddBookmarkUseCase
 import com.retro99.reader.domain.usecase.DeleteBookmarkUseCase
 import com.retro99.reader.domain.usecase.GetCustomReaderFontsUseCase
@@ -140,6 +143,7 @@ class ReaderViewModel(
     @Provided private val supertonicTermsStore: SupertonicTermsStore,
     @Provided private val getUserPreferenceUseCase: GetUserPreferenceUseCase,
     @Provided private val saveUserPreferenceUseCase: SaveUserPreferenceUseCase,
+    @Provided private val recapSessionRecorder: RecapSessionRecorder,
 ) : BaseViewModel<ReaderViewState, ReaderIntent>(
     ReaderViewState(
         bookUuid = bookUuid,
@@ -244,6 +248,9 @@ class ReaderViewModel(
 
     /** Timestamp when the book was opened, used for calculating reading duration */
     private var bookOpenedTimestamp: Long = 0L
+
+    /** Recap session id, minted when the book opens; null until then. */
+    private var recapSessionId: String? = null
 
     /** Checkpoints the auto-open target before process death can bypass the Reader close action. */
     private var currentBookTargetCheckpoint: CurrentBookTargetCheckpoint? = null
@@ -694,6 +701,7 @@ class ReaderViewModel(
         ).onSuccess { publication ->
             // Track book opened event
             bookOpenedTimestamp = nowMillis()
+            startRecapSession(data.serverId, data.bookUuid, position)
             analytics.logEvent(
                 ReaderAnalyticsEvent.BookOpened(
                     bookUuid = data.bookUuid,
@@ -2596,6 +2604,7 @@ class ReaderViewModel(
         // outbox holds the reading position even if the checkpoint below never runs.
         if (hasRequestedClose) return
         hasRequestedClose = true
+        endRecapSession()
         completeContinueReadingOpen(
             outcome = ContinueReadingOpenOutcome.Cancelled,
             reasonCode = ContinueReadingOpenReasonCode.ClosedBeforeContent,
@@ -2978,11 +2987,45 @@ class ReaderViewModel(
     }
 
     override fun onCleared() {
+        // Left without close(): still end the recap session.
+        endRecapSession()
         currentBookTargetCheckpoint?.cancel()
         routineSyncScheduler.close()
         super.onCleared()
         readerScope.close()
     }
+
+    // Recap bookkeeping only; reading text is appended elsewhere (Stage 2).
+    @OptIn(ExperimentalUuidApi::class)
+    private fun startRecapSession(serverId: String, bookUuid: String, position: PositionUiModel?) {
+        if (recapSessionId != null) return
+        val sessionId = Uuid.random().toString()
+        recapSessionId = sessionId
+        recapSessionRecorder.onSessionStarted(
+            sessionId = sessionId,
+            serverId = serverId,
+            bookId = bookUuid,
+            startPosition = position.toRecapPosition(),
+            chapter = position?.let { RecapChapter(it.chapterIndex, it.title) },
+        )
+    }
+
+    private fun endRecapSession() {
+        val sessionId = recapSessionId ?: return
+        recapSessionId = null
+        recapSessionRecorder.onSessionEnded(
+            sessionId = sessionId,
+            endPosition = viewState.value.currentPosition.toRecapPosition(),
+            lastSentence = null,
+            activeReadingMs = (nowMillis() - bookOpenedTimestamp).coerceAtLeast(0L),
+        )
+    }
+
+    private fun PositionUiModel?.toRecapPosition(): RecapPosition = RecapPosition(
+        href = this?.href?.takeIf { it.isNotEmpty() },
+        progression = this?.progression,
+        totalProgression = this?.totalProgression,
+    )
 
     private fun scheduleCurrentBookTargetCheckpoint() {
         if (hasRequestedClose || bookOpenedTimestamp <= 0L) return
