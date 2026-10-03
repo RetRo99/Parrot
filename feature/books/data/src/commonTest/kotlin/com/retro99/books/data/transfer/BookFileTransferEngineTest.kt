@@ -1,6 +1,10 @@
 package com.retro99.books.data.transfer
 
 import com.retro99.books.domain.BookFileTransferTransport
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.AnalyticsEvent
+import com.retro99.analytics.api.ProductAnalyticsEvent
+import com.retro99.analytics.api.ProductOutcome
 import com.retro99.books.domain.BookFileTransferRejectedException
 import com.retro99.books.domain.BookFileTransferSessionExpiredException
 import com.retro99.books.domain.BackupAllResult
@@ -47,6 +51,58 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 class BookFileTransferEngineTest {
+    @Test
+    fun backupAnalyticsReportRealTransferCompletionWithoutPrivateData() = runTest {
+        val bytes = "private book contents".encodeToByteArray()
+        val hash = sha256(bytes).toHexString()
+        val transfer = uploadTransfer(hash, bytes.size.toLong())
+        val analytics = TransferRecordingAnalytics()
+        val fixture = uploadFixture(transfer, uploadSource(hash, bytes.size.toLong()),
+            UploadPathTransport(bytes, uploadedFile(hash, bytes.size.toLong())), analytics = analytics)
+
+        fixture.engine.processTransfer(transfer.transferId)
+        fixture.engine.processTransfer(transfer.transferId)
+
+        val events = analytics.events.filterIsInstance<ProductAnalyticsEvent.BookBackupOperation>()
+        assertEquals(listOf(ProductOutcome.Started, ProductOutcome.Succeeded), events.map { it.outcome })
+        assertTrue(events.all { it.stage == "transfer" && !it.bulk })
+        assertTrue(events.all { event -> event.parameters.keys.none { it in setOf("book_uuid", "file_name", "server_url", "content_hash", "error_message") } })
+    }
+
+    @Test
+    fun backupAnalyticsFailureDoesNotChangeTransferSuccess() = runTest {
+        val bytes = "book".encodeToByteArray()
+        val hash = sha256(bytes).toHexString()
+        val transfer = uploadTransfer(hash, bytes.size.toLong())
+        val fixture = uploadFixture(transfer, uploadSource(hash, bytes.size.toLong()),
+            UploadPathTransport(bytes, uploadedFile(hash, bytes.size.toLong())),
+            analytics = object : Analytics {
+                override fun logEvent(event: AnalyticsEvent): Unit = error("provider unavailable")
+                override fun logException(throwable: Throwable, message: String?) = Unit
+                override fun setUserId(userId: String?) = Unit
+            })
+
+        fixture.engine.processTransfer(transfer.transferId)
+        assertEquals("completed", fixture.database.getTransfer(transfer.transferId)?.state)
+    }
+
+    @Test
+    fun rejectedBackupReportsFailureWithoutSendingServerReason() = runTest {
+        val bytes = "book".encodeToByteArray()
+        val hash = sha256(bytes).toHexString()
+        val transfer = uploadTransfer(hash, bytes.size.toLong())
+        val analytics = TransferRecordingAnalytics()
+        val fixture = uploadFixture(transfer, uploadSource(hash, bytes.size.toLong()),
+            UploadPathTransport(bytes, uploadedFile(hash, bytes.size.toLong()),
+                reserveException = BookFileTransferRejectedException("private_server_reason")), analytics = analytics)
+
+        fixture.engine.processTransfer(transfer.transferId)
+
+        val events = analytics.events.filterIsInstance<ProductAnalyticsEvent.BookBackupOperation>()
+        assertEquals(listOf(ProductOutcome.Started, ProductOutcome.Failed), events.map { it.outcome })
+        assertTrue(events.flatMap { it.parameters.values }.none { it.toString().contains("private_server_reason") })
+    }
+
     @Test
     fun downloadResumesFromDurablePartAndFinalizesReplica() = runTest {
         val state = CloudBookFileEntity(
@@ -954,6 +1010,7 @@ class BookFileTransferEngineTest {
         source: DeviceFileEntity,
         transport: UploadPathTransport,
         fileStore: InMemoryFileStore = InMemoryFileStore(),
+        analytics: Analytics? = null,
     ): UploadFixture {
         val fileState = CloudBookFileEntity(
             libraryBookId = transfer.libraryBookId,
@@ -975,6 +1032,7 @@ class BookFileTransferEngineTest {
             libraryBooksDatabase = FakeLibraryBooksDatabase(testLibraryBook(transfer.libraryBookId)),
             transports = listOf(transport),
             fileStore = fileStore,
+            analytics = analytics,
         )
         return UploadFixture(engine, database)
     }
@@ -998,6 +1056,13 @@ class BookFileTransferEngineTest {
         val engine: BookFileTransferEngine,
         val database: FakeCloudFilesDatabase,
     )
+
+    private class TransferRecordingAnalytics : Analytics {
+        val events = mutableListOf<AnalyticsEvent>()
+        override fun logEvent(event: AnalyticsEvent) { events += event }
+        override fun logException(throwable: Throwable, message: String?) = Unit
+        override fun setUserId(userId: String?) = Unit
+    }
 
     private fun uploadTransfer(contentHash: String, sizeBytes: Long) = activeTransfer().copy(
         direction = "upload",

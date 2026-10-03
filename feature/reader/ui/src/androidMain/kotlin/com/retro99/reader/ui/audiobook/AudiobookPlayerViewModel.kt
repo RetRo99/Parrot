@@ -14,6 +14,10 @@ import com.github.michaelbull.result.onSuccess
 import com.retro99.base.nowMillis
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ReaderOpenTracker
+import com.retro99.analytics.api.ProductOutcome
+import com.retro99.analytics.api.ProductUsage
+import com.retro99.analytics.api.UsageMode
 import com.retro99.analytics.api.ContinueReadingOpenOperation
 import com.retro99.analytics.api.NavigationAnalyticsEvent.ContinueReadingOpenOutcome
 import com.retro99.analytics.api.NavigationAnalyticsEvent.ContinueReadingOpenReasonCode
@@ -73,9 +77,12 @@ class AudiobookPlayerViewModel(
     @Provided private val getBookByUuidUseCase: GetBookByUuidUseCase,
     @Provided private val getAudioTrackDurationsUseCase: GetAudioTrackDurationsUseCase,
     @Provided private val analytics: Analytics,
+    @Provided private val productUsage: ProductUsage,
 ) : BaseViewModel<AudiobookPlayerViewState, AudiobookPlayerIntent>(
     AudiobookPlayerViewState(bookUuid = bookUuid)
 ) {
+
+    private val openTracker = ReaderOpenTracker(analytics, "audiobook", readerOpenEntryPoint ?: "book_detail")
 
     private var player: ExoPlayer? = null
     private var playerListener: Player.Listener? = null
@@ -126,8 +133,13 @@ class AudiobookPlayerViewModel(
                 loadAudioFiles()
 
                 if (viewState.value.trackCount > 0 && viewState.value.error == null) {
+                    openTracker.complete(ProductOutcome.Succeeded)
+                    loadSavedPosition()?.totalProgression?.let { progress ->
+                        productUsage.observeCompletion("$serverId:$bookUuid", progress, UsageMode.Audiobook, initial = true)
+                    }
                     completeContinueReadingOpen(ContinueReadingOpenOutcome.Succeeded)
                 } else {
+                    openTracker.complete(ProductOutcome.Failed, "audio_content_unavailable")
                     completeContinueReadingOpen(
                         outcome = ContinueReadingOpenOutcome.Failed,
                         reasonCode = ContinueReadingOpenReasonCode.AudioContentUnavailable,
@@ -138,12 +150,14 @@ class AudiobookPlayerViewModel(
                     reconnectToExistingPlayback()
                 }
             } catch (cancellation: CancellationException) {
+                openTracker.complete(ProductOutcome.Cancelled, "reader_open_cancelled")
                 completeContinueReadingOpen(
                     outcome = ContinueReadingOpenOutcome.Cancelled,
                     reasonCode = ContinueReadingOpenReasonCode.ReaderOpenCancelled,
                 )
                 throw cancellation
             } catch (error: Exception) {
+                openTracker.complete(ProductOutcome.Failed, "audio_content_unavailable")
                 val operation = continueReadingOpenOperation
                 if (operation == null) throw error
                 completeContinueReadingOpen(
@@ -505,6 +519,7 @@ class AudiobookPlayerViewModel(
         }
 
     private fun saveProgress(progress: PositionDomainModel) {
+        progress.totalProgression?.let { productUsage.observeCompletion("$serverId:$bookUuid", it, UsageMode.Audiobook) }
         viewModelScope.launch(NonCancellable) {
             try {
                 saveReadingProgressUseCase(progress)
@@ -575,6 +590,7 @@ class AudiobookPlayerViewModel(
     }
 
     fun close() {
+        openTracker.complete(ProductOutcome.Cancelled, "closed_before_content")
         completeContinueReadingOpen(
             outcome = ContinueReadingOpenOutcome.Cancelled,
             reasonCode = ContinueReadingOpenReasonCode.ClosedBeforeContent,
@@ -610,6 +626,7 @@ class AudiobookPlayerViewModel(
     }
 
     override fun onCleared() {
+        openTracker.complete(ProductOutcome.Cancelled, "reader_cleared")
         routineSyncScheduler.close()
         super.onCleared()
         stopPositionUpdates()

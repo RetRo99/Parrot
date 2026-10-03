@@ -1,6 +1,10 @@
 package com.retro99.books.data.transfer
 
 import com.retro99.base.AppInitializer
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ProductAnalyticsEvent
+import com.retro99.analytics.api.ProductOutcome
+import com.retro99.analytics.api.BackupErrorCategory
 import com.retro99.books.data.CONTENT_HASH_ALGORITHM
 import com.retro99.books.data.Sha256Digest
 import com.retro99.books.data.toHexString
@@ -52,6 +56,8 @@ import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 import kotlin.time.Clock
+import kotlin.time.TimeSource
+import kotlin.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
 import kotlin.uuid.ExperimentalUuidApi
@@ -67,6 +73,7 @@ class BookFileTransferEngine(
     @Provided private val deletionTransports: List<BookFileDeletionTransport> = emptyList(),
     @Provided private val downloadFinalizer: DownloadTransferFinalizer? = null,
     @Provided private val fileStore: BookFileTransferFileStore? = null,
+    @Provided private val analytics: Analytics? = null,
 ) : BookFileTransferManager, FileTransferStatusSource {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val enqueueMutex = Mutex()
@@ -240,8 +247,21 @@ class BookFileTransferEngine(
         libraryBookId: String,
         mediaType: String,
         rightsAttestation: UploadRightsAttestation,
-    ): String = enqueueMutex.withLock {
-        enqueueUploadLocked(serverId, libraryBookId, mediaType, rightsAttestation)
+    ): String {
+        val started = TimeSource.Monotonic.markNow()
+        reportBackup(ProductOutcome.Started, "queue")
+        return try {
+            enqueueMutex.withLock {
+                enqueueUploadLocked(serverId, libraryBookId, mediaType, rightsAttestation)
+            }.also { reportBackup(ProductOutcome.Queued, "queue", started.elapsedNow().inWholeMilliseconds, queuedCount = 1) }
+        } catch (exception: CancellationException) {
+            reportBackup(ProductOutcome.Cancelled, "queue", started.elapsedNow().inWholeMilliseconds)
+            throw exception
+        } catch (exception: Exception) {
+            reportBackup(ProductOutcome.Failed, "queue", started.elapsedNow().inWholeMilliseconds, failedCount = 1,
+                errorCategory = if (exception is BookFileTransferRejectedException) BackupErrorCategory.Rejected else BackupErrorCategory.QueueFailed)
+            throw exception
+        }
     }
 
     private suspend fun enqueueUploadLocked(
@@ -389,6 +409,7 @@ class BookFileTransferEngine(
             updatedAt = now(),
         )
         cloudFilesDatabase.updateTransfer(cancelled)
+        if (latestTransfer.direction == DIRECTION_UPLOAD) reportTransferBackup(latestTransfer, ProductOutcome.Cancelled)
         if (latestTransfer.direction == DIRECTION_DOWNLOAD) {
             latestTransfer.stagingPath?.let { path -> fileStore?.delete(path) }
         } else {
@@ -585,6 +606,7 @@ class BookFileTransferEngine(
         }
         val transport = transport(transfer.serverId)
         if (!transport.capabilities.supportsUpload) return
+        reportTransferBackup(transfer, ProductOutcome.Started)
 
         try {
             val request = createRequest(transfer)
@@ -910,6 +932,7 @@ class BookFileTransferEngine(
                 updatedAt = now(),
             ),
         )
+        reportTransferBackup(transfer, ProductOutcome.Succeeded)
     }
 
     private suspend fun updateFileState(
@@ -944,6 +967,7 @@ class BookFileTransferEngine(
         )
         cloudFilesDatabase.updateTransfer(failed)
         if (transfer.direction == DIRECTION_DOWNLOAD) return
+        reportTransferBackup(transfer, ProductOutcome.Failed)
         val transport = transportByServer[transfer.serverId]
         if (transport != null) {
             try {
@@ -999,7 +1023,24 @@ class BookFileTransferEngine(
             updatedAt = now(),
         )
         cloudFilesDatabase.updateTransfer(pending)
+        if (transfer.direction == DIRECTION_UPLOAD) reportTransferBackup(transfer, ProductOutcome.RetryScheduled)
         scheduleRetryTimer(transfer.transferId, pending.nextAttemptAt!!, delayMillis)
+    }
+
+    private fun reportTransferBackup(transfer: CloudFileTransferEntity, outcome: ProductOutcome) {
+        val duration = runCatching { (Clock.System.now() - Instant.parse(transfer.createdAt)).inWholeMilliseconds }
+            .getOrDefault(0L).coerceIn(0L, 31_536_000_000L)
+        reportBackup(outcome, "transfer", duration, isRetry = transfer.attemptCount > 0,
+            failedCount = if (outcome == ProductOutcome.Failed) 1 else 0,
+            errorCategory = BackupErrorCategory.TransferFailed.takeIf { outcome == ProductOutcome.Failed || outcome == ProductOutcome.RetryScheduled })
+    }
+
+    private fun reportBackup(outcome: ProductOutcome, stage: String, durationMs: Long = 0L,
+        queuedCount: Int = 0, failedCount: Int = 0, isRetry: Boolean = false, errorCategory: BackupErrorCategory? = null) {
+        // Telemetry must never turn a successful transfer into a retry or failure.
+        runCatching { analytics?.logEvent(ProductAnalyticsEvent.BookBackupOperation(
+            false, stage, outcome, durationMs, queuedCount, failedCount, isRetry, errorCategory,
+        )) }
     }
 
     private fun transport(serverId: String): BookFileTransferTransport =

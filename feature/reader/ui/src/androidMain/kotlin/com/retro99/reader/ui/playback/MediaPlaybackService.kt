@@ -29,6 +29,11 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.github.michaelbull.result.onFailure
 import com.retro99.base.deeplink.DeepLinkUriBuilder
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ProductUsage
+import com.retro99.analytics.api.UsageSession
+import com.retro99.analytics.api.UsageMode
+import com.retro99.analytics.api.UsageEndReason
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.ui.media.MediaOverlayClip
 import com.retro99.reader.ui.media.smil.SmilClipRepository
@@ -96,6 +101,9 @@ class MediaPlaybackService : MediaLibraryService() {
     private val autoMediaBrowser: AutoMediaBrowser by inject()
     private val headlessSessionFactory: HeadlessSessionFactory by inject()
     private val saveReadingSessionUseCase: SaveReadingSessionUseCase by inject()
+    private val analytics: Analytics by inject()
+    private val productUsage: ProductUsage by inject()
+    private var audiobookUsage: UsageSession? = null
     private val audiobookStatistics = AudiobookSessionTracker(saveSession = { session ->
         serviceScope.launch(NonCancellable) {
             saveReadingSessionUseCase(
@@ -249,6 +257,10 @@ class MediaPlaybackService : MediaLibraryService() {
             Log.d(TAG, "SERVICE onIsPlayingChanged: isPlaying=$isPlaying, clipsCount=${currentChapterClips.size}")
             _isPlaying.value = isPlaying
             audiobookStatistics.setPlaying(isPlaying)
+            updateAudiobookUsage()
+            if (!isPlaying && player?.playbackState == Player.STATE_READY && player?.playWhenReady == false) {
+                audiobookUsage?.checkpoint(UsageEndReason.Paused)
+            }
             synchronized(stateLock) {
                 wasPlaying = isPlaying
             }
@@ -273,9 +285,15 @@ class MediaPlaybackService : MediaLibraryService() {
             val p = player ?: return
             updatePlaybackStateInternal(playerState, p.isPlaying)
             _isPlayerReady.value = playerState == Player.STATE_READY
+            updateAudiobookUsage()
 
             when (playerState) {
                 Player.STATE_ENDED -> {
+                    if (bookType == BookType.AUDIOBOOK) {
+                        audiobookUsage?.checkpoint(UsageEndReason.Completed)
+                        val localKey = "${serverId ?: return}:${bookUuid ?: return}"
+                        productUsage.observeCompletion(localKey, 1.0, UsageMode.Audiobook)
+                    }
                     _isPlaying.value = false
                     if (playbackContentType == PlaybackContentType.MEDIA_OVERLAY) {
                         _chapterAudioCompleted.tryEmit(Unit)
@@ -295,6 +313,8 @@ class MediaPlaybackService : MediaLibraryService() {
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            audiobookUsage?.update(null, productUsage.isAppForeground)
+            audiobookUsage?.checkpoint(UsageEndReason.Error)
             Log.e(TAG, "SERVICE onPlayerError: ${error.errorCodeName}", error)
             _playbackState.value = PlaybackState.ERROR
             _isPlaying.value = false
@@ -363,6 +383,14 @@ class MediaPlaybackService : MediaLibraryService() {
         // Notify controller that service is ready
         Log.d(TAG, "Calling controller.onServiceCreated()")
         controller.onServiceCreated(this, playbackPlayer, mediaSession!!)
+        serviceScope.launch {
+            var seconds = 0
+            while (isActive) {
+                delay(1_000L)
+                updateAudiobookUsage()
+                if (++seconds % 30 == 0) audiobookUsage?.checkpoint()
+            }
+        }
         Log.d(TAG, "onCreate() completed")
     }
 
@@ -371,6 +399,7 @@ class MediaPlaybackService : MediaLibraryService() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
+        productUsage.setAppForeground(false)
         val currentPlayer = player
         Log.d(TAG, "onTaskRemoved: player=${currentPlayer != null}, mediaItemCount=${currentPlayer?.mediaItemCount}, isPlaying=${currentPlayer?.isPlaying}")
         if (currentPlayer == null || currentPlayer.mediaItemCount == 0) {
@@ -389,6 +418,7 @@ class MediaPlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        audiobookUsage?.finish(UsageEndReason.Cleared)
         audiobookStatistics.finish()
         Log.d(TAG, "onDestroy() called", Exception("stack trace"))
         handler.removeCallbacks(stopSelfRunnable)
@@ -433,10 +463,13 @@ class MediaPlaybackService : MediaLibraryService() {
         bookUuid: String? = null,
         bookType: BookType? = null,
     ) {
-        if ((bookUuid != null && bookUuid != this.bookUuid) ||
+        if ((serverId != null && serverId != this.serverId) ||
+            (bookUuid != null && bookUuid != this.bookUuid) ||
             (bookType != null && bookType != this.bookType)
         ) {
             audiobookStatistics.finish()
+            audiobookUsage?.finish(UsageEndReason.BookChanged)
+            audiobookUsage = null
         }
         if (bookTitle != null) this.bookTitle = bookTitle
         if (chapterTitle != null) this.chapterTitle = chapterTitle
@@ -449,9 +482,23 @@ class MediaPlaybackService : MediaLibraryService() {
             this.bookTitle,
         )
         audiobookStatistics.setPlaying(player?.isPlaying == true)
+        if (this.bookType == BookType.AUDIOBOOK && this.bookUuid != null && audiobookUsage == null) {
+            audiobookUsage = UsageSession(analytics, productUsage::meaningfulSession)
+        }
+        updateAudiobookUsage()
 
         // Update session activity for deep link
         updateSessionActivity()
+    }
+
+    private fun updateAudiobookUsage() {
+        val p = player ?: return
+        audiobookUsage?.update(
+            mode = UsageMode.Audiobook.takeIf { p.isPlaying && bookType == BookType.AUDIOBOOK },
+            foreground = productUsage.isAppForeground,
+            buffering = p.playWhenReady && p.playbackState == Player.STATE_BUFFERING,
+            listeningMode = UsageMode.Audiobook,
+        )
     }
 
     /**

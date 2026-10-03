@@ -7,6 +7,12 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ProductAnalyticsEvent
+import com.retro99.analytics.api.ProductOutcome
+import com.retro99.analytics.api.BackupErrorCategory
+import com.retro99.analytics.api.SearchScope
+import com.retro99.analytics.api.FeatureExposureTracker
+import com.retro99.analytics.api.UsageFeature
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.analytics.api.BooksListAnalyticsEvent
@@ -51,6 +57,7 @@ import kotlinx.coroutines.CancellationException
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
+import kotlin.time.TimeSource
 
 @KoinViewModel
 class BooksListViewModel(
@@ -74,6 +81,8 @@ class BooksListViewModel(
 
     private var currentBooks: List<BookWithProgressDomainModel> = emptyList()
     val searchFieldState = TextFieldState()
+    private val featureExposure = FeatureExposureTracker(analytics, "books_library")
+    private var lastSearchResults: Triple<String, BookFilterState, Int>? = null
 
     init {
         observeActiveCloudAccount()
@@ -94,6 +103,13 @@ class BooksListViewModel(
 
     override fun onIntent(intent: BooksListIntent) {
         when (intent) {
+            BooksListIntent.OnScreenVisible -> {
+                featureExposure.reset()
+                lastSearchResults = null
+                if (viewState.value.supportsCloudBackup) featureExposure.expose(UsageFeature.Backup, true)
+            }
+            BooksListIntent.OnSearchResultsVisible -> reportSearchResults()
+            BooksListIntent.OnBackupFeatureVisible -> featureExposure.expose(UsageFeature.Backup, true)
             BooksListIntent.OnRefresh -> refreshProgressInfo()
             BooksListIntent.OnSearchActivated -> activateSearch()
             BooksListIntent.OnSearchKeyboardDismissed ->
@@ -106,6 +122,12 @@ class BooksListViewModel(
             is BooksListIntent.OnRecentSearchSelected -> selectRecentSearch(intent)
             BooksListIntent.OnRecentSearchesCleared -> clearRecentSearches()
             is BooksListIntent.OnBookClicked -> {
+                val state = viewState.value
+                if (state.searchQuery.isNotBlank()) {
+                    reportSearchResults()
+                    val index = state.filteredBooks.indexOfFirst { it.uuid == intent.book.uuid }
+                    if (index >= 0) analytics.logEvent(ProductAnalyticsEvent.SearchResultSelected(SearchScope.Library, index))
+                }
                 saveRecentSearch(viewState.value.searchQuery)
                 onNavigateToBookDetail(intent.book)
             }
@@ -166,6 +188,7 @@ class BooksListViewModel(
     }
 
     private fun closeSearch() {
+        lastSearchResults = null
         saveRecentSearch(viewState.value.searchQuery, onlyWithResults = true)
         searchFieldState.edit { delete(0, length) }
         updateState { it.copy(isSearchActive = false, searchQuery = "") }
@@ -190,6 +213,22 @@ class BooksListViewModel(
     private fun clearRecentSearches() {
         updateState { it.copy(recentSearches = emptyList()) }
         saveUserPreferenceUseCase(PreferencesKey.RecentLibrarySearches, RecentSearches())
+    }
+
+    private fun reportSearchResults() {
+        val state = viewState.value
+        if (state.isLoading || state.error != null || state.searchQuery.isBlank()) return
+        val started = TimeSource.Monotonic.markNow()
+        val count = state.filteredBooks.size
+        val signature = Triple(state.searchQuery, state.filterState, count)
+        if (signature == lastSearchResults) return
+        lastSearchResults = signature
+        analytics.logEvent(ProductAnalyticsEvent.SearchResultsShown(
+            scope = SearchScope.Library,
+            count = count,
+            durationMs = started.elapsedNow().inWholeMilliseconds,
+            hasFilters = state.filterState.activeQuickFilters.isNotEmpty() || state.filterState.homeFilter != null,
+        ))
     }
 
     private fun toggleQuickFilter(filter: BookQuickFilter) {
@@ -479,12 +518,16 @@ class BooksListViewModel(
     }
 
     private fun backUpAllBooks() {
-        if (!viewState.value.supportsCloudBackup || !viewState.value.backupAllRightsAttested) return
+        if (!viewState.value.supportsCloudBackup || !viewState.value.backupAllRightsAttested || viewState.value.isBackingUpAll) return
+        updateState { it.copy(isBackingUpAll = true, backupAllError = null) }
         viewModelScope.launch {
-            updateState { it.copy(isBackingUpAll = true, backupAllError = null) }
+            val started = TimeSource.Monotonic.markNow()
+            analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(true, "queue", ProductOutcome.Started, 0L))
             try {
                 val localProfileId = userRegistry.getActiveProfileIdOrDefault()
                 if (!hasActiveCloudAccount(localProfileId)) {
+                    analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(true, "queue", ProductOutcome.Failed, started.elapsedNow().inWholeMilliseconds,
+                        errorCategory = BackupErrorCategory.AuthenticationUnavailable))
                     updateState {
                         it.copy(
                             showBackupAllConfirmation = false,
@@ -500,6 +543,13 @@ class BooksListViewModel(
                     serverId = PARROT_CLOUD_SERVER_ID,
                     localProfileId = localProfileId,
                 )
+                analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(
+                    bulk = true, stage = "queue",
+                    outcome = if (result.failedCount == 0) ProductOutcome.Queued else if (result.queuedCount > 0) ProductOutcome.Partial else ProductOutcome.Failed,
+                    durationMs = started.elapsedNow().inWholeMilliseconds,
+                    queuedCount = result.queuedCount, failedCount = result.failedCount,
+                    errorCategory = BackupErrorCategory.QueueFailed.takeIf { result.failedCount > 0 },
+                ))
                 updateState {
                     it.copy(
                         showBackupAllConfirmation = false,
@@ -510,8 +560,11 @@ class BooksListViewModel(
                     )
                 }
             } catch (exception: CancellationException) {
+                analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(true, "queue", ProductOutcome.Cancelled, started.elapsedNow().inWholeMilliseconds))
                 throw exception
             } catch (exception: Exception) {
+                analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(true, "queue", ProductOutcome.Failed, started.elapsedNow().inWholeMilliseconds,
+                    errorCategory = BackupErrorCategory.QueueFailed))
                 updateState {
                     it.copy(
                         showBackupAllConfirmation = false,

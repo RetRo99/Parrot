@@ -56,6 +56,11 @@ inline fun <reified T> Preferences.observeObject(key: PreferencesKey): Flow<T?> 
     }
 
 sealed class PreferencesKey(val name: String) {
+    data object AnalyticsFirstLaunch : PreferencesKey("AnalyticsFirstLaunch")
+    data object AnalyticsActivated : PreferencesKey("AnalyticsActivated")
+    /** Device-local deduplication only; neither profile nor book key is sent to analytics. */
+    data class AnalyticsBookCompleted(val profileId: String, val localBookKey: String) :
+        PreferencesKey("AnalyticsBookCompleted_${profileId}_$localBookKey")
     data object ReaderSettings : PreferencesKey("ReaderSettings")
     data object ReaderCustomFonts : PreferencesKey("ReaderCustomFonts")
     data object DatabaseSchemaVersion : PreferencesKey("DatabaseSchemaVersion")

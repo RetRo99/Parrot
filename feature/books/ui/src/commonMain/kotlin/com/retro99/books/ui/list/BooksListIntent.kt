@@ -9,6 +9,9 @@ import com.retro99.books.ui.model.BookUiModel
 import io.github.vinceglb.filekit.core.PlatformFile
 
 sealed interface BooksListIntent : BaseIntent {
+    data object OnScreenVisible : BooksListIntent
+    data object OnSearchResultsVisible : BooksListIntent
+    data object OnBackupFeatureVisible : BooksListIntent
     data object OnRefresh : BooksListIntent
     data object OnSearchActivated : BooksListIntent
     data object OnSearchKeyboardDismissed : BooksListIntent

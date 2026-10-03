@@ -2,6 +2,7 @@ package com.retro99.parrot.navigation
 
 import androidx.lifecycle.viewModelScope
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ProductUsage
 import com.retro99.analytics.api.clearUserIdentity
 import com.retro99.analytics.api.AuthAnalyticsEvent
 import com.retro99.analytics.api.DiagnosticContext
@@ -20,12 +21,14 @@ class RootNavigationViewModel(
     private val checkAuthStateUseCase: CheckAuthStateUseCase,
     private val logoutUseCase: LogoutUseCase,
     @Provided private val analytics: Analytics,
+    @Provided private val productUsage: ProductUsage,
 ) : BaseViewModel<RootNavigationState, RootNavigationIntent>(RootNavigationState()) {
 
     private var nextHomeEntryId = 0L
     private val homeExposureGate = HomeExposureGate()
 
     init {
+        productUsage.appLaunched()
         analytics.clearUserIdentity()
         checkAuthState()
     }

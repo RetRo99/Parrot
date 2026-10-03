@@ -10,6 +10,9 @@ internal fun sanitizeAnalyticsParameters(parameters: Map<String, Any>): Map<Stri
         ?.takeIf { it in SAFE_SETTING_NAMES }
     parameters.forEach { (key, value) ->
         when {
+            key in PRODUCT_ENUM_DIMENSIONS && value is String && value in PRODUCT_ENUM_DIMENSIONS.getValue(key) ->
+                put(key, value)
+
             key == "setting_name" && value is String && value in SAFE_SETTING_NAMES ->
                 put(key, value)
 
@@ -243,6 +246,7 @@ private val SAFE_TTS_REASON_CODES = setOf(
 )
 
 private val SAFE_BOOLEAN_KEYS = setOf(
+    "has_filters", "is_capped", "is_restricted", "is_available",
     "is_enabled",
     "is_success",
     "is_retry",
@@ -254,6 +258,9 @@ private val SAFE_BOOLEAN_KEYS = setOf(
 )
 
 private val SAFE_LONG_KEYS = setOf(
+    "audiobook_duration_ms", "readaloud_duration_ms", "tts_duration_ms",
+    "foreground_duration_ms", "background_duration_ms", "playing_duration_ms",
+    "buffering_duration_ms", "since_first_launch_ms",
     "reading_duration_ms",
     "duration_ms",
     "download_duration_ms",
@@ -267,3 +274,16 @@ private val SAFE_FLOAT_KEYS = setOf(
 private const val MAX_HTTP_STATUS_CODE = 599
 private const val MAX_SAFE_LONG = 31_536_000_000L // one year; reject malformed/unbounded durations
 private const val MAX_SAFE_FLOAT = 4f
+
+private val PRODUCT_ENUM_DIMENSIONS = mapOf(
+    "usage_mode" to setOf("reading", "audiobook", "readaloud", "tts"),
+    "previous_usage_mode" to setOf("reading", "audiobook", "readaloud", "tts"),
+    "search_scope" to setOf("library", "book"),
+    "feature_name" to setOf("tts", "bookmarks", "sleep_timer", "backup"),
+    "end_reason" to setOf("checkpoint", "background", "closed", "cleared", "book_changed", "paused", "completed", "error", "source_changed"),
+    "content_access" to setOf("on_device"),
+    "completion_method" to setOf("automatic"),
+    "backup_scope" to setOf("single", "bulk"),
+    "backup_error_category" to setOf("rejected", "transfer_failed", "queue_failed", "authentication_unavailable"),
+) + listOf("result_count_bucket", "result_position_bucket", "interruption_count_bucket", "queued_count_bucket", "failed_count_bucket")
+    .associateWith { setOf("zero", "one", "two_to_five", "six_to_twenty", "over_twenty") }

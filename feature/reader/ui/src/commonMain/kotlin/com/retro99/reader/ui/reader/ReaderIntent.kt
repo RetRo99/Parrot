@@ -7,6 +7,7 @@ import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.tts.NeuralVoicePackage
 
 sealed interface ReaderIntent : BaseIntent {
+    data class FeatureVisible(val feature: com.retro99.analytics.api.UsageFeature, val available: Boolean = true) : ReaderIntent
     data object ToggleBookSearch : ReaderIntent
 
     /** The reader screen started or stopped (app foreground or background). */

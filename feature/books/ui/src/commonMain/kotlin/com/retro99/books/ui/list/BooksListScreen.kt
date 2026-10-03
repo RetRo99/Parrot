@@ -179,6 +179,14 @@ fun BooksListScreen(
         modifier = modifier,
         viewModel = viewModel,
     ) { viewState, intentDispatcher ->
+        LaunchedEffect(Unit) { intentDispatcher(BooksListIntent.OnScreenVisible) }
+        LaunchedEffect(viewState.searchQuery, viewState.filterState, viewState.isLoading,
+            viewState.books, viewState.favoriteBookUuids, viewState.bookProgressInfo) {
+            intentDispatcher(BooksListIntent.OnSearchResultsVisible)
+        }
+        LaunchedEffect(viewState.supportsCloudBackup) {
+            if (viewState.supportsCloudBackup) intentDispatcher(BooksListIntent.OnBackupFeatureVisible)
+        }
         BooksListScreenContent(
             viewState = viewState,
             searchFieldState = viewModel.searchFieldState,

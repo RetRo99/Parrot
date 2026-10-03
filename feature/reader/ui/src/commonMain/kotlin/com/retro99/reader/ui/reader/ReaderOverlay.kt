@@ -257,6 +257,20 @@ internal fun ReaderOverlayContent(
         ?: "System voice"
     val isEink = Ember.style.isEink
     val searchActive = viewState.selectedSearchIndex != null
+    LaunchedEffect(controlsVisible, searchActive, viewState.isTtsReadAloud, viewState.isListenSheetVisible) {
+        if (controlsVisible && !searchActive) {
+            intentDispatcher(ReaderIntent.FeatureVisible(com.retro99.analytics.api.UsageFeature.Bookmarks))
+            if (!viewState.isReadAloud) {
+                intentDispatcher(ReaderIntent.FeatureVisible(com.retro99.analytics.api.UsageFeature.Tts, viewState.isTtsReadAloud))
+            }
+        }
+        if (viewState.isListenSheetVisible) {
+            intentDispatcher(ReaderIntent.FeatureVisible(com.retro99.analytics.api.UsageFeature.SleepTimer))
+            if (viewState.isTtsReadAloud) {
+                intentDispatcher(ReaderIntent.FeatureVisible(com.retro99.analytics.api.UsageFeature.Tts))
+            }
+        }
+    }
     val searchAccent = Ember.colors.accent.toArgb()
     val searchSoft = Ember.colors.navActive.toArgb()
     val searchOnAccent = Ember.colors.onAccent.toArgb()

@@ -8,6 +8,16 @@ import com.retro99.preferences.implementation.usecase.SaveUserPreferenceUseCase
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ProductAnalyticsEvent
+import com.retro99.analytics.api.ProductOutcome
+import com.retro99.analytics.api.ProductUsage
+import com.retro99.analytics.api.ReaderOpenTracker
+import com.retro99.analytics.api.SearchScope
+import com.retro99.analytics.api.FeatureExposureTracker
+import com.retro99.analytics.api.UsageFeature
+import com.retro99.analytics.api.UsageMode
+import com.retro99.analytics.api.UsageEndReason
+import com.retro99.analytics.api.UsageSession
 import com.retro99.analytics.api.ContinueReadingOpenOperation
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.NavigationAnalyticsEvent
@@ -144,6 +154,7 @@ class ReaderViewModel(
     @Provided private val updateBookmarkTitleUseCase: UpdateBookmarkTitleUseCase,
     @Provided private val publicationService: EpubPublicationService,
     @Provided private val analytics: Analytics,
+    @Provided private val productUsage: ProductUsage,
     @Provided private val supertonicTermsStore: SupertonicTermsStore,
     @Provided private val getUserPreferenceUseCase: GetUserPreferenceUseCase,
     @Provided private val saveUserPreferenceUseCase: SaveUserPreferenceUseCase,
@@ -156,6 +167,15 @@ class ReaderViewModel(
         hasAcceptedSupertonicTerms = supertonicTermsStore.hasAcceptedCurrentTerms(),
     )
 ) {
+
+    private val openTracker = ReaderOpenTracker(analytics, bookType.value,
+        readerOpenEntryPoint ?: if (isLastBookOnLaunch) "app_launch" else "book_detail")
+    private val usageSession = UsageSession(analytics, productUsage::meaningfulSession)
+    private val featureExposure = FeatureExposureTracker(analytics, "reader")
+    private var contentReady = false
+    private var completionInitialized = false
+    private var searchStartedAt = TimeSource.Monotonic.markNow()
+    private var searchReportedGeneration: Long? = null
 
     private var continueReadingOpenOperation = createContinueReadingOpenOperation(
         entryPoint = readerOpenEntryPoint,
@@ -318,6 +338,7 @@ class ReaderViewModel(
 
     init {
         initializeReader()
+        observeProductUsage()
         observeShowCurrentTimeSetting()
         furthestReadMark = getUserPreferenceUseCase<SearchBoundaryMark>(
             PreferencesKey.FurthestReadPosition(serverId, bookUuid),
@@ -369,6 +390,9 @@ class ReaderViewModel(
 
     override fun onIntent(intent: ReaderIntent) {
         when (intent) {
+            is ReaderIntent.FeatureVisible -> {
+                if (isReaderVisible) featureExposure.expose(intent.feature, intent.available)
+            }
             ReaderIntent.ToggleBookSearch -> toggleBookSearch()
             is ReaderIntent.SearchBook -> searchBook(intent.query, intent.submitOnly)
             is ReaderIntent.ReaderVisibilityChanged -> setReaderVisible(intent.visible)
@@ -517,6 +541,7 @@ class ReaderViewModel(
     }
 
     private fun retry() {
+        openTracker.retry()
         updateState { it.copy(error = null) }
         beginContinueReadingOpenRetry()
         if (isLastBookOnLaunch) {
@@ -598,6 +623,15 @@ class ReaderViewModel(
                     createdAt = now().toString(),
                 )
                 updatePosition(positionUiModel)
+                if (!contentReady && !hasRequestedClose) {
+                    contentReady = true
+                    openTracker.complete(ProductOutcome.Succeeded)
+                    refreshProductUsage()
+                }
+                positionUiModel.totalProgression?.let { progress ->
+                    productUsage.observeCompletion("$serverId:$bookUuid", progress, currentUsageMode(), initial = !completionInitialized)
+                    completionInitialized = true
+                }
                 positionUiModel.toRecapPage(locator.chapterInfo?.currentPage)
                     ?.let { page -> recapCapture?.onPageShown(page) }
 
@@ -666,35 +700,43 @@ class ReaderViewModel(
 
     private fun initializeReader() {
         viewModelScope.launch {
-            syncNowUseCase(
-                SyncRequest(
-                    reason = SyncTriggerReason.BOOK_OPEN,
-                    scope = SyncScope.Books(setOf(bookUuid)),
-                    urgency = SyncUrgency.ROUTINE,
-                ),
-            )
-            initializeReaderUseCase(serverId, bookUuid, bookType)
-                .onSuccess { data ->
-                    openPublication(data)
-                }
-                .onFailure { error ->
-                    completeContinueReadingOpenFailure(error, stage = "initialization")
-                    if (!isContinueReadingCancellation(error)) {
-                        analytics.logEvent(
-                            ReaderAnalyticsEvent.BookOpenFailed(
-                                bookUuid = bookUuid,
-                                bookType = bookType.name,
-                                errorMessage = error.message ?: "Unknown reader initialization error",
-                            ),
-                        )
+            try {
+                syncNowUseCase(
+                    SyncRequest(
+                        reason = SyncTriggerReason.BOOK_OPEN,
+                        scope = SyncScope.Books(setOf(bookUuid)),
+                        urgency = SyncUrgency.ROUTINE,
+                    ),
+                )
+                initializeReaderUseCase(serverId, bookUuid, bookType)
+                    .onSuccess { data ->
+                        openPublication(data)
                     }
-                    reportReaderOpenFailure(
-                        error = error,
-                        stage = "initialization",
-                        reasonCode = "reader_initialization_failed",
-                    )
-                    updateState { it.copy(error = error) }
-                }
+                    .onFailure { error ->
+                        completeContinueReadingOpenFailure(error, stage = "initialization")
+                        if (!isContinueReadingCancellation(error)) {
+                            analytics.logEvent(
+                                ReaderAnalyticsEvent.BookOpenFailed(
+                                    bookUuid = bookUuid,
+                                    bookType = bookType.name,
+                                    errorMessage = error.message ?: "Unknown reader initialization error",
+                                ),
+                            )
+                        }
+                        reportReaderOpenFailure(
+                            error = error,
+                            stage = "initialization",
+                            reasonCode = "reader_initialization_failed",
+                        )
+                        updateState { it.copy(error = error) }
+                    }
+            } catch (exception: CancellationException) {
+                openTracker.complete(ProductOutcome.Cancelled, "reader_open_cancelled")
+                throw exception
+            } catch (exception: Exception) {
+                openTracker.complete(ProductOutcome.Failed, "unexpected_reader_open_failure")
+                throw exception
+            }
         }
     }
 
@@ -737,6 +779,10 @@ class ReaderViewModel(
                 customFonts = customFonts,
             )
             position?.let(::trackFurthestPosition)
+            position?.totalProgression?.let { progress ->
+                productUsage.observeCompletion("$serverId:$bookUuid", progress, UsageMode.Reading, initial = true)
+                completionInitialized = true
+            }
 
             updateState { state ->
                 state.copy(
@@ -819,6 +865,7 @@ class ReaderViewModel(
             error is AppError.AuthError && stage == "initialization" -> "server_not_authenticated"
             else -> reasonCode
         }
+        openTracker.complete(if (isContinueReadingCancellation) ProductOutcome.Cancelled else ProductOutcome.Failed, resolvedReasonCode)
         val context = DiagnosticContext(
             screen = "reader",
             sourceScreen = when {
@@ -1087,6 +1134,7 @@ class ReaderViewModel(
                     }
                     is TtsPlaybackOperation.Succeeded -> analytics.logBreadcrumb(context)
                     is TtsPlaybackOperation.Failed -> {
+                        usageSession.checkpoint(UsageEndReason.Error)
                         if (operation.error != null) {
                             analytics.logException(operation.error, context)
                         } else {
@@ -2049,6 +2097,7 @@ class ReaderViewModel(
         bookSearchJob = viewModelScope.launch {
             try {
                 if (!submitted) delay(300L)
+                searchStartedAt = TimeSource.Monotonic.markNow()
                 val boundaries = searchBoundaries ?: bookController.searchChapterBoundaries().also { searchBoundaries = it }
                 if (generation != viewState.value.bookSearchSessionId) return@launch
                 updateState { it.copy(bookSearchBoundaries = boundaries) }
@@ -2066,6 +2115,7 @@ class ReaderViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
+                if (generation == viewState.value.bookSearchSessionId) reportSearchResults(generation, ProductOutcome.Failed)
                 updateState { state ->
                     if (generation == viewState.value.bookSearchSessionId) {
                         state.copy(isBookSearchLoading = false, bookSearchFailed = error !is BookNotSearchableException,
@@ -2088,7 +2138,22 @@ class ReaderViewModel(
                 state
             }
         }
+        reportSearchResults(generation)
         if (revealAfterScan) revealSearchAhead()
+    }
+
+    private fun reportSearchResults(generation: Long, outcome: ProductOutcome = ProductOutcome.Succeeded) {
+        val state = viewState.value
+        if (generation != state.bookSearchSessionId || searchReportedGeneration == generation) return
+        searchReportedGeneration = generation
+        analytics.logEvent(ProductAnalyticsEvent.SearchResultsShown(
+            scope = SearchScope.Book,
+            count = state.bookSearchResults.size,
+            durationMs = searchStartedAt.elapsedNow().inWholeMilliseconds,
+            outcome = outcome,
+            isCapped = state.bookSearchCapped,
+            isRestricted = state.searchBoundary != null,
+        ))
     }
 
     /**
@@ -2191,6 +2256,7 @@ class ReaderViewModel(
     private fun goToSearchResult(result: ReaderSearchResult) {
         val state = viewState.value
         if (result.sessionId != state.bookSearchSessionId) return
+        analytics.logEvent(ProductAnalyticsEvent.SearchResultSelected(SearchScope.Book, result.index))
         // Recent searches store no match counts: while hidden, a count would leak the rest.
         val recent = RecentBookSearch(state.bookSearchQuery.trim(), 0, state.bookSearchComplete)
         val recents = (listOf(recent) + state.bookSearchRecents.filterNot { it.query == recent.query }).take(8)
@@ -2320,6 +2386,11 @@ class ReaderViewModel(
                 isNarrationStartPending = false,
             )
         }
+        analytics.logEvent(ProductAnalyticsEvent.ListeningSourceChanged(
+            previous = if (state.listenSource == ListenSource.DEVICE_VOICE) UsageMode.Tts else UsageMode.ReadAloud,
+            current = if (target == ListenSource.DEVICE_VOICE) UsageMode.Tts else UsageMode.ReadAloud,
+        ))
+        refreshProductUsage()
         if (!wasPlaying) return
 
         when (target) {
@@ -2623,6 +2694,8 @@ class ReaderViewModel(
         // outbox holds the reading position even if the checkpoint below never runs.
         if (hasRequestedClose) return
         hasRequestedClose = true
+        openTracker.complete(ProductOutcome.Cancelled, "closed_before_content")
+        usageSession.finish(UsageEndReason.Closed)
         // Kept for the statistics row; endRecapSession() clears it.
         val closedRecapSessionId = recapSessionId
         val readingDurationMs = statisticsTimer.finish() ?: 0L
@@ -2989,6 +3062,8 @@ class ReaderViewModel(
     }
 
     override fun onCleared() {
+        openTracker.complete(ProductOutcome.Cancelled, "reader_cleared")
+        usageSession.finish(UsageEndReason.Cleared)
         statisticsTimer.finish()?.let { durationMs ->
             saveStatisticsSession(durationMs, nowMillis(), recapSessionId)
         }
@@ -3068,11 +3143,46 @@ class ReaderViewModel(
     }
 
     private fun setReaderVisible(visible: Boolean) {
+        if (isReaderVisible && !visible) usageSession.checkpoint(UsageEndReason.Background)
         isReaderVisible = visible
+        refreshProductUsage()
         if (bookOpenedTimestamp > 0L) {
             statisticsTimer.setActive(visible || viewState.value.isPlaying)
         }
         recapCapture?.setForeground(visible)
+    }
+
+    private fun currentUsageMode(): UsageMode = when {
+        !viewState.value.isPlaying -> UsageMode.Reading
+        viewState.value.listenSource == ListenSource.DEVICE_VOICE -> UsageMode.Tts
+        else -> UsageMode.ReadAloud
+    }
+
+    private fun refreshProductUsage() {
+        val state = viewState.value
+        val blocked = state.positionConflict != null || state.linkedResumeOffer != null || state.error != null
+        val loading = state.isListening && (state.isNarrationLoading || state.isNarrationStartPending)
+        val active = contentReady && !hasRequestedClose && !blocked && !loading && (isReaderVisible || state.isPlaying)
+        usageSession.update(
+            mode = currentUsageMode().takeIf { active },
+            foreground = isReaderVisible,
+            buffering = contentReady && !blocked && loading,
+            listeningMode = if (state.listenSource == ListenSource.DEVICE_VOICE) UsageMode.Tts else UsageMode.ReadAloud,
+        )
+    }
+
+    private fun observeProductUsage() {
+        viewState.map { state ->
+            listOf(state.isPlaying, state.isNarrationLoading, state.isNarrationStartPending,
+                state.isListening, state.positionConflict != null, state.linkedResumeOffer != null, state.error != null,
+                state.listenSource == ListenSource.DEVICE_VOICE)
+        }.distinctUntilChanged().onEach { refreshProductUsage() }.launchIn(viewModelScope)
+        viewModelScope.launch {
+            while (true) {
+                delay(30_000L)
+                usageSession.checkpoint()
+            }
+        }
     }
 
     private fun saveStatisticsSession(durationMs: Long, endTime: Long, recapId: String?) {
