@@ -3018,6 +3018,8 @@ class ReaderViewModel(
         wasPlaying = isPlaying
 
         updateState { it.copy(isPlaying = isPlaying) }
+        // Playback turns pages on its own; those turns are not pages the reader read.
+        readingSpeedTracker.setListening(isPlaying)
         if (bookOpenedTimestamp > 0L) statisticsTimer.setActive(isReaderVisible || isPlaying)
         if (!isPlaying) {
             saveCurrentAudioPosition()
@@ -3254,6 +3256,7 @@ class ReaderViewModel(
                 startTime = bookOpenedTimestamp,
                 endTime = endTime,
                 durationMs = durationMs,
+                pagesRead = readingSpeedTracker.sessionPagesRead().takeIf { pages -> pages > 0 },
                 endProgression = state.currentPosition?.totalProgression,
                 readingSpeedWpm = speed,
                 recapSessionId = recapId,

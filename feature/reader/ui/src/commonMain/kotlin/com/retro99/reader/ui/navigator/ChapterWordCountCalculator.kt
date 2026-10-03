@@ -38,8 +38,17 @@ object ChapterWordCountCalculator : KoinComponent {
                     return JSON.stringify({ status: 'error', message: 'No body element' });
                 }
                 
-                // Get all text content, excluding script and style elements
-                const textContent = body.innerText || body.textContent || '';
+                // innerText is the rendered text and already excludes script, style and
+                // hidden elements. The old textContent fallback counted them and inflated
+                // the chapter's word count; only use it when innerText is unavailable.
+                let textContent = body.innerText;
+                if (textContent == null) {
+                    const clone = body.cloneNode(true);
+                    clone.querySelectorAll('script,style,noscript,template,svg').forEach(function(node) {
+                        node.remove();
+                    });
+                    textContent = clone.textContent || '';
+                }
                 
                 // Split by whitespace and filter out empty strings
                 const words = textContent.trim().split(/\s+/).filter(function(word) {

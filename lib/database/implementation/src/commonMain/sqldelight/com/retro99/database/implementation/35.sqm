@@ -1,0 +1,7 @@
+-- Reading speed repair (design/RECAP_REPORT.md §6): the estimator used to clamp to its
+-- 50/1000 bounds and persist the clamped value, so a spike pinned one of those bounds as
+-- the fallback for every future session. Values at the bounds are artifacts, not
+-- measurements: reset them instead of showing them.
+UPDATE reader_settings SET setting_value='200'
+WHERE setting_key='reading_speed_wpm' AND CAST(setting_value AS INTEGER) IN (50, 1000);
+UPDATE reading_session SET reading_speed_wpm=NULL WHERE reading_speed_wpm IN (50, 1000);

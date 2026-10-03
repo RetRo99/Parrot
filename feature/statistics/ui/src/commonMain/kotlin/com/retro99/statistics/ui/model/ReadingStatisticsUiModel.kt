@@ -49,6 +49,7 @@ data class ReadingSessionUiModel(
     val id: Long,
     val bookUuid: String,
     val bookTitle: String,
+    val bookType: BookType = BookType.EBOOK,
     val startTime: Long,
     val durationMs: Long,
     val durationFormatted: TextWrapper,
@@ -56,6 +57,8 @@ data class ReadingSessionUiModel(
     val readingSpeedFormatted: TextWrapper,
     val endTimeFormatted: String = "",
     val readingSpeedWpm: Int = 0,
+    /** Pages turned forward by the reader; null when none were counted. */
+    val pagesRead: Int? = null,
     val startProgression: Double? = null,
     val endProgression: Double? = null,
     /** Links to the recap of the same reader session; null when none was recorded. */
@@ -128,6 +131,7 @@ fun ReadingSessionDomainModel.toSessionUiModel(): ReadingSessionUiModel {
         id = id,
         bookUuid = bookUuid,
         bookTitle = bookTitle,
+        bookType = bookType,
         startTime = startTime,
         durationMs = durationMs,
         durationFormatted = formatDuration(durationMs),
@@ -135,6 +139,7 @@ fun ReadingSessionDomainModel.toSessionUiModel(): ReadingSessionUiModel {
         readingSpeedFormatted = formatReadingSpeed(readingSpeedWpm),
         endTimeFormatted = formatSessionTime(endTime),
         readingSpeedWpm = readingSpeedWpm,
+        pagesRead = pagesRead,
         startProgression = startProgression,
         endProgression = endProgression,
         recapSessionId = recapSessionId,
