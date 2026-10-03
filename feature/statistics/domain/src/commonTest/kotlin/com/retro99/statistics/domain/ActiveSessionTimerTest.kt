@@ -29,4 +29,39 @@ class ActiveSessionTimerTest {
         val timer = ActiveSessionTimer { 500L }
         assertEquals(0L, timer.finish())
     }
+
+    @Test
+    fun finishingWhilePausedDoesNotIncludeTheTimeSinceThePause() {
+        var elapsed = 10L
+        val timer = ActiveSessionTimer { elapsed }
+        timer.setActive(true)
+        elapsed = 210L
+        timer.setActive(false)
+        elapsed = 1_000_000L
+        assertEquals(200L, timer.finish())
+    }
+
+    @Test
+    fun manyPauseResumeCyclesSumOnlyActiveIntervals() {
+        var elapsed = 0L
+        val timer = ActiveSessionTimer { elapsed }
+        repeat(100) {
+            timer.setActive(true)
+            elapsed += 10L
+            timer.setActive(false)
+            elapsed += 1_000L
+        }
+        assertEquals(1_000L, timer.finish())
+    }
+
+    @Test
+    fun finishingBeforeOpeningPreventsLateCallbacksFromStartingASession() {
+        var elapsed = 0L
+        val timer = ActiveSessionTimer { elapsed }
+        assertEquals(0L, timer.finish())
+        timer.setActive(true)
+        elapsed = 10_000L
+        timer.setActive(false)
+        assertNull(timer.finish())
+    }
 }

@@ -42,7 +42,7 @@ class StatisticsDataRepositoryFailureTest {
         val result = repository.getReadingStreak()
 
         result.fold(
-            success = { error("Expected the reading-days failure to propagate") },
+            success = { error("Expected the session query failure to propagate") },
             failure = { assertIs<AppError.DatabaseError>(it) },
         )
     }
@@ -74,15 +74,26 @@ class StatisticsDataRepositoryFailureTest {
             failure = { assertIs<AppError.DatabaseError>(it) },
         )
     }
+
+    @Test
+    fun dailyCalendarQueryFailureIsNotReportedAsAnEmptyChart() = runTest {
+        val repository = StatisticsDataRepository(
+            localSource = FakeStatisticsLocalSource(failAt = Query.ALL_SESSIONS),
+        )
+        repository.getDailyReadingTime(30).fold(
+            success = { error("Expected the session query failure to propagate") },
+            failure = { assertIs<AppError.DatabaseError>(it) },
+        )
+    }
 }
 
-private enum class Query {
+internal enum class Query {
     TOTAL_TIME,
     READING_DAYS,
     ALL_SESSIONS,
 }
 
-private class FakeStatisticsLocalSource(
+internal class FakeStatisticsLocalSource(
     private val failAt: Query? = null,
 ) : StatisticsLocalSource {
 

@@ -76,4 +76,64 @@ class StatisticsSessionCalendarTest {
         val streak = StatisticsSessionCalendar.streak(sessions, today, zone)
         assertEquals(2, streak.currentStreak)
     }
+
+    @Test
+    fun fallBackKeepsBothOccurrencesOfTheRepeatedHourOnTheSameLocalDay() {
+        val zone = TimeZone.of("America/New_York")
+        val sessions = listOf(session("2026-11-01T05:30:00Z"), session("2026-11-01T06:30:00Z"))
+        val daily = StatisticsSessionCalendar.dailyTime(sessions, 0L, zone)
+        assertEquals(1, daily.size)
+        assertEquals(
+            LocalDate(2026, 11, 1).atStartOfDayIn(zone).toEpochMilliseconds(),
+            daily.single().dayStart,
+        )
+        assertEquals(120_000L, daily.single().totalDurationMs)
+    }
+
+    @Test
+    fun shuffledSessionsProduceChronologicalDailyBuckets() {
+        val sessions = listOf(
+            session("2026-09-30T12:00:00Z", 10L),
+            session("2026-09-28T12:00:00Z", 20L),
+            session("2026-09-29T12:00:00Z", 30L),
+            session("2026-09-28T13:00:00Z", 40L),
+        )
+        val daily = StatisticsSessionCalendar.dailyTime(sessions, 0L, TimeZone.UTC)
+        assertEquals(
+            (28..30).map { LocalDate(2026, 9, it).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds() },
+            daily.map { it.dayStart },
+        )
+        assertEquals(listOf(60L, 30L, 10L), daily.map { it.totalDurationMs })
+    }
+
+    @Test
+    fun midnightCrossingSessionBelongsToItsStartDay() {
+        val sessions = listOf(session("2026-09-28T23:30:00Z", 3_600_000L))
+        val daily = StatisticsSessionCalendar.dailyTime(sessions, 0L, TimeZone.UTC)
+        assertEquals(
+            LocalDate(2026, 9, 28).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
+            daily.single().dayStart,
+        )
+        assertEquals(3_600_000L, daily.single().totalDurationMs)
+        val streak = StatisticsSessionCalendar.streak(sessions, LocalDate(2026, 9, 29), TimeZone.UTC)
+        assertEquals(1, streak.currentStreak)
+        assertEquals(1, streak.currentStreakDays.size)
+    }
+
+    @Test
+    fun equalLongestStreaksChooseTheMostRecentAndLapsedCurrentStreakIsEmpty() {
+        val sessions = listOf(
+            session("2026-09-01T12:00:00Z"), session("2026-09-02T12:00:00Z"),
+            session("2026-09-10T12:00:00Z"), session("2026-09-11T12:00:00Z"),
+        )
+        val streak = StatisticsSessionCalendar.streak(sessions, LocalDate(2026, 9, 29), TimeZone.UTC)
+        assertEquals(0, streak.currentStreak)
+        assertEquals(emptyList(), streak.currentStreakDays)
+        assertEquals(2, streak.longestStreak)
+        assertEquals(
+            (10..11).map { LocalDate(2026, 9, it).atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds() },
+            streak.longestStreakDays,
+        )
+        assertEquals(streak.longestStreakDays.last(), streak.lastReadingDay)
+    }
 }
