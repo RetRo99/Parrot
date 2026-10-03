@@ -92,10 +92,15 @@ appended **at the event**, never at close, because `close()` tears down the WebV
     turn or heard sentence.
   - `language` (`RecapLanguages.resolve`): book metadata language if supported, else
     the system locale, else null. Allow-list: en, sl, de, fr, es, it, hr.
-- **Recorder buffer:** appends are non-blocking and queued in order. It keeps the most
-  recent 8,000 chars (`RecapLimits.MAX_EXCERPT_CHARS`) and ignores a segment equal to
-  the previous one. A forward `PAGE` counts as a page advance; each `TTS_SENTENCE` as
+- **Recorder buffer:** appends are non-blocking and queued in order. There is no
+  excerpt cap: it keeps everything read in the session and only ignores a segment equal
+  to the previous one. A forward `PAGE` counts as a page advance; each `TTS_SENTENCE` as
   one sentence.
+- **Saving:** each save rewrites the whole `excerpt` column. Up to 16k chars it is saved
+  on every append; past that at most every 30 s, so a long session doesn't rewrite
+  megabytes per sentence. Session end always saves the full in-memory text; a crash
+  loses at most the last 30 s. On Android the SQLite cursor window is raised to 16 MB
+  (default 2 MB) so a long session's row stays readable.
 - **iOS:** pages are captured as on Android. iOS device TTS is a stub with no sentence
   callbacks, so there is no TTS capture. Locator callbacks run one at a time so pages
   arrive in order.
@@ -173,7 +178,33 @@ Observing never triggers generation. `SessionRecap` exposes no excerpt text.
   eligible, waiting for opt-in, generating, done (summary, engine, model), not enough
   read, failed with Retry, failed for good, sign-in required (also for a `PENDING` row
   parked with `AUTH_REQUIRED` while the client still looks signed in).
-- **Settings:** App settings → Reading → Cloud recaps.
+- **Settings:** App settings → Reading → Cloud recaps. Turning it on needs a live
+  Parrot Cloud session (`CloudAuthState.SignedIn`, as the runner checks). Signed
+  out, the row says "Sign in to Parrot Cloud to use recaps" and is disabled, unless
+  consent is on: then it can still be turned off. Signing out keeps consent; rows
+  wait as `PENDING` until sign-in (`CloudRecapsToggle.kt` in home ui).
+
+## Long sessions (`generate-recap`)
+
+Request bodies of ~1 MB+ hang or fail at the Edge gateway, so `CloudRecapEngine`
+sends an excerpt whose JSON is over 180 KB as upload parts (one random upload id,
+parts in order); the server stores all but the last in `recap_upload_parts`, and
+the last part's request joins them and generates. A 409 (a part went missing)
+is retryable and re-uploads. Only past 64 parts (~11M chars) are the oldest
+parts left out, which changes nothing: the server reads at most 2M.
+The function makes one model call for up to 250k chars. Longer excerpts are split
+at line or sentence breaks into parts of up to 250k chars; each part gets a short
+factual note (4 calls in parallel), then one merge call turns the notes, in order,
+into the 2-3 sentence recap with the same rules. Notes are never returned. One
+recap uses one quota unit however many calls it needs.
+
+Everything runs within a 135 s budget (the Edge gateway answers 504 at 150 s): each
+call has a 60 s timeout, one retry only on 5xx/network and only with ≥ 10 s left,
+and part calls stop 35 s early so the merge has time. Past 2M chars (~20 h of
+reading) the function keeps the most recent 2M, which is about 9 parts, three map
+rounds. Measured on hy3 (2026-10-02): 8k chars 3.2 s, 300k chars 11 s in one call,
+a whole novel (690k chars, 3 parts) 14 s, and 2M chars (9 parts) 31 s. The client
+waits up to 150 s per request (`CloudRecapEngine.REQUEST_TIMEOUT_MS`).
 
 ## Offline engine extension point
 
@@ -181,7 +212,7 @@ Observing never triggers generation. `SessionRecap` exposes no excerpt text.
 produced it. To add an on-device engine:
 
 1. Implement `RecapEngine` in reader data with its own `id` (e.g. `"local"`). It gets a
-   bounded `RecapInput` (excerpt, language, lastSentence) and maps its own failures to
+   `RecapInput` (the whole excerpt, language, lastSentence) and maps its own failures to
    `RecapResult` (`Retryable`/`Permanent`; never `AuthRequired`).
 2. Add a separate setting for it in `RecapSettings` (do not reuse cloud consent).
 3. Choose it in `DefaultRecapEngineSelector.select()` when cloud isn't usable, and
@@ -208,11 +239,16 @@ The runner, retention, eligibility and UI need no changes.
 ## Privacy
 
 The API receives only `excerpt`, `language` and `lastSentence`: no titles, ids or
-chapter names. Summaries and excerpts are kept in the profile database on the device and
-never synced to Parrot Cloud. That database is part of OS backups (Android Auto Backup
-with `allowBackup="true"` and no exclusion rules; iOS iCloud/device backup), so recap
-rows go wherever the user's backups go; the settings copy says so. Excluding them
-would mean excluding the whole profile database or moving recaps to their own file.
-Logs carry status
-and error codes only (`RecapDiagnostics`); `toString()` of inputs, results and capture
+chapter names. A long excerpt's earlier parts are held server-side in
+`recap_upload_parts` (owner-only, no client table access) until the last part
+arrives, then deleted; abandoned parts are deleted after an hour. Otherwise the
+function stores none of it (only a per-user daily count).
+Recaps are not part of Parrot Cloud sync or backup: sync is row-based
+(`SyncOutboxEntry` types: library books, book links, positions, bookmarks, reader
+settings, reading sessions without `recap_session_id`) and backups upload book
+files only. There is no
+`session_recap` table on the server. Recap rows live in the profile database,
+which OS backups (Android Auto Backup, iCloud/device backup) still include; the
+Android backup rules exclude secrets, models and book files, not databases.
+Logs carry status and error codes only (`RecapDiagnostics`); `toString()` of inputs, results and capture
 types omits the text. `recap_session_id` is not part of the synced statistics payload.

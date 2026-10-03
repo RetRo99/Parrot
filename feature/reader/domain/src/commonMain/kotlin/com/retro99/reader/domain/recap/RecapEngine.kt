@@ -20,7 +20,7 @@ interface RecapEngine {
 }
 
 data class RecapInput(
-    /** Read text, already bounded to [RecapLimits.MAX_EXCERPT_CHARS]. */
+    /** Everything read in the session; never truncated. */
     val excerpt: String,
     /** Output language (BCP-47); null lets the engine choose. */
     val language: String?,

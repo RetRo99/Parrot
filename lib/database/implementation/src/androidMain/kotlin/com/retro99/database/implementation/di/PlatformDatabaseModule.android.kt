@@ -47,6 +47,9 @@ private class AndroidSqlDriverFactory(
                 schema = AppDatabase.Schema,
                 context = context,
                 name = databaseName,
+                // Recap excerpts are uncapped; the 2 MB default window would
+                // make a long session's row unreadable on Android.
+                windowSizeBytes = CURSOR_WINDOW_BYTES,
             )
 
             override fun deleteDatabaseFile(): Boolean = context.deleteDatabase(databaseName)
@@ -58,3 +61,6 @@ private class AndroidSqlDriverFactory(
         return context.deleteDatabase(databaseName)
     }
 }
+
+// ~15M chars of read text; memory is only used as a row fills it.
+private const val CURSOR_WINDOW_BYTES = 16L * 1024 * 1024
