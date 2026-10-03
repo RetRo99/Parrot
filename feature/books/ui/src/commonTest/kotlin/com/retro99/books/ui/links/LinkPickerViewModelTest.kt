@@ -24,6 +24,7 @@ import kotlin.test.assertNull
 class LinkPickerViewModelTest {
 
     private val links = FakeBookLinksRepository()
+    private val analytics = RecordingLinkAnalytics()
     private var backCount = 0
 
     @Test
@@ -74,6 +75,8 @@ class LinkPickerViewModelTest {
             links.linked,
         )
         assertEquals(1, backCount)
+        assertEquals(listOf("started", "succeeded"), analytics.events.map { it.parameters["outcome"] })
+        assertEquals(listOf("manual_link", "manual_link"), analytics.events.map { it.parameters["usage_action"] })
         assertNull(classUnderTest.currentViewState().sameSourceError)
     }
 
@@ -91,6 +94,7 @@ class LinkPickerViewModelTest {
         // Then
         assertEquals(CopySource.Library, classUnderTest.currentViewState().sameSourceError)
         assertEquals(0, backCount)
+        assertEquals(listOf("started", "failed"), analytics.events.map { it.parameters["outcome"] })
 
         // When
         classUnderTest.onIntent(LinkPickerIntent.OnErrorDismissed)
@@ -113,6 +117,7 @@ class LinkPickerViewModelTest {
             getBooksUseCase = GetBooksUseCase(provider, links),
             observeBookLinksUseCase = ObserveBookLinksUseCase(links),
             linkBooksUseCase = LinkBooksUseCase(links),
+            analytics = analytics,
         )
     }
 

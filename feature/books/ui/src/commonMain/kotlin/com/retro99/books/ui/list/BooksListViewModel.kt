@@ -7,6 +7,13 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.FeatureUsageAnalyticsEvent
+import com.retro99.analytics.api.DiscoveryRoute
+import com.retro99.analytics.api.DiscoveryDestination
+import com.retro99.analytics.api.UsageOperation
+import com.retro99.analytics.api.UsageAction
+import com.retro99.analytics.api.logFeatureUsage
+import com.retro99.analytics.api.trackUsageOperation
 import com.retro99.analytics.api.ProductAnalyticsEvent
 import com.retro99.analytics.api.ProductOutcome
 import com.retro99.analytics.api.BackupErrorCategory
@@ -103,9 +110,11 @@ class BooksListViewModel(
 
     override fun onIntent(intent: BooksListIntent) {
         when (intent) {
+            BooksListIntent.OnLinkSuggestionsVisible -> featureExposure.expose(UsageFeature.LinkedCopies, true)
             BooksListIntent.OnScreenVisible -> {
                 featureExposure.reset()
                 lastSearchResults = null
+                featureExposure.expose(UsageFeature.LocalImport, true)
                 if (viewState.value.supportsCloudBackup) featureExposure.expose(UsageFeature.Backup, true)
             }
             BooksListIntent.OnSearchResultsVisible -> reportSearchResults()
@@ -129,6 +138,13 @@ class BooksListViewModel(
                     if (index >= 0) analytics.logEvent(ProductAnalyticsEvent.SearchResultSelected(SearchScope.Library, index))
                 }
                 saveRecentSearch(viewState.value.searchQuery)
+                val route = when {
+                    state.searchQuery.isNotBlank() -> DiscoveryRoute.Search
+                    BookQuickFilter.FAVORITES in state.filterState.activeQuickFilters -> DiscoveryRoute.Favorites
+                    state.filterState.activeQuickFilters.isNotEmpty() || state.filterState.homeFilter != null -> DiscoveryRoute.Filtered
+                    else -> DiscoveryRoute.Library
+                }
+                analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.DiscoverySelected(route, DiscoveryDestination.Book))
                 onNavigateToBookDetail(intent.book)
             }
             is BooksListIntent.OnFavoriteClicked -> toggleFavorite(intent.bookUuid)
@@ -347,6 +363,8 @@ class BooksListViewModel(
     private var hasInitiallyFetchedRemoteProgress = false
 
     private fun observeBooks() {
+        val started = TimeSource.Monotonic.markNow()
+        var initialReported = false
         observeAllBooksWithProgressUseCase()
             .onStart {
                 updateState { it.copy(isLoading = true, error = null) }
@@ -354,6 +372,12 @@ class BooksListViewModel(
             .onEach { result ->
                 result
                     .onSuccess { booksWithProgress ->
+                        if (!initialReported) {
+                            initialReported = true
+                            analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.LibraryLoadCompleted(
+                                ProductOutcome.Succeeded, started.elapsedNow().inWholeMilliseconds, booksWithProgress.size,
+                            ))
+                        }
                         currentBooks = booksWithProgress
 
                         if (!hasInitiallyFetchedRemoteProgress && booksWithProgress.isNotEmpty()) {
@@ -379,6 +403,12 @@ class BooksListViewModel(
                         }
                     }
                     .onFailure { error ->
+                        if (!initialReported) {
+                            initialReported = true
+                            analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.LibraryLoadCompleted(
+                                ProductOutcome.Failed, started.elapsedNow().inWholeMilliseconds, 0,
+                            ))
+                        }
                         error.log(
                             analytics,
                             DiagnosticContext(
@@ -405,7 +435,10 @@ class BooksListViewModel(
     private fun importBook(file: io.github.vinceglb.filekit.core.PlatformFile, openAfterImport: Boolean) {
         viewModelScope.launch {
             updateState { it.copy(isImporting = true) }
-            importEpubUseCase(file)
+            analytics.trackUsageOperation(
+                UsageOperation.Import, UsageAction.Import, "books_library",
+                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+            ) { importEpubUseCase(file) }
                 .onSuccess { imported ->
                     analytics.logEvent(BookAnalyticsEvent.BookImported(bookUuid = imported.libraryBookId))
                     if (openAfterImport) {

@@ -1,6 +1,12 @@
 package com.retro99.books.ui.positions
 
 import androidx.lifecycle.viewModelScope
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ProductOutcome
+import com.retro99.analytics.api.UsageOperation
+import com.retro99.analytics.api.UsageAction
+import com.retro99.analytics.api.trackUsageOperation
+import com.retro99.reader.domain.write.CopyWriteResult
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.reader.domain.usecase.ApplyPositionUseCase
 import com.retro99.reader.domain.usecase.ObserveCopyPositionsUseCase
@@ -19,6 +25,7 @@ class PositionsViewModel(
     @Provided private val observeCopyPositionsUseCase: ObserveCopyPositionsUseCase,
     @Provided private val previewApplyPositionUseCase: PreviewApplyPositionUseCase,
     @Provided private val applyPositionUseCase: ApplyPositionUseCase,
+    @Provided private val analytics: Analytics,
 ) : BaseViewModel<PositionsViewState, PositionsIntent>(PositionsViewState()) {
 
     init {
@@ -81,6 +88,7 @@ class PositionsViewModel(
 
     private fun apply() {
         val state = viewState.value
+        if (state.isApplying) return
         val source = state.rows.firstOrNull { row -> row.copy.key.value == state.selectedKey }
             ?: return
         val ticked = state.previews.orEmpty()
@@ -88,7 +96,17 @@ class PositionsViewModel(
         if (ticked.isEmpty()) return
         updateState { current -> current.copy(isApplying = true) }
         viewModelScope.launch {
-            val results = applyPositionUseCase(source, ticked)
+            val results = analytics.trackUsageOperation(
+                UsageOperation.ApplyPosition, UsageAction.Apply, "positions", ticked.size,
+                outcome = { results ->
+                    val written = results.count { it.result == CopyWriteResult.Written }
+                    when {
+                        written == ticked.size -> ProductOutcome.Succeeded
+                        written == 0 -> ProductOutcome.Failed
+                        else -> ProductOutcome.Partial
+                    }
+                },
+            ) { applyPositionUseCase(source, ticked) }
             val rows = observeCopyPositionsUseCase(serverId, bookUuid).orEmpty()
             updateState { current ->
                 current.copy(isApplying = false, results = results, rows = rows)

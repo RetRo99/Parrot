@@ -8,6 +8,8 @@ enum class UsageMode(val value: String) {
 enum class SearchScope(val value: String) { Library("library"), Book("book") }
 enum class UsageFeature(val value: String) {
     Tts("tts"), Bookmarks("bookmarks"), SleepTimer("sleep_timer"), Backup("backup"),
+    Recaps("recaps"), LinkedCopies("linked_copies"), Positions("positions"), ReadAloud("readaloud"),
+    LocalImport("local_import"), AuthorBrowsing("author_browsing"), SeriesBrowsing("series_browsing"),
 }
 enum class UsageEndReason(val value: String) {
     Checkpoint("checkpoint"), Background("background"), Closed("closed"),

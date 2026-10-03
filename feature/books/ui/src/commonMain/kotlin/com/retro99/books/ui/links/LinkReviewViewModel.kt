@@ -1,6 +1,11 @@
 package com.retro99.books.ui.links
 
 import androidx.lifecycle.viewModelScope
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ProductOutcome
+import com.retro99.analytics.api.UsageOperation
+import com.retro99.analytics.api.UsageAction
+import com.retro99.analytics.api.trackUsageOperation
 import com.github.michaelbull.result.onFailure
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.links.LinkDecisionType
@@ -27,6 +32,7 @@ class LinkReviewViewModel(
     @Provided private val observeLinkSuggestionsUseCase: ObserveLinkSuggestionsUseCase,
     @Provided private val linkBooksUseCase: LinkBooksUseCase,
     @Provided private val decideLinkUseCase: DecideLinkUseCase,
+    @Provided private val analytics: Analytics,
 ) : BaseViewModel<LinkReviewViewState, LinkReviewIntent>(
     LinkReviewViewState(),
 ) {
@@ -63,7 +69,10 @@ class LinkReviewViewModel(
     private fun link(pairKey: String) {
         val suggestion = suggestion(pairKey) ?: return
         viewModelScope.launch {
-            linkBooksUseCase(suggestion.first.key, suggestion.second.key).onFailure { error ->
+            analytics.trackUsageOperation(
+                UsageOperation.Link, UsageAction.SuggestedLink, "link_review",
+                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+            ) { linkBooksUseCase(suggestion.first.key, suggestion.second.key) }.onFailure { error ->
                 val source = error.repeatedLinkSource()
                 updateState { state ->
                     state.copy(sameSourceError = source, error = error.takeIf { source == null })
@@ -75,7 +84,10 @@ class LinkReviewViewModel(
     private fun decide(pairKey: String, decision: LinkDecisionType) {
         val suggestion = suggestion(pairKey) ?: return
         viewModelScope.launch {
-            decideLinkUseCase(suggestion.first.key, suggestion.second.key, decision)
+            analytics.trackUsageOperation(
+                UsageOperation.Link, if (decision == LinkDecisionType.Never) UsageAction.Reject else UsageAction.Skip, "link_review",
+                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+            ) { decideLinkUseCase(suggestion.first.key, suggestion.second.key, decision) }
                 .onFailure { error -> updateState { state -> state.copy(error = error) } }
         }
     }
@@ -87,8 +99,17 @@ class LinkReviewViewModel(
         viewModelScope.launch {
             // One at a time: an earlier link can make a later one invalid (a source would
             // repeat), and that one is then simply not counted.
-            val linkedCount = confident.count { suggestion ->
-                linkBooksUseCase(suggestion.first.key, suggestion.second.key).isOk
+            val linkedCount = analytics.trackUsageOperation(
+                UsageOperation.Link, UsageAction.BulkLink, "link_review", confident.size,
+                outcome = { count -> when (count) {
+                    confident.size -> ProductOutcome.Succeeded
+                    0 -> ProductOutcome.Failed
+                    else -> ProductOutcome.Partial
+                } },
+            ) {
+                confident.count { suggestion ->
+                    linkBooksUseCase(suggestion.first.key, suggestion.second.key).isOk
+                }
             }
             updateState { state -> state.copy(linkedCount = linkedCount) }
         }

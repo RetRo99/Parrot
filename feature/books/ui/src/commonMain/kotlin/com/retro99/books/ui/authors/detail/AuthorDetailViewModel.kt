@@ -4,6 +4,10 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.FeatureUsageAnalyticsEvent
+import com.retro99.analytics.api.DiscoveryRoute
+import com.retro99.analytics.api.DiscoveryDestination
+import com.retro99.analytics.api.logFeatureUsage
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.usecase.GetBooksByAuthorUseCase
@@ -39,7 +43,10 @@ class AuthorDetailViewModel(
         when (intent) {
             AuthorDetailIntent.OnBackClicked -> onBack()
             AuthorDetailIntent.OnRefresh -> observeBooks()
-            is AuthorDetailIntent.OnBookClicked -> onNavigateToBookDetail(intent.book)
+            is AuthorDetailIntent.OnBookClicked -> {
+                analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.DiscoverySelected(DiscoveryRoute.Author, DiscoveryDestination.Book))
+                onNavigateToBookDetail(intent.book)
+            }
         }
     }
 
@@ -77,4 +84,3 @@ class AuthorDetailViewModel(
             .launchIn(viewModelScope)
     }
 }
-

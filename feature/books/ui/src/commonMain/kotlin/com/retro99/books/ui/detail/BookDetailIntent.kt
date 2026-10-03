@@ -5,6 +5,8 @@ import com.retro99.books.domain.model.BookType
 import com.retro99.books.ui.model.LinkedCopyUiModel
 
 sealed interface BookDetailIntent : BaseIntent {
+    data class OnPromptVisible(val operation: com.retro99.analytics.api.UsageOperation) : BookDetailIntent
+    data class OnFeatureVisible(val feature: com.retro99.analytics.api.UsageFeature, val available: Boolean) : BookDetailIntent
     data object OnBackClicked : BookDetailIntent
     data object OnRetryClicked : BookDetailIntent
     data object OnReturnedToDetail : BookDetailIntent

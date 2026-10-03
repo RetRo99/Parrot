@@ -29,6 +29,7 @@ class LinkReviewViewModelTest {
     private val duneAudiobookshelf = CopyKey(CopySource.Audiobookshelf, "a2")
 
     private val links = FakeBookLinksRepository()
+    private val analytics = RecordingLinkAnalytics()
 
     @Test
     fun `the screen lists each suggestion with both books and its reason`() = runViewModelTest {
@@ -66,6 +67,7 @@ class LinkReviewViewModelTest {
         // Then
         assertEquals(listOf(hobbitLibrary to hobbitStoryteller), links.linked)
         assertEquals(emptyList(), links.decided)
+        assertEquals(listOf("started", "succeeded"), analytics.events.map { it.parameters["outcome"] })
     }
 
     @Test
@@ -127,6 +129,8 @@ class LinkReviewViewModelTest {
                 links.linked,
             )
             assertEquals(1, classUnderTest.currentViewState().linkedCount)
+            assertEquals(listOf("started", "partial"), analytics.events.map { it.parameters["outcome"] })
+            assertEquals(listOf("bulk_link", "bulk_link"), analytics.events.map { it.parameters["usage_action"] })
 
             // When
             classUnderTest.onIntent(LinkReviewIntent.OnMessageDismissed)
@@ -153,6 +157,7 @@ class LinkReviewViewModelTest {
             observeLinkSuggestionsUseCase = suggestions,
             linkBooksUseCase = LinkBooksUseCase(links),
             decideLinkUseCase = DecideLinkUseCase(links),
+            analytics = analytics,
         )
     }
 

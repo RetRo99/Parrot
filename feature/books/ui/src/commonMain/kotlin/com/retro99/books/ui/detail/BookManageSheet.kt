@@ -16,6 +16,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import com.retro99.analytics.api.UsageFeature
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.window.Dialog
@@ -60,6 +62,12 @@ internal fun BookManageSheet(
     dispatch: IntentDispatcher<BookDetailIntent>,
     onDismiss: () -> Unit,
 ) {
+    LaunchedEffect(Unit) {
+        dispatch(BookDetailIntent.OnFeatureVisible(UsageFeature.LinkedCopies, true))
+    }
+    LaunchedEffect(state.linkedCopies.isNotEmpty()) {
+        dispatch(BookDetailIntent.OnFeatureVisible(UsageFeature.Positions, state.linkedCopies.isNotEmpty()))
+    }
     val content: @Composable () -> Unit = {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),

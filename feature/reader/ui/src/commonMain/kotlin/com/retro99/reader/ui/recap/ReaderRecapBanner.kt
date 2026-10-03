@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -51,6 +52,7 @@ internal fun ReaderRecapBannerHost(
 ) {
     val state by viewModel.viewState.collectAsState()
     val banner = state.banner ?: return
+    LaunchedEffect(banner.sessionId) { viewModel.onIntent(ReaderRecapIntent.Visible) }
     ReaderRecapBanner(
         banner = banner,
         isExpanded = state.isExpanded,

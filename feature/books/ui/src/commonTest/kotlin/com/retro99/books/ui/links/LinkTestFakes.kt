@@ -1,5 +1,8 @@
 package com.retro99.books.ui.links
 
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.AnalyticsEvent
+
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.retro99.base.result.AppError
@@ -19,6 +22,13 @@ import com.retro99.server.api.ServerType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+
+internal class RecordingLinkAnalytics : Analytics {
+    val events = mutableListOf<AnalyticsEvent>()
+    override fun logEvent(event: AnalyticsEvent) { events += event }
+    override fun logException(throwable: Throwable, message: String?) = Unit
+    override fun setUserId(userId: String?) = Unit
+}
 
 internal class FakeBookLinksRepository(
     initialLinks: List<BookLink> = emptyList(),

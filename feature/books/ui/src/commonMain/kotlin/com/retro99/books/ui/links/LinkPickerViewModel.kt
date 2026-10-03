@@ -3,6 +3,11 @@ package com.retro99.books.ui.links
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewModelScope
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ProductOutcome
+import com.retro99.analytics.api.UsageOperation
+import com.retro99.analytics.api.UsageAction
+import com.retro99.analytics.api.trackUsageOperation
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
@@ -32,6 +37,7 @@ class LinkPickerViewModel(
     @Provided private val getBooksUseCase: GetBooksUseCase,
     @Provided private val observeBookLinksUseCase: ObserveBookLinksUseCase,
     @Provided private val linkBooksUseCase: LinkBooksUseCase,
+    @Provided private val analytics: Analytics,
 ) : BaseViewModel<LinkPickerViewState, LinkPickerIntent>(
     LinkPickerViewState(),
 ) {
@@ -89,7 +95,10 @@ class LinkPickerViewModel(
             candidate.serverId == pickedServerId && candidate.uuid == pickedUuid
         } ?: return
         viewModelScope.launch {
-            linkBooksUseCase(book.copyKey(), picked.copyKey())
+            analytics.trackUsageOperation(
+                UsageOperation.Link, UsageAction.ManualLink, "link_picker",
+                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+            ) { linkBooksUseCase(book.copyKey(), picked.copyKey()) }
                 .onSuccess { onBack() }
                 .onFailure { error ->
                     val source = error.repeatedLinkSource()

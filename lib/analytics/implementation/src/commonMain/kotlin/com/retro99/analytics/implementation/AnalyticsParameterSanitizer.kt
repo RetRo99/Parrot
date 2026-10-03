@@ -246,6 +246,7 @@ private val SAFE_TTS_REASON_CODES = setOf(
 )
 
 private val SAFE_BOOLEAN_KEYS = setOf(
+    "is_latest_recap",
     "has_filters", "is_capped", "is_restricted", "is_available",
     "is_enabled",
     "is_success",
@@ -279,11 +280,16 @@ private val PRODUCT_ENUM_DIMENSIONS = mapOf(
     "usage_mode" to setOf("reading", "audiobook", "readaloud", "tts"),
     "previous_usage_mode" to setOf("reading", "audiobook", "readaloud", "tts"),
     "search_scope" to setOf("library", "book"),
-    "feature_name" to setOf("tts", "bookmarks", "sleep_timer", "backup"),
+    "feature_name" to setOf("tts", "bookmarks", "sleep_timer", "backup", "recaps", "linked_copies", "positions", "readaloud", "local_import", "author_browsing", "series_browsing"),
+    "usage_action" to setOf("import", "manual_link", "suggested_link", "bulk_link", "reject", "skip", "unlink", "accept", "decline", "local", "remote", "apply", "shown", "expanded", "collapsed", "dismissed"),
+    "discovery_route" to setOf("library", "search", "favorites", "filtered", "author", "series"),
+    "discovery_destination" to setOf("book", "author", "series"),
+    "navigation_method" to setOf("toc", "bookmark", "progress_slider"),
+    "load_kind" to setOf("initial_observation"),
     "end_reason" to setOf("checkpoint", "background", "closed", "cleared", "book_changed", "paused", "completed", "error", "source_changed"),
     "content_access" to setOf("on_device"),
     "completion_method" to setOf("automatic"),
     "backup_scope" to setOf("single", "bulk"),
     "backup_error_category" to setOf("rejected", "transfer_failed", "queue_failed", "authentication_unavailable"),
-) + listOf("result_count_bucket", "result_position_bucket", "interruption_count_bucket", "queued_count_bucket", "failed_count_bucket")
+) + listOf("result_count_bucket", "result_position_bucket", "interruption_count_bucket", "queued_count_bucket", "failed_count_bucket", "target_count_bucket")
     .associateWith { setOf("zero", "one", "two_to_five", "six_to_twenty", "over_twenty") }

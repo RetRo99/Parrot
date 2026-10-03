@@ -4,6 +4,13 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.FeatureUsageAnalyticsEvent
+import com.retro99.analytics.api.ProductOutcome
+import com.retro99.analytics.api.UsageOperation
+import com.retro99.analytics.api.UsageAction
+import com.retro99.analytics.api.ProductAnalyticsEvent
+import com.retro99.analytics.api.logFeatureUsage
+import com.retro99.analytics.api.trackUsageOperation
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.base.result.log
 import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
@@ -118,6 +125,12 @@ class BookDetailViewModel(
 
     override fun onIntent(intent: BookDetailIntent) {
         when (intent) {
+            is BookDetailIntent.OnPromptVisible -> analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.Operation(
+                intent.operation, UsageAction.Shown, "book_detail", ProductOutcome.Succeeded,
+            ))
+            is BookDetailIntent.OnFeatureVisible -> analytics.logFeatureUsage(
+                ProductAnalyticsEvent.FeatureExposed(intent.feature, "book_detail", intent.available),
+            )
             BookDetailIntent.OnReturnedToDetail -> {
                 updateState { state -> state.returnFromPositionComparison() }
             }
@@ -315,7 +328,10 @@ class BookDetailViewModel(
         updateState { state -> state.copy(unlinkConfirmationCopy = null) }
         val key = CopyKey.parse(copy.key) ?: return
         viewModelScope.launch {
-            unlinkCopyUseCase(key).onFailure { error ->
+            analytics.trackUsageOperation(
+                UsageOperation.Link, UsageAction.Unlink, "book_detail",
+                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+            ) { unlinkCopyUseCase(key) }.onFailure { error ->
                 error.log(analytics, "BookDetailViewModel: Failed to unlink a copy")
             }
         }
@@ -341,7 +357,10 @@ class BookDetailViewModel(
             val pendingBookType = viewState.value.pendingOpenBookType
             val bookTitle = viewState.value.book?.title ?: ""
             updateState { it.copy(isResolvingConflict = true, conflictResolutionError = null) }
-            resolvePositionConflictUseCase.useLocal(serverId, bookUuid)
+            analytics.trackUsageOperation(
+                UsageOperation.Conflict, UsageAction.Local, "book_detail",
+                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+            ) { resolvePositionConflictUseCase.useLocal(serverId, bookUuid) }
                 .onSuccess {
                     // Navigate to reader if user was trying to open a book
                     pendingBookType?.let { bookType ->
@@ -362,7 +381,10 @@ class BookDetailViewModel(
             val pendingBookType = viewState.value.pendingOpenBookType
             val bookTitle = viewState.value.book?.title ?: ""
             updateState { it.copy(isResolvingConflict = true, conflictResolutionError = null) }
-            resolvePositionConflictUseCase.useRemote(serverId, bookUuid)
+            analytics.trackUsageOperation(
+                UsageOperation.Conflict, UsageAction.Remote, "book_detail",
+                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+            ) { resolvePositionConflictUseCase.useRemote(serverId, bookUuid) }
                 .onSuccess {
                     // Navigate to reader if user was trying to open a book
                     pendingBookType?.let { bookType ->
@@ -425,8 +447,10 @@ class BookDetailViewModel(
                 val state = viewState.value
                 val hasConflict = state.progressInfo?.hasConflict == true
                 when (bookDetailOpenPrompt(offer, hasConflict)) {
-                    BookDetailOpenPrompt.LinkedResume -> updateState { current ->
-                        current.copy(linkedResumeOffer = offer, pendingOpenBookType = bookType)
+                    BookDetailOpenPrompt.LinkedResume -> {
+                        updateState { current ->
+                            current.copy(linkedResumeOffer = offer, pendingOpenBookType = bookType)
+                        }
                     }
                     // Check for conflict - show dialog for user to resolve first
                     BookDetailOpenPrompt.SameCopyConflict -> {
@@ -446,14 +470,20 @@ class BookDetailViewModel(
         updateState { state -> state.copy(linkedResumeOffer = null, pendingOpenBookType = null) }
         viewModelScope.launch {
             if (accept) {
-                resolveLinkedResumeUseCase.continueFrom(offer).onFailure { error ->
+                analytics.trackUsageOperation(
+                    UsageOperation.LinkedResume, UsageAction.Accept, "book_detail",
+                    outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+                ) { resolveLinkedResumeUseCase.continueFrom(offer) }.onFailure { error ->
                     error.log(
                         analytics,
                         "BookDetailViewModel: Failed to continue from another copy",
                     )
                 }
             } else {
-                resolveLinkedResumeUseCase.stayHere(offer)
+                analytics.trackUsageOperation(
+                    UsageOperation.LinkedResume, UsageAction.Decline, "book_detail",
+                    outcome = { ProductOutcome.Succeeded },
+                ) { resolveLinkedResumeUseCase.stayHere(offer) }
             }
             bookType?.let { type ->
                 val bookTitle = viewState.value.book?.title ?: ""

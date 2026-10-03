@@ -1,5 +1,8 @@
 package com.retro99.reader.ui.recap
 
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.AnalyticsEvent
+
 import com.retro99.reader.domain.recap.RecapBannerDismissals
 import com.retro99.reader.domain.recap.RecapChapter
 import com.retro99.reader.domain.recap.RecapPosition
@@ -32,6 +35,12 @@ class ReaderRecapViewModelTest {
     private val enabled = MutableStateFlow(true)
     private val repository = FakeRepository(history)
     private val dismissals = FakeDismissals()
+    private val events = mutableListOf<AnalyticsEvent>()
+    private val analytics = object : Analytics {
+        override fun logEvent(event: AnalyticsEvent) { events += event }
+        override fun logException(throwable: Throwable, message: String?) = Unit
+        override fun setUserId(userId: String?) = Unit
+    }
 
     @Test
     fun theLatestSucceededRecapIsOffered() {
@@ -136,6 +145,22 @@ class ReaderRecapViewModelTest {
         assertFalse(ReaderRecapBanner("s", "Secret plot.", true).toString().contains("Secret"))
     }
 
+    @Test
+    fun telemetryTracksVisibleUseWithoutSummaryOrIdentity() = runVmTest { viewModel ->
+        history.value = listOf(recap("private_session", RecapStatus.SUCCEEDED, "Private plot."))
+        advanceUntilIdle()
+        assertTrue(events.isEmpty()) // Stored availability is not a visible exposure.
+        viewModel.onIntent(ReaderRecapIntent.Visible)
+        viewModel.onIntent(ReaderRecapIntent.Visible)
+        viewModel.onIntent(ReaderRecapIntent.ToggleExpanded)
+        viewModel.onIntent(ReaderRecapIntent.ToggleExpanded)
+        viewModel.onIntent(ReaderRecapIntent.Dismiss)
+        assertEquals(listOf("feature_exposed", "recap_interaction", "recap_interaction", "recap_interaction", "recap_interaction"), events.map { it.name })
+        assertEquals(listOf("shown", "expanded", "collapsed", "dismissed"), events.drop(1).map { it.parameters["usage_action"] })
+        assertTrue(events.none { it.parameters.toString().contains("Private") || it.parameters.toString().contains("private_session") })
+        advanceUntilIdle()
+    }
+
     private fun runVmTest(
         dismissed: List<String> = emptyList(),
         block: suspend TestScope.(ReaderRecapViewModel) -> Unit,
@@ -148,6 +173,7 @@ class ReaderRecapViewModelTest {
                 recapRepository = repository,
                 recapSettings = FakeSettings(enabled),
                 dismissals = dismissals,
+                analytics = analytics,
             )
             advanceUntilIdle()
             block(viewModel)

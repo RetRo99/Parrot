@@ -8,6 +8,13 @@ import com.retro99.preferences.implementation.usecase.SaveUserPreferenceUseCase
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.FeatureUsageAnalyticsEvent
+import com.retro99.analytics.api.ReaderNavigationMethod
+import com.retro99.analytics.api.ReaderNavigationTracker
+import com.retro99.analytics.api.UsageOperation
+import com.retro99.analytics.api.UsageAction
+import com.retro99.analytics.api.logFeatureUsage
+import com.retro99.analytics.api.trackUsageOperation
 import com.retro99.analytics.api.ProductAnalyticsEvent
 import com.retro99.analytics.api.ProductOutcome
 import com.retro99.analytics.api.ProductUsage
@@ -172,6 +179,26 @@ class ReaderViewModel(
         readerOpenEntryPoint ?: if (isLastBookOnLaunch) "app_launch" else "book_detail")
     private val usageSession = UsageSession(analytics, productUsage::meaningfulSession)
     private val featureExposure = FeatureExposureTracker(analytics, "reader")
+    private var navigationTarget: ((PositionUiModel) -> Boolean)? = null
+    private var navigationTimeout: kotlinx.coroutines.Job? = null
+    private val navigationTracker = ReaderNavigationTracker(analytics)
+
+    private fun beginNavigation(method: ReaderNavigationMethod, target: (PositionUiModel) -> Boolean) {
+        finishNavigation(ProductOutcome.Cancelled)
+        navigationTracker.begin(method, currentUsageMode())
+        navigationTarget = target
+        navigationTimeout = viewModelScope.launch {
+            kotlinx.coroutines.delay(10_000)
+            finishNavigation(ProductOutcome.Failed)
+        }
+    }
+
+    private fun finishNavigation(outcome: ProductOutcome) {
+        navigationTracker.complete(outcome)
+        navigationTarget = null
+        navigationTimeout?.cancel()
+        navigationTimeout = null
+    }
     private var contentReady = false
     private var completionInitialized = false
     private var searchStartedAt = TimeSource.Monotonic.markNow()
@@ -390,6 +417,9 @@ class ReaderViewModel(
 
     override fun onIntent(intent: ReaderIntent) {
         when (intent) {
+            is ReaderIntent.PromptVisible -> analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.Operation(
+                intent.operation, UsageAction.Shown, "reader", ProductOutcome.Succeeded,
+            ))
             is ReaderIntent.FeatureVisible -> {
                 if (isReaderVisible) featureExposure.expose(intent.feature, intent.available)
             }
@@ -622,6 +652,7 @@ class ReaderViewModel(
                     basePosition = currentState.currentPosition,
                     createdAt = now().toString(),
                 )
+                if (navigationTarget?.invoke(positionUiModel) == true) finishNavigation(ProductOutcome.Succeeded)
                 updatePosition(positionUiModel)
                 if (!contentReady && !hasRequestedClose) {
                     contentReady = true
@@ -1645,7 +1676,9 @@ class ReaderViewModel(
         val conflict = viewState.value.positionConflict ?: return
         viewModelScope.launch {
             updateState { it.copy(positionConflict = null) }
-            bookController.goToPosition(conflict.localPosition)
+            analytics.trackUsageOperation(
+                UsageOperation.Conflict, UsageAction.Local, "reader", outcome = { ProductOutcome.Queued },
+            ) { bookController.goToPosition(conflict.localPosition) }
         }
     }
 
@@ -1659,7 +1692,9 @@ class ReaderViewModel(
                     currentAudioPositionMs = conflict.remotePosition.audioTimestampMs ?: 0L,
                 )
             }
-            bookController.goToPosition(conflict.remotePosition)
+            analytics.trackUsageOperation(
+                UsageOperation.Conflict, UsageAction.Remote, "reader", outcome = { ProductOutcome.Queued },
+            ) { bookController.goToPosition(conflict.remotePosition) }
             // Also update the audio position if this is a ReadAloud book with actual media overlays
             if (currentState.isReadAloud) {
                 audioController.setInitialAudioPosition(conflict.remotePosition.audioTimestampMs)
@@ -1690,7 +1725,10 @@ class ReaderViewModel(
                         ?: state.currentAudioPositionMs,
                 )
             }
-            resolveLinkedResumeUseCase.continueFrom(offer)
+            analytics.trackUsageOperation(
+                UsageOperation.LinkedResume, UsageAction.Accept, "reader",
+                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+            ) { resolveLinkedResumeUseCase.continueFrom(offer) }
             if (position.locatorHref != null) {
                 bookController.goToPosition(position.toUiModel())
             } else {
@@ -1728,7 +1766,11 @@ class ReaderViewModel(
     private fun stayLinkedResume() {
         val offer = viewState.value.linkedResumeOffer ?: return
         updateState { state -> state.copy(linkedResumeOffer = null) }
-        viewModelScope.launch { resolveLinkedResumeUseCase.stayHere(offer) }
+        viewModelScope.launch {
+            analytics.trackUsageOperation(
+                UsageOperation.LinkedResume, UsageAction.Decline, "reader", outcome = { ProductOutcome.Succeeded },
+            ) { resolveLinkedResumeUseCase.stayHere(offer) }
+        }
     }
 
     private fun updatePosition(position: PositionUiModel) {
@@ -2317,6 +2359,11 @@ class ReaderViewModel(
 
     private fun seekToChapterProgress(progression: Double) {
         val position = viewState.value.currentPosition ?: return
+        val target = progression.coerceIn(0.0, 1.0)
+        beginNavigation(ReaderNavigationMethod.ProgressSlider) {
+            it.href.substringBefore('#') == position.href.substringBefore('#') &&
+                it.progression?.let { progress -> kotlin.math.abs(progress - target) <= 0.05 } == true
+        }
         bookController.goToPosition(
             position.copy(
                 progression = progression.coerceIn(0.0, 1.0),
@@ -2456,6 +2503,7 @@ class ReaderViewModel(
     }
 
     private fun goToChapter(href: String, currentPosition: PositionUiModel?) {
+        beginNavigation(ReaderNavigationMethod.Toc) { it.href.substringBefore('#') == href.substringBefore('#') }
         bookController.goToChapter(href)
         updateState {
             it.copy(
@@ -2666,6 +2714,12 @@ class ReaderViewModel(
             chapterIndex = bookmark.chapterIndex,
             totalChapters = viewState.value.currentPosition?.totalChapters,
         )
+        beginNavigation(ReaderNavigationMethod.Bookmark) {
+            it.href.substringBefore('#') == position.href.substringBefore('#') &&
+                (position.progression == null || it.progression?.let { progress ->
+                    kotlin.math.abs(progress - position.progression) <= 0.05
+                } == true)
+        }
         bookController.goToPosition(position)
         updateState {
             it.copy(
@@ -2693,6 +2747,7 @@ class ReaderViewModel(
         // this ViewModel (same pattern as AudiobookPlayerViewModel.close()); the sync
         // outbox holds the reading position even if the checkpoint below never runs.
         if (hasRequestedClose) return
+        finishNavigation(ProductOutcome.Cancelled)
         hasRequestedClose = true
         openTracker.complete(ProductOutcome.Cancelled, "closed_before_content")
         usageSession.finish(UsageEndReason.Closed)
@@ -3062,6 +3117,7 @@ class ReaderViewModel(
     }
 
     override fun onCleared() {
+        finishNavigation(ProductOutcome.Cancelled)
         openTracker.complete(ProductOutcome.Cancelled, "reader_cleared")
         usageSession.finish(UsageEndReason.Cleared)
         statisticsTimer.finish()?.let { durationMs ->

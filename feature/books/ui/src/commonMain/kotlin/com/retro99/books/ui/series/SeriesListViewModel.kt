@@ -5,6 +5,12 @@ import com.github.michaelbull.result.coroutines.coroutineBinding
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.FeatureUsageAnalyticsEvent
+import com.retro99.analytics.api.DiscoveryRoute
+import com.retro99.analytics.api.DiscoveryDestination
+import com.retro99.analytics.api.logFeatureUsage
+import com.retro99.analytics.api.ProductAnalyticsEvent
+import com.retro99.analytics.api.UsageFeature
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.usecase.GetBooksUseCase
@@ -33,8 +39,14 @@ class SeriesListViewModel(
 
     override fun onIntent(intent: SeriesListIntent) {
         when (intent) {
+            SeriesListIntent.OnScreenVisible -> analytics.logFeatureUsage(
+                ProductAnalyticsEvent.FeatureExposed(UsageFeature.SeriesBrowsing, "series", true),
+            )
             SeriesListIntent.OnRefresh -> observeSeriesWithBooks()
-            is SeriesListIntent.OnSeriesClicked -> onNavigateToSeriesDetail(intent.series)
+            is SeriesListIntent.OnSeriesClicked -> {
+                analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.DiscoverySelected(DiscoveryRoute.Series, DiscoveryDestination.Series))
+                onNavigateToSeriesDetail(intent.series)
+            }
         }
     }
 

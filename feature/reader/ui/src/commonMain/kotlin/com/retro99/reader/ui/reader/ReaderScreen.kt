@@ -324,6 +324,9 @@ private fun ReaderScreenContent(
         }
 
         viewState.linkedResumeOffer?.let { offer ->
+            LaunchedEffect(offer.dismissalEntry) {
+                intentDispatcher(ReaderIntent.PromptVisible(com.retro99.analytics.api.UsageOperation.LinkedResume))
+            }
             LinkedResumeDialog(
                 model = offer.toUiModel(),
                 onContinue = { intentDispatcher(ReaderIntent.ContinueLinkedResume) },
@@ -339,6 +342,9 @@ private fun ReaderScreenContent(
         }
 
         viewState.positionConflict?.let { conflict ->
+            LaunchedEffect(Unit) {
+                intentDispatcher(ReaderIntent.PromptVisible(com.retro99.analytics.api.UsageOperation.Conflict))
+            }
             PositionConflictDialog(
                 conflict = conflict,
                 onUseLocal = { intentDispatcher(ReaderIntent.UseLocalPosition) },

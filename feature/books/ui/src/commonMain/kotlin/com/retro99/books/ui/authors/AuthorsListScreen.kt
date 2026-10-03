@@ -59,6 +59,7 @@ fun AuthorsListScreen(
         modifier = modifier,
         viewModel = viewModel,
     ) { viewState, intentDispatcher ->
+        LaunchedEffect(Unit) { intentDispatcher(AuthorsListIntent.OnScreenVisible) }
         AuthorsListScreenContent(
             viewState = viewState,
             intentDispatcher = intentDispatcher,
@@ -227,4 +228,3 @@ private fun AuthorItem(
         }
     }
 }
-

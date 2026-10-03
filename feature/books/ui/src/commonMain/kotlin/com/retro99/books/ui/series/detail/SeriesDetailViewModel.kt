@@ -7,6 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.FeatureUsageAnalyticsEvent
+import com.retro99.analytics.api.DiscoveryRoute
+import com.retro99.analytics.api.DiscoveryDestination
+import com.retro99.analytics.api.logFeatureUsage
 import com.retro99.analytics.api.BookAnalyticsEvent
 import com.retro99.analytics.api.NavigationAnalyticsEvent
 import com.retro99.base.result.log
@@ -54,7 +58,10 @@ class SeriesDetailViewModel(
             SeriesDetailIntent.OnBackClicked -> onBack()
             SeriesDetailIntent.OnRefresh -> observeBooks()
             SeriesDetailIntent.OnSearchToggled -> toggleSearch()
-            is SeriesDetailIntent.OnBookClicked -> onNavigateToBookDetail(intent.book)
+            is SeriesDetailIntent.OnBookClicked -> {
+                analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.DiscoverySelected(DiscoveryRoute.Series, DiscoveryDestination.Book))
+                onNavigateToBookDetail(intent.book)
+            }
             is SeriesDetailIntent.OnFavoriteClicked -> toggleFavorite(intent.bookUuid)
         }
     }
@@ -132,4 +139,3 @@ class SeriesDetailViewModel(
             .launchIn(viewModelScope)
     }
 }
-

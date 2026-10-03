@@ -79,6 +79,7 @@ fun SeriesListScreen(
         modifier = modifier,
         viewModel = viewModel,
     ) { viewState, intentDispatcher ->
+        LaunchedEffect(Unit) { intentDispatcher(SeriesListIntent.OnScreenVisible) }
         SeriesListScreenContent(
             viewState = viewState,
             intentDispatcher = intentDispatcher,
@@ -365,4 +366,3 @@ private fun SeriesCover(
         }
     }
 }
-

@@ -462,6 +462,7 @@ private fun BooksListScreenContent(
             }
 
             if (viewState.showLinkSuggestionsBanner) {
+                LaunchedEffect(Unit) { intentDispatcher(BooksListIntent.OnLinkSuggestionsVisible) }
                 LinkSuggestionsBanner(
                     suggestionCount = viewState.linkSuggestionCount,
                     onClick = onNavigateToLinkReview,

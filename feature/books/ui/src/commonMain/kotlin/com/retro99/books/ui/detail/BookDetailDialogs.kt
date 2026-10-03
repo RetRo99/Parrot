@@ -7,6 +7,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import com.retro99.analytics.api.UsageOperation
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.compose.Ember
 import com.retro99.books.ui.components.LinkedResumeDialog
@@ -113,6 +115,7 @@ internal fun BookDetailDialogs(
     }
     val offer = state.linkedResumeOffer
     if (offer != null && !state.comparingLinkedPositions) {
+        LaunchedEffect(offer.dismissalEntry) { dispatch(BookDetailIntent.OnPromptVisible(UsageOperation.LinkedResume)) }
         LinkedResumeDialog(
             model = offer.toUiModel(),
             onContinue = { dispatch(BookDetailIntent.OnLinkedResumeContinueClicked) },
@@ -125,6 +128,7 @@ internal fun BookDetailDialogs(
         )
     } else if (offer == null && state.pendingOpenBookType != null &&
         state.progressInfo?.hasConflict == true) {
+        LaunchedEffect(Unit) { dispatch(BookDetailIntent.OnPromptVisible(UsageOperation.Conflict)) }
         PositionConflictDialog(
             localProgressPercent = state.progressInfo.localProgressPercent ?: 0,
             remoteProgressPercent = state.progressInfo.remoteProgressPercent ?: 0,

@@ -1,6 +1,12 @@
 package com.retro99.reader.ui.recap
 
 import androidx.lifecycle.viewModelScope
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.FeatureUsageAnalyticsEvent
+import com.retro99.analytics.api.UsageAction
+import com.retro99.analytics.api.UsageFeature
+import com.retro99.analytics.api.ProductAnalyticsEvent
+import com.retro99.analytics.api.logFeatureUsage
 import com.retro99.base.ui.BaseIntent
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.reader.domain.recap.RecapBannerDismissals
@@ -40,6 +46,7 @@ data class ReaderRecapViewState(
 )
 
 sealed interface ReaderRecapIntent : BaseIntent {
+    data object Visible : ReaderRecapIntent
     data object ToggleExpanded : ReaderRecapIntent
     data object Dismiss : ReaderRecapIntent
 }
@@ -66,9 +73,11 @@ class ReaderRecapViewModel(
     @Provided private val recapRepository: RecapRepository,
     @Provided private val recapSettings: RecapSettings,
     @Provided private val dismissals: RecapBannerDismissals,
+    @Provided private val analytics: Analytics,
 ) : BaseViewModel<ReaderRecapViewState, ReaderRecapIntent>(ReaderRecapViewState()) {
 
     private val dismissedNow = MutableStateFlow(emptySet<String>())
+    private var exposedSessionId: String? = null
 
     init {
         combine(
@@ -93,13 +102,30 @@ class ReaderRecapViewModel(
 
     override fun onIntent(intent: ReaderRecapIntent) {
         when (intent) {
-            ReaderRecapIntent.ToggleExpanded -> updateState { it.copy(isExpanded = !it.isExpanded) }
+            ReaderRecapIntent.Visible -> {
+                val banner = viewState.value.banner ?: return
+                if (exposedSessionId != banner.sessionId) {
+                    exposedSessionId = banner.sessionId
+                    analytics.logFeatureUsage(ProductAnalyticsEvent.FeatureExposed(UsageFeature.Recaps, "reader", true))
+                    analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.RecapInteraction(UsageAction.Shown, banner.isLatestSession))
+                }
+            }
+            ReaderRecapIntent.ToggleExpanded -> {
+                val state = viewState.value
+                val banner = state.banner ?: return
+                analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.RecapInteraction(
+                    if (state.isExpanded) UsageAction.Collapsed else UsageAction.Expanded, banner.isLatestSession,
+                ))
+                updateState { it.copy(isExpanded = !it.isExpanded) }
+            }
             ReaderRecapIntent.Dismiss -> dismiss()
         }
     }
 
     private fun dismiss() {
-        val sessionId = viewState.value.banner?.sessionId ?: return
+        val banner = viewState.value.banner ?: return
+        val sessionId = banner.sessionId
+        analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.RecapInteraction(UsageAction.Dismissed, banner.isLatestSession))
         dismissedNow.update { it + sessionId }
         viewModelScope.launch {
             try {
