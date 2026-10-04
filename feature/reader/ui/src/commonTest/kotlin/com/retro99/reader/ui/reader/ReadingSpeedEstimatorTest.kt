@@ -122,6 +122,19 @@ class ReadingSpeedEstimatorTest {
     }
 
     @Test
+    fun `smoothing cannot hide an implausible raw measurement`() {
+        page(page = 1, atMs = 0)
+        page(page = 2, atMs = 20_000)
+        page(page = 3, atMs = 40_000)
+        val previous = estimator.establishedReadingSpeedWpm.value
+        assertNotNull(previous)
+        page(href = "ch2", page = 1, atMs = 41_000, totalWords = 4_000, totalPages = 10)
+        val info = page(href = "ch2", page = 2, atMs = 61_000, totalWords = 4_000, totalPages = 10)
+        assertNull(info)
+        assertEquals(previous, estimator.establishedReadingSpeedWpm.value)
+    }
+
+    @Test
     fun `before any measurement the estimate falls back to settings`() {
         // When
         val info = page(page = 1, atMs = 0, fallbackWpm = 200)

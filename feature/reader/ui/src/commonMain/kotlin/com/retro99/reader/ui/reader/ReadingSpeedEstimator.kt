@@ -214,11 +214,11 @@ internal class ReadingSpeedEstimator(
             (established * establishedWeight + rawWpm * newMeasurementWeight).toInt()
         } ?: rawWpm
 
-        if (!isPlausible(blendedWpm)) {
+        if (!isPlausible(rawWpm) || !isPlausible(blendedWpm)) {
             // Saturated measurement: the old clamp's 50/1000 came from jumps and playback
             // turns. Treat it as no measurement at all instead of clipping it.
             measurementRejected = true
-            return calculatedWordsPerMinute
+            return null
         }
         measurementRejected = false
 
