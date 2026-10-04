@@ -41,6 +41,7 @@ kotlin {
             implementation(projects.translations)
             implementation(projects.feature.saved.domain)
             implementation(projects.feature.books.domain)
+            implementation(projects.feature.reader.domain)
             implementation(projects.lib.analytics.api)
             implementation(projects.lib.preferences.api)
             implementation(libs.kotlin.result)
