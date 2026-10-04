@@ -3,7 +3,6 @@ package com.retro99.reader.ui.reader
 import com.retro99.base.result.AppError
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.linked.LinkedResumeOffer
-import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.ChapterReadingTimeInfo
 import com.retro99.reader.ui.model.PositionConflictUiModel
@@ -39,7 +38,7 @@ data class ReaderViewState(
     val isAudioPlayerReady: Boolean = false,
     // Table of contents
     val tableOfContents: List<TocItemUiModel> = emptyList(),
-    // Contents sheet (Chapters / Bookmarks share one visibility flag)
+    // Contents sheet (Chapters / Saved share one visibility flag)
     val isContentsVisible: Boolean = false,
     // Tab the sheet opens on; the tab switch itself is local to the sheet.
     val contentsInitialTab: ContentsTab = ContentsTab.CHAPTERS,
@@ -55,25 +54,13 @@ data class ReaderViewState(
     // Flag to show snackbar when ReadAloud book has no media overlays
     val showNoAudioMessage: Boolean = false,
     val showTtsPlaybackFailed: Boolean = false,
-    // Flag to show snackbar when bookmark save fails
-    val showBookmarkSaveFailed: Boolean = false,
     val showPositionSaveFailed: Boolean = false,
-    // Flag to show snackbar when a bookmark is successfully added (with undo action)
-    val showBookmarkAdded: Boolean = false,
-    // ID of the most recently added bookmark (used for undo)
-    val lastAddedBookmarkId: String? = null,
-    // Flag to show snackbar when the position is already bookmarked
-    val showBookmarkAlreadyExists: Boolean = false,
     // Sleep timer state for ReadAloud playback. Null means no active timer.
     val sleepTimerRemainingMs: Long? = null,
     // Shows a one-time prompt when the sleep timer is close to ending.
     val showSleepTimerWarningPrompt: Boolean = false,
-    val bookmarks: List<BookmarkUiModel> = emptyList(),
-    // Undo for bookmark deletion from the Contents sheet (restore within the snackbar window).
-    val showBookmarkDeleted: Boolean = false,
-    val lastDeletedBookmark: BookmarkUiModel? = null,
-    val renamingBookmark: BookmarkUiModel? = null,
-    val showNoMoreBookmarks: Boolean = false,
+    // Bookmarks, highlights and notes, and their UI in the reader.
+    val saved: com.retro99.reader.ui.reader.saved.ReaderSavedState = com.retro99.reader.ui.reader.saved.ReaderSavedState(),
     // When true, shows the audiobook-style audio-only UI instead of the EPUB text view
     val isAudioOnlyMode: Boolean = false,
     val isTtsReadAloud: Boolean = false,
@@ -163,4 +150,4 @@ data class ReaderViewState(
 }
 
 /** Tabs of the reader Contents sheet. */
-enum class ContentsTab { CHAPTERS, BOOKMARKS }
+enum class ContentsTab { CHAPTERS, SAVED }

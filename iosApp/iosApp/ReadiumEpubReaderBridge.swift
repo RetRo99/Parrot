@@ -116,6 +116,9 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
     private var navigatorViewController: EPUBNavigatorViewController?
     private var onPositionChangedCallback: ((PositionLocator) -> Void)?
     private var onSentenceTapCallback: ((String) -> Void)?
+    private var onSelectionChangedCallback: ((KotlinBoolean) -> Void)?
+    private var onSavedDecorationTapCallback: ((String) -> Void)?
+    private var savedDecorations: [SavedDecorationLocator] = []
 
     // Cached table of contents (populated when publication is opened)
     private var tableOfContentsCache: [TocItem] = []
@@ -278,7 +281,8 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
                 publication: publication,
                 initialLocation: initialLocation,
                 config: EPUBNavigatorViewController.Configuration(
-                    preferences: initialPreferences
+                    preferences: initialPreferences,
+                    decorationTemplates: Self.decorationTemplates()
                 ),
                 httpServer: httpServer
             )
@@ -289,6 +293,15 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
 
             // Set delegate to receive location change callbacks
             navigator.delegate = self
+            for group in [Self.savedGroup, Self.savedNoteGroup] {
+                navigator.observeDecorationInteractions(inGroup: group) { [weak self] event in
+                    let id = event.decoration.id.replacingOccurrences(of: Self.noteSuffix, with: "")
+                    self?.onSavedDecorationTapCallback?(id)
+                }
+            }
+            if !savedDecorations.isEmpty {
+                applySavedDecorations(decorations: savedDecorations)
+            }
 
             // Reset the navigator's view to a standard size
             // This prevents any cached sizing from the previous session from affecting layout
@@ -560,6 +573,110 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
 
     func clearSearchDecorations() {
         navigatorViewController?.apply(decorations: [], in: "book-search")
+    }
+
+    // MARK: - Bookmarks and highlights
+
+    private static let savedGroup = "saved"
+    private static let savedNoteGroup = "saved-notes"
+    private static let noteSuffix = "#note"
+    private static let savedHighlightStyle = Decoration.Style.Id(rawValue: "parrotHighlight")
+    private static let noteMarkerStyle = Decoration.Style.Id(rawValue: "parrotNoteMarker")
+
+    /// Readium's templates plus two of ours: a highlight that keeps the tint's own alpha,
+    /// and the "note" pill drawn after the last line of a range.
+    private static func decorationTemplates() -> [Decoration.Style.Id: HTMLDecorationTemplate] {
+        var templates = HTMLDecorationTemplate.defaultTemplates()
+        templates[savedHighlightStyle] = HTMLDecorationTemplate(
+            layout: .boxes,
+            element: { decoration in
+                let tint = (decoration.style.config as? Decoration.Style.HighlightConfig)?.tint ?? .yellow
+                return "<div class=\"parrot-saved-highlight\" style=\"background-color: \(cssColor(tint)) !important\"></div>"
+            },
+            stylesheet: ".parrot-saved-highlight { border-radius: 3px; }"
+        )
+        templates[noteMarkerStyle] = HTMLDecorationTemplate(
+            layout: .boxes,
+            element: { decoration in
+                let config = decoration.style.config as? NoteMarkerConfig
+                let label = (config?.label ?? "")
+                    .replacingOccurrences(of: "&", with: "&amp;")
+                    .replacingOccurrences(of: "\"", with: "&quot;")
+                    .replacingOccurrences(of: "<", with: "&lt;")
+                let tint = cssColor(config?.tint ?? .black)
+                return "<div class=\"parrot-note-marker\" data-label=\"\(label)\" style=\"--parrot-note: \(tint)\"></div>"
+            },
+            stylesheet: """
+            .parrot-note-marker { pointer-events: none; }
+            .parrot-note-marker:last-child::after {
+                content: attr(data-label);
+                position: absolute; left: 100%; top: 50%;
+                transform: translate(3px, -70%);
+                padding: 0 6px; border-radius: 999px;
+                background: var(--parrot-note); color: #fff;
+                font: 600 0.55em/1.5 -apple-system, sans-serif; white-space: nowrap;
+            }
+            """
+        )
+        return templates
+    }
+
+    private struct NoteMarkerConfig: Hashable {
+        let label: String
+        let tint: UIColor
+    }
+
+    private static func cssColor(_ color: UIColor) -> String {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return "rgba(\(Int(r * 255)), \(Int(g * 255)), \(Int(b * 255)), \(a))"
+    }
+
+    func setOnSelectionChangedCallback(callback: ((KotlinBoolean) -> Void)?) {
+        onSelectionChangedCallback = callback
+    }
+
+    func clearSelection() {
+        navigatorViewController?.clearSelection()
+    }
+
+    func setOnSavedDecorationTapCallback(callback: ((String) -> Void)?) {
+        onSavedDecorationTapCallback = callback
+    }
+
+    func applySavedDecorations(decorations: [SavedDecorationLocator]) {
+        savedDecorations = decorations
+        guard let navigator = navigatorViewController else { return }
+        var highlights: [Decoration] = []
+        var notes: [Decoration] = []
+        for saved in decorations {
+            guard let href = AnyURL(legacyHREF: saved.href) else { continue }
+            let mediaType = MediaType(saved.type) ?? .xhtml
+            let locator = Locator(
+                href: href,
+                mediaType: mediaType,
+                locations: Locator.Locations(progression: saved.progression?.doubleValue),
+                text: Locator.Text(after: saved.after, before: saved.before, highlight: saved.highlight)
+            )
+            let tint = highlightColorFromArgb(saved.tint)
+            highlights.append(Decoration(
+                id: saved.id,
+                locator: locator,
+                style: saved.underline
+                    ? .underline(tint: tint)
+                    : Decoration.Style(id: Self.savedHighlightStyle, config: Decoration.Style.HighlightConfig(tint: tint))
+            ))
+            if let label = saved.noteLabel {
+                let pill = saved.underline ? UIColor.black : tint.withAlphaComponent(1)
+                notes.append(Decoration(
+                    id: saved.id + Self.noteSuffix,
+                    locator: locator,
+                    style: Decoration.Style(id: Self.noteMarkerStyle, config: NoteMarkerConfig(label: label, tint: pill))
+                ))
+            }
+        }
+        navigator.apply(decorations: highlights, in: Self.savedGroup)
+        navigator.apply(decorations: notes, in: Self.savedNoteGroup)
     }
 
     func search(query: String, token: String,
@@ -1026,6 +1143,12 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
 // MARK: - EPUBNavigatorDelegate
 
 extension ReadiumEpubReaderBridge: EPUBNavigatorDelegate {
+    /// Our own toolbar replaces the system edit menu; Kotlin asks the page for the selection.
+    func navigator(_ navigator: SelectableNavigator, shouldShowMenuForSelection selection: Selection) -> Bool {
+        onSelectionChangedCallback?(KotlinBoolean(value: true))
+        return false
+    }
+
     func navigator(_ navigator: any Navigator, presentError error: NavigatorError) {
         print("Navigator error: \(error)")
     }

@@ -47,6 +47,8 @@ kotlin {
             implementation(projects.baseUi)
             implementation(projects.translations)
             implementation(projects.feature.reader.domain)
+            implementation(projects.feature.saved.domain)
+            implementation(projects.feature.saved.ui)
             implementation(projects.lib.epub.api)
             implementation(projects.lib.epub.implementation)
             implementation(projects.feature.sync.domain)

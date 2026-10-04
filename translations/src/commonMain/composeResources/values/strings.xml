@@ -1384,4 +1384,118 @@
     <string name="statistics_recap_retry">Retry</string>
     <string name="statistics_recap_retry_unavailable">This recap can no longer be retried.</string>
     <string name="statistics_recap_sign_in">Sign in to Parrot Cloud to generate this recap.</string>
+
+    <!-- Saved items: bookmarks, highlights and notes -->
+    <string name="saved_tab_count" tools:ignore="MissingTranslation">Saved · %1$d</string>
+    <string name="saved_filter_all" tools:ignore="MissingTranslation">All</string>
+    <string name="saved_filter_bookmarks" tools:ignore="MissingTranslation">Bookmarks</string>
+    <string name="saved_filter_highlights" tools:ignore="MissingTranslation">Highlights</string>
+    <string name="saved_filter_notes" tools:ignore="MissingTranslation">Notes</string>
+    <string name="saved_kind_bookmark" tools:ignore="MissingTranslation">Bookmark</string>
+    <string name="saved_kind_highlight" tools:ignore="MissingTranslation">Highlight</string>
+    <string name="saved_meta_percent" tools:ignore="MissingTranslation">%1$d%</string>
+    <string name="saved_meta_listening" tools:ignore="MissingTranslation">listening, %1$s</string>
+    <string name="saved_note_label" tools:ignore="MissingTranslation">Note</string>
+    <string name="saved_note_marker" tools:ignore="MissingTranslation">note</string>
+    <string name="saved_sync_synced" tools:ignore="MissingTranslation">✓ Synced to Parrot Cloud</string>
+    <string name="saved_sync_synced_ago" tools:ignore="MissingTranslation">✓ Synced to Parrot Cloud · %1$s</string>
+    <string name="saved_sync_offline" tools:ignore="MissingTranslation">Will sync when you’re online</string>
+    <string name="saved_sync_syncing" tools:ignore="MissingTranslation">Syncing to Parrot Cloud…</string>
+    <string name="saved_sync_sign_in" tools:ignore="MissingTranslation">Sign in to sync across devices</string>
+    <string name="saved_edit" tools:ignore="MissingTranslation">Edit</string>
+    <string name="saved_done" tools:ignore="MissingTranslation">Done</string>
+    <string name="saved_export" tools:ignore="MissingTranslation">Export</string>
+    <string name="saved_empty_title" tools:ignore="MissingTranslation">Nothing saved yet</string>
+    <string name="saved_empty_body" tools:ignore="MissingTranslation">Tap the bookmark at the top of a page to save your place. Press and hold a sentence to highlight it or add a note.</string>
+    <string name="saved_bookmark_this_page" tools:ignore="MissingTranslation">Bookmark this page</string>
+    <string name="saved_remove_bookmark" tools:ignore="MissingTranslation">Remove bookmark</string>
+    <string name="saved_bar_bookmarked" tools:ignore="MissingTranslation">Bookmarked</string>
+    <string name="saved_bar_add_note" tools:ignore="MissingTranslation">Add note</string>
+    <string name="saved_bar_undo" tools:ignore="MissingTranslation">Undo</string>
+    <string name="saved_bar_bookmark_removed" tools:ignore="MissingTranslation">Bookmark removed</string>
+    <string name="saved_bar_highlight_removed" tools:ignore="MissingTranslation">Highlight removed</string>
+    <string name="saved_bar_highlighted" tools:ignore="MissingTranslation">Highlighted</string>
+    <string name="saved_select_highlight" tools:ignore="MissingTranslation">Highlight</string>
+    <string name="saved_select_note" tools:ignore="MissingTranslation">Note</string>
+    <string name="saved_copy" tools:ignore="MissingTranslation">Copy</string>
+    <string name="saved_search" tools:ignore="MissingTranslation">Search</string>
+    <string name="saved_share" tools:ignore="MissingTranslation">Share</string>
+    <string name="saved_color_amber" tools:ignore="MissingTranslation">Amber</string>
+    <string name="saved_color_rose" tools:ignore="MissingTranslation">Rose</string>
+    <string name="saved_color_sage" tools:ignore="MissingTranslation">Sage</string>
+    <string name="saved_color_sky" tools:ignore="MissingTranslation">Sky</string>
+    <string name="saved_color_selected" tools:ignore="MissingTranslation">%1$s, selected</string>
+    <string name="saved_detail_add_note" tools:ignore="MissingTranslation">Add a note…</string>
+    <string name="saved_detail_remove" tools:ignore="MissingTranslation">Remove…</string>
+    <string name="saved_close" tools:ignore="MissingTranslation">Close</string>
+    <string name="saved_note_hint" tools:ignore="MissingTranslation">Write a note…</string>
+    <string name="saved_note_save" tools:ignore="MissingTranslation">Save note</string>
+    <string name="saved_note_discard_title" tools:ignore="MissingTranslation">Discard this note?</string>
+    <string name="saved_note_discard" tools:ignore="MissingTranslation">Discard</string>
+    <string name="saved_note_keep" tools:ignore="MissingTranslation">Keep editing</string>
+    <string name="saved_export_title" tools:ignore="MissingTranslation">Export from this book</string>
+    <string name="saved_export_share_text" tools:ignore="MissingTranslation">Share as text</string>
+    <string name="saved_export_copy" tools:ignore="MissingTranslation">Copy everything</string>
+    <string name="saved_export_markdown" tools:ignore="MissingTranslation">Save as Markdown file</string>
+    <string name="saved_copied" tools:ignore="MissingTranslation">Copied</string>
+    <string name="saved_untitled_chapter" tools:ignore="MissingTranslation">Untitled chapter</string>
+    <string name="saved_too_long" tools:ignore="MissingTranslation">That’s too long to highlight</string>
+    <string name="saved_ribbon_a11y" tools:ignore="MissingTranslation">This page is bookmarked</string>
+    <string name="saved_row_a11y" tools:ignore="MissingTranslation">%1$s, %2$s, %3$d percent: %4$s</string>
+    <string name="saved_row_a11y_listening" tools:ignore="MissingTranslation">%1$s, %2$s, listening at %3$s: %4$s</string>
+    <string name="saved_row_a11y_note" tools:ignore="MissingTranslation">%1$s. Note: %2$s</string>
+    <string name="saved_highlighted_a11y" tools:ignore="MissingTranslation">highlighted</string>
+    <string name="saved_delete_a11y" tools:ignore="MissingTranslation">Delete %1$s</string>
+    <string name="saved_ago_just_now" tools:ignore="MissingTranslation">just now</string>
+    <string name="saved_ago_yesterday" tools:ignore="MissingTranslation">yesterday</string>
+    <string name="saved_library_title" tools:ignore="MissingTranslation">Notes &amp; highlights</string>
+    <string name="saved_library_search" tools:ignore="MissingTranslation">Search your notes and highlights</string>
+    <string name="saved_library_latest" tools:ignore="MissingTranslation">Latest</string>
+    <string name="saved_library_by_book" tools:ignore="MissingTranslation">By book</string>
+    <string name="saved_library_no_results" tools:ignore="MissingTranslation">Nothing matches “%1$s”</string>
+    <string name="saved_library_entry" tools:ignore="MissingTranslation">Notes &amp; highlights</string>
+    <string name="saved_library_entry_body" tools:ignore="MissingTranslation">Bookmarks, highlights and notes from every book</string>
+    <string name="saved_download_title" tools:ignore="MissingTranslation">Download this book?</string>
+    <string name="saved_download_body" tools:ignore="MissingTranslation">%1$s isn’t on this device. Download it to open your saved place.</string>
+    <string name="saved_download_confirm" tools:ignore="MissingTranslation">Download</string>
+    <string name="saved_download_cancel" tools:ignore="MissingTranslation">Not now</string>
+    <string name="saved_book_unavailable" tools:ignore="MissingTranslation">This book isn’t available on this device</string>
+    <string name="saved_book_details_row" tools:ignore="MissingTranslation">Saved · %1$d</string>
+    <string name="saved_listening_bookmark" tools:ignore="MissingTranslation">Bookmark this sentence</string>
+    <plurals name="saved_ago_minutes">
+        <item quantity="one">%1$d minute ago</item>
+        <item quantity="other">%1$d minutes ago</item>
+    </plurals>
+    <plurals name="saved_ago_hours">
+        <item quantity="one">%1$d hour ago</item>
+        <item quantity="other">%1$d hours ago</item>
+    </plurals>
+    <plurals name="saved_ago_days">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+    <plurals name="saved_ago_weeks">
+        <item quantity="one">%1$d week ago</item>
+        <item quantity="other">%1$d weeks ago</item>
+    </plurals>
+    <plurals name="saved_ago_months">
+        <item quantity="one">%1$d month ago</item>
+        <item quantity="other">%1$d months ago</item>
+    </plurals>
+    <plurals name="saved_ago_years">
+        <item quantity="one">%1$d year ago</item>
+        <item quantity="other">%1$d years ago</item>
+    </plurals>
+    <plurals name="saved_count_bookmarks">
+        <item quantity="one">%1$d bookmark</item>
+        <item quantity="other">%1$d bookmarks</item>
+    </plurals>
+    <plurals name="saved_count_highlights">
+        <item quantity="one">%1$d highlight</item>
+        <item quantity="other">%1$d highlights</item>
+    </plurals>
+    <plurals name="saved_count_notes">
+        <item quantity="one">%1$d note</item>
+        <item quantity="other">%1$d notes</item>
+    </plurals>
 </resources>

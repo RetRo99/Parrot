@@ -202,4 +202,38 @@ interface BookController : AutoCloseable {
     fun decorateSearch(results: List<ReaderSearchResult>, selectedIndex: Int, accent: Int, soft: Int, onAccent: Int, eink: Boolean) = Unit
     fun clearSearchDecorations() = Unit
     suspend fun searchSentenceId(result: ReaderSearchResult): String? = null
+
+    // Bookmarks and highlights. The page work itself is [SavedPageScript], shared by both
+    // platforms; these are the few hooks that differ per platform.
+
+    /**
+     * Emits true when the reader selects text or changes the selection, false when the
+     * selection goes away. The system selection menu is suppressed; the reader shows its own.
+     */
+    val selectionChanges: Flow<Boolean> get() = kotlinx.coroutines.flow.emptyFlow()
+
+    fun clearSelection() = Unit
+
+    /** Runs a page script in the current chapter; the raw result, or null. */
+    suspend fun runPageScript(script: String): String? = null
+
+    /** Replaces every bookmark and highlight decoration. */
+    fun applySavedDecorations(decorations: List<SavedDecoration>) = Unit
+
+    /** Ids of highlights (or note markers) the reader tapped. */
+    val savedDecorationTaps: Flow<String> get() = kotlinx.coroutines.flow.emptyFlow()
 }
+
+/**
+ * A highlight drawn on the page. [underline] draws a 2dp line instead of a fill (e-ink).
+ * [noteLabel] adds the small "note" marker at the end of the range.
+ */
+data class SavedDecoration(
+    val id: String,
+    val href: String,
+    val mediaType: String?,
+    val anchor: PageAnchor,
+    val tint: Int,
+    val underline: Boolean,
+    val noteLabel: String?,
+)

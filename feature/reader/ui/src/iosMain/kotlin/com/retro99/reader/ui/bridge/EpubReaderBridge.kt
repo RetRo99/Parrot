@@ -286,6 +286,17 @@ interface EpubReaderBridge {
     fun goToSearchLocator(locatorJson: String)
     fun decorateSearch(locators: List<String>, selectedIndex: Int, accent: Int, soft: Int, eink: Boolean)
     fun clearSearchDecorations()
+
+    // Bookmarks and highlights. The system edit menu is suppressed; [callback] receives
+    // true whenever the reader selects text or changes the selection.
+    fun setOnSelectionChangedCallback(callback: ((Boolean) -> Unit)?)
+    fun clearSelection()
+
+    /** Replaces every saved highlight and note marker on the page. */
+    fun applySavedDecorations(decorations: List<SavedDecorationLocator>)
+
+    /** Called with a saved item's id when the reader taps its highlight or note marker. */
+    fun setOnSavedDecorationTapCallback(callback: ((String) -> Unit)?)
 }
 
 data class SearchResultLocator(
@@ -380,3 +391,19 @@ object EpubReaderBridgeRegistry {
      */
     fun isRegistered(): Boolean = bridge != null
 }
+
+/** A saved highlight for the page, anchored by its text. */
+data class SavedDecorationLocator(
+    val id: String,
+    val href: String,
+    val type: String,
+    val progression: Double?,
+    val before: String?,
+    val highlight: String,
+    val after: String?,
+    /** ARGB, alpha included. */
+    val tint: Int,
+    val underline: Boolean,
+    /** Draws the "note" marker after the range when set. */
+    val noteLabel: String?,
+)

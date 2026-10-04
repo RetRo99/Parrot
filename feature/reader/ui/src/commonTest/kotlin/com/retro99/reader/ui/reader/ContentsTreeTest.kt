@@ -1,6 +1,5 @@
 package com.retro99.reader.ui.reader
 
-import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.TocItemUiModel
 import kotlin.test.Test
@@ -22,16 +21,6 @@ class ContentsTreeTest {
             chapterIndex = null, totalChapters = null,
         )
 
-    private fun bookmark(
-        href: String,
-        position: Int? = null,
-        progression: Double? = null,
-        total: Double? = null,
-    ) = BookmarkUiModel(
-        id = "id", locatorHref = href, locatorType = null, locatorTitle = null,
-        progression = progression, totalProgression = total, chapterIndex = null,
-        position = position, createdAt = "2026-01-01T00:00:00Z",
-    )
 
     // Href normalisation
 
@@ -233,24 +222,4 @@ class ContentsTreeTest {
         assertTrue(filterTocByTitle(toc(Triple("c.xhtml", "Chapter", 0)), "   ").isEmpty())
     }
 
-    // Bookmark duplicate detection
-
-    @Test fun positionlessBookmarksCompareByProgressionInsteadOfCollapsing() {
-        val first = bookmark("ch.xhtml", position = null, progression = 0.1)
-        val second = bookmark("ch.xhtml", position = null, progression = 0.7)
-        assertFalse(bookmarkMatchesPosition(first, position("ch.xhtml", progression = 0.7)))
-        assertTrue(bookmarkMatchesPosition(second, position("ch.xhtml", progression = 0.7)))
-    }
-
-    @Test fun locatorPositionsStillMatchExactly() {
-        val saved = bookmark("ch.xhtml", position = 42, progression = 0.5)
-        assertTrue(bookmarkMatchesPosition(saved, position("ch.xhtml", progression = 0.9, position = 42)))
-        assertFalse(bookmarkMatchesPosition(saved, position("ch.xhtml", progression = 0.5, position = 43)))
-        assertFalse(bookmarkMatchesPosition(saved, position("other.xhtml", progression = 0.5, position = 42)))
-    }
-
-    @Test fun fragmentDifferencesDoNotHideASamePlaceMatch() {
-        val saved = bookmark("ch.xhtml#part", position = 1, progression = 0.2)
-        assertTrue(bookmarkMatchesPosition(saved, position("ch.xhtml", progression = 0.2, position = 1)))
-    }
 }

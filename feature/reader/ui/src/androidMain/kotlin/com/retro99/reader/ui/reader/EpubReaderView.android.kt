@@ -32,6 +32,7 @@ import com.retro99.reader.ui.publication.PublicationState
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import com.retro99.reader.ui.navigator.SavedNoteMarkerStyle
 import org.readium.r2.navigator.epub.css.FontStyle
 import org.readium.r2.navigator.epub.css.FontWeight
 import org.readium.r2.navigator.html.HtmlDecorationTemplate
@@ -104,7 +105,9 @@ internal actual fun EpubReaderViewInternal(
     // (Readium's default templates override alpha with 0.3, ignoring the user's selection)
     val navigatorConfiguration = remember(navigatorController, customFontsKey) {
         EpubNavigatorFragment.Configuration(
-            decorationTemplates = createUserAlphaDecorationTemplates()
+            decorationTemplates = createUserAlphaDecorationTemplates(),
+            // Our own toolbar replaces the system text-selection menu.
+            selectionActionModeCallback = navigatorController?.selectionActionModeCallback,
         ).apply {
             registerBundledFonts()
             registerCustomFonts(publicationState)
@@ -317,6 +320,7 @@ internal fun createUserAlphaDecorationTemplates(): HtmlDecorationTemplates {
             Decoration.Style.Underline::class,
             createUnderlineTemplate(defaultTint, lineWeight, cornerRadius)
         )
+        set(SavedNoteMarkerStyle::class, SavedNoteMarkerStyle.template())
     }
 }
 

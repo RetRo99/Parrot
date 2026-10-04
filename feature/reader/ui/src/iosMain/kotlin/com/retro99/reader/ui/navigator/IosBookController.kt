@@ -4,6 +4,7 @@ import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAU
 import com.retro99.reader.ui.bridge.AudioLocator
 import com.retro99.reader.ui.bridge.EpubReaderBridge
 import com.retro99.reader.ui.bridge.EpubReaderSettings
+import com.retro99.reader.ui.bridge.SavedDecorationLocator
 import com.retro99.reader.ui.reader.ReaderSearchResult
 import com.retro99.reader.ui.reader.ReaderSearchBatch
 import com.retro99.reader.ui.reader.BookNotSearchableException
@@ -82,8 +83,16 @@ class IosBookController(
 
     private val sentenceDoubleTapRecognizer = SentenceDoubleTapRecognizer()
 
+    private val _selectionChanges = MutableSharedFlow<Boolean>(extraBufferCapacity = 16)
+    override val selectionChanges: Flow<Boolean> = _selectionChanges
+
+    private val _savedDecorationTaps = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    override val savedDecorationTaps: Flow<String> = _savedDecorationTaps
+
     init {
         setupCallbacks()
+        bridge.setOnSelectionChangedCallback { present -> _selectionChanges.tryEmit(present) }
+        bridge.setOnSavedDecorationTapCallback { id -> _savedDecorationTaps.tryEmit(id) }
         // Only inject tap detection script for ReadAloud books
         if (bridge.hasMediaOverlays()) {
             enableSentenceTapDetection()
@@ -428,9 +437,38 @@ class IosBookController(
         return rawResult?.let(VisibleTextRangeDetector::parseResult)
     }
 
+    override fun clearSelection() = bridge.clearSelection()
+
+    override suspend fun runPageScript(script: String): String? = suspendCancellableCoroutine { continuation ->
+        bridge.evaluateJavaScript(script) { value ->
+            if (continuation.isActive) continuation.resume(value)
+        }
+    }
+
+    override fun applySavedDecorations(decorations: List<SavedDecoration>) {
+        bridge.applySavedDecorations(
+            decorations.map { saved ->
+                SavedDecorationLocator(
+                    id = saved.id,
+                    href = saved.href,
+                    type = saved.mediaType ?: "application/xhtml+xml",
+                    progression = saved.anchor.progression,
+                    before = saved.anchor.before,
+                    highlight = saved.anchor.quote,
+                    after = saved.anchor.after,
+                    tint = saved.tint,
+                    underline = saved.underline,
+                    noteLabel = saved.noteLabel,
+                )
+            },
+        )
+    }
+
     override fun close() {
         pendingPageTurnJob?.cancel()
         sentenceDoubleTapRecognizer.reset()
+        bridge.setOnSelectionChangedCallback(null)
+        bridge.setOnSavedDecorationTapCallback(null)
         // Note: No need to call getRemoveTapDetectorScript() here.
         // The WebView and its JavaScript context will be destroyed when the
         // navigator is closed, so the event listener will be cleaned up automatically.

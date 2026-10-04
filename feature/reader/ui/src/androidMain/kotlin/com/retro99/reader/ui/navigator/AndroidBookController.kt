@@ -67,6 +67,10 @@ import org.readium.r2.shared.util.mediatype.MediaType
 /** Decoration group name for ReadAloud text highlighting */
 private const val READALOUD_DECORATION_GROUP = "readaloud"
 
+/** Saved highlights, and the "note" markers drawn after highlights that have notes. */
+private const val SAVED_DECORATION_GROUP = "saved"
+private const val SAVED_NOTE_DECORATION_GROUP = "saved-notes"
+
 /**
  * Android implementation of [BookController] using Readium's EpubNavigatorFragment.
  *
@@ -201,9 +205,14 @@ class AndroidBookController internal constructor() : BookController {
         publication: Publication,
         hasMediaOverlays: Boolean = false,
     ) {
+        if (_navigator.value !== navigator) {
+            navigator.addDecorationListener(SAVED_DECORATION_GROUP, savedDecorationListener)
+            navigator.addDecorationListener(SAVED_NOTE_DECORATION_GROUP, savedDecorationListener)
+        }
         _navigator.value = navigator
         this.publication = publication
         this.hasMediaOverlays = hasMediaOverlays
+        if (savedDecorations.isNotEmpty()) applySavedDecorations(savedDecorations)
 
         // Execute any pending actions that were queued before initialization
         executePendingActions(navigator)
@@ -777,6 +786,108 @@ class AndroidBookController internal constructor() : BookController {
         }
     }
 
+    // ==================== Bookmarks and highlights ====================
+
+    private val _selectionChanges = MutableSharedFlow<Boolean>(extraBufferCapacity = 16)
+    override val selectionChanges: Flow<Boolean> = _selectionChanges.asSharedFlow()
+
+    private val _savedDecorationTaps = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    override val savedDecorationTaps: Flow<String> = _savedDecorationTaps.asSharedFlow()
+
+    private var savedDecorations: List<SavedDecoration> = emptyList()
+
+    private val savedDecorationListener = object : DecorableNavigator.Listener {
+        override fun onDecorationActivated(event: DecorableNavigator.OnActivatedEvent): Boolean {
+            _savedDecorationTaps.tryEmit(event.decoration.id.removeSuffix(NOTE_MARKER_SUFFIX))
+            return true
+        }
+    }
+
+    /**
+     * Replaces the system text-selection menu: the menu stays empty, so no floating toolbar
+     * appears, and every change to the selection is reported for the reader's own toolbar.
+     */
+    val selectionActionModeCallback: android.view.ActionMode.Callback =
+        object : android.view.ActionMode.Callback2() {
+            override fun onCreateActionMode(mode: android.view.ActionMode, menu: android.view.Menu): Boolean {
+                menu.clear()
+                _selectionChanges.tryEmit(true)
+                return true
+            }
+
+            override fun onPrepareActionMode(mode: android.view.ActionMode, menu: android.view.Menu): Boolean {
+                menu.clear()
+                return false
+            }
+
+            override fun onActionItemClicked(mode: android.view.ActionMode, item: android.view.MenuItem): Boolean = false
+
+            override fun onDestroyActionMode(mode: android.view.ActionMode) {
+                _selectionChanges.tryEmit(false)
+            }
+
+            override fun onGetContentRect(mode: android.view.ActionMode, view: android.view.View, outRect: android.graphics.Rect) {
+                super.onGetContentRect(mode, view, outRect)
+                // Called again whenever the selection handles move.
+                _selectionChanges.tryEmit(true)
+            }
+        }
+
+    override fun clearSelection() {
+        withNavigatorOrNull { nav -> nav.clearSelection() }
+    }
+
+    override suspend fun runPageScript(script: String): String? =
+        withNavigatorOrNull { nav -> nav.evaluateJavascript(script) }
+
+    override fun applySavedDecorations(decorations: List<SavedDecoration>) {
+        savedDecorations = decorations
+        val highlights = decorations.mapNotNull { saved ->
+            val locator = saved.toLocator() ?: return@mapNotNull null
+            Decoration(
+                id = saved.id,
+                locator = locator,
+                style = if (saved.underline) {
+                    Decoration.Style.Underline(tint = saved.tint)
+                } else {
+                    Decoration.Style.Highlight(tint = saved.tint)
+                },
+            )
+        }
+        val notes = decorations.mapNotNull { saved ->
+            val label = saved.noteLabel ?: return@mapNotNull null
+            val locator = saved.toLocator() ?: return@mapNotNull null
+            Decoration(
+                id = saved.id + NOTE_MARKER_SUFFIX,
+                locator = locator,
+                style = SavedNoteMarkerStyle(label = label, tint = saved.noteTint()),
+            )
+        }
+        controllerScope.launch {
+            withNavigatorOrNull { nav ->
+                nav.applyDecorations(highlights, SAVED_DECORATION_GROUP)
+                nav.applyDecorations(notes, SAVED_NOTE_DECORATION_GROUP)
+            }
+        }
+    }
+
+    private fun SavedDecoration.toLocator(): Locator? {
+        val url = Url(href) ?: return null
+        return Locator(
+            href = url,
+            mediaType = mediaType?.let { type -> MediaType(type) } ?: MediaType.XHTML,
+            locations = Locator.Locations(progression = anchor.progression),
+            text = Locator.Text(
+                before = anchor.before,
+                highlight = anchor.quote,
+                after = anchor.after,
+            ),
+        )
+    }
+
+    /** The marker uses the text colour of the theme over an opaque highlight hue. */
+    private fun SavedDecoration.noteTint(): Int = if (underline) android.graphics.Color.BLACK else (tint or 0xFF000000.toInt())
+
     override fun close() {
         pendingPageTurnJob?.cancel()
         pendingActions.clear()
@@ -791,6 +902,8 @@ class AndroidBookController internal constructor() : BookController {
     }
 
     private companion object Companion {
+        private const val NOTE_MARKER_SUFFIX = "#note"
+
         /** Minimum delay before page turn to avoid jarring transitions */
         private const val MIN_PAGE_TURN_DELAY_MS = 200L
 

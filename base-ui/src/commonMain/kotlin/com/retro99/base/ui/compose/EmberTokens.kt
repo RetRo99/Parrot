@@ -50,7 +50,45 @@ data class EmberColors(
     val welcomeChip: Color,
     /** Fixed book-details hero; never derived from cover art. */
     val bookHero: Color = bg,
+    /** Highlight colours for saved highlights. */
+    val highlights: EmberHighlights = EmberDayHighlights,
 )
+
+/**
+ * One highlight colour. [fill] is drawn behind text on the page and in colour dots;
+ * [bar] is the stronger edge bar of a saved row.
+ */
+@Immutable
+data class EmberHighlightColor(val fill: Color, val bar: Color)
+
+/** The four highlight colours: amber (default), rose, sage and sky. */
+@Immutable
+data class EmberHighlights(
+    val amber: EmberHighlightColor,
+    val rose: EmberHighlightColor,
+    val sage: EmberHighlightColor,
+    val sky: EmberHighlightColor,
+)
+
+val EmberDayHighlights = EmberHighlights(
+    amber = EmberHighlightColor(fill = Color(0xFFFBE2A4), bar = Color(0xFFF0D184)),
+    rose = EmberHighlightColor(fill = Color(0xFFF6D0CB), bar = Color(0xFFE9B4AC)),
+    sage = EmberHighlightColor(fill = Color(0xFFD6E6C8), bar = Color(0xFFBCD4A8)),
+    sky = EmberHighlightColor(fill = Color(0xFFD2E2F2), bar = Color(0xFFB2CBE5)),
+)
+
+/** Translucent fills so light text stays readable on dark pages. */
+val EmberNightHighlights = EmberHighlights(
+    amber = EmberHighlightColor(fill = Color(0x66C9962E), bar = Color(0xFF8A6A2A)),
+    rose = EmberHighlightColor(fill = Color(0x66B5615A), bar = Color(0xFF8C4A45)),
+    sage = EmberHighlightColor(fill = Color(0x66708F5E), bar = Color(0xFF55704A)),
+    sky = EmberHighlightColor(fill = Color(0x66607FA3), bar = Color(0xFF46607E)),
+)
+
+/** E-ink has no colour: highlights are a black underline and rows a black bar. */
+val EmberEinkHighlights = EmberHighlightColor(fill = Color.Black, bar = Color.Black).let { black ->
+    EmberHighlights(amber = black, rose = black, sage = black, sky = black)
+}
 
 /** Per-mode style values that are not colors. */
 @Immutable
@@ -105,6 +143,7 @@ val EmberNightColors = EmberColors(
     welcomeCoverRed = Color(0xFF7A3434),
     welcomeChip = Color(0xFF3A2615),
     bookHero = Color(0xFF2E2016),
+    highlights = EmberNightHighlights,
 )
 
 val EmberDayColors = EmberColors(
@@ -170,6 +209,7 @@ val EmberEinkColors = EmberColors(
     welcomeCoverGreen = Color.Black,
     welcomeCoverRed = Color.White,
     welcomeChip = Color.White,
+    highlights = EmberEinkHighlights,
 )
 
 val EmberNightStyle = EmberStyle(

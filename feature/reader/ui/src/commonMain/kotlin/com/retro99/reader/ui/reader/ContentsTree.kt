@@ -1,9 +1,7 @@
 package com.retro99.reader.ui.reader
 
-import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.TocItemUiModel
-import kotlin.math.abs
 
 /**
  * Pure model behind the Contents sheet: href normalisation, current-location resolution,
@@ -336,22 +334,3 @@ internal fun filterTocByTitle(toc: List<TocItemUiModel>, query: String): List<To
     }
 }
 
-/**
- * Whether a bookmark already marks the same place as [position]. Locations without a
- * locator position fall back to (resource) progression, then book progression, so two
- * position-less bookmarks in one resource no longer collapse into one place.
- */
-internal fun bookmarkMatchesPosition(bookmark: BookmarkUiModel, position: PositionUiModel): Boolean {
-    if (normaliseTocHref(bookmark.locatorHref) != normaliseTocHref(position.href)) return false
-    val bookmarkPage = bookmark.position
-    val positionPage = position.position
-    if (bookmarkPage != null && positionPage != null) return bookmarkPage == positionPage
-    val bookmarkProgression = bookmark.progression
-    val positionProgression = position.progression
-    if (bookmarkProgression != null && positionProgression != null) {
-        return abs(bookmarkProgression - positionProgression) < 1e-3
-    }
-    val bookmarkTotal = bookmark.totalProgression
-    val positionTotal = position.totalProgression
-    return bookmarkTotal != null && positionTotal != null && abs(bookmarkTotal - positionTotal) < 1e-3
-}

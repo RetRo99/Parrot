@@ -42,7 +42,6 @@ import com.retro99.base.result.AppError
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
-import com.retro99.reader.domain.model.BookmarkDomainModel
 import com.retro99.reader.domain.linked.LinkedResumeOffer
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
@@ -53,23 +52,29 @@ import com.retro99.reader.domain.recap.RecapLanguages
 import com.retro99.reader.domain.recap.RecapPosition
 import com.retro99.reader.domain.recap.RecapSessionRecorder
 import com.retro99.reader.domain.recap.RecapSettings
-import com.retro99.reader.domain.usecase.AddBookmarkUseCase
-import com.retro99.reader.domain.usecase.DeleteBookmarkUseCase
 import com.retro99.reader.domain.usecase.GetCustomReaderFontsUseCase
 import com.retro99.reader.domain.usecase.GetReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.FindLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.InitializeReaderUseCase
 import com.retro99.reader.domain.usecase.ObserveAppliedPositionUseCase
 import com.retro99.reader.domain.usecase.PropagateToLinkedCopiesUseCase
-import com.retro99.reader.domain.usecase.ObserveBookmarksUseCase
 import com.retro99.reader.domain.usecase.ResolveLinkedResumeUseCase
+import com.retro99.reader.domain.usecase.ResolveSavedBookUseCase
+import com.retro99.reader.ui.reader.saved.ListeningSentence
+import com.retro99.reader.ui.reader.saved.ReaderSavedContext
+import com.retro99.reader.ui.reader.saved.ReaderSavedItems
+import com.retro99.reader.ui.reader.saved.SavedAction
+import com.retro99.base.ui.sharing.FileSharer
+import com.retro99.saved.domain.usecase.DeleteSavedItemUseCase
+import com.retro99.saved.domain.usecase.ObserveBookSavedItemsUseCase
+import com.retro99.saved.domain.usecase.ObserveSavedSyncStateUseCase
+import com.retro99.saved.domain.usecase.RestoreSavedItemUseCase
+import com.retro99.saved.domain.usecase.SaveSavedItemsUseCase
 import com.retro99.reader.domain.usecase.SaveReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.domain.usecase.SetCurrentlyReadingUseCase
-import com.retro99.reader.domain.usecase.UpdateBookmarkTitleUseCase
 import com.retro99.reader.ui.di.InitialAudioPosition
 import com.retro99.reader.ui.di.ReaderScope
-import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.model.toDomainModel
@@ -155,10 +160,13 @@ class ReaderViewModel(
     @Provided private val saveReadingSessionUseCase: SaveReadingSessionUseCase,
     @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val setCurrentlyReadingUseCase: SetCurrentlyReadingUseCase,
-    @Provided private val addBookmarkUseCase: AddBookmarkUseCase,
-    @Provided private val observeBookmarksUseCase: ObserveBookmarksUseCase,
-    @Provided private val deleteBookmarkUseCase: DeleteBookmarkUseCase,
-    @Provided private val updateBookmarkTitleUseCase: UpdateBookmarkTitleUseCase,
+    @Provided private val observeBookSavedItemsUseCase: ObserveBookSavedItemsUseCase,
+    @Provided private val saveSavedItemsUseCase: SaveSavedItemsUseCase,
+    @Provided private val deleteSavedItemUseCase: DeleteSavedItemUseCase,
+    @Provided private val restoreSavedItemUseCase: RestoreSavedItemUseCase,
+    @Provided private val observeSavedSyncStateUseCase: ObserveSavedSyncStateUseCase,
+    @Provided private val resolveSavedBookUseCase: ResolveSavedBookUseCase,
+    @Provided private val fileSharer: FileSharer,
     @Provided private val publicationService: EpubPublicationService,
     @Provided private val analytics: Analytics,
     @Provided private val productUsage: ProductUsage,
@@ -249,6 +257,7 @@ class ReaderViewModel(
 
     /** Element id of the sentence the device voice last read; used to hand over to narration. */
     private var ttsCurrentElementId: String? = null
+    private var ttsCurrentSentence: com.retro99.reader.ui.tts.TtsSentence? = null
 
     private val syncCoordinator: ReaderSyncCoordinator by lazy {
         readerScope.get<ReaderSyncCoordinator>().also {
@@ -326,8 +335,6 @@ class ReaderViewModel(
     private var lastBookLaunchSourceScreen: String = "home"
     private var lastBookLaunchEntryPoint: String = "app_launch"
 
-    /** Monotonic mark used to generate unique bookmark IDs with nanosecond precision. */
-    private val bookmarkIdMark = TimeSource.Monotonic.markNow()
 
     /** Tracks the previous playing state to detect play/pause transitions */
     private var wasPlaying: Boolean = false
@@ -529,21 +536,9 @@ class ReaderViewModel(
             ReaderIntent.DismissNoAudioMessage -> dismissNoAudioMessage()
             ReaderIntent.RetryTtsPlayback -> retryTtsPlayback()
             ReaderIntent.DismissTtsPlaybackFailed -> dismissTtsPlaybackFailed()
-            ReaderIntent.DismissBookmarkSaveFailed -> dismissBookmarkSaveFailed()
             ReaderIntent.RetryPositionSave -> retryPositionSave()
             ReaderIntent.ToggleBookmarks -> toggleBookmarks()
-            ReaderIntent.AddBookmark -> addBookmark()
-            ReaderIntent.DismissBookmarkAdded -> dismissBookmarkAdded()
-            ReaderIntent.DismissBookmarkAlreadyExists -> dismissBookmarkAlreadyExists()
-            is ReaderIntent.UndoBookmark -> undoBookmark(intent.id)
-            is ReaderIntent.RenameBookmark -> renameBookmark(intent.id, intent.newTitle)
-            is ReaderIntent.RestoreBookmark -> restoreBookmark(intent.bookmark)
-            ReaderIntent.DismissBookmarkDeleted -> dismissBookmarkDeleted()
-            ReaderIntent.GoToPreviousBookmark -> goToPreviousBookmark()
-            ReaderIntent.GoToNextBookmark -> goToNextBookmark()
-            ReaderIntent.DismissNoMoreBookmarks -> dismissNoMoreBookmarks()
-            is ReaderIntent.DeleteBookmark -> deleteBookmark(intent.id)
-            is ReaderIntent.GoToBookmark -> navigateKeepingAudio { goToBookmark(intent.bookmark) }
+            is ReaderIntent.Saved -> handleSaved(intent.action)
         }
     }
 
@@ -558,10 +553,6 @@ class ReaderViewModel(
     private fun retryTtsPlayback() {
         updateState { it.copy(showTtsPlaybackFailed = false) }
         togglePlayback()
-    }
-
-    private fun dismissBookmarkSaveFailed() {
-        updateState { it.copy(showBookmarkSaveFailed = false) }
     }
 
     private fun retryPositionSave() {
@@ -670,6 +661,7 @@ class ReaderViewModel(
                 // (word count is used internally by ReadingSpeedTracker via the locator flow)
                 updateState { it.copy(chapterInfo = locator.chapterInfo) }
                 refreshSearchDecorations()
+                savedItems.onPageChanged(positionUiModel)
             }
             .launchIn(viewModelScope)
     }
@@ -847,7 +839,7 @@ class ReaderViewModel(
             observeReadingSpeedPersistence()
             observeSettingsChanges()
             observeCustomFontChanges()
-            observeBookmarks()
+            savedItems.start(serverId, bookUuid)
             // Initialize audio after publication is in state
             if (publication.hasMediaOverlays) {
                 initAudio()
@@ -1589,6 +1581,7 @@ class ReaderViewModel(
         ttsController.currentSentence
             .onEach { sentence ->
                 ttsCurrentElementId = sentence?.elementId ?: ttsCurrentElementId
+                if (sentence != null) ttsCurrentSentence = sentence
                 if (sentence != null) {
                     updateState { state -> state.copy(ttsSentenceIndex = sentence.index) }
                 }
@@ -2018,7 +2011,7 @@ class ReaderViewModel(
     }
 
     private fun toggleBookmarks() {
-        openContentsSheet(ContentsTab.BOOKMARKS)
+        openContentsSheet(ContentsTab.SAVED)
     }
 
     /**
@@ -2031,7 +2024,7 @@ class ReaderViewModel(
         val show = if (tab == ContentsTab.CHAPTERS) {
             !state.isContentsVisible
         } else {
-            !state.isContentsVisible || state.contentsInitialTab != ContentsTab.BOOKMARKS
+            !state.isContentsVisible || state.contentsInitialTab != ContentsTab.SAVED
         }
         if (show) {
             analytics.logEvent(
@@ -2562,182 +2555,109 @@ class ReaderViewModel(
         goToChapterAndPlay(previousChapter.href, state.currentPosition)
     }
 
-    private fun addBookmark() {
-        val currentPosition = viewState.value.currentPosition ?: return
-        val existing = viewState.value.bookmarks.find { bookmark ->
-            bookmarkMatchesPosition(bookmark, currentPosition)
+    /** Bookmarks, highlights and notes; see [ReaderSavedItems]. */
+    private val savedItems: ReaderSavedItems by lazy {
+        ReaderSavedItems(
+            scope = viewModelScope,
+            bookController = { bookController },
+            state = { viewState.value.saved },
+            update = { change -> updateState { state -> state.copy(saved = change(state.saved)) } },
+            context = {
+                val state = viewState.value
+                ReaderSavedContext(
+                    position = state.currentPosition,
+                    bookTitle = state.bookTitle,
+                    bookAuthor = state.bookAuthor.takeIf { author -> author.isNotBlank() },
+                    isListening = state.isListening,
+                    chapterTitleFor = { href ->
+                        state.tableOfContents.firstOrNull { item ->
+                            normaliseTocHref(item.href) == normaliseTocHref(href)
+                        }?.title
+                    },
+                )
+            },
+            listeningSentence = ::listeningSentence,
+            navigate = ::goToSaved,
+            openSearch = { query ->
+                if (!viewState.value.isBookSearchVisible) toggleBookSearch()
+                searchBook(query, submitted = true)
+            },
+            observeBookItems = observeBookSavedItemsUseCase,
+            saveItems = saveSavedItemsUseCase,
+            deleteItem = deleteSavedItemUseCase,
+            restoreItem = restoreSavedItemUseCase,
+            observeSyncState = observeSavedSyncStateUseCase,
+            resolveBook = resolveSavedBookUseCase,
+            fileSharer = fileSharer,
+            onError = { error, message -> analytics.logException(error, message) },
+        )
+    }
+
+    private fun handleSaved(action: SavedAction) {
+        if (action == SavedAction.ToggleBookmark) {
+            analytics.logEvent(
+                if (viewState.value.saved.pageBookmark == null) ReaderAnalyticsEvent.BookmarkAdded(bookUuid = bookUuid)
+                else ReaderAnalyticsEvent.BookmarkDeleted(bookUuid = bookUuid),
+            )
         }
-        if (existing != null) {
-            updateState {
-                it.copy(
-                    showBookmarkAlreadyExists = true,
+        savedItems.handle(action)
+    }
+
+    /** The sentence being read aloud, for a bookmark made while listening. */
+    private fun listeningSentence(): ListeningSentence? {
+        val state = viewState.value
+        if (!state.isListening) return null
+        return when (state.listenSource) {
+            ListenSource.NARRATION -> audioController.currentAudioLocator.value?.locator?.let { locator ->
+                ListeningSentence(
+                    href = locator.href,
+                    mediaType = locator.type,
+                    elementId = locator.fragments?.firstOrNull(),
+                    text = null,
+                    audioMs = state.currentAudioPositionMs.takeIf { ms -> ms > 0 },
                 )
             }
-            return
-        }
-        val nanoSuffix = bookmarkIdMark.elapsedNow().inWholeNanoseconds
-        val bookmark = BookmarkDomainModel(
-            id = "${bookUuid}_${nowMillis()}_$nanoSuffix",
-            bookUuid = bookUuid,
-            locatorHref = currentPosition.href,
-            locatorType = currentPosition.type,
-            locatorTitle = currentPosition.title,
-            progression = currentPosition.progression,
-            totalProgression = currentPosition.totalProgression,
-            chapterIndex = currentPosition.chapterIndex,
-            position = currentPosition.position,
-            createdAt = now().toString(),
-        )
-        viewModelScope.launch {
-            addBookmarkUseCase(bookmark)
-                .onSuccess {
-                    analytics.logEvent(ReaderAnalyticsEvent.BookmarkAdded(bookUuid = bookUuid))
-                    updateState {
-                        it.copy(
-                            showBookmarkAdded = true,
-                            lastAddedBookmarkId = bookmark.id,
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    error.log(analytics, "ReaderViewModel: Failed to save bookmark")
-                    updateState { it.copy(showBookmarkSaveFailed = true) }
-                }
+            ListenSource.DEVICE_VOICE -> ttsCurrentSentence?.let { sentence ->
+                val position = state.currentPosition ?: return null
+                ListeningSentence(
+                    href = position.href,
+                    mediaType = position.type,
+                    elementId = sentence.elementId,
+                    text = sentence.text,
+                    audioMs = null,
+                )
+            }
         }
     }
 
-    private fun dismissBookmarkAdded() {
-        updateState {
-            it.copy(
-                showBookmarkAdded = false,
-                lastAddedBookmarkId = null,
-            )
+    /**
+     * Opens a saved item's place: on its own text when it is in this copy of the book,
+     * otherwise at the same point of the book. Audio keeps going from there.
+     */
+    private fun goToSaved(result: ReaderSearchResult) {
+        val inThisCopy = bookController.searchReadingOrder().any { href ->
+            normaliseTocHref(href) == normaliseTocHref(result.href)
         }
-    }
-
-    private fun dismissBookmarkAlreadyExists() {
-        updateState { it.copy(showBookmarkAlreadyExists = false) }
-    }
-
-    private fun undoBookmark(id: String) {
-        viewModelScope.launch {
-            deleteBookmarkUseCase(id)
-        }
-        updateState {
-            it.copy(
-                showBookmarkAdded = false,
-                lastAddedBookmarkId = null,
-            )
-        }
-    }
-
-    private fun deleteBookmark(id: String) {
-        analytics.logEvent(ReaderAnalyticsEvent.BookmarkDeleted(bookUuid = bookUuid))
-        val deleted = viewState.value.bookmarks.firstOrNull { it.id == id }
-        if (deleted != null) {
-            updateState { it.copy(showBookmarkDeleted = true, lastDeletedBookmark = deleted) }
-        }
-        viewModelScope.launch {
-            deleteBookmarkUseCase(id)
-        }
-    }
-
-    /** Undoes a deletion from the Contents sheet, keeping the bookmark's id and date. */
-    private fun restoreBookmark(bookmark: BookmarkUiModel) {
-        viewModelScope.launch {
-            addBookmarkUseCase(
-                BookmarkDomainModel(
-                    id = bookmark.id,
-                    bookUuid = bookUuid,
-                    locatorHref = bookmark.locatorHref,
-                    locatorType = bookmark.locatorType,
-                    locatorTitle = bookmark.locatorTitle,
-                    progression = bookmark.progression,
-                    totalProgression = bookmark.totalProgression,
-                    chapterIndex = bookmark.chapterIndex,
-                    position = bookmark.position,
-                    createdAt = bookmark.createdAt,
-                    sortOrder = bookmark.sortOrder,
-                ),
-            )
-        }
-        updateState { it.copy(showBookmarkDeleted = false, lastDeletedBookmark = null) }
-    }
-
-    private fun dismissBookmarkDeleted() {
-        updateState { it.copy(showBookmarkDeleted = false, lastDeletedBookmark = null) }
-    }
-
-    private fun renameBookmark(id: String, newTitle: String) {
-        analytics.logEvent(ReaderAnalyticsEvent.BookmarkRenamed(bookUuid = bookUuid))
-        viewModelScope.launch {
-            updateBookmarkTitleUseCase(id, newTitle)
-        }
-        updateState { it.copy(renamingBookmark = null) }
-    }
-
-    private fun goToPreviousBookmark() {
-        val currentHref = viewState.value.currentPosition?.href ?: return
-        val sorted = viewState.value.bookmarks.sortedBy { it.sortOrder }
-        val currentIndex = sorted.indexOfFirst { it.locatorHref == currentHref }
-        if (currentIndex <= 0) {
-            updateState { it.copy(showNoMoreBookmarks = true) }
-            return
-        }
-        goToBookmark(sorted[currentIndex - 1])
-    }
-
-    private fun goToNextBookmark() {
-        val currentHref = viewState.value.currentPosition?.href ?: return
-        val sorted = viewState.value.bookmarks.sortedBy { it.sortOrder }
-        val currentIndex = sorted.indexOfFirst { it.locatorHref == currentHref }
-        if (currentIndex < 0 || currentIndex >= sorted.size - 1) {
-            updateState { it.copy(showNoMoreBookmarks = true) }
-            return
-        }
-        goToBookmark(sorted[currentIndex + 1])
-    }
-
-    private fun dismissNoMoreBookmarks() {
-        updateState { it.copy(showNoMoreBookmarks = false) }
-    }
-
-    private fun goToBookmark(bookmark: BookmarkUiModel) {
-        val position = PositionUiModel(
-            createdAt = bookmark.createdAt,
-            href = bookmark.locatorHref,
-            type = bookmark.locatorType ?: "",
-            title = bookmark.locatorTitle,
-            progression = bookmark.progression,
-            position = bookmark.position,
-            totalProgression = bookmark.totalProgression,
-            chapterIndex = bookmark.chapterIndex,
-            totalChapters = viewState.value.currentPosition?.totalChapters,
-        )
-        beginNavigation(ReaderNavigationMethod.Bookmark) {
-            it.href.substringBefore('#') == position.href.substringBefore('#') &&
-                (position.progression == null || it.progression?.let { progress ->
-                    kotlin.math.abs(progress - position.progression) <= 0.05
-                } == true)
-        }
-        bookController.goToPosition(position)
-        updateState {
-            it.copy(
-                isContentsVisible = false,
-                jumpOrigin = it.currentPosition,
-                jumpOriginPageTurns = 0,
-            )
-        }
-    }
-
-    private fun observeBookmarks() {
-        observeBookmarksUseCase(bookUuid)
-            .onEach { bookmarks ->
-                updateState { state ->
-                    state.copy(bookmarks = bookmarks.map { bookmark -> bookmark.toUiModel() })
+        val origin = viewState.value.currentPosition
+        navigateKeepingAudio(searchResult = result.takeIf { inThisCopy }) {
+            beginNavigation(ReaderNavigationMethod.Bookmark) { position ->
+                normaliseTocHref(position.href) == normaliseTocHref(result.href)
+            }
+            if (inThisCopy) {
+                bookController.goToSearchResult(result)
+            } else {
+                result.totalProgression?.let { progression ->
+                    viewModelScope.launch { bookController.goToTotalProgression(progression) }
                 }
             }
-            .launchIn(viewModelScope)
+            updateState {
+                it.copy(
+                    isContentsVisible = false,
+                    jumpOrigin = origin,
+                    jumpOriginPageTurns = 0,
+                )
+            }
+        }
     }
 
     fun close(closeSource: ReaderCloseSource = ReaderCloseSource.CloseButton) {

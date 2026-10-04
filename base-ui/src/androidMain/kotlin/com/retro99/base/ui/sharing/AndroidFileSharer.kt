@@ -36,4 +36,23 @@ class AndroidFileSharer(
 
         context.startActivity(chooserIntent)
     }
+
+    override fun shareText(text: String, title: String?) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+            title?.let { subject -> putExtra(Intent.EXTRA_SUBJECT, subject) }
+        }
+        context.startActivity(
+            Intent.createChooser(shareIntent, title).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) },
+        )
+    }
+
+    override fun shareTextAsFile(fileName: String, text: String, mimeType: String, title: String?) {
+        // Under filesDir, which the FileProvider exposes.
+        val directory = File(context.filesDir, "exports").apply { mkdirs() }
+        val file = File(directory, fileName)
+        file.writeText(text)
+        shareFile(file.absolutePath, mimeType, title)
+    }
 }

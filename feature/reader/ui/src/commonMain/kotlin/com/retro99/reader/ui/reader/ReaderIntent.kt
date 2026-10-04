@@ -1,7 +1,6 @@
 package com.retro99.reader.ui.reader
 
 import com.retro99.base.ui.BaseIntent
-import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.tts.NeuralVoicePackage
@@ -244,42 +243,14 @@ sealed interface ReaderIntent : BaseIntent {
 
     data object DismissTtsPlaybackFailed : ReaderIntent
 
-    /**
-     * Dismiss the "bookmark save failed" snackbar message.
-     */
-    data object DismissBookmarkSaveFailed : ReaderIntent
-
     data object RetryPositionSave : ReaderIntent
 
-    // Bookmarks
+    // Bookmarks, highlights and notes
 
-    /** Toggle the Contents sheet on the Bookmarks tab (closes it when already open). */
+    /** Toggle the Contents sheet on the Saved tab (closes it when already open). */
     data object ToggleBookmarks : ReaderIntent
 
-    data object AddBookmark : ReaderIntent
-
-    data object DismissBookmarkAdded : ReaderIntent
-
-    data object DismissBookmarkAlreadyExists : ReaderIntent
-
-    /** Undo of a bookmark deletion: puts the deleted bookmark back. */
-    data class RestoreBookmark(val bookmark: BookmarkUiModel) : ReaderIntent
-
-    data object DismissBookmarkDeleted : ReaderIntent
-
-    data class UndoBookmark(val id: String) : ReaderIntent
-
-    data class RenameBookmark(val id: String, val newTitle: String) : ReaderIntent
-
-    data object GoToPreviousBookmark : ReaderIntent
-
-    data object GoToNextBookmark : ReaderIntent
-
-    data object DismissNoMoreBookmarks : ReaderIntent
-
-    data class DeleteBookmark(val id: String) : ReaderIntent
-
-    data class GoToBookmark(val bookmark: BookmarkUiModel) : ReaderIntent
+    data class Saved(val action: com.retro99.reader.ui.reader.saved.SavedAction) : ReaderIntent
 }
 
 enum class ListenSource { NARRATION, DEVICE_VOICE }
