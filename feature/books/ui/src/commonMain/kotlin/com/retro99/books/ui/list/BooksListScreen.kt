@@ -102,7 +102,7 @@ import io.github.vinceglb.filekit.core.PickerMode
 import io.github.vinceglb.filekit.core.PickerType
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
-import com.retro99.base.ui.compose.ParrotEmptyState
+import com.retro99.base.ui.compose.EmberEmptyState
 import com.retro99.books.ui.components.BookFilterBottomSheet
 import com.retro99.books.ui.components.BookGridCard
 import com.retro99.books.ui.components.BookItemCard
@@ -696,7 +696,7 @@ private fun EmptyBooksState(
         contentAlignment = Alignment.Center,
     ) {
         if (hasActiveFilters) {
-            ParrotEmptyState(
+            EmberEmptyState(
                 title = stringResource(StringRes.books_empty_filtered_title),
                 message = stringResource(StringRes.books_empty_filtered_subtitle),
                 icon = Icons.AutoMirrored.Outlined.MenuBook,
@@ -704,7 +704,7 @@ private fun EmptyBooksState(
                 onAction = onResetFilters,
             )
         } else {
-            ParrotEmptyState(
+            EmberEmptyState(
                 title = stringResource(StringRes.books_empty_title),
                 message = stringResource(StringRes.books_empty_subtitle),
                 icon = Icons.AutoMirrored.Outlined.MenuBook,

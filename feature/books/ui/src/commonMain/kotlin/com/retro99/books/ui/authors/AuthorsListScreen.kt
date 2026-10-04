@@ -40,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.LoadingScreen
-import com.retro99.base.ui.compose.ParrotEmptyState
+import com.retro99.base.ui.compose.EmberEmptyState
 import com.retro99.books.ui.authors.model.AuthorListUiModel
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
@@ -115,7 +115,7 @@ private fun EmptyAuthorsState(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        ParrotEmptyState(
+        EmberEmptyState(
             title = stringResource(StringRes.authors_empty_title),
             message = stringResource(StringRes.authors_empty_subtitle),
             icon = Icons.Filled.Person,

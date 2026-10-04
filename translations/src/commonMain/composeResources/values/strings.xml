@@ -68,6 +68,8 @@
     <string name="general_cancel">Cancel</string>
     <string name="general_close">Close</string>
     <string name="general_retry">Retry</string>
+    <string name="reader_error_title" tools:ignore="MissingTranslation">Can\'t open this book</string>
+    <string name="statistics_load_failed_title" tools:ignore="MissingTranslation">Couldn\'t load this</string>
 
     <string name="error_network_connectivity">Network connection unavailable. Please check your internet connection.</string>
     <string name="error_network_generic">A network error occurred. Please try again.</string>
