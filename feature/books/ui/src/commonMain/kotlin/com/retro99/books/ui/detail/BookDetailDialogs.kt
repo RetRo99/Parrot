@@ -2,15 +2,16 @@ package com.retro99.books.ui.detail
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.AnnotatedString
 import com.retro99.analytics.api.UsageOperation
 import com.retro99.base.ui.IntentDispatcher
-import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.books.ui.components.LinkedResumeDialog
 import com.retro99.books.ui.components.PositionConflictDialog
 import com.retro99.books.ui.components.toUiModel
@@ -35,7 +36,6 @@ import resources.translations.cloud_backup_replace_button
 import resources.translations.cloud_backup_title
 import resources.translations.cloud_backup_confirm
 import resources.translations.cloud_backup_attestation_checkbox
-import resources.translations.resume_linked_compare
 
 @Composable
 internal fun BookDetailDialogs(
@@ -76,13 +76,23 @@ internal fun BookDetailDialogs(
         onDismiss = { dispatch(BookDetailIntent.OnReplaceBackupDismissed) },
     )
     if (state.showBackupConfirmation) {
-        AlertDialog(
+        EmberDialog(
             onDismissRequest = { dispatch(BookDetailIntent.OnBackupDismissed) },
-            containerColor = Ember.colors.surface,
-            titleContentColor = Ember.colors.ink,
-            textContentColor = Ember.colors.ink,
-            title = { Text(stringResource(StringRes.cloud_backup_title)) },
-            text = {
+            title = stringResource(StringRes.cloud_backup_title),
+            actions = listOf(
+                EmberDialogAction(
+                    label = stringResource(StringRes.general_cancel),
+                    style = EmberDialogActionStyle.Neutral,
+                    onClick = { dispatch(BookDetailIntent.OnBackupDismissed) },
+                ),
+                EmberDialogAction(
+                    label = stringResource(StringRes.cloud_backup_confirm),
+                    style = EmberDialogActionStyle.Main,
+                    enabled = state.backupRightsAttested,
+                    onClick = { dispatch(BookDetailIntent.OnBackupConfirmed) },
+                ),
+            ),
+            content = {
                 Column {
                     Text(book.title)
                     Row {
@@ -91,17 +101,6 @@ internal fun BookDetailDialogs(
                         })
                         Text(stringResource(StringRes.cloud_backup_attestation_checkbox))
                     }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { dispatch(BookDetailIntent.OnBackupConfirmed) },
-                    enabled = state.backupRightsAttested) {
-                    Text(stringResource(StringRes.cloud_backup_confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { dispatch(BookDetailIntent.OnBackupDismissed) }) {
-                    Text(stringResource(StringRes.general_cancel))
                 }
             },
         )
@@ -120,11 +119,7 @@ internal fun BookDetailDialogs(
             model = offer.toUiModel(),
             onContinue = { dispatch(BookDetailIntent.OnLinkedResumeContinueClicked) },
             onStay = { dispatch(BookDetailIntent.OnLinkedResumeStayClicked) },
-            compareAll = {
-                TextButton(onClick = { dispatch(BookDetailIntent.OnLinkedResumeCompareClicked) }) {
-                    Text(stringResource(StringRes.resume_linked_compare))
-                }
-            },
+            onCompareAll = { dispatch(BookDetailIntent.OnLinkedResumeCompareClicked) },
         )
     } else if (offer == null && state.pendingOpenBookType != null &&
         state.progressInfo?.hasConflict == true) {
@@ -147,18 +142,21 @@ private fun DetailConfirmation(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismiss,
-        containerColor = Ember.colors.surface,
-        titleContentColor = Ember.colors.ink,
-        textContentColor = Ember.colors.ink,
-        title = { Text(title) },
-        text = { Text(message) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) { Text(confirm, color = Ember.colors.destructive) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(StringRes.general_cancel)) }
-        },
+        title = title,
+        body = AnnotatedString(message),
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
+                onClick = onDismiss,
+            ),
+            EmberDialogAction(
+                label = confirm,
+                style = EmberDialogActionStyle.Destructive,
+                onClick = onConfirm,
+            ),
+        ),
     )
 }

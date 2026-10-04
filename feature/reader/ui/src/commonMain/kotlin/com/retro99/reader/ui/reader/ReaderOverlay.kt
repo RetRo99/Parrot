@@ -53,7 +53,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -113,6 +112,7 @@ import com.retro99.base.nowMillis
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberBottomSheet
+import com.retro99.base.ui.compose.EmberTopBar
 import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.BookmarkUiModel
@@ -752,45 +752,29 @@ internal fun ReaderOverlayToolbar(
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             // Below 360dp the pill drops its label so the title keeps its column.
             val compact = maxWidth < 360.dp
-            Row(
-                modifier = Modifier.fillMaxWidth().height(64.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(StringRes.general_back), tint = colors.ink)
-                }
-                Column(Modifier.weight(1f).padding(start = 8.dp, end = 8.dp)) {
-                    Text(
-                        text = bookTitle,
-                        style = Ember.type.bookTitle,
-                        color = colors.ink,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (bookAuthor.isNotBlank()) {
-                        Text(
-                            text = bookAuthor,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = colors.ink2,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+            EmberTopBar(
+                title = bookTitle,
+                subtitle = bookAuthor.ifBlank { null },
+                titleStyle = Ember.type.bookTitle,
+                containerColor = colors.surface,
+                applyStatusBarInset = false,
+                onBack = onBack,
+                actions = {
+                    recap(compact)
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(
+                        onClick = onBookmark,
+                        modifier = Modifier.size(48.dp),
+                    ) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark this page",
+                            tint = if (isBookmarked) colors.accentText else colors.ink,
                         )
                     }
-                }
-                recap(compact)
-                Spacer(Modifier.width(4.dp))
-                IconButton(
-                    onClick = onBookmark,
-                    modifier = Modifier.size(48.dp),
-                ) {
-                    Icon(
-                        imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark this page",
-                        tint = if (isBookmarked) colors.accentText else colors.ink,
-                    )
-                }
-                Spacer(Modifier.width(4.dp))
-            }
+                    Spacer(Modifier.width(4.dp))
+                },
+            )
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line))
     }

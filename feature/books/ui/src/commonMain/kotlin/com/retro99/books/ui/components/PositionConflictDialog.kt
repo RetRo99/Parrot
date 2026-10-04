@@ -1,5 +1,8 @@
 package com.retro99.books.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,18 +11,21 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.reader_conflict_local_title
@@ -68,6 +74,7 @@ fun PositionConflictDialog(
 /**
  * Shared dialog content for position conflict resolution.
  * Can be used with different card content (simple progress or full position details).
+ * Both positions are peer choices, so both buttons carry the main-choice color.
  */
 @Composable
 fun PositionConflictDialogContent(
@@ -78,40 +85,30 @@ fun PositionConflictDialogContent(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismissRequest,
+        title = stringResource(StringRes.reader_conflict_title),
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.reader_conflict_use_local),
+                style = EmberDialogActionStyle.Main,
+                onClick = onUseLocal,
+            ),
+            EmberDialogAction(
+                label = stringResource(StringRes.reader_conflict_use_remote),
+                style = EmberDialogActionStyle.Main,
+                onClick = onUseRemote,
+            ),
+        ),
         modifier = modifier,
-        title = {
-            Text(
-                text = stringResource(StringRes.reader_conflict_title),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = stringResource(StringRes.reader_conflict_message),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Box(modifier = Modifier.weight(1f)) { localContent() }
-                    Box(modifier = Modifier.weight(1f)) { remoteContent() }
-                }
-            }
-        },
-        confirmButton = {
-            Row {
-                TextButton(onClick = onUseLocal) {
-                    Text(stringResource(StringRes.reader_conflict_use_local))
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                TextButton(onClick = onUseRemote) {
-                    Text(stringResource(StringRes.reader_conflict_use_remote))
-                }
+        body = AnnotatedString(stringResource(StringRes.reader_conflict_message)),
+        content = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Box(modifier = Modifier.weight(1f)) { localContent() }
+                Box(modifier = Modifier.weight(1f)) { remoteContent() }
             }
         },
     )
@@ -128,33 +125,34 @@ private fun ProgressCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        onClick = onClick,
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Ember.colors.bg)
+            .border(
+                if (Ember.style.isEink) 2.dp else 1.dp,
+                Ember.colors.chipBorder,
+                shape,
+            )
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(
-                    StringRes.reader_conflict_progress,
-                    progressPercent,
-                ),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
+        Text(
+            text = title,
+            style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+            color = Ember.colors.ink,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = stringResource(
+                StringRes.reader_conflict_progress,
+                progressPercent,
+            ),
+            style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+            color = Ember.colors.accentText,
+        )
     }
 }
-

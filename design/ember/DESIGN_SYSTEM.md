@@ -21,7 +21,7 @@ Reference: `ds-colors-night.png`, `ds-colors-day.png`, `ds-colors-eink.png`, `ds
 | err / errBg | #F08A7A / #3A1A15 | #A8321F / #FBE9E5 | black, bold / outline |
 
 ## Type
-- **Fraunces** — screen titles (24sp), hero titles (28–32sp), dialog titles (20sp). Weight 500 night, 600 day, 700 e-ink.
+- **Fraunces** — screen titles (24sp), hero titles (28–32sp), dialog titles (22sp). Weight 500 night, 600 day, 700 e-ink.
 - **Figtree** — all UI: row title 16sp Bold, body 15sp, secondary 13sp, eyebrow/label 11sp Bold caps +1.2 tracking (13sp on e-ink).
 - **Literata** — book text and snippets only.
 - Sentence case everywhere. Nothing below 13sp on e-ink.

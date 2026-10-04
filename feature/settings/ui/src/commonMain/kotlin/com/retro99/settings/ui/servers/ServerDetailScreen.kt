@@ -5,15 +5,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,16 +17,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberChevron
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.base.ui.compose.EmberGroupCard
 import com.retro99.base.ui.compose.EmberRowDivider
 import com.retro99.base.ui.compose.EmberSectionHeader
 import com.retro99.base.ui.compose.EmberSettingRow
+import com.retro99.base.ui.compose.EmberTextField
 import com.retro99.server.api.ServerType
 import com.retro99.settings.ui.servers.model.ServerWithStatusUiModel
 import com.retro99.translations.StringRes
@@ -161,7 +162,7 @@ internal fun ServerDetailScreen(
                 if (isConnected) {
                     EmberRowDivider()
                     EmberSettingRow(
-                        title = stringResource(StringRes.server_detail_sign_out),
+                        title = stringResource(StringRes.server_detail_sign_out) + "…",
                         subtitle = stringResource(StringRes.server_detail_sign_out_hint),
                         onClick = { dialog = DetailDialog.SignOut },
                         enabled = actionsEnabled,
@@ -197,7 +198,7 @@ internal fun ServerDetailScreen(
             EmberSectionHeader(stringResource(StringRes.server_detail_section_remove))
             EmberGroupCard {
                 EmberSettingRow(
-                    title = stringResource(StringRes.server_detail_remove),
+                    title = stringResource(StringRes.server_detail_remove) + "…",
                     subtitle = stringResource(StringRes.server_detail_remove_hint),
                     onClick = { dialog = DetailDialog.Remove },
                     isDestructive = true,
@@ -266,43 +267,29 @@ private fun ConfirmDialog(
     onDismiss: () -> Unit,
     isDestructive: Boolean = false,
 ) {
-    val colors = Ember.colors
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismiss,
-        containerColor = colors.surface,
-        title = {
-            Text(text = title, style = Ember.type.cardTitle.copy(fontSize = 22.sp), color = colors.ink)
-        },
-        text = {
-            Text(
-                text = body,
-                style = Ember.type.meta.copy(fontSize = 16.sp, lineHeight = 24.sp),
-                color = colors.ink2,
-            )
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = stringResource(StringRes.general_cancel),
-                    color = colors.ink,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
+        title = title,
+        body = AnnotatedString(body),
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
+                onClick = onDismiss,
+            ),
+            EmberDialogAction(
+                label = confirmLabel,
+                style = if (isDestructive) {
+                    EmberDialogActionStyle.Destructive
+                } else {
+                    EmberDialogActionStyle.Main
+                },
                 onClick = {
                     onConfirm()
                     onDismiss()
                 },
-            ) {
-                Text(
-                    text = confirmLabel,
-                    color = if (isDestructive) colors.destructive else colors.accentText,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        },
+            ),
+        ),
     )
 }
 
@@ -316,50 +303,33 @@ private fun TextEditDialog(
     onSave: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val colors = Ember.colors
     var value by remember { mutableStateOf(initialValue) }
     var showError by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismiss,
-        containerColor = colors.surface,
-        title = {
-            Text(text = title, style = Ember.type.cardTitle.copy(fontSize = 22.sp), color = colors.ink)
+        title = title,
+        content = {
+            EmberTextField(
+                value = value,
+                onValueChange = { newValue ->
+                    value = newValue
+                    showError = false
+                },
+                label = label,
+                isError = showError,
+                errorText = errorText,
+            )
         },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = { newValue ->
-                        value = newValue
-                        showError = false
-                    },
-                    label = { Text(label) },
-                    singleLine = true,
-                    isError = showError,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (showError && errorText != null) {
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = errorText,
-                        style = Ember.type.meta.copy(fontSize = 13.sp),
-                        color = colors.error,
-                    )
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = stringResource(StringRes.general_cancel),
-                    color = colors.ink,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
+                onClick = onDismiss,
+            ),
+            EmberDialogAction(
+                label = stringResource(StringRes.server_detail_save),
+                style = EmberDialogActionStyle.Main,
                 onClick = {
                     if (validate(value)) {
                         onSave(value)
@@ -368,13 +338,7 @@ private fun TextEditDialog(
                         showError = true
                     }
                 },
-            ) {
-                Text(
-                    text = stringResource(StringRes.server_detail_save),
-                    color = colors.accentText,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        },
+            ),
+        ),
     )
 }

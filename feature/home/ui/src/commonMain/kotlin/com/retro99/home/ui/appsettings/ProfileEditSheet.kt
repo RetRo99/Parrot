@@ -322,7 +322,7 @@ private fun DeleteRow(
         Spacer(modifier = Modifier.width(16.dp))
         Column {
             Text(
-                text = stringResource(StringRes.settings_profile_delete),
+                text = stringResource(StringRes.settings_profile_delete) + "…",
                 style = Ember.type.meta.copy(fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
                 color = contentColor,
             )

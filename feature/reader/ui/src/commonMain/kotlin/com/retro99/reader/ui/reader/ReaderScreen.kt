@@ -127,7 +127,6 @@ import resources.translations.reader_time_remaining_minutes
 import resources.translations.reader_tts_pause
 import resources.translations.reader_tts_read_aloud
 import resources.translations.reader_tts_voice_settings
-import resources.translations.resume_linked_compare
 import resources.translations.settings_changed
 import resources.translations.settings_tts_enabled
 import resources.translations.settings_undo
@@ -325,13 +324,7 @@ private fun ReaderScreenContent(
                 model = offer.toUiModel(),
                 onContinue = { intentDispatcher(ReaderIntent.ContinueLinkedResume) },
                 onStay = { intentDispatcher(ReaderIntent.StayLinkedResume) },
-                compareAll = {
-                    TextButton(
-                        onClick = { intentDispatcher(ReaderIntent.CompareLinkedPositions) },
-                    ) {
-                        Text(stringResource(StringRes.resume_linked_compare))
-                    }
-                },
+                onCompareAll = { intentDispatcher(ReaderIntent.CompareLinkedPositions) },
             )
         }
 

@@ -36,25 +36,20 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,9 +60,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
+import com.retro99.base.ui.compose.EmberTextField
 import com.retro99.base.ui.compose.ThemeMode
 import com.retro99.base.buildconfig.BuildConfig
 import com.retro99.base.ui.BaseScreen
@@ -145,58 +147,44 @@ internal fun AddProfileDialog(
 ) {
     var profileName by remember { mutableStateOf("") }
 
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = { if (!isOperationInProgress) onDismissRequest() },
-        title = {
-            Text(text = stringResource(StringRes.app_settings_profile_add_title))
-        },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = profileName,
-                    onValueChange = {
-                        profileName = it
-                        onNameChanged()
-                    },
-                    isError = showDuplicateNameError,
-                    label = { Text(stringResource(StringRes.app_settings_profile_name_label)) },
-                    enabled = !isOperationInProgress,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+        title = stringResource(StringRes.app_settings_profile_add_title),
+        content = {
+            EmberTextField(
+                value = profileName,
+                onValueChange = {
+                    profileName = it
+                    onNameChanged()
+                },
+                label = stringResource(StringRes.app_settings_profile_name_label),
+                isError = showDuplicateNameError,
+                errorText = stringResource(StringRes.app_settings_profile_name_already_exists),
+                enabled = !isOperationInProgress,
+            )
+            if (showError) {
+                Text(
+                    text = stringResource(StringRes.app_settings_profile_operation_failed),
+                    color = Ember.colors.destructive,
+                    style = Ember.type.meta.copy(fontSize = 13.sp),
                 )
-                if (showError) {
-                    Text(
-                        text = stringResource(StringRes.app_settings_profile_operation_failed),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                if (showDuplicateNameError) {
-                    Text(
-                        text = stringResource(StringRes.app_settings_profile_name_already_exists),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
             }
         },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(profileName) },
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
+                enabled = !isOperationInProgress,
+                onClick = onCancel,
+            ),
+            EmberDialogAction(
+                label = stringResource(StringRes.app_settings_profile_add),
+                style = EmberDialogActionStyle.Main,
                 enabled = profileName.isNotBlank() && !showDuplicateNameError && !isOperationInProgress,
-            ) {
-                if (isOperationInProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(stringResource(StringRes.app_settings_profile_add))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel, enabled = !isOperationInProgress) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
+                showProgress = isOperationInProgress,
+                onClick = { onConfirm(profileName) },
+            ),
+        ),
     )
 }
 
@@ -209,36 +197,33 @@ internal fun DeleteProfileConfirmationDialog(
     showError: Boolean,
     isOperationInProgress: Boolean,
 ) {
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = { if (!isOperationInProgress) onDismissRequest() },
-        title = {
-            Text(text = stringResource(StringRes.app_settings_profile_delete_title))
-        },
-        text = {
-            Column {
-                Text(text = stringResource(StringRes.app_settings_profile_delete_message))
-                if (showError) {
-                    Text(
-                        text = stringResource(StringRes.app_settings_profile_operation_failed),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
+        title = stringResource(StringRes.app_settings_profile_delete_title),
+        body = AnnotatedString(stringResource(StringRes.app_settings_profile_delete_message)),
+        content = {
+            if (showError) {
+                Text(
+                    text = stringResource(StringRes.app_settings_profile_operation_failed),
+                    color = Ember.colors.destructive,
+                    style = Ember.type.meta.copy(fontSize = 13.sp),
+                )
             }
         },
-        confirmButton = {
-            TextButton(onClick = onConfirm, enabled = !isOperationInProgress) {
-                if (isOperationInProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(stringResource(StringRes.action_delete))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel, enabled = !isOperationInProgress) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
+                enabled = !isOperationInProgress,
+                onClick = onCancel,
+            ),
+            EmberDialogAction(
+                label = stringResource(StringRes.action_delete),
+                style = EmberDialogActionStyle.Destructive,
+                enabled = !isOperationInProgress,
+                showProgress = isOperationInProgress,
+                onClick = onConfirm,
+            ),
+        ),
     )
 }

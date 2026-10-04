@@ -92,7 +92,7 @@ internal fun BookManageSheet(
                             },
                         )
                         if (item.canRemove) DetailButton(
-                            stringResource(StringRes.book_detail_remove), onClick = {
+                            stringResource(StringRes.book_detail_remove) + "…", onClick = {
                                 onDismiss()
                                 dispatch(BookDetailIntent.OnDeleteCacheClicked(item.type))
                             },
@@ -127,7 +127,7 @@ internal fun BookManageSheet(
                             onDismiss()
                             dispatch(BookDetailIntent.OnOpenLinkedCopyClicked(copy))
                         })
-                        DetailButton(stringResource(StringRes.link_not_same_book), onClick = {
+                        DetailButton(stringResource(StringRes.link_not_same_book) + "…", onClick = {
                             onDismiss()
                             dispatch(BookDetailIntent.OnNotSameBookClicked(copy))
                         })

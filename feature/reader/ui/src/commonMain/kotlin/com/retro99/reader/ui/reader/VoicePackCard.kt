@@ -405,7 +405,7 @@ private fun PackActions(state: PackUiState, actions: VoicePackActions, isEink: B
         is PackUiState.Downloading ->
             OutlineButton(stringResource(StringRes.general_cancel), colors.ink, isEink, actions.onCancel)
         PackUiState.Downloaded -> OutlineButton(
-            stringResource(StringRes.reader_voices_delete_pack),
+            stringResource(StringRes.reader_voices_delete_pack) + "…",
             colors.destructive,
             isEink,
             actions.onDelete,
@@ -413,7 +413,7 @@ private fun PackActions(state: PackUiState, actions: VoicePackActions, isEink: B
         is PackUiState.UpdateAvailable -> {
             PillButton(stringResource(StringRes.reader_tts_update), isEink, actions.onUpdate)
             OutlineButton(
-                stringResource(StringRes.reader_voices_delete_pack),
+                stringResource(StringRes.reader_voices_delete_pack) + "…",
                 colors.destructive,
                 isEink,
                 actions.onDelete,

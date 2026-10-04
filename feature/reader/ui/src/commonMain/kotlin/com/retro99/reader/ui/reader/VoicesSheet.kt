@@ -21,13 +21,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,6 +46,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberBottomSheet
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
+import com.retro99.base.ui.compose.emberDialogKeyFact
 import com.retro99.reader.ui.navigator.TTS_SYSTEM_VOICE_KEY
 import com.retro99.reader.ui.tts.NeuralVoicePackage
 import com.retro99.reader.ui.tts.TtsPreparationProgress
@@ -441,7 +443,6 @@ private fun DeletePackDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val colors = Ember.colors
     val removes = if (sizeMb != null) {
         stringResource(StringRes.reader_voices_delete_message, voiceCount, packName, sizeMb)
     } else {
@@ -450,55 +451,43 @@ private fun DeletePackDialog(
     val using = voiceInUse?.let { name -> stringResource(StringRes.reader_voices_delete_using, name) }
     val again = stringResource(StringRes.reader_voices_delete_again)
     val boldRemoved = "all $voiceCount $packName voices"
+    val keyFact = emberDialogKeyFact()
     val message = buildAnnotatedString {
-        appendWithBold(removes, boldRemoved)
+        appendWithBold(removes, boldRemoved, keyFact)
         if (using != null && voiceInUse != null) {
             append(" ")
-            appendWithBold(using, voiceInUse)
+            appendWithBold(using, voiceInUse, keyFact)
         }
         append(" ")
         append(again)
     }
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismiss,
-        containerColor = colors.surface,
-        title = {
-            Text(
-                stringResource(StringRes.reader_voices_delete_title, packName),
-                style = Ember.type.cardTitle,
-                color = colors.ink,
-            )
-        },
-        text = { Text(message, color = colors.ink2, fontSize = 16.sp) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    stringResource(StringRes.reader_voices_delete_pack),
-                    color = colors.destructive,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    stringResource(StringRes.general_cancel),
-                    color = colors.ink,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-        },
+        title = stringResource(StringRes.reader_voices_delete_title, packName),
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
+                onClick = onDismiss,
+            ),
+            EmberDialogAction(
+                label = stringResource(StringRes.reader_voices_delete_pack),
+                style = EmberDialogActionStyle.Destructive,
+                onClick = onConfirm,
+            ),
+        ),
+        body = message,
     )
 }
 
-private fun AnnotatedString.Builder.appendWithBold(text: String, bold: String) {
+private fun AnnotatedString.Builder.appendWithBold(text: String, bold: String, style: SpanStyle) {
     val start = text.indexOf(bold)
     if (start < 0) {
         append(text)
         return
     }
     append(text.substring(0, start))
-    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(bold) }
+    withStyle(style) { append(bold) }
     append(text.substring(start + bold.length))
 }
 

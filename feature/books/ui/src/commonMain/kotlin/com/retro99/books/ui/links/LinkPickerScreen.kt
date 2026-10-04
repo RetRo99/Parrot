@@ -9,22 +9,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.LoadingScreen
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
+import com.retro99.base.ui.compose.EmberTopBar
 import com.retro99.books.ui.components.BookItemCard
 import com.retro99.books.ui.components.BookSearchBar
 import com.retro99.translations.StringRes
@@ -79,35 +80,25 @@ private fun LinkPickerScreenContent(
         else -> null
     }
     if (errorMessage != null) {
-        AlertDialog(
+        EmberDialog(
             onDismissRequest = { intentDispatcher(LinkPickerIntent.OnErrorDismissed) },
-            text = { Text(errorMessage) },
-            confirmButton = {
-                TextButton(onClick = { intentDispatcher(LinkPickerIntent.OnErrorDismissed) }) {
-                    Text(stringResource(StringRes.general_ok))
-                }
-            },
+            title = "",
+            body = AnnotatedString(errorMessage),
+            actions = listOf(
+                EmberDialogAction(
+                    label = stringResource(StringRes.general_ok),
+                    style = EmberDialogActionStyle.Neutral,
+                    onClick = { intentDispatcher(LinkPickerIntent.OnErrorDismissed) },
+                ),
+            ),
         )
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(StringRes.link_picker_title),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { intentDispatcher(LinkPickerIntent.OnBackClicked) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(StringRes.general_back),
-                        )
-                    }
-                },
+            EmberTopBar(
+                title = stringResource(StringRes.link_picker_title),
+                onBack = { intentDispatcher(LinkPickerIntent.OnBackClicked) },
             )
         },
         modifier = modifier,

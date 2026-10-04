@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -13,7 +11,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.books.ui.components.HomeBadge
 import com.retro99.books.ui.model.LinkedCopyUiModel
 import com.retro99.translations.StringRes
@@ -96,7 +98,7 @@ private fun LinkedCopyRow(
                 Text(text = stringResource(StringRes.link_open_copy))
             }
             TextButton(onClick = onNotSameBook) {
-                Text(text = stringResource(StringRes.link_not_same_book))
+                Text(text = stringResource(StringRes.link_not_same_book) + "…")
             }
         }
     }
@@ -109,30 +111,28 @@ fun UnlinkCopyConfirmationDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismiss,
+        title = stringResource(StringRes.link_unlink_confirm_title),
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
+                onClick = onDismiss,
+            ),
+            EmberDialogAction(
+                label = stringResource(StringRes.link_not_same_book),
+                style = EmberDialogActionStyle.Main,
+                onClick = onConfirm,
+            ),
+        ),
         modifier = modifier,
-        title = { Text(stringResource(StringRes.link_unlink_confirm_title)) },
-        text = {
-            Text(
-                text = stringResource(
-                    StringRes.link_unlink_confirm_message,
-                    copy.title,
-                    copy.home.label(),
-                ) + "\n\n" + stringResource(StringRes.book_detail_unlink_never),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(stringResource(StringRes.link_not_same_book))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
+        body = AnnotatedString(
+            stringResource(
+                StringRes.link_unlink_confirm_message,
+                copy.title,
+                copy.home.label(),
+            ) + "\n\n" + stringResource(StringRes.book_detail_unlink_never),
+        ),
     )
 }

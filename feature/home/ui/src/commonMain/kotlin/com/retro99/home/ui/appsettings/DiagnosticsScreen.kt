@@ -11,31 +11,32 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberChevron
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.base.ui.compose.EmberGroupCard
 import com.retro99.base.ui.compose.EmberRowDivider
 import com.retro99.base.ui.compose.EmberSectionHeader
@@ -148,42 +149,22 @@ private fun DiagnosticsScreenContent(
     }
 
     if (viewState.showClearLogsConfirmation) {
-        AlertDialog(
+        EmberDialog(
             onDismissRequest = { intentDispatcher(DiagnosticsIntent.OnClearLogsDismissed) },
-            containerColor = colors.surface,
-            shape = RoundedCornerShape(20.dp),
-            title = {
-                Text(
-                    text = stringResource(StringRes.diagnostics_clear_confirm_title),
-                    style = Ember.type.cardTitle,
-                    color = colors.ink,
-                )
-            },
-            text = {
-                Text(
-                    text = stringResource(StringRes.diagnostics_clear_confirm_body),
-                    style = Ember.type.meta.copy(fontSize = 14.sp),
-                    color = colors.ink2,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { intentDispatcher(DiagnosticsIntent.OnClearLogsConfirmed) }) {
-                    Text(
-                        text = stringResource(StringRes.diagnostics_clear_confirm_action),
-                        style = Ember.type.label.copy(fontSize = 15.sp),
-                        color = colors.destructive,
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { intentDispatcher(DiagnosticsIntent.OnClearLogsDismissed) }) {
-                    Text(
-                        text = stringResource(StringRes.general_cancel),
-                        style = Ember.type.label.copy(fontSize = 15.sp),
-                        color = colors.accentText,
-                    )
-                }
-            },
+            title = stringResource(StringRes.diagnostics_clear_confirm_title),
+            body = AnnotatedString(stringResource(StringRes.diagnostics_clear_confirm_body)),
+            actions = listOf(
+                EmberDialogAction(
+                    label = stringResource(StringRes.general_cancel),
+                    style = EmberDialogActionStyle.Neutral,
+                    onClick = { intentDispatcher(DiagnosticsIntent.OnClearLogsDismissed) },
+                ),
+                EmberDialogAction(
+                    label = stringResource(StringRes.diagnostics_clear_confirm_action),
+                    style = EmberDialogActionStyle.Destructive,
+                    onClick = { intentDispatcher(DiagnosticsIntent.OnClearLogsConfirmed) },
+                ),
+            ),
         )
     }
 
@@ -263,7 +244,7 @@ private fun DiagnosticsScreenContent(
                 )
                 EmberRowDivider()
                 EmberSettingRow(
-                    title = stringResource(StringRes.diagnostics_clear_logs),
+                    title = stringResource(StringRes.diagnostics_clear_logs) + "…",
                     subtitle = stringResource(StringRes.diagnostics_clear_logs_subtitle),
                     icon = Icons.Outlined.Delete,
                     onClick = { intentDispatcher(DiagnosticsIntent.OnClearLogsClicked) },

@@ -51,10 +51,12 @@ import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material3.AlertDialog
 import resources.translations.books_shelf_title
 import resources.translations.books_library_title
 import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
@@ -78,11 +80,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -94,6 +94,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
@@ -302,14 +303,29 @@ private fun BooksListScreenContent(
     }
 
     if (viewState.showImportBackupAttestation) {
-        AlertDialog(
+        EmberDialog(
             onDismissRequest = {
                 if (!viewState.isStartingImportBackup) {
                     intentDispatcher(BooksListIntent.OnImportBackupDismissed)
                 }
             },
-            title = { Text(stringResource(StringRes.cloud_backup_autobackup_prompt_title)) },
-            text = {
+            title = stringResource(StringRes.cloud_backup_autobackup_prompt_title),
+            actions = listOf(
+                EmberDialogAction(
+                    label = stringResource(StringRes.cloud_backup_autobackup_not_now),
+                    style = EmberDialogActionStyle.Neutral,
+                    enabled = !viewState.isStartingImportBackup,
+                    onClick = { intentDispatcher(BooksListIntent.OnImportBackupDismissed) },
+                ),
+                EmberDialogAction(
+                    label = stringResource(StringRes.cloud_backup_autobackup_enable),
+                    style = EmberDialogActionStyle.Main,
+                    enabled = viewState.importBackupRightsAttested && !viewState.isStartingImportBackup,
+                    showProgress = viewState.isStartingImportBackup,
+                    onClick = { intentDispatcher(BooksListIntent.OnImportBackupConfirmed) },
+                ),
+            ),
+            content = {
                 Column {
                     Text(stringResource(StringRes.cloud_backup_autobackup_prompt_body))
                     Row(
@@ -327,36 +343,31 @@ private fun BooksListScreenContent(
                     }
                 }
             },
-            confirmButton = {
-                TextButton(
-                    enabled = viewState.importBackupRightsAttested && !viewState.isStartingImportBackup,
-                    onClick = { intentDispatcher(BooksListIntent.OnImportBackupConfirmed) },
-                ) {
-                    if (viewState.isStartingImportBackup) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    } else {
-                        Text(stringResource(StringRes.cloud_backup_autobackup_enable))
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    enabled = !viewState.isStartingImportBackup,
-                    onClick = { intentDispatcher(BooksListIntent.OnImportBackupDismissed) },
-                ) {
-                    Text(stringResource(StringRes.cloud_backup_autobackup_not_now))
-                }
-            },
         )
     }
 
     if (viewState.showBackupAllConfirmation) {
-        AlertDialog(
+        EmberDialog(
             onDismissRequest = {
                 if (!viewState.isBackingUpAll) intentDispatcher(BooksListIntent.OnBackupAllDismissed)
             },
-            title = { Text(stringResource(StringRes.cloud_backup_all_title)) },
-            text = {
+            title = stringResource(StringRes.cloud_backup_all_title),
+            actions = listOf(
+                EmberDialogAction(
+                    label = stringResource(StringRes.general_cancel),
+                    style = EmberDialogActionStyle.Neutral,
+                    enabled = !viewState.isBackingUpAll,
+                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllDismissed) },
+                ),
+                EmberDialogAction(
+                    label = stringResource(StringRes.cloud_backup_confirm),
+                    style = EmberDialogActionStyle.Main,
+                    enabled = viewState.backupAllRightsAttested && !viewState.isBackingUpAll,
+                    showProgress = viewState.isBackingUpAll,
+                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllConfirmed) },
+                ),
+            ),
+            content = {
                 Column {
                     Text(stringResource(StringRes.cloud_backup_all_message))
                     Row(
@@ -373,48 +384,28 @@ private fun BooksListScreenContent(
                     }
                 }
             },
-            confirmButton = {
-                TextButton(
-                    enabled = viewState.backupAllRightsAttested && !viewState.isBackingUpAll,
-                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllConfirmed) },
-                ) {
-                    if (viewState.isBackingUpAll) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    } else {
-                        Text(stringResource(StringRes.cloud_backup_confirm))
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    enabled = !viewState.isBackingUpAll,
-                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllDismissed) },
-                ) {
-                    Text(stringResource(StringRes.general_cancel))
-                }
-            },
         )
     }
 
     if (viewState.backupAllQueuedCount != null || viewState.backupAllError != null) {
-        AlertDialog(
+        EmberDialog(
             onDismissRequest = { intentDispatcher(BooksListIntent.OnBackupAllResultDismissed) },
-            title = { Text(stringResource(StringRes.cloud_backup_all_result_title)) },
-            text = {
-                Text(
-                    viewState.backupAllError
-                        ?: stringResource(
-                            StringRes.cloud_backup_all_summary,
-                            viewState.backupAllQueuedCount ?: 0,
-                            viewState.backupAllFailedCount ?: 0,
-                        ),
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = { intentDispatcher(BooksListIntent.OnBackupAllResultDismissed) }) {
-                    Text(stringResource(StringRes.general_close))
-                }
-            },
+            title = stringResource(StringRes.cloud_backup_all_result_title),
+            body = AnnotatedString(
+                viewState.backupAllError
+                    ?: stringResource(
+                        StringRes.cloud_backup_all_summary,
+                        viewState.backupAllQueuedCount ?: 0,
+                        viewState.backupAllFailedCount ?: 0,
+                    ),
+            ),
+            actions = listOf(
+                EmberDialogAction(
+                    label = stringResource(StringRes.general_close),
+                    style = EmberDialogActionStyle.Neutral,
+                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllResultDismissed) },
+                ),
+            ),
         )
     }
 
@@ -457,7 +448,7 @@ private fun BooksListScreenContent(
                         contentDescription = null,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(StringRes.cloud_backup_backup_all))
+                    Text(stringResource(StringRes.cloud_backup_backup_all) + "…")
                 }
             }
 
@@ -734,17 +725,12 @@ internal fun shouldShowHeaderInEmptyBooksState(
 private fun ImportingDialog(
     modifier: Modifier = Modifier,
 ) {
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = { },
+        title = stringResource(StringRes.books_importing),
+        actions = emptyList(),
         modifier = modifier,
-        confirmButton = { },
-        title = {
-            Text(
-                text = stringResource(StringRes.books_importing),
-                style = MaterialTheme.typography.titleMedium,
-            )
-        },
-        text = {
+        content = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
