@@ -37,7 +37,6 @@ internal class BooksSqlDelightDao(
     private val readaloudQueries get() = database.readaloudQueries
     private val positionQueries get() = database.positionQueries
     private val syncOutboxQueries get() = database.syncOutboxQueries
-    private val bookmarkQueries get() = database.bookmarkQueries
 
     // ==================== BOOK OPERATIONS ====================
 
@@ -949,7 +948,6 @@ internal class BooksSqlDelightDao(
                 readaloudQueries.deleteAllReadalouds()
                 positionQueries.deleteAllPositions()
                 positionQueries.deleteAllRemotePositions()
-                bookmarkQueries.deleteAllBookmarks()
                 personQueries.deleteAllPersons()
                 seriesQueries.deleteAllSeries()
                 tagQueries.deleteAllTags()

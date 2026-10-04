@@ -121,10 +121,11 @@ class LibraryBookMergeTest {
     }
 
     @Test
-    fun `merge moves bookmarks and reading sessions`() {
+    fun `merge moves saved items and reading sessions`() {
         // Given
-        database.bookmarkQueries.insertBookmark(
-            "b1", FROM, "c1", null, null, null, null, null, null, "2026-09-01", 0, null, null,
+        database.savedItemQueries.upsertSavedItem(
+            "b1", "library:$FROM", FROM, null, null, "bookmark", "c1", null, null, null, null, null,
+            null, null, null, null, null, null, null, 0, "2026-09-01", "2026-09-01", null, null,
         )
         database.readingSessionQueries.insertSession(
             FROM, "Book", "ebook", 1, 2, 1, null, null, null, null, null,
@@ -134,7 +135,9 @@ class LibraryBookMergeTest {
         database.mergeLibraryBookRows(fromId = FROM, intoId = INTO)
 
         // Then
-        assertEquals(1, database.bookmarkQueries.getBookmarksByBookUuid(INTO).executeAsList().size)
+        val moved = database.savedItemQueries.getSavedItemById("b1").executeAsOne()
+        assertEquals(INTO, moved.book_uuid)
+        assertEquals("library:$INTO", moved.book_key)
         assertEquals(
             listOf(INTO),
             database.readingSessionQueries.getAllSessions().executeAsList().map { row -> row.book_uuid },

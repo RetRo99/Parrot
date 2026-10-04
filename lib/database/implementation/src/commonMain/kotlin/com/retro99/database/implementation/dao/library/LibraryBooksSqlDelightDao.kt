@@ -143,7 +143,7 @@ internal fun AppDatabase.mergeLibraryBookRows(fromId: String, intoId: String): L
 
         favoriteQueries.mergeFavorite(intoId, fromId)
         favoriteQueries.deleteFavorite(fromId)
-        bookmarkQueries.moveBookmarks(intoId, fromId)
+        savedItemQueries.moveSavedItems(intoUuid = intoId, intoKey = "library:$intoId", fromUuid = fromId)
         readingSessionQueries.moveReadingSessions(intoId, fromId)
         sessionRecapQueries.moveRecaps(intoId, fromId)
 

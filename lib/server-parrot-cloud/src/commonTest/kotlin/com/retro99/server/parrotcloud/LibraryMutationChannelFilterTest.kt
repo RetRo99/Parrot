@@ -23,7 +23,7 @@ class LibraryMutationChannelFilterTest {
     fun onlyProgressEntriesAreFilteredOut() {
         val entries = listOf(
             entry("session", SyncOutboxEntry.ENTITY_TYPE_READING_SESSION),
-            entry("bookmark", SyncOutboxEntry.ENTITY_TYPE_BOOKMARK),
+            entry("saved_item", SyncOutboxEntry.ENTITY_TYPE_SAVED_ITEM),
         )
 
         assertEquals(entries, entries.filterLibraryMutationChannelEntries())

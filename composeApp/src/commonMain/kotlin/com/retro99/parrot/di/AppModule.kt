@@ -32,6 +32,9 @@ import com.retro99.server.storyteller.di.StorytellerModule
 import com.retro99.settings.data.di.SettingsDataModule
 import com.retro99.settings.domain.di.SettingsDomainModule
 import com.retro99.settings.ui.di.SettingsUiModule
+import com.retro99.saved.data.di.SavedDataModule
+import com.retro99.saved.domain.di.SavedDomainModule
+import com.retro99.saved.ui.di.SavedUiModule
 import com.retro99.statistics.data.di.StatisticsDataModule
 import com.retro99.statistics.domain.di.StatisticsDomainModule
 import com.retro99.statistics.ui.di.StatisticsUiModule
@@ -86,6 +89,9 @@ import org.koin.core.annotation.Module
         StatisticsDomainModule::class,
         StatisticsDataModule::class,
         StatisticsUiModule::class,
+        SavedDomainModule::class,
+        SavedDataModule::class,
+        SavedUiModule::class,
     ],
 )
 @Configuration

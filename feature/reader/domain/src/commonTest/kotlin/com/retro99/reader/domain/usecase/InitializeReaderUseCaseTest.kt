@@ -13,7 +13,6 @@ import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.reader.domain.ReaderSettingsRepository
-import com.retro99.reader.domain.model.BookmarkDomainModel
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.reader.domain.model.CustomReaderFontDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
@@ -162,12 +161,6 @@ class InitializeReaderUseCaseTest {
         override fun clearCurrentlyReading() = Unit
         override suspend fun getAllPositions(): AppResult<List<PositionDomainModel>> =
             Ok(emptyList())
-        override fun observeBookmarks(bookUuid: String): Flow<List<BookmarkDomainModel>> =
-            emptyFlow()
-        override suspend fun addBookmark(bookmark: BookmarkDomainModel) = Ok(Unit)
-        override suspend fun deleteBookmark(id: String) = Ok(Unit)
-        override suspend fun updateBookmarkTitle(id: String, title: String) = Ok(Unit)
-        override suspend fun updateBookmarkSortOrders(orders: List<Pair<String, Int>>) = Ok(Unit)
     }
 
     private object UnusedPositionDatabase : PositionDatabase {

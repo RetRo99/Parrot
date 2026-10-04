@@ -86,7 +86,7 @@ class OneBookIdMigrationTest {
             listOf("imp-1", "sha-256-v1:x").forEach { bookId ->
                 assertEquals(0L, count(driver, "SELECT COUNT(*) FROM position WHERE book_uuid = '$bookId'"))
                 assertEquals(0L, count(driver, "SELECT COUNT(*) FROM favorites WHERE book_uuid = '$bookId'"))
-                assertEquals(0L, count(driver, "SELECT COUNT(*) FROM bookmarks WHERE book_uuid = '$bookId'"))
+                assertEquals(0L, count(driver, "SELECT COUNT(*) FROM saved_items WHERE book_uuid = '$bookId'"))
                 assertEquals(
                     0L,
                     count(driver, "SELECT COUNT(*) FROM reading_session WHERE book_uuid = '$bookId'"),
@@ -97,7 +97,7 @@ class OneBookIdMigrationTest {
                 .executeAsOne()
             assertNull(storytellerPosition.library_book_id)
             assertEquals(1L, count(driver, "SELECT COUNT(*) FROM favorites WHERE book_uuid = 'st-1'"))
-            assertEquals(1L, count(driver, "SELECT COUNT(*) FROM bookmarks WHERE book_uuid = 'st-1'"))
+            assertEquals(1L, count(driver, "SELECT COUNT(*) FROM saved_items WHERE book_uuid = 'st-1'"))
             assertEquals(
                 1L,
                 count(driver, "SELECT COUNT(*) FROM reading_session WHERE book_uuid = 'st-1'"),

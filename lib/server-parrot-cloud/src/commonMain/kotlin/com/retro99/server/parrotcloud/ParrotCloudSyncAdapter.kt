@@ -52,6 +52,7 @@ class ParrotCloudSyncAdapter(
     @Provided private val readingSessionSyncService: ParrotCloudReadingSessionSyncService,
     @Provided private val readingSessionChangeApplier: ParrotCloudReadingSessionChangeApplier,
     private val bookLinkSync: ParrotCloudBookLinkSync,
+    private val savedItemSync: ParrotCloudSavedItemSync,
 ) : SyncPass {
     private val outboxCapability = SyncOutboxCapability(
         unsupportedEntityTypes = setOf(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS),
@@ -78,6 +79,8 @@ class ParrotCloudSyncAdapter(
         // Backfill-style sweep: enqueue every local reading session recorded
         // since the last sweep before the pass drains the outbox.
         readingSessionSyncService.enqueueNewSessions(cloudUserId)
+        // Saved items Parrot Cloud has never had (migrated bookmarks) join the same pass.
+        savedItemSync.enqueueUnsynced(cloudUserId)
         return syncBoundedPass.execute(
             destinationId = PARROT_CLOUD_SERVER_ID,
             remoteAccountId = cloudUserId,
@@ -225,9 +228,11 @@ class ParrotCloudSyncAdapter(
             val unattempted = chunk.filter { entry -> entry.mutationId !in attemptedMutationIds }
             // A duplicate response can change book IDs and replace queued link snapshots.
             // Resolve book identities before sending other mutations from this snapshot.
-            val freshChunk = unattempted.libraryMutationBatch()
-            freshChunk.forEach { entry -> attemptedMutationIds.add(entry.mutationId) }
-            if (freshChunk.isEmpty()) break
+            val batch = unattempted.libraryMutationBatch()
+            batch.forEach { entry -> attemptedMutationIds.add(entry.mutationId) }
+            // Saved items carry only their id in the outbox; send each item's current row.
+            val freshChunk = savedItemSync.preparePush(batch)
+            if (batch.isEmpty()) break
             val summary = libraryMutationSyncEngine.push(
                 entries = freshChunk,
                 transport = libraryMutationTransport,
@@ -276,6 +281,7 @@ class ParrotCloudSyncAdapter(
             SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK -> bookLinkSync.applyRemoteLink(payload)
             SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK_DECISION ->
                 bookLinkSync.applyRemoteDecision(payload)
+            SyncOutboxEntry.ENTITY_TYPE_SAVED_ITEM -> savedItemSync.applyRemote(payload)
         }
     }
 

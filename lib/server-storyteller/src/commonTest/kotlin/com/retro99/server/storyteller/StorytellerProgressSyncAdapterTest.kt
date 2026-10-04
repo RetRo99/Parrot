@@ -264,7 +264,7 @@ class StorytellerProgressSyncAdapterTest {
     ): SyncOutboxEntry {
         return SyncOutboxEntry.new(
             cloudUserId = serverId,
-            entityType = SyncOutboxEntry.ENTITY_TYPE_BOOKMARK,
+            entityType = SyncOutboxEntry.ENTITY_TYPE_SAVED_ITEM,
             entityId = "bookmark-1",
             operation = SyncOutboxEntry.OPERATION_UPSERT,
             payload = "{}",

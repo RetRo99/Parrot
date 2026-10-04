@@ -116,6 +116,9 @@ kotlin {
             implementation(projects.feature.statistics.ui)
             implementation(projects.feature.statistics.domain)
             implementation(projects.feature.statistics.data)
+            implementation(projects.feature.saved.domain)
+            implementation(projects.feature.saved.data)
+            implementation(projects.feature.saved.ui)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

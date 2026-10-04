@@ -13,7 +13,6 @@ import com.retro99.books.domain.model.links.CopyKey
 import com.retro99.books.domain.model.links.LinkDecision
 import com.retro99.books.domain.model.links.LinkDecisionType
 import com.retro99.reader.domain.ReaderSettingsRepository
-import com.retro99.reader.domain.model.BookmarkDomainModel
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.reader.domain.model.CustomReaderFontDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
@@ -224,11 +223,5 @@ class ObserveAllBooksWithProgressUseCaseTest {
         override fun clearCurrentlyReading() = Unit
         override suspend fun getAllPositions(): AppResult<List<PositionDomainModel>> =
             Ok(emptyList())
-        override fun observeBookmarks(bookUuid: String): Flow<List<BookmarkDomainModel>> =
-            emptyFlow()
-        override suspend fun addBookmark(bookmark: BookmarkDomainModel) = Ok(Unit)
-        override suspend fun deleteBookmark(id: String) = Ok(Unit)
-        override suspend fun updateBookmarkTitle(id: String, title: String) = Ok(Unit)
-        override suspend fun updateBookmarkSortOrders(orders: List<Pair<String, Int>>) = Ok(Unit)
     }
 }

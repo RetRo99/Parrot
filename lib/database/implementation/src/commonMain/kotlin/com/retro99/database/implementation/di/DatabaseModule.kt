@@ -3,7 +3,6 @@ package com.retro99.database.implementation.di
 import com.retro99.database.api.DataClearable
 import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.books.AuthorsDatabase
-import com.retro99.database.api.books.BookmarksDatabase
 import com.retro99.database.api.books.BooksDatabase
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.cloudfiles.CloudFilesDatabase
@@ -14,15 +13,15 @@ import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBookMergeDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.reader.ReaderSettingsDatabase
+import com.retro99.database.api.saved.SavedItemsDatabase
 import com.retro99.database.api.recap.SessionRecapDatabase
 import com.retro99.database.api.statistics.ReadingSessionDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncCheckpointDatabase
 import com.retro99.database.implementation.DatabaseManager
+import com.retro99.database.implementation.dao.saved.SavedItemsSqlDelightDao
 import com.retro99.database.implementation.dao.books.AuthorsDatabaseImpl
 import com.retro99.database.implementation.dao.books.AuthorsSqlDelightDao
-import com.retro99.database.implementation.dao.books.BookmarksDatabaseImpl
-import com.retro99.database.implementation.dao.books.BookmarksSqlDelightDao
 import com.retro99.database.implementation.dao.cloudfiles.CloudFilesDatabaseImpl
 import com.retro99.database.implementation.dao.cloudfiles.CloudFilesSqlDelightDao
 import com.retro99.database.implementation.dao.books.BooksDatabaseImpl
@@ -90,13 +89,8 @@ class DatabaseModule {
     }
 
     @Single
-    internal fun provideBookmarksSqlDelightDao(databaseManager: DatabaseManager): BookmarksSqlDelightDao {
-        return BookmarksSqlDelightDao(databaseManager)
-    }
-
-    @Single
-    internal fun provideBookmarksDatabase(bookmarksSqlDelightDao: BookmarksSqlDelightDao): BookmarksDatabase {
-        return BookmarksDatabaseImpl(bookmarksSqlDelightDao)
+    internal fun provideSavedItemsDatabase(databaseManager: DatabaseManager): SavedItemsDatabase {
+        return SavedItemsSqlDelightDao(databaseManager)
     }
 
     @Single
@@ -250,7 +244,6 @@ class DatabaseModule {
     @Single
     internal fun provideDataClearables(
         booksDatabase: BooksDatabase,
-        bookmarksDatabase: BookmarksDatabase,
         favoritesDatabase: FavoritesDatabase,
         authorsDatabase: AuthorsDatabase,
         readingSessionDatabase: ReadingSessionDatabase,
@@ -261,7 +254,6 @@ class DatabaseModule {
     ): List<DataClearable> {
         return listOf(
             booksDatabase,
-            bookmarksDatabase,
             favoritesDatabase,
             authorsDatabase,
             readingSessionDatabase,

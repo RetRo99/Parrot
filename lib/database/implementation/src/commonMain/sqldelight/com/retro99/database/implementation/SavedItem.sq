@@ -1,0 +1,88 @@
+-- ============================================
+-- SAVED ITEMS (bookmarks, highlights and notes)
+-- ============================================
+-- One row per item. id is a random UUID chosen on the device that made the
+-- item; it never changes, so edits on two devices update the same row.
+-- book_key is the portable copy key (library:<id>, storyteller:<uuid>,
+-- audiobookshelf:<itemId>) shared across devices; book_uuid is the local id.
+-- A "note" is any item with note text. Deletes are tombstones (deleted_at)
+-- until Parrot Cloud has them. Created in 34.sqm, replacing bookmarks.
+
+CREATE TABLE IF NOT EXISTS saved_items (
+    id TEXT NOT NULL PRIMARY KEY,
+    book_key TEXT NOT NULL,
+    book_uuid TEXT NOT NULL,
+    book_title TEXT,
+    book_author TEXT,
+    type TEXT NOT NULL,
+    href TEXT NOT NULL,
+    media_type TEXT,
+    progression REAL,
+    total_progression REAL,
+    position INTEGER,
+    chapter_title TEXT,
+    text_before TEXT,
+    text_quote TEXT,
+    text_after TEXT,
+    color TEXT,
+    note TEXT,
+    audio_href TEXT,
+    audio_ms INTEGER,
+    snippet_pending INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    remote_revision INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_items_book_key ON saved_items(book_key, deleted_at);
+CREATE INDEX IF NOT EXISTS idx_saved_items_book_uuid ON saved_items(book_uuid);
+CREATE INDEX IF NOT EXISTS idx_saved_items_updated ON saved_items(updated_at);
+
+upsertSavedItem:
+INSERT OR REPLACE INTO saved_items(
+    id, book_key, book_uuid, book_title, book_author, type, href, media_type,
+    progression, total_progression, position, chapter_title,
+    text_before, text_quote, text_after, color, note, audio_href, audio_ms,
+    snippet_pending, created_at, updated_at, deleted_at, remote_revision
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getSavedItemById:
+SELECT * FROM saved_items WHERE id = ?;
+
+-- Book order: whole-book progression, then position inside the chapter.
+getLiveSavedItemsForBooks:
+SELECT * FROM saved_items
+WHERE (book_key IN :bookKeys OR book_uuid IN :bookUuids) AND deleted_at IS NULL
+ORDER BY total_progression IS NULL, total_progression ASC, href ASC,
+    progression ASC, created_at ASC;
+
+getAllLiveSavedItems:
+SELECT * FROM saved_items
+WHERE deleted_at IS NULL
+ORDER BY updated_at DESC;
+
+getSnippetPendingItems:
+SELECT * FROM saved_items
+WHERE book_uuid = ? AND snippet_pending = 1 AND deleted_at IS NULL;
+
+moveSavedItems:
+UPDATE saved_items SET book_uuid = :intoUuid, book_key = :intoKey
+WHERE book_uuid = :fromUuid;
+
+deleteAllSavedItems:
+DELETE FROM saved_items;
+
+-- Items Parrot Cloud has never acknowledged and that have nothing queued,
+-- such as bookmarks migrated from before saved items synced.
+getUnsyncedSavedItems:
+SELECT * FROM saved_items
+WHERE remote_revision IS NULL
+AND id NOT IN (SELECT entity_id FROM sync_outbox WHERE entity_type = 'saved_item');
+
+countPendingSavedItemMutations:
+SELECT COUNT(*) FROM sync_outbox WHERE entity_type = 'saved_item';
+
+setSavedItemRemoteRevision:
+UPDATE saved_items SET remote_revision = :revision WHERE id = :id;

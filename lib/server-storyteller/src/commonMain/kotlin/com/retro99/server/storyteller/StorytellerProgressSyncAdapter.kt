@@ -96,7 +96,7 @@ class StorytellerProgressSyncAdapter(
                 // Links sync through Parrot Cloud only; nothing is written to this server.
                 SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK,
                 SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK_DECISION,
-                SyncOutboxEntry.ENTITY_TYPE_BOOKMARK,
+                SyncOutboxEntry.ENTITY_TYPE_SAVED_ITEM,
                 SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
                 SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS,
                 SyncOutboxEntry.ENTITY_TYPE_READING_SESSION,

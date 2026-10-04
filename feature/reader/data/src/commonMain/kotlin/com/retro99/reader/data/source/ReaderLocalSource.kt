@@ -4,7 +4,6 @@ import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.data.model.CustomReaderFontLocalModel
-import com.retro99.reader.data.model.BookmarkLocalModel
 import com.retro99.reader.data.model.PositionLocalModel
 import com.retro99.reader.data.model.ReaderSettingsLocalModel
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
@@ -106,14 +105,5 @@ interface ReaderLocalSource {
      */
     suspend fun getAllPositions(): AppResult<List<PositionLocalModel>>
 
-    fun observeBookmarks(bookUuid: String): Flow<List<BookmarkLocalModel>>
-
-    suspend fun addBookmark(bookmark: BookmarkLocalModel): CompletableResult
-
-    suspend fun deleteBookmark(id: String): CompletableResult
-
-    suspend fun updateBookmarkTitle(id: String, title: String): CompletableResult
-
-    suspend fun updateBookmarkSortOrders(orders: List<Pair<String, Int>>): CompletableResult
 }
 

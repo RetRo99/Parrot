@@ -10,7 +10,6 @@ import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.reader.data.model.toDomain
 import com.retro99.reader.data.model.toLocal
-import com.retro99.reader.domain.model.BookmarkDomainModel
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.data.source.ReaderLocalSource
@@ -113,35 +112,6 @@ internal class ReaderDataRepository(
         }
     }
 
-    override fun observeBookmarks(bookUuid: String): Flow<List<BookmarkDomainModel>> {
-        return localSource.observeBookmarks(bookUuid).map { bookmarks ->
-            bookmarks.map { it.toDomain() }
-        }
-    }
-
-    override suspend fun addBookmark(bookmark: BookmarkDomainModel): CompletableResult {
-        return localSource.addBookmark(bookmark.toLocal()).onFailure { error ->
-            logError(error, "Failed to add bookmark")
-        }
-    }
-
-    override suspend fun deleteBookmark(id: String): CompletableResult {
-        return localSource.deleteBookmark(id).onFailure { error ->
-            logError(error, "Failed to delete bookmark")
-        }
-    }
-
-    override suspend fun updateBookmarkTitle(id: String, title: String): CompletableResult {
-        return localSource.updateBookmarkTitle(id, title).onFailure { error ->
-            logError(error, "Failed to update bookmark title")
-        }
-    }
-
-    override suspend fun updateBookmarkSortOrders(orders: List<Pair<String, Int>>): CompletableResult {
-        return localSource.updateBookmarkSortOrders(orders).onFailure { error ->
-            logError(error, "Failed to update bookmark sort orders")
-        }
-    }
 
     private fun logError(error: AppError, message: String) {
         val throwable = when (error) {
