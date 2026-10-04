@@ -167,6 +167,7 @@ class ReaderViewModel(
     @Provided private val observeSavedSyncStateUseCase: ObserveSavedSyncStateUseCase,
     @Provided private val resolveSavedBookUseCase: ResolveSavedBookUseCase,
     @Provided private val fileSharer: FileSharer,
+    @Provided private val pendingSavedJump: com.retro99.saved.domain.PendingSavedJump,
     @Provided private val publicationService: EpubPublicationService,
     @Provided private val analytics: Analytics,
     @Provided private val productUsage: ProductUsage,
@@ -2589,6 +2590,7 @@ class ReaderViewModel(
             observeSyncState = observeSavedSyncStateUseCase,
             resolveBook = resolveSavedBookUseCase,
             fileSharer = fileSharer,
+            pendingJump = pendingSavedJump,
             onError = { error, message -> analytics.logException(error, message) },
         )
     }

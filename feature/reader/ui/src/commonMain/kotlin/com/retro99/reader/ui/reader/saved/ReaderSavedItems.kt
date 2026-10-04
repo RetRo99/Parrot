@@ -11,6 +11,7 @@ import com.retro99.reader.ui.navigator.SavedDecoration
 import com.retro99.reader.ui.navigator.SavedPageScript
 import com.retro99.reader.ui.reader.ReaderSearchResult
 import com.retro99.saved.domain.HighlightMerger
+import com.retro99.saved.domain.PendingSavedJump
 import com.retro99.saved.domain.SavedItemsExport
 import com.retro99.saved.domain.model.HighlightColor
 import com.retro99.saved.domain.model.SavedAudioPosition
@@ -84,6 +85,7 @@ internal class ReaderSavedItems(
     private val observeSyncState: ObserveSavedSyncStateUseCase,
     private val resolveBook: ResolveSavedBookUseCase,
     private val fileSharer: FileSharer,
+    private val pendingJump: PendingSavedJump,
     private val onError: (Throwable, String) -> Unit,
 ) {
     private var identity: SavedBookIdentity? = null
@@ -103,6 +105,7 @@ internal class ReaderSavedItems(
         this.bookUuid = bookUuid
         scope.launch {
             val book = identity()
+            var jumpId = pendingJump.take(bookUuid)
             observeBookItems(book.keys, book.uuids).collect { items ->
                 update { saved ->
                     saved.copy(
@@ -113,6 +116,11 @@ internal class ReaderSavedItems(
                 }
                 refreshDecorations()
                 refreshPage()
+                // Opened from Notes & highlights: go to the item once it has loaded.
+                jumpId?.let { id -> items.firstOrNull { item -> item.id == id } }?.let { item ->
+                    jumpId = null
+                    goTo(item)
+                }
             }
         }
         scope.launch { observeSyncState().collect { sync -> update { it.copy(syncState = sync) } } }
