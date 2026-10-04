@@ -88,7 +88,6 @@ import com.retro99.reader.domain.model.ChapterProgressDisplayMode
 import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.domain.model.ProgressBarPosition
 import com.retro99.reader.domain.model.ProgressIndicatorMode
-import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.ChapterReadingTimeInfo
 import com.retro99.reader.ui.model.PositionUiModel
@@ -111,11 +110,6 @@ import resources.translations.reader_action_bookmarks
 import resources.translations.reader_action_readaloud
 import resources.translations.reader_action_settings
 import resources.translations.reader_action_toc
-import resources.translations.reader_bookmark_added
-import resources.translations.reader_bookmark_already_exists
-import resources.translations.reader_bookmark_no_more_bookmarks
-import resources.translations.reader_bookmark_save_failed
-import resources.translations.reader_bookmark_undo
 import resources.translations.reader_page_of_pages
 import resources.translations.reader_position_save_failed
 import resources.translations.reader_position_save_retry
@@ -365,11 +359,6 @@ private fun ReaderScreenContent(
             modifier = Modifier.align(Alignment.BottomCenter),
         )
 
-        BookmarkSaveFailedSnackbar(
-            showMessage = viewState.showBookmarkSaveFailed,
-            onDismiss = { intentDispatcher(ReaderIntent.DismissBookmarkSaveFailed) },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
 
         PositionSaveFailedSnackbar(
             showMessage = viewState.showPositionSaveFailed,
@@ -377,25 +366,8 @@ private fun ReaderScreenContent(
             modifier = Modifier.align(Alignment.BottomCenter),
         )
 
-        BookmarkAddedSnackbar(
-            showMessage = viewState.showBookmarkAdded,
-            bookmarkId = viewState.lastAddedBookmarkId,
-            onUndo = { id -> intentDispatcher(ReaderIntent.UndoBookmark(id)) },
-            onDismiss = { intentDispatcher(ReaderIntent.DismissBookmarkAdded) },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
 
-        BookmarkAlreadyExistsSnackbar(
-            showMessage = viewState.showBookmarkAlreadyExists,
-            onDismiss = { intentDispatcher(ReaderIntent.DismissBookmarkAlreadyExists) },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
 
-        NoMoreBookmarksSnackbar(
-            showMessage = viewState.showNoMoreBookmarks,
-            onDismiss = { intentDispatcher(ReaderIntent.DismissNoMoreBookmarks) },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
 
         if (viewState.showSleepTimerWarningPrompt && viewState.sleepTimerRemainingMs != null) {
             SleepTimerDurationDialog(
@@ -472,30 +444,6 @@ private fun TtsPlaybackFailedSnackbar(
     )
 }
 
-@Composable
-private fun BookmarkSaveFailedSnackbar(
-    showMessage: Boolean,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    val message = stringResource(StringRes.reader_bookmark_save_failed)
-
-    LaunchedEffect(showMessage) {
-        if (showMessage) {
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short,
-            )
-            onDismiss()
-        }
-    }
-
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = modifier,
-    )
-}
 
 @Composable
 private fun PositionSaveFailedSnackbar(
@@ -513,89 +461,8 @@ private fun PositionSaveFailedSnackbar(
     ) { Text(message) }
 }
 
-@Composable
-private fun BookmarkAddedSnackbar(
-    showMessage: Boolean,
-    bookmarkId: String?,
-    onUndo: (String) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    val message = stringResource(StringRes.reader_bookmark_added)
-    val undoLabel = stringResource(StringRes.reader_bookmark_undo)
 
-    LaunchedEffect(showMessage) {
-        if (showMessage) {
-            val result = snackbarHostState.showSnackbar(
-                message = message,
-                actionLabel = undoLabel,
-                duration = SnackbarDuration.Short,
-            )
-            when (result) {
-                SnackbarResult.ActionPerformed -> {
-                    bookmarkId?.let { id -> onUndo(id) }
-                }
-                SnackbarResult.Dismissed -> onDismiss()
-            }
-        }
-    }
 
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun BookmarkAlreadyExistsSnackbar(
-    showMessage: Boolean,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    val message = stringResource(StringRes.reader_bookmark_already_exists)
-
-    LaunchedEffect(showMessage) {
-        if (showMessage) {
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short,
-            )
-            onDismiss()
-        }
-    }
-
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun NoMoreBookmarksSnackbar(
-    showMessage: Boolean,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    val message = stringResource(StringRes.reader_bookmark_no_more_bookmarks)
-
-    LaunchedEffect(showMessage) {
-        if (showMessage) {
-            snackbarHostState.showSnackbar(
-                message = message,
-                duration = SnackbarDuration.Short,
-            )
-            onDismiss()
-        }
-    }
-
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = modifier,
-    )
-}
 
 @Composable
 internal fun AnimatedProgressBar(
