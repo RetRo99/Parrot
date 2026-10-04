@@ -28,6 +28,7 @@ data class BookProgressInfoUiModel(
     val totalDurationMs: Long? = null,
     val bookTimeMs: Long? = null,
     val remoteObservedAt: String? = null,
+    val remoteDeviceName: String? = null,
 ) {
     /**
      * Returns the display progress (prefers local) as a percentage (0-100).
@@ -70,5 +71,6 @@ fun BookProgressInfoDomainModel.toUiModel(): BookProgressInfoUiModel {
         totalDurationMs = totalDurationMs,
         bookTimeMs = bookTimeMs,
         remoteObservedAt = remoteObservedAt,
+        remoteDeviceName = remoteDeviceName,
     )
 }

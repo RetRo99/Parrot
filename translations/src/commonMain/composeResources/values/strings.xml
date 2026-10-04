@@ -1295,6 +1295,22 @@
     <string name="book_detail_progress_announcement" tools:ignore="MissingTranslation">%1$d percent</string>
     <string name="book_detail_percent" tools:ignore="MissingTranslation">%1$d%</string>
     <string name="book_detail_remote_further" tools:ignore="MissingTranslation">Another device is further: %1$d%.</string>
+    <string name="book_detail_another_device" tools:ignore="MissingTranslation">Another device</string>
+    <string name="book_detail_saved_title" tools:ignore="MissingTranslation">Saved</string>
+    <plurals name="book_detail_saved_bookmarks" tools:ignore="MissingTranslation">
+        <item quantity="one">%1$d bookmark</item>
+        <item quantity="other">%1$d bookmarks</item>
+    </plurals>
+    <plurals name="book_detail_saved_highlights" tools:ignore="MissingTranslation">
+        <item quantity="one">%1$d highlight</item>
+        <item quantity="other">%1$d highlights</item>
+    </plurals>
+    <plurals name="book_detail_saved_notes" tools:ignore="MissingTranslation">
+        <item quantity="one">%1$d note</item>
+        <item quantity="other">%1$d notes</item>
+    </plurals>
+    <string name="book_detail_device_position" tools:ignore="MissingTranslation">%1$s is at %2$d%</string>
+    <string name="book_detail_device_further" tools:ignore="MissingTranslation">%1$s is further: %2$d%.</string>
     <string name="book_detail_remote_position" tools:ignore="MissingTranslation">Another device is at %1$d%.</string>
     <string name="book_detail_go_remote" tools:ignore="MissingTranslation">Go to %1$d%</string>
     <string name="book_detail_use_remote" tools:ignore="MissingTranslation">Use %1$d%</string>

@@ -110,6 +110,7 @@ class ObserveBookWithProgressUseCase(
             totalDurationMs = displayPosition?.totalDurationMs,
             bookTimeMs = displayPosition?.bookTimeMs,
             remoteObservedAt = remotePosition?.observedAt ?: remotePosition?.updatedAt,
+            remoteDeviceName = remotePosition?.deviceName,
         )
 
         return Ok(
@@ -132,6 +133,7 @@ class ObserveBookWithProgressUseCase(
         totalDurationMs: Long?,
         bookTimeMs: Long?,
         remoteObservedAt: String?,
+        remoteDeviceName: String?,
     ): BookProgressInfoDomainModel? {
         val localProgression = localPosition?.totalProgression
         val hasLocalProgress = localProgression != null && localProgression > 0.0
@@ -151,6 +153,7 @@ class ObserveBookWithProgressUseCase(
                 totalDurationMs = totalDurationMs,
                 bookTimeMs = bookTimeMs,
                 remoteObservedAt = remoteObservedAt,
+                remoteDeviceName = remoteDeviceName,
             )
         } else {
             null

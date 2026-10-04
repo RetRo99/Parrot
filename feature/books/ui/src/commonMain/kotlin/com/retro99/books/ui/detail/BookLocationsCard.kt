@@ -93,7 +93,7 @@ internal fun BookLocationsCard(
     onManage: () -> Unit,
 ) {
     val book = state.book ?: return
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(18.dp)
     val transfers = visibleDetailTransfers(state.bookFileTransfers)
     Column(Modifier.fillMaxWidth().clip(shape).background(Ember.colors.surface)
         .border(Ember.style.detailBorder, Ember.colors.line, shape)) {

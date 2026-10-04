@@ -1,6 +1,7 @@
 package com.retro99.books.ui.detail
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -20,6 +21,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
@@ -131,8 +137,21 @@ internal fun DetailButton(
 
 /** Static even for indeterminate transfers: no infinite repaint on e-ink. */
 @Composable
-internal fun DetailProgressBar(progress: Float?, modifier: Modifier = Modifier) {
+internal fun DetailProgressBar(progress: Float?, modifier: Modifier = Modifier, marker: Float? = null) {
     val colors = EmberTheme.colors
+    if (marker != null) {
+        val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+        Box(modifier.fillMaxWidth().height(12.dp), contentAlignment = Alignment.Center) {
+            DetailProgressBar(progress)
+            Canvas(Modifier.matchParentSize()) {
+                val width = 2.dp.toPx()
+                val fraction = marker.coerceIn(0f, 1f).let { if (rtl) 1f - it else it }
+                val x = (size.width * fraction - width / 2).coerceIn(0f, size.width - width)
+                drawRect(colors.ink, topLeft = Offset(x, 0f), size = Size(width, size.height))
+            }
+        }
+        return
+    }
     val shape = RoundedCornerShape(50)
     val fraction = progress?.coerceIn(0f, 1f) ?: 0f
     Box(

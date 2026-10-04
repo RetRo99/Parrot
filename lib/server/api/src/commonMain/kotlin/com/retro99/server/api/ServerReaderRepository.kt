@@ -116,4 +116,6 @@ data class ServerPosition(
      */
     @Transient
     val ebookLocationRaw: String? = null,
+    @Transient
+    val deviceName: String? = null,
 )

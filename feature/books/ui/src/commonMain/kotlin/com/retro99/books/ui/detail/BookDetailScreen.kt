@@ -49,10 +49,11 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.koin.compose.koinInject
 import com.retro99.reader.domain.usecase.ResolveSavedBookUseCase
 import com.retro99.saved.domain.usecase.ObserveBookSavedItemsUseCase
-import com.retro99.base.ui.compose.EmberCard
-import com.retro99.base.ui.compose.EmberSettingRow
-import com.retro99.base.ui.compose.EmberChevron
-import resources.translations.saved_book_details_row
+import org.jetbrains.compose.resources.pluralStringResource
+import resources.translations.Res
+import resources.translations.book_detail_saved_bookmarks
+import resources.translations.book_detail_saved_highlights
+import resources.translations.book_detail_saved_notes
 import org.koin.core.parameter.parametersOf
 import resources.translations.general_back
 import resources.translations.books_detail_add_favorite
@@ -89,10 +90,14 @@ fun BookDetailScreen(
 ) {
     val resolveSavedBook = koinInject<ResolveSavedBookUseCase>()
     val observeSavedItems = koinInject<ObserveBookSavedItemsUseCase>()
-    val savedSummary by produceState<Pair<String, Int>?>(null, serverId, bookUuid) {
+    val savedSummary by produceState<Pair<String, Triple<Int, Int, Int>>?>(null, serverId, bookUuid) {
         val identity = resolveSavedBook(serverId, bookUuid)
         observeSavedItems(setOf(identity.selfKey), setOf(bookUuid)).collect { items ->
-            value = identity.selfKey to items.size
+            value = identity.selfKey to Triple(
+                items.count { it.type.name == "Bookmark" },
+                items.count { it.type.name == "Highlight" },
+                items.count { it.hasNote },
+            )
         }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -117,7 +122,7 @@ private fun BookDetailContent(
     dispatch: IntentDispatcher<BookDetailIntent>,
     onServers: () -> Unit,
     bottomNavigationHeight: Dp,
-    savedSummary: Pair<String, Int>?,
+    savedSummary: Pair<String, Triple<Int, Int, Int>>?,
     onSavedItems: (String) -> Unit,
 ) {
     val snackbar = remember { SnackbarHostState() }
@@ -181,16 +186,20 @@ private fun BookDetailContent(
                     BookDetailHeader(state.book, media) { series ->
                         dispatch(BookDetailIntent.OnSeriesClicked(series))
                     }
-                    BookDetailProgress(state, dispatch)
-                    BookDetailActions(state, media, dispatch)
-                    savedSummary?.let { (key, count) ->
-                        EmberCard(contentPadding = 0.dp) {
-                            EmberSettingRow(
-                                title = stringResource(StringRes.saved_book_details_row, count),
-                                subtitle = null,
-                                onClick = { onSavedItems(key) },
-                                trailing = { EmberChevron() },
-                            )
+                    BookDetailReadingSection(state, dispatch) {
+                        BookDetailActions(state, media, dispatch)
+                    }
+                    savedSummary?.let { (key, counts) ->
+                        val subtitle = listOfNotNull(
+                            counts.first.takeIf { it > 0 }?.let {
+                                pluralStringResource(Res.plurals.book_detail_saved_bookmarks, it, it) },
+                            counts.second.takeIf { it > 0 }?.let {
+                                pluralStringResource(Res.plurals.book_detail_saved_highlights, it, it) },
+                            counts.third.takeIf { it > 0 }?.let {
+                                pluralStringResource(Res.plurals.book_detail_saved_notes, it, it) },
+                        ).joinToString(" · ")
+                        if (counts.first + counts.second + counts.third > 0) {
+                            BookDetailSavedRow(subtitle, onClick = { onSavedItems(key) })
                         }
                     }
                     BookLocationsCard(state, media, dispatch, onManage = { manage = true })

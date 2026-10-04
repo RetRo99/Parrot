@@ -32,6 +32,7 @@ data class BookProgressInfoDomainModel(
     val totalDurationMs: Long? = null,
     val bookTimeMs: Long? = null,
     val remoteObservedAt: String? = null,
+    val remoteDeviceName: String? = null,
 ) {
     /**
      * Returns true if any media type is cached.
