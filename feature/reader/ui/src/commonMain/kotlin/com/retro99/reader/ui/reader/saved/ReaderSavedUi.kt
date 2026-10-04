@@ -135,9 +135,9 @@ internal fun PageRibbon(onClick: () -> Unit, modifier: Modifier = Modifier) {
             .size(width = 44.dp, height = 44.dp)
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description },
-        contentAlignment = Alignment.TopCenter,
+        contentAlignment = Alignment.TopEnd,
     ) {
-        Box(Modifier.size(width = 22.dp, height = 38.dp).clip(RibbonShape).background(color))
+        Box(Modifier.size(width = 18.dp, height = 32.dp).clip(RibbonShape).background(color))
     }
 }
 

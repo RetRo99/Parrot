@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.translations.StringRes
@@ -40,6 +41,8 @@ fun EmberTopBar(
     titleStyle: TextStyle = Ember.type.screenTitle.copy(fontSize = 24.sp, lineHeight = 30.sp),
     containerColor: Color = Ember.colors.bg,
     applyStatusBarInset: Boolean = true,
+    horizontalPadding: Dp = 20.dp,
+    titleStartPadding: Dp = 8.dp,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Surface(
@@ -51,7 +54,7 @@ fun EmberTopBar(
                 .fillMaxWidth()
                 .then(if (applyStatusBarInset) Modifier.statusBarsPadding() else Modifier)
                 .height(64.dp)
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = horizontalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (onBack != null) {
@@ -66,7 +69,7 @@ fun EmberTopBar(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = if (onBack != null) 8.dp else 0.dp),
+                    .padding(start = if (onBack != null) titleStartPadding else 0.dp),
             ) {
                 Text(
                     text = title,

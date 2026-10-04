@@ -578,20 +578,21 @@ object SavedPageScript {
         host.appendChild(el);
     }
 
-    // How many pages sit side by side, and how wide each one is. Readium fills one "column"
-    // per page, so this is also the distance between the outer edges the bars sit on.
+    // How many pages sit side by side. The pitch includes the inter-column gap; width is the
+    // page surface itself, which is where an edge bar must anchor (not the far side of the gap).
     function pages(o) {
         var screen = window.innerWidth || 1;
-        if (o && o.scroll) return { pitch: screen, count: 1 };
+        if (o && o.scroll) return { pitch: screen, width: screen, count: 1 };
         var cs = getComputedStyle(document.documentElement);
         var count = parseInt(cs.getPropertyValue('column-count'), 10) || 0;
         var gap = parseFloat(cs.getPropertyValue('column-gap')) || 0;
         var raw = cs.getPropertyValue('column-width') || '';
         var width = /px\s*$/.test(raw) ? parseFloat(raw) : 0;
-        if (width >= screen) return { pitch: screen, count: 1 };
+        if (width >= screen) return { pitch: screen, width: screen, count: 1 };
         var n = count > 0 ? count : (width > 0 ? Math.max(1, Math.floor((screen + gap) / (width + gap))) : 1);
         if (!(n > 0)) n = 1;
-        return { pitch: (screen - (n - 1) * gap) / n + gap, count: n };
+        var pageWidth = (screen - (n - 1) * gap) / n;
+        return { pitch: pageWidth + gap, width: pageWidth, count: n };
     }
 
     // Font ascent and descent in px, which is where a text fragment's box sits on its baseline.
@@ -740,7 +741,9 @@ object SavedPageScript {
             if (!Object.prototype.hasOwnProperty.call(bars, key2)) continue;
             var s = bars[key2];
             var from = s.band * layout.pitch;
-            var x = s.edge === 1 ? from + layout.pitch - edgeGap - edgeWidth : from + edgeGap;
+            // Use the page width, not pitch: pitch also includes the inter-column gap and
+            // would push the rightmost bar beyond the screen on a spread.
+            var x = s.edge === 1 ? from + layout.width - edgeGap - edgeWidth : from + edgeGap;
             markBox(host, x, s.top, edgeWidth, s.bottom - s.top, edgeRadius, s.color, s.id, true);
         }
         return ids;

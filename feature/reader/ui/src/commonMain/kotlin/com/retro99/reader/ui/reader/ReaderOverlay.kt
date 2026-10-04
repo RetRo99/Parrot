@@ -481,11 +481,13 @@ internal fun ReaderOverlayContent(
                 onClick = { intentDispatcher(ReaderIntent.ReturnToJumpOrigin) },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
-            if (pageBookmark != null && !searchActive) {
+            if (pageBookmark != null && !controlsVisible && !searchActive) {
                 PageRibbon(
                     onClick = { onSaved(SavedAction.OpenDetail(pageBookmark.id)) },
-                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 15.dp,
-                        top = if (controlsVisible && !searchActive) 65.dp else 0.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(
+                        end = 24.dp,
+                        top = settings.marginVertical.dp,
+                    ),
                 )
             }
             saved.selection?.let { selection ->
@@ -810,6 +812,8 @@ internal fun ReaderOverlayToolbar(
                 titleStyle = Ember.type.bookTitle,
                 containerColor = colors.surface,
                 applyStatusBarInset = false,
+                horizontalPadding = 4.dp,
+                titleStartPadding = 4.dp,
                 onBack = onBack,
                 actions = {
                     recap(compact)
@@ -826,7 +830,6 @@ internal fun ReaderOverlayToolbar(
                             tint = if (isBookmarked) colors.accentText else colors.ink,
                         )
                     }
-                    Spacer(Modifier.width(4.dp))
                 },
             )
         }
