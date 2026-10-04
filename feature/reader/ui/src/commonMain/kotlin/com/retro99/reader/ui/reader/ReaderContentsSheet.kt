@@ -26,9 +26,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,18 +54,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberBottomSheet
-import com.retro99.reader.ui.model.BookmarkUiModel
 import com.retro99.translations.PluralRes
 import com.retro99.translations.StringRes
-import kotlinx.coroutines.delay
+import com.retro99.reader.ui.reader.saved.SavedAction
+import com.retro99.reader.ui.reader.saved.SavedBarHost
+import com.retro99.saved.ui.SavedBookList
+import resources.translations.saved_tab_count
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.general_close
-import resources.translations.reader_bookmark_deleted
-import resources.translations.reader_bookmark_undo
-import resources.translations.reader_bookmarks_title
 import resources.translations.reader_contents_book_percent
-import resources.translations.reader_contents_bookmarks_count
 import resources.translations.reader_contents_chapters
 import resources.translations.reader_contents_chapter_quantity
 import resources.translations.reader_contents_find
@@ -75,11 +71,8 @@ import resources.translations.reader_find_clear
 import resources.translations.reader_overlay_contents
 import resources.translations.reader_toc_search_hint
 
-/** Duration of the bookmark-deletion undo snackbar inside the sheet. */
-private const val BOOKMARK_DELETE_UNDO_MS = 5_000L
-
 /**
- * The reader's Contents sheet: one sheet with Chapters and Bookmarks tabs, a header that
+ * The reader's Contents sheet: one sheet with Chapters and Saved tabs, a header that
  * honestly says where you are in the book, and no jump-to-percentage card. Every jump
  * (chapter, group or bookmark) closes the sheet.
  */
@@ -87,12 +80,7 @@ private const val BOOKMARK_DELETE_UNDO_MS = 5_000L
 internal fun ReaderContentsSheet(
     state: ReaderViewState,
     onChapterClick: (href: String) -> Unit,
-    onBookmarkClick: (BookmarkUiModel) -> Unit,
-    onAddBookmark: () -> Unit,
-    onBookmarkDelete: (String) -> Unit,
-    onBookmarkRename: (String, String) -> Unit,
-    onRestoreBookmark: (BookmarkUiModel) -> Unit,
-    onBookmarkDeletedDismissed: () -> Unit,
+    onSaved: (SavedAction) -> Unit,
     onToggleGroup: (Int) -> Unit,
     onDismiss: () -> Unit,
     footer: (@Composable () -> Unit)? = null,
@@ -121,7 +109,7 @@ internal fun ReaderContentsSheet(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    // Fixed geometry: Chapters, Bookmarks, search and empty states all share one
+                    // Fixed geometry: Chapters, Saved, search and empty states all share one
                     // sheet height, so switching tabs never resizes (jumps) the modal.
                     .height(maxSheetHeight)
                     .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier)
@@ -143,7 +131,7 @@ internal fun ReaderContentsSheet(
                 )
                 ContentsTabs(
                     selectedTab = selectedTab,
-                    bookmarkCount = state.bookmarks.size,
+                    savedCount = state.saved.items.size,
                     onSelect = {
                         selectedTab = it
                         if (it != ContentsTab.CHAPTERS && searchOpen) {
@@ -191,24 +179,26 @@ internal fun ReaderContentsSheet(
                             )
                         }
 
-                        ContentsTab.BOOKMARKS -> ContentsBookmarksTab(
-                            bookmarks = state.bookmarks,
-                            toc = toc,
-                            readingOrder = state.bookSearchReadingOrder,
-                            currentPosition = currentPosition,
-                            isEink = eink,
-                            onBookmarkClick = onBookmarkClick,
-                            onAddBookmark = onAddBookmark,
-                            onDelete = onBookmarkDelete,
-                            onRename = onBookmarkRename,
+                        ContentsTab.SAVED -> SavedBookList(
+                            items = state.saved.items,
+                            filter = state.saved.filter,
+                            onFilter = { onSaved(SavedAction.SetFilter(it)) },
+                            isEditing = state.saved.isEditing,
+                            syncState = state.saved.syncState,
+                            onOpen = { item -> onSaved(SavedAction.GoTo(item.id)) },
+                            onDetails = { item -> onSaved(SavedAction.OpenDetail(item.id)) },
+                            onDelete = { item -> onSaved(SavedAction.Remove(item.id)) },
+                            onToggleEdit = { onSaved(SavedAction.ToggleEditing) },
+                            onExport = { onSaved(SavedAction.OpenExport) },
+                            onSignIn = null,
+                            onBookmarkThisPage = { onSaved(SavedAction.ToggleBookmark) },
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
-                    BookmarkDeletedSnackbar(
-                        show = state.showBookmarkDeleted,
-                        deleted = state.lastDeletedBookmark,
-                        onRestore = onRestoreBookmark,
-                        onDismissed = onBookmarkDeletedDismissed,
+                    // Deletes from the list are immediate; their Undo shows inside the sheet.
+                    SavedBarHost(
+                        bar = state.saved.bar,
+                        onSaved = onSaved,
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
                 }
@@ -271,7 +261,7 @@ private fun ContentsHeader(
 @Composable
 private fun ContentsTabs(
     selectedTab: ContentsTab,
-    bookmarkCount: Int,
+    savedCount: Int,
     onSelect: (ContentsTab) -> Unit,
 ) {
     val colors = Ember.colors
@@ -295,14 +285,10 @@ private fun ContentsTabs(
             modifier = Modifier.weight(1f),
         )
         TabSegment(
-            text = if (bookmarkCount > 0) {
-                stringResource(StringRes.reader_contents_bookmarks_count, bookmarkCount)
-            } else {
-                stringResource(StringRes.reader_bookmarks_title)
-            },
-            selected = selectedTab == ContentsTab.BOOKMARKS,
+            text = stringResource(StringRes.saved_tab_count, savedCount),
+            selected = selectedTab == ContentsTab.SAVED,
             isEink = eink,
-            onClick = { onSelect(ContentsTab.BOOKMARKS) },
+            onClick = { onSelect(ContentsTab.SAVED) },
             modifier = Modifier.weight(1f),
         )
     }
@@ -419,28 +405,3 @@ private fun FindChapterField(
     )
 }
 
-/** Undo bar for deletion inside the sheet; the bookmark is restored on Undo. */
-@Composable
-private fun BookmarkDeletedSnackbar(
-    show: Boolean,
-    deleted: BookmarkUiModel?,
-    onRestore: (BookmarkUiModel) -> Unit,
-    onDismissed: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    if (!show || deleted == null) return
-    LaunchedEffect(deleted.id) {
-        delay(BOOKMARK_DELETE_UNDO_MS)
-        onDismissed()
-    }
-    Snackbar(
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        action = {
-            TextButton(onClick = { onRestore(deleted) }) {
-                Text(stringResource(StringRes.reader_bookmark_undo))
-            }
-        },
-    ) {
-        Text(stringResource(StringRes.reader_bookmark_deleted))
-    }
-}

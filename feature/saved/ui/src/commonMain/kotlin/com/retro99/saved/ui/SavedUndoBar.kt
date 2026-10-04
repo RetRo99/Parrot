@@ -1,7 +1,5 @@
 package com.retro99.saved.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,7 +34,8 @@ import com.retro99.base.ui.compose.Ember
 @Composable
 fun SavedUndoBar(
     message: String,
-    undoLabel: String,
+    /** Null for a message with nothing to undo. */
+    undoLabel: String?,
     onUndo: () -> Unit,
     modifier: Modifier = Modifier,
     showBookmarkIcon: Boolean = false,
@@ -80,7 +79,7 @@ fun SavedUndoBar(
             if (actionLabel != null && onAction != null) {
                 BarButton(actionLabel, onAction, if (eink) colors.ink else colors.accentText)
             }
-            BarButton(undoLabel, onUndo, colors.ink)
+            if (undoLabel != null) BarButton(undoLabel, onUndo, colors.ink)
         }
     }
 }
