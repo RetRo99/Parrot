@@ -5,6 +5,7 @@ sealed interface SyncStatus {
 
     data class Idle(
         val lastSuccessfulAt: String? = null,
+        val pendingCount: Int = 0,
     ) : SyncStatus
 
     data class Running(
@@ -17,12 +18,14 @@ sealed interface SyncStatus {
 
     data class Offline(
         val pendingCount: Int,
+        val lastSuccessfulAt: String? = null,
     ) : SyncStatus
 
     data class Failed(
         val error: String,
         val pendingCount: Int,
         val canRetry: Boolean,
+        val lastSuccessfulAt: String? = null,
     ) : SyncStatus
 
     data class Completed(

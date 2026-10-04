@@ -3,6 +3,11 @@ package com.retro99.cloudaccount.domain
 sealed class CloudAccountException(message: String, cause: Throwable? = null) : Exception(message, cause) {
     class NotConfigured : CloudAccountException("Cloud account is not configured")
 
+    class InvalidCredentials(cause: Throwable) : CloudAccountException("Invalid credentials", cause)
+    class NetworkUnavailable(cause: Throwable) : CloudAccountException("Network unavailable", cause)
+    class WeakPassword(cause: Throwable) : CloudAccountException("Password is too weak", cause)
+    class EmailAlreadyRegistered(cause: Throwable) : CloudAccountException("Email already registered", cause)
+
     class ProfileAlreadyLinked :
         CloudAccountException("Cloud profile is already linked to a different account")
 

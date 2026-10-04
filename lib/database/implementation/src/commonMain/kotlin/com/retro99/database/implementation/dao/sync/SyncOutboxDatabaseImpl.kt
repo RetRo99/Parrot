@@ -19,6 +19,9 @@ internal class SyncOutboxDatabaseImpl(
         return sqlDelightDao.getPending(cloudUserId)
     }
 
+    override suspend fun getPendingIncludingUnassigned(cloudUserId: String): List<SyncOutboxEntry> =
+        sqlDelightDao.getPendingIncludingUnassigned(cloudUserId)
+
     override suspend fun getEligible(
         cloudUserId: String,
         now: String,

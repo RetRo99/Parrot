@@ -1,16 +1,13 @@
 package com.retro99.cloudaccount.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.input.TextFieldLineLimits
@@ -19,127 +16,45 @@ import androidx.compose.foundation.text.input.TextObfuscationMode
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedSecureTextField
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.error
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
+import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberCard
+import com.retro99.base.ui.compose.EmberSectionLabel
 import com.retro99.cloudaccount.domain.model.CloudAccount
 import com.retro99.cloudaccount.domain.model.CloudAuthState
-import com.retro99.cloudaccount.domain.model.CloudProfileLink
-import com.retro99.cloudaccount.domain.CloudStorageUsage
-import com.retro99.sync.domain.SyncPhase
 import com.retro99.sync.domain.SyncStatus
+import com.retro99.sync.domain.SyncPhase
 import com.retro99.translations.StringRes
-import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
-import resources.translations.app_settings_sync_backup
-import resources.translations.cloud_account_check_email
-import resources.translations.cloud_account_connected
-import resources.translations.cloud_account_create_account
-import resources.translations.cloud_account_create_account_hint
-import resources.translations.cloud_account_description
-import resources.translations.cloud_account_delete
-import resources.translations.cloud_account_delete_confirm
-import resources.translations.cloud_account_delete_message
-import resources.translations.cloud_account_delete_reauthentication_required
-import resources.translations.cloud_account_delete_title
-import resources.translations.cloud_account_error_could_not_connect
-import resources.translations.cloud_account_error_generic
-import resources.translations.cloud_account_error_server
-import resources.translations.cloud_account_error_timeout
-import resources.translations.cloud_account_email_label
-import resources.translations.cloud_account_email_invalid
-import resources.translations.cloud_account_enable_sync
-import resources.translations.cloud_account_generic_error
-import resources.translations.cloud_account_link_pending
-import resources.translations.cloud_account_link_profile
-import resources.translations.cloud_account_link_profile_description
-import resources.translations.cloud_account_link_profile_title
-import resources.translations.cloud_account_not_configured
-import resources.translations.cloud_account_password_label
-import resources.translations.cloud_account_profile_already_linked
-import resources.translations.cloud_account_reauthentication_required
-import resources.translations.cloud_account_refresh_unavailable
-import resources.translations.cloud_account_sign_in
-import resources.translations.cloud_account_sign_in_hint
-import resources.translations.cloud_account_sign_in_with_google
-import resources.translations.cloud_account_sign_out
-import resources.translations.cloud_account_switch_to_create
-import resources.translations.cloud_account_switch_to_sign_in
-import resources.translations.cloud_account_sync_enabled
-import resources.translations.cloud_account_sync_not_enabled
-import resources.translations.cloud_account_sync_now
-import resources.translations.cloud_account_sync_status_applying
-import resources.translations.cloud_account_sync_status_bytes_progress
-import resources.translations.cloud_account_sync_status_can_retry
-import resources.translations.cloud_account_sync_status_cannot_retry
-import resources.translations.cloud_account_sync_status_completed
-import resources.translations.cloud_account_sync_status_disabled
-import resources.translations.cloud_account_sync_status_failed
-import resources.translations.cloud_account_sync_status_downloading_files
-import resources.translations.cloud_account_sync_status_finalizing
-import resources.translations.cloud_account_sync_status_idle
-import resources.translations.cloud_account_sync_status_items_progress
-import resources.translations.cloud_account_sync_status_last_successful
-import resources.translations.cloud_account_sync_status_offline
-import resources.translations.cloud_account_sync_status_pulling
-import resources.translations.cloud_account_sync_status_preparing
-import resources.translations.cloud_account_sync_status_uploading_changes
-import resources.translations.cloud_account_sync_status_uploading_files
-import resources.translations.cloud_account_sync_status_transferring_files
-import resources.translations.cloud_account_tos_checkbox
-import resources.translations.cloud_account_title
-import resources.translations.cloud_account_verification_message
-import resources.translations.cloud_backup_attestation_checkbox
-import resources.translations.cloud_backup_autobackup_confirm_body
-import resources.translations.cloud_backup_autobackup_enable
-import resources.translations.cloud_backup_autobackup_not_now
-import resources.translations.cloud_backup_autobackup_toggle
-import resources.translations.cloud_storage_usage_title
-import resources.translations.cloud_storage_usage_used
-import resources.translations.cloud_storage_usage_reserved
-import resources.translations.cloud_storage_usage_error
-import resources.translations.general_back
-import resources.translations.general_cancel
-import resources.translations.login_hide_password
-import resources.translations.login_show_password
+import resources.translations.*
+import kotlin.time.Clock
 
 @Composable
 fun CloudAccountScreen(
@@ -149,883 +64,723 @@ fun CloudAccountScreen(
     onAuthenticated: (() -> Unit)? = null,
     viewModel: CloudAccountViewModel = koinViewModel { parametersOf(onBack) },
 ) {
-    BaseScreen(
-        modifier = modifier,
-        viewModel = viewModel,
-    ) { viewState, intentDispatcher ->
+    BaseScreen(modifier = modifier, viewModel = viewModel) { state, dispatch ->
         LaunchedEffect(initialCreateAccount) {
-            if (initialCreateAccount) {
-                intentDispatcher(CloudAccountIntent.OnSwitchToCreateAccountClicked)
+            if (initialCreateAccount) dispatch(CloudAccountIntent.OnSwitchToCreateAccountClicked)
+        }
+        LaunchedEffect(state.authState, state.profileLink, state.isLoading) {
+            val signedIn = state.authState as? CloudAuthState.SignedIn
+            if (signedIn != null && !state.isLoading && state.profileLink?.cloudUserId == signedIn.account.id) {
+                onAuthenticated?.invoke()
             }
         }
-        LaunchedEffect(viewState.authState, viewState.profileLink, viewState.isLoading) {
-            val signedIn = viewState.authState as? CloudAuthState.SignedIn
-            if (onAuthenticated != null &&
-                signedIn != null &&
-                !viewState.isLoading &&
-                viewState.profileLink?.cloudUserId == signedIn.account.id
-            ) {
-                onAuthenticated()
-            }
-        }
-        CloudAccountScreenContent(
-            viewState = viewState,
-            emailState = viewModel.emailState,
-            passwordState = viewModel.passwordState,
-            intentDispatcher = intentDispatcher,
-        )
+        CloudAccountScreenContent(state, viewModel.emailState, viewModel.passwordState, dispatch)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CloudAccountScreenContent(
-    viewState: CloudAccountViewState,
+internal fun CloudAccountScreenContent(
+    state: CloudAccountViewState,
     emailState: TextFieldState,
     passwordState: TextFieldState,
-    intentDispatcher: IntentDispatcher<CloudAccountIntent>,
-    modifier: Modifier = Modifier,
+    dispatch: IntentDispatcher<CloudAccountIntent>,
 ) {
-    if (viewState.showLinkConfirmation) {
-        LinkProfileConfirmationDialog(
-            onConfirm = { intentDispatcher(CloudAccountIntent.OnLinkConfirmed) },
-            onDismiss = { entryPoint ->
-                intentDispatcher(CloudAccountIntent.OnLinkDismissed(entryPoint))
-            },
-        )
-    }
-    if (viewState.showDeleteAccountConfirmation) {
-        DeleteCloudAccountConfirmationDialog(
-            onConfirm = { intentDispatcher(CloudAccountIntent.OnDeleteAccountConfirmed) },
-            onDismiss = { entryPoint ->
-                intentDispatcher(CloudAccountIntent.OnDeleteAccountDismissed(entryPoint))
-            },
-        )
-    }
-    if (viewState.showAutoBackupConfirmation) {
-        AutoBackupConfirmationDialog(
-            rightsAttested = viewState.autoBackupRightsAttested,
-            isUpdating = viewState.isUpdatingAutoBackup,
-            onRightsAttestedChanged = {
-                intentDispatcher(CloudAccountIntent.OnAutoBackupAttestationChanged(it))
-            },
-            onConfirm = { intentDispatcher(CloudAccountIntent.OnAutoBackupConfirmed) },
-            onDismiss = { entryPoint ->
-                intentDispatcher(CloudAccountIntent.OnAutoBackupDismissed(entryPoint))
-            },
-        )
-    }
-
+    val colors = Ember.colors
+    CloudAccountConfirmations(state, dispatch)
     Scaffold(
-        modifier = modifier.fillMaxSize(),
+        containerColor = colors.bg,
+        contentColor = colors.ink,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(StringRes.app_settings_sync_backup)) },
+                title = { Text(stringResource(StringRes.cloud_account_title), style = Ember.type.screenTitle.copy(fontSize = 24.sp)) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.bg, titleContentColor = colors.ink, navigationIconContentColor = colors.ink),
                 navigationIcon = {
-                    IconButton(onClick = { intentDispatcher(CloudAccountIntent.OnBackClicked) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(StringRes.general_back),
-                        )
+                    IconButton(onClick = { dispatch(CloudAccountIntent.OnBackClicked) }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(StringRes.general_back))
                     }
                 },
             )
         },
-    ) { paddingValues ->
+    ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(
-                imageVector = Icons.Default.Cloud,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp),
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(StringRes.cloud_account_title),
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = stringResource(StringRes.cloud_account_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-
-            when (val authState = viewState.authState) {
-                CloudAuthState.RestoringSession -> {
-                    CircularProgressIndicator()
-                }
-                is CloudAuthState.SignedIn -> {
-                    ConnectedAccountContent(
-                        account = authState.account,
-                        profileLink = viewState.profileLink,
-                        syncStatus = viewState.syncStatus,
-                        isLoading = viewState.isLoading,
-                        error = viewState.error,
-                        storageUsage = viewState.storageUsage,
-                        isLoadingStorageUsage = viewState.isLoadingStorageUsage,
-                        storageUsageError = viewState.storageUsageError,
-                        isUpdatingAutoBackup = viewState.isUpdatingAutoBackup,
-                        onSignOut = {
-                            intentDispatcher(CloudAccountIntent.OnSignOutClicked)
-                        },
-                        onDeleteAccount = {
-                            intentDispatcher(CloudAccountIntent.OnDeleteAccountClicked)
-                        },
-                        onSync = {
-                            intentDispatcher(CloudAccountIntent.OnSyncClicked)
-                        },
-                        onAutoBackupToggled = { enabled ->
-                            intentDispatcher(CloudAccountIntent.OnAutoBackupToggled(enabled))
-                        },
-                    )
-                }
-                else -> {
-                    AccountFormContent(
-                        authState = authState,
-                        viewState = viewState,
-                        emailState = emailState,
-                        passwordState = passwordState,
-                        onPasswordVisibilityChanged = { isVisible ->
-                            intentDispatcher(CloudAccountIntent.OnPasswordVisibilityChanged(isVisible))
-                        },
-                        intentDispatcher = intentDispatcher,
-                    )
-                }
+            when (val auth = state.authState) {
+                CloudAuthState.RestoringSession -> CloudText(stringResource(StringRes.parrot_cloud_restoring))
+                is CloudAuthState.SignedIn -> ParrotCloudConnectedContent(auth.account, state, dispatch)
+                else -> ParrotCloudSignedOutContent(state, emailState, passwordState, dispatch)
             }
         }
     }
 }
 
 @Composable
-private fun LinkProfileConfirmationDialog(
-    onConfirm: () -> Unit,
-    onDismiss: (String) -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = { onDismiss("dismiss_request") },
-        title = {
-            Text(stringResource(StringRes.cloud_account_link_profile_title))
-        },
-        text = {
-            Text(stringResource(StringRes.cloud_account_link_profile_description))
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(stringResource(StringRes.cloud_account_link_profile))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = { onDismiss("cancel_button") }) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
-    )
-}
-
-@Composable
-private fun DeleteCloudAccountConfirmationDialog(
-    onConfirm: () -> Unit,
-    onDismiss: (String) -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = { onDismiss("dismiss_request") },
-        title = { Text(stringResource(StringRes.cloud_account_delete_title)) },
-        text = { Text(stringResource(StringRes.cloud_account_delete_message)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(
-                    text = stringResource(StringRes.cloud_account_delete_confirm),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = { onDismiss("cancel_button") }) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
-    )
-}
-
-@Composable
-private fun AutoBackupConfirmationDialog(
-    rightsAttested: Boolean,
-    isUpdating: Boolean,
-    onRightsAttestedChanged: (Boolean) -> Unit,
-    onConfirm: () -> Unit,
-    onDismiss: (String) -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = { onDismiss("dismiss_request") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(stringResource(StringRes.cloud_backup_autobackup_confirm_body))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = rightsAttested,
-                        onCheckedChange = onRightsAttestedChanged,
-                        enabled = !isUpdating,
-                    )
-                    Text(stringResource(StringRes.cloud_backup_attestation_checkbox))
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                enabled = rightsAttested && !isUpdating,
-            ) {
-                if (isUpdating) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Text(stringResource(StringRes.cloud_backup_autobackup_enable))
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = { onDismiss("not_now_button") }, enabled = !isUpdating) {
-                Text(stringResource(StringRes.cloud_backup_autobackup_not_now))
-            }
-        },
-    )
-}
-
-@Composable
-private fun AccountFormContent(
-    authState: CloudAuthState,
-    viewState: CloudAccountViewState,
+private fun ParrotCloudSignedOutContent(
+    state: CloudAccountViewState,
     emailState: TextFieldState,
     passwordState: TextFieldState,
-    onPasswordVisibilityChanged: (Boolean) -> Unit,
-    intentDispatcher: IntentDispatcher<CloudAccountIntent>,
-    modifier: Modifier = Modifier,
+    dispatch: IntentDispatcher<CloudAccountIntent>,
 ) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        AuthStateMessage(authState = authState)
-
-        if (viewState.showVerificationMessage && authState is CloudAuthState.AwaitingEmailVerification) {
-            Text(
-                text = stringResource(StringRes.cloud_account_check_email),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            StatusMessage(
-                message = stringResource(
-                    StringRes.cloud_account_verification_message,
-                    authState.email,
-                ),
-            )
-        }
-
-        viewState.error?.let { error ->
-            ErrorMessage(error = error)
-        }
-
+    val create = state.mode == CloudAccountMode.CreateAccount
+    val emailLabel = stringResource(StringRes.cloud_account_email_label)
+    val passwordLabel = stringResource(StringRes.cloud_account_password_label)
+    val emailError = when {
+        state.showEmailValidationError -> stringResource(StringRes.cloud_account_email_invalid)
+        state.error == CloudAccountError.EmailAlreadyRegistered -> stringResource(StringRes.parrot_cloud_email_registered)
+        else -> null
+    }
+    val passwordError = when (state.error) {
+        CloudAccountError.InvalidCredentials -> stringResource(StringRes.parrot_cloud_credentials_error)
+        CloudAccountError.WeakPassword -> stringResource(StringRes.parrot_cloud_weak_password)
+        else -> null
+    }
+    EmberCard(contentPadding = 16.dp) {
+        Benefit(stringResource(StringRes.parrot_cloud_benefit_books))
+        Spacer(Modifier.height(10.dp))
+        Benefit(stringResource(StringRes.parrot_cloud_benefit_progress))
+    }
+    Spacer(Modifier.height(2.dp))
+    when (val auth = state.authState) {
+        is CloudAuthState.AwaitingEmailVerification -> CloudNotice(stringResource(StringRes.cloud_account_verification_message, auth.email))
+        is CloudAuthState.ReauthenticationRequired -> CloudNotice(stringResource(StringRes.cloud_account_reauthentication_required))
+        is CloudAuthState.RefreshUnavailable -> CloudNotice(stringResource(StringRes.cloud_account_refresh_unavailable))
+        else -> Unit
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        EmberSectionLabel(emailLabel)
         OutlinedTextField(
             state = emailState,
-            enabled = !viewState.isLoading,
-            label = { Text(stringResource(StringRes.cloud_account_email_label)) },
-            isError = viewState.showEmailValidationError,
-            supportingText = if (viewState.showEmailValidationError) {
-                { Text(stringResource(StringRes.cloud_account_email_invalid)) }
-            } else {
-                null
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .onFocusChanged { focusState ->
-                    intentDispatcher(CloudAccountIntent.OnEmailFocusChanged(focusState.isFocused))
+            enabled = !state.isLoading,
+            isError = emailError != null,
+            shape = RoundedCornerShape(16.dp),
+            colors = cloudFieldColors(),
+            textStyle = Ember.type.meta.copy(fontSize = 15.sp),
+            placeholder = { CloudText(stringResource(StringRes.parrot_cloud_email_placeholder), secondary = true) },
+            modifier = Modifier.fillMaxWidth().height(52.dp).cloudFieldOutline(emailError != null)
+                .onFocusChanged { dispatch(CloudAccountIntent.OnEmailFocusChanged(it.isFocused)) }
+                .semantics {
+                    contentDescription = emailLabel
+                    emailError?.let { error(it) }
                 },
             lineLimits = TextFieldLineLimits.SingleLine,
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Email,
-                imeAction = ImeAction.Next,
-                autoCorrectEnabled = false,
-            ),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next, autoCorrectEnabled = false),
         )
-
-        PasswordField(
-            passwordState = passwordState,
-            enabled = !viewState.isLoading,
-            onVisibilityChanged = onPasswordVisibilityChanged,
-        )
-
-        if (viewState.mode == CloudAccountMode.CreateAccount) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Checkbox(
-                    checked = viewState.tosAccepted,
-                    onCheckedChange = { accepted ->
-                        intentDispatcher(CloudAccountIntent.OnTosAcceptedChanged(accepted))
-                    },
-                    enabled = !viewState.isLoading,
-                )
-                Text(
-                    text = stringResource(StringRes.cloud_account_tos_checkbox),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-
-        Button(
-            onClick = { intentDispatcher(CloudAccountIntent.OnSubmitClicked) },
-            enabled = viewState.isSubmitEnabled,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (viewState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            } else {
-                Text(
-                    text = stringResource(
-                        if (viewState.mode == CloudAccountMode.SignIn) {
-                            StringRes.cloud_account_sign_in
-                        } else {
-                            StringRes.cloud_account_create_account
-                        },
-                    ),
-                )
-            }
-        }
-
-        if (!viewState.isSubmitEnabled && !viewState.isLoading) {
-            Text(
-                text = stringResource(
-                    if (viewState.mode == CloudAccountMode.SignIn) {
-                        StringRes.cloud_account_sign_in_hint
-                    } else {
-                        StringRes.cloud_account_create_account_hint
-                    },
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-
-        OutlinedButton(
-            onClick = {
-                intentDispatcher(CloudAccountIntent.OnGoogleSignInClicked)
-            },
-            enabled = !viewState.isLoading,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(stringResource(StringRes.cloud_account_sign_in_with_google))
-        }
-
-        TextButton(
-            onClick = {
-                intentDispatcher(
-                    if (viewState.mode == CloudAccountMode.SignIn) {
-                        CloudAccountIntent.OnSwitchToCreateAccountClicked
-                    } else {
-                        CloudAccountIntent.OnSwitchToSignInClicked
-                    },
-                )
-            },
-            enabled = !viewState.isLoading,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = stringResource(
-                    if (viewState.mode == CloudAccountMode.SignIn) {
-                        StringRes.cloud_account_switch_to_create
-                    } else {
-                        StringRes.cloud_account_switch_to_sign_in
-                    },
-                ),
-                textAlign = TextAlign.Center,
-            )
-        }
+        emailError?.let { CloudText(it, error = true) }
     }
-}
-
-@Composable
-private fun PasswordField(
-    passwordState: TextFieldState,
-    enabled: Boolean,
-    onVisibilityChanged: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var passwordVisible by remember { mutableStateOf(false) }
-    OutlinedSecureTextField(
-        state = passwordState,
-        label = { Text(stringResource(StringRes.cloud_account_password_label)) },
-        enabled = enabled,
-        modifier = modifier.fillMaxWidth(),
-        textObfuscationMode = if (passwordVisible) {
-            TextObfuscationMode.Visible
-        } else {
-            TextObfuscationMode.Hidden
-        },
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Password,
-            imeAction = ImeAction.Done,
-            autoCorrectEnabled = false,
-        ),
-        trailingIcon = {
-            IconButton(
-                onClick = {
-                    passwordVisible = !passwordVisible
-                    onVisibilityChanged(passwordVisible)
-                },
-            ) {
-                Icon(
-                    imageVector = if (passwordVisible) {
-                        Icons.Default.VisibilityOff
-                    } else {
-                        Icons.Default.Visibility
-                    },
-                    contentDescription = stringResource(
-                        if (passwordVisible) {
-                            StringRes.login_hide_password
-                        } else {
-                            StringRes.login_show_password
-                        },
-                    ),
-                )
-            }
-        },
-    )
-}
-
-@Composable
-private fun ConnectedAccountContent(
-    account: CloudAccount,
-    profileLink: CloudProfileLink?,
-    syncStatus: SyncStatus,
-    isLoading: Boolean,
-    error: CloudAccountError?,
-    storageUsage: CloudStorageUsage?,
-    isLoadingStorageUsage: Boolean,
-    storageUsageError: String?,
-    isUpdatingAutoBackup: Boolean,
-    onSignOut: () -> Unit,
-    onDeleteAccount: () -> Unit,
-    onSync: () -> Unit,
-    onAutoBackupToggled: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        error?.let { accountError ->
-            ErrorMessage(error = accountError)
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-            ),
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        EmberSectionLabel(passwordLabel)
+        var visible by remember { mutableStateOf(false) }
+        OutlinedSecureTextField(
+            state = passwordState,
+            enabled = !state.isLoading,
+            isError = passwordError != null,
             shape = RoundedCornerShape(16.dp),
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(StringRes.cloud_account_connected),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = account.email ?: account.id,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = when {
-                        profileLink == null -> stringResource(StringRes.cloud_account_link_pending)
-                        profileLink.syncEnabled -> stringResource(StringRes.cloud_account_sync_enabled)
-                        else -> stringResource(StringRes.cloud_account_sync_not_enabled)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            colors = cloudFieldColors(),
+            textStyle = Ember.type.meta.copy(fontSize = 15.sp),
+            modifier = Modifier.fillMaxWidth().height(52.dp).cloudFieldOutline(passwordError != null).semantics {
+                contentDescription = passwordLabel
+                passwordError?.let { error(it) }
+            },
+            textObfuscationMode = if (visible) TextObfuscationMode.Visible else TextObfuscationMode.Hidden,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done, autoCorrectEnabled = false),
+            trailingIcon = {
+                IconButton(onClick = {
+                    visible = !visible
+                    dispatch(CloudAccountIntent.OnPasswordVisibilityChanged(visible))
+                }) {
+                    Icon(
+                        if (visible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        stringResource(if (visible) StringRes.login_hide_password else StringRes.login_show_password),
+                        tint = Ember.colors.ink2,
+                    )
+                }
+            },
+        )
+        passwordError?.let { CloudText(it, error = true) }
+        if (create) CloudText(stringResource(StringRes.parrot_cloud_password_helper), secondary = true)
+    }
+    if (create) {
+        ConsentRow(stringResource(StringRes.cloud_account_tos_checkbox), state.tosAccepted, !state.isLoading) {
+            dispatch(CloudAccountIntent.OnTosAcceptedChanged(it))
+        }
+    }
+    if (state.error != null && emailError == null && passwordError == null) {
+        CloudNotice(accountErrorMessage(state.error), isError = true) {
+            CloudLink(stringResource(StringRes.parrot_cloud_try_again), enabled = state.isSubmitEnabled) {
+                dispatch(CloudAccountIntent.OnSubmitClicked)
+            }
+        }
+    }
+    CloudButton(
+        text = stringResource(if (state.isLoading) {
+            if (create) StringRes.parrot_cloud_creating else StringRes.parrot_cloud_signing_in
+        } else if (create) StringRes.cloud_account_create_account else StringRes.cloud_account_sign_in),
+        primary = true,
+        enabled = state.isSubmitEnabled,
+        modifier = Modifier.fillMaxWidth(),
+    ) { dispatch(CloudAccountIntent.OnSubmitClicked) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        CloudDivider(Modifier.weight(1f))
+        CloudText(stringResource(StringRes.parrot_cloud_or), secondary = true)
+        CloudDivider(Modifier.weight(1f))
+    }
+    CloudButton(stringResource(StringRes.parrot_cloud_google), enabled = !state.isLoading, modifier = Modifier.fillMaxWidth()) {
+        dispatch(CloudAccountIntent.OnGoogleSignInClicked)
+    }
+    val modeHint = stringResource(if (create) StringRes.parrot_cloud_existing_account else StringRes.parrot_cloud_new_account)
+    val modeAction = stringResource(if (create) StringRes.cloud_account_sign_in else StringRes.parrot_cloud_create_link)
+    val colors = Ember.colors
+    TextButton(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        enabled = !state.isLoading,
+        onClick = {
+            dispatch(if (create) CloudAccountIntent.OnSwitchToSignInClicked else CloudAccountIntent.OnSwitchToCreateAccountClicked)
+        },
+    ) {
+        Text(
+            buildAnnotatedString {
+                withStyle(SpanStyle(color = colors.ink2)) { append("$modeHint ") }
+                withStyle(SpanStyle(color = if (state.isLoading) colors.ink2 else colors.accentText, fontWeight = FontWeight.Bold)) { append(modeAction) }
+            },
+            style = Ember.type.meta.copy(fontSize = 15.sp),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
 
-                SyncStatusMessage(status = syncStatus)
-                if (profileLink != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(StringRes.cloud_backup_autobackup_toggle),
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Switch(
-                            checked = profileLink.autoBackupEnabled,
-                            onCheckedChange = onAutoBackupToggled,
-                            enabled = !isLoading && !isUpdatingAutoBackup,
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = onSync,
-                        enabled = !isLoading,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
-                        } else {
-                            Text(
-                                stringResource(
-                                    if (profileLink.syncEnabled) {
-                                        StringRes.cloud_account_sync_now
-                                    } else {
-                                        StringRes.cloud_account_enable_sync
-                                    },
-                                ),
-                            )
-                        }
-                    }
+@Composable
+private fun Benefit(text: String) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("✓", color = Ember.colors.accentText, style = Ember.type.meta.copy(fontSize = 18.sp))
+        CloudText(text)
+    }
+}
+
+@Composable
+private fun ParrotCloudConnectedContent(account: CloudAccount, state: CloudAccountViewState, dispatch: IntentDispatcher<CloudAccountIntent>) {
+    ParrotCloudAccountCard(account, state)
+    ParrotCloudSyncCard(state, dispatch)
+    ParrotCloudStorageCard(state)
+    ParrotCloudSettingsCard(state, dispatch)
+    state.error?.let { CloudNotice(accountErrorMessage(it), isError = true) }
+    CloudLink(
+        stringResource(StringRes.parrot_cloud_delete_link),
+        destructive = true,
+        enabled = !state.isLoading,
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+    ) { dispatch(CloudAccountIntent.OnDeleteAccountClicked) }
+}
+
+@Composable
+private fun ParrotCloudAccountCard(account: CloudAccount, state: CloudAccountViewState) {
+    val email = account.email ?: stringResource(StringRes.parrot_cloud_connected_account)
+    EmberCard(contentPadding = 16.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(
+                Modifier.size(48.dp).clip(CircleShape).background(if (Ember.style.isEink) Ember.colors.surface else Ember.colors.navActive)
+                    .then(if (Ember.style.isEink) Modifier.border(2.dp, Ember.colors.line, CircleShape) else Modifier),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(email.take(1).uppercase(), style = Ember.type.cardTitle, color = Ember.colors.accentText)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(email, style = Ember.type.meta.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                state.storageUsage?.let {
+                    CloudText(stringResource(StringRes.parrot_cloud_account_storage, storageLabel(it.quotaBytes)), secondary = true)
                 }
             }
-        }
-
-        StorageUsageCard(
-            usage = storageUsage,
-            isLoading = isLoadingStorageUsage,
-            error = storageUsageError,
-        )
-
-        Button(
-            onClick = onSignOut,
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(20.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                )
-            } else {
-                Text(stringResource(StringRes.cloud_account_sign_out))
-            }
-        }
-
-        OutlinedButton(
-            onClick = onDeleteAccount,
-            enabled = !isLoading,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text(
-                text = stringResource(StringRes.cloud_account_delete),
-                color = MaterialTheme.colorScheme.error,
-            )
         }
     }
 }
 
 @Composable
-private fun StorageUsageCard(
-    usage: CloudStorageUsage?,
-    isLoading: Boolean,
-    error: String?,
-    modifier: Modifier = Modifier,
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(StringRes.cloud_storage_usage_title),
-                style = MaterialTheme.typography.titleMedium,
-            )
-            when {
-                isLoading -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                usage != null -> {
-                    val progress = if (usage.quotaBytes > 0) {
-                        (usage.usedBytes.toFloat() / usage.quotaBytes.toFloat()).coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    }
-                    Text(
-                        text = stringResource(
-                            StringRes.cloud_storage_usage_used,
-                            usage.usedBytes.toStorageLabel(),
-                            usage.quotaBytes.toStorageLabel(),
-                        ),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    if (usage.reservedBytes > 0L) {
-                        Text(
-                            stringResource(
-                                StringRes.cloud_storage_usage_reserved,
-                                usage.reservedBytes.toStorageLabel(),
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                error != null -> Text(
-                    stringResource(StringRes.cloud_storage_usage_error, friendlyErrorMessage(error)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
+private fun ParrotCloudSyncCard(state: CloudAccountViewState, dispatch: IntentDispatcher<CloudAccountIntent>) {
+    val status = state.syncStatus
+    val failed = status is SyncStatus.Offline || status is SyncStatus.Failed
+    val synced = state.profileLink?.syncEnabled == true && state.lastSuccessfulSyncAt != null && when (status) {
+        is SyncStatus.Completed -> status.pendingCount == 0
+        is SyncStatus.Idle -> status.pendingCount == 0
+        else -> false
+    }
+    val title = stringResource(when {
+        status is SyncStatus.Running -> StringRes.parrot_cloud_syncing
+        failed -> StringRes.parrot_cloud_cant_sync
+        synced -> StringRes.parrot_cloud_all_synced
+        state.profileLink == null -> StringRes.cloud_account_link_pending
+        state.profileLink.syncEnabled.not() -> StringRes.cloud_account_sync_not_enabled
+        else -> StringRes.parrot_cloud_ready_to_sync
+    })
+    val time = lastSyncLabel(state.lastSuccessfulSyncAt)
+    EmberCard(contentPadding = 16.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                CloudText(title, bold = true, error = failed, success = synced)
+                if (status is SyncStatus.Running) {
+                    val totalItems = status.totalItems
+                    if (totalItems != null) {
+                        val progressLabel = when (status.phase) {
+                            SyncPhase.UPLOADING_FILES, SyncPhase.DOWNLOADING_FILES, SyncPhase.TRANSFERRING_FILES -> StringRes.parrot_cloud_books_progress
+                            else -> StringRes.parrot_cloud_changes_progress
+                        }
+                        CloudText(stringResource(progressLabel, status.completedItems, totalItems), secondary = true)
+                    } else CloudText(stringResource(StringRes.parrot_cloud_changes_syncing), secondary = true)
+                } else CloudText(time, secondary = true)
             }
+            if (status !is SyncStatus.Running && state.profileLink != null) {
+                CloudButton(
+                    stringResource(if (failed) StringRes.parrot_cloud_try_again else StringRes.cloud_account_sync_now),
+                    enabled = !state.isLoading && (status !is SyncStatus.Failed || status.canRetry),
+                ) { dispatch(CloudAccountIntent.OnSyncClicked) }
+            }
+        }
+        if (status is SyncStatus.Running) {
+            val fraction = syncProgress(status)
+            if (fraction != null) {
+                Spacer(Modifier.height(12.dp))
+                CloudProgress(fraction)
+            }
+        }
+        if (failed) {
+            Spacer(Modifier.height(12.dp))
+            CloudNotice(if (status is SyncStatus.Offline) stringResource(StringRes.parrot_cloud_offline_sync) else syncErrorMessage((status as SyncStatus.Failed).error), isError = true)
+        }
+        Spacer(Modifier.height(12.dp))
+        CloudDivider()
+        Spacer(Modifier.height(10.dp))
+        CloudText(stringResource(StringRes.parrot_cloud_syncs), secondary = true)
+    }
+}
+
+@Composable
+private fun ParrotCloudStorageCard(state: CloudAccountViewState) {
+    val usage = state.storageUsage
+    if (usage == null || usage.quotaBytes <= 0) {
+        if (state.storageUsageError != null) CloudNotice(stringResource(StringRes.parrot_cloud_storage_unavailable), isError = true)
+        return
+    }
+    val almostFull = isStorageAlmostFull(usage.usedBytes, usage.quotaBytes)
+    val description = stringResource(StringRes.parrot_cloud_storage_accessibility, spokenStorageLabel(usage.usedBytes), spokenStorageLabel(usage.quotaBytes))
+    EmberCard(contentPadding = 16.dp) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            CloudText(stringResource(StringRes.cloud_storage_usage_title), bold = true)
+            CloudText(stringResource(StringRes.parrot_cloud_storage_used, storageLabel(usage.usedBytes), storageLabel(usage.quotaBytes)), secondary = true)
+        }
+        Spacer(Modifier.height(10.dp))
+        CloudProgress((usage.usedBytes.toDouble() / usage.quotaBytes).toFloat(), error = almostFull, modifier = Modifier.semantics { contentDescription = description })
+        if (almostFull) {
+            Spacer(Modifier.height(8.dp))
+            CloudText(stringResource(StringRes.parrot_cloud_storage_almost_full), error = true)
         }
     }
 }
 
-private fun Long.toStorageLabel(): String {
-    val units = listOf("B", "KiB", "MiB", "GiB", "TiB")
-    var value = this.toDouble()
-    var unitIndex = 0
-    while (value >= 1024.0 && unitIndex < units.lastIndex) {
-        value /= 1024.0
-        unitIndex++
+@Composable
+private fun ParrotCloudSettingsCard(state: CloudAccountViewState, dispatch: IntentDispatcher<CloudAccountIntent>) {
+    EmberCard(contentPadding = 0.dp) {
+        state.profileLink?.let { link ->
+            Row(
+                Modifier.fillMaxWidth().toggleable(link.autoBackupEnabled, enabled = !state.isLoading && !state.isUpdatingAutoBackup, role = Role.Switch) {
+                    dispatch(CloudAccountIntent.OnAutoBackupToggled(it))
+                }.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    CloudText(stringResource(StringRes.parrot_cloud_automatic_books), bold = true)
+                    CloudText(stringResource(StringRes.parrot_cloud_automatic_books_helper), secondary = true)
+                }
+                CloudSwitch(link.autoBackupEnabled)
+            }
+            CloudDivider()
+        }
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 64.dp)
+                .clickable(enabled = !state.isLoading && state.syncStatus !is SyncStatus.Running, role = Role.Button) { dispatch(CloudAccountIntent.OnSignOutClicked) }
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            CloudText(stringResource(StringRes.cloud_account_sign_out), bold = true, modifier = Modifier.weight(1f))
+            CloudText(stringResource(StringRes.parrot_cloud_books_stay), secondary = true, modifier = Modifier.weight(1f))
+        }
     }
-    val whole = value.toLong()
-    val tenth = ((value - whole) * 10).toInt()
-    return if (unitIndex == 0) "$whole ${units[unitIndex]}" else "$whole.$tenth ${units[unitIndex]}"
+}
+
+@Composable
+private fun CloudAccountConfirmations(state: CloudAccountViewState, dispatch: IntentDispatcher<CloudAccountIntent>) {
+    if (state.showLinkConfirmation) {
+        CloudConfirmation(
+            stringResource(StringRes.cloud_account_link_profile_title),
+            stringResource(StringRes.cloud_account_link_profile),
+            onConfirm = { dispatch(CloudAccountIntent.OnLinkConfirmed) },
+            onDismiss = { dispatch(CloudAccountIntent.OnLinkDismissed("dismiss_request")) },
+        ) { CloudText(stringResource(StringRes.cloud_account_link_profile_description)) }
+    }
+    if (state.showAutoBackupConfirmation) {
+        CloudConfirmation(
+            stringResource(StringRes.parrot_cloud_automatic_books),
+            stringResource(StringRes.cloud_backup_autobackup_enable),
+            confirmEnabled = state.autoBackupRightsAttested && !state.isUpdatingAutoBackup,
+            dismissEnabled = !state.isUpdatingAutoBackup,
+            onConfirm = { dispatch(CloudAccountIntent.OnAutoBackupConfirmed) },
+            onDismiss = { dispatch(CloudAccountIntent.OnAutoBackupDismissed("dismiss_request")) },
+        ) {
+            CloudText(stringResource(StringRes.parrot_cloud_upload_consent))
+            ConsentRow(stringResource(StringRes.cloud_backup_attestation_checkbox), state.autoBackupRightsAttested, !state.isUpdatingAutoBackup) {
+                dispatch(CloudAccountIntent.OnAutoBackupAttestationChanged(it))
+            }
+        }
+    }
+    if (state.showSignOutConfirmation) {
+        SignOutConfirmationDialog(
+            pendingCount = state.signOutPendingCount,
+            isSigningOut = state.isSigningOut,
+            onSyncFirst = { dispatch(CloudAccountIntent.OnSignOutSyncFirstClicked) },
+            onConfirm = { dispatch(CloudAccountIntent.OnSignOutConfirmed) },
+            onDismiss = { dispatch(CloudAccountIntent.OnSignOutDismissed) },
+        )
+    }
+    if (state.showDeleteAccountConfirmation) {
+        var confirmation by remember { mutableStateOf("") }
+        CloudConfirmation(
+            stringResource(StringRes.parrot_cloud_delete_title),
+            stringResource(StringRes.cloud_account_delete_confirm),
+            destructive = true,
+            confirmEnabled = canConfirmDeletion(confirmation) && !state.isLoading,
+            onConfirm = { dispatch(CloudAccountIntent.OnDeleteAccountConfirmed) },
+            onDismiss = { dispatch(CloudAccountIntent.OnDeleteAccountDismissed("dismiss_request")) },
+        ) {
+            CloudText(stringResource(StringRes.parrot_cloud_delete_message))
+            EmberSectionLabel(stringResource(StringRes.parrot_cloud_delete_field))
+            val fieldLabel = stringResource(StringRes.parrot_cloud_delete_field)
+            OutlinedTextField(
+                value = confirmation,
+                onValueChange = { confirmation = it },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                colors = cloudFieldColors(),
+                textStyle = Ember.type.meta,
+                modifier = Modifier.fillMaxWidth().cloudFieldOutline(false).semantics { contentDescription = fieldLabel },
+                keyboardOptions = KeyboardOptions(autoCorrectEnabled = false),
+            )
+        }
+    }
 }
 
 /**
- * Raw transport errors ("HTTP request to http://… (POST) failed with message:
- * Failed to connect to …") mean nothing to a reader. Translate the common cases
- * into plain language and keep the original text only when it is short enough
- * to be readable.
+ * Custom dialog shell. E-ink uses a Popup (no dimmed scrim, focusable so Back and
+ * tap-outside dismiss it); other modes use a regular [Dialog].
  */
 @Composable
-private fun friendlyErrorMessage(raw: String): String {
-    val lower = raw.lowercase()
-    val friendlyRes = when {
-        "failed to connect" in lower ||
-            "connection refused" in lower ||
-            "unable to resolve host" in lower ||
-            "unknownhost" in lower.replace(" ", "") ||
-            "network is unreachable" in lower ||
-            "connectionreset" in lower.replace(" ", "") ||
-            "software caused connection" in lower ->
-            StringRes.cloud_account_error_could_not_connect
-        "timeout" in lower || "timed out" in lower ->
-            StringRes.cloud_account_error_timeout
-        "http request to" in lower || "exception" in lower || "sql" in lower ->
-            StringRes.cloud_account_error_generic
-        else -> return raw
+private fun CloudDialogShell(
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    if (Ember.style.isEink) {
+        // Popup has no scrim; focusable makes Back dismiss it and prevents background input.
+        androidx.compose.ui.window.Popup(
+            alignment = Alignment.Center,
+            onDismissRequest = onDismiss,
+            properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+        ) { Box(Modifier.fillMaxWidth().padding(24.dp)) { content() } }
+    } else {
+        Dialog(onDismissRequest = onDismiss) { content() }
     }
-    return stringResource(friendlyRes)
 }
 
 @Composable
-private fun SyncStatusMessage(
-    status: SyncStatus,
-    modifier: Modifier = Modifier,
+private fun CloudConfirmation(
+    title: String,
+    confirmLabel: String,
+    confirmEnabled: Boolean = true,
+    dismissEnabled: Boolean = true,
+    destructive: Boolean = false,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    val message = when (status) {
-        SyncStatus.Disabled -> stringResource(StringRes.cloud_account_sync_status_disabled)
-        is SyncStatus.Idle -> {
-            val ready = stringResource(StringRes.cloud_account_sync_status_idle)
-            status.lastSuccessfulAt?.let { lastSuccessfulAt ->
-                "$ready\n${stringResource(StringRes.cloud_account_sync_status_last_successful, lastSuccessfulAt)}"
-            } ?: ready
-        }
-        is SyncStatus.Running -> stringResource(
-            when (status.phase) {
-                SyncPhase.PREPARING -> StringRes.cloud_account_sync_status_preparing
-                SyncPhase.PULLING -> StringRes.cloud_account_sync_status_pulling
-                SyncPhase.APPLYING -> StringRes.cloud_account_sync_status_applying
-                SyncPhase.UPLOADING_CHANGES -> StringRes.cloud_account_sync_status_uploading_changes
-                SyncPhase.UPLOADING_FILES -> StringRes.cloud_account_sync_status_uploading_files
-                SyncPhase.DOWNLOADING_FILES -> StringRes.cloud_account_sync_status_downloading_files
-                SyncPhase.TRANSFERRING_FILES -> StringRes.cloud_account_sync_status_transferring_files
-                SyncPhase.FINALIZING -> StringRes.cloud_account_sync_status_finalizing
-            },
-        )
-        is SyncStatus.Offline -> stringResource(
-            StringRes.cloud_account_sync_status_offline,
-            status.pendingCount,
-        )
-        is SyncStatus.Failed -> {
-            val failure = stringResource(
-                StringRes.cloud_account_sync_status_failed,
-                friendlyErrorMessage(status.error),
-                status.pendingCount,
-            )
-            val retryMessage = stringResource(
-                if (status.canRetry) {
-                    StringRes.cloud_account_sync_status_can_retry
-                } else {
-                    StringRes.cloud_account_sync_status_cannot_retry
-                },
-            )
-            "$failure\n$retryMessage"
-        }
-        is SyncStatus.Completed -> {
-            val completed = stringResource(
-                StringRes.cloud_account_sync_status_completed,
-                status.pushedCount,
-                status.pulledCount,
-                status.pendingCount,
-            )
-            "$completed\n${stringResource(StringRes.cloud_account_sync_status_last_successful, status.completedAt)}"
+    CloudDialogShell(onDismiss = { if (dismissEnabled) onDismiss() }) {
+        EmberCard(contentPadding = 20.dp) {
+            Text(title, style = Ember.type.screenTitle.copy(fontSize = 20.sp), color = Ember.colors.ink)
+            Spacer(Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+            Spacer(Modifier.height(16.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                CloudLink(stringResource(StringRes.general_cancel), enabled = dismissEnabled, onClick = onDismiss)
+                CloudButton(confirmLabel, enabled = confirmEnabled, destructive = destructive, onClick = onConfirm)
+            }
         }
     }
+}
+
+/**
+ * Sign-out confirmation — always shown. Without unsynced changes it is a simple
+ * Cancel / Sign out row; with unsynced changes it adds an error box and stacks
+ * Sync first / Sign out anyway / Cancel. Sign out is not destructive (not red).
+ */
+@Composable
+private fun SignOutConfirmationDialog(
+    pendingCount: Int,
+    isSigningOut: Boolean,
+    onSyncFirst: () -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    CloudDialogShell(onDismiss = { if (!isSigningOut) onDismiss() }) {
+        EmberCard(contentPadding = 20.dp) {
+            Text(
+                text = stringResource(StringRes.parrot_cloud_sign_out_title),
+                style = Ember.type.screenTitle.copy(fontSize = 20.sp),
+                color = Ember.colors.ink,
+            )
+            Spacer(Modifier.height(16.dp))
+            CloudText(stringResource(StringRes.parrot_cloud_sign_out_body))
+            if (pendingCount > 0) {
+                Spacer(Modifier.height(16.dp))
+                SignOutPendingError(pendingCount)
+            }
+            Spacer(Modifier.height(16.dp))
+            if (pendingCount > 0) {
+                Column(
+                    Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    CloudTextAction(
+                        stringResource(StringRes.parrot_cloud_sync_first),
+                        Ember.colors.accentText,
+                        enabled = !isSigningOut,
+                        onClick = onSyncFirst,
+                    )
+                    CloudTextAction(
+                        stringResource(StringRes.parrot_cloud_sign_out_anyway),
+                        Ember.colors.ink,
+                        enabled = !isSigningOut,
+                        onClick = onConfirm,
+                    )
+                    CloudTextAction(
+                        stringResource(StringRes.general_cancel),
+                        Ember.colors.ink,
+                        enabled = !isSigningOut,
+                        onClick = onDismiss,
+                    )
+                }
+            } else {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CloudTextAction(
+                        stringResource(StringRes.general_cancel),
+                        Ember.colors.ink,
+                        enabled = !isSigningOut,
+                        onClick = onDismiss,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    CloudTextAction(
+                        stringResource(StringRes.cloud_account_sign_out),
+                        Ember.colors.accentText,
+                        enabled = !isSigningOut,
+                        onClick = onConfirm,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SignOutPendingError(count: Int) {
+    val lead = if (count == 1) {
+        stringResource(StringRes.parrot_cloud_sign_out_pending_one)
+    } else {
+        stringResource(StringRes.parrot_cloud_sign_out_pending_many, count)
+    }
+    val tail = stringResource(StringRes.parrot_cloud_sign_out_pending_tail)
+    val shape = RoundedCornerShape(16.dp)
     Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        StatusMessage(message = message)
-        if (status is SyncStatus.Running) {
-            val totalItems = status.totalItems
-            val totalBytes = status.totalBytes
-            val itemFraction = totalItems?.takeIf { total -> total > 0 }?.let { total ->
-                (status.completedItems.toFloat() / total).coerceIn(0f, 1f)
-            }
-            val byteFraction = totalBytes?.takeIf { total -> total > 0L }?.let { total ->
-                (status.bytesTransferred.toFloat() / total).coerceIn(0f, 1f)
-            }
-            if (totalItems != null) {
-                Text(
-                    text = stringResource(
-                        StringRes.cloud_account_sync_status_items_progress,
-                        status.completedItems,
-                        totalItems,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            if (totalBytes != null) {
-                Text(
-                    text = stringResource(
-                        StringRes.cloud_account_sync_status_bytes_progress,
-                        status.bytesTransferred,
-                        totalBytes,
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            when {
-                byteFraction != null -> LinearProgressIndicator(
-                    progress = { byteFraction },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                itemFraction != null -> LinearProgressIndicator(
-                    progress = { itemFraction },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                else -> LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-        }
-    }
-}
-
-@Composable
-private fun AuthStateMessage(
-    authState: CloudAuthState,
-    modifier: Modifier = Modifier,
-) {
-    when (authState) {
-        is CloudAuthState.ReauthenticationRequired -> StatusMessage(
-            message = stringResource(StringRes.cloud_account_reauthentication_required),
-            modifier = modifier,
-            tone = StatusTone.Warning,
-        )
-        is CloudAuthState.RefreshUnavailable -> StatusMessage(
-            message = stringResource(StringRes.cloud_account_refresh_unavailable),
-            modifier = modifier,
-            tone = StatusTone.Warning,
-        )
-        else -> Unit
-    }
-}
-
-private enum class StatusTone { Info, Warning }
-
-@Composable
-private fun StatusMessage(
-    message: String,
-    modifier: Modifier = Modifier,
-    tone: StatusTone = StatusTone.Info,
-) {
-    // Problems must not wear the green "everything is fine" styling.
-    val containerColor = when (tone) {
-        StatusTone.Info -> MaterialTheme.colorScheme.primaryContainer
-        StatusTone.Warning -> MaterialTheme.colorScheme.errorContainer
-    }
-    val contentColor = when (tone) {
-        StatusTone.Info -> MaterialTheme.colorScheme.onPrimaryContainer
-        StatusTone.Warning -> MaterialTheme.colorScheme.onErrorContainer
-    }
-    Surface(
-        color = containerColor,
-        shape = MaterialTheme.shapes.small,
-        modifier = modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth()
+            .clip(shape)
+            .background(Ember.colors.errorContainer)
+            .then(if (Ember.style.isEink) Modifier.border(2.dp, Ember.colors.line, shape) else Modifier)
+            .padding(12.dp),
     ) {
         Text(
-            text = message,
-            color = contentColor,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(12.dp),
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(lead) }
+                append(" ")
+                append(tail)
+            },
+            color = Ember.colors.destructive,
+            style = Ember.type.meta.copy(fontSize = 15.sp),
         )
     }
 }
 
 @Composable
-private fun ErrorMessage(
-    error: CloudAccountError,
+private fun CloudTextAction(
+    text: String,
+    color: Color,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.errorContainer,
-        shape = MaterialTheme.shapes.small,
-        modifier = modifier.fillMaxWidth(),
+    TextButton(
+        onClick,
+        modifier.heightIn(min = 48.dp),
+        enabled = enabled,
+        colors = ButtonDefaults.textButtonColors(contentColor = color, disabledContentColor = Ember.colors.ink2),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Icon(
-                imageVector = Icons.Default.ErrorOutline,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringResource(error.stringRes),
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
+        Text(text, style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold))
     }
 }
 
-private val CloudAccountError.stringRes: StringResource
-    get() = when (this) {
-        CloudAccountError.ProfileAlreadyLinked -> StringRes.cloud_account_profile_already_linked
-        CloudAccountError.NotConfigured -> StringRes.cloud_account_not_configured
-        CloudAccountError.DeleteReauthenticationRequired ->
-            StringRes.cloud_account_delete_reauthentication_required
-        CloudAccountError.Generic -> StringRes.cloud_account_generic_error
+@Composable
+private fun ConsentRow(text: String, checked: Boolean, enabled: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(checked, enabled = enabled, role = Role.Checkbox, onValueChange = onCheckedChange),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.size(24.dp).border(if (Ember.style.isEink) 2.dp else 1.5.dp, Ember.colors.ink2, RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
+            if (checked) CloudText("✓")
+        }
+        CloudText(text, secondary = true)
     }
+}
+
+@Composable
+private fun CloudSwitch(checked: Boolean) {
+    val colors = Ember.colors
+    Box(
+        Modifier.size(52.dp, 32.dp).clip(CircleShape).background(if (checked) colors.accent else colors.track)
+            .then(if (Ember.style.isEink) Modifier.border(2.dp, colors.line, CircleShape) else Modifier),
+        contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
+    ) {
+        Box(Modifier.padding(4.dp).size(24.dp).clip(CircleShape).background(if (checked) colors.onAccent else colors.ink2))
+    }
+}
+
+@Composable
+private fun CloudProgress(progress: Float, error: Boolean = false, modifier: Modifier = Modifier) {
+    Box(
+        modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(Ember.colors.track)
+            .then(if (Ember.style.isEink) Modifier.border(2.dp, Ember.colors.line, CircleShape) else Modifier),
+    ) {
+        Box(Modifier.fillMaxHeight().fillMaxWidth(progress.coerceIn(0f, 1f)).background(if (error) Ember.colors.destructive else Ember.colors.accent))
+    }
+}
+
+@Composable
+private fun CloudDivider(modifier: Modifier = Modifier) {
+    HorizontalDivider(modifier, thickness = if (Ember.style.isEink) 2.dp else 1.dp, color = Ember.colors.line)
+}
+
+@Composable
+private fun CloudText(text: String, modifier: Modifier = Modifier, secondary: Boolean = false, bold: Boolean = false, error: Boolean = false, success: Boolean = false) {
+    Text(text, modifier, style = Ember.type.meta.copy(fontSize = if (secondary) 13.sp else if (bold) 16.sp else 15.sp, fontWeight = if (bold || error && Ember.style.isEink) FontWeight.Bold else FontWeight.Normal),
+        color = when { error -> Ember.colors.destructive; success -> Ember.colors.success; secondary -> Ember.colors.ink2; else -> Ember.colors.ink })
+}
+
+@Composable
+private fun CloudNotice(message: String, isError: Boolean = false, action: @Composable (() -> Unit)? = null) {
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(if (isError) Ember.colors.errorContainer else Ember.colors.surface)
+            .then(if (Ember.style.isEink) Modifier.border(2.dp, Ember.colors.line, shape) else Modifier).padding(12.dp),
+    ) {
+        CloudText(message, error = isError)
+        action?.invoke()
+    }
+}
+
+@Composable
+private fun CloudLink(text: String, modifier: Modifier = Modifier, destructive: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
+    TextButton(onClick, modifier.heightIn(min = 48.dp), enabled = enabled, colors = ButtonDefaults.textButtonColors(contentColor = if (destructive) Ember.colors.destructive else Ember.colors.accentText, disabledContentColor = Ember.colors.ink2)) {
+        Text(text, style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun CloudButton(text: String, modifier: Modifier = Modifier, primary: Boolean = false, enabled: Boolean = true, destructive: Boolean = false, onClick: () -> Unit) {
+    val colors = Ember.colors
+    val outlined = !primary || Ember.style.isEink
+    Button(
+        onClick, modifier.heightIn(min = 52.dp), enabled = enabled, shape = CircleShape,
+        border = if (outlined) BorderStroke(if (Ember.style.isEink) 2.dp else 1.5.dp, if (destructive) colors.destructive else colors.chipBorder) else null,
+        elevation = null,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (outlined) Color.Transparent else colors.accent,
+            contentColor = if (destructive) colors.destructive else if (outlined) colors.ink else colors.onAccent,
+            disabledContainerColor = if (outlined) Color.Transparent else colors.track,
+            disabledContentColor = colors.ink2,
+        ),
+    ) { Text(text, style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold)) }
+}
+
+@Composable
+private fun cloudFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = Ember.colors.ink, unfocusedTextColor = Ember.colors.ink,
+    disabledTextColor = Ember.colors.ink2, errorTextColor = Ember.colors.ink,
+    cursorColor = Ember.colors.accent,
+    focusedContainerColor = Ember.colors.surface, unfocusedContainerColor = Ember.colors.surface,
+    disabledContainerColor = Ember.colors.surface, errorContainerColor = Ember.colors.surface,
+    focusedBorderColor = Ember.colors.accent, unfocusedBorderColor = Ember.colors.line,
+    disabledBorderColor = Ember.colors.line, errorBorderColor = Ember.colors.destructive,
+)
+
+@Composable
+private fun Modifier.cloudFieldOutline(isError: Boolean): Modifier = if (isError || Ember.style.isEink) {
+    border(2.dp, if (isError) Ember.colors.destructive else Ember.colors.line, RoundedCornerShape(16.dp))
+} else this
+
+@Composable
+private fun spokenStorageLabel(bytes: Long): String {
+    val label = storageLabel(bytes)
+    val unit = stringResource(when (label.substringAfterLast(' ')) {
+        "GB" -> StringRes.parrot_cloud_gigabytes
+        "MB" -> StringRes.parrot_cloud_megabytes
+        else -> StringRes.parrot_cloud_kilobytes
+    })
+    return "${label.substringBefore(' ')} $unit"
+}
+
+@Composable
+private fun accountErrorMessage(error: CloudAccountError): String = stringResource(when (error) {
+    CloudAccountError.InvalidCredentials -> StringRes.parrot_cloud_credentials_error
+    CloudAccountError.NetworkUnavailable -> StringRes.parrot_cloud_offline_sign_in
+    CloudAccountError.WeakPassword -> StringRes.parrot_cloud_weak_password
+    CloudAccountError.EmailAlreadyRegistered -> StringRes.parrot_cloud_email_registered
+    CloudAccountError.ProfileAlreadyLinked -> StringRes.cloud_account_profile_already_linked
+    CloudAccountError.NotConfigured -> StringRes.cloud_account_not_configured
+    CloudAccountError.DeleteReauthenticationRequired -> StringRes.cloud_account_delete_reauthentication_required
+    CloudAccountError.Generic -> StringRes.cloud_account_generic_error
+})
+
+@Composable
+private fun syncErrorMessage(raw: String): String = stringResource(when (syncFailureKind(raw)) {
+    SyncFailureKind.Network -> StringRes.parrot_cloud_offline_sync
+    SyncFailureKind.Timeout -> StringRes.parrot_cloud_sync_timeout
+    SyncFailureKind.Quota -> StringRes.parrot_cloud_storage_almost_full
+    SyncFailureKind.Authentication -> StringRes.parrot_cloud_sync_authentication
+    SyncFailureKind.Other -> StringRes.parrot_cloud_sync_error
+})
+
+@Composable
+private fun lastSyncLabel(timestamp: String?): String {
+    val elapsed = elapsedSyncMinutes(timestamp, Clock.System.now())
+    return when {
+        elapsed == null -> stringResource(StringRes.parrot_cloud_not_synced)
+        elapsed < 1 -> stringResource(StringRes.parrot_cloud_synced_now)
+        elapsed == 1L -> stringResource(StringRes.parrot_cloud_synced_minute)
+        elapsed < 60 -> stringResource(StringRes.parrot_cloud_synced_minutes, elapsed)
+        elapsed < 120 -> stringResource(StringRes.parrot_cloud_synced_hour)
+        elapsed < 1440 -> stringResource(StringRes.parrot_cloud_synced_hours, elapsed / 60)
+        isYesterday(timestamp!!, Clock.System.now()) -> stringResource(StringRes.parrot_cloud_synced_yesterday, localSyncTime(timestamp))
+        else -> stringResource(StringRes.parrot_cloud_synced_date, localSyncDate(timestamp))
+    }
+}
