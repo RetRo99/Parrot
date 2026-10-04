@@ -89,7 +89,10 @@ fun SavedItem.metaLine(now: Instant = Clock.System.now()): AnnotatedString {
     val rest = listOfNotNull(whereText(), agoText(createdAt, now))
     return buildAnnotatedString {
         withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Ember.colors.ink)) { append(kind) }
-        rest.forEach { part -> append(" · ").append(part) }
+        rest.forEach { part ->
+            append(" · ")
+            append(part)
+        }
     }
 }
 

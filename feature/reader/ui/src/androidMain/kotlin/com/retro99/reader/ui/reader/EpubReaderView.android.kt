@@ -24,6 +24,7 @@ import com.retro99.reader.ui.navigator.AndroidBookController
 import com.retro99.reader.ui.navigator.BookController
 import com.retro99.reader.ui.navigator.ReaderOpenTarget
 import com.retro99.reader.ui.navigator.SentenceTapJsInterface
+import com.retro99.reader.ui.navigator.SavedHighlightStyle
 import com.retro99.reader.ui.navigator.openTarget
 import com.retro99.reader.ui.navigator.readingOrderHrefs
 import com.retro99.reader.ui.navigator.toAndroidLocator
@@ -32,7 +33,6 @@ import com.retro99.reader.ui.publication.PublicationState
 import org.readium.r2.navigator.Decoration
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
-import com.retro99.reader.ui.navigator.SavedNoteMarkerStyle
 import org.readium.r2.navigator.epub.css.FontStyle
 import org.readium.r2.navigator.epub.css.FontWeight
 import org.readium.r2.navigator.html.HtmlDecorationTemplate
@@ -312,6 +312,7 @@ internal fun createUserAlphaDecorationTemplates(): HtmlDecorationTemplates {
     val cornerRadius = 3
 
     return HtmlDecorationTemplates {
+        set(SavedHighlightStyle::class, SavedHighlightStyle.template())
         set(
             Decoration.Style.Highlight::class,
             createHighlightTemplate(defaultTint, lineWeight, cornerRadius)
@@ -320,7 +321,6 @@ internal fun createUserAlphaDecorationTemplates(): HtmlDecorationTemplates {
             Decoration.Style.Underline::class,
             createUnderlineTemplate(defaultTint, lineWeight, cornerRadius)
         )
-        set(SavedNoteMarkerStyle::class, SavedNoteMarkerStyle.template())
     }
 }
 

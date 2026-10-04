@@ -21,6 +21,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.platform.LocalDensity
@@ -101,6 +104,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -130,6 +135,7 @@ import com.retro99.reader.ui.model.RelativeTime
 import com.retro99.reader.ui.model.TocItemUiModel
 import com.retro99.reader.ui.model.relativeTimeFromIso
 import com.retro99.reader.ui.model.backgroundColor
+import com.retro99.reader.ui.model.isDarkPage
 import com.retro99.reader.ui.publication.PublicationState
 import com.retro99.reader.ui.reader.ReaderViewState
 import com.retro99.reader.ui.tts.TtsVoice
@@ -221,7 +227,7 @@ internal fun ReaderOverlayContent(
     var temporaryFontScale by remember(settings.fontSize) { mutableFloatStateOf(settings.fontSize.toFloat()) }
     var readerSize by remember { mutableStateOf(IntSize.Zero) }
     val scope = rememberCoroutineScope()
-    val fontUndoState = androidx.compose.material3.SnackbarHostState()
+    val fontUndoState = remember(bookUuid) { androidx.compose.material3.SnackbarHostState() }
     val snackbarMessage = stringResource(StringRes.settings_changed)
     val undoLabel = stringResource(StringRes.settings_undo)
     val openSheet = viewState.isContentsVisible ||
@@ -368,6 +374,8 @@ internal fun ReaderOverlayContent(
     val hasBottomBar = viewState.isListening || hasBottomStrip
     var topBarPx by remember { mutableIntStateOf(0) }
     var bottomBarPx by remember { mutableIntStateOf(0) }
+    var bottomControlsTopPx by remember { mutableStateOf<Float?>(null) }
+    var readerBottomPx by remember { mutableStateOf<Float?>(null) }
     val density = LocalDensity.current
     val topInset = if (hasTopStrip) with(density) { topBarPx.toDp() } else 0.dp
     // The mini player collapses while the controls are shown; keep its height reserved so
@@ -380,7 +388,9 @@ internal fun ReaderOverlayContent(
         Modifier.fillMaxSize().background(settings.theme.backgroundColor()).statusBarsPadding(),
     ) {
         Box(
-            Modifier.fillMaxSize().padding(top = topInset, bottom = bottomInset).onSizeChanged { readerSize = it },
+            Modifier.fillMaxSize().padding(top = topInset, bottom = bottomInset)
+                .onSizeChanged { readerSize = it }
+                .onGloballyPositioned { readerBottomPx = it.boundsInRoot().bottom },
         ) {
             EpubReaderView(
                 bookUuid = bookUuid,
@@ -464,21 +474,24 @@ internal fun ReaderOverlayContent(
             if (pageBookmark != null && !searchActive) {
                 PageRibbon(
                     onClick = { onSaved(SavedAction.OpenDetail(pageBookmark.id)) },
-                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 15.dp,
+                        top = if (controlsVisible && !searchActive) 65.dp else 0.dp),
                 )
             }
             saved.selection?.let { selection ->
                 SelectionToolbar(
                     selection = selection,
                     pageTopDp = settings.marginVertical.toFloat(),
+                    bottomObstructionDp = with(density) {
+                        ((readerBottomPx ?: 0f) - (bottomControlsTopPx ?: readerBottomPx ?: 0f))
+                            .coerceAtLeast(0f).toDp().value
+                    },
+                    topObstructionDp = if (controlsVisible && !searchActive) 65f else 0f,
+                    pageBackground = settings.theme.backgroundColor(),
                     onSaved = onSaved,
                     modifier = Modifier.matchParentSize(),
                 )
             }
-            FontSizeUndoSnackbarHost(
-                hostState = fontUndoState,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
         }
 
 
@@ -524,15 +537,17 @@ internal fun ReaderOverlayContent(
             )
         }
 
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().imePadding()) {
+            ReaderMessageHost(viewState, intentDispatcher, fontUndoState)
+            Column(Modifier.fillMaxWidth().onGloballyPositioned { bottomControlsTopPx = it.boundsInRoot().top }) {
             if (searchActive && viewState.isFindBarVisible && !viewState.isBookSearchVisible) {
                 ReaderFindBar(viewState, { intentDispatcher(it) },
                     Modifier.then(if (!hasBottomBar) Modifier.navigationBarsPadding() else Modifier))
             }
             AnimatedVisibility(
                 visible = controlsVisible && !searchActive,
-                enter = if (isEink) EnterTransition.None else fadeIn() + slideInVertically { it },
-                exit = if (isEink) ExitTransition.None else fadeOut() + slideOutVertically { it },
+                enter = if (isEink) EnterTransition.None else expandVertically(expandFrom = Alignment.Bottom) + fadeIn(),
+                exit = if (isEink) ExitTransition.None else shrinkVertically(shrinkTowards = Alignment.Bottom) + fadeOut(),
                 modifier = Modifier
                     .then(
                         if (hasBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier,
@@ -579,9 +594,6 @@ internal fun ReaderOverlayContent(
                 )
             }
 
-            if (!viewState.isContentsVisible) {
-                SavedBarHost(bar = saved.bar, onSaved = onSaved)
-            }
             if (hasBottomBar) {
                 Box(
                     Modifier
@@ -619,6 +631,7 @@ internal fun ReaderOverlayContent(
                     }
                 }
             }
+            }
         }
     }
 
@@ -651,7 +664,9 @@ internal fun ReaderOverlayContent(
     ReaderSavedHost(
         saved = saved,
         onSaved = onSaved,
-        isDarkPage = settings.theme.backgroundColor().luminance() < 0.4f,
+        isDarkPage = settings.theme.isDarkPage,
+        marginHorizontalDp = settings.marginHorizontal,
+        scroll = settings.scrollMode == true,
     )
 
     if (viewState.isBookSearchVisible) {

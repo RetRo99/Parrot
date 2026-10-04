@@ -217,23 +217,18 @@ interface BookController : AutoCloseable {
     /** Runs a page script in the current chapter; the raw result, or null. */
     suspend fun runPageScript(script: String): String? = null
 
+    /** Selection bounds in navigator coordinates, including platform WebView insets. */
+    suspend fun selectionForToolbar(): PageText? = SavedPageScript.parseAnchor(runPageScript(SavedPageScript.selection()))
+
     /** Replaces every bookmark and highlight decoration. */
-    fun applySavedDecorations(decorations: List<SavedDecoration>) = Unit
+    fun applySavedDecorations(marks: List<PageMark>) = Unit
 
-    /** Ids of highlights (or note markers) the reader tapped. */
+    /** Ids of highlights the reader tapped. */
     val savedDecorationTaps: Flow<String> get() = kotlinx.coroutines.flow.emptyFlow()
-}
 
-/**
- * A highlight drawn on the page. [underline] draws a 2dp line instead of a fill (e-ink).
- * [noteLabel] adds the small "note" marker at the end of the range.
- */
-data class SavedDecoration(
-    val id: String,
-    val href: String,
-    val mediaType: String?,
-    val anchor: PageAnchor,
-    val tint: Int,
-    val underline: Boolean,
-    val noteLabel: String?,
-)
+    /**
+     * Emits when the page is rebuilt under us - a rotation recreates the navigator and with it
+     * the document the marks were drawn into, so they have to be drawn again.
+     */
+    val pageReloads: Flow<Unit> get() = kotlinx.coroutines.flow.emptyFlow()
+}

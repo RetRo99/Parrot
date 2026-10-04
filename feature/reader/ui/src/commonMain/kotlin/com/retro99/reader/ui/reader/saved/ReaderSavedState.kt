@@ -110,12 +110,8 @@ sealed interface SavedAction {
 
     data class EffectHandled(val serial: Long) : SavedAction
 
-    /** Colours and words the page decorations need, from the theme. */
-    data class UpdateDecorationStyle(
-        val tints: Map<HighlightColor, Int>,
-        val eink: Boolean,
-        val noteLabel: String,
-    ) : SavedAction
+    /** Colours and page layout the marks need, from the theme of the page itself. */
+    data class UpdateDecorationStyle(val style: SavedMarkStyle) : SavedAction
 }
 
 enum class SavedExportFormat { ShareText, CopyAll, Markdown }

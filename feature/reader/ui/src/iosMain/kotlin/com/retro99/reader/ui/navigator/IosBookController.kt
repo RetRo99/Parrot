@@ -445,20 +445,18 @@ class IosBookController(
         }
     }
 
-    override fun applySavedDecorations(decorations: List<SavedDecoration>) {
+    override fun applySavedDecorations(marks: List<PageMark>) {
         bridge.applySavedDecorations(
-            decorations.map { saved ->
+            marks.filter { mark -> mark.tappable }.map { mark ->
                 SavedDecorationLocator(
-                    id = saved.id,
-                    href = saved.href,
-                    type = saved.mediaType ?: "application/xhtml+xml",
-                    progression = saved.anchor.progression,
-                    before = saved.anchor.before,
-                    highlight = saved.anchor.quote,
-                    after = saved.anchor.after,
-                    tint = saved.tint,
-                    underline = saved.underline,
-                    noteLabel = saved.noteLabel,
+                    id = mark.id,
+                    href = mark.href,
+                    type = mark.mediaType ?: "application/xhtml+xml",
+                    progression = mark.progression,
+                    before = mark.before,
+                    highlight = mark.quote,
+                    after = mark.after,
+                    fill = mark.fill,
                 )
             },
         )

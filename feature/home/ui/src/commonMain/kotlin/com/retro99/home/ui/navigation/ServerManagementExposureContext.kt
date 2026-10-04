@@ -30,6 +30,7 @@ internal fun HomeDestination.analyticsScreenName(): String = when (this) {
     is HomeDestination.LinkPicker -> "link_picker"
     is HomeDestination.Positions -> "reading_positions"
     HomeDestination.LinkReview -> "link_review"
+    is HomeDestination.NotesHighlights -> "notes_highlights"
     is HomeDestination.SeriesDetail -> "series_detail"
     is HomeDestination.Reader -> "reader"
     HomeDestination.Settings -> "reader_settings"

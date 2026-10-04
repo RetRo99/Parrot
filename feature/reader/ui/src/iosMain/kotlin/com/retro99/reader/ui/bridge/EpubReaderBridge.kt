@@ -292,10 +292,10 @@ interface EpubReaderBridge {
     fun setOnSelectionChangedCallback(callback: ((Boolean) -> Unit)?)
     fun clearSelection()
 
-    /** Replaces every saved highlight and note marker on the page. */
+    /** Replaces every saved highlight on the page. */
     fun applySavedDecorations(decorations: List<SavedDecorationLocator>)
 
-    /** Called with a saved item's id when the reader taps its highlight or note marker. */
+    /** Called with a saved item's id when the reader taps its highlight. */
     fun setOnSavedDecorationTapCallback(callback: ((String) -> Unit)?)
 }
 
@@ -401,9 +401,7 @@ data class SavedDecorationLocator(
     val before: String?,
     val highlight: String,
     val after: String?,
-    /** ARGB, alpha included. */
-    val tint: Int,
-    val underline: Boolean,
-    /** Draws the "note" marker after the range when set. */
-    val noteLabel: String?,
+    /** Fill behind the text, ARGB, alpha included. A transparent fill (e-ink) is only there
+     *  to carry the taps: the rules and edge bars are drawn by the page script. */
+    val fill: Int,
 )

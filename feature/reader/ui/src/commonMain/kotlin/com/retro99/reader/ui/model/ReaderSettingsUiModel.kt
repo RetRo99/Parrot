@@ -276,3 +276,14 @@ fun ReaderThemeUi.backgroundColor(): Color {
         ReaderThemeUi.SYSTEM -> if (isSystemDark) DarkBackgroundColor else LightBackgroundColor
     }
 }
+
+/**
+ * Whether the book's page is actually rendered dark, which is what the page's own marks
+ * (highlight fills, note rules) have to contrast against.
+ *
+ * Only an explicit [ReaderThemeUi.DARK] is sent to the navigator as a night page: for
+ * [ReaderThemeUi.SYSTEM] it gets no preference at all and keeps the publisher's own page,
+ * which is light. [backgroundColor] is about the surface behind the page and does follow the
+ * system, so it cannot be used to pick colours drawn over the text.
+ */
+val ReaderThemeUi.isDarkPage: Boolean get() = this == ReaderThemeUi.DARK

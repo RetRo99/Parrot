@@ -71,6 +71,28 @@ select count(*) from public.cloud_book_links where cardinality(members) > 64;
   `{"uploads": true, "recap": true}`.
 - Schedule `select public.purge_cloud_retention(90);` as the service role
   (e.g. daily). It is not scheduled by the migration.
+- After the saved-items migration, schedule
+  `select public.purge_saved_item_tombstones(180);` as the service role
+  (e.g. daily, alongside cloud retention). Keep the 180-day window so offline
+  devices can receive deletes before their tombstones are removed. This job is
+  also not scheduled by the migration.
+  For pg_cron, the command must set both the database role and the JWT role
+  checked by the function:
+  ```sql
+  select cron.schedule(
+    'saved-item-tombstone-purge',
+    '30 3 * * *',
+    $$begin;
+      set local role service_role;
+      set local request.jwt.claim.role = 'service_role';
+      select public.purge_saved_item_tombstones(180);
+      commit;$$
+  );
+  ```
+  This daily job is installed on the demo project. Its migration is
+  `20261006000000_parrot_cloud_saved_items.sql`; `20261005000000` was already
+  used there by `durable_recaps`. Preserve the durable-recap migration history
+  when integrating this branch (do not repair or reset it to deploy saved items).
 - Tune the global recap cap without a deploy:
   `update public.recap_settings set value = <n> where key = 'global_daily_limit';`
   (`0` turns recaps off for everyone).

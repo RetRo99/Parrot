@@ -55,6 +55,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
@@ -346,25 +349,6 @@ private fun ReaderScreenContent(
             )
         }
 
-        NoAudioSnackbar(
-            showMessage = viewState.showNoAudioMessage,
-            onDismiss = { intentDispatcher(ReaderIntent.DismissNoAudioMessage) },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
-
-        TtsPlaybackFailedSnackbar(
-            showMessage = viewState.showTtsPlaybackFailed,
-            onRetry = { intentDispatcher(ReaderIntent.RetryTtsPlayback) },
-            onDismiss = { intentDispatcher(ReaderIntent.DismissTtsPlaybackFailed) },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
-
-
-        PositionSaveFailedSnackbar(
-            showMessage = viewState.showPositionSaveFailed,
-            onRetry = { intentDispatcher(ReaderIntent.RetryPositionSave) },
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
 
 
 
@@ -393,9 +377,8 @@ private fun ReaderScreenContent(
 private fun NoAudioSnackbar(
     showMessage: Boolean,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState,
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val noAudioMessage = stringResource(StringRes.reader_readaloud_no_audio)
 
     LaunchedEffect(showMessage) {
@@ -408,10 +391,6 @@ private fun NoAudioSnackbar(
         }
     }
 
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = modifier,
-    )
 }
 
 @Composable
@@ -419,9 +398,8 @@ private fun TtsPlaybackFailedSnackbar(
     showMessage: Boolean,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState,
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val message = stringResource(StringRes.reader_tts_playback_failed)
     val retryLabel = stringResource(StringRes.reader_tts_playback_retry)
 
@@ -438,10 +416,6 @@ private fun TtsPlaybackFailedSnackbar(
         }
     }
 
-    SnackbarHost(
-        hostState = snackbarHostState,
-        modifier = modifier,
-    )
 }
 
 
@@ -459,6 +433,37 @@ private fun PositionSaveFailedSnackbar(
         modifier = modifier,
         action = { TextButton(onClick = onRetry) { Text(retryLabel) } },
     ) { Text(message) }
+}
+
+/** All reader messages share the overlay's panel-aware slot; no independent bottom anchors. */
+@Composable
+internal fun ReaderMessageHost(
+    viewState: ReaderViewState,
+    dispatch: IntentDispatcher<ReaderIntent>,
+    hostState: SnackbarHostState,
+) {
+    NoAudioSnackbar(viewState.showNoAudioMessage, { dispatch(ReaderIntent.DismissNoAudioMessage) }, hostState)
+    TtsPlaybackFailedSnackbar(viewState.showTtsPlaybackFailed, { dispatch(ReaderIntent.RetryTtsPlayback) },
+        { dispatch(ReaderIntent.DismissTtsPlaybackFailed) }, hostState)
+    val surface = Ember.colors.surface
+    // Keep the 8dp joining gap clear of page text, including during panel expansion.
+    Box(Modifier.drawBehind {
+        val gap = minOf(8.dp.toPx(), size.height)
+        drawRect(surface, topLeft = Offset(0f, size.height - gap), size = Size(size.width, gap))
+    }) {
+        when {
+            !viewState.isContentsVisible && viewState.saved.bar != null ->
+                com.retro99.reader.ui.reader.saved.SavedBarHost(viewState.saved.bar, { dispatch(ReaderIntent.Saved(it)) })
+            viewState.showPositionSaveFailed -> PositionSaveFailedSnackbar(true, { dispatch(ReaderIntent.RetryPositionSave) },
+                Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            Ember.style.isEink -> hostState.currentSnackbarData?.let {
+                Snackbar(it, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            }
+            else -> if (hostState.currentSnackbarData != null) {
+                FontSizeUndoSnackbarHost(hostState, Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            }
+        }
+    }
 }
 
 

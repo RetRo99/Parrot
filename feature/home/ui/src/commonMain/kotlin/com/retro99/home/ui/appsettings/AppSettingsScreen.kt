@@ -137,6 +137,8 @@ import resources.translations.app_settings_open_last_book
 import resources.translations.app_settings_reader_settings
 import resources.translations.app_settings_servers
 import resources.translations.app_settings_sync_backup
+import resources.translations.saved_library_entry
+import resources.translations.saved_library_entry_body
 
 private val PREVIEW_COVER_COLOR = Color(0xFF3D4A2E)
 private val AVATAR_SIZE = 56.dp
@@ -147,6 +149,7 @@ fun AppSettingsScreen(
     onNavigateToSyncAndBackup: () -> Unit,
     onNavigateToReaderSettings: () -> Unit,
     onNavigateToDiagnostics: () -> Unit,
+    onNavigateToNotesHighlights: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AppSettingsViewModel = koinViewModel(),
 ) {
@@ -160,6 +163,7 @@ fun AppSettingsScreen(
             onNavigateToSyncAndBackup = onNavigateToSyncAndBackup,
             onNavigateToReaderSettings = onNavigateToReaderSettings,
             onNavigateToDiagnostics = onNavigateToDiagnostics,
+            onNavigateToNotesHighlights = onNavigateToNotesHighlights,
             intentDispatcher = intentDispatcher,
         )
     }
@@ -172,6 +176,7 @@ private fun AppSettingsScreenContent(
     onNavigateToSyncAndBackup: () -> Unit,
     onNavigateToReaderSettings: () -> Unit,
     onNavigateToDiagnostics: () -> Unit,
+    onNavigateToNotesHighlights: () -> Unit,
     intentDispatcher: IntentDispatcher<AppSettingsIntent>,
     modifier: Modifier = Modifier,
     buildConfig: BuildConfig = koinInject(),
@@ -321,6 +326,14 @@ private fun AppSettingsScreenContent(
 
             EmberSectionHeader(text = stringResource(StringRes.settings_section_library_sync))
             EmberGroupCard {
+                EmberSettingRow(
+                    title = stringResource(StringRes.saved_library_entry),
+                    subtitle = stringResource(StringRes.saved_library_entry_body),
+                    icon = Icons.Outlined.Edit,
+                    onClick = onNavigateToNotesHighlights,
+                    trailing = { EmberChevron() },
+                )
+                EmberRowDivider()
                 EmberSettingRow(
                     title = stringResource(StringRes.app_settings_servers),
                     subtitle = if (viewState.serverNames.isEmpty()) {

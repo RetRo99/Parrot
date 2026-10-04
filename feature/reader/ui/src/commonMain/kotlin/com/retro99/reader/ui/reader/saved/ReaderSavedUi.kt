@@ -11,26 +11,24 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -38,6 +36,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.base.ui.compose.Ember
@@ -60,7 +64,6 @@ import resources.translations.saved_bar_highlight_removed
 import resources.translations.saved_bar_highlighted
 import resources.translations.saved_bar_undo
 import resources.translations.saved_copy
-import resources.translations.saved_note_marker
 import resources.translations.saved_ribbon_a11y
 import resources.translations.saved_search
 import resources.translations.saved_select_highlight
@@ -68,6 +71,16 @@ import resources.translations.saved_select_note
 import resources.translations.saved_share
 import resources.translations.saved_too_long
 import kotlin.math.roundToInt
+
+/** Page highlight fills, independent of the profile/chrome theme. */
+private val ReaderDayHighlights = com.retro99.base.ui.compose.EmberDayHighlights.let { palette ->
+    palette.copy(
+        amber = palette.amber.copy(fill = Color(0xFFFBE3A6)),
+        rose = palette.rose.copy(fill = Color(0xFFF8CFCB)),
+        sage = palette.sage.copy(fill = Color(0xFFD3E6C4)),
+        sky = palette.sky.copy(fill = Color(0xFFCCE0F2)),
+    )
+}
 
 /** "Bookmarked · Add note · Undo", "Bookmark removed · Undo", or a refusal. */
 @Composable
@@ -119,12 +132,12 @@ internal fun PageRibbon(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val description = stringResource(StringRes.saved_ribbon_a11y)
     Box(
         modifier
-            .size(width = 44.dp, height = 72.dp)
+            .size(width = 44.dp, height = 44.dp)
             .clickable(role = Role.Button, onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.TopCenter,
     ) {
-        Box(Modifier.size(width = 28.dp, height = 44.dp).clip(RibbonShape).background(color))
+        Box(Modifier.size(width = 22.dp, height = 38.dp).clip(RibbonShape).background(color))
     }
 }
 
@@ -148,6 +161,9 @@ private val RibbonShape = GenericShape { size, _ ->
 internal fun SelectionToolbar(
     selection: ReaderTextSelection,
     pageTopDp: Float,
+    bottomObstructionDp: Float,
+    topObstructionDp: Float,
+    pageBackground: Color,
     onSaved: (SavedAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -155,31 +171,34 @@ internal fun SelectionToolbar(
     val eink = Ember.style.isEink
     val rect = selection.text.rect ?: return
     val density = LocalDensity.current
-    var toolbarHeight by remember { mutableIntStateOf(0) }
     BoxWithConstraints(modifier) {
-        val containerPx = constraints.maxHeight
-        val gapPx = with(density) { 10.dp.roundToPx() }
-        val topPx = with(density) { (pageTopDp + rect.top.toFloat()).dp.roundToPx() }
-        val bottomPx = with(density) { (pageTopDp + rect.bottom.toFloat()).dp.roundToPx() }
-        val below = bottomPx + gapPx
-        val y = when {
-            below + toolbarHeight <= containerPx -> below
-            topPx - gapPx - toolbarHeight >= 0 -> topPx - gapPx - toolbarHeight
-            else -> (containerPx - toolbarHeight).coerceAtLeast(0)
+        val scale = selection.text.viewport?.width?.takeIf { it > 0 }?.let { constraints.maxWidth / it }
+            ?: density.density.toDouble()
+        val pageTopPx = with(density) { pageTopDp.dp.roundToPx() }
+        val topPx = pageTopPx + (rect.top * scale).roundToInt()
+        val bottomPx = pageTopPx + (rect.bottom * scale).roundToInt()
+        val availableTop = with(density) { topObstructionDp.dp.roundToPx() }
+        val availableBottom = constraints.maxHeight - with(density) { bottomObstructionDp.dp.roundToPx() }
+        val aboveGap = with(density) { 12.dp.roundToPx() }
+        val belowGap = with(density) { 32.dp.roundToPx() }
+        val position = object : PopupPositionProvider {
+            override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset {
+                val y = selectionToolbarY(topPx, bottomPx, popupContentSize.height, availableTop,
+                    minOf(availableBottom, windowSize.height - anchorBounds.top), aboveGap, belowGap)
+                return IntOffset(anchorBounds.left + (anchorBounds.width - popupContentSize.width) / 2, anchorBounds.top + y)
+            }
         }
+        Popup(popupPositionProvider = position, properties = PopupProperties(focusable = false)) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = colors.surface,
             shadowElevation = if (eink) 0.dp else 12.dp,
             border = if (eink) androidx.compose.foundation.BorderStroke(2.dp, colors.ink) else null,
             modifier = Modifier
-                .offset { IntOffset(0, y) }
                 .padding(horizontal = 16.dp)
-                .widthIn(max = 480.dp)
-                .fillMaxWidth()
-                .onSizeChanged { size -> toolbarHeight = size.height },
+                .width(minOf(maxWidth, 480.dp)),
         ) {
-            Column(Modifier.padding(10.dp)) {
+            Column(Modifier.padding(8.dp)) {
                 Row(
                     Modifier.fillMaxWidth().padding(start = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -199,12 +218,14 @@ internal fun SelectionToolbar(
                             fontSize = 15.sp,
                             modifier = Modifier.weight(1f),
                         )
-                        HighlightColorDots(selected = null, onSelect = { color -> onSaved(SavedAction.Highlight(color)) })
+                        HighlightColorDots(selected = null, onSelect = { color -> onSaved(SavedAction.Highlight(color)) },
+                            palette = if (pageBackground.luminance() < 0.4f) com.retro99.base.ui.compose.EmberNightHighlights else ReaderDayHighlights,
+                            compact = true, pageBackground = pageBackground)
                     }
                 }
                 Row(
                     Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     ToolbarButton(stringResource(StringRes.saved_select_note), { onSaved(SavedAction.NoteSelection) }, Modifier.weight(1f))
                     ToolbarButton(stringResource(StringRes.saved_copy), { onSaved(SavedAction.CopySelection) }, Modifier.weight(1f))
@@ -213,47 +234,65 @@ internal fun SelectionToolbar(
                 }
             }
         }
+        }
     }
+}
+
+/** Coordinates are relative to the page overlay; full-page selections fall back to its foot. */
+internal fun selectionToolbarY(top: Int, bottom: Int, height: Int, availableTop: Int, availableBottom: Int, aboveGap: Int, belowGap: Int): Int = when {
+    bottom + belowGap >= availableTop && bottom + belowGap + height <= availableBottom -> bottom + belowGap
+    top - aboveGap - height >= availableTop && top - aboveGap <= availableBottom -> top - aboveGap - height
+    else -> (availableBottom - height).coerceAtLeast(availableTop)
 }
 
 @Composable
 private fun ToolbarButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = Ember.colors
     val eink = Ember.style.isEink
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(14.dp)
     Box(
         modifier
-            .heightIn(min = 48.dp)
+            .height(48.dp)
             .clip(shape)
-            .background(if (eink) Color.Transparent else colors.chip)
+            .background(colors.bg)
             .then(if (eink) Modifier.border(2.dp, colors.ink, shape) else Modifier)
             .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = colors.ink, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1)
+        Text(label, color = colors.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
     }
 }
 
-/** Detail, note and export sheets, the clipboard, and the page decoration colours. */
+/** Detail, note and export sheets, the clipboard, and the colours the page marks are drawn in. */
 @Suppress("DEPRECATION")
 @Composable
 internal fun ReaderSavedHost(
     saved: ReaderSavedState,
     onSaved: (SavedAction) -> Unit,
     isDarkPage: Boolean,
+    marginHorizontalDp: Int,
+    scroll: Boolean,
 ) {
     val eink = Ember.style.isEink
-    val palette = if (isDarkPage) com.retro99.base.ui.compose.EmberNightHighlights else com.retro99.base.ui.compose.EmberDayHighlights
-    val noteLabel = stringResource(StringRes.saved_note_marker)
-    LaunchedEffect(palette, eink, noteLabel) {
-        onSaved(
-            SavedAction.UpdateDecorationStyle(
-                tints = HighlightColor.entries.associateWith { color -> palette.of(color).fill.toArgb() },
-                eink = eink,
-                noteLabel = noteLabel,
-            ),
-        )
+    val palette = if (isDarkPage) com.retro99.base.ui.compose.EmberNightHighlights else ReaderDayHighlights
+    // The rules take their tone from the page, so a dark page never gets a dark rule.
+    val style = SavedMarkStyle(
+        fills = HighlightColor.entries.associateWith { color ->
+            (if (eink) Color.Transparent else palette.of(color).fill).toArgb()
+        },
+        rules = HighlightColor.entries.associateWith { color ->
+            (if (eink) Color.Black else palette.of(color).line).toArgb()
+        },
+        eink = eink,
+        // The bar is the accent, matching the ribbon; e-ink has only black.
+        barColor = (if (eink) Color.Black else Ember.colors.accent).toArgb(),
+        marginLeftDp = marginHorizontalDp,
+        marginRightDp = marginHorizontalDp,
+        scroll = scroll,
+    )
+    LaunchedEffect(style) {
+        onSaved(SavedAction.UpdateDecorationStyle(style))
     }
 
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current

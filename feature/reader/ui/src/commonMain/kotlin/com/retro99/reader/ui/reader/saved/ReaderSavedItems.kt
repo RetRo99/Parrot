@@ -6,8 +6,8 @@ import com.retro99.reader.domain.usecase.SavedBookIdentity
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.navigator.BookController
 import com.retro99.reader.ui.navigator.PageAnchor
+import com.retro99.reader.ui.navigator.PageMark
 import com.retro99.reader.ui.navigator.PageText
-import com.retro99.reader.ui.navigator.SavedDecoration
 import com.retro99.reader.ui.navigator.SavedPageScript
 import com.retro99.reader.ui.reader.ReaderSearchResult
 import com.retro99.saved.domain.HighlightMerger
@@ -91,7 +91,7 @@ internal class ReaderSavedItems(
     private var identity: SavedBookIdentity? = null
     private var serverId = ""
     private var bookUuid = ""
-    private var decorationStyle: SavedAction.UpdateDecorationStyle? = null
+    private var decorationStyle: SavedMarkStyle? = null
     private var pageJob: Job? = null
     private var selectionPollJob: Job? = null
     private var barJob: Job? = null
@@ -136,6 +136,7 @@ internal class ReaderSavedItems(
             }
         }
         scope.launch { bookController().savedDecorationTaps.collect { id -> openDetail(id) } }
+        scope.launch { bookController().pageReloads.collect { refreshDecorations() } }
     }
 
     fun handle(action: SavedAction) {
@@ -184,8 +185,8 @@ internal class ReaderSavedItems(
             is SavedAction.EffectHandled -> update { saved ->
                 if (saved.effect?.serial == action.serial) saved.copy(effect = null) else saved
             }
-            is SavedAction.UpdateDecorationStyle -> if (action != decorationStyle) {
-                decorationStyle = action
+            is SavedAction.UpdateDecorationStyle -> if (action.style != decorationStyle) {
+                decorationStyle = action.style
                 refreshDecorations()
                 scope.launch { applySelectionStyle() }
             }
@@ -276,7 +277,7 @@ internal class ReaderSavedItems(
 
     private suspend fun readSelection() {
         val position = context().position ?: return
-        val text = SavedPageScript.parseAnchor(bookController().runPageScript(SavedPageScript.selection()))
+        val text = bookController().selectionForToolbar()
         update { it.copy(selection = text?.let { selection -> ReaderTextSelection(position.href, position.type, selection) }) }
         if (text != null) watchSelection()
     }
@@ -287,8 +288,10 @@ internal class ReaderSavedItems(
         selectionPollJob = scope.launch {
             while (state().selection != null) {
                 delay(SELECTION_POLL_MS)
-                val raw = bookController().runPageScript(SavedPageScript.selection())
-                if (SavedPageScript.parseAnchor(raw) == null) update { it.copy(selection = null) }
+                val text = bookController().selectionForToolbar()
+                update { saved -> saved.copy(selection = saved.selection?.let { current ->
+                    text?.let { current.copy(text = it) }
+                }) }
             }
         }
     }
@@ -322,7 +325,7 @@ internal class ReaderSavedItems(
             } else {
                 SavedPageScript.parseAnchor(
                     bookController().runPageScript(
-                        SavedPageScript.merge(selection.text.toPageAnchor(), existing.map { item -> item.toPageAnchor() }),
+                        SavedPageScript.merge(selection.text.toPageAnchor(), existing.mapNotNull { item -> item.toPageAnchor() }),
                     ),
                 )
             }
@@ -449,34 +452,30 @@ internal class ReaderSavedItems(
 
     private fun refreshDecorations() {
         val style = decorationStyle ?: return
-        val decorations = state().items.mapNotNull { item ->
-            val anchor = item.toPageAnchor() ?: return@mapNotNull null
-            if (item.type != SavedItemType.Highlight && !item.hasNote) return@mapNotNull null
-            val isHighlight = item.type == SavedItemType.Highlight
-            SavedDecoration(
-                id = item.id,
-                href = item.location.href,
-                mediaType = item.location.mediaType,
-                anchor = anchor,
-                tint = if (isHighlight) style.tints[item.color ?: HighlightColor.Default] ?: 0 else 0,
-                underline = style.eink && isHighlight,
-                noteLabel = style.noteLabel.takeIf { item.hasNote },
-            )
-        }
-        bookController().applySavedDecorations(decorations)
+        val marks = SavedMarks.marks(state().items, style)
+        bookController().applySavedDecorations(marks)
+        scope.launch { drawMarks(marks, style) }
+    }
+
+    /**
+     * Draws the rules and the edge bars for [marks], and learns which of them start on the
+     * page being shown.
+     */
+    private suspend fun drawMarks(marks: List<PageMark>, style: SavedMarkStyle) {
+        if (marks.isEmpty()) return
+        val raw = bookController().runPageScript(SavedPageScript.page(marks, style.options()))
+        val ids = SavedPageScript.parseIds(raw).toSet()
+        update { saved -> if (saved.onPageIds == ids) saved else saved.copy(onPageIds = ids) }
     }
 
     private suspend fun refreshPage() {
         val position = context().position ?: return
         val inChapter = state().items.filter { item -> item.location.href.sameResource(position.href) }
         resolveSnippets(inChapter.filter { item -> item.snippetPending && item.anchor == null })
-        val anchors = inChapter.mapNotNull { item -> item.toPageAnchor() }
-        val ids = if (anchors.isEmpty()) {
-            emptySet()
-        } else {
-            SavedPageScript.parseIds(bookController().runPageScript(SavedPageScript.onPage(anchors))).toSet()
-        }
-        update { saved -> if (saved.onPageIds == ids) saved else saved.copy(onPageIds = ids) }
+        // A different chapter (or a reflow) needs the marks drawn again. Nothing is drawn
+        // until the theme has said what colour they are: drawing earlier would paint them
+        // transparent and wipe the ones already on the page.
+        if (decorationStyle != null) refreshDecorations()
     }
 
     /** Bookmarks from before sentences were kept get theirs the first time their chapter is open. */
@@ -617,7 +616,7 @@ internal class ReaderSavedItems(
 
     private companion object {
         const val SELECTION_SETTLE_MS = 150L
-        const val SELECTION_POLL_MS = 700L
+        const val SELECTION_POLL_MS = 80L
         const val PAGE_SETTLE_MS = 250L
         const val BAR_VISIBLE_MS = 5_000L
         const val SEARCH_MAX_CHARS = 120

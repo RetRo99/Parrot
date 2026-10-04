@@ -55,7 +55,7 @@ class SavedItemsDataRepositoryTest {
     }
 
     @Test
-    fun `delete leaves a tombstone, queues a delete and returns the item for undo`() = runTest {
+    fun `delete leaves a tombstone and queues a delete and returns the item for undo`() = runTest {
         // Given
         repository.save(listOf(highlight()))
 

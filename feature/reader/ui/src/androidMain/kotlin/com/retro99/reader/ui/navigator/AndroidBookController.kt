@@ -45,6 +45,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.readium.r2.shared.ExperimentalReadiumApi
 import org.koin.core.annotation.Scope
 import org.koin.core.annotation.Scoped
@@ -67,9 +70,8 @@ import org.readium.r2.shared.util.mediatype.MediaType
 /** Decoration group name for ReadAloud text highlighting */
 private const val READALOUD_DECORATION_GROUP = "readaloud"
 
-/** Saved highlights, and the "note" markers drawn after highlights that have notes. */
+/** Saved highlights: the fill behind the text, and the tap target for its detail sheet. */
 private const val SAVED_DECORATION_GROUP = "saved"
-private const val SAVED_NOTE_DECORATION_GROUP = "saved-notes"
 
 /**
  * Android implementation of [BookController] using Readium's EpubNavigatorFragment.
@@ -205,14 +207,20 @@ class AndroidBookController internal constructor() : BookController {
         publication: Publication,
         hasMediaOverlays: Boolean = false,
     ) {
+        // The reader's DI scope can outlive its Android view (rotation or font reload).
+        // close() cancels the old view's jobs; the replacement needs a live scope again.
+        if (!controllerScope.isActive) {
+            controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        }
         if (_navigator.value !== navigator) {
             navigator.addDecorationListener(SAVED_DECORATION_GROUP, savedDecorationListener)
-            navigator.addDecorationListener(SAVED_NOTE_DECORATION_GROUP, savedDecorationListener)
         }
         _navigator.value = navigator
         this.publication = publication
         this.hasMediaOverlays = hasMediaOverlays
         if (savedDecorations.isNotEmpty()) applySavedDecorations(savedDecorations)
+        // A new navigator means a new document: whatever was drawn into the old one is gone.
+        _pageReloads.tryEmit(Unit)
 
         // Execute any pending actions that were queued before initialization
         executePendingActions(navigator)
@@ -794,11 +802,15 @@ class AndroidBookController internal constructor() : BookController {
     private val _savedDecorationTaps = MutableSharedFlow<String>(extraBufferCapacity = 4)
     override val savedDecorationTaps: Flow<String> = _savedDecorationTaps.asSharedFlow()
 
-    private var savedDecorations: List<SavedDecoration> = emptyList()
+    private var savedDecorations: List<PageMark> = emptyList()
+    private val savedDecorationMutex = Mutex()
+
+    private val _pageReloads = MutableSharedFlow<Unit>(replay = 1, extraBufferCapacity = 1)
+    override val pageReloads: Flow<Unit> = _pageReloads.asSharedFlow()
 
     private val savedDecorationListener = object : DecorableNavigator.Listener {
         override fun onDecorationActivated(event: DecorableNavigator.OnActivatedEvent): Boolean {
-            _savedDecorationTaps.tryEmit(event.decoration.id.removeSuffix(NOTE_MARKER_SUFFIX))
+            _savedDecorationTaps.tryEmit(event.decoration.id)
             return true
         }
     }
@@ -840,53 +852,72 @@ class AndroidBookController internal constructor() : BookController {
     override suspend fun runPageScript(script: String): String? =
         withNavigatorOrNull { nav -> nav.evaluateJavascript(script) }
 
-    override fun applySavedDecorations(decorations: List<SavedDecoration>) {
-        savedDecorations = decorations
-        val highlights = decorations.mapNotNull { saved ->
-            val locator = saved.toLocator() ?: return@mapNotNull null
-            Decoration(
-                id = saved.id,
-                locator = locator,
-                style = if (saved.underline) {
-                    Decoration.Style.Underline(tint = saved.tint)
-                } else {
-                    Decoration.Style.Highlight(tint = saved.tint)
-                },
-            )
+    override suspend fun selectionForToolbar(): PageText? = withNavigatorOrNull { nav ->
+        val text = SavedPageScript.parseAnchor(nav.evaluateJavascript(SavedPageScript.selection())) ?: return@withNavigatorOrNull null
+        val rect = text.rect ?: return@withNavigatorOrNull text
+        val root = nav.view ?: return@withNavigatorOrNull text
+        val rootLocation = IntArray(2).also(root::getLocationOnScreen)
+        fun visibleWebView(view: android.view.View): android.webkit.WebView? {
+            if (view is android.webkit.WebView) {
+                val location = IntArray(2).also(view::getLocationOnScreen)
+                if (location[0] < rootLocation[0] + root.width && location[0] + view.width > rootLocation[0]) return view
+            }
+            if (view is android.view.ViewGroup) {
+                for (i in 0 until view.childCount) visibleWebView(view.getChildAt(i))?.let { return it }
+            }
+            return null
         }
-        val notes = decorations.mapNotNull { saved ->
-            val label = saved.noteLabel ?: return@mapNotNull null
-            val locator = saved.toLocator() ?: return@mapNotNull null
+        val webView = visibleWebView(root) ?: return@withNavigatorOrNull text
+        val location = IntArray(2).also(webView::getLocationOnScreen)
+        val density = root.resources.displayMetrics.density.toDouble()
+        val scale = webView.width / (text.viewport?.width ?: (webView.width / density))
+        val x = (location[0] - rootLocation[0]) / density
+        val y = (location[1] - rootLocation[1]) / density
+        text.copy(
+            rect = PageRect(x + rect.left * scale / density, y + rect.top * scale / density,
+                x + rect.right * scale / density, y + rect.bottom * scale / density),
+            viewport = PageSize(root.width / density, root.height / density),
+        )
+    }
+
+    /**
+     * The fill behind each highlight, which also carries the taps on its detail sheet. On
+     * e-ink the fill is transparent: the rules are drawn by [SavedPageScript], and the
+     * decoration is there only so the range can be tapped.
+     */
+    override fun applySavedDecorations(marks: List<PageMark>) {
+        savedDecorations = marks
+        val decorations = marks.mapNotNull { mark ->
+            if (!mark.tappable) return@mapNotNull null
+            val locator = mark.toLocator() ?: return@mapNotNull null
             Decoration(
-                id = saved.id + NOTE_MARKER_SUFFIX,
+                id = mark.id,
                 locator = locator,
-                style = SavedNoteMarkerStyle(label = label, tint = saved.noteTint()),
+                style = SavedHighlightStyle(tint = mark.fill),
             )
         }
         controllerScope.launch {
-            withNavigatorOrNull { nav ->
-                nav.applyDecorations(highlights, SAVED_DECORATION_GROUP)
-                nav.applyDecorations(notes, SAVED_NOTE_DECORATION_GROUP)
+            savedDecorationMutex.withLock {
+                withNavigatorOrNull { nav ->
+                    nav.applyDecorations(decorations, SAVED_DECORATION_GROUP)
+                }
             }
         }
     }
 
-    private fun SavedDecoration.toLocator(): Locator? {
+    private fun PageMark.toLocator(): Locator? {
         val url = Url(href) ?: return null
         return Locator(
             href = url,
             mediaType = mediaType?.let { type -> MediaType(type) } ?: MediaType.XHTML,
-            locations = Locator.Locations(progression = anchor.progression),
+            locations = Locator.Locations(progression = progression),
             text = Locator.Text(
-                before = anchor.before,
-                highlight = anchor.quote,
-                after = anchor.after,
+                before = before,
+                highlight = quote,
+                after = after,
             ),
         )
     }
-
-    /** The marker uses the text colour of the theme over an opaque highlight hue. */
-    private fun SavedDecoration.noteTint(): Int = if (underline) android.graphics.Color.BLACK else (tint or 0xFF000000.toInt())
 
     override fun close() {
         pendingPageTurnJob?.cancel()
@@ -902,8 +933,6 @@ class AndroidBookController internal constructor() : BookController {
     }
 
     private companion object Companion {
-        private const val NOTE_MARKER_SUFFIX = "#note"
-
         /** Minimum delay before page turn to avoid jarring transitions */
         private const val MIN_PAGE_TURN_DELAY_MS = 200L
 

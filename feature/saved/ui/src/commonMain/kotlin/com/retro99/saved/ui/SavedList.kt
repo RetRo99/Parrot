@@ -72,6 +72,7 @@ import resources.translations.saved_filter_bookmarks
 import resources.translations.saved_filter_highlights
 import resources.translations.saved_filter_notes
 import resources.translations.saved_note_label
+import resources.translations.saved_no_matching_items
 import resources.translations.saved_sync_offline
 import resources.translations.saved_sync_sign_in
 import resources.translations.saved_sync_synced
@@ -98,6 +99,7 @@ fun SavedBookList(
     quoteFont: FontFamily? = null,
     /** Shown in the empty state; null hides the button (e.g. outside the reader). */
     onBookmarkThisPage: (() -> Unit)? = null,
+    query: String = "",
 ) {
     if (items.isEmpty()) {
         Column(modifier) {
@@ -106,13 +108,27 @@ fun SavedBookList(
         }
         return
     }
-    val visible = items.filter(filter::matches)
+    val needle = query.trim()
+    val visible = items.filter { item ->
+        filter.matches(item) && (needle.isEmpty() ||
+            item.text?.contains(needle, ignoreCase = true) == true ||
+            item.note?.contains(needle, ignoreCase = true) == true ||
+            item.location.chapterTitle?.contains(needle, ignoreCase = true) == true)
+    }
     val untitled = savedExportLabels().untitledChapter
     val groups = SavedItemsExport.groupByChapter(visible, SavedItemsExport.Labels("", "", "", "", untitled))
     val now = Clock.System.now()
     Column(modifier) {
         SavedFilterChips(filter, onFilter, Modifier.padding(horizontal = 24.dp, vertical = 6.dp))
         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+            if (visible.isEmpty()) item {
+                Text(
+                    text = stringResource(StringRes.saved_no_matching_items),
+                    color = Ember.colors.ink2,
+                    style = Ember.type.meta,
+                    modifier = Modifier.padding(24.dp),
+                )
+            }
             groups.forEachIndexed { index, (chapter, chapterItems) ->
                 chapterHeader(index, chapter)
                 items(chapterItems, key = { item -> item.id }) { item ->

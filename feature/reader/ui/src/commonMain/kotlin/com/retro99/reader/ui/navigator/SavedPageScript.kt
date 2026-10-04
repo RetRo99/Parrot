@@ -39,9 +39,15 @@ object SavedPageScript {
     fun elementSentence(elementId: String): String =
         call("elementSentence", json.encodeToString(String.serializer(), elementId))
 
-    /** Which of [anchors] start on the current page. */
-    fun onPage(anchors: List<PageAnchor>): String =
-        call("onPage", json.encodeToString(ListSerializer(PageAnchor.serializer()), anchors))
+    /**
+     * Draws the marks for [marks] and returns the ids of the ones whose text starts on the
+     * current page. See [PageMark] for what is drawn.
+     */
+    fun page(marks: List<PageMark>, options: PageMarkOptions): String = call(
+        "page",
+        json.encodeToString(ListSerializer(PageMark.serializer()), marks),
+        json.encodeToString(PageMarkOptions.serializer(), options),
+    )
 
     /** Highlights [selection] overlaps or touches, with the text of the combined range. */
     fun merge(selection: PageAnchor, highlights: List<PageAnchor>): String = call(
@@ -397,17 +403,6 @@ object SavedPageScript {
         return capped(anchorOf(index, start, end));
     };
 
-    // Ids of anchors whose first character is on the current page.
-    P.onPage = function(anchors) {
-        var index = buildIndex();
-        var ids = [];
-        for (var i = 0; i < anchors.length; i++) {
-            var found = resolve(index, anchors[i]);
-            if (found && offsetVisible(index, found.start)) ids.push(anchors[i].id);
-        }
-        return ids;
-    };
-
     // Overlapping, or separated only by whitespace (two sentences side by side).
     function touches(text, r, start, end) {
         if (r.start <= end && r.end >= start) return true;
@@ -450,14 +445,278 @@ object SavedPageScript {
     P.setSelectionStyle = function(eink) {
         var id = 'parrot-selection-style';
         var style = document.getElementById(id);
-        if (!eink) { if (style) style.remove(); return true; }
         if (!style) {
             style = document.createElement('style');
             style.id = id;
             (document.head || document.documentElement).appendChild(style);
         }
-        style.textContent = '::selection { background: #000 !important; color: #fff !important; }';
+        style.textContent = eink
+            ? '::selection { background: #000 !important; color: #fff !important; }'
+            : '::selection { background: rgba(181, 88, 29, 0.32) !important; }';
         return true;
+    };
+
+    // ---- Marks: the rules under a highlight and the bars at the edge of the page ----
+    // Everything here is a fixed number of dp (CSS px are dp in both WebViews), so nothing
+    // grows with the book font. The marks live in their own layer over the page and are
+    // never part of the book's text: the page cannot reflow around them and they take no
+    // taps, so a tap near the edge still turns the page.
+
+    var metricCache = {};
+
+    // An ARGB int as CSS, keeping its own alpha.
+    function css(argb) {
+        var v = argb | 0;
+        var a = Math.round(((v >>> 24) & 255) * 1000 / 255) / 1000;
+        return 'rgba(' + ((v >>> 16) & 255) + ',' + ((v >>> 8) & 255) + ',' + (v & 255) + ',' + a + ')';
+    }
+
+    function markHost() {
+        var host = document.getElementById('parrot-marks');
+        if (!host) {
+            host = document.createElement('div');
+            host.id = 'parrot-marks';
+            host.setAttribute('aria-hidden', 'true');
+            (document.body || document.documentElement).appendChild(host);
+        }
+        host.style.cssText = 'position:absolute;left:0;top:0;width:0;height:0;overflow:visible;' +
+            'margin:0;padding:0;border:0;pointer-events:none;z-index:1;';
+        while (host.firstChild) host.removeChild(host.firstChild);
+        return host;
+    }
+
+    function markBox(host, x, y, w, h, radius, color) {
+        x = Number(x); y = Number(y); w = Number(w); h = Number(h); radius = Number(radius);
+        if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h)) return;
+        if (!(w > 0) || !(h > 0)) return;
+        var el = document.createElement('div');
+        // ReadiumCSS paints every element transparent once a page colour is set, and its
+        // !important beats a plain inline declaration - so this one has to be !important too.
+        // Set per property: one bad value in a cssText makes the rest of it get dropped.
+        var st = el.style;
+        st.setProperty('position', 'absolute');
+        st.setProperty('box-sizing', 'border-box');
+        st.setProperty('margin', '0');
+        st.setProperty('padding', '0');
+        st.setProperty('border', '0');
+        st.setProperty('pointer-events', 'none');
+        st.setProperty('left', x + 'px');
+        st.setProperty('top', y + 'px');
+        st.setProperty('width', w + 'px');
+        st.setProperty('height', h + 'px');
+        // ReadiumCSS gives every div `max-width: 100%`, and the marks' host is zero-width so
+        // that it cannot affect the page's layout - which would clamp every mark to no width.
+        st.setProperty('max-width', 'none', 'important');
+        st.setProperty('max-height', 'none', 'important');
+        st.setProperty('border-radius', radius + 'px');
+        st.setProperty('background-color', color, 'important');
+        host.appendChild(el);
+    }
+
+    // How many pages sit side by side, and how wide each one is. Readium fills one "column"
+    // per page, so this is also the distance between the outer edges the bars sit on.
+    function pages(o) {
+        var screen = window.innerWidth || 1;
+        if (o && o.scroll) return { pitch: screen, count: 1 };
+        var cs = getComputedStyle(document.documentElement);
+        var count = parseInt(cs.getPropertyValue('column-count'), 10) || 0;
+        var gap = parseFloat(cs.getPropertyValue('column-gap')) || 0;
+        var raw = cs.getPropertyValue('column-width') || '';
+        var width = /px\s*$/.test(raw) ? parseFloat(raw) : 0;
+        if (width >= screen) return { pitch: screen, count: 1 };
+        var n = count > 0 ? count : (width > 0 ? Math.max(1, Math.floor((screen + gap) / (width + gap))) : 1);
+        if (!(n > 0)) n = 1;
+        return { pitch: (screen - (n - 1) * gap) / n + gap, count: n };
+    }
+
+    // Font ascent and descent in px, which is where a text fragment's box sits on its baseline.
+    function metrics(node) {
+        var cs = getComputedStyle(node);
+        var key = (cs.fontStyle || '') + '|' + (cs.fontWeight || '') + '|' + (cs.fontSize || '') +
+            '|' + (cs.fontFamily || '');
+        var hit = metricCache[key];
+        if (hit) return hit;
+        var size = parseFloat(cs.fontSize) || 16;
+        var out = { up: size * 0.8, down: size * 0.2 };
+        try {
+            var ctx = document.createElement('canvas').getContext('2d');
+            ctx.font = (cs.fontStyle || 'normal') + ' ' + (cs.fontWeight || 'normal') + ' ' +
+                (cs.fontSize || '16px') + ' ' + (cs.fontFamily || 'serif');
+            var m = ctx.measureText('Hxpg');
+            if (m.fontBoundingBoxAscent > 0) {
+                out.up = m.fontBoundingBoxAscent;
+                out.down = m.fontBoundingBoxDescent || 0;
+            }
+        } catch (e) {}
+        metricCache[key] = out;
+        return out;
+    }
+
+    // Overlapping segments on one edge become one; the rest keep their own bar.
+    function mergeSpans(spans) {
+        var sorted = spans.slice().sort(function(a, b) { return a.top - b.top; });
+        var out = [];
+        for (var i = 0; i < sorted.length; i++) {
+            var last = out.length ? out[out.length - 1] : null;
+            if (last && sorted[i].top <= last.bottom + 0.5) {
+                if (sorted[i].bottom > last.bottom) last.bottom = sorted[i].bottom;
+            } else {
+                out.push({ top: sorted[i].top, bottom: sorted[i].bottom });
+            }
+        }
+        return out;
+    }
+    P.mergeSpans = mergeSpans;
+
+    // Which edge of the page a bar belongs to: 0 is the left edge, 1 the right one. The bar
+    // takes the page's outer edge, so it never lands in the gutter of a two-page spread.
+    function edgeOf(band, count, rtl) {
+        if (count <= 1) return rtl ? 0 : 1;
+        var within = ((band % count) + count) % count;
+        if (within === 0) return rtl ? 1 : 0;
+        return rtl ? 0 : 1;
+    }
+    P.edgeOf = edgeOf;
+
+    // Draws the marks for a chapter and returns the ids whose text starts on this page.
+    function drawMarks(specs, options) {
+        var o = options || {};
+        var host = markHost();
+        var ids = [];
+        if (!specs || !specs.length) return ids;
+        var index = buildIndex();
+        if (!index.text.length) return ids;
+        var scroller = document.scrollingElement || document.documentElement;
+        var sl = scroller.scrollLeft || 0;
+        var st = scroller.scrollTop || 0;
+        var layout = pages(o);
+        var rtl = (getComputedStyle(document.body || document.documentElement).direction === 'rtl');
+        var edgeGap = o.edgeGap == null ? 4 : o.edgeGap;
+        var edgeWidth = o.edgeWidth == null ? 4 : o.edgeWidth;
+        var edgeRadius = o.edgeRadius == null ? 2 : o.edgeRadius;
+        var minMargin = o.minMargin == null ? 8 : o.minMargin;
+        var ruleBelow = o.ruleBelow == null ? 3 : o.ruleBelow;
+        var ruleWeight = o.ruleWeight == null ? 2 : o.ruleWeight;
+        var pairWeight = o.pairWeight == null ? 1.5 : o.pairWeight;
+        var pairGap = o.pairGap == null ? 2 : o.pairGap;
+        var pairBelow = o.pairBelow == null ? 7 : o.pairBelow;
+        var pairFallback = o.pairFallback == null ? 3 : o.pairFallback;
+        var bars = {};
+
+        for (var i = 0; i < specs.length; i++) {
+            var spec = specs[i];
+            var found = resolve(index, spec);
+            if (!found) continue;
+            if (offsetVisible(index, found.start)) ids.push(spec.id);
+            if (!spec.ruleCount && !spec.barColor) continue;
+            var range = rangeFor(index, found.start, found.end);
+            if (!range) continue;
+            var rects = range.getClientRects();
+            if (!rects || !rects.length) continue;
+            var point = pointAt(index, found.start);
+            var host2 = point && point.node && point.node.parentElement;
+            var font = metrics(host2 || document.body);
+            var lineHeight = host2 ? (parseFloat(getComputedStyle(host2).lineHeight) || 0) : 0;
+
+            for (var r = 0; r < rects.length; r++) {
+                var rect = rects[r];
+                if (!(rect.width > 0) && !(rect.height > 0)) continue;
+                var top = rect.top + st;
+                var left = rect.left + sl;
+                var bottom = rect.bottom + st;
+
+                // Rules: one per line fragment, a fixed distance under the text's baseline.
+                if (spec.ruleCount > 0) {
+                    var total = font.up + font.down || rect.height || 1;
+                    var ascent = rect.height * (font.up / total);
+                    var baseline = top + ascent;
+                    // Room under the baseline before the next line's text begins.
+                    // Large fonts have descenders deeper than ruleBelow. Keep the rule
+                    // outside the entire glyph box, not across the tails of g/p/y.
+                    var y = Math.max(baseline + ruleBelow, bottom + 1);
+                    var below = Math.max(0, top + (lineHeight || total) - y);
+                    var weights = [ruleWeight];
+                    if (spec.ruleCount > 1) {
+                        weights = below >= pairBelow ? [pairWeight, pairWeight] : [pairFallback];
+                    }
+                    for (var w = 0; w < weights.length; w++) {
+                        if (w > 0) y += weights[w - 1] + pairGap;
+                        markBox(host, left, y, rect.width, weights[w], 0, css(spec.ruleColor));
+                    }
+                }
+
+                // One bar segment per page the highlight has lines on: the lines on a page
+                // form one segment, and segments from different highlights that overlap join.
+                if (spec.barColor) {
+                    var band = Math.floor((left + rect.width / 2) / layout.pitch);
+                    var edge = edgeOf(band, layout.count, rtl);
+                    var margin = (edge === 0 ? o.marginLeft : o.marginRight) || 0;
+                    if (margin < minMargin) continue;
+                    var key = spec.id + '@' + band;
+                    var span = bars[key];
+                    if (!span) {
+                        span = bars[key] = {
+                            edge: edge, band: band, color: css(spec.barColor), top: top, bottom: bottom
+                        };
+                    } else {
+                        if (top < span.top) span.top = top;
+                        if (bottom > span.bottom) span.bottom = bottom;
+                    }
+                }
+            }
+        }
+
+        // Group the segments by the edge they sit on and merge the ones that overlap.
+        var edges = {};
+        for (var key2 in bars) {
+            if (!Object.prototype.hasOwnProperty.call(bars, key2)) continue;
+            var s = bars[key2];
+            var at = s.edge + ':' + s.band;
+            if (!edges[at]) edges[at] = { edge: s.edge, band: s.band, color: s.color, spans: [] };
+            edges[at].spans.push({ top: s.top, bottom: s.bottom });
+        }
+        for (var at2 in edges) {
+            if (!Object.prototype.hasOwnProperty.call(edges, at2)) continue;
+            var group = edges[at2];
+            var from = group.band * layout.pitch;
+            var x = group.edge === 1 ? from + layout.pitch - edgeGap - edgeWidth : from + edgeGap;
+            var merged = mergeSpans(group.spans);
+            for (var m = 0; m < merged.length; m++) {
+                markBox(host, x, merged[m].top, edgeWidth, merged[m].bottom - merged[m].top,
+                    edgeRadius, group.color);
+            }
+        }
+        return ids;
+    }
+
+    // The marks are laid out against the text, so anything that reflows the page (a rotation,
+    // a new font size, a margin change) moves them. Redraw from the last request when that
+    // happens instead of leaving stale - or missing - marks behind.
+    var markPending = false;
+    function markSchedule() {
+        if (markPending) return;
+        markPending = true;
+        requestAnimationFrame(function() {
+            markPending = false;
+            if (P.lastMarks) drawMarks(P.lastMarks.specs, P.lastMarks.options);
+        });
+    }
+
+    function markHooks() {
+        if (P.marksHooked) return;
+        P.marksHooked = true;
+        window.addEventListener('resize', markSchedule);
+        if (document.readyState !== 'complete') window.addEventListener('load', markSchedule);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(markSchedule);
+        try {
+            new ResizeObserver(markSchedule).observe(document.body);
+        } catch (e) {}
+    }
+
+    P.page = function(specs, options) {
+        P.lastMarks = { specs: specs, options: options };
+        markHooks();
+        return drawMarks(specs, options);
     };
 
     window.parrotSaved = P;
@@ -496,3 +755,59 @@ data class PageRect(val left: Double, val top: Double, val right: Double, val bo
 
 @Serializable
 data class PageSize(val width: Double, val height: Double)
+
+/**
+ * One saved range and the marks the page draws for it.
+ *
+ * The navigator draws the fill and owns the taps on [tappable] ranges; [SavedPageScript.page]
+ * draws the rules and the edge bars in its own layer over the page. Colours are ARGB.
+ */
+@Serializable
+data class PageMark(
+    val id: String = "",
+    /** The resource the range lives in. */
+    val href: String = "",
+    val mediaType: String? = null,
+    val quote: String,
+    val before: String? = null,
+    val after: String? = null,
+    val progression: Double? = null,
+    /** Fill behind the text, or 0 when the theme draws none (e-ink). */
+    val fill: Int = 0,
+    /** Whether the navigator draws a tap target for this range. */
+    val tappable: Boolean = false,
+    /** Colour of the rule under the range, or 0 for none. */
+    val ruleColor: Int = 0,
+    /** How many rules to draw: 0, 1 (or 2 on e-ink for a highlight with a note). */
+    val ruleCount: Int = 0,
+    /** Colour of the bar at the edge of the page, or 0 for none. */
+    val barColor: Int = 0,
+)
+
+/**
+ * Sizes for [SavedPageScript.page], all in dp. They are constants rather than parameters
+ * because the marks must not change size with the book's font.
+ */
+@Serializable
+data class PageMarkOptions(
+    /** Space between the bar and the edge of the page. */
+    val edgeGap: Int = 4,
+    val edgeWidth: Int = 4,
+    val edgeRadius: Int = 2,
+    /** No bar where the page margin is thinner than this: the rule carries the signal. */
+    val minMargin: Int = 8,
+    val marginLeft: Int = 0,
+    val marginRight: Int = 0,
+    /** How far under the text's baseline the rules start. */
+    val ruleBelow: Int = 3,
+    /** One rule (also the plain e-ink highlight). */
+    val ruleWeight: Int = 2,
+    /** Two rules (a highlight with a note on e-ink), and the space between them. */
+    val pairWeight: Double = 1.5,
+    val pairGap: Double = 2.0,
+    /** Line spacing under the baseline that still fits the pair; less falls back to one rule. */
+    val pairBelow: Double = 7.0,
+    val pairFallback: Double = 3.0,
+    /** No columns while scrolling. */
+    val scroll: Boolean = false,
+)

@@ -47,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -229,6 +230,9 @@ fun HighlightColorDots(
     selected: HighlightColor?,
     onSelect: (HighlightColor) -> Unit,
     modifier: Modifier = Modifier,
+    palette: com.retro99.base.ui.compose.EmberHighlights = Ember.colors.highlights,
+    compact: Boolean = false,
+    pageBackground: Color? = null,
 ) {
     val colors = Ember.colors
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -238,7 +242,7 @@ fun HighlightColorDots(
             val description = if (isSelected) stringResource(StringRes.saved_color_selected, name) else name
             Box(
                 Modifier
-                    .size(48.dp)
+                    .size(if (compact) 44.dp else 48.dp)
                     .clip(CircleShape)
                     .clickable(role = Role.RadioButton, onClick = { onSelect(color) })
                     .semantics {
@@ -249,12 +253,12 @@ fun HighlightColorDots(
             ) {
                 Box(
                     Modifier
-                        .size(if (isSelected) 40.dp else 34.dp)
+                        .size(if (compact) 28.dp else if (isSelected) 40.dp else 34.dp)
                         .border(if (isSelected) 2.dp else 0.dp, if (isSelected) colors.ink else Color.Transparent, CircleShape)
                         .padding(if (isSelected) 4.dp else 0.dp)
                         .clip(CircleShape)
-                        .background(colors.highlights.of(color).fill)
-                        .border(1.dp, colors.highlights.of(color).bar, CircleShape),
+                        .background(pageBackground?.let { palette.of(color).fill.compositeOver(it) } ?: palette.of(color).fill)
+                        .border(1.dp, palette.of(color).bar, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (isSelected) {

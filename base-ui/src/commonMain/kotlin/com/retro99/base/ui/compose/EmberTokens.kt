@@ -56,10 +56,16 @@ data class EmberColors(
 
 /**
  * One highlight colour. [fill] is drawn behind text on the page and in colour dots;
- * [bar] is the stronger edge bar of a saved row.
+ * [bar] is the stronger edge bar of a saved row; [line] is the rule the page draws under a
+ * highlight that carries a note — the colour's darker tone on a light page, its lighter tone
+ * on a dark one.
  */
 @Immutable
-data class EmberHighlightColor(val fill: Color, val bar: Color)
+data class EmberHighlightColor(
+    val fill: Color,
+    val bar: Color,
+    val line: Color = bar,
+)
 
 /** The four highlight colours: amber (default), rose, sage and sky. */
 @Immutable
@@ -71,18 +77,18 @@ data class EmberHighlights(
 )
 
 val EmberDayHighlights = EmberHighlights(
-    amber = EmberHighlightColor(fill = Color(0xFFFBE2A4), bar = Color(0xFFF0D184)),
-    rose = EmberHighlightColor(fill = Color(0xFFF6D0CB), bar = Color(0xFFE9B4AC)),
-    sage = EmberHighlightColor(fill = Color(0xFFD6E6C8), bar = Color(0xFFBCD4A8)),
-    sky = EmberHighlightColor(fill = Color(0xFFD2E2F2), bar = Color(0xFFB2CBE5)),
+    amber = EmberHighlightColor(fill = Color(0xFFFBE2A4), bar = Color(0xFFF0D184), line = Color(0xFFB98A1E)),
+    rose = EmberHighlightColor(fill = Color(0xFFF6D0CB), bar = Color(0xFFE9B4AC), line = Color(0xFFB5564C)),
+    sage = EmberHighlightColor(fill = Color(0xFFD6E6C8), bar = Color(0xFFBCD4A8), line = Color(0xFF5E8A45)),
+    sky = EmberHighlightColor(fill = Color(0xFFD2E2F2), bar = Color(0xFFB2CBE5), line = Color(0xFF4A7BA8)),
 )
 
 /** Translucent fills so light text stays readable on dark pages. */
 val EmberNightHighlights = EmberHighlights(
-    amber = EmberHighlightColor(fill = Color(0x66C9962E), bar = Color(0xFF8A6A2A)),
-    rose = EmberHighlightColor(fill = Color(0x66B5615A), bar = Color(0xFF8C4A45)),
-    sage = EmberHighlightColor(fill = Color(0x66708F5E), bar = Color(0xFF55704A)),
-    sky = EmberHighlightColor(fill = Color(0x66607FA3), bar = Color(0xFF46607E)),
+    amber = EmberHighlightColor(fill = Color(0x66C9962E), bar = Color(0xFF8A6A2A), line = Color(0xFFE3B24A)),
+    rose = EmberHighlightColor(fill = Color(0x66B5615A), bar = Color(0xFF8C4A45), line = Color(0xFFE08A80)),
+    sage = EmberHighlightColor(fill = Color(0x66708F5E), bar = Color(0xFF55704A), line = Color(0xFF9CC58A)),
+    sky = EmberHighlightColor(fill = Color(0x66607FA3), bar = Color(0xFF46607E), line = Color(0xFF8FB8DC)),
 )
 
 /** E-ink has no colour: highlights are a black underline and rows a black bar. */

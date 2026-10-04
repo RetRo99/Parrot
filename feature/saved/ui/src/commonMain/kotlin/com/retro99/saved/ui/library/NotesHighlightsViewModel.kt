@@ -14,10 +14,12 @@ import com.retro99.saved.domain.model.SavedCounts
 import com.retro99.saved.domain.model.SavedFilter
 import com.retro99.saved.domain.model.SavedItem
 import com.retro99.saved.domain.model.SavedSyncState
+import com.retro99.saved.domain.model.HighlightColor
 import com.retro99.saved.domain.usecase.DeleteSavedItemUseCase
 import com.retro99.saved.domain.usecase.ObserveAllSavedItemsUseCase
 import com.retro99.saved.domain.usecase.ObserveSavedSyncStateUseCase
 import com.retro99.saved.domain.usecase.RestoreSavedItemUseCase
+import com.retro99.saved.domain.usecase.SaveSavedItemsUseCase
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -48,7 +50,11 @@ data class NotesHighlightsViewState(
     val removed: SavedItem? = null,
     val isExportVisible: Boolean = false,
     val copyText: String? = null,
+    val detailId: String? = null,
+    val noteEditorId: String? = null,
 ) {
+    val detail: SavedItem? get() = items.firstOrNull { it.id == detailId }
+    val noteEditor: SavedItem? get() = items.firstOrNull { it.id == noteEditorId }
     private fun matches(item: SavedItem): Boolean {
         if (!filter.matches(item)) return false
         val needle = query.trim()
@@ -112,6 +118,14 @@ sealed interface NotesHighlightsIntent : BaseIntent {
     data object CloseExport : NotesHighlightsIntent
     data class Export(val format: ExportFormat, val labels: SavedItemsExport.Labels) : NotesHighlightsIntent
     data object CopyHandled : NotesHighlightsIntent
+    data class ShowDetail(val id: String) : NotesHighlightsIntent
+    data object CloseDetail : NotesHighlightsIntent
+    data class SetColor(val id: String, val color: HighlightColor) : NotesHighlightsIntent
+    data class EditNote(val id: String) : NotesHighlightsIntent
+    data object CloseNote : NotesHighlightsIntent
+    data class SaveNote(val id: String, val text: String) : NotesHighlightsIntent
+    data class CopyItem(val item: SavedItem) : NotesHighlightsIntent
+    data class ShareItem(val item: SavedItem) : NotesHighlightsIntent
 }
 
 enum class ExportFormat { ShareText, CopyAll, Markdown }
@@ -133,6 +147,7 @@ class NotesHighlightsViewModel(
     @Provided private val resolveBookOpen: ResolveSavedBookOpenUseCase,
     @Provided private val pendingJump: PendingSavedJump,
     @Provided private val fileSharer: FileSharer,
+    @Provided private val saveSavedItems: SaveSavedItemsUseCase,
 ) : BaseViewModel<NotesHighlightsViewState, NotesHighlightsIntent>(
     NotesHighlightsViewState(bookKey = initialBookKey),
 ) {
@@ -161,6 +176,7 @@ class NotesHighlightsViewModel(
             NotesHighlightsIntent.DismissUnavailable -> updateState { it.copy(showUnavailable = false) }
             NotesHighlightsIntent.ToggleEditing -> updateState { it.copy(isEditing = !it.isEditing) }
             is NotesHighlightsIntent.Delete -> viewModelScope.launch {
+                updateState { it.copy(detailId = null, noteEditorId = null) }
                 deleteSavedItem(intent.item.id)?.let { removed -> updateState { it.copy(removed = removed) } }
             }
             NotesHighlightsIntent.UndoDelete -> {
@@ -173,8 +189,27 @@ class NotesHighlightsViewModel(
             NotesHighlightsIntent.CloseExport -> updateState { it.copy(isExportVisible = false) }
             is NotesHighlightsIntent.Export -> export(intent.format, intent.labels)
             NotesHighlightsIntent.CopyHandled -> updateState { it.copy(copyText = null) }
+            is NotesHighlightsIntent.ShowDetail -> updateState { it.copy(detailId = intent.id) }
+            NotesHighlightsIntent.CloseDetail -> updateState { it.copy(detailId = null) }
+            is NotesHighlightsIntent.SetColor -> edit(intent.id) { it.copy(color = intent.color) }
+            is NotesHighlightsIntent.EditNote -> updateState { it.copy(detailId = null, noteEditorId = intent.id) }
+            NotesHighlightsIntent.CloseNote -> updateState { it.copy(noteEditorId = null) }
+            is NotesHighlightsIntent.SaveNote -> {
+                edit(intent.id) { it.copy(note = intent.text.trim().ifEmpty { null }) }
+                updateState { it.copy(noteEditorId = null) }
+            }
+            is NotesHighlightsIntent.CopyItem -> updateState { it.copy(copyText = itemText(intent.item)) }
+            is NotesHighlightsIntent.ShareItem -> fileSharer.shareText(itemText(intent.item), intent.item.book.title.orEmpty())
         }
     }
+
+    private fun edit(id: String, transform: (SavedItem) -> SavedItem) {
+        val item = viewState.value.items.firstOrNull { it.id == id } ?: return
+        viewModelScope.launch { saveSavedItems(transform(item)) }
+    }
+
+    private fun itemText(item: SavedItem): String =
+        listOfNotNull(item.text, item.note?.takeIf { it.isNotBlank() }).joinToString("\n\n")
 
     private fun back() {
         val state = viewState.value

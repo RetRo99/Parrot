@@ -29,6 +29,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -45,6 +46,13 @@ import com.retro99.books.domain.model.BookType
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
+import com.retro99.reader.domain.usecase.ResolveSavedBookUseCase
+import com.retro99.saved.domain.usecase.ObserveBookSavedItemsUseCase
+import com.retro99.base.ui.compose.EmberCard
+import com.retro99.base.ui.compose.EmberSettingRow
+import com.retro99.base.ui.compose.EmberChevron
+import resources.translations.saved_book_details_row
 import org.koin.core.parameter.parametersOf
 import resources.translations.general_back
 import resources.translations.books_detail_add_favorite
@@ -71,6 +79,7 @@ fun BookDetailScreen(
     onNavigateToBookDetail: (serverId: String, bookUuid: String) -> Unit,
     onNavigateToPositions: (serverId: String, bookUuid: String) -> Unit,
     onNavigateToServers: () -> Unit,
+    onNavigateToSavedItems: (String) -> Unit,
     bottomNavigationHeight: Dp = 0.dp,
     modifier: Modifier = Modifier,
     viewModel: BookDetailViewModel = koinViewModel {
@@ -78,6 +87,14 @@ fun BookDetailScreen(
             onBack, onNavigateToLinkPicker, onNavigateToBookDetail, onNavigateToPositions)
     },
 ) {
+    val resolveSavedBook = koinInject<ResolveSavedBookUseCase>()
+    val observeSavedItems = koinInject<ObserveBookSavedItemsUseCase>()
+    val savedSummary by produceState<Pair<String, Int>?>(null, serverId, bookUuid) {
+        val identity = resolveSavedBook(serverId, bookUuid)
+        observeSavedItems(setOf(identity.selfKey), setOf(bookUuid)).collect { items ->
+            value = identity.selfKey to items.size
+        }
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, viewModel) {
         val observer = LifecycleEventObserver { _, event ->
@@ -89,7 +106,8 @@ fun BookDetailScreen(
         onDispose { lifecycle.removeObserver(observer) }
     }
     BaseScreen(modifier = modifier, viewModel = viewModel) { state, dispatch ->
-        BookDetailContent(state, dispatch, onNavigateToServers, bottomNavigationHeight)
+        BookDetailContent(state, dispatch, onNavigateToServers, bottomNavigationHeight,
+            savedSummary, onNavigateToSavedItems)
     }
 }
 
@@ -99,6 +117,8 @@ private fun BookDetailContent(
     dispatch: IntentDispatcher<BookDetailIntent>,
     onServers: () -> Unit,
     bottomNavigationHeight: Dp,
+    savedSummary: Pair<String, Int>?,
+    onSavedItems: (String) -> Unit,
 ) {
     val snackbar = remember { SnackbarHostState() }
     var manage by remember(state.book?.uuid) { mutableStateOf(false) }
@@ -163,6 +183,16 @@ private fun BookDetailContent(
                     }
                     BookDetailProgress(state, dispatch)
                     BookDetailActions(state, media, dispatch)
+                    savedSummary?.let { (key, count) ->
+                        EmberCard(contentPadding = 0.dp) {
+                            EmberSettingRow(
+                                title = stringResource(StringRes.saved_book_details_row, count),
+                                subtitle = null,
+                                onClick = { onSavedItems(key) },
+                                trailing = { EmberChevron() },
+                            )
+                        }
+                    }
                     BookLocationsCard(state, media, dispatch, onManage = { manage = true })
                     BookDetailAbout(state.book.description)
                     BookDetailFacts(state)

@@ -1396,7 +1396,6 @@
     <string name="saved_meta_percent" tools:ignore="MissingTranslation">%1$d%</string>
     <string name="saved_meta_listening" tools:ignore="MissingTranslation">listening, %1$s</string>
     <string name="saved_note_label" tools:ignore="MissingTranslation">Note</string>
-    <string name="saved_note_marker" tools:ignore="MissingTranslation">note</string>
     <string name="saved_sync_synced" tools:ignore="MissingTranslation">✓ Synced to Parrot Cloud</string>
     <string name="saved_sync_synced_ago" tools:ignore="MissingTranslation">✓ Synced to Parrot Cloud · %1$s</string>
     <string name="saved_sync_offline" tools:ignore="MissingTranslation">Will sync when you’re online</string>
@@ -1453,6 +1452,7 @@
     <string name="saved_library_latest" tools:ignore="MissingTranslation">Latest</string>
     <string name="saved_library_by_book" tools:ignore="MissingTranslation">By book</string>
     <string name="saved_library_no_results" tools:ignore="MissingTranslation">Nothing matches “%1$s”</string>
+    <string name="saved_no_matching_items" tools:ignore="MissingTranslation">No saved items match your search or filter</string>
     <string name="saved_library_entry" tools:ignore="MissingTranslation">Notes &amp; highlights</string>
     <string name="saved_library_entry_body" tools:ignore="MissingTranslation">Bookmarks, highlights and notes from every book</string>
     <string name="saved_download_title" tools:ignore="MissingTranslation">Download this book?</string>

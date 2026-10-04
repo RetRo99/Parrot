@@ -1,4 +1,5 @@
 -- Saved items: bookmarks, highlights and notes in Parrot Cloud.
+-- Version 20261005000000 is already used by durable_recaps on the demo project.
 --
 -- One row per item, keyed by a client-generated UUID, so the same item edited
 -- on two devices can never become two rows. Items sync through the existing

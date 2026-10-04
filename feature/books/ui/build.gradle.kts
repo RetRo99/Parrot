@@ -44,6 +44,7 @@ kotlin {
             implementation(projects.feature.books.domain)
             implementation(projects.feature.cloudAccount.domain)
             implementation(projects.feature.reader.domain)
+            implementation(projects.feature.saved.domain)
             implementation(projects.feature.sync.domain)
             implementation(projects.lib.analytics.api)
             implementation(projects.lib.preferences.api)

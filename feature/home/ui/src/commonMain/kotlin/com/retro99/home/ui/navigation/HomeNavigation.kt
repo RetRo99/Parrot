@@ -59,6 +59,7 @@ import com.retro99.reader.ui.reader.ReaderCloseSource
 import com.retro99.settings.ui.SettingsScreen
 import com.retro99.settings.ui.servers.ServerManagementScreen
 import com.retro99.statistics.ui.StatisticsScreen
+import com.retro99.saved.ui.library.NotesHighlightsScreen
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -493,6 +494,25 @@ fun HomeNavigation(
                                     HomeDestination.ServerManagement,
                                 ))
                             },
+                            onNavigateToSavedItems = { key ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.NotesHighlights(key)))
+                            },
+                        )
+                    }
+
+                    entry<HomeDestination.NotesHighlights> { destination ->
+                        NotesHighlightsScreen(
+                            bookKey = destination.bookKey,
+                            onBack = { requestBack("toolbar_back") },
+                            onOpenReader = { serverId, bookUuid, bookType ->
+                                intentDispatcher(HomeNavigationIntent.RequestOpenReader(serverId, bookUuid, bookType))
+                            },
+                            onOpenBookDetail = { serverId, bookUuid ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.BookDetail(serverId, bookUuid)))
+                            },
+                            onSignIn = {
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.SyncAndBackup))
+                            },
                         )
                     }
 
@@ -589,6 +609,9 @@ fun HomeNavigation(
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(HomeDestination.Diagnostics)
                                 )
+                            },
+                            onNavigateToNotesHighlights = {
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.NotesHighlights()))
                             },
                         )
                     }

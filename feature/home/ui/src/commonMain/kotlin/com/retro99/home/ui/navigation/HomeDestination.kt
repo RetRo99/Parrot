@@ -56,6 +56,9 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
     data object LinkReview : HomeDestination
 
     @Serializable
+    data class NotesHighlights(val bookKey: String? = null) : HomeDestination
+
+    @Serializable
     data class SeriesDetail(
         val seriesUuid: String,
         val seriesName: String,
@@ -119,7 +122,8 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
             this is BookDetail ||
             this is LinkPicker ||
             this is Positions ||
-            this is LinkReview
+            this is LinkReview ||
+            this is NotesHighlights
 }
 
 /** Returns whether this destination already restores the requested Reader route. */
