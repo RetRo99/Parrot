@@ -54,7 +54,7 @@
     <string name="recap_failed">Couldn’t write this recap. Something went wrong on our side.</string>
     <string name="recap_retry">Try again</string>
     <string name="recap_offline">You’re offline. The recap will be written when you’re back online.</string>
-    <string name="recap_limit">Recaps are temporarily unavailable. We’ll try again automatically.</string>
+    <string name="recap_limit">That’s all the recaps for today. New recaps are available again tomorrow.</string>
     <string name="recap_signed_out">Sign in to Parrot Cloud to get recaps.</string>
     <string name="recap_sign_in">Sign in</string>
     <string name="recap_turned_off">Recaps are turned off.</string>

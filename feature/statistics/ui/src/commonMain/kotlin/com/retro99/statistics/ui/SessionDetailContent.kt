@@ -32,7 +32,11 @@ import com.retro99.reader.ui.recap.RecapSettingsSheet
 import resources.translations.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.base.ui.compose.stringTextWrapper
@@ -40,6 +44,7 @@ import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.recap.RecapRequestResult
 import com.retro99.statistics.ui.model.ReadingSessionUiModel
 import com.retro99.translations.StringRes
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.statistics_recap_failed_permanent
 import resources.translations.statistics_recap_failed_retryable
@@ -94,24 +99,27 @@ internal fun SessionDetailContent(
             }
             Text(
                 text = stringResource(StringRes.statistics_session_detail_title),
-            style = Ember.type.screenTitle,
+            style = Ember.type.screenTitle.copy(fontSize = 24.sp, lineHeight = 30.sp),
+            color = Ember.colors.ink,
             )
         }
         Text(
             text = session.bookTitle,
-            style = MaterialTheme.typography.titleMedium,
+            style = Ember.type.meta.copy(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold),
+            color = Ember.colors.ink,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 8.dp),
         )
         Text(
-            text = stringResource(
-                StringRes.statistics_session_detail_time,
-                session.dateFormatted,
-                session.endTimeFormatted,
-            ) + (detail.recapChapterTitle?.let { " · $it" } ?: ""),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            text = "${sessionRelativeDay(session.startTime)}, " +
+                stringResource(
+                    StringRes.statistics_session_detail_time,
+                    session.startTimeFormatted,
+                    session.endTimeFormatted,
+                ) + (detail.recapChapterTitle?.let { " · $it" } ?: ""),
+            style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 21.sp),
+            color = Ember.colors.ink2,
             modifier = Modifier.padding(bottom = 16.dp),
         )
 
@@ -128,12 +136,16 @@ internal fun SessionDetailContent(
         if (!detail.recapsAvailable) return@Column
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 16.dp),
-            color = MaterialTheme.colorScheme.outlineVariant,
+            color = Ember.colors.line,
         )
 
         Text(
-            text = stringResource(StringRes.recap_section_title),
-            style = MaterialTheme.typography.titleMedium,
+            text = buildAnnotatedString {
+                withStyle(SpanStyle(color = Ember.colors.accentText)) { append("✦ ") }
+                append(stringResource(StringRes.recap_section_title).removePrefix("✦ "))
+            },
+            style = Ember.type.meta.copy(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold),
+            color = Ember.colors.ink,
             modifier = Modifier.padding(bottom = 8.dp),
         )
         SessionRecapSection(detail = detail)
@@ -150,37 +162,29 @@ internal fun SessionDetailContent(
 private fun SessionStatTile(label: String, value: String, modifier: Modifier) {
     EmberGroupCard(modifier = modifier) {
         Column(Modifier.padding(12.dp)) {
-            Text(value, style = MaterialTheme.typography.titleLarge, color = Ember.colors.ink)
+            Text(
+                text = value,
+                style = Ember.type.meta.copy(fontSize = 20.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold),
+                color = Ember.colors.ink,
+            )
             Text(label, fontSize = 13.sp, color = Ember.colors.ink2)
         }
     }
 }
 
+/** "Today", "Yesterday" or the month and day, matching the recap sheets. */
 @Composable
-private fun SessionStatRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(text = value, style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
-@Composable
-private fun sessionProgressText(session: ReadingSessionUiModel): String? {
-    val end = session.endProgression?.toPercent() ?: return null
-    val start = session.startProgression?.toPercent()
-    return if (start != null && start != end) {
-        stringResource(StringRes.statistics_session_detail_progress_range, start, end)
-    } else {
-        stringResource(StringRes.statistics_session_detail_progress_end, end)
+private fun sessionRelativeDay(startTime: Long): String {
+    val zone = kotlinx.datetime.TimeZone.currentSystemDefault()
+    val date = kotlin.time.Instant.fromEpochMilliseconds(startTime).toLocalDateTime(zone).date
+    val today = kotlin.time.Clock.System.now().toLocalDateTime(zone).date
+    return when (today.toEpochDays() - date.toEpochDays()) {
+        0L -> stringResource(StringRes.recap_today)
+        1L -> stringResource(StringRes.recap_yesterday)
+        else -> {
+            val month = date.month.name.take(3).lowercase().replaceFirstChar { it.uppercase() }
+            "$month ${date.dayOfMonth}"
+        }
     }
 }
 
@@ -209,9 +213,8 @@ private fun SessionRecapSection(
             RecapProse(recap.summary)
             Text(
                 text = stringResource(StringRes.recap_ai_notice),
-                style = MaterialTheme.typography.labelMedium,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = Ember.type.meta.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                color = Ember.colors.ink2,
                 modifier = Modifier.padding(top = 12.dp),
             )
         }
@@ -261,8 +264,8 @@ private fun RecapGenerateAction(
 private fun RecapMessage(text: String) {
     Text(
         text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 22.sp),
+        color = Ember.colors.ink2,
         modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
     )
 }

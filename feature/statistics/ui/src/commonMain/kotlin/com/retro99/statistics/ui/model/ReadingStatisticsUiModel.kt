@@ -55,6 +55,7 @@ data class ReadingSessionUiModel(
     val durationFormatted: TextWrapper,
     val dateFormatted: String,
     val readingSpeedFormatted: TextWrapper,
+    val startTimeFormatted: String = "",
     val endTimeFormatted: String = "",
     val readingSpeedWpm: Int = 0,
     /** Pages turned forward by the reader; null when none were counted. */
@@ -137,6 +138,7 @@ fun ReadingSessionDomainModel.toSessionUiModel(): ReadingSessionUiModel {
         durationFormatted = formatDuration(durationMs),
         dateFormatted = formatSessionDate(startTime),
         readingSpeedFormatted = formatReadingSpeed(readingSpeedWpm),
+        startTimeFormatted = formatSessionTime(startTime),
         endTimeFormatted = formatSessionTime(endTime),
         readingSpeedWpm = readingSpeedWpm,
         pagesRead = pagesRead,
