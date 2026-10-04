@@ -136,6 +136,9 @@ import com.retro99.reader.ui.model.relativeTimeFromIso
 import com.retro99.reader.ui.model.backgroundColor
 import com.retro99.reader.ui.model.isDarkPage
 import com.retro99.reader.ui.publication.PublicationState
+import com.retro99.reader.ui.di.koinReaderScopeInject
+import com.retro99.reader.ui.navigator.BookController
+import com.retro99.reader.ui.navigator.SavedPageScript
 import com.retro99.reader.ui.reader.ReaderViewState
 import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.translations.StringRes
@@ -218,6 +221,7 @@ internal fun ReaderOverlayContent(
     loader: @Composable (() -> Unit),
 ) {
     val publicationState = viewState.publicationState ?: return
+    val bookController = koinReaderScopeInject<BookController>(bookUuid)
     val settings = publicationState.settings
     val currentPosition = publicationState.position
     var controlsVisible by remember(bookUuid) { mutableStateOf(true) }
@@ -403,6 +407,13 @@ internal fun ReaderOverlayContent(
                         detectDoubleTaps = viewState.isReadAloud || (viewState.isTtsReadAloud && settings.ttsEnabled),
                         doubleTapTimeoutMs = settings.doubleTapTimeoutMs,
                         tapNavigationEnabled = settings.tapNavigationEnabled,
+                        onContentTap = {
+                            val id = SavedPageScript.parseSavedTap(
+                                bookController.runPageScript(SavedPageScript.takeSavedTap()),
+                            )
+                            if (id != null) onSaved(SavedAction.OpenDetail(id))
+                            id != null
+                        },
                         onZoomChange = { scale ->
                             isZooming = true
                             temporaryFontScale = (settings.fontSize * scale).toFloat().coerceIn(0.5f, 3f)

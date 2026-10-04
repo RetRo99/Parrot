@@ -26,6 +26,19 @@ object SavedPageScript {
 
     fun clearSelection(): String = call("clearSelection")
 
+    /** Saved target of the last touch, captured in WebView coordinates before native tap handling. */
+    fun takeSavedTap(): String = call("takeSavedTap")
+
+    fun parseSavedTap(raw: String?): String? {
+        val value = raw?.let {
+            runCatching { json.decodeFromString(String.serializer(), it) }.getOrNull()
+        } ?: return null
+        val id = if (value.startsWith("\"")) {
+            runCatching { json.decodeFromString(String.serializer(), value) }.getOrNull()
+        } else value
+        return id?.takeUnless { it.isEmpty() || it == "null" }
+    }
+
     /** The first sentence that starts on the current page. */
     fun firstSentence(): String = call("firstSentence")
 
@@ -459,8 +472,44 @@ object SavedPageScript {
     // ---- Marks: the rules under a highlight and the bars at the edge of the page ----
     // Everything here is a fixed number of dp (CSS px are dp in both WebViews), so nothing
     // grows with the book font. The marks live in their own layer over the page and are
-    // never part of the book's text: the page cannot reflow around them and they take no
-    // taps, so a tap near the edge still turns the page.
+    // never part of the book's text: the page cannot reflow around them. Only the marks
+    // themselves take taps; blank margin still belongs to page navigation.
+
+    var savedRanges = [];
+    var savedTap = null;
+    function contains(rect, x, y) {
+        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    }
+    function savedTarget(x, y) {
+        var host = document.getElementById('parrot-marks');
+        if (host) {
+            for (var i = host.children.length - 1; i >= 0; i--) {
+                var mark = host.children[i];
+                if (mark.savedId && contains(mark.getBoundingClientRect(), x, y)) return mark.savedId;
+            }
+        }
+        for (var r = 0; r < savedRanges.length; r++) {
+            var rects = savedRanges[r].range.getClientRects();
+            for (var j = 0; j < rects.length; j++) {
+                if (contains(rects[j], x, y)) return savedRanges[r].id;
+            }
+        }
+        return null;
+    }
+    // Use DOM coordinates, not Compose coordinates: Readium can inset, scroll or scale
+    // its WebView. Capture on down so asynchronous decoration activation cannot race us.
+    document.addEventListener('touchstart', function(event) {
+        var touch = event.touches.length === 1 ? event.touches[0] : null;
+        savedTap = touch ? savedTarget(touch.clientX, touch.clientY) : null;
+    }, { capture: true, passive: true });
+    document.addEventListener('mousedown', function(event) {
+        savedTap = savedTarget(event.clientX, event.clientY);
+    }, true);
+    P.takeSavedTap = function() {
+        var id = savedTap;
+        savedTap = null;
+        return id;
+    };
 
     var metricCache = {};
 
@@ -485,10 +534,13 @@ object SavedPageScript {
         return host;
     }
 
-    function markBox(host, x, y, w, h, radius, color) {
+    function markBox(host, x, y, w, h, radius, color, id, edgeTarget) {
         x = Number(x); y = Number(y); w = Number(w); h = Number(h); radius = Number(radius);
         if (!isFinite(x) || !isFinite(y) || !isFinite(w) || !isFinite(h)) return;
         if (!(w > 0) || !(h > 0)) return;
+        // A 4dp bar is inside some phones' edge-rejection area. Extend its target
+        // inward without changing the visible mark or intercepting the whole margin.
+        var pad = id && edgeTarget ? 24 : 0;
         var el = document.createElement('div');
         // ReadiumCSS paints every element transparent once a page colour is set, and its
         // !important beats a plain inline declaration - so this one has to be !important too.
@@ -499,17 +551,30 @@ object SavedPageScript {
         st.setProperty('margin', '0');
         st.setProperty('padding', '0');
         st.setProperty('border', '0');
-        st.setProperty('pointer-events', 'none');
-        st.setProperty('left', x + 'px');
+        st.setProperty('pointer-events', id ? 'auto' : 'none');
+        el.savedId = id;
+        // The common reader gesture opens the item using takeSavedTap. Do not let
+        // this synthetic click become a sentence/read-aloud or Readium page tap.
+        el.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        st.setProperty('left', (x - pad) + 'px');
         st.setProperty('top', y + 'px');
-        st.setProperty('width', w + 'px');
+        st.setProperty('width', (w + pad * 2) + 'px');
         st.setProperty('height', h + 'px');
         // ReadiumCSS gives every div `max-width: 100%`, and the marks' host is zero-width so
         // that it cannot affect the page's layout - which would clamp every mark to no width.
         st.setProperty('max-width', 'none', 'important');
         st.setProperty('max-height', 'none', 'important');
         st.setProperty('border-radius', radius + 'px');
-        st.setProperty('background-color', color, 'important');
+        if (pad) {
+            var paint = document.createElement('div');
+            paint.style.cssText = 'position:absolute;left:' + pad + 'px;top:0;width:' + w +
+                'px;height:100%;max-width:none!important;pointer-events:none;border-radius:' + radius + 'px;';
+            paint.style.setProperty('background-color', color, 'important');
+            el.appendChild(paint);
+        } else st.setProperty('background-color', color, 'important');
         host.appendChild(el);
     }
 
@@ -582,6 +647,7 @@ object SavedPageScript {
     function drawMarks(specs, options) {
         var o = options || {};
         var host = markHost();
+        savedRanges = [];
         var ids = [];
         if (!specs || !specs.length) return ids;
         var index = buildIndex();
@@ -608,9 +674,10 @@ object SavedPageScript {
             var found = resolve(index, spec);
             if (!found) continue;
             if (offsetVisible(index, found.start)) ids.push(spec.id);
-            if (!spec.ruleCount && !spec.barColor) continue;
+            if (!spec.tappable && !spec.ruleCount && !spec.barColor) continue;
             var range = rangeFor(index, found.start, found.end);
             if (!range) continue;
+            if (spec.tappable) savedRanges.push({ id: spec.id, range: range });
             var rects = range.getClientRects();
             if (!rects || !rects.length) continue;
             var point = pointAt(index, found.start);
@@ -641,7 +708,7 @@ object SavedPageScript {
                     }
                     for (var w = 0; w < weights.length; w++) {
                         if (w > 0) y += weights[w - 1] + pairGap;
-                        markBox(host, left, y, rect.width, weights[w], 0, css(spec.ruleColor));
+                        markBox(host, left, y, rect.width, weights[w], 0, css(spec.ruleColor), spec.tappable ? spec.id : null);
                     }
                 }
 
@@ -656,6 +723,7 @@ object SavedPageScript {
                     var span = bars[key];
                     if (!span) {
                         span = bars[key] = {
+                            id: spec.tappable ? spec.id : null,
                             edge: edge, band: band, color: css(spec.barColor), top: top, bottom: bottom
                         };
                     } else {
@@ -666,25 +734,14 @@ object SavedPageScript {
             }
         }
 
-        // Group the segments by the edge they sit on and merge the ones that overlap.
-        var edges = {};
+        // Keep each item's identity even when bars overlap. The last painted bar wins
+        // in the overlap, just as it does for decorations; the rest retains its own target.
         for (var key2 in bars) {
             if (!Object.prototype.hasOwnProperty.call(bars, key2)) continue;
             var s = bars[key2];
-            var at = s.edge + ':' + s.band;
-            if (!edges[at]) edges[at] = { edge: s.edge, band: s.band, color: s.color, spans: [] };
-            edges[at].spans.push({ top: s.top, bottom: s.bottom });
-        }
-        for (var at2 in edges) {
-            if (!Object.prototype.hasOwnProperty.call(edges, at2)) continue;
-            var group = edges[at2];
-            var from = group.band * layout.pitch;
-            var x = group.edge === 1 ? from + layout.pitch - edgeGap - edgeWidth : from + edgeGap;
-            var merged = mergeSpans(group.spans);
-            for (var m = 0; m < merged.length; m++) {
-                markBox(host, x, merged[m].top, edgeWidth, merged[m].bottom - merged[m].top,
-                    edgeRadius, group.color);
-            }
+            var from = s.band * layout.pitch;
+            var x = s.edge === 1 ? from + layout.pitch - edgeGap - edgeWidth : from + edgeGap;
+            markBox(host, x, s.top, edgeWidth, s.bottom - s.top, edgeRadius, s.color, s.id, true);
         }
         return ids;
     }

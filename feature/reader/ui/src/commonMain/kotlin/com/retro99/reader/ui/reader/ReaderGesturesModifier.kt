@@ -38,6 +38,8 @@ import kotlin.coroutines.coroutineContext
  * @param onRightTap Callback when user taps right third of screen (only called if tapNavigationEnabled)
  * @param onMiddleTap Callback when user taps middle third of screen
  * @param onDoubleTap Callback when user double-taps (only called when detectDoubleTaps is true)
+ * @param onContentTap Resolves a native content tap before zone or double-tap actions.
+ *                     Returns true when the content handled it, even with navigation disabled.
  */
 @Composable
 internal fun Modifier.readerGestures(
@@ -51,6 +53,7 @@ internal fun Modifier.readerGestures(
     onRightTap: () -> Unit,
     onMiddleTap: () -> Unit,
     onDoubleTap: () -> Unit = {},
+    onContentTap: suspend () -> Boolean = { false },
 ): Modifier {
     val currentOnZoomChange = rememberUpdatedState(onZoomChange)
     val currentOnZoomEnd = rememberUpdatedState(onZoomEnd)
@@ -58,6 +61,7 @@ internal fun Modifier.readerGestures(
     val currentOnRightTap = rememberUpdatedState(onRightTap)
     val currentOnMiddleTap = rememberUpdatedState(onMiddleTap)
     val currentOnDoubleTap = rememberUpdatedState(onDoubleTap)
+    val currentOnContentTap = rememberUpdatedState(onContentTap)
 
     return this.pointerInput(containerSize, detectDoubleTaps, doubleTapTimeoutMs, tapNavigationEnabled) {
         val touchSlop = viewConfiguration.touchSlop
@@ -121,34 +125,34 @@ internal fun Modifier.readerGestures(
                     else -> currentOnMiddleTap.value // Middle tap always works (toggles controls)
                 }
 
-                // If no action (tap navigation disabled for left/right), do nothing
-                if (tapAction == null) {
-                    return@awaitEachGesture
-                }
-
-                if (!detectDoubleTaps) {
-                    // Original behavior: fire tap immediately
-                    down.consume()
-                    tapAction()
-                } else {
-                    // Double-tap detection enabled: wait before firing single taps
-                    val timeSinceLastTap = currentTimeMs - lastTapTimeMs
-                    val isDoubleTap = timeSinceLastTap < doubleTapTimeoutMs
-
-                    if (isDoubleTap) {
-                        // This is a double-tap - cancel pending single tap and fire double-tap callback
+                // Native WebViews may consume even empty-page taps. Ask the content
+                // explicitly rather than treating interop consumption as a saved hit.
+                scope.launch {
+                    if (currentOnContentTap.value()) {
                         pendingTapJob?.cancel()
                         pendingTapJob = null
                         lastTapTimeMs = 0L
-                        down.consume()
-                        currentOnDoubleTap.value()
+                        return@launch
+                    }
+                    if (tapAction == null) return@launch
+                    if (!detectDoubleTaps) {
+                        tapAction()
                     } else {
-                        // Might be first tap of double-tap, schedule with delay
-                        lastTapTimeMs = currentTimeMs
-                        pendingTapJob?.cancel()
-                        pendingTapJob = scope.launch {
-                            delay(doubleTapTimeoutMs.toLong())
-                            tapAction()
+                        val timeSinceLastTap = currentTimeMs - lastTapTimeMs
+                        val isDoubleTap = timeSinceLastTap < doubleTapTimeoutMs
+
+                        if (isDoubleTap) {
+                            pendingTapJob?.cancel()
+                            pendingTapJob = null
+                            lastTapTimeMs = 0L
+                            currentOnDoubleTap.value()
+                        } else {
+                            lastTapTimeMs = currentTimeMs
+                            pendingTapJob?.cancel()
+                            pendingTapJob = scope.launch {
+                                delay(doubleTapTimeoutMs.toLong())
+                                tapAction()
+                            }
                         }
                     }
                 }
