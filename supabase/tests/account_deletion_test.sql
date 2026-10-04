@@ -102,6 +102,9 @@ select is(
     2,
     'account deletion redacts all audit rows for the account'
 );
+-- Private audit tables are deliberately accessible only through service
+-- RPCs. Inspect their persisted effects as the test owner, not service_role.
+reset role;
 select is(
     (select actor from public.cloud_file_audit_events
      where action = 'takedown' and reason = 'rights notice'),

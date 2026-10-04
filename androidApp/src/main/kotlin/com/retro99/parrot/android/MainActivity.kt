@@ -136,8 +136,8 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         SyncWorkScheduler.enqueue(this)
+        RecapTriggerBridge.onForeground()
         val reason = if (hasStarted) {
-            RecapTriggerBridge.onForeground()
             SyncTriggerReason.LIFECYCLE
         } else {
             hasStarted = true

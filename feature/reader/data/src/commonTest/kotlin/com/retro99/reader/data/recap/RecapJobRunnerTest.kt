@@ -240,7 +240,7 @@ class RecapJobRunnerTest {
     @Test
     fun givesUpAfterMaxAttempts() = runTest {
         database.put(pendingRow("s1", attemptCount = RecapJobPolicy.MAX_ATTEMPTS - 1))
-        engine.next = { RecapResult.Retryable(RecapErrorCode.TIMEOUT, 1.minutes) }
+        engine.next = { RecapResult.Retryable(RecapErrorCode.PROVIDER_ERROR, 1.minutes) }
 
         runner().runPending()
 
@@ -307,7 +307,7 @@ class RecapJobRunnerTest {
     }
 
     @Test
-    fun startupWorkRunsBeforeTheFirstPassAndRetriesAfterAFailure() = runTest {
+    fun startupFailureDoesNotBlockDeliveryButIsRetried() = runTest {
         var calls = 0
         val runner = runner()
         runner.start(startupWork = {
@@ -316,13 +316,16 @@ class RecapJobRunnerTest {
         })
         database.put(pendingRow("s1"))
 
-        kotlin.test.assertFails { runner.runPending() }
-        assertEquals("PENDING", database["s1"]!!.status)
-
+        // A startup failure must never strand a due row: delivery proceeds.
         assertEquals(1, runner.runPending())
+        assertEquals("SUCCEEDED", database["s1"]!!.status)
+        assertEquals(1, calls)
+
+        // Startup is retried on the next pass, then only once ever.
         runner.runPending()
         assertEquals(2, calls)
-        assertEquals(1, database.retentionCalls.size)
+        runner.runPending()
+        assertEquals(2, calls)
     }
 
     @Test

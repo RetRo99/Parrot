@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.map
 import kotlin.coroutines.cancellation.CancellationException
 
 /** Where the recap function lives. */
@@ -31,6 +32,8 @@ data class RecapEndpoint(
 
 /** The signed-in user's access token, as the recap engine needs it. */
 interface RecapAuthTokens {
+    fun accountId(): String? = null
+    fun observeAccountId(): Flow<String?> = flowOf(accountId())
     fun isSignedIn(): Boolean
 
     fun observeSignedIn(): Flow<Boolean>
@@ -45,6 +48,12 @@ interface RecapAuthTokens {
 class SupabaseRecapAuthTokens(
     private val clientProvider: SupabaseClientProvider,
 ) : RecapAuthTokens {
+
+    override fun accountId(): String? = try { clientProvider.client.auth.currentUserOrNull()?.id } catch (_: Exception) { null }
+    override fun observeAccountId(): Flow<String?> = clientProvider.observeActiveSessionState()
+        .mapNotNull { state -> if (state.status is SessionStatus.Initializing) null else Account(accountId()) }
+        .map { it.id }.distinctUntilChanged()
+    private data class Account(val id: String?)
 
     override fun isSignedIn(): Boolean =
         clientProvider.isConfigured &&

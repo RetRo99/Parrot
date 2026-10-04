@@ -37,6 +37,12 @@ data class SessionRecapEntity(
     val updatedAt: Long,
     val endedAt: Long? = null,
     val generatedAt: Long? = null,
+    val cloudAccountId: String? = null,
+    val cloudBookId: String? = null,
+    val consentVersion: Int = 2,
+    val cloudChangeId: Long = 0,
+    val cloudExpiresAt: Long? = null,
+    val cloudIdentityBound: Boolean = false,
 )
 
 /** Capture progress written while a session is still open. */

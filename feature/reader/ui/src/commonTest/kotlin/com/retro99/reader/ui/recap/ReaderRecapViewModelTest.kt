@@ -190,7 +190,7 @@ class ReaderRecapViewModelTest {
         summary = summary,
         lastError = null,
         startPosition = RecapPosition(),
-        endPosition = RecapPosition(),
+        endPosition = RecapPosition(totalProgression = 0.5),
         startChapter = RecapChapter(),
         endChapter = RecapChapter(),
         attemptCount = 0,
@@ -204,6 +204,9 @@ class ReaderRecapViewModelTest {
     )
 
     private class FakeRepository(private val history: Flow<List<SessionRecap>>) : RecapRepository {
+        override suspend fun request(sessionId: String) = com.retro99.reader.domain.recap.RecapRequestResult.TEXT_UNAVAILABLE
+        override fun observeProgression(bookId: String): Flow<Double?> = flowOf(0.5)
+        override suspend fun delete(sessionId: String) {}
         var retries = 0
 
         override fun observeRecap(sessionId: String): Flow<SessionRecap?> = flowOf(null)
@@ -220,6 +223,8 @@ class ReaderRecapViewModelTest {
 
     private class FakeSettings(private val enabled: MutableStateFlow<Boolean>) : RecapSettings {
         override fun observeCloudRecapsEnabled(): Flow<Boolean> = enabled
+
+        override fun observeConsentGiven(): Flow<Boolean> = enabled
 
         override suspend fun isCloudRecapsEnabled(): Boolean = enabled.value
 

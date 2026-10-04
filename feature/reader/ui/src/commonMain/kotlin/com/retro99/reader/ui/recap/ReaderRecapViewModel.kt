@@ -55,10 +55,14 @@ sealed interface ReaderRecapIntent : BaseIntent {
  * Only SUCCEEDED recaps are offered; pending and failed ones stay out of
  * the reader. [history] is newest first and holds ended sessions only.
  */
-fun readerRecapBanner(history: List<SessionRecap>, cloudRecapsEnabled: Boolean): ReaderRecapBanner? {
+fun readerRecapBanner(history: List<SessionRecap>, cloudRecapsEnabled: Boolean,
+    currentProgression: Double? = null, requirePosition: Boolean = false): ReaderRecapBanner? {
     if (!cloudRecapsEnabled) return null
     val index = history.indexOfFirst { recap ->
-        recap.status == RecapStatus.SUCCEEDED && !recap.summary.isNullOrBlank()
+        recap.status == RecapStatus.SUCCEEDED && !recap.summary.isNullOrBlank() &&
+            (!requirePosition || (currentProgression != null && recap.endPosition.totalProgression?.let { end ->
+                currentProgression >= end && currentProgression <= end + 0.02
+            } == true))
     }
     if (index < 0) return null
     val recap = history[index]
@@ -84,8 +88,9 @@ class ReaderRecapViewModel(
             recapRepository.observeHistory(bookUuid),
             recapSettings.observeCloudRecapsEnabled(),
             dismissedNow,
-        ) { history, enabled, dismissed ->
-            readerRecapBanner(history, enabled)?.takeIf { it.sessionId !in dismissed }
+            recapRepository.observeProgression(bookUuid),
+        ) { history, enabled, dismissed, progression ->
+            readerRecapBanner(history, enabled, progression, requirePosition = true)?.takeIf { it.sessionId !in dismissed }
         }
             .mapLatest { banner -> banner?.takeIf { !dismissals.isDismissed(it.sessionId) } }
             .distinctUntilChanged()

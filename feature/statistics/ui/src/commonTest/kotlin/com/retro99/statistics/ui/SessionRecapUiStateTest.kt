@@ -49,8 +49,8 @@ class SessionRecapUiStateTest {
     }
 
     @Test
-    fun pendingAndRunningRowsAreGenerating() {
-        assertEquals(SessionRecapUiState.Generating, sessionRecap(RecapStatus.PENDING).state())
+    fun pendingRowsAreReadyAndRunningRowsAreGenerating() {
+        assertEquals(SessionRecapUiState.Ready, sessionRecap(RecapStatus.PENDING).state())
         assertEquals(SessionRecapUiState.Generating, sessionRecap(RecapStatus.CAPTURING).state())
         // A request may already be in flight, whatever the consent now.
         assertEquals(

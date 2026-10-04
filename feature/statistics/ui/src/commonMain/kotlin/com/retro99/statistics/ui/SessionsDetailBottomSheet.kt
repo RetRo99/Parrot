@@ -46,7 +46,7 @@ fun SessionsDetailBottomSheet(
     onRetry: () -> Unit,
     onSessionClick: (Long) -> Unit,
     onSessionDetailBack: () -> Unit,
-    onRetryRecap: () -> Unit,
+    onGenerateRecap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -66,7 +66,7 @@ fun SessionsDetailBottomSheet(
             SessionDetailContent(
                 detail = selected,
                 onBack = onSessionDetailBack,
-                onRetryRecap = onRetryRecap,
+                onGenerateRecap = onGenerateRecap,
             )
             return@ModalBottomSheet
         }

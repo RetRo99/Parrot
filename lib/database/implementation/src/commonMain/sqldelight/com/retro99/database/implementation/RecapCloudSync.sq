@@ -1,0 +1,24 @@
+CREATE TABLE recap_cloud_delete (account_id TEXT NOT NULL, session_id TEXT NOT NULL, PRIMARY KEY(account_id,session_id));
+CREATE TABLE recap_cloud_withdrawal (account_id TEXT NOT NULL PRIMARY KEY, pending INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE recap_cloud_cursor (account_id TEXT NOT NULL, book_id TEXT NOT NULL, cursor INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(account_id,book_id));
+
+queueDelete:
+INSERT OR IGNORE INTO recap_cloud_delete VALUES (?,?);
+getDeletes:
+SELECT session_id FROM recap_cloud_delete WHERE account_id=?;
+acknowledgeDelete:
+DELETE FROM recap_cloud_delete WHERE account_id=? AND session_id=?;
+queueWithdrawal:
+INSERT OR REPLACE INTO recap_cloud_withdrawal(account_id,pending) VALUES (?,1);
+getWithdrawal:
+SELECT account_id FROM recap_cloud_withdrawal WHERE account_id=? AND pending=1;
+acknowledgeWithdrawal:
+UPDATE recap_cloud_withdrawal SET pending=0 WHERE account_id=?;
+enableConsent:
+DELETE FROM recap_cloud_withdrawal WHERE account_id=?;
+getCursor:
+SELECT cursor FROM recap_cloud_cursor WHERE account_id=? AND book_id=?;
+setCursor:
+INSERT OR REPLACE INTO recap_cloud_cursor VALUES (?,?,?);
+clearCursors:
+DELETE FROM recap_cloud_cursor WHERE account_id=?;

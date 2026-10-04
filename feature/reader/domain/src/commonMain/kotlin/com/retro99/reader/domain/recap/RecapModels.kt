@@ -8,6 +8,8 @@ enum class RecapStatus {
     PENDING,
     /** Claimed by the job runner; a request may be in flight. */
     RUNNING,
+    CLOUD_QUEUED,
+    CLOUD_RUNNING,
     SUCCEEDED,
     /** The model said too little happened to summarise. */
     NOT_ENOUGH,
@@ -109,6 +111,7 @@ data class SessionRecap(
     /** True while a result may still arrive without user action. */
     val isInProgress: Boolean
         get() = status == RecapStatus.PENDING ||
+            status == RecapStatus.CLOUD_QUEUED || status == RecapStatus.CLOUD_RUNNING ||
             status == RecapStatus.RUNNING ||
             status == RecapStatus.FAILED_RETRYABLE
 }

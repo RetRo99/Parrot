@@ -26,6 +26,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
+import kotlinx.serialization.decodeFromString
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -51,6 +52,8 @@ class CloudRecapEngine(
 
     override suspend fun generate(input: RecapInput): RecapResult {
         if (!endpoint.isConfigured) return RecapResult.Retryable(RecapErrorCode.SERVICE_UNAVAILABLE)
+        if (input.sessionId == null || input.endedAt == null) return RecapResult.Permanent(RecapErrorCode.BAD_REQUEST)
+        if (input.accountId != null && auth.accountId() != input.accountId) return RecapResult.AuthRequired
         val excerpt = input.excerpt
         // The server answers 422 below this; don't spend a request on it.
         if (excerpt.trim().length < MIN_EXCERPT_CHARS) {
@@ -60,6 +63,11 @@ class CloudRecapEngine(
         val token = auth.accessToken() ?: return RecapResult.AuthRequired
         val session = Session(token)
         return try {
+            // Lookup first: response loss after admission or completion must not
+            // cause another upload or provider call. A definitive empty page is
+            // the ONLY condition under which this session is submitted.
+            val page = fetch(input.accountId, sessionId = input.sessionId)
+            page.items.firstOrNull()?.let { return remoteResult(it) }
             if (parts.size == 1) {
                 val response = send(requestBody(input, excerpt = excerpt), session)
                     ?: return RecapResult.AuthRequired
@@ -68,7 +76,7 @@ class CloudRecapEngine(
             // Long excerpt: earlier parts are stored, the last one generates.
             val upload = UploadRef(newUploadId(), parts.size)
             parts.dropLast(1).forEachIndexed { index, part ->
-                val response = send(partBody(upload, index, part), session)
+                val response = send(partBody(upload, index, part, input), session)
                     ?: return RecapResult.AuthRequired
                 if (response.status.value != 202) return map(response)
             }
@@ -88,16 +96,18 @@ class CloudRecapEngine(
         }
     }
 
-    private class Session(var token: String)
+    private inner class Session(var token: String, val accountId: String? = auth.accountId())
 
     private class UploadRef(val id: String, val total: Int)
 
     /** Posts with the session's token; null once a refresh can't help. */
     private suspend fun send(body: String, session: Session): HttpResponse? {
+        if (auth.accountId() != session.accountId) return null
         val response = post(body, session.token)
         if (response.status.value != 401) return response
         // Expired access token: refresh once, then give up until sign-in.
         val refreshed = auth.refreshedAccessToken() ?: return null
+        if (auth.accountId() != session.accountId) return null
         session.token = refreshed
         return post(body, refreshed).takeIf { it.status.value != 401 }
     }
@@ -113,10 +123,11 @@ class CloudRecapEngine(
     private suspend fun map(response: HttpResponse): RecapResult {
         val status = response.status.value
         return when (status) {
-            200 -> parseSuccess(response.bodyAsText())
+            200, 202 -> parseSuccess(response.bodyAsText())
             400, 405, 413 -> RecapResult.Permanent(RecapErrorCode.BAD_REQUEST)
             // A stored part expired or was lost; the next attempt re-uploads.
-            409 -> RecapResult.Retryable(RecapErrorCode.UNKNOWN)
+            409 -> if (response.bodyAsText().contains("upload_incomplete")) RecapResult.Retryable(RecapErrorCode.NETWORK)
+                else RecapResult.Permanent(RecapErrorCode.BAD_REQUEST)
             // Not a token problem (the function never sends it): back off.
             403 -> RecapResult.Retryable(RecapErrorCode.UNKNOWN, retryAfter(response))
             422 -> RecapResult.Permanent(unprocessableCode(response.bodyAsText()))
@@ -132,6 +143,11 @@ class CloudRecapEngine(
     private fun parseSuccess(text: String): RecapResult {
         val body = runCatching { Json.parseToJsonElement(text).jsonObject }.getOrNull()
             ?: return RecapResult.Retryable(RecapErrorCode.BAD_RESPONSE)
+        if (body.string("state") != null) {
+            val record = runCatching { wireJson.decodeFromString<CloudRecapRecord>(text) }.getOrNull()
+                ?: return RecapResult.Retryable(RecapErrorCode.BAD_RESPONSE)
+            return remoteResult(record)
+        }
         val summary = body.string("summary")?.trim()
         // The function doesn't report a model yet; tolerate it missing.
         val model = body.string("model")?.takeIf { it.isNotBlank() && it.length <= 100 }
@@ -173,6 +189,7 @@ class CloudRecapEngine(
         upload: UploadRef? = null,
         last: String? = null,
     ): String = buildJsonObject {
+        metadata(input)
         excerpt?.let { put("excerpt", it) }
         if (upload != null && last != null) {
             putUpload(upload, upload.total - 1)
@@ -184,11 +201,59 @@ class CloudRecapEngine(
         }
     }.toString()
 
-    private fun partBody(upload: UploadRef, index: Int, text: String): String =
+    private fun partBody(upload: UploadRef, index: Int, text: String, input: RecapInput): String =
         buildJsonObject {
+            metadata(input)
             putUpload(upload, index)
             put("text", text)
         }.toString()
+
+    private fun JsonObjectBuilder.metadata(input: RecapInput) {
+        put("consentVersion", 2)
+        put("sessionId", input.sessionId)
+        put("cloudBookId", input.cloudBookId)
+        put("endedAt", input.endedAt)
+        put("position", buildJsonObject {
+            put("href", input.position.href)
+            put("progression", input.position.progression)
+            put("totalProgression", input.position.totalProgression)
+        })
+    }
+
+    suspend fun fetch(accountId: String?, sessionId: String? = null, cloudBookId: String? = null, cursor: Long = 0): CloudRecapPage {
+        val text = operation(accountId, buildJsonObject {
+            put("operation", "fetch"); put("sessionId", sessionId); put("cloudBookId", cloudBookId); put("cursor", cursor)
+        })
+        return wireJson.decodeFromString(text)
+    }
+
+    suspend fun consent(accountId: String, enabled: Boolean) {
+        operation(accountId, buildJsonObject { put("operation", "consent"); put("enabled", enabled) })
+    }
+
+    suspend fun delete(accountId: String, sessionId: String) {
+        operation(accountId, buildJsonObject { put("operation", "delete"); put("sessionId", sessionId) })
+    }
+
+    private suspend fun operation(accountId: String?, body: JsonObject): String {
+        if (!endpoint.isConfigured || auth.accountId() != accountId) throw IllegalStateException("recap_account_unavailable")
+        val token = auth.accessToken() ?: throw IllegalStateException("recap_signed_out")
+        if (auth.accountId() != accountId) throw IllegalStateException("recap_account_changed")
+        val response = send(body.toString(), Session(token, accountId)) ?: throw IllegalStateException("recap_signed_out")
+        if (response.status.value != 200 || auth.accountId() != accountId) throw IllegalStateException("recap_transport_failure")
+        return response.bodyAsText()
+    }
+
+    private fun remoteResult(record: CloudRecapRecord): RecapResult = when (record.state) {
+        "queued" -> RecapResult.Queued()
+        "running" -> RecapResult.Queued(running = true)
+        "completed" -> record.summary?.takeIf { it.isNotBlank() }?.let { RecapResult.Success(it, record.model) }
+            ?: RecapResult.Retryable(RecapErrorCode.BAD_RESPONSE)
+        "not_enough" -> RecapResult.NotEnough
+        "deleted" -> RecapResult.Permanent(RecapErrorCode.CONSENT_WITHDRAWN)
+        "failed" -> RecapResult.Permanent(RecapErrorCode.fromName(record.errorCode) ?: RecapErrorCode.PROVIDER_ERROR)
+        else -> RecapResult.Retryable(RecapErrorCode.BAD_RESPONSE)
+    }
 
     private fun JsonObjectBuilder.putUpload(upload: UploadRef, index: Int) {
         put(
@@ -212,9 +277,12 @@ class CloudRecapEngine(
     companion object {
         /**
          * The server answers within its 135 s budget (long sessions are
-         * summarised in parts); the Edge gateway gives up at 150 s anyway.
+         * summarised in parts; the Edge gateway gives up at 150 s). The client
+         * does not wait that long: a submission whose response is lost is
+         * recovered by the lookup at the start of the next attempt, so a
+         * short timeout can delay a recap but never lose one.
          */
-        const val REQUEST_TIMEOUT_MS = 150_000L
+        const val REQUEST_TIMEOUT_MS = 30_000L
 
         /** The server's minimum after trim. */
         const val MIN_EXCERPT_CHARS = 80
@@ -261,6 +329,7 @@ class CloudRecapEngine(
         private fun newUploadId(): String = Uuid.random().toString()
 
         private val MAX_RETRY_AFTER = 24.hours
+        private val wireJson = Json { ignoreUnknownKeys = true }
 
         /** Languages the function writes in; others fall back to its default. */
         val SUPPORTED_LANGUAGES: Set<String> = RecapLanguages.SUPPORTED

@@ -24,7 +24,14 @@ fun initKoin(
         modules(additionalModules)
         analytics()
     }.also { koinApp ->
-        koinApp.koin.getAll<AppInitializer>().forEach { it.initialize() }
+        koinApp.koin.getAll<AppInitializer>().forEach {
+            try {
+                it.initialize()
+            } catch (e: Exception) {
+                // One broken initializer must not silently disable the rest.
+                println("RECAPDBG initializer_failed ${it::class.simpleName}: ${e::class.simpleName}")
+            }
+        }
     }
 }
 

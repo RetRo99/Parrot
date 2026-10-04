@@ -1354,7 +1354,7 @@
     <string name="reader_find_back_no_percent">Back to where I was</string>
     <!-- Session recaps -->
     <string name="settings_cloud_recaps_title">Cloud recaps</string>
-    <string name="settings_cloud_recaps_subtitle">Get a short AI summary after each reading session. The text you read is sent to Parrot Cloud to create it.</string>
+    <string name="settings_cloud_recaps_subtitle">Allow AI recaps: excerpts are temporarily stored on Parrot Cloud (24-hour expiry, removed at the next cleanup) and sent to the AI provider. Summaries are stored in your account for up to 180 days and synced across signed-in devices. Turning this off deletes cloud recaps and their local caches when devices reconnect. Text already sent to the provider cannot be recalled. Existing sessions are not uploaded.</string>
     <string name="settings_cloud_recaps_sign_in_hint">Sign in to Parrot Cloud to use recaps</string>
     <string name="reader_recap_last_session">Recap of your last session</string>
     <string name="reader_recap_earlier_session">Recap of an earlier session</string>
@@ -1381,7 +1381,11 @@
     <string name="statistics_recap_not_enough">Too little happened in this session to summarize.</string>
     <string name="statistics_recap_failed_retryable">Couldn't generate the recap yet. Parrot will try again automatically.</string>
     <string name="statistics_recap_failed_permanent">Couldn't generate a recap for this session.</string>
-    <string name="statistics_recap_retry">Retry</string>
+    <string name="statistics_recap_generate">Generate recap</string>
+    <string name="statistics_recap_queued">Recap queued. It will be generated when connected, subject to quota and text expiry.</string>
+    <string name="statistics_recap_request_failed">Couldn’t request the recap. Please try again.</string>
+    <string name="statistics_recap_ready">This session already has a recap.</string>
+    <string name="statistics_recap_text_unavailable">No consented text is saved for this session, so a recap can’t be generated.</string>
     <string name="statistics_recap_retry_unavailable">This recap can no longer be retried.</string>
     <string name="statistics_recap_sign_in">Sign in to Parrot Cloud to generate this recap.</string>
 </resources>

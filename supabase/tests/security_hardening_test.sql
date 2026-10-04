@@ -310,9 +310,10 @@ select ok(
 );
 
 -- Recaps: allowlist gate and global daily cap.
+-- Quota is now an owner-only internal algorithm called by durable admission.
 update public.recap_settings set value = 2 where key = 'global_daily_limit';
 
-set local role authenticated;
+reset role;
 set local request.jwt.claim.sub = '17000000-0000-0000-0000-000000000003';
 set local request.jwt.claim.role = 'authenticated';
 select is(public.consume_recap_quota(5), false, 'an account off the allowlist gets no recap');
@@ -342,7 +343,7 @@ select is(
 
 update public.recap_settings set value = 0 where key = 'global_daily_limit';
 delete from public.recap_global_usage;
-set local role authenticated;
+reset role;
 set local request.jwt.claim.sub = '17000000-0000-0000-0000-000000000002';
 set local request.jwt.claim.role = 'authenticated';
 select is(public.consume_recap_quota(5), false, 'a zero global limit turns recaps off');
@@ -351,7 +352,7 @@ reset role;
 -- A direct call can't raise its own limit past per_user_daily_limit.
 update public.recap_settings set value = 500 where key = 'global_daily_limit';
 update public.recap_settings set value = 1 where key = 'per_user_daily_limit';
-set local role authenticated;
+reset role;
 select is(public.consume_recap_quota(1000000), true, 'the clamped limit grants one unit');
 select is(
     public.consume_recap_quota(1000000), false,
@@ -359,6 +360,7 @@ select is(
 );
 
 -- Sync payload limits.
+set local role authenticated;
 select throws_ok(
     $$select public.push_sync_changes(
         (select jsonb_agg(jsonb_build_object('mutation_id', gen_random_uuid()))

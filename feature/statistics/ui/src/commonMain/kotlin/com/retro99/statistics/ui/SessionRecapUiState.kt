@@ -18,6 +18,8 @@ sealed interface SessionRecapUiState {
     data object WaitingForOptIn : SessionRecapUiState
 
     data object Generating : SessionRecapUiState
+    /** Captured input is waiting for automatic or explicit delivery. */
+    data object Ready : SessionRecapUiState
 
     data class Succeeded(
         val summary: String,
@@ -38,8 +40,10 @@ sealed interface SessionRecapUiState {
 }
 
 /**
- * [engineAvailable] is consent and sign-in together, as the job runner
- * sees it. Waiting rows can only move once both hold.
+ * [cloudRecapsEnabled] is the consent alone, whether or not a Parrot Cloud
+ * session is usable; [engineAvailable] is consent and sign-in together, as the
+ * job runner sees it. Waiting rows can only move once both hold, and the pair
+ * is what tells "turn Cloud recaps on" apart from "sign in again".
  */
 fun SessionRecap?.toSessionRecapUiState(
     cloudRecapsEnabled: Boolean,
@@ -49,7 +53,7 @@ fun SessionRecap?.toSessionRecapUiState(
     return when (recap.status) {
         RecapStatus.SKIPPED_INELIGIBLE -> SessionRecapUiState.Ineligible
         RecapStatus.NOT_ENOUGH -> SessionRecapUiState.NotEnough
-        RecapStatus.RUNNING -> SessionRecapUiState.Generating
+        RecapStatus.RUNNING, RecapStatus.CLOUD_QUEUED, RecapStatus.CLOUD_RUNNING -> SessionRecapUiState.Generating
         RecapStatus.SUCCEEDED -> recap.summary?.takeIf { it.isNotBlank() }
             ?.let { summary -> SessionRecapUiState.Succeeded(summary, recap.engineId, recap.model) }
             ?: SessionRecapUiState.FailedPermanent(canRetry = false)
@@ -65,6 +69,7 @@ fun SessionRecap?.toSessionRecapUiState(
                 SessionRecapUiState.SignInRequired
             recap.status == RecapStatus.FAILED_RETRYABLE ->
                 SessionRecapUiState.FailedRetryable(recap.canRetry)
+            recap.status == RecapStatus.PENDING -> SessionRecapUiState.Ready
             else -> SessionRecapUiState.Generating
         }
     }

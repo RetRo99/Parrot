@@ -182,7 +182,7 @@ private fun StatisticsScreenContent(
                 onRetry = { intentDispatcher(StatisticsIntent.OnRetryDetail) },
                 onSessionClick = { id -> intentDispatcher(StatisticsIntent.OnSessionClicked(id)) },
                 onSessionDetailBack = { intentDispatcher(StatisticsIntent.OnSessionDetailClosed) },
-                onRetryRecap = { intentDispatcher(StatisticsIntent.OnRetryRecap) },
+                onGenerateRecap = { intentDispatcher(StatisticsIntent.OnGenerateRecap) },
             )
         }
     }

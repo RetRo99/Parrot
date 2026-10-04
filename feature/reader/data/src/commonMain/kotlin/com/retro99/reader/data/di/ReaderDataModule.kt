@@ -1,10 +1,15 @@
 package com.retro99.reader.data.di
 
 import com.retro99.analytics.api.Analytics
-import com.retro99.base.AppInitializer
 import com.retro99.cloud.implementation.CloudConfiguration
 import com.retro99.cloud.implementation.SupabaseClientProvider
 import com.retro99.database.api.recap.SessionRecapDatabase
+import com.retro99.database.api.books.BooksDatabase
+import com.retro99.database.api.books.PositionDatabase
+import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.database.api.links.BookLinksDatabase
+import com.retro99.reader.data.recap.RecapBookIdentity
+import com.retro99.reader.data.recap.RecapCloudSync
 import com.retro99.reader.data.recap.CloudRecapEngine
 import com.retro99.reader.data.recap.DefaultRecapEngineSelector
 import com.retro99.reader.data.recap.RecapAuthTokens
@@ -66,16 +71,31 @@ class ReaderDataModule {
     ): RecapEngineSelector = DefaultRecapEngineSelector(settings, auth, cloudEngine)
 
     @Single
+    internal fun provideRecapBookIdentity(library: LibraryBooksDatabase, links: BookLinksDatabase,
+        books: BooksDatabase, positions: PositionDatabase) = RecapBookIdentity(library, links, books, positions)
+
+    @Single
+    internal fun provideRecapCloudSync(database: SessionRecapDatabase, cloud: CloudRecapEngine,
+        auth: RecapAuthTokens, settings: RecapSettings, identity: RecapBookIdentity, userRegistry: UserRegistry) =
+        RecapCloudSync(database, cloud, auth, settings, identity, userRegistry::getActiveProfileIdOrDefault)
+
+    @Single
     internal fun provideRecapJobRunner(
         database: SessionRecapDatabase,
         selector: RecapEngineSelector,
         analytics: Analytics,
         userRegistry: UserRegistry,
+        auth: RecapAuthTokens,
+        identity: RecapBookIdentity,
+        sync: RecapCloudSync,
     ): RecapJobRunner = RecapJobRunner(
         database = database,
         selector = selector,
         diagnostics = RecapDiagnostics(analytics),
         activeProfileId = userRegistry::getActiveProfileIdOrDefault,
+        accountId = auth::accountId,
+        cloudBookId = identity::cloudId,
+        cloudSync = sync::sync,
     )
 
     @Single
@@ -84,8 +104,10 @@ class ReaderDataModule {
         settings: RecapSettings,
         analytics: Analytics,
         runner: RecapJobRunner,
+        auth: RecapAuthTokens,
     ): RecapSessionRecorderImpl = RecapSessionRecorderImpl(
         database = database,
+        accountId = auth::accountId,
         settings = settings,
         diagnostics = RecapDiagnostics(analytics),
         onSessionReady = { runner.trigger(RecapTrigger.SESSION_ENDED) },
@@ -100,13 +122,9 @@ class ReaderDataModule {
     internal fun provideRecapRepository(
         database: SessionRecapDatabase,
         runner: RecapJobRunner,
-    ): RecapRepository = SessionRecapDataRepository(database, runner)
-
-    @Single(binds = [AppInitializer::class])
-    internal fun provideRecapStartupInitializer(
-        recorder: RecapSessionRecorderImpl,
-        runner: RecapJobRunner,
-    ): RecapStartupInitializer = RecapStartupInitializer(recorder, runner)
+        auth: RecapAuthTokens,
+        identity: RecapBookIdentity,
+    ): RecapRepository = SessionRecapDataRepository(database, runner, auth = auth, identity = identity)
 
     private companion object {
         const val RECAP_CONNECT_TIMEOUT_MS = 15_000L

@@ -61,7 +61,7 @@ class AppSettingsViewModel(
         observeBooleanPref(PreferencesKey.ShowContinueReading, defaultValue = true) { enabled ->
             updateState { it.copy(showContinueReading = enabled) }
         }
-        recapSettings.observeCloudRecapsEnabled()
+        recapSettings.observeConsentGiven()
             .onEach { enabled -> updateState { it.copy(cloudRecapsEnabled = enabled) } }
             .catch { error -> logCloudRecapsFailure(error, stage = "observe") }
             .launchIn(viewModelScope)

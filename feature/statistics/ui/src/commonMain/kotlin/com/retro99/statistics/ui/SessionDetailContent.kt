@@ -23,7 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.compose.stringTextWrapper
+import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.recap.RecapEngine
+import com.retro99.reader.domain.recap.RecapRequestResult
 import com.retro99.statistics.ui.model.ReadingSessionUiModel
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
@@ -35,8 +37,12 @@ import resources.translations.statistics_recap_generating
 import resources.translations.statistics_recap_ineligible
 import resources.translations.statistics_recap_none
 import resources.translations.statistics_recap_not_enough
-import resources.translations.statistics_recap_retry
 import resources.translations.statistics_recap_retry_unavailable
+import resources.translations.statistics_recap_generate
+import resources.translations.statistics_recap_queued
+import resources.translations.statistics_recap_request_failed
+import resources.translations.statistics_recap_ready
+import resources.translations.statistics_recap_text_unavailable
 import resources.translations.statistics_recap_sign_in
 import resources.translations.statistics_recap_turn_on_hint
 import resources.translations.statistics_recap_waiting_opt_in
@@ -57,7 +63,7 @@ import kotlin.math.roundToInt
 internal fun SessionDetailContent(
     detail: SessionDetailState,
     onBack: () -> Unit,
-    onRetryRecap: () -> Unit,
+    onGenerateRecap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val session = detail.session
@@ -123,7 +129,8 @@ internal fun SessionDetailContent(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = 8.dp),
         )
-        SessionRecapSection(detail = detail, onRetry = onRetryRecap)
+        SessionRecapSection(detail = detail)
+        RecapGenerateAction(detail = detail, onGenerate = onGenerateRecap)
     }
 }
 
@@ -160,14 +167,18 @@ private fun Double.toPercent(): Int = (this * 100).roundToInt().coerceIn(0, 100)
 @Composable
 private fun SessionRecapSection(
     detail: SessionDetailState,
-    onRetry: () -> Unit,
 ) {
     when (val recap = detail.recap) {
         SessionRecapUiState.Loading -> CircularProgressIndicator(modifier = Modifier.size(24.dp))
+        SessionRecapUiState.Ready -> RecapMessage(stringResource(StringRes.statistics_recap_queued))
         is SessionRecapUiState.None -> {
             RecapMessage(stringResource(StringRes.statistics_recap_none))
-            if (!recap.cloudRecapsEnabled) {
-                RecapMessage(stringResource(StringRes.statistics_recap_turn_on_hint))
+            // Audiobooks never capture recaps; the other lines would mislead.
+            if (detail.session.bookType != BookType.AUDIOBOOK) {
+                RecapMessage(stringResource(StringRes.statistics_recap_text_unavailable))
+                if (!recap.cloudRecapsEnabled) {
+                    RecapMessage(stringResource(StringRes.statistics_recap_turn_on_hint))
+                }
             }
         }
         SessionRecapUiState.Ineligible -> RecapMessage(stringResource(StringRes.statistics_recap_ineligible))
@@ -192,32 +203,36 @@ private fun SessionRecapSection(
         SessionRecapUiState.NotEnough -> RecapMessage(stringResource(StringRes.statistics_recap_not_enough))
         is SessionRecapUiState.FailedRetryable -> {
             RecapMessage(stringResource(StringRes.statistics_recap_failed_retryable))
-            RecapRetry(detail = detail, canRetry = recap.canRetry, onRetry = onRetry)
         }
         is SessionRecapUiState.FailedPermanent -> {
             RecapMessage(stringResource(StringRes.statistics_recap_failed_permanent))
-            RecapRetry(detail = detail, canRetry = recap.canRetry, onRetry = onRetry)
+            if (!recap.canRetry) RecapMessage(stringResource(StringRes.statistics_recap_retry_unavailable))
         }
         SessionRecapUiState.SignInRequired -> RecapMessage(stringResource(StringRes.statistics_recap_sign_in))
     }
 }
 
 @Composable
-private fun RecapRetry(
+private fun RecapGenerateAction(
     detail: SessionDetailState,
-    canRetry: Boolean,
-    onRetry: () -> Unit,
+    onGenerate: () -> Unit,
 ) {
-    when {
-        detail.retryUnavailable ->
-            RecapMessage(stringResource(StringRes.statistics_recap_retry_unavailable))
-        canRetry -> OutlinedButton(
-            onClick = onRetry,
-            enabled = !detail.isRetrying,
-            modifier = Modifier.padding(top = 8.dp),
-        ) {
-            Text(stringResource(StringRes.statistics_recap_retry))
-        }
+    when (detail.recapRequestResult) {
+        RecapRequestResult.QUEUED -> RecapMessage(stringResource(StringRes.statistics_recap_queued))
+        RecapRequestResult.IN_PROGRESS -> RecapMessage(stringResource(StringRes.statistics_recap_generating))
+        RecapRequestResult.ALREADY_GENERATED -> RecapMessage(stringResource(StringRes.statistics_recap_ready))
+        RecapRequestResult.TEXT_UNAVAILABLE -> RecapMessage(stringResource(StringRes.statistics_recap_retry_unavailable))
+        RecapRequestResult.ACCOUNT_REQUIRED -> RecapMessage(stringResource(StringRes.statistics_recap_sign_in))
+        null -> Unit
+    }
+    if (detail.recapRequestFailed) RecapMessage(stringResource(StringRes.statistics_recap_request_failed))
+    OutlinedButton(
+        onClick = onGenerate,
+        enabled = detail.canRequestRecap,
+        modifier = Modifier.padding(top = 8.dp),
+    ) {
+        if (detail.isRequestingRecap) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+        Text(stringResource(StringRes.statistics_recap_generate))
     }
 }
 

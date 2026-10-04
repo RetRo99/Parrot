@@ -32,8 +32,8 @@ select ok(
     'clients have no direct table privileges'
 );
 select ok(
-    has_function_privilege('authenticated', 'public.consume_recap_quota(integer)', 'execute'),
-    'authenticated users can consume quota'
+    not has_function_privilege('authenticated', 'public.consume_recap_quota(integer)', 'execute'),
+    'authenticated users cannot directly consume quota'
 );
 select ok(
     not has_function_privilege('anon', 'public.consume_recap_quota(integer)', 'execute'),
@@ -50,7 +50,8 @@ select ok(
 );
 
 -- User A: limit 2.
-set local role authenticated;
+-- Exercise the internal algorithm as its owner with user claims; actual
+-- service-only admission and client denial are covered in durable_recaps_test.
 set local request.jwt.claims = '{"sub":"10000000-0000-0000-0000-000000000061","role":"authenticated","is_anonymous":false}';
 
 select is(public.consume_recap_quota(2), true, 'first call is allowed');

@@ -70,7 +70,18 @@ data class SessionsDetailState(
 data class SessionDetailState(
     val session: ReadingSessionUiModel,
     val recap: SessionRecapUiState = SessionRecapUiState.Loading,
-    val isRetrying: Boolean = false,
-    /** Retry was refused, e.g. the stored text has expired. */
-    val retryUnavailable: Boolean = false,
+    val recapRequestsAllowed: Boolean = false,
+    val isRequestingRecap: Boolean = false,
+    val recapRequestResult: com.retro99.reader.domain.recap.RecapRequestResult? = null,
+    val recapRequestFailed: Boolean = false,
 )
+
+internal val SessionDetailState.canRequestRecap: Boolean
+    get() = session.recapSessionId != null && recapRequestsAllowed && !isRequestingRecap &&
+        recapRequestResult == null && when (val state = recap) {
+            SessionRecapUiState.Ready -> true
+            // request() wakes normal delivery without skipping its backoff.
+            is SessionRecapUiState.FailedRetryable -> true
+            is SessionRecapUiState.FailedPermanent -> state.canRetry
+            else -> false
+        }

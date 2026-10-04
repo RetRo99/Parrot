@@ -298,6 +298,34 @@ class SessionRecapQueriesTest {
         assertEquals(excerpt, queries.getRecap("s1").executeAsOne().excerpt)
     }
 
+    @Test
+    fun `acknowledged withdrawal fences late cache writes until fresh consent`() {
+        database.recapCloudSyncQueries.queueWithdrawal("account")
+        insertCloud("late")
+        assertNull(queries.getRecap("late").executeAsOneOrNull())
+        database.recapCloudSyncQueries.acknowledgeWithdrawal("account")
+        insertCloud("late")
+        assertNull(queries.getRecap("late").executeAsOneOrNull())
+        database.recapCloudSyncQueries.enableConsent("account")
+        insertCloud("late")
+        assertEquals("Saved.", queries.getRecap("late").executeAsOne().summary)
+    }
+
+    @Test
+    fun `offline deletion fences cache inserts and updates`() {
+        database.recapCloudSyncQueries.queueDelete("account", "deleted")
+        insertCloud("deleted")
+        assertNull(queries.getRecap("deleted").executeAsOneOrNull())
+        insertCloud("existing")
+        database.recapCloudSyncQueries.queueDelete("account", "existing")
+        queries.updateCloudRecap("SUCCEEDED", "Late.", null, null, null, null, null,
+            1, "en", 2, 2, "cloud", 2, 1000, "existing", "account")
+        assertEquals("Saved.", queries.getRecap("existing").executeAsOne().summary)
+    }
+
+    private fun insertCloud(id: String) = queries.insertCloudRecap(id, "server", "book", "SUCCEEDED",
+        null, null, 0.5, "en", "Saved.", "hy3", 1, 1, 1, 1, "account", "cloud", 1, 1000)
+
     private fun pending(sessionId: String) = finish(sessionId, "PENDING")
 
     private fun finish(sessionId: String, status: String) {

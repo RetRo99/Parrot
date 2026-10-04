@@ -204,7 +204,9 @@ and part calls stop 35 s early so the merge has time. Past 2M chars (~20 h of
 reading) the function keeps the most recent 2M, which is about 9 parts, three map
 rounds. Measured on hy3 (2026-10-02): 8k chars 3.2 s, 300k chars 11 s in one call,
 a whole novel (690k chars, 3 parts) 14 s, and 2M chars (9 parts) 31 s. The client
-waits up to 150 s per request (`CloudRecapEngine.REQUEST_TIMEOUT_MS`).
+waits up to 30 s per request (`CloudRecapEngine.REQUEST_TIMEOUT_MS`); a submission
+whose response is lost is recovered by the lookup at the start of the next attempt,
+so a short client timeout can delay a recap but never lose one.
 
 ## Offline engine extension point
 
@@ -226,7 +228,8 @@ The runner, retention, eligibility and UI need no changes.
 
 - The excerpt and last sentence are dropped as soon as a result is stored, when the
   server rejects the input, or at skip time (only a hash stays for the repeat check).
-- Excerpts and last sentences older than 14 days are nulled; pending rows then become
+- Excerpts and last sentences older than 24 hours are nulled
+  (`RecapJobPolicy.EXCERPT_RETENTION`); pending rows then become
   `FAILED_PERMANENT/EXCERPT_EXPIRED`.
 - Rows older than 180 days are deleted, as are rows whose book is in neither `books`
   nor live `library_books`.
@@ -234,7 +237,8 @@ The runner, retention, eligibility and UI need no changes.
   transaction. Recaps with no statistics row are kept until the rules above.
 - Removing a book from the device deletes its recaps unless a server copy (`books`)
   still has the id. Library-book merges move rows; profile data clear deletes them.
-- Banner dismissals live in preferences, capped at 200 ids.
+- Banner dismissals live in preferences; entries whose recap no longer exists are
+  pruned, and the list is capped at 1,000 ids.
 
 ## Privacy
 

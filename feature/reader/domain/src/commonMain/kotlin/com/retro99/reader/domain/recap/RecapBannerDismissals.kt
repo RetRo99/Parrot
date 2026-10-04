@@ -7,6 +7,10 @@ interface RecapBannerDismissals {
     suspend fun dismiss(sessionId: String)
 
     companion object {
-        const val MAX_ENTRIES = 200
+        /**
+         * Safety bound only. Entries are pruned to recaps that still exist, so
+         * the cap must not evict one and make a dismissed chip resurface.
+         */
+        const val MAX_ENTRIES = 1_000
     }
 }

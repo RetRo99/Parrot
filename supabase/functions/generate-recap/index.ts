@@ -1,21 +1,14 @@
 // generate-recap — Supabase Edge Function
 //
-// Turns a reading-session excerpt into a 2-3 sentence "welcome back" recap.
-// This function is a thin, auditable proxy: it never logs content and
-// hard-caps output tokens. A long excerpt is uploaded in parts, held in
-// recap_upload_parts only until its last part arrives (at most an hour).
-// See docs/reading-session-recap-implementation-plan.md §7 and README.md.
+// Authenticated durable recap submission, lookup, consent and deletion.
+// Generation runs in recap-worker; this HTTP request never calls a provider.
 //
 // Provider: OpenCode Go (OpenAI-compatible /chat/completions) at a fixed
 // URL with a server-side model allow-list; see recap.ts. Secrets and
 // deploy commands are in README.md next to this file.
 //
-// Request:  { excerpt: string, language?: "en" | "sl" | …, lastSentence? },
-//           or upload parts { upload: { id, index, total }, text, … }
-// Response: { kind: "recap" | "not_enough", summary: string | null, model }
-//
-// Callers must be signed-in, non-anonymous users; see guards.ts. Each call
-// consumes one unit of a per-user daily quota (consume_recap_quota RPC).
+// Contract: docs/server-backed-recaps.md. Quota is charged atomically by
+// the worker's admission transaction, never by submission or lookup.
 
 import { createClient, isAuthRetryableFetchError } from 'npm:@supabase/supabase-js@2.117.2'
 import { classifyAuthError } from '../_shared/auth_errors.ts'
@@ -29,15 +22,12 @@ import {
   type UploadPart,
 } from './guards.ts'
 import {
-  DEADLINE_MS,
-  generateRecap,
   isEnabled,
   loadConfig,
   MAX_HINT_CHARS,
   MAX_INPUT_CHARS,
   MIN_EXCERPT_CHARS,
   parseLanguage,
-  sessionId,
 } from './recap.ts'
 
 // Legacy anon key, else the default new publishable key. Only used so
@@ -83,13 +73,11 @@ async function rpc(token: string, name: string, args: Record<string, unknown>) {
     global: { headers: { Authorization: `Bearer ${token}` } },
   })
   const { data, error } = await userClient.rpc(name, args)
-  if (error) throw new Error(`${name} failed: ${error.code ?? 'unknown'}`)
+  if (error) throw new RpcError(error.code ?? 'unknown')
   return data
 }
 
-async function consumeQuota(token: string, limit: number): Promise<boolean> {
-  return (await rpc(token, 'consume_recap_quota', { p_limit: limit })) === true
-}
+class RpcError extends Error { constructor(readonly code: string) { super('database_failure') } }
 
 async function putPart(token: string, part: UploadPart): Promise<boolean> {
   const stored = await rpc(token, 'put_recap_upload_part', {
@@ -99,20 +87,6 @@ async function putPart(token: string, part: UploadPart): Promise<boolean> {
     p_content: part.text,
   })
   return stored === true
-}
-
-/** The earlier parts joined in order (and deleted), or null if incomplete. */
-async function takeParts(token: string, part: UploadPart): Promise<string | null> {
-  const joined = await rpc(token, 'take_recap_upload', {
-    p_upload_id: part.id,
-    p_part_count: part.total,
-  })
-  return typeof joined === 'string' ? joined : null
-}
-
-function secondsToUtcMidnight(now: Date): number {
-  const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
-  return Math.max(1, Math.ceil((next - now.getTime()) / 1000))
 }
 
 function json(body: unknown, status = 200, extra: Record<string, string> = {}): Response {
@@ -132,7 +106,6 @@ Deno.serve(async (req) => {
 })
 
 async function handle(req: Request): Promise<Response> {
-  const receivedAt = Date.now()
   // Only the native app calls this, so no CORS: browsers get no
   // Allow-Origin and cannot read responses. Preflights just end here.
   if (req.method === 'OPTIONS') return new Response(null, { status: 204 })
@@ -140,20 +113,10 @@ async function handle(req: Request): Promise<Response> {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
   try {
-    // Kill switch first: off means no Auth calls and no provider calls.
-    if (!isEnabled(env)) return json({ error: 'Recaps are disabled' }, 503)
-
     if (!authClient) {
       console.error('generate-recap: Supabase URL or key env missing')
       return json({ error: 'Server configuration is incomplete' }, 500)
     }
-
-    const cfg = loadConfig(env)
-    if (!cfg.ok) {
-      console.error(`generate-recap: not configured (${cfg.reason})`)
-      return json({ error: 'Recap provider not configured' }, 503)
-    }
-    const { apiKey, model, dailyLimit } = cfg.config
 
     // verify_jwt = true is not auth: it also admits the publishable key.
     // The user id comes only from the verified token, never the body.
@@ -168,6 +131,28 @@ async function handle(req: Request): Promise<Response> {
     }
     const value = body.value
     const payload = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>
+    // Lookup, deletion and withdrawal remain available with generation off.
+    if (payload.operation === 'fetch') {
+      return json(await rpc(token, 'fetch_recap_jobs', {
+        p_session_id: payload.sessionId ?? null, p_cloud_book_id: payload.cloudBookId ?? null,
+        p_cursor: payload.cursor ?? 0, p_limit: payload.limit ?? 100,
+      }))
+    }
+    if (payload.operation === 'consent') {
+      if (typeof payload.enabled !== 'boolean') return json({ error: 'Invalid consent' }, 400)
+      await rpc(token, 'set_recap_consent', { p_enabled: payload.enabled })
+      return json({ ok: true })
+    }
+    if (payload.operation === 'delete') {
+      if (typeof payload.sessionId !== 'string') return json({ error: 'Session required' }, 400)
+      await rpc(token, 'delete_recap_job', { p_session_id: payload.sessionId })
+      return json({ ok: true })
+    }
+    if (!isEnabled(env) || !loadConfig(env).ok) return json({ error: 'Recaps unavailable' }, 503)
+    // Old synchronous clients cannot silently opt into durable storage.
+    if (payload.consentVersion !== 2 || typeof payload.sessionId !== 'string') {
+      return json({ error: 'New recap consent required' }, 400)
+    }
     const upload = parseUploadPart(payload)
     if (upload.kind === 'invalid') return json({ error: 'Invalid upload part' }, 400)
     if (upload.kind === 'part' && upload.part.index < upload.part.total - 1) {
@@ -183,16 +168,15 @@ async function handle(req: Request): Promise<Response> {
 
     let raw = String(payload?.excerpt ?? '')
     if (upload.kind === 'part') {
-      const head = await takeParts(token, upload.part)
-      // A lost or expired part: the client uploads again with a new id.
-      if (head === null) return json({ error: 'Upload incomplete' }, 409)
-      raw = head + upload.part.text
+      // Joining, deleting staging text and inserting the durable job happen
+      // in ONE database transaction; a lost response cannot lose the input.
+      raw = upload.part.text
     }
     // bookTitle and chapterTitles are ignored on purpose; see buildMessages.
     // Past the time budget, the most recent text matters most.
     const trimmed = raw.length > MAX_INPUT_CHARS
     const excerpt = trimmed ? raw.slice(-MAX_INPUT_CHARS) : raw
-    if (excerpt.trim().length < MIN_EXCERPT_CHARS) {
+    if (upload.kind !== 'part' && excerpt.trim().length < MIN_EXCERPT_CHARS) {
       // Do not pay for a model call on unusable input.
       return json({ error: 'Excerpt too short to summarise' }, 422)
     }
@@ -200,36 +184,23 @@ async function handle(req: Request): Promise<Response> {
       ? payload.lastSentence.slice(0, MAX_HINT_CHARS)
       : undefined
 
-    // Consumed before the call and not refunded, so failures still count.
-    const now = new Date()
-    if (!(await consumeQuota(token, dailyLimit))) {
-      return json({ error: 'daily recap limit reached' }, 429, {
-        'Retry-After': String(secondsToUtcMidnight(now)),
-      })
-    }
-
-    // The budget counts from receipt, so auth and quota time is included.
-    const deadlineMs = DEADLINE_MS - (Date.now() - receivedAt)
-    const outcome = await generateRecap({ fetch, deadlineMs }, {
-      apiKey,
-      model,
-      sessionId: await sessionId(userId, now),
-      excerpt,
-      lastSentence,
-      language,
+    const result = await rpc(token, 'submit_recap_job', {
+      p_session_id: payload.sessionId, p_cloud_book_id: payload.cloudBookId ?? null,
+      p_language: language, p_ended_at: payload.endedAt ?? null,
+      p_position: payload.position ?? {}, p_excerpt: excerpt, p_last_sentence: lastSentence ?? null,
+      p_upload_id: upload.kind === 'part' ? upload.part.id : null,
+      p_part_count: upload.kind === 'part' ? upload.part.total : null,
     })
-    // Metadata only — never the excerpt, prompt, summary or key.
-    const meta = { chars: excerpt.length, ...(trimmed ? { trimmed } : {}) }
-    console.log(JSON.stringify({ ev: 'recap', status: outcome.status, model, ...meta, ...outcome.log }))
-
-    if (outcome.status === 200) return json(outcome.body)
-    const extra: Record<string, string> = 'retryAfter' in outcome && outcome.retryAfter
-      ? { 'Retry-After': outcome.retryAfter }
-      : {}
-    return json(outcome.body, outcome.status, extra)
+    if (result?.error === 'conflict') return json({ error: 'conflict' }, 409)
+    if (result?.error === 'upload_incomplete') return json({ error: 'upload_incomplete' }, 409)
+    if (result?.error === 'storage_limit') return json({ error: 'storage_limit' }, 429, { 'Retry-After': '3600' })
+    return json(result, result?.state === 'queued' || result?.state === 'running' ? 202 : 200)
   } catch (e) {
     // Errors only — never the excerpt, prompt or summary.
-    console.error('generate-recap failed:', e instanceof Error ? e.message : e)
+    console.error('generate-recap: request_failed')
+    if (e instanceof RpcError && e.code === '42501') return json({ error: 'Recap access denied' }, 403)
+    if (e instanceof RpcError && e.code === '54000') return json({ error: 'Recap deletion limit reached' }, 429, { 'Retry-After': '3600' })
+    if (e instanceof RpcError && ['22023', '22P02', '23514'].includes(e.code)) return json({ error: 'Invalid recap input' }, 400)
     return json({ error: 'Recap generation failed' }, 500)
   }
 }

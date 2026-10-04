@@ -28,4 +28,9 @@ enabled = true
 verify_jwt = true
 
 [functions.generate-recap]
-verify_jwt = true
+# Live user JWT verification happens inside the handler (supports new keys).
+verify_jwt = false
+
+# Authenticated inside the handler with a dedicated Vault/Edge shared secret.
+[functions.recap-worker]
+verify_jwt = false

@@ -17,7 +17,6 @@ import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.reader.domain.recap.RecapEngineSelector
 import com.retro99.reader.domain.recap.RecapRepository
-import com.retro99.reader.domain.recap.RecapRetryResult
 import com.retro99.reader.domain.recap.RecapSettings
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
@@ -67,6 +66,7 @@ class StatisticsViewModel(
 
     private var overviewJob: Job? = null
     private var sessionRecapJob: Job? = null
+    private var recapRequestGeneration = 0L
 
     init {
         val storedRange = StatisticsRange.entries.firstOrNull { range ->
@@ -123,7 +123,7 @@ class StatisticsViewModel(
             StatisticsIntent.OnDismissDetail -> dismissDetail()
             is StatisticsIntent.OnSessionClicked -> showSessionDetail(intent.sessionId)
             StatisticsIntent.OnSessionDetailClosed -> closeSessionDetail()
-            StatisticsIntent.OnRetryRecap -> retryRecap()
+            StatisticsIntent.OnGenerateRecap -> generateRecap()
         }
     }
 
@@ -386,6 +386,7 @@ class StatisticsViewModel(
     private fun showSessionDetail(sessionId: Long) {
         val sessions = viewState.value.sessionsDetailState ?: return
         val session = sessions.sessions.firstOrNull { it.id == sessionId } ?: return
+        recapRequestGeneration++
         analytics.logEvent(StatisticsAnalyticsEvent.StatisticsDetailShown(detailType = "session"))
         updateSessionDetail { SessionDetailState(session) }
         sessionRecapJob?.cancel()
@@ -393,17 +394,22 @@ class StatisticsViewModel(
         sessionRecapJob = combine(
             recap,
             recapSettings.observeCloudRecapsEnabled(),
+            recapSettings.observeConsentGiven(),
             recapEngineSelector.observeAvailable(),
-        ) { stored, enabled, available ->
-            stored.toSessionRecapUiState(cloudRecapsEnabled = enabled, engineAvailable = available)
+        ) { stored, enabled, consent, available ->
+            // The mapper needs the consent alone: enabled also needs a live
+            // session, so it cannot tell "turn it on" apart from "sign in".
+            stored.toSessionRecapUiState(cloudRecapsEnabled = consent, engineAvailable = available) to (enabled && available)
         }
-            .onEach { state ->
+            .onEach { (state, allowed) ->
                 updateSessionDetail { detail ->
-                    // A refused retry only holds for the state it was refused in.
-                    detail?.copy(
+                    // A previous session's late emission cannot update a new detail.
+                    detail?.takeIf { it.session.id == sessionId }?.copy(
                         recap = state,
-                        retryUnavailable = detail.retryUnavailable && detail.recap == state,
-                    )
+                        recapRequestsAllowed = allowed,
+                        recapRequestResult = detail.recapRequestResult.takeIf { detail.recap == state && detail.recapRequestsAllowed == allowed },
+                        recapRequestFailed = detail.recapRequestFailed && detail.recap == state,
+                    ) ?: detail
                 }
             }
             .catch { error ->
@@ -414,31 +420,35 @@ class StatisticsViewModel(
     }
 
     private fun closeSessionDetail() {
+        recapRequestGeneration++
         sessionRecapJob?.cancel()
         sessionRecapJob = null
         updateSessionDetail { null }
     }
 
-    private fun retryRecap() {
+    private fun generateRecap() {
         val detail = viewState.value.sessionsDetailState?.selected ?: return
         val recapSessionId = detail.session.recapSessionId ?: return
-        if (detail.isRetrying) return
-        updateSessionDetail { it?.copy(isRetrying = true, retryUnavailable = false) }
+        if (!detail.canRequestRecap) return
+        val selectedId = detail.session.id
+        val requestGeneration = ++recapRequestGeneration
+        updateSessionDetail { it?.copy(isRequestingRecap = true, recapRequestFailed = false) }
         viewModelScope.launch {
             val result = try {
-                recapRepository.retry(recapSessionId)
+                recapRepository.request(recapSessionId)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Exception) {
-                analytics.logException(error, sessionRecapContext(stage = "retry"))
+                analytics.logException(error, sessionRecapContext(stage = "request"))
                 // Unknown outcome: leave the button so the user can try again.
                 null
             }
             updateSessionDetail { current ->
                 // The user may have opened another session meanwhile.
-                current?.takeIf { it.session.recapSessionId == recapSessionId }?.copy(
-                    isRetrying = false,
-                    retryUnavailable = result != null && result != RecapRetryResult.QUEUED,
+                current?.takeIf { it.session.id == selectedId && it.isRequestingRecap && requestGeneration == recapRequestGeneration }?.copy(
+                    isRequestingRecap = false,
+                    recapRequestResult = result.takeIf { current.recap == detail.recap && current.recapRequestsAllowed == detail.recapRequestsAllowed },
+                    recapRequestFailed = result == null && current.recap == detail.recap,
                 ) ?: current
             }
         }

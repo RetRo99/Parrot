@@ -26,6 +26,11 @@ data class RecapInput(
     val language: String?,
     /** Where the reader stopped, at most [RecapLimits.MAX_LAST_SENTENCE_CHARS]. */
     val lastSentence: String?,
+    val sessionId: String? = null,
+    val cloudBookId: String? = null,
+    val endedAt: Long? = null,
+    val position: RecapPosition = RecapPosition(),
+    val accountId: String? = null,
 ) {
     override fun toString(): String = "RecapInput(chars=${excerpt.length}, language=$language)"
 }
@@ -36,6 +41,9 @@ sealed interface RecapResult {
     }
 
     data object NotEnough : RecapResult
+
+    /** Server accepted this session; future passes fetch, never regenerate. */
+    data class Queued(val running: Boolean = false) : RecapResult
 
     /** Try again later; [retryAfter] is the server's hint when it sent one. */
     data class Retryable(val code: RecapErrorCode, val retryAfter: Duration? = null) : RecapResult
