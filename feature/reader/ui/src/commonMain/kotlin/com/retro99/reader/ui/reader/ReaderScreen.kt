@@ -896,7 +896,7 @@ private fun ReadingProgressBar(
                 if (currentTime.isNotEmpty()) {
                     Text(
                         text = currentTime,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Ember.type.meta,
                         color = Ember.colors.ink2,
                         maxLines = 1,
                     )
@@ -905,7 +905,7 @@ private fun ReadingProgressBar(
                 // Centered chapter title - uses weight to take remaining space and truncate if needed
                 Text(
                     text = chapterTitleText,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Ember.type.meta,
                     color = Ember.colors.ink2,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -923,8 +923,12 @@ private fun ReadingProgressBar(
                     if (pageInfoText.isNotEmpty()) {
                         Text(
                             text = pageInfoText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Ember.colors.ink2,
+                            style = Ember.type.meta,
+                            color = if (chapterProgressDisplayMode == ChapterProgressDisplayMode.PERCENTAGE) {
+                                Ember.colors.ink
+                            } else {
+                                Ember.colors.ink2
+                            },
                         )
                     }
 
@@ -932,7 +936,7 @@ private fun ReadingProgressBar(
                     if (audioStatus != null) {
                         Text(
                             text = audioStatus,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = Ember.type.meta,
                             color = Ember.colors.ink2,
                         )
                     } else if (showReadingTime && chapterReadingTimeInfo != null) {
@@ -946,7 +950,7 @@ private fun ReadingProgressBar(
                         }
                         Text(
                             text = readingTimeText,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = Ember.type.meta,
                             color = Ember.colors.ink2,
                         )
                     }
@@ -955,8 +959,8 @@ private fun ReadingProgressBar(
                     if (showTotalProgress) {
                         Text(
                             text = "$totalProgressPercent%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Ember.colors.ink2,
+                            style = Ember.type.meta,
+                            color = Ember.colors.ink,
                         )
                     }
                 }
