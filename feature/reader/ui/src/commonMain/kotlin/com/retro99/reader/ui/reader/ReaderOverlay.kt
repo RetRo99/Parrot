@@ -115,7 +115,14 @@ import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberBottomSheet
 import com.retro99.reader.domain.model.NavigationAction
 import com.retro99.reader.ui.model.ChapterInfo
-import com.retro99.reader.ui.model.BookmarkUiModel
+import com.retro99.reader.ui.reader.saved.PageRibbon
+import resources.translations.saved_bookmark_this_page
+import resources.translations.saved_remove_bookmark
+import com.retro99.reader.ui.reader.saved.ReaderSavedHost
+import com.retro99.reader.ui.reader.saved.SavedAction
+import com.retro99.reader.ui.reader.saved.SavedBarHost
+import com.retro99.reader.ui.reader.saved.SelectionToolbar
+import androidx.compose.ui.graphics.luminance
 import com.retro99.reader.ui.model.ChapterReadingTimeInfo
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
@@ -234,9 +241,9 @@ internal fun ReaderOverlayContent(
         controlsVisible = true
         lastInteractionTime = nowMillis()
     }
-    val currentBookmark = currentPosition?.let { position ->
-        viewState.bookmarks.firstOrNull { bookmark -> bookmarkMatchesPosition(bookmark, position) }
-    }
+    val saved = viewState.saved
+    val pageBookmark = saved.pageBookmark
+    val onSaved: (SavedAction) -> Unit = { action -> intentDispatcher(ReaderIntent.Saved(action)) }
     // One resolver feeds the header, the sheet and the progress strip, so they always agree.
     val currentLocation = remember(
         viewState.tableOfContents,
@@ -454,6 +461,20 @@ internal fun ReaderOverlayContent(
                 onClick = { intentDispatcher(ReaderIntent.ReturnToJumpOrigin) },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
+            if (pageBookmark != null && !searchActive) {
+                PageRibbon(
+                    onClick = { onSaved(SavedAction.OpenDetail(pageBookmark.id)) },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(end = 12.dp),
+                )
+            }
+            saved.selection?.let { selection ->
+                SelectionToolbar(
+                    selection = selection,
+                    pageTopDp = settings.marginVertical.toFloat(),
+                    onSaved = onSaved,
+                    modifier = Modifier.matchParentSize(),
+                )
+            }
             FontSizeUndoSnackbarHost(
                 hostState = fontUndoState,
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -481,6 +502,7 @@ internal fun ReaderOverlayContent(
                     chapterInfo = viewState.chapterInfo,
                     currentTime = progressBarTime,
                     audioStatus = nowPlaying?.stripLabel,
+                    bookmarkTicks = saved.bookmarkTicks,
                 )
             }
         }
@@ -493,12 +515,11 @@ internal fun ReaderOverlayContent(
             ReaderOverlayToolbar(
                 bookTitle = viewState.bookTitle,
                 bookAuthor = viewState.bookAuthor,
-                isBookmarked = currentBookmark != null,
+                isBookmarked = pageBookmark != null,
                 onBack = { intentDispatcher(ReaderIntent.Close) },
                 onBookmark = {
                     onInteraction()
-                    if (currentBookmark == null) intentDispatcher(ReaderIntent.AddBookmark)
-                    else intentDispatcher(ReaderIntent.DeleteBookmark(currentBookmark.id))
+                    onSaved(SavedAction.ToggleBookmark)
                 },
             )
         }
@@ -558,6 +579,9 @@ internal fun ReaderOverlayContent(
                 )
             }
 
+            if (!viewState.isContentsVisible) {
+                SavedBarHost(bar = saved.bar, onSaved = onSaved)
+            }
             if (hasBottomBar) {
                 Box(
                     Modifier
@@ -588,6 +612,7 @@ internal fun ReaderOverlayContent(
                                     chapterInfo = viewState.chapterInfo,
                                     currentTime = progressBarTime,
                                     audioStatus = nowPlaying?.stripLabel,
+                                    bookmarkTicks = saved.bookmarkTicks,
                                 )
                             }
                         }
@@ -616,17 +641,18 @@ internal fun ReaderOverlayContent(
             onChapterClick = { href ->
                 intentDispatcher(ReaderIntent.GoToChapter(href, currentPosition))
             },
-            onBookmarkClick = { intentDispatcher(ReaderIntent.GoToBookmark(it)) },
-            onAddBookmark = { intentDispatcher(ReaderIntent.AddBookmark) },
-            onBookmarkDelete = { intentDispatcher(ReaderIntent.DeleteBookmark(it)) },
-            onBookmarkRename = { id, title -> intentDispatcher(ReaderIntent.RenameBookmark(id, title)) },
-            onRestoreBookmark = { intentDispatcher(ReaderIntent.RestoreBookmark(it)) },
-            onBookmarkDeletedDismissed = { intentDispatcher(ReaderIntent.DismissBookmarkDeleted) },
+            onSaved = onSaved,
             onToggleGroup = { intentDispatcher(ReaderIntent.ToggleContentsGroup(it)) },
             onDismiss = { intentDispatcher(ReaderIntent.ToggleToc) },
             footer = sheetMiniPlayer,
         )
     }
+
+    ReaderSavedHost(
+        saved = saved,
+        onSaved = onSaved,
+        isDarkPage = settings.theme.backgroundColor().luminance() < 0.4f,
+    )
 
     if (viewState.isBookSearchVisible) {
         ReaderSearchSheet(
@@ -778,7 +804,9 @@ internal fun ReaderOverlayToolbar(
             ) {
                 Icon(
                     imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                    contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark this page",
+                    contentDescription = stringResource(
+                        if (isBookmarked) StringRes.saved_remove_bookmark else StringRes.saved_bookmark_this_page,
+                    ),
                     tint = if (isBookmarked) colors.accentText else colors.ink,
                 )
             }

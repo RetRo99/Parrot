@@ -475,6 +475,8 @@ internal fun AnimatedProgressBar(
     chapterInfo: ChapterInfo?,
     currentTime: String,
     audioStatus: String? = null,
+    /** Whole-book fractions of this book's bookmarks. */
+    bookmarkTicks: List<Double> = emptyList(),
 ) {
     val isVisible = when (settings.showProgressBar) {
         true -> settings.progressBarPosition == position
@@ -499,6 +501,7 @@ internal fun AnimatedProgressBar(
             currentTime = currentTime,
             showReadingTime = settings.showReadingTime,
             audioStatus = audioStatus,
+            bookmarkTicks = bookmarkTicks,
         )
     }
 }
@@ -705,6 +708,7 @@ private fun ReadingProgressBar(
     showReadingTime: Boolean,
     modifier: Modifier = Modifier,
     audioStatus: String? = null,
+    bookmarkTicks: List<Double> = emptyList(),
 ) {
     val totalProgress = totalProgression?.toFloat() ?: 0f
     val totalProgressPercent = bookPercent(totalProgression)
@@ -738,12 +742,16 @@ private fun ReadingProgressBar(
                 }
 
                 ProgressIndicatorMode.BOOK -> {
-                    LinearProgressIndicator(
-                        progress = { totalProgress },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Ember.colors.accent,
-                        trackColor = Ember.colors.track,
-                    )
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        LinearProgressIndicator(
+                            progress = { totalProgress },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Ember.colors.accent,
+                            trackColor = Ember.colors.track,
+                        )
+                        // Ticks mark bookmarks (not highlights) along the book.
+                        com.retro99.reader.ui.reader.saved.BookmarkTicks(bookmarkTicks)
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                 }
             }
