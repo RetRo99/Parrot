@@ -37,6 +37,9 @@ sealed interface SessionRecapUiState {
     data class FailedPermanent(val canRetry: Boolean) : SessionRecapUiState
 
     data object SignInRequired : SessionRecapUiState
+    data object Offline : SessionRecapUiState
+    data object Limited : SessionRecapUiState
+    data object Expired : SessionRecapUiState
 }
 
 /**
@@ -48,8 +51,14 @@ sealed interface SessionRecapUiState {
 fun SessionRecap?.toSessionRecapUiState(
     cloudRecapsEnabled: Boolean,
     engineAvailable: Boolean,
+    signedIn: Boolean? = null,
 ): SessionRecapUiState {
-    val recap = this ?: return SessionRecapUiState.None(cloudRecapsEnabled)
+    val recap = this ?: return when {
+        signedIn == false -> SessionRecapUiState.SignInRequired
+        !cloudRecapsEnabled -> SessionRecapUiState.WaitingForOptIn
+        else -> SessionRecapUiState.None(cloudRecapsEnabled)
+    }
+    if (recap.lastError == RecapErrorCode.EXCERPT_EXPIRED) return SessionRecapUiState.Expired
     return when (recap.status) {
         RecapStatus.SKIPPED_INELIGIBLE -> SessionRecapUiState.Ineligible
         RecapStatus.NOT_ENOUGH -> SessionRecapUiState.NotEnough
@@ -62,13 +71,18 @@ fun SessionRecap?.toSessionRecapUiState(
         RecapStatus.PENDING,
         RecapStatus.FAILED_RETRYABLE,
         -> when {
+            signedIn == false -> SessionRecapUiState.SignInRequired
             !cloudRecapsEnabled -> SessionRecapUiState.WaitingForOptIn
             !engineAvailable -> SessionRecapUiState.SignInRequired
             // The server refused the session even though it looks signed in.
             recap.status == RecapStatus.PENDING && recap.lastError == RecapErrorCode.AUTH_REQUIRED ->
                 SessionRecapUiState.SignInRequired
             recap.status == RecapStatus.FAILED_RETRYABLE ->
-                SessionRecapUiState.FailedRetryable(recap.canRetry)
+                when (recap.lastError) {
+                    RecapErrorCode.NETWORK -> SessionRecapUiState.Offline
+                    RecapErrorCode.RATE_LIMITED -> SessionRecapUiState.Limited
+                    else -> SessionRecapUiState.FailedRetryable(recap.canRetry)
+                }
             recap.status == RecapStatus.PENDING -> SessionRecapUiState.Ready
             else -> SessionRecapUiState.Generating
         }

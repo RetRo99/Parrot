@@ -16,9 +16,9 @@ reader/domain       ▼                   ▼
 reader/data   RecapJobRunner ── RecapEngineSelector ── RecapEngine (CloudRecapEngine)
                                               │ SUCCEEDED / NOT_ENOUGH / FAILED_*
 UI            RecapRepository.observe* / retry
-              ├─ reader:     ReaderRecapViewModel + ReaderRecapBannerHost (chip)
+              ├─ reader:     ReaderRecapViewModel + Last time toolbar pill / bottom sheet
               ├─ statistics: session detail (SessionRecapUiState)
-              └─ settings:   App settings → Reading → Cloud recaps (RecapSettings)
+              └─ settings:   App settings → Reading → Recaps (RecapSettings)
 ```
 
 | Layer | Module / file | Role |
@@ -27,7 +27,7 @@ UI            RecapRepository.observe* / retry
 | Link | `ReadingSession.sq`, `33.sqm` | local-only `reading_session.recap_session_id` |
 | Domain | `feature/reader/domain/.../recap/` | models, policies (capture, eligibility, job, limits), `RecapEngine`, `RecapRepository`, `RecapSettings`, `RecapSessionRecorder` |
 | Data | `feature/reader/data/.../recap/` | recorder impl, job runner, cloud engine, selector, mappers, startup, settings and dismissals in preferences |
-| Capture | `feature/reader/ui/.../reader/ReaderRecapCapture.kt`, `navigator/VisibleTextRangeDetector.kt` | turns page dwell and finished TTS sentences into appends |
+| Capture | `feature/reader/ui/.../reader/ReaderRecapCapture.kt`, `navigator/VisibleTextRangeDetector.kt` | commits completed pages/scroll ranges and fully-heard TTS sentences |
 | Triggers | `composeApp` `RecapTriggerBridge`, `androidApp` `RecapWorker` | wake the runner |
 
 Everything is wired through Koin annotations (`@Single` in reader data; the recorder
@@ -65,22 +65,19 @@ appended **at the event**, never at close, because `close()` tears down the WebV
 
 | Source | When it counts | What is appended |
 |---|---|---|
-| Manual reading (`PAGE`) | the page has been visible ≥ `PAGE_DWELL_MS` (5 s) in the foreground, with no startup prompt open and device read-aloud not active (playing, loading, extracting or synthesising); after read-aloud stops the page starts a fresh dwell | `BookController.getVisibleTextRange()`: first to last visible word, with chapter offsets |
+| Manual reading (`PAGE`) | normal adjacent forward turn, or text fully scrolled above view; foreground only, no startup prompt/audio; navigation jumps do not count | previously observed DOM ranges confirmed behind the new viewport |
 | Device TTS (`TTS_SENTENCE`, Android) | `TtsController.finishedSentences`: the sentence's audio played from its start to its end (`TtsHeardSentenceTracker` follows the item the player really plays, not the engine's seek or skip target). Skips, seeks into a sentence, stops and unsynthesised sentences don't count | that sentence |
-| Narration (media overlays) | through the pages it turns, foreground only | as `PAGE` |
+| Narration (media overlays) | automatic audio page turns do not count as manual reading | no page capture during playback; fully-heard device TTS has a separate source |
 
 - **No chapter-end fallback.** `VisibleTextRangeDetector` returns null when no text is
   visible (image page, blank page). It reads the DOM without changing it. Offsets count
   all text outside script and style, so read-aloud sentence spans don't move them.
-- **Dedupe:** pages by chapter character range (rereading or going back adds nothing; a
-  relaid-out page adds only the new part); sentences by chapter href plus sentence
-  index. A sentence heard on a page already captured as text can appear twice; the two
-  sources don't share coordinates.
-- **Skipped pages:** a page left before the dwell time is never read. A page that
-  changes while its text is being read is dropped. The read also returns the page
-  number (same formula as `ChapterPageCalculator`); text from a page other than the
-  one the locator reported is dropped, since the locator lags the WebView. Scroll
-  mode and chapter changes between two pages with the same number aren't caught.
+- **Dedupe:** manual pages and extracted TTS chunks share chapter character ranges.
+  Legacy/controller sentences without coordinates retain the chapter+index fallback.
+- **Unfinished text:** observing a page does not commit it. Closing discards visible
+  candidates; asynchronous DOM results and locator/page mismatches are dropped.
+  A normal quick forward turn counts without a five-second dwell. Navigation jumps
+  discard candidates. Scroll capture commits only ranges fully above the viewport.
 - **Chapters:** each chunk carries its chapter (index, title) and position (href,
   progression, totalProgression). A heard sentence from another chapter goes without.
 - **Foreground:** `ReaderScreen` forwards ON_START/ON_STOP as
@@ -92,15 +89,12 @@ appended **at the event**, never at close, because `close()` tears down the WebV
     turn or heard sentence.
   - `language` (`RecapLanguages.resolve`): book metadata language if supported, else
     the system locale, else null. Allow-list: en, sl, de, fr, es, it, hr.
-- **Recorder buffer:** appends are non-blocking and queued in order. There is no
-  excerpt cap: it keeps everything read in the session and only ignores a segment equal
-  to the previous one. A forward `PAGE` counts as a page advance; each `TTS_SENTENCE` as
-  one sentence.
-- **Saving:** each save rewrites the whole `excerpt` column. Up to 16k chars it is saved
-  on every append; past that at most every 30 s, so a long session doesn't rewrite
-  megabytes per sentence. Session end always saves the full in-memory text; a crash
-  loses at most the last 30 s. On Android the SQLite cursor window is raised to 16 MB
-  (default 2 MB) so a long session's row stays readable.
+- **Recorder buffer:** appends are non-blocking and queued in order. New captures are
+  bounded to 8,000 characters: a brief opening (up to 1,000) and the latest text
+  verbatim, cut at word boundaries. Existing submitted payloads are not rewritten.
+  A forward `PAGE` counts as an advance; each new `TTS_SENTENCE` as one sentence.
+- **Saving:** bounded captures are persisted on every append. Session end saves only
+  confirmed text, never the remaining visible page.
 - **iOS:** pages are captured as on Android. iOS device TTS is a stub with no sentence
   callbacks, so there is no TTS capture. Locator callbacks run one at a time so pages
   arrive in order.
@@ -169,20 +163,23 @@ CAPTURING ─► SKIPPED_INELIGIBLE
 
 Observing never triggers generation. `SessionRecap` exposes no excerpt text.
 
-- **Reader chip** (`ReaderRecapBannerHost`): the newest `SUCCEEDED` recap of the book,
-  only while Cloud recaps is on and no startup prompt is open. Titled "Recap of an
-  earlier session" when newer sessions have no recap. Pending and failed recaps are
-  never shown. Dismissal is stored per recap (`RecapBannerDismissals`, last 200).
-- **Statistics detail:** tapping a session opens time, speed, progress and its recap
-  state (`toSessionRecapUiState(cloudRecapsEnabled, engineAvailable)`): none, not
-  eligible, waiting for opt-in, generating, done (summary, engine, model), not enough
-  read, failed with Retry, failed for good, sign-in required (also for a `PENDING` row
-  parked with `AUTH_REQUIRED` while the client still looks signed in).
-- **Settings:** App settings → Reading → Cloud recaps. Turning it on needs a live
-  Parrot Cloud session (`CloudAuthState.SignedIn`, as the runner checks). Signed
-  out, the row says "Sign in to Parrot Cloud to use recaps" and is disabled, unless
-  consent is on: then it can still be turned off. Signing out keeps consent; rows
-  wait as `PENDING` until sign-in (`CloudRecapsToggle.kt` in home ui).
+- **Reader:** Last time lives in the toolbar and opens an Ember bottom sheet. The
+  position gate remains `end ≤ current ≤ end + 0.02`. The latest unseen ready recap
+  may open automatically after more than an hour (default), every entry, or never.
+  Audio/startup prompts suppress automatic opening; writing recaps are manual only.
+  Closing marks that session's recap seen using the existing pruned 1,000-entry FIFO, but
+  keeps the manual pill available. No recap card sits over the text.
+- **Statistics:** time/pages/end-position tiles, no WPM/model labels. States are
+  static accessible messages, with only actionable write/retry/sign-in/consent
+  buttons. Historical sessions without captured text cannot generate a recap.
+- **Settings:** Reading → Recaps opens presentation/privacy settings. Enabling
+  requires confirmed V2 consent and a signed-in allowlisted account. The full
+  disclosure remains reachable unchanged. Withdrawal remains durable and possible
+  while signed out. No recap surfaces appear for accounts without feature access.
+- **Two-part output:** the provider returns `summary` and localized `stoppedAt`.
+  Validated fields are stored/synced as two plain paragraphs, ≤600 characters total
+  including their separator. Ordinary prose falls back to one paragraph. The
+  existing schema and job fingerprints are unchanged.
 
 ## Long sessions (`generate-recap`)
 
@@ -195,7 +192,7 @@ parts left out, which changes nothing: the server reads at most 2M.
 The function makes one model call for up to 250k chars. Longer excerpts are split
 at line or sentence breaks into parts of up to 250k chars; each part gets a short
 factual note (4 calls in parallel), then one merge call turns the notes, in order,
-into the 2-3 sentence recap with the same rules. Notes are never returned. One
+into the two-part recap with the same rules. Notes are never returned. One
 recap uses one quota unit however many calls it needs.
 
 Everything runs within a 135 s budget (the Edge gateway answers 504 at 150 s): each

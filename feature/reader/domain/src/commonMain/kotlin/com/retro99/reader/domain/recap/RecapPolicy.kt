@@ -6,10 +6,11 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.hours
 
 /**
- * Size limits shared with the generate-recap API. The excerpt has none:
- * a session sends everything it read.
+ * Client capture limits. Existing submitted jobs retain their original payload.
  */
 object RecapLimits {
+    const val MAX_EXCERPT_CHARS = 8_000
+    const val OPENING_CHARS = 1_000
     /** The API's lastSentence cap. */
     const val MAX_LAST_SENTENCE_CHARS = 300
 }

@@ -50,6 +50,20 @@ class CloudRecapEngine(
 
     override val id: String = RecapEngine.CLOUD_ENGINE_ID
 
+    /** Read-only allowlist capability; never uploads text or changes consent. */
+    suspend fun featureAvailable(accountId: String): Boolean {
+        check(auth.accountId() == accountId)
+        val token = auth.accessToken() ?: error("Authentication unavailable")
+        val response = httpClient.post(endpoint.supabaseUrl.trimEnd('/') + "/rest/v1/rpc/get_cloud_feature_access") {
+            header("apikey", endpoint.publishableKey)
+            header(HttpHeaders.Authorization, "Bearer $token")
+            setBody(TextContent("{}", ContentType.Application.Json))
+            timeout { requestTimeoutMillis = REQUEST_TIMEOUT_MS }
+        }
+        check(response.status.value == 200 && auth.accountId() == accountId)
+        return Json.parseToJsonElement(response.bodyAsText()).jsonObject["recap"] == JsonPrimitive(true)
+    }
+
     override suspend fun generate(input: RecapInput): RecapResult {
         if (!endpoint.isConfigured) return RecapResult.Retryable(RecapErrorCode.SERVICE_UNAVAILABLE)
         if (input.sessionId == null || input.endedAt == null) return RecapResult.Permanent(RecapErrorCode.BAD_REQUEST)
@@ -250,7 +264,7 @@ class CloudRecapEngine(
         "completed" -> record.summary?.takeIf { it.isNotBlank() }?.let { RecapResult.Success(it, record.model) }
             ?: RecapResult.Retryable(RecapErrorCode.BAD_RESPONSE)
         "not_enough" -> RecapResult.NotEnough
-        "deleted" -> RecapResult.Permanent(RecapErrorCode.CONSENT_WITHDRAWN)
+        "deleted" -> RecapResult.Permanent(RecapErrorCode.fromName(record.errorCode) ?: RecapErrorCode.UNKNOWN)
         "failed" -> RecapResult.Permanent(RecapErrorCode.fromName(record.errorCode) ?: RecapErrorCode.PROVIDER_ERROR)
         else -> RecapResult.Retryable(RecapErrorCode.BAD_RESPONSE)
     }

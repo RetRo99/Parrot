@@ -13,7 +13,7 @@ class SessionRecapUiStateTest {
 
     @Test
     fun noRecordedRecapIsNoneAndSaysWhetherRecapsAreOff() {
-        assertEquals(SessionRecapUiState.None(cloudRecapsEnabled = false), null.state(enabled = false))
+        assertEquals(SessionRecapUiState.WaitingForOptIn, null.state(enabled = false))
         assertEquals(SessionRecapUiState.None(cloudRecapsEnabled = true), null.state())
     }
 
@@ -84,7 +84,7 @@ class SessionRecapUiStateTest {
     @Test
     fun failuresCarryWhetherRetryCanWork() {
         assertEquals(
-            SessionRecapUiState.FailedRetryable(canRetry = true),
+            SessionRecapUiState.Offline,
             sessionRecap(RecapStatus.FAILED_RETRYABLE, lastError = RecapErrorCode.NETWORK, canRetry = true)
                 .state(),
         )
@@ -94,7 +94,7 @@ class SessionRecapUiStateTest {
                 .state(enabled = false),
         )
         assertEquals(
-            SessionRecapUiState.FailedPermanent(canRetry = false),
+            SessionRecapUiState.Expired,
             sessionRecap(RecapStatus.FAILED_PERMANENT, lastError = RecapErrorCode.EXCERPT_EXPIRED).state(),
         )
     }

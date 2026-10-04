@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -53,6 +54,38 @@ class PreferencesRecapSettingsTest {
     private fun consent() {
         save(PreferencesKey.CloudRecapConsentAccount, "account")
         save(PreferencesKey.CloudStoredRecapsEnabled, true)
+    }
+
+    @Test
+    fun capabilityUsesReadOnlyRpcAndSignedOutAdviceRequiresVerifiedOwner() = runTest {
+        val paths = mutableListOf<String>()
+        val client = HttpClient(MockEngine { request ->
+            paths += request.url.encodedPath
+            respond("{\"recap\":true,\"uploads\":false}")
+        })
+        try {
+            val settings = settings(client)
+            assertTrue(settings.observeFeatureAvailable().first { it })
+            assertEquals(listOf("/rest/v1/rpc/get_cloud_feature_access"), paths)
+            assertEquals("account", get<String>(PreferencesKey.RecapAllowedAccount))
+            consent()
+            account.value = null
+            assertTrue(settings.observeFeatureAvailable().first { it })
+            save(PreferencesKey.CloudRecapConsentAccount, "unknown-account")
+            assertFalse(settings.observeFeatureAvailable().first())
+        } finally { client.close() }
+    }
+
+    @Test
+    fun presentationDefaultsToAfterBreakAndPersistsWithoutConsent() = runTest {
+        val client = HttpClient(MockEngine { error("Presentation must never contact the cloud") })
+        try {
+            val settings = settings(client)
+            assertEquals(com.retro99.reader.domain.recap.RecapPresentation.AFTER_BREAK, settings.observePresentation().first())
+            settings.setPresentation(com.retro99.reader.domain.recap.RecapPresentation.NEVER)
+            assertEquals(com.retro99.reader.domain.recap.RecapPresentation.NEVER, settings.observePresentation().first())
+            assertFalse(settings.isConsentGiven("account"))
+        } finally { client.close() }
     }
 
     @Test

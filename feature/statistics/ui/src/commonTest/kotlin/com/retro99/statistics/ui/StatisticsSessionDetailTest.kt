@@ -104,7 +104,7 @@ class StatisticsSessionDetailTest {
         viewModel.onIntent(StatisticsIntent.OnSessionClicked(UNLINKED))
         advanceUntilIdle()
 
-        assertEquals(SessionRecapUiState.None(cloudRecapsEnabled = false), viewModel.selected()!!.recap)
+        assertEquals(SessionRecapUiState.WaitingForOptIn, viewModel.selected()!!.recap)
         assertTrue(recaps.observed.isEmpty())
     }
 

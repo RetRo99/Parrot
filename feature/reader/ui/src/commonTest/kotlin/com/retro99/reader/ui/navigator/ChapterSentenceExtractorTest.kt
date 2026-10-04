@@ -7,6 +7,14 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ChapterSentenceExtractorTest {
+    @Test
+    fun `normalized spoken chunks retain exact raw chapter ranges`() {
+        val json = """{"status":"success","sentences":[{"id":"s1","t":"Ana%20left.%20Bor%20stayed.","start":100,"r":"%20Ana%20%20left.%0ABor%20stayed.%20"}]}"""
+        val sentences = ChapterSentenceExtractor.parseResult(json)
+        assertEquals(listOf("Ana left.", "Bor stayed."), sentences.map { it.text })
+        assertEquals(listOf(101, 112), sentences.map { it.startOffset })
+        assertEquals(listOf("Ana  left.", "Bor stayed."), sentences.map { it.rawText })
+    }
 
     @Test
     fun `readable content check does not modify the document`() {

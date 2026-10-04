@@ -49,6 +49,8 @@ internal class FakeRecapRepository(
 }
 
 internal class FakeRecapSettings(enabled: Boolean = false) : RecapSettings {
+    override fun observeFeatureAvailable(): Flow<Boolean> = kotlinx.coroutines.flow.flowOf(true)
+    override fun observeSignedIn(): Flow<Boolean> = kotlinx.coroutines.flow.flowOf(true)
     val enabled = MutableStateFlow(enabled)
 
     /** Consent alone; defaults to [enabled], point it elsewhere to model kept consent without a session. */

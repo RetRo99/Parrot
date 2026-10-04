@@ -48,12 +48,12 @@ fun SessionsDetailBottomSheet(
     onSessionDetailBack: () -> Unit,
     onGenerateRecap: () -> Unit,
     modifier: Modifier = Modifier,
+    onSignIn: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
+    com.retro99.base.ui.compose.EmberBottomSheet(
+        onDismiss = onDismiss,
         modifier = modifier,
     ) {
         val selected = sessionsDetailState.selected
@@ -67,8 +67,9 @@ fun SessionsDetailBottomSheet(
                 detail = selected,
                 onBack = onSessionDetailBack,
                 onGenerateRecap = onGenerateRecap,
+                onSignIn = onSignIn,
             )
-            return@ModalBottomSheet
+            return@EmberBottomSheet
         }
         Column(
             modifier = Modifier

@@ -10,6 +10,7 @@ data class AppSettingsViewState(
     val showContinueReading: Boolean = true,
     /** Consent to send read text for cloud recaps; off until turned on. */
     val cloudRecapsEnabled: Boolean = false,
+    val recapsAvailable: Boolean = false,
     val cloudRecapsAccess: CloudRecapsAccess = CloudRecapsAccess.Restoring,
     val appSettingSaveFailureCount: Int = 0,
     val themeMode: ThemeMode = ThemeMode.Night,

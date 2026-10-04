@@ -96,6 +96,7 @@ fun StatisticsScreen(
     modifier: Modifier = Modifier,
     showBack: Boolean = true,
     viewModel: StatisticsViewModel = koinViewModel { parametersOf(onBack) },
+    onSignIn: () -> Unit = {},
 ) {
     BaseScreen(
         modifier = modifier,
@@ -107,6 +108,7 @@ fun StatisticsScreen(
                 viewState = viewState,
                 intentDispatcher = intentDispatcher,
                 showBack = showBack,
+                onSignIn = onSignIn,
             )
         }
     }
@@ -118,6 +120,7 @@ private fun StatisticsScreenContent(
     intentDispatcher: IntentDispatcher<StatisticsIntent>,
     modifier: Modifier = Modifier,
     showBack: Boolean = true,
+    onSignIn: () -> Unit = {},
 ) {
     Scaffold(
         modifier = modifier,
@@ -177,6 +180,7 @@ private fun StatisticsScreenContent(
 
         viewState.sessionsDetailState?.let { sessionsDetailState ->
             SessionsDetailBottomSheet(
+                onSignIn = onSignIn,
                 sessionsDetailState = sessionsDetailState,
                 onDismiss = { intentDispatcher(StatisticsIntent.OnDismissDetail) },
                 onRetry = { intentDispatcher(StatisticsIntent.OnRetryDetail) },

@@ -65,6 +65,10 @@ class AppSettingsViewModel(
             .onEach { enabled -> updateState { it.copy(cloudRecapsEnabled = enabled) } }
             .catch { error -> logCloudRecapsFailure(error, stage = "observe") }
             .launchIn(viewModelScope)
+        recapSettings.observeFeatureAvailable()
+            .onEach { available -> updateState { it.copy(recapsAvailable = available) } }
+            .catch { updateState { it.copy(recapsAvailable = false) } }
+            .launchIn(viewModelScope)
         observeCloudAuthState()
             .onEach { auth -> updateState { it.copy(cloudRecapsAccess = auth.toCloudRecapsAccess()) } }
             // A failed observation leaves the toggle unusable to turn on.

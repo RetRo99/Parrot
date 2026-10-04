@@ -74,6 +74,8 @@ data class SessionDetailState(
     val isRequestingRecap: Boolean = false,
     val recapRequestResult: com.retro99.reader.domain.recap.RecapRequestResult? = null,
     val recapRequestFailed: Boolean = false,
+    val recapsAvailable: Boolean = false,
+    val recapChapterTitle: String? = null,
 )
 
 internal val SessionDetailState.canRequestRecap: Boolean

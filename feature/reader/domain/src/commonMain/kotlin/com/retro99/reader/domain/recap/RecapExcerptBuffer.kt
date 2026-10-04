@@ -1,12 +1,13 @@
 package com.retro99.reader.domain.recap
 
 /**
- * Read-text buffer. Appends in reading order and never drops text: a
- * session sends everything it read. Not thread-safe; callers serialise.
+ * Bounded read-text buffer: preserves a brief opening and the most recent
+ * text verbatim. Not thread-safe; callers serialise. Never summarizes locally.
  */
 class RecapExcerptBuffer(initial: String? = null) {
     private val builder = StringBuilder(initial.orEmpty())
     private var lastSegment: String? = null
+    private var opening: String? = null
 
     val length: Int get() = builder.length
 
@@ -19,6 +20,14 @@ class RecapExcerptBuffer(initial: String? = null) {
         lastSegment = segment
         if (builder.isNotEmpty()) builder.append(SEPARATOR)
         builder.append(segment)
+        if (builder.length > RecapLimits.MAX_EXCERPT_CHARS) {
+            val opening = opening ?: builder.substring(0, RecapLimits.OPENING_CHARS)
+                .substringBeforeLast(' ').also { opening = it }
+            val tail = builder.takeLast(RecapLimits.MAX_EXCERPT_CHARS - opening.length - SEPARATOR.length)
+                .toString().substringAfter(' ')
+            builder.clear()
+            builder.append(opening).append(SEPARATOR).append(tail)
+        }
         return true
     }
 

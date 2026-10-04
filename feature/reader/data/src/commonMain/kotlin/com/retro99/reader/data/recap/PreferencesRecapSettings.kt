@@ -6,6 +6,10 @@ import com.retro99.preferences.implementation.usecase.GetUserPreferenceUseCase
 import com.retro99.preferences.implementation.usecase.ObserveUserPreferenceUseCase
 import com.retro99.preferences.implementation.usecase.SaveUserPreferenceUseCase
 import com.retro99.reader.domain.recap.RecapSettings
+import com.retro99.reader.domain.recap.RecapPresentation
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.combine
@@ -27,6 +31,39 @@ class PreferencesRecapSettings(
     @Provided private val cloud: CloudRecapEngine,
 ) : RecapSettings {
     private val consentMutex = Mutex()
+    override fun observeSignedIn(): Flow<Boolean> = auth.observeSignedIn()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun observeFeatureAvailable(): Flow<Boolean> = combine(auth.observeAccountId(),
+        observeUserPreferenceUseCase<String>(PreferencesKey.CloudRecapConsentAccount)) { account, owner -> account to owner }
+        .distinctUntilChanged()
+        .transformLatest { (account, owner) ->
+        emit(false)
+        if (account == null) {
+            // Only a previously verified consenting account may see sign-in advice.
+            emit(owner != null && owner == getUserPreferenceUseCase<String>(PreferencesKey.RecapAllowedAccount))
+        } else {
+            try {
+                val allowed = cloud.featureAvailable(account)
+                if (auth.accountId() != account) return@transformLatest
+                saveUserPreferenceUseCase(PreferencesKey.RecapAllowedAccount, if (allowed) account else "")
+                emit(allowed)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                emit(auth.accountId() == account && getUserPreferenceUseCase<String>(PreferencesKey.RecapAllowedAccount) == account)
+            }
+        }
+    }.distinctUntilChanged()
+
+    override fun observePresentation(): Flow<RecapPresentation> =
+        observeUserPreferenceUseCase<String>(PreferencesKey.RecapPresentation).map { stored ->
+            RecapPresentation.entries.firstOrNull { it.name == stored } ?: RecapPresentation.AFTER_BREAK
+        }.distinctUntilChanged()
+
+    override suspend fun setPresentation(value: RecapPresentation) {
+        saveUserPreferenceUseCase(PreferencesKey.RecapPresentation, value.name)
+    }
 
     override fun observeCloudRecapsEnabled(): Flow<Boolean> =
         combine(

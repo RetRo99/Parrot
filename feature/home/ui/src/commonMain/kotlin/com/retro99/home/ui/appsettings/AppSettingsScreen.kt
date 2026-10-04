@@ -51,6 +51,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -108,8 +111,11 @@ import resources.translations.app_settings_title
 import resources.translations.app_settings_version
 import resources.translations.settings_app_name
 import resources.translations.settings_cloud_recaps_sign_in_hint
-import resources.translations.settings_cloud_recaps_subtitle
 import resources.translations.settings_cloud_recaps_title
+import resources.translations.recap_settings_title
+import resources.translations.recap_short_description
+import resources.translations.recap_on
+import resources.translations.recap_off
 import resources.translations.settings_continue_reading_subtitle
 import resources.translations.settings_continue_reading_title
 import resources.translations.settings_diagnostics_subtitle
@@ -177,6 +183,11 @@ private fun AppSettingsScreenContent(
     buildConfig: BuildConfig = koinInject(),
 ) {
     val colors = Ember.colors
+    var recapSettingsOpen by remember { mutableStateOf(false) }
+    if (recapSettingsOpen && viewState.recapsAvailable) {
+        com.retro99.reader.ui.recap.RecapSettingsSheet(onDismiss = { recapSettingsOpen = false })
+        return
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val currentBookClearedMessage = stringResource(StringRes.app_settings_current_book_cleared)
     val currentBookClearFailedMessage = stringResource(StringRes.app_settings_current_book_clear_failed)
@@ -291,22 +302,19 @@ private fun AppSettingsScreenContent(
                         intentDispatcher(AppSettingsIntent.OnShowContinueReadingToggled(enabled))
                     },
                 )
-                EmberRowDivider()
-                val recapsToggle = viewState.cloudRecapsToggle
-                EmberSwitchRow(
-                    title = stringResource(StringRes.settings_cloud_recaps_title),
-                    subtitle = if (recapsToggle.showSignInHint) {
-                        stringResource(StringRes.settings_cloud_recaps_sign_in_hint)
-                    } else {
-                        stringResource(StringRes.settings_cloud_recaps_subtitle)
-                    },
-                    icon = Icons.Outlined.AutoAwesome,
-                    checked = recapsToggle.checked,
-                    enabled = recapsToggle.enabled,
-                    onCheckedChange = { enabled ->
-                        intentDispatcher(AppSettingsIntent.OnCloudRecapsToggled(enabled))
-                    },
-                )
+                if (viewState.recapsAvailable) {
+                    EmberRowDivider()
+                    EmberSettingRow(
+                        title = stringResource(StringRes.recap_settings_title),
+                        subtitle = stringResource(StringRes.recap_short_description),
+                        icon = Icons.Outlined.AutoAwesome,
+                        onClick = { recapSettingsOpen = true },
+                        trailing = {
+                            Text(stringResource(if (viewState.cloudRecapsEnabled) StringRes.recap_on else StringRes.recap_off), color = colors.ink2)
+                            EmberChevron()
+                        },
+                    )
+                }
                 if (viewState.hasCurrentlyReadingBook) {
                     EmberRowDivider()
                     EmberSettingRow(

@@ -30,6 +30,8 @@ internal fun SessionRecapEntity.toDomain(): SessionRecap {
         updatedAt = updatedAt,
         endedAt = endedAt,
         generatedAt = generatedAt,
+        activeReadingMs = activeReadingMs,
+        pageAdvances = pageAdvances,
         // Same rule as SessionRecapDataRepository.retry.
         canRetry = stopped && excerpt != null && lastError?.isInputError != true,
     )

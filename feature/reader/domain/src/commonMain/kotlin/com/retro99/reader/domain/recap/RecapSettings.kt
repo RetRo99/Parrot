@@ -1,12 +1,19 @@
 package com.retro99.reader.domain.recap
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+
+enum class RecapPresentation { AFTER_BREAK, EVERY_TIME, NEVER }
 
 /**
  * Recap consent. Cloud recaps send read text to the recap API, so they are
  * off until the user opts in. A future offline engine gets its own key.
  */
 interface RecapSettings {
+    fun observeFeatureAvailable(): Flow<Boolean> = flowOf(false)
+    fun observeSignedIn(): Flow<Boolean> = flowOf(false)
+    fun observePresentation(): Flow<RecapPresentation> = flowOf(RecapPresentation.AFTER_BREAK)
+    suspend fun setPresentation(value: RecapPresentation) {}
     fun observeCloudRecapsEnabled(): Flow<Boolean>
 
     /**

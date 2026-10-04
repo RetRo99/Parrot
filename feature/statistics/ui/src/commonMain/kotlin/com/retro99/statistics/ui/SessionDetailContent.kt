@@ -1,6 +1,8 @@
 package com.retro99.statistics.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,20 +19,28 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.semantics.*
+import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberGroupCard
+import com.retro99.reader.ui.recap.RecapProse
+import com.retro99.reader.ui.recap.RecapSettingsSheet
+import resources.translations.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.retro99.base.ui.compose.stringTextWrapper
 import com.retro99.books.domain.model.BookType
-import com.retro99.reader.domain.recap.RecapEngine
 import com.retro99.reader.domain.recap.RecapRequestResult
 import com.retro99.statistics.ui.model.ReadingSessionUiModel
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
-import resources.translations.statistics_recap_engine_cloud
-import resources.translations.statistics_recap_engine_model
 import resources.translations.statistics_recap_failed_permanent
 import resources.translations.statistics_recap_failed_retryable
 import resources.translations.statistics_recap_generating
@@ -51,10 +61,8 @@ import resources.translations.statistics_session_detail_duration
 import resources.translations.statistics_session_detail_progress
 import resources.translations.statistics_session_detail_progress_end
 import resources.translations.statistics_session_detail_progress_range
-import resources.translations.statistics_session_detail_speed
 import resources.translations.statistics_session_detail_time
 import resources.translations.statistics_session_detail_title
-import resources.translations.statistics_session_detail_wpm
 import resources.translations.statistics_session_recap_title
 import kotlin.math.roundToInt
 
@@ -65,8 +73,11 @@ internal fun SessionDetailContent(
     onBack: () -> Unit,
     onGenerateRecap: () -> Unit,
     modifier: Modifier = Modifier,
+    onSignIn: () -> Unit = {},
 ) {
     val session = detail.session
+    var recapSettingsOpen by remember { mutableStateOf(false) }
+    if (recapSettingsOpen) RecapSettingsSheet(onDismiss = { recapSettingsOpen = false })
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -83,7 +94,7 @@ internal fun SessionDetailContent(
             }
             Text(
                 text = stringResource(StringRes.statistics_session_detail_title),
-                style = MaterialTheme.typography.headlineSmall,
+            style = Ember.type.screenTitle,
             )
         }
         Text(
@@ -98,39 +109,50 @@ internal fun SessionDetailContent(
                 StringRes.statistics_session_detail_time,
                 session.dateFormatted,
                 session.endTimeFormatted,
-            ),
+            ) + (detail.recapChapterTitle?.let { " · $it" } ?: ""),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 16.dp),
         )
 
-        SessionStatRow(
-            label = stringResource(StringRes.statistics_session_detail_duration),
-            value = stringTextWrapper(session.durationFormatted),
-        )
-        SessionStatRow(
-            label = stringResource(StringRes.statistics_session_detail_speed),
-            value = stringResource(StringRes.statistics_session_detail_wpm, session.readingSpeedWpm),
-        )
-        sessionProgressText(session)?.let { progress ->
-            SessionStatRow(
-                label = stringResource(StringRes.statistics_session_detail_progress),
-                value = progress,
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SessionStatTile(stringResource(StringRes.recap_time_read), stringTextWrapper(session.durationFormatted), Modifier.weight(1f))
+            session.pagesRead?.let { pages ->
+                SessionStatTile(stringResource(StringRes.recap_pages_read), pages.toString(), Modifier.weight(1f))
+            }
+            session.endProgression?.let { end ->
+                SessionStatTile(stringResource(StringRes.recap_ended_at), "${end.toPercent()}%", Modifier.weight(1f))
+            }
         }
 
+        if (!detail.recapsAvailable) return@Column
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 16.dp),
             color = MaterialTheme.colorScheme.outlineVariant,
         )
 
         Text(
-            text = stringResource(StringRes.statistics_session_recap_title),
+            text = stringResource(StringRes.recap_section_title),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = 8.dp),
         )
         SessionRecapSection(detail = detail)
         RecapGenerateAction(detail = detail, onGenerate = onGenerateRecap)
+        when (detail.recap) {
+            SessionRecapUiState.SignInRequired -> TextButton(onClick = onSignIn) { Text(stringResource(StringRes.recap_sign_in)) }
+            SessionRecapUiState.WaitingForOptIn -> TextButton(onClick = { recapSettingsOpen = true }) { Text(stringResource(StringRes.recap_turn_on_action)) }
+            else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun SessionStatTile(label: String, value: String, modifier: Modifier) {
+    EmberGroupCard(modifier = modifier) {
+        Column(Modifier.padding(12.dp)) {
+            Text(value, style = MaterialTheme.typography.titleLarge, color = Ember.colors.ink)
+            Text(label, fontSize = 13.sp, color = Ember.colors.ink2)
+        }
     }
 }
 
@@ -168,47 +190,43 @@ private fun Double.toPercent(): Int = (this * 100).roundToInt().coerceIn(0, 100)
 private fun SessionRecapSection(
     detail: SessionDetailState,
 ) {
-    when (val recap = detail.recap) {
-        SessionRecapUiState.Loading -> CircularProgressIndicator(modifier = Modifier.size(24.dp))
-        SessionRecapUiState.Ready -> RecapMessage(stringResource(StringRes.statistics_recap_queued))
+    when (val recap = if (detail.recapRequestResult in setOf(RecapRequestResult.QUEUED, RecapRequestResult.IN_PROGRESS))
+        SessionRecapUiState.Generating else detail.recap) {
+        SessionRecapUiState.Loading -> RecapMessage(stringResource(StringRes.recap_writing))
+        SessionRecapUiState.Ready -> RecapMessage(stringResource(StringRes.recap_none))
         is SessionRecapUiState.None -> {
-            RecapMessage(stringResource(StringRes.statistics_recap_none))
+            RecapMessage(stringResource(StringRes.recap_none))
             // Audiobooks never capture recaps; the other lines would mislead.
             if (detail.session.bookType != BookType.AUDIOBOOK) {
                 RecapMessage(stringResource(StringRes.statistics_recap_text_unavailable))
-                if (!recap.cloudRecapsEnabled) {
-                    RecapMessage(stringResource(StringRes.statistics_recap_turn_on_hint))
-                }
             }
         }
-        SessionRecapUiState.Ineligible -> RecapMessage(stringResource(StringRes.statistics_recap_ineligible))
+        SessionRecapUiState.Ineligible -> RecapMessage(stringResource(StringRes.recap_too_short))
         SessionRecapUiState.WaitingForOptIn ->
-            RecapMessage(stringResource(StringRes.statistics_recap_waiting_opt_in))
-        SessionRecapUiState.Generating -> Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-            RecapMessage(stringResource(StringRes.statistics_recap_generating))
-        }
+            RecapMessage(stringResource(StringRes.recap_turned_off))
+        SessionRecapUiState.Generating -> RecapMessage(stringResource(StringRes.recap_writing))
         is SessionRecapUiState.Succeeded -> {
-            Text(text = recap.summary, style = MaterialTheme.typography.bodyLarge)
+            RecapProse(recap.summary)
             Text(
-                text = recapEngineLabel(recap.engineId, recap.model),
+                text = stringResource(StringRes.recap_ai_notice),
                 style = MaterialTheme.typography.labelMedium,
+                fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 12.dp),
             )
         }
-        SessionRecapUiState.NotEnough -> RecapMessage(stringResource(StringRes.statistics_recap_not_enough))
+        SessionRecapUiState.NotEnough -> RecapMessage(stringResource(StringRes.recap_too_short))
         is SessionRecapUiState.FailedRetryable -> {
-            RecapMessage(stringResource(StringRes.statistics_recap_failed_retryable))
+            RecapMessage(stringResource(StringRes.recap_failed))
         }
         is SessionRecapUiState.FailedPermanent -> {
-            RecapMessage(stringResource(StringRes.statistics_recap_failed_permanent))
+            RecapMessage(stringResource(StringRes.recap_failed))
             if (!recap.canRetry) RecapMessage(stringResource(StringRes.statistics_recap_retry_unavailable))
         }
-        SessionRecapUiState.SignInRequired -> RecapMessage(stringResource(StringRes.statistics_recap_sign_in))
+        SessionRecapUiState.SignInRequired -> RecapMessage(stringResource(StringRes.recap_signed_out))
+        SessionRecapUiState.Offline -> RecapMessage(stringResource(StringRes.recap_offline))
+        SessionRecapUiState.Limited -> RecapMessage(stringResource(StringRes.recap_limit))
+        SessionRecapUiState.Expired -> RecapMessage(stringResource(StringRes.recap_expired))
     }
 }
 
@@ -218,21 +236,24 @@ private fun RecapGenerateAction(
     onGenerate: () -> Unit,
 ) {
     when (detail.recapRequestResult) {
-        RecapRequestResult.QUEUED -> RecapMessage(stringResource(StringRes.statistics_recap_queued))
-        RecapRequestResult.IN_PROGRESS -> RecapMessage(stringResource(StringRes.statistics_recap_generating))
-        RecapRequestResult.ALREADY_GENERATED -> RecapMessage(stringResource(StringRes.statistics_recap_ready))
+        RecapRequestResult.QUEUED, RecapRequestResult.IN_PROGRESS, RecapRequestResult.ALREADY_GENERATED -> Unit
         RecapRequestResult.TEXT_UNAVAILABLE -> RecapMessage(stringResource(StringRes.statistics_recap_retry_unavailable))
         RecapRequestResult.ACCOUNT_REQUIRED -> RecapMessage(stringResource(StringRes.statistics_recap_sign_in))
         null -> Unit
     }
     if (detail.recapRequestFailed) RecapMessage(stringResource(StringRes.statistics_recap_request_failed))
-    OutlinedButton(
+    if (!detail.canRequestRecap) return
+    Button(
         onClick = onGenerate,
-        enabled = detail.canRequestRecap,
+        shape = CircleShape,
+        border = if (Ember.style.isEink) BorderStroke(2.dp, Ember.colors.line) else null,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (Ember.style.isEink) Ember.colors.surface else Ember.colors.navActive,
+            contentColor = if (Ember.style.isEink) Ember.colors.ink else Ember.colors.navActiveContent,
+        ),
         modifier = Modifier.padding(top = 8.dp),
     ) {
-        if (detail.isRequestingRecap) CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-        Text(stringResource(StringRes.statistics_recap_generate))
+        Text(stringResource(if (detail.recap == SessionRecapUiState.Ready) StringRes.recap_write else StringRes.recap_retry))
     }
 }
 
@@ -242,16 +263,6 @@ private fun RecapMessage(text: String) {
         text = text,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
     )
-}
-
-@Composable
-private fun recapEngineLabel(engineId: String?, model: String?): String {
-    val engine = when (engineId) {
-        RecapEngine.CLOUD_ENGINE_ID, null -> stringResource(StringRes.statistics_recap_engine_cloud)
-        else -> engineId
-    }
-    return model?.takeIf { it.isNotBlank() }
-        ?.let { stringResource(StringRes.statistics_recap_engine_model, engine, it) }
-        ?: engine
 }

@@ -625,6 +625,7 @@ fun HomeNavigation(
                     entry<HomeDestination.Statistics> {
                         StatisticsScreen(
                             onBack = { requestBack("toolbar_back") },
+                            onSignIn = { viewModel.onIntent(HomeNavigationIntent.NavigateTo(HomeDestination.SyncAndBackup)) },
                             // Back arrow only makes sense when Statistics is pushed onto a stack;
                             // as a tab root it is the root of its own tab.
                             showBack = navigationState.currentBackStack.size > 1,

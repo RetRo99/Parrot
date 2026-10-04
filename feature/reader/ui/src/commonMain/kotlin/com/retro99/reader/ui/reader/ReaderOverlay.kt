@@ -491,6 +491,7 @@ internal fun ReaderOverlayContent(
             modifier = Modifier.align(Alignment.TopCenter).padding(top = topInset),
         ) {
             ReaderOverlayToolbar(
+                recap = { compact -> com.retro99.reader.ui.recap.ReaderRecapPill(bookUuid, compact = compact) },
                 bookTitle = viewState.bookTitle,
                 bookAuthor = viewState.bookAuthor,
                 isBookmarked = currentBookmark != null,
@@ -744,45 +745,52 @@ internal fun ReaderOverlayToolbar(
     onBack: () -> Unit,
     onBookmark: () -> Unit,
     modifier: Modifier = Modifier,
+    recap: @Composable (compact: Boolean) -> Unit = {},
 ) {
     val colors = Ember.colors
     Column(modifier.fillMaxWidth().background(colors.surface)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().height(64.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(StringRes.general_back), tint = colors.ink)
-            }
-            Column(Modifier.weight(1f).padding(start = 8.dp)) {
-                Text(
-                    text = bookTitle,
-                    style = Ember.type.bookTitle,
-                    color = colors.ink,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (bookAuthor.isNotBlank()) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // Below 360dp the pill drops its label so the title keeps its column.
+            val compact = maxWidth < 360.dp
+            Row(
+                modifier = Modifier.fillMaxWidth().height(64.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(StringRes.general_back), tint = colors.ink)
+                }
+                Column(Modifier.weight(1f).padding(start = 8.dp, end = 8.dp)) {
                     Text(
-                        text = bookAuthor,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.ink2,
+                        text = bookTitle,
+                        style = Ember.type.bookTitle,
+                        color = colors.ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    if (bookAuthor.isNotBlank()) {
+                        Text(
+                            text = bookAuthor,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.ink2,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
+                recap(compact)
+                Spacer(Modifier.width(4.dp))
+                IconButton(
+                    onClick = onBookmark,
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(
+                        imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark this page",
+                        tint = if (isBookmarked) colors.accentText else colors.ink,
+                    )
+                }
+                Spacer(Modifier.width(4.dp))
             }
-            IconButton(
-                onClick = onBookmark,
-                modifier = Modifier.size(48.dp),
-            ) {
-                Icon(
-                    imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                    contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark this page",
-                    tint = if (isBookmarked) colors.accentText else colors.ink,
-                )
-            }
-            Spacer(Modifier.width(4.dp))
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.line))
     }

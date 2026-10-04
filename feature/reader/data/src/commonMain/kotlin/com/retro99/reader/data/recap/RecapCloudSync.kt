@@ -88,7 +88,8 @@ class RecapCloudSync(
     }
 
     private suspend fun apply(record: CloudRecapRecord, account: String, localBook: String): Boolean {
-        if (record.state == "deleted" || record.expiresAt <= clock.now().toEpochMilliseconds()) {
+        val textExpired = record.state == "deleted" && record.errorCode == "EXCERPT_EXPIRED" && record.expiresAt > clock.now().toEpochMilliseconds()
+        if (record.state == "deleted" && !textExpired || record.expiresAt <= clock.now().toEpochMilliseconds()) {
             database.getRecap(record.sessionId)?.takeIf { it.cloudAccountId == account }
                 ?.let { database.deleteRecap(record.sessionId) }
             return false
@@ -101,6 +102,7 @@ class RecapCloudSync(
             "completed" -> "SUCCEEDED"
             "not_enough" -> "NOT_ENOUGH"
             "failed" -> "FAILED_PERMANENT"
+            "deleted" -> if (textExpired) "FAILED_PERMANENT" else return false
             else -> return false
         }
         val now = clock.now().toEpochMilliseconds()

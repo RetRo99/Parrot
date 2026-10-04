@@ -138,9 +138,6 @@ import kotlin.math.abs
 
 private val logger = Logger.withTag("ReaderScreen")
 
-/** Clears the reader toolbar so the recap chip never covers it. */
-private val RECAP_BANNER_TOP_PADDING = 64.dp
-
 /** Duration in milliseconds before auto-hiding the media controls */
 private const val CONTROLS_AUTO_HIDE_DELAY_MS = 5000L
 
@@ -316,10 +313,7 @@ private fun ReaderScreenContent(
         ) {
             ReaderRecapBannerHost(
                 bookUuid = bookUuid,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .statusBarsPadding()
-                    .padding(top = RECAP_BANNER_TOP_PADDING, start = 16.dp, end = 16.dp),
+                audioActive = viewState.isPlaying || viewState.isNarrationLoading || viewState.isNarrationStartPending,
             )
         }
 

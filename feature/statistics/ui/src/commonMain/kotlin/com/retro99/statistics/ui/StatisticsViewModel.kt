@@ -394,18 +394,22 @@ class StatisticsViewModel(
         sessionRecapJob = combine(
             recap,
             recapSettings.observeCloudRecapsEnabled(),
-            recapSettings.observeConsentGiven(),
+            combine(recapSettings.observeConsentGiven(), recapSettings.observeSignedIn()) { consent, signedIn -> consent to signedIn },
             recapEngineSelector.observeAvailable(),
-        ) { stored, enabled, consent, available ->
+            recapSettings.observeFeatureAvailable(),
+        ) { stored, enabled, access, available, allowed ->
             // The mapper needs the consent alone: enabled also needs a live
             // session, so it cannot tell "turn it on" apart from "sign in".
-            stored.toSessionRecapUiState(cloudRecapsEnabled = consent, engineAvailable = available) to (enabled && available)
+            Triple(stored.toSessionRecapUiState(cloudRecapsEnabled = access.first, engineAvailable = available, signedIn = access.second), enabled && available && allowed, allowed) to stored?.endChapter?.title
         }
-            .onEach { (state, allowed) ->
+            .onEach { (result, chapter) ->
+                val (state, allowed, featureAvailable) = result
                 updateSessionDetail { detail ->
                     // A previous session's late emission cannot update a new detail.
                     detail?.takeIf { it.session.id == sessionId }?.copy(
                         recap = state,
+                        recapsAvailable = featureAvailable,
+                        recapChapterTitle = chapter,
                         recapRequestsAllowed = allowed,
                         recapRequestResult = detail.recapRequestResult.takeIf { detail.recap == state && detail.recapRequestsAllowed == allowed },
                         recapRequestFailed = detail.recapRequestFailed && detail.recap == state,
