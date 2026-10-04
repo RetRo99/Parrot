@@ -12,7 +12,6 @@ import com.retro99.base.result.CompletableResult
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.domain.ReaderFontImportManager
 import com.retro99.reader.domain.ReaderSettingsRepository
-import com.retro99.reader.domain.model.BookmarkDomainModel
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.reader.domain.model.CustomReaderFontDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
@@ -194,10 +193,5 @@ class ReaderSettingPersistenceTest {
         override fun setCurrentlyReading(currentlyReading: CurrentlyReadingDomainModel) = Unit
         override fun clearCurrentlyReading() = Unit
         override suspend fun getAllPositions(): AppResult<List<PositionDomainModel>> = Ok(emptyList())
-        override fun observeBookmarks(bookUuid: String): Flow<List<BookmarkDomainModel>> = flowOf(emptyList())
-        override suspend fun addBookmark(bookmark: BookmarkDomainModel): CompletableResult = Ok(Unit)
-        override suspend fun deleteBookmark(id: String): CompletableResult = Ok(Unit)
-        override suspend fun updateBookmarkTitle(id: String, title: String): CompletableResult = Ok(Unit)
-        override suspend fun updateBookmarkSortOrders(orders: List<Pair<String, Int>>): CompletableResult = Ok(Unit)
     }
 }
