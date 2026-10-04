@@ -13,7 +13,7 @@ class SessionRecapUiStateTest {
 
     @Test
     fun noRecordedRecapIsNoneAndSaysWhetherRecapsAreOff() {
-        assertEquals(SessionRecapUiState.None(cloudRecapsEnabled = false), null.state(enabled = false))
+        assertEquals(SessionRecapUiState.WaitingForOptIn, null.state(enabled = false))
         assertEquals(SessionRecapUiState.None(cloudRecapsEnabled = true), null.state())
     }
 
@@ -49,8 +49,8 @@ class SessionRecapUiStateTest {
     }
 
     @Test
-    fun pendingAndRunningRowsAreGenerating() {
-        assertEquals(SessionRecapUiState.Generating, sessionRecap(RecapStatus.PENDING).state())
+    fun pendingRowsAreReadyAndRunningRowsAreGenerating() {
+        assertEquals(SessionRecapUiState.Ready, sessionRecap(RecapStatus.PENDING).state())
         assertEquals(SessionRecapUiState.Generating, sessionRecap(RecapStatus.CAPTURING).state())
         // A request may already be in flight, whatever the consent now.
         assertEquals(
@@ -84,7 +84,7 @@ class SessionRecapUiStateTest {
     @Test
     fun failuresCarryWhetherRetryCanWork() {
         assertEquals(
-            SessionRecapUiState.FailedRetryable(canRetry = true),
+            SessionRecapUiState.Offline,
             sessionRecap(RecapStatus.FAILED_RETRYABLE, lastError = RecapErrorCode.NETWORK, canRetry = true)
                 .state(),
         )
@@ -94,7 +94,7 @@ class SessionRecapUiStateTest {
                 .state(enabled = false),
         )
         assertEquals(
-            SessionRecapUiState.FailedPermanent(canRetry = false),
+            SessionRecapUiState.Expired,
             sessionRecap(RecapStatus.FAILED_PERMANENT, lastError = RecapErrorCode.EXCERPT_EXPIRED).state(),
         )
     }

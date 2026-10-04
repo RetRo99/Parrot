@@ -101,6 +101,27 @@ interface SessionRecapDatabase : DataClearable {
 
     suspend fun deleteAllRecaps()
 
+    suspend fun getCloudRows(accountId: String): List<SessionRecapEntity>
+    suspend fun cacheCloudRecap(entity: SessionRecapEntity)
+    suspend fun markCloudQueued(sessionId: String, accountId: String, cloudBookId: String?, running: Boolean, now: Long): Boolean
+    /** Durable privacy commands. Process only with this account's credentials. */
+    suspend fun queueCloudDeletion(accountId: String, sessionId: String)
+    suspend fun getCloudDeletions(accountId: String): List<String>
+    suspend fun acknowledgeCloudDeletion(accountId: String, sessionId: String)
+
+    /**
+     * Withdrawal for this account: stores the write fence, drops queued text
+     * and deletes the account's recaps and cursors. Rows still being written
+     * go too; their late conditional updates no-op on the missing row.
+     */
+    suspend fun queueCloudWithdrawal(accountId: String, now: Long)
+    suspend fun hasCloudWithdrawal(accountId: String): Boolean
+    suspend fun acknowledgeCloudWithdrawal(accountId: String)
+    suspend fun enableCloudConsent(accountId: String)
+    suspend fun getCloudCursor(accountId: String, bookId: String): Long
+    suspend fun setCloudCursor(accountId: String, bookId: String, cursor: Long)
+    suspend fun bindCloudIdentity(sessionId: String, cloudBookId: String?): Boolean
+
     override suspend fun clearAllData() {
         deleteAllRecaps()
     }

@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,7 +25,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -35,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.LoadingScreen
+import com.retro99.base.ui.compose.EmberTopBar
 import com.retro99.base.ui.compose.TooltipIconButton
 import com.retro99.books.ui.components.BookItemCard
 import com.retro99.books.ui.components.BookSearchBar
@@ -83,22 +82,9 @@ private fun SeriesDetailScreenContent(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = viewState.seriesName,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { intentDispatcher(SeriesDetailIntent.OnBackClicked) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(StringRes.general_back),
-                        )
-                    }
-                },
+            EmberTopBar(
+                title = viewState.seriesName,
+                onBack = { intentDispatcher(SeriesDetailIntent.OnBackClicked) },
                 actions = {
                     TooltipIconButton(
                         tooltip = stringResource(StringRes.series_action_search),

@@ -37,6 +37,7 @@ class RecapSessionRecorderImpl(
     private val onSessionReady: () -> Unit,
     private val clock: Clock = Clock.System,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val accountId: () -> String? = { null },
 ) : RecapSessionRecorder {
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -91,6 +92,7 @@ class RecapSessionRecorderImpl(
                 startChapterTitle = chapter?.title,
                 furthestTotalProgression = startPosition.totalProgression,
                 language = language,
+                cloudAccountId = accountId(),
                 createdAt = now,
                 updatedAt = now,
             ),
@@ -173,7 +175,7 @@ class RecapSessionRecorderImpl(
         lastSentence: String?,
         activeReadingMs: Long,
     ) {
-        if (row.lastError == RecapErrorCode.CONSENT_WITHDRAWN.name || !consentGiven()) {
+        if (row.lastError == RecapErrorCode.CONSENT_WITHDRAWN.name || !consentGiven(row.cloudAccountId)) {
             finishWithdrawn(row, capture, activeReadingMs)
             return
         }
@@ -241,8 +243,8 @@ class RecapSessionRecorderImpl(
     }
 
     // Unreadable consent counts as no consent.
-    private suspend fun consentGiven(): Boolean = try {
-        settings.isCloudRecapsEnabled()
+    private suspend fun consentGiven(accountId: String? = null): Boolean = try {
+        settings.isConsentGiven(accountId)
     } catch (e: CancellationException) {
         throw e
     } catch (_: Exception) {

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
@@ -24,7 +23,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.LoadingScreen
+import com.retro99.base.ui.compose.EmberTopBar
 import com.retro99.base.ui.compose.relativeTimeText
 import com.retro99.books.domain.model.links.LinkedCopy
 import com.retro99.books.ui.links.label
@@ -105,16 +104,9 @@ private fun PositionsScreenContent(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(StringRes.positions_title)) },
-                navigationIcon = {
-                    IconButton(onClick = { intentDispatcher(PositionsIntent.OnBackClicked) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(StringRes.general_back),
-                        )
-                    }
-                },
+            EmberTopBar(
+                title = stringResource(StringRes.positions_title),
+                onBack = { intentDispatcher(PositionsIntent.OnBackClicked) },
             )
         },
     ) { padding ->

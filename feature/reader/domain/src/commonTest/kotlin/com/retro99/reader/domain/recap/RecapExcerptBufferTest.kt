@@ -27,22 +27,24 @@ class RecapExcerptBufferTest {
     }
 
     @Test
-    fun neverDropsTextFromALongSession() {
+    fun longSessionKeepsOpeningAndLatestTextWithinBudget() {
         val buffer = RecapExcerptBuffer()
         repeat(50_000) { page -> buffer.append("Page $page has some sentences. It ends here.") }
 
-        assertTrue(buffer.length > 2_000_000)
+        assertTrue(buffer.length <= RecapLimits.MAX_EXCERPT_CHARS)
         assertTrue(buffer.text().startsWith("Page 0 has some sentences."))
         assertTrue(buffer.text().endsWith("Page 49999 has some sentences. It ends here."))
     }
 
     @Test
-    fun keepsOneHugeSegmentWhole() {
+    fun hugeSegmentIsBoundedAndKeepsTheEnd() {
         val buffer = RecapExcerptBuffer()
         val huge = (1..100_000).joinToString(" ") { "w$it" }
         buffer.append(huge)
 
-        assertEquals(huge, buffer.text())
+        assertTrue(buffer.length <= RecapLimits.MAX_EXCERPT_CHARS)
+        assertTrue(buffer.text().startsWith("w1 w2 w3"))
+        assertTrue(buffer.text().endsWith("w99999 w100000"))
     }
 
     @Test

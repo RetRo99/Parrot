@@ -124,7 +124,6 @@ import resources.translations.reader_time_remaining_minutes
 import resources.translations.reader_tts_pause
 import resources.translations.reader_tts_read_aloud
 import resources.translations.reader_tts_voice_settings
-import resources.translations.resume_linked_compare
 import resources.translations.settings_changed
 import resources.translations.settings_tts_enabled
 import resources.translations.settings_undo
@@ -134,9 +133,6 @@ import resources.translations.sleep_timer_postpone
 import kotlin.math.abs
 
 private val logger = Logger.withTag("ReaderScreen")
-
-/** Clears the reader toolbar so the recap chip never covers it. */
-private val RECAP_BANNER_TOP_PADDING = 64.dp
 
 /** Duration in milliseconds before auto-hiding the media controls */
 private const val CONTROLS_AUTO_HIDE_DELAY_MS = 5000L
@@ -313,10 +309,7 @@ private fun ReaderScreenContent(
         ) {
             ReaderRecapBannerHost(
                 bookUuid = bookUuid,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .statusBarsPadding()
-                    .padding(top = RECAP_BANNER_TOP_PADDING, start = 16.dp, end = 16.dp),
+                audioActive = viewState.isPlaying || viewState.isNarrationLoading || viewState.isNarrationStartPending,
             )
         }
 
@@ -328,13 +321,7 @@ private fun ReaderScreenContent(
                 model = offer.toUiModel(),
                 onContinue = { intentDispatcher(ReaderIntent.ContinueLinkedResume) },
                 onStay = { intentDispatcher(ReaderIntent.StayLinkedResume) },
-                compareAll = {
-                    TextButton(
-                        onClick = { intentDispatcher(ReaderIntent.CompareLinkedPositions) },
-                    ) {
-                        Text(stringResource(StringRes.resume_linked_compare))
-                    }
-                },
+                onCompareAll = { intentDispatcher(ReaderIntent.CompareLinkedPositions) },
             )
         }
 
@@ -789,7 +776,7 @@ private fun ReadingProgressBar(
                 if (currentTime.isNotEmpty()) {
                     Text(
                         text = currentTime,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Ember.type.meta,
                         color = Ember.colors.ink2,
                         maxLines = 1,
                     )
@@ -798,7 +785,7 @@ private fun ReadingProgressBar(
                 // Centered chapter title - uses weight to take remaining space and truncate if needed
                 Text(
                     text = chapterTitleText,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Ember.type.meta,
                     color = Ember.colors.ink2,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -816,8 +803,12 @@ private fun ReadingProgressBar(
                     if (pageInfoText.isNotEmpty()) {
                         Text(
                             text = pageInfoText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Ember.colors.ink2,
+                            style = Ember.type.meta,
+                            color = if (chapterProgressDisplayMode == ChapterProgressDisplayMode.PERCENTAGE) {
+                                Ember.colors.ink
+                            } else {
+                                Ember.colors.ink2
+                            },
                         )
                     }
 
@@ -825,7 +816,7 @@ private fun ReadingProgressBar(
                     if (audioStatus != null) {
                         Text(
                             text = audioStatus,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = Ember.type.meta,
                             color = Ember.colors.ink2,
                         )
                     } else if (showReadingTime && chapterReadingTimeInfo != null) {
@@ -839,7 +830,7 @@ private fun ReadingProgressBar(
                         }
                         Text(
                             text = readingTimeText,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = Ember.type.meta,
                             color = Ember.colors.ink2,
                         )
                     }
@@ -848,8 +839,8 @@ private fun ReadingProgressBar(
                     if (showTotalProgress) {
                         Text(
                             text = "$totalProgressPercent%",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Ember.colors.ink2,
+                            style = Ember.type.meta,
+                            color = Ember.colors.ink,
                         )
                     }
                 }

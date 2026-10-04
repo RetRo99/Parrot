@@ -185,7 +185,7 @@ class RecapSessionRecorderTest {
     }
 
     @Test
-    fun aLongSessionKeepsEverythingItRead() = runTest {
+    fun aLongSessionKeepsTheOpeningAndEndWithinBudget() = runTest {
         val recorder = recorder()
         recorder.onSessionStarted("s1", "server", "book", RecapPosition(totalProgression = 0.0), null)
         recorder.readPages("s1", pages = 300, from = 0.0)
@@ -194,27 +194,28 @@ class RecapSessionRecorderTest {
 
         val row = database["s1"]!!
         assertEquals("PENDING", row.status)
-        assertTrue(row.excerpt!!.length > 8_000)
+        assertTrue(row.excerpt!!.length <= 8_000)
         assertTrue(row.excerpt!!.startsWith(page.trim()))
         assertTrue(row.excerpt!!.contains("Page 0."))
         assertTrue(row.excerpt!!.endsWith("Page 299."))
     }
 
     @Test
-    fun aLongExcerptIsSavedAtMostEveryInterval() = runTest {
+    fun boundedExcerptsAreSavedAfterEveryAppend() = runTest {
         val recorder = recorder()
         recorder.onSessionStarted("s1", "server", "book", RecapPosition(totalProgression = 0.0), null)
-        // ~25k chars: past the size where every append is saved.
+        // Reading more than the budget must not leave an old tail on disk.
         recorder.readPages("s1", pages = 100, from = 0.0)
         testScheduler.advanceUntilIdle()
         val saved = database["s1"]!!.excerpt!!
-        assertTrue(saved.length in 15_500..16_000, "length ${saved.length}")
+        assertTrue(saved.length <= 8_000, "length ${saved.length}")
+        assertTrue(saved.endsWith("Page 99."))
 
         clock.nowMs += 30_000
         recorder.readPages("s1", pages = 1, from = 0.5)
         testScheduler.advanceUntilIdle()
         assertTrue(database["s1"]!!.excerpt!!.endsWith("Page 0."))
-        assertTrue(database["s1"]!!.excerpt!!.length > 25_000)
+        assertTrue(database["s1"]!!.excerpt!!.length <= 8_000)
     }
 
     @Test

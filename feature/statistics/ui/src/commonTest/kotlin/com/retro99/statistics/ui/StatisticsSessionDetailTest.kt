@@ -2,7 +2,9 @@ package com.retro99.statistics.ui
 
 import com.github.michaelbull.result.Ok
 import com.retro99.books.domain.model.BookType
-import com.retro99.reader.domain.recap.RecapRetryResult
+import com.retro99.reader.domain.recap.RecapRequestResult
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.test.runCurrent
 import com.retro99.reader.domain.recap.RecapStatus
 import com.retro99.statistics.domain.model.ReadingSessionDomainModel
 import com.retro99.statistics.domain.usecase.GetAllBooksReadUseCase
@@ -11,6 +13,7 @@ import com.retro99.statistics.domain.usecase.GetReadingStatisticsUseCase
 import com.retro99.statistics.domain.usecase.GetRecentSessionsUseCase
 import com.retro99.statistics.domain.usecase.GetStatisticsOverviewUseCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -40,10 +43,12 @@ class StatisticsSessionDetailTest {
 
         val detail = viewModel.selected()!!
         assertEquals(LINKED, detail.session.id)
-        assertEquals(SessionRecapUiState.Generating, detail.recap)
+        assertEquals(SessionRecapUiState.Ready, detail.recap)
+        assertTrue(detail.canRequestRecap)
         assertEquals(listOf("r1"), recaps.observed)
         assertEquals(0, selector.selectCalls)
         assertTrue(recaps.retried.isEmpty())
+        assertTrue(recaps.requested.isEmpty())
     }
 
     @Test
@@ -80,18 +85,31 @@ class StatisticsSessionDetailTest {
     }
 
     @Test
+    fun consentWithoutASessionAsksForSignInNotForOptIn() = runDetailTest { viewModel ->
+        recaps.recaps.value = mapOf("r1" to sessionRecap(RecapStatus.PENDING, sessionId = "r1"))
+        // Consent stays on, but the enabled gate needs a live session and is off.
+        settings.consent = MutableStateFlow(true)
+        settings.enabled.value = false
+        selector.available.value = false
+        viewModel.onIntent(StatisticsIntent.OnSessionClicked(LINKED))
+        advanceUntilIdle()
+
+        assertEquals(SessionRecapUiState.SignInRequired, viewModel.selected()!!.recap)
+    }
+
+    @Test
     fun aSessionWithoutALinkHasNoRecap() = runDetailTest { viewModel ->
         settings.enabled.value = false
 
         viewModel.onIntent(StatisticsIntent.OnSessionClicked(UNLINKED))
         advanceUntilIdle()
 
-        assertEquals(SessionRecapUiState.None(cloudRecapsEnabled = false), viewModel.selected()!!.recap)
+        assertEquals(SessionRecapUiState.WaitingForOptIn, viewModel.selected()!!.recap)
         assertTrue(recaps.observed.isEmpty())
     }
 
     @Test
-    fun retryAsksTheRepositoryOnce() = runDetailTest { viewModel ->
+    fun generateAsksTheRepositoryOnce() = runDetailTest { viewModel ->
         recaps.recaps.value = mapOf(
             "r1" to sessionRecap(RecapStatus.FAILED_RETRYABLE, sessionId = "r1", canRetry = true),
         )
@@ -99,41 +117,43 @@ class StatisticsSessionDetailTest {
         advanceUntilIdle()
         assertEquals(SessionRecapUiState.FailedRetryable(canRetry = true), viewModel.selected()!!.recap)
 
-        viewModel.onIntent(StatisticsIntent.OnRetryRecap)
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
         advanceUntilIdle()
 
-        assertEquals(listOf("r1"), recaps.retried)
-        assertFalse(viewModel.selected()!!.isRetrying)
-        assertFalse(viewModel.selected()!!.retryUnavailable)
+        assertEquals(listOf("r1"), recaps.requested)
+        assertTrue(recaps.retried.isEmpty())
+        assertFalse(viewModel.selected()!!.isRequestingRecap)
+        assertEquals(RecapRequestResult.QUEUED, viewModel.selected()!!.recapRequestResult)
     }
 
     @Test
     fun aRefusedRetryIsShown() = runDetailTest { viewModel ->
-        recaps.retryResult = RecapRetryResult.NOT_RETRYABLE
+        recaps.requestResult = RecapRequestResult.TEXT_UNAVAILABLE
         recaps.recaps.value = mapOf(
             "r1" to sessionRecap(RecapStatus.FAILED_PERMANENT, sessionId = "r1", canRetry = true),
         )
         viewModel.onIntent(StatisticsIntent.OnSessionClicked(LINKED))
         advanceUntilIdle()
 
-        viewModel.onIntent(StatisticsIntent.OnRetryRecap)
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
         advanceUntilIdle()
 
-        assertTrue(viewModel.selected()!!.retryUnavailable)
+        assertEquals(RecapRequestResult.TEXT_UNAVAILABLE, viewModel.selected()!!.recapRequestResult)
+        assertFalse(viewModel.selected()!!.canRequestRecap)
     }
 
     @Test
     fun aRefusedRetryClearsOnceTheRecapMovesOn() = runDetailTest { viewModel ->
-        recaps.retryResult = RecapRetryResult.NOT_RETRYABLE
+        recaps.requestResult = RecapRequestResult.TEXT_UNAVAILABLE
         recaps.recaps.value = mapOf(
             "r1" to sessionRecap(RecapStatus.FAILED_PERMANENT, sessionId = "r1", canRetry = true),
         )
         viewModel.onIntent(StatisticsIntent.OnSessionClicked(LINKED))
         advanceUntilIdle()
         // Refused because the runner had just claimed the row.
-        viewModel.onIntent(StatisticsIntent.OnRetryRecap)
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
         advanceUntilIdle()
-        assertTrue(viewModel.selected()!!.retryUnavailable)
+        assertEquals(RecapRequestResult.TEXT_UNAVAILABLE, viewModel.selected()!!.recapRequestResult)
 
         recaps.recaps.value = mapOf("r1" to sessionRecap(RecapStatus.RUNNING, sessionId = "r1"))
         advanceUntilIdle()
@@ -142,7 +162,7 @@ class StatisticsSessionDetailTest {
         )
         advanceUntilIdle()
 
-        assertFalse(viewModel.selected()!!.retryUnavailable)
+        assertNull(viewModel.selected()!!.recapRequestResult)
     }
 
     @Test
@@ -155,6 +175,76 @@ class StatisticsSessionDetailTest {
 
         assertNull(viewModel.selected())
         assertEquals(2, viewModel.currentViewState().sessionsDetailState!!.sessions.size)
+    }
+
+    @Test
+    fun duplicateTapsAreIgnoredUntilTheRequestFinishes() = runDetailTest { viewModel ->
+        val result = CompletableDeferred<RecapRequestResult>()
+        recaps.requestHandler = { result.await() }
+        recaps.recaps.value = mapOf("r1" to sessionRecap(RecapStatus.PENDING, sessionId = "r1"))
+        viewModel.onIntent(StatisticsIntent.OnSessionClicked(LINKED))
+        advanceUntilIdle()
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
+        runCurrent()
+        assertTrue(viewModel.selected()!!.isRequestingRecap)
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
+        runCurrent()
+        assertEquals(listOf("r1"), recaps.requested)
+        result.complete(RecapRequestResult.QUEUED)
+        advanceUntilIdle()
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
+        advanceUntilIdle()
+        assertEquals(listOf("r1"), recaps.requested)
+    }
+
+    @Test
+    fun aLateResponseCannotChangeAnotherSession() = runDetailTest { viewModel ->
+        val result = CompletableDeferred<RecapRequestResult>()
+        recaps.requestHandler = { result.await() }
+        recaps.recaps.value = mapOf("r1" to sessionRecap(RecapStatus.PENDING, sessionId = "r1"))
+        viewModel.onIntent(StatisticsIntent.OnSessionClicked(LINKED))
+        advanceUntilIdle()
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
+        runCurrent()
+        viewModel.onIntent(StatisticsIntent.OnSessionClicked(UNLINKED))
+        runCurrent()
+        result.complete(RecapRequestResult.ACCOUNT_REQUIRED)
+        advanceUntilIdle()
+        assertEquals(UNLINKED, viewModel.selected()!!.session.id)
+        assertNull(viewModel.selected()!!.recapRequestResult)
+        assertFalse(viewModel.selected()!!.isRequestingRecap)
+    }
+
+    @Test
+    fun completedHistoricalAndUnconsentedSessionsCannotRequest() = runDetailTest { viewModel ->
+        viewModel.onIntent(StatisticsIntent.OnSessionClicked(UNLINKED))
+        advanceUntilIdle()
+        assertFalse(viewModel.selected()!!.canRequestRecap)
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
+        recaps.recaps.value = mapOf("r1" to sessionRecap(RecapStatus.SUCCEEDED, sessionId = "r1", summary = "Saved."))
+        viewModel.onIntent(StatisticsIntent.OnSessionClicked(LINKED))
+        advanceUntilIdle()
+        assertFalse(viewModel.selected()!!.canRequestRecap)
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
+        recaps.recaps.value = mapOf("r1" to sessionRecap(RecapStatus.PENDING, sessionId = "r1"))
+        settings.enabled.value = false
+        advanceUntilIdle()
+        assertFalse(viewModel.selected()!!.canRequestRecap)
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
+        advanceUntilIdle()
+        assertTrue(recaps.requested.isEmpty())
+    }
+
+    @Test
+    fun requestFailureLeavesTheButtonAvailableForAnotherTry() = runDetailTest { viewModel ->
+        recaps.requestHandler = { error("test failure") }
+        recaps.recaps.value = mapOf("r1" to sessionRecap(RecapStatus.PENDING, sessionId = "r1"))
+        viewModel.onIntent(StatisticsIntent.OnSessionClicked(LINKED))
+        advanceUntilIdle()
+        viewModel.onIntent(StatisticsIntent.OnGenerateRecap)
+        advanceUntilIdle()
+        assertTrue(viewModel.selected()!!.recapRequestFailed)
+        assertTrue(viewModel.selected()!!.canRequestRecap)
     }
 
     private fun runDetailTest(block: suspend TestScope.(StatisticsViewModel) -> Unit) = runTest {

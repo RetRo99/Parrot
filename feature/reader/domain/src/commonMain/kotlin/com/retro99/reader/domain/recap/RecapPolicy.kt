@@ -6,10 +6,11 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.hours
 
 /**
- * Size limits shared with the generate-recap API. The excerpt has none:
- * a session sends everything it read.
+ * Client capture limits. Existing submitted jobs retain their original payload.
  */
 object RecapLimits {
+    const val MAX_EXCERPT_CHARS = 8_000
+    const val OPENING_CHARS = 1_000
     /** The API's lastSentence cap. */
     const val MAX_LAST_SENTENCE_CHARS = 300
 }
@@ -26,7 +27,7 @@ object RecapJobPolicy {
     val STALE_RUNNING_AFTER: Duration = 3.minutes
 
     /** Read text is kept at most this long, then nulled. */
-    val EXCERPT_RETENTION: Duration = 14.days
+    val EXCERPT_RETENTION: Duration = 1.days
 
     /** Whole recap rows are deleted after this long. */
     val ROW_RETENTION: Duration = 180.days
@@ -39,7 +40,8 @@ object RecapJobPolicy {
      * use up its attempts; backoff and excerpt expiry still bound them.
      */
     fun countsTowardCap(code: RecapErrorCode): Boolean =
-        code != RecapErrorCode.RATE_LIMITED && code != RecapErrorCode.SERVICE_UNAVAILABLE
+        code !in setOf(RecapErrorCode.RATE_LIMITED, RecapErrorCode.SERVICE_UNAVAILABLE,
+            RecapErrorCode.NETWORK, RecapErrorCode.TIMEOUT)
 
     /** 1, 2, 4, 8 ... minutes, capped; [attempt] starts at 1. */
     fun backoff(attempt: Int): Duration {

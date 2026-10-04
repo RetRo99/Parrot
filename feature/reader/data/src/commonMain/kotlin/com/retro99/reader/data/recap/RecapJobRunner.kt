@@ -13,6 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -52,6 +54,9 @@ class RecapJobRunner(
     // The database and token follow the active profile; a pass must not
     // span a switch.
     private val activeProfileId: () -> String? = { null },
+    private val accountId: () -> String? = { null },
+    private val cloudBookId: suspend (String) -> String? = { null },
+    private val cloudSync: (suspend () -> Boolean)? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private val wakeups = Channel<RecapTrigger>(Channel.CONFLATED)
@@ -61,6 +66,8 @@ class RecapJobRunner(
     private var lastCleanupAt = Long.MIN_VALUE / 2
     private var startupWork: suspend () -> Unit = {}
     private var timer: Job? = null
+    private var cloudPolls = 0
+    private var cloudPollAt: Long? = null
 
     // Runner-wide pauses: a quota, outage or auth answer applies to every
     // row, so no other row is sent until they end.
@@ -73,15 +80,19 @@ class RecapJobRunner(
      * run before the first pass that can reach the database.
      */
     fun start(startupWork: suspend () -> Unit = {}) {
+        this.startupWork = startupWork
         if (started) return
         started = true
-        this.startupWork = startupWork
         scope.launch {
             for (trigger in wakeups) {
                 try {
+                    if (trigger != RecapTrigger.SCHEDULED) cloudPolls = 0
                     runPending()
                 } catch (e: CancellationException) {
-                    throw e
+                    // A stray cancellation from a background caller must not
+                    // kill this loop; only cancellation of our own scope may.
+                    currentCoroutineContext().ensureActive()
+                    diagnostics.breadcrumb(stage = "pass", outcome = "cancelled", reasonCode = e::class.simpleName)
                 } catch (e: Exception) {
                     // e.g. no profile database yet at app start; next trigger retries.
                     diagnostics.breadcrumb(stage = "pass", outcome = "failed", reasonCode = e::class.simpleName)
@@ -93,6 +104,12 @@ class RecapJobRunner(
             .filter { available -> available }
             .onEach { onEngineAvailable() }
             .launchIn(scope)
+        scope.launch {
+            while (true) {
+                delay(RecapJobPolicy.CLEANUP_INTERVAL.inWholeMilliseconds)
+                trigger(RecapTrigger.SCHEDULED)
+            }
+        }
         trigger(RecapTrigger.APP_START)
     }
 
@@ -105,15 +122,28 @@ class RecapJobRunner(
 
     /** Non-blocking; repeated triggers collapse into one pass. */
     fun trigger(reason: RecapTrigger) {
+        // Self-start: delivery must work even when an app initializer failed.
+        if (!started) start()
         wakeups.trySend(reason)
     }
 
     /** One pass over due rows. Safe to call from background work too. */
-    suspend fun runPending(): Int = passMutex.withLock {
+    suspend fun runPending(): Int {
+        if (!started) start()
+        return passMutex.withLock {
         if (!startupDone) {
-            startupWork()
+            try {
+                startupWork()
+                startupDone = true
+            } catch (e: CancellationException) {
+                currentCoroutineContext().ensureActive()
+                diagnostics.breadcrumb(stage = "startup", outcome = "cancelled", reasonCode = e::class.simpleName)
+            } catch (e: Exception) {
+                // A startup failure must not block delivery forever; it is
+                // retried on the next pass until it succeeds.
+                diagnostics.breadcrumb(stage = "startup", outcome = "failed", reasonCode = e::class.simpleName)
+            }
             runCleanup()
-            startupDone = true
         }
         val now = clock.now().toEpochMilliseconds()
         if (now - lastCleanupAt >= RecapJobPolicy.CLEANUP_INTERVAL.inWholeMilliseconds) runCleanup()
@@ -123,12 +153,31 @@ class RecapJobRunner(
             maxAttempts = RecapJobPolicy.MAX_ATTEMPTS,
         )
         val profile = activeProfileId()
+        if (cloudSync != null) {
+            val waiting = try { cloudSync.invoke() } catch (e: CancellationException) { throw e }
+                catch (_: Exception) { true }
+            cloudPollAt = if (waiting && cloudPolls++ < 5) now + RecapJobPolicy.backoff(cloudPolls).inWholeMilliseconds else null
+        }
+        if (profileChanged(profile)) return@withLock 0
         var sent = 0
         var guard = 0
         while (guard++ < MAX_ROWS_PER_PASS) {
             if (clock.now().toEpochMilliseconds() < blockEnd()) break
-            val engine = selector.select() ?: break
-            val row = database.getNextDue(clock.now().toEpochMilliseconds()) ?: break
+            val engine = selector.select()
+            if (engine == null) {
+                diagnostics.breadcrumb(stage = "select", outcome = "engine_unavailable")
+                break
+            }
+            val dueAt = clock.now().toEpochMilliseconds()
+            val row = if (cloudSync == null) database.getNextDue(dueAt) else accountId()?.let { account ->
+                database.getCloudRows(account).filter { it.consentVersion == 2 && it.excerpt != null &&
+                    it.status in setOf("PENDING", "FAILED_RETRYABLE") && (it.nextAttemptAt ?: 0L) <= dueAt }
+                    .minByOrNull { it.createdAt }
+            }
+            if (row == null) {
+                diagnostics.breadcrumb(stage = "select", outcome = "no_due_row")
+                break
+            }
             val excerpt = row.excerpt ?: break
             if (!database.claim(row.sessionId, engine.id, clock.now().toEpochMilliseconds())) {
                 continue
@@ -136,9 +185,15 @@ class RecapJobRunner(
             // Never send one profile's text with another's token; the row
             // is recovered as stale in its own profile later.
             if (profileChanged(profile)) break
+            val linkedBook = if (row.cloudIdentityBound) row.cloudBookId else cloudBookId(row.bookUuid)
+            if (!row.cloudIdentityBound) database.bindCloudIdentity(row.sessionId, linkedBook)
+            if (profileChanged(profile) || (cloudSync != null && row.cloudAccountId != accountId())) break
             sent++
             val result = try {
-                engine.generate(RecapInput(excerpt, row.language, row.lastSentence))
+                engine.generate(RecapInput(excerpt, row.language, row.lastSentence,
+                    sessionId = row.sessionId, cloudBookId = linkedBook, endedAt = row.endedAt ?: row.createdAt,
+                    position = com.retro99.reader.domain.recap.RecapPosition(row.endHref, row.endProgression, row.endTotalProgression),
+                    accountId = row.cloudAccountId))
             } catch (e: CancellationException) {
                 // e.g. WorkManager stopped the worker: back off instead of
                 // leaving the row RUNNING until stale recovery.
@@ -154,11 +209,12 @@ class RecapJobRunner(
                 RecapResult.Retryable(RecapErrorCode.UNKNOWN)
             }
             // The result belongs to a database that is no longer open.
-            if (profileChanged(profile)) break
-            if (!record(row, attempt = row.attemptCount + 1, result)) break
+            if (profileChanged(profile) || (cloudSync != null && row.cloudAccountId != accountId())) break
+            if (!record(row.copy(cloudBookId = linkedBook), attempt = row.attemptCount + 1, result)) break
         }
         scheduleNext()
         sent
+        }
     }
 
     /** Retention: at app start, then at most hourly before a pass. */
@@ -184,6 +240,12 @@ class RecapJobRunner(
         val id = row.sessionId
         var stored = true
         val keepGoing = when (result) {
+            is RecapResult.Queued -> {
+                stored = database.markCloudQueued(id, row.cloudAccountId ?: return false, row.cloudBookId,
+                    result.running, now)
+                cloudPollAt = now + RecapJobPolicy.BASE_BACKOFF.inWholeMilliseconds
+                true
+            }
             is RecapResult.Success -> {
                 stored = database.complete(id, RecapStatus.SUCCEEDED.name, result.summary, result.model, now)
                 authFailures = 0
@@ -198,7 +260,7 @@ class RecapJobRunner(
                 stored = database.fail(
                     id, RecapStatus.FAILED_PERMANENT.name, attempt, null, result.code.name, now,
                     // Rejected input can't be retried; keep no text for it.
-                    dropText = result.code.isInputError,
+                    dropText = true,
                 )
                 true
             }
@@ -249,7 +311,7 @@ class RecapJobRunner(
         val staleAt = database.getOldestRunningUpdate()
             ?.let { it + RecapJobPolicy.STALE_RUNNING_AFTER.inWholeMilliseconds + 1 }
         val block = blockEnd().takeIf { it > now }
-        val at = listOfNotNull(database.getEarliestScheduled(now), staleAt, block).minOrNull()
+        val at = listOfNotNull(database.getEarliestScheduled(now), staleAt, block, cloudPollAt).minOrNull()
             ?.coerceAtLeast(block ?: 0L)
             ?: return
         timer = scope.launch {
@@ -262,6 +324,7 @@ class RecapJobRunner(
 
     private fun RecapResult.outcomeName(): String = when (this) {
         is RecapResult.Success -> "succeeded"
+        is RecapResult.Queued -> "queued"
         RecapResult.NotEnough -> "not_enough"
         is RecapResult.Retryable -> "retryable"
         is RecapResult.Permanent -> "permanent"

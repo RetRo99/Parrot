@@ -6,6 +6,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ReaderSettingsJsonCodecTest {
+    @kotlin.test.Test
+    fun oldPinnedSpeedIsRepairedWithoutChangingOtherSettingsOrRevision() {
+        val speed = com.retro99.database.api.reader.ReaderSettingsEntity("readingSpeedWpm", "1000", remoteRevision = 7, deletedAt = null)
+        val entries = listOf(speed)
+        kotlin.test.assertEquals(200, ReaderSettingsJsonCodec.decode(entries).readingSpeedWpm)
+        kotlin.test.assertEquals(listOf(speed.copy(value = "200")), ReaderSettingsJsonCodec.readingSpeedRepairs(entries))
+        kotlin.test.assertEquals(emptyList(), ReaderSettingsJsonCodec.readingSpeedRepairs(listOf(speed.copy(value = "250"))))
+    }
 
     @Test
     fun `decode returns defaults when nothing is stored`() {

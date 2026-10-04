@@ -86,7 +86,13 @@ class ReaderLocalDataSource(
             migrateLegacyReaderSettings()
             emitAll(
                 readerSettingsDatabase.observeAll()
-                    .map { entries -> ReaderSettingsJsonCodec.decode(entries) },
+                    .map { entries ->
+                        val repairs = ReaderSettingsJsonCodec.readingSpeedRepairs(entries)
+                        if (repairs.isNotEmpty()) databaseExecutor.executeDatabaseOperation(reportException = false) {
+                            readerSettingsDatabase.upsertSettingsWithMutations(repairs.map { it.toReaderSettingsMutation() })
+                        }
+                        ReaderSettingsJsonCodec.decode(entries)
+                    },
             )
         }
     }

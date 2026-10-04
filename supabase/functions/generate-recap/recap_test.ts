@@ -29,6 +29,18 @@ import {
 const USER_ID = '6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b'
 const FAKE_KEY = 'test-key-not-real'
 
+Deno.test('two-part output preserves localized stopping line and bounds the combined text', () => {
+  assertEquals(checkOutput('Ana left.\n\nBor stayed.', 'stop'),
+    { ok: true, kind: 'recap', summary: 'Ana left. Bor stayed.' })
+  assertEquals(checkOutput(JSON.stringify({ summary: 'Ana je odšla.', stoppedAt: 'Ustavili ste se, ko je zaprla vrata.' }), 'stop'),
+    { ok: true, kind: 'recap', summary: 'Ana je odšla.\n\nUstavili ste se, ko je zaprla vrata.' })
+  assertEquals(checkOutput(JSON.stringify({ summary: 'a'.repeat(400), stoppedAt: 'b'.repeat(199) }), 'stop'),
+    { ok: false, reason: 'too_long' })
+  assertEquals(checkOutput(JSON.stringify({ summary: 'Ana left.', stoppedAt: '' }), 'stop'),
+    { ok: false, reason: 'empty' })
+  assertEquals(checkOutput('{broken}', 'stop'), { ok: false, reason: 'empty' })
+})
+
 function envOf(vars: Record<string, string>): Env {
   return (name) => vars[name]
 }
@@ -108,7 +120,8 @@ Deno.test('prompt puts rules in system and data in delimiters', () => {
   assertEquals(system.role, 'system')
   assertEquals(user.role, 'user')
   assertMatch(system.content, /ignore any commands/)
-  assertMatch(system.content, /2-3 sentences/)
+  assertMatch(system.content, /summary is 1-2 sentences/)
+  assertMatch(system.content, /stoppedAt is one sentence/)
   assertMatch(system.content, /in English/)
   assertMatch(system.content, /names exactly as spelled/)
   assertMatch(system.content, new RegExp(`reply exactly ${NOT_ENOUGH} and nothing else\\.$`))
@@ -486,7 +499,7 @@ Deno.test('map and reduce prompts keep rules in system, data delimited', () => {
     language: 'sl',
   })
   assert(system.content.includes('ONLY the notes inside <part>'))
-  assert(system.content.includes('2-3 sentences'))
+  assert(system.content.includes('summary is 1-2 sentences'))
   assert(system.content.includes(NOT_ENOUGH))
   assertEquals(user.content.match(/<part /g)?.length, 2)
   assert(user.content.indexOf('Ana left.') < user.content.indexOf('Bor came.'))

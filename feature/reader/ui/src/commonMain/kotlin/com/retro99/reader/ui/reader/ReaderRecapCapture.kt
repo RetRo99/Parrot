@@ -3,7 +3,6 @@ package com.retro99.reader.ui.reader
 import com.retro99.reader.domain.recap.RecapActiveReadingClock
 import com.retro99.reader.domain.recap.RecapCapturePolicy
 import com.retro99.reader.domain.recap.RecapChapter
-import com.retro99.reader.domain.recap.RecapPageDwell
 import com.retro99.reader.domain.recap.RecapPosition
 import com.retro99.reader.domain.recap.RecapReadTracker
 import com.retro99.reader.domain.recap.RecapSessionRecorder
@@ -13,7 +12,6 @@ import com.retro99.reader.ui.navigator.FinishedTtsSentence
 import com.retro99.reader.ui.navigator.VisibleTextRange
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.TimeSource
@@ -38,8 +36,8 @@ internal data class RecapCaptureSummary(
 
 /**
  * Feeds one reading session's text to the recorder as it is read, so an
- * app kill still leaves the text read so far. A page counts after it has
- * been visible for the dwell time; a spoken sentence once its audio ends.
+ * app kill still leaves completed text. Visible text is only a candidate:
+ * it counts after it has been turned/scrolled past, never at session end.
  * Only created when cloud recaps are on. Call from the main thread.
  */
 internal class ReaderRecapCapture(
@@ -48,43 +46,79 @@ internal class ReaderRecapCapture(
     private val scope: CoroutineScope,
     private val readVisibleText: suspend () -> VisibleTextRange?,
     private val nowMs: () -> Long = monotonicMillis(),
-    dwellMs: Long = RecapCapturePolicy.PAGE_DWELL_MS,
     idleCapMs: Long = RecapCapturePolicy.IDLE_CAP_MS,
 ) {
-    private val dwell = RecapPageDwell<Pair<String, Double?>>(dwellMs)
     private val tracker = RecapReadTracker()
     private val clock = RecapActiveReadingClock(idleCapMs)
 
     private var page: RecapPage? = null
     private var pageGeneration = 0
-    private var dwellJob: Job? = null
     private var captureJob: Job? = null
+    private var candidate: Pair<RecapPage, VisibleTextRange>? = null
     private var lastText: String? = null
     private var summary: RecapCaptureSummary? = null
 
     private var foreground = true
     private var playing = false
-    private var deviceVoice = false
     private var blocked = false
-    private var readingAloud = false
+    private var scrolling = false
 
     init {
         clock.setActive(true, nowMs())
     }
 
-    fun onPageShown(next: RecapPage) {
+    fun onPageShown(next: RecapPage, navigated: Boolean = false, scrollMode: Boolean = false) {
         if (summary != null) return
+        scrolling = scrollMode
+        if (page?.key == next.key) return
         val now = nowMs()
-        if (page?.key != next.key) pageGeneration++
+        val previous = page
+        val pending = candidate
+        pageGeneration++
+        captureJob?.cancel()
+        candidate = null
         page = next
         clock.onActivity(now)
-        dwell.show(next.key, now)
-        scheduleDwell()
+        val generation = pageGeneration
+        if (!canCapturePages()) return
+        captureJob = scope.launch {
+            val range = try {
+                readVisibleText()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                null
+            } ?: return@launch
+            if (summary != null || generation != pageGeneration || !canCapturePages()) return@launch
+            if (range.pieces.isEmpty()) return@launch
+            if (next.chapterPage != null && range.page != null && next.chapterPage != range.page) return@launch
+            // In scroll mode the locator can move several times within a
+            // viewport. Keep the old range until it is entirely above view.
+            val sameChapter = previous?.href == next.href
+            val forward = previous?.position?.totalProgression?.let { old ->
+                next.position.totalProgression?.let { it > old }
+            } == true
+            val adjacent = previous?.chapterPage?.let { old -> next.chapterPage == old + 1 } == true
+            val chapterTurn = !sameChapter && previous?.chapter?.index?.let { old -> next.chapter?.index == old + 1 } == true &&
+                next.chapterPage == 1
+            if (!navigated && forward && pending != null && (scrollMode && sameChapter || adjacent || chapterTurn)) {
+                // Range coordinates, rather than locator progression alone,
+                // prove that every committed word is now behind the reader.
+                val completed = if (sameChapter) pending.second.pieces.filter { it.end <= range.startOffset } else pending.second.pieces
+                val text = tracker.takeUnreadPageText(pending.first.href, completed)
+                if (text != null) append(text, pending.first.chapter, next.position, RecapTextSource.PAGE)
+            }
+            candidate = if (scrollMode && !navigated && forward && sameChapter && pending != null) {
+                next to range.copy(pieces = (pending.second.pieces.filter { it.end > range.startOffset } + range.pieces)
+                    .distinctBy { it.start to it.end }.sortedBy { it.start })
+            } else next to range
+        }
     }
 
     fun setForeground(value: Boolean) {
+        val wasCounting = canCapturePages()
         foreground = value
-        updateCounting()
+        updateCounting(wasCounting)
     }
 
     /**
@@ -92,15 +126,16 @@ internal class ReaderRecapCapture(
      * [isPlaying] must stay true while it loads or synthesises, too.
      */
     fun setPlayback(isPlaying: Boolean, isDeviceVoice: Boolean) {
+        val wasCounting = canCapturePages()
         playing = isPlaying
-        deviceVoice = isDeviceVoice
-        updateCounting()
+        updateCounting(wasCounting)
     }
 
     /** A startup prompt covers the page; it isn't being read. */
     fun setBlocked(value: Boolean) {
+        val wasCounting = canCapturePages()
         blocked = value
-        updateCounting()
+        updateCounting(wasCounting)
     }
 
     fun onSentenceFinished(finished: FinishedTtsSentence) {
@@ -108,7 +143,8 @@ internal class ReaderRecapCapture(
         clock.onActivity(nowMs())
         val current = page
         val href = finished.chapterHref?.substringBefore('#') ?: current?.href.orEmpty()
-        val text = tracker.takeUnheardSentence(href, finished.sentence.index, finished.sentence.text)
+        val sentence = finished.sentence
+        val text = tracker.takeUnheardSentence(href, sentence.index, sentence.text, sentence.startOffset, sentence.rawText)
             ?: return
         val sameChapter = current != null && current.href == href
         append(
@@ -122,65 +158,30 @@ internal class ReaderRecapCapture(
     /** Stops capture; later calls return the same summary. */
     fun stop(): RecapCaptureSummary {
         summary?.let { return it }
-        dwellJob?.cancel()
-        dwellJob = null
         captureJob?.cancel()
         captureJob = null
+        candidate = null
         return RecapCaptureSummary(
             lastSentence = RecapText.lastSentence(lastText),
             activeReadingMs = clock.totalMs(nowMs()),
         ).also { summary = it }
     }
 
-    private fun updateCounting() {
+    private fun updateCounting(wasCounting: Boolean) {
         if (summary != null) return
         val now = nowMs()
         clock.setActive(foreground || playing, now)
-        val aloud = playing && deviceVoice
-        dwell.setCounting(foreground && !blocked && !aloud, now)
-        // Time on the page before or during read-aloud wasn't reading it.
-        if (readingAloud && !aloud) dwell.restart(now)
-        readingAloud = aloud
-        scheduleDwell()
-    }
-
-    private fun scheduleDwell() {
-        dwellJob?.cancel()
-        dwellJob = null
-        if (dwell.remainingMs(nowMs()) == null) return
-        dwellJob = scope.launch {
-            while (true) {
-                val remaining = dwell.remainingMs(nowMs()) ?: return@launch
-                if (remaining > 0) {
-                    delay(remaining)
-                    continue
-                }
-                val key = dwell.takeDue(nowMs()) ?: return@launch
-                // Own job: a later reschedule mustn't cancel a read in flight.
-                captureJob = scope.launch { capturePage(key) }
-                return@launch
-            }
+        if (!canCapturePages()) {
+            candidate = null
+            captureJob?.cancel()
+        } else if (!wasCounting) {
+            val current = page
+            page = null
+            current?.let { onPageShown(it, scrollMode = scrolling) }
         }
     }
 
-    private suspend fun capturePage(key: Pair<String, Double?>) {
-        val dwelt = page?.takeIf { it.key == key } ?: return
-        val generation = pageGeneration
-        val range = try {
-            readVisibleText()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            null
-        } ?: return
-        // The reader moved on while the page was read: its text is unsure.
-        if (summary != null || generation != pageGeneration) return
-        // The screen is already on another page whose locator hasn't
-        // arrived yet (the locator lags the WebView by several JS calls).
-        if (dwelt.chapterPage != null && range.page != null && dwelt.chapterPage != range.page) return
-        val text = tracker.takeUnreadPageText(dwelt.href, range.pieces) ?: return
-        append(text, dwelt.chapter, dwelt.position, RecapTextSource.PAGE)
-    }
+    private fun canCapturePages(): Boolean = foreground && !blocked && !playing
 
     private fun append(
         text: String,

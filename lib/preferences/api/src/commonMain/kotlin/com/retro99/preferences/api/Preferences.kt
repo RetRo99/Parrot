@@ -91,6 +91,10 @@ sealed class PreferencesKey(val name: String) {
 
     /** Consent to send read text to the cloud recap API; off when unset. */
     data object CloudRecapsEnabled : PreferencesKey("CloudRecapsEnabled")
+    data object CloudStoredRecapsEnabled : PreferencesKey("CloudStoredRecapsEnabledV2")
+    data object CloudRecapConsentAccount : PreferencesKey("CloudRecapConsentAccountV2")
+    data object RecapPresentation : PreferencesKey("RecapPresentation")
+    data object RecapAllowedAccount : PreferencesKey("RecapAllowedAccount")
 
     /** Recap session ids whose reader banner was dismissed, newest last. */
     data object DismissedRecapBanners : PreferencesKey("DismissedRecapBanners")

@@ -28,3 +28,16 @@ Checks:
 Build: `:androidApp:assembleDebug` successful.
 Tests: `:feature:reader:ui:testAndroidHostTest` — 188 passed, including seven toolbar-placement cases.
 iOS was not device-tested.
+
+## Merge verification
+
+After integrating current `main`, the Android debug build succeeds and 432 tests pass
+across reader UI, saved data/domain/UI, home UI, database implementation, and Parrot
+Cloud server modules. The saved-items local migration is now `36.sqm` (schema 37),
+preserving main's recap migration 34 and reading-speed repair 35.
+
+The Xiaomi still has the approved pre-merge debug build. That experimental branch
+used migration 34 for saved items (schema 35), so its DB history differs from main's.
+Before installing the merged build there, inspect and reconcile that development DB
+without deleting its books or saved items; do not assume the normal main-to-main
+upgrade path covers this experimental schema. No phone data was reset during merging.

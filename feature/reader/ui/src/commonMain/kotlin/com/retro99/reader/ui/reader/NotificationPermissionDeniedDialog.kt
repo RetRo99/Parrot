@@ -1,11 +1,11 @@
 package com.retro99.reader.ui.reader
 
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.general_cancel
@@ -40,37 +40,26 @@ fun NotificationPermissionDeniedDialog(
         stringResource(StringRes.notification_permission_message)
     }
 
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismiss,
+        title = stringResource(StringRes.notification_permission_title),
+        actions = listOf(
+            EmberDialogAction(
+                label = if (showRationale) {
+                    stringResource(StringRes.notification_permission_try_again)
+                } else {
+                    stringResource(StringRes.notification_permission_open_settings)
+                },
+                style = EmberDialogActionStyle.Main,
+                onClick = if (showRationale) onTryAgain else onOpenSettings,
+            ),
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
+                onClick = onDismiss,
+            ),
+        ),
         modifier = modifier,
-        title = {
-            Text(
-                text = stringResource(StringRes.notification_permission_title),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-        },
-        text = {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            if (showRationale) {
-                TextButton(onClick = onTryAgain) {
-                    Text(stringResource(StringRes.notification_permission_try_again))
-                }
-            } else {
-                TextButton(onClick = onOpenSettings) {
-                    Text(stringResource(StringRes.notification_permission_open_settings))
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
+        body = AnnotatedString(message),
     )
 }
-

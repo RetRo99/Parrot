@@ -68,10 +68,15 @@ class RecapReadTracker {
     }
 
     /** The sentence's text the first time it is heard, else null. */
-    fun takeUnheardSentence(chapterKey: String, sentenceIndex: Int, text: String): String? {
+    fun takeUnheardSentence(chapterKey: String, sentenceIndex: Int, text: String,
+        startOffset: Int? = null, rawText: String? = null): String? {
         val clean = text.collapseWhitespace().trim()
         if (clean.isEmpty()) return null
         if (!heardSentences.add("$chapterKey#$sentenceIndex")) return null
+        if (startOffset != null && startOffset >= 0 && !rawText.isNullOrBlank()) {
+            return takeUnreadPageText(chapterKey, listOf(RecapTextPiece(startOffset,
+                startOffset + rawText.length, rawText, false)))
+        }
         return clean
     }
 

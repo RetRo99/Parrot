@@ -1,5 +1,6 @@
 package com.retro99.reader.data.recap
 
+import com.retro99.database.api.recap.SessionRecapDatabase
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.preferences.implementation.usecase.GetUserPreferenceUseCase
 import com.retro99.preferences.implementation.usecase.SaveUserPreferenceUseCase
@@ -14,6 +15,7 @@ import org.koin.core.annotation.Single
 class PreferencesRecapBannerDismissals(
     @Provided private val getUserPreferenceUseCase: GetUserPreferenceUseCase,
     @Provided private val saveUserPreferenceUseCase: SaveUserPreferenceUseCase,
+    @Provided private val database: SessionRecapDatabase,
 ) : RecapBannerDismissals {
     private val mutex = Mutex()
 
@@ -22,9 +24,18 @@ class PreferencesRecapBannerDismissals(
     override suspend fun dismiss(sessionId: String) = mutex.withLock {
         saveUserPreferenceUseCase(
             PreferencesKey.DismissedRecapBanners,
-            ((entries() - sessionId) + sessionId).takeLast(RecapBannerDismissals.MAX_ENTRIES),
+            live((entries() - sessionId) + sessionId),
         )
     }
+
+    /**
+     * A dismissal only matters while its recap can still be offered, so
+     * entries whose recap is gone are dropped before the cap: evicting a live
+     * one would make a dismissed chip resurface.
+     */
+    private suspend fun live(ids: List<String>): List<String> =
+        ids.filter { database.getRecap(it) != null }
+            .takeLast(RecapBannerDismissals.MAX_ENTRIES)
 
     private fun entries(): List<String> =
         getUserPreferenceUseCase<List<String>>(PreferencesKey.DismissedRecapBanners).orEmpty()

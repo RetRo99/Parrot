@@ -4,13 +4,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.reader.ui.tts.NeuralVoicePackage
 import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.translations.StringRes
@@ -27,12 +28,17 @@ internal fun SupertonicLicenseDialog(
     licenseText: String,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(stringResource(StringRes.reader_tts_model_license_title))
-        },
-        text = {
+        title = stringResource(StringRes.reader_tts_model_license_title),
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_close),
+                style = EmberDialogActionStyle.Neutral,
+                onClick = onDismiss,
+            ),
+        ),
+        content = {
             Column(
                 modifier = Modifier
                     .heightIn(max = 480.dp)
@@ -42,13 +48,9 @@ internal fun SupertonicLicenseDialog(
                     text = licenseText.ifBlank {
                         stringResource(StringRes.reader_tts_model_license_loading)
                     },
-                    style = MaterialTheme.typography.bodySmall,
+                    style = com.retro99.base.ui.compose.Ember.type.meta.copy(fontSize = 13.sp),
+                    color = com.retro99.base.ui.compose.Ember.colors.ink2,
                 )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(StringRes.general_close))
             }
         },
     )

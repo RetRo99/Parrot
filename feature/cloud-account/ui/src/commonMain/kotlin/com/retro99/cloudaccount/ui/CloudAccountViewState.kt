@@ -24,6 +24,10 @@ data class CloudAccountViewState(
     val storageUsage: CloudStorageUsage? = null,
     val isLoadingStorageUsage: Boolean = false,
     val storageUsageError: String? = null,
+    val lastSuccessfulSyncAt: String? = null,
+    val showSignOutConfirmation: Boolean = false,
+    val signOutPendingCount: Int = 0,
+    val isSigningOut: Boolean = false,
 )
 
 enum class CloudAccountMode {
@@ -32,6 +36,10 @@ enum class CloudAccountMode {
 }
 
 enum class CloudAccountError {
+    InvalidCredentials,
+    NetworkUnavailable,
+    WeakPassword,
+    EmailAlreadyRegistered,
     ProfileAlreadyLinked,
     NotConfigured,
     DeleteReauthenticationRequired,

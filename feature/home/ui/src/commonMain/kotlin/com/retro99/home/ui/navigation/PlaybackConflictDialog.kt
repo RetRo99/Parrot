@@ -1,12 +1,11 @@
 package com.retro99.home.ui.navigation
 
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.general_cancel
@@ -25,34 +24,24 @@ fun PlaybackConflictDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismiss,
-        modifier = modifier,
-        title = {
-            Text(
-                text = stringResource(StringRes.playback_conflict_title),
-                style = MaterialTheme.typography.headlineSmall,
-            )
-        },
-        text = {
-            Text(
-                text = stringResource(StringRes.playback_conflict_message, state.currentlyPlayingTitle),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = onStopAndOpen,
-            ) {
-                Text(stringResource(StringRes.playback_conflict_stop_open))
-            }
-        },
-        dismissButton = {
-            TextButton(
+        title = stringResource(StringRes.playback_conflict_title),
+        body = AnnotatedString(
+            stringResource(StringRes.playback_conflict_message, state.currentlyPlayingTitle),
+        ),
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
                 onClick = onDismiss,
-            ) {
-                Text(stringResource(StringRes.general_cancel))
-            }
-        },
+            ),
+            EmberDialogAction(
+                label = stringResource(StringRes.playback_conflict_stop_open),
+                style = EmberDialogActionStyle.Main,
+                onClick = onStopAndOpen,
+            ),
+        ),
+        modifier = modifier,
     )
 }

@@ -5,6 +5,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class RecapReadTrackerTest {
+    @Test fun pageAndHeardSentenceShareCoordinatesInEitherOrder() {
+        val tracker = RecapReadTracker()
+        val piece = RecapTextPiece(0, 9, "She left.", false)
+        assertEquals("She left.", tracker.takeUnreadPageText("c1", listOf(piece)))
+        assertNull(tracker.takeUnheardSentence("c1", 0, "She left.", 0, "She left."))
+        assertEquals("She left.", tracker.takeUnheardSentence("c2", 0, "She left.", 0, "She left."))
+        assertNull(tracker.takeUnreadPageText("c2", listOf(piece)))
+    }
 
     private val chapter = "Very long chapter text. ".repeat(20) + "The end."
 

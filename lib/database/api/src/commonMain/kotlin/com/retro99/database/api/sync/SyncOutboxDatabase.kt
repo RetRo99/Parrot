@@ -10,6 +10,9 @@ interface SyncOutboxDatabase : DataClearable {
 
     suspend fun getPending(cloudUserId: String): List<SyncOutboxEntry>
 
+    /** Read-only preview, including local changes awaiting their first account binding. */
+    suspend fun getPendingIncludingUnassigned(cloudUserId: String): List<SyncOutboxEntry> = getPending(cloudUserId)
+
     suspend fun getEligible(
         cloudUserId: String,
         now: String,

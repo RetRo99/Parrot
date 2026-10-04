@@ -3,6 +3,7 @@ package com.retro99.cloudaccount.domain.usecase
 import com.retro99.cloudaccount.domain.CloudAccountRepository
 import com.retro99.cloudaccount.domain.CloudAccountException
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
+import com.retro99.cloudaccount.domain.CloudRecapsRepository
 import com.retro99.cloudaccount.domain.PendingCloudAuthenticationRepository
 import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
 import com.retro99.cloudaccount.domain.model.CloudAccount
@@ -30,6 +31,7 @@ class CloudAuthenticationUseCasesTest {
     private val accountRepository = FakeCloudAccountRepository()
     private val pendingAuthenticationRepository = FakePendingCloudAuthenticationRepository()
     private val profileLinkRepository = FakeCloudProfileLinkRepository()
+    private val cloudRecapsRepository = FakeCloudRecapsRepository()
 
     @Test
     fun `registration rejects authentication completed for a different profile`() = runTest {
@@ -257,7 +259,7 @@ class CloudAuthenticationUseCasesTest {
     }
 
     @Test
-    fun `deleting cloud account removes the remote account before unlinking the profile`() = runTest {
+    fun `deleting cloud account removes the remote account before the local records`() = runTest {
         profileLinkRepository.addLink(
             CloudProfileLink(
                 localProfileId = "profile-a",
@@ -268,18 +270,75 @@ class CloudAuthenticationUseCasesTest {
         val events = mutableListOf<String>()
         accountRepository.onDeleteAccount = { events += "delete-account" }
         profileLinkRepository.onUnlink = { events += "unlink-profile" }
-        val classUnderTest = DeleteCloudAccountUseCase(
-            accountRepository = accountRepository,
-            profileLinkRepository = profileLinkRepository,
-            pendingAuthenticationRepository = pendingAuthenticationRepository,
-            userRegistry = userRegistry,
-        )
+        cloudRecapsRepository.onPurge = { _, _ -> events += "purge-recaps" }
 
-        classUnderTest()
+        deleteCloudAccountUseCase()()
 
-        assertEquals(listOf("delete-account", "unlink-profile"), events)
+        assertEquals(listOf("delete-account", "unlink-profile", "purge-recaps"), events)
         assertNull(profileLinkRepository.getForLocalProfile("profile-a"))
     }
+
+    @Test
+    fun `deletion purges recap data for the deleted account on this profile`() = runTest {
+        profileLinkRepository.addLink(
+            CloudProfileLink(
+                localProfileId = "profile-a",
+                cloudUserId = account.id,
+                syncEnabled = true,
+            ),
+        )
+
+        deleteCloudAccountUseCase()()
+
+        assertEquals(listOf(account.id to "profile-a"), cloudRecapsRepository.purges)
+    }
+
+    @Test
+    fun `deletion without a known account skips the recap purge`() = runTest {
+        deleteCloudAccountUseCase()()
+
+        assertEquals(0, cloudRecapsRepository.purges.size)
+    }
+
+    @Test
+    fun `recap purge failure is reported as a failed local cleanup`() = runTest {
+        profileLinkRepository.addLink(
+            CloudProfileLink(
+                localProfileId = "profile-a",
+                cloudUserId = account.id,
+                syncEnabled = true,
+            ),
+        )
+        cloudRecapsRepository.onPurge = { _, _ -> throw IllegalStateException("recap database is closed") }
+
+        val error = assertFailsWith<CloudAccountException.LocalStatePersistence> {
+            deleteCloudAccountUseCase()()
+        }
+
+        assertEquals(true, error.cleanupFailed)
+    }
+
+    @Test
+    fun `recap purge cancellation is not wrapped`() = runTest {
+        profileLinkRepository.addLink(
+            CloudProfileLink(
+                localProfileId = "profile-a",
+                cloudUserId = account.id,
+                syncEnabled = true,
+            ),
+        )
+        cloudRecapsRepository.onPurge = { _, _ -> throw CancellationException("cancelled") }
+
+        assertFailsWith<CancellationException> { deleteCloudAccountUseCase()() }
+    }
+
+    private fun deleteCloudAccountUseCase() = DeleteCloudAccountUseCase(
+        accountRepository = accountRepository,
+        profileLinkRepository = profileLinkRepository,
+        pendingAuthenticationRepository = pendingAuthenticationRepository,
+        cloudRecapsRepository = cloudRecapsRepository,
+        userRegistry = userRegistry,
+    )
 
     @Test
     fun `registration awaiting verification preserves the originating profile`() = runTest {
@@ -519,6 +578,16 @@ private class FakeCloudProfileLinkRepository : CloudProfileLinkRepository {
     override suspend fun unlink(localProfileId: String) {
         onUnlink()
         links.removeAll { link -> link.localProfileId == localProfileId }
+    }
+}
+
+private class FakeCloudRecapsRepository : CloudRecapsRepository {
+    val purges = mutableListOf<Pair<String, String>>()
+    var onPurge: suspend (String, String) -> Unit = { _, _ -> }
+
+    override suspend fun purgeAccountData(cloudUserId: String, localProfileId: String) {
+        onPurge(cloudUserId, localProfileId)
+        purges += cloudUserId to localProfileId
     }
 }
 

@@ -30,6 +30,25 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ReaderRecapViewModelTest {
+    @Test fun automaticPresentationRespectsBreakSeenAudioAndWriting() {
+        val afterBreak = com.retro99.reader.domain.recap.RecapPresentation.AFTER_BREAK
+        assertFalse(shouldAutoOpenRecap(afterBreak, 0, 300_000, false, false, false))
+        assertFalse(shouldAutoOpenRecap(afterBreak, 0, 3_600_000, false, false, false))
+        assertTrue(shouldAutoOpenRecap(afterBreak, 0, 7_200_000, false, false, false))
+        assertFalse(shouldAutoOpenRecap(afterBreak, 0, 7_200_000, true, false, false))
+        assertFalse(shouldAutoOpenRecap(afterBreak, 0, 7_200_000, false, true, false))
+        assertFalse(shouldAutoOpenRecap(afterBreak, 0, 7_200_000, false, false, true))
+        assertFalse(shouldAutoOpenRecap(com.retro99.reader.domain.recap.RecapPresentation.NEVER, 0, 7_200_000, false, false, false))
+        assertTrue(shouldAutoOpenRecap(com.retro99.reader.domain.recap.RecapPresentation.EVERY_TIME, 0, 300_000, false, false, false))
+    }
+
+    @Test fun positionGateStillExcludesEarlierUnknownAndFarLaterPositions() {
+        val history = listOf(recap("s", RecapStatus.SUCCEEDED, "Summary."))
+        assertNull(readerRecapBanner(history, true, null, true))
+        assertNull(readerRecapBanner(history, true, 0.49, true))
+        assertNull(readerRecapBanner(history, true, 0.53, true))
+        assertEquals("s", readerRecapBanner(history, true, 0.51, true)?.sessionId)
+    }
 
     private val history = MutableStateFlow<List<SessionRecap>>(emptyList())
     private val enabled = MutableStateFlow(true)
@@ -49,14 +68,13 @@ class ReaderRecapViewModelTest {
             cloudRecapsEnabled = true,
         )
 
-        assertEquals(ReaderRecapBanner("new", "New.", isLatestSession = true), banner)
+        assertEquals("new", banner?.sessionId)
+        assertTrue(banner?.isLatestSession == true)
     }
 
     @Test
-    fun pendingAndFailedRecapsAreNotOffered() {
+    fun failedRecapsAreNotOfferedButWritingCanBeOpenedManually() {
         listOf(
-            RecapStatus.PENDING,
-            RecapStatus.RUNNING,
             RecapStatus.FAILED_RETRYABLE,
             RecapStatus.FAILED_PERMANENT,
             RecapStatus.NOT_ENOUGH,
@@ -64,6 +82,7 @@ class ReaderRecapViewModelTest {
             assertNull(readerRecapBanner(listOf(recap("s", status)), cloudRecapsEnabled = true), status.name)
         }
         assertNull(readerRecapBanner(emptyList(), cloudRecapsEnabled = true))
+        assertTrue(readerRecapBanner(listOf(recap("s", RecapStatus.PENDING)), true)?.isWriting == true)
         assertNull(readerRecapBanner(listOf(recap("s", RecapStatus.SUCCEEDED, " ")), cloudRecapsEnabled = true))
     }
 
@@ -74,7 +93,8 @@ class ReaderRecapViewModelTest {
             cloudRecapsEnabled = true,
         )
 
-        assertEquals(ReaderRecapBanner("old", "Old.", isLatestSession = false), banner)
+        assertEquals("new", banner?.sessionId)
+        assertTrue(banner?.isWriting == true)
     }
 
     @Test
@@ -101,7 +121,9 @@ class ReaderRecapViewModelTest {
         viewModel.onIntent(ReaderRecapIntent.Dismiss)
         advanceUntilIdle()
 
-        assertNull(viewModel.currentViewState().banner)
+        assertEquals("s1", viewModel.currentViewState().banner?.sessionId)
+        assertTrue(viewModel.currentViewState().seen)
+        assertFalse(viewModel.currentViewState().sheetOpen)
         assertEquals(listOf("s1"), dismissals.dismissed)
         assertEquals(0, repository.retries)
     }
@@ -111,22 +133,23 @@ class ReaderRecapViewModelTest {
         history.value = listOf(recap("s1", RecapStatus.SUCCEEDED, "Summary."))
         advanceUntilIdle()
 
-        assertNull(viewModel.currentViewState().banner)
+        assertEquals("s1", viewModel.currentViewState().banner?.sessionId)
+        assertTrue(viewModel.currentViewState().seen)
     }
 
     @Test
-    fun expandingTogglesAndANewRecapCollapses() = runVmTest { viewModel ->
+    fun manuallyOpensSeenRecapAndANewRecapClosesTheSheet() = runVmTest { viewModel ->
         history.value = listOf(recap("s1", RecapStatus.SUCCEEDED, "One."))
         advanceUntilIdle()
 
-        viewModel.onIntent(ReaderRecapIntent.ToggleExpanded)
-        assertTrue(viewModel.currentViewState().isExpanded)
+        viewModel.onIntent(ReaderRecapIntent.Open)
+        assertTrue(viewModel.currentViewState().sheetOpen)
 
         history.value = listOf(recap("s2", RecapStatus.SUCCEEDED, "Two."), history.value.single())
         advanceUntilIdle()
 
         assertEquals("s2", viewModel.currentViewState().banner?.sessionId)
-        assertFalse(viewModel.currentViewState().isExpanded)
+        assertFalse(viewModel.currentViewState().sheetOpen)
     }
 
     @Test
@@ -152,11 +175,10 @@ class ReaderRecapViewModelTest {
         assertTrue(events.isEmpty()) // Stored availability is not a visible exposure.
         viewModel.onIntent(ReaderRecapIntent.Visible)
         viewModel.onIntent(ReaderRecapIntent.Visible)
-        viewModel.onIntent(ReaderRecapIntent.ToggleExpanded)
-        viewModel.onIntent(ReaderRecapIntent.ToggleExpanded)
+        viewModel.onIntent(ReaderRecapIntent.Open)
         viewModel.onIntent(ReaderRecapIntent.Dismiss)
-        assertEquals(listOf("feature_exposed", "recap_interaction", "recap_interaction", "recap_interaction", "recap_interaction"), events.map { it.name })
-        assertEquals(listOf("shown", "expanded", "collapsed", "dismissed"), events.drop(1).map { it.parameters["usage_action"] })
+        assertEquals(listOf("feature_exposed", "recap_interaction", "recap_interaction"), events.map { it.name })
+        assertEquals(listOf("shown", "dismissed"), events.drop(1).map { it.parameters["usage_action"] })
         assertTrue(events.none { it.parameters.toString().contains("Private") || it.parameters.toString().contains("private_session") })
         advanceUntilIdle()
     }
@@ -190,7 +212,7 @@ class ReaderRecapViewModelTest {
         summary = summary,
         lastError = null,
         startPosition = RecapPosition(),
-        endPosition = RecapPosition(),
+        endPosition = RecapPosition(totalProgression = 0.5),
         startChapter = RecapChapter(),
         endChapter = RecapChapter(),
         attemptCount = 0,
@@ -204,6 +226,9 @@ class ReaderRecapViewModelTest {
     )
 
     private class FakeRepository(private val history: Flow<List<SessionRecap>>) : RecapRepository {
+        override suspend fun request(sessionId: String) = com.retro99.reader.domain.recap.RecapRequestResult.TEXT_UNAVAILABLE
+        override fun observeProgression(bookId: String): Flow<Double?> = flowOf(0.5)
+        override suspend fun delete(sessionId: String) {}
         var retries = 0
 
         override fun observeRecap(sessionId: String): Flow<SessionRecap?> = flowOf(null)
@@ -219,7 +244,10 @@ class ReaderRecapViewModelTest {
     }
 
     private class FakeSettings(private val enabled: MutableStateFlow<Boolean>) : RecapSettings {
+        override fun observeFeatureAvailable(): Flow<Boolean> = flowOf(true)
         override fun observeCloudRecapsEnabled(): Flow<Boolean> = enabled
+
+        override fun observeConsentGiven(): Flow<Boolean> = enabled
 
         override suspend fun isCloudRecapsEnabled(): Boolean = enabled.value
 

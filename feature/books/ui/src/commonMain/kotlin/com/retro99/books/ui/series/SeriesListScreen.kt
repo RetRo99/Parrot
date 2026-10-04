@@ -53,7 +53,7 @@ import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.LoadingScreen
 import com.retro99.base.ui.compose.CoilImage
-import com.retro99.base.ui.compose.ParrotEmptyState
+import com.retro99.base.ui.compose.EmberEmptyState
 import com.retro99.base.ui.compose.TooltipIconButton
 import com.retro99.books.ui.components.BookSearchBar
 import com.retro99.books.ui.series.model.SeriesListUiModel
@@ -188,7 +188,7 @@ private fun EmptySeriesState(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
     ) {
-        ParrotEmptyState(
+        EmberEmptyState(
             title = stringResource(StringRes.series_empty_title),
             message = stringResource(StringRes.series_empty_subtitle),
             icon = Icons.Outlined.CollectionsBookmark,

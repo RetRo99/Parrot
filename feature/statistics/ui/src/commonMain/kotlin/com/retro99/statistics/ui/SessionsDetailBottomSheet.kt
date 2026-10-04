@@ -18,7 +18,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -26,10 +25,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.stringTextWrapper
 import com.retro99.statistics.ui.model.ReadingSessionUiModel
 import com.retro99.translations.StringRes
@@ -46,14 +48,14 @@ fun SessionsDetailBottomSheet(
     onRetry: () -> Unit,
     onSessionClick: (Long) -> Unit,
     onSessionDetailBack: () -> Unit,
-    onRetryRecap: () -> Unit,
+    onGenerateRecap: () -> Unit,
     modifier: Modifier = Modifier,
+    onSignIn: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
+    com.retro99.base.ui.compose.EmberBottomSheet(
+        onDismiss = onDismiss,
         modifier = modifier,
     ) {
         val selected = sessionsDetailState.selected
@@ -66,9 +68,10 @@ fun SessionsDetailBottomSheet(
             SessionDetailContent(
                 detail = selected,
                 onBack = onSessionDetailBack,
-                onRetryRecap = onRetryRecap,
+                onGenerateRecap = onGenerateRecap,
+                onSignIn = onSignIn,
             )
-            return@ModalBottomSheet
+            return@EmberBottomSheet
         }
         Column(
             modifier = Modifier
@@ -78,7 +81,8 @@ fun SessionsDetailBottomSheet(
         ) {
             Text(
                 text = stringResource(StringRes.statistics_sessions_title),
-                style = MaterialTheme.typography.headlineSmall,
+                style = Ember.type.screenTitle.copy(fontSize = 24.sp, lineHeight = 30.sp),
+                color = Ember.colors.ink,
                 modifier = Modifier.padding(bottom = 4.dp),
             )
             Text(
@@ -86,8 +90,8 @@ fun SessionsDetailBottomSheet(
                     StringRes.statistics_sessions_total,
                     sessionsDetailState.totalSessions,
                 ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 21.sp),
+                color = Ember.colors.ink2,
                 modifier = Modifier.padding(bottom = 16.dp),
             )
 
@@ -116,8 +120,8 @@ fun SessionsDetailBottomSheet(
                     ) {
                         Text(
                             text = stringResource(StringRes.statistics_sessions_no_sessions),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 21.sp),
+                            color = Ember.colors.ink2,
                         )
                     }
                 }
@@ -134,7 +138,7 @@ fun SessionsDetailBottomSheet(
                             if (index < sessionsDetailState.sessions.lastIndex) {
                                 HorizontalDivider(
                                     modifier = Modifier.padding(vertical = 4.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    color = Ember.colors.line,
                                 )
                             }
                         }
@@ -164,7 +168,7 @@ private fun SessionItem(
             imageVector = Icons.Default.Schedule,
             contentDescription = null,
             modifier = Modifier.size(32.dp),
-            tint = MaterialTheme.colorScheme.primary,
+            tint = Ember.colors.accent,
         )
 
         Column(
@@ -172,26 +176,22 @@ private fun SessionItem(
         ) {
             Text(
                 text = session.bookTitle,
-                style = MaterialTheme.typography.bodyLarge,
+                style = Ember.type.meta.copy(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold),
+                color = Ember.colors.ink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = session.dateFormatted,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = stringTextWrapper(session.readingSpeedFormatted),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = Ember.type.meta.copy(fontSize = 13.sp, lineHeight = 18.sp),
+                color = Ember.colors.ink2,
             )
         }
 
         Text(
             text = stringTextWrapper(session.durationFormatted),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary,
+            style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold),
+            color = Ember.colors.accentText,
         )
     }
 }

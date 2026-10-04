@@ -61,10 +61,10 @@ class SupabaseCloudAccountDataRepository(
         check(auth.currentSessionOrNull() == null) {
             "Cannot register a cloud account while already signed in"
         }
-        val response = auth.signUpWith(Email) {
+        val response = withAuthenticationErrors { auth.signUpWith(Email) {
             this.email = email
             this.password = password
-        }
+        } }
         val account = response?.toCloudAccount() ?: auth.currentUserOrNull()?.toCloudAccount()
         return if (auth.currentSessionOrNull() != null && account != null) {
             validateAccountForProfile(localProfileId, account, previousSession = null)
@@ -82,10 +82,10 @@ class SupabaseCloudAccountDataRepository(
         requireConfigured()
         val auth = clientProvider.client.auth
         val previousSession = auth.currentSessionOrNull()
-        auth.signInWith(Email) {
+        withAuthenticationErrors { auth.signInWith(Email) {
             this.email = email
             this.password = password
-        }
+        } }
         val account = auth.currentUserOrNull()?.toCloudAccount()
             ?: error("Cloud sign-in did not return an account")
         validateAccountForProfile(localProfileId, account, previousSession)

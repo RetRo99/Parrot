@@ -128,7 +128,7 @@ internal fun BookLocationsCard(
             icon = Icons.Outlined.PhoneAndroid,
             action = if (removable.isNotEmpty()) {
                 {
-                    DetailButton(stringResource(StringRes.book_detail_remove), onClick = {
+                    DetailButton(stringResource(StringRes.book_detail_remove) + "…", onClick = {
                         if (removable.size == 1) dispatch(
                             BookDetailIntent.OnDeleteCacheClicked(removable.single().type),
                         ) else onManage()

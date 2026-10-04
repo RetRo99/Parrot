@@ -27,11 +27,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Remove
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -63,6 +61,9 @@ import androidx.compose.ui.unit.sp
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import com.retro99.base.ui.compose.Ember
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.base.ui.compose.EmberSectionLabel
 import com.retro99.settings.ui.model.FontFamilyUiModel
 import com.retro99.settings.ui.model.ReaderThemeUiModel
@@ -622,14 +623,10 @@ private fun ColorPickerDialog(
     val controller = rememberColorPickerController()
     var selectedColor by remember { mutableStateOf(initialComposeColor) }
 
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onDismiss,
-        containerColor = colors.surface,
-        shape = RoundedCornerShape(20.dp),
-        title = {
-            Text(text = title, style = Ember.type.cardTitle, color = colors.ink)
-        },
-        text = {
+        title = title,
+        content = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -657,8 +654,15 @@ private fun ColorPickerDialog(
                 )
             }
         },
-        confirmButton = {
-            TextButton(
+        actions = listOf(
+            EmberDialogAction(
+                label = stringResource(StringRes.general_cancel),
+                style = EmberDialogActionStyle.Neutral,
+                onClick = onDismiss,
+            ),
+            EmberDialogAction(
+                label = stringResource(StringRes.general_ok),
+                style = EmberDialogActionStyle.Main,
                 onClick = {
                     val argb = ((selectedColor.alpha * 255).toInt() shl 24) or
                         ((selectedColor.red * 255).toInt() shl 16) or
@@ -666,15 +670,8 @@ private fun ColorPickerDialog(
                         (selectedColor.blue * 255).toInt()
                     onColorSelected(argb)
                 },
-            ) {
-                Text(stringResource(StringRes.general_ok), color = colors.accentText)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(StringRes.general_cancel), color = colors.accentText)
-            }
-        },
+            ),
+        ),
     )
 }
 

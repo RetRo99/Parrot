@@ -414,6 +414,31 @@ class SyncDataRepositoryTest {
     }
 
     @Test
+    fun offlineResultKeepsLastSyncTimeAcrossRestartAndRetry() = runTest {
+        val lastSync = "2026-10-02T21:40:00Z"
+        val checkpointDatabase = StatusRecordingCheckpointDatabase(
+            SyncCheckpoint(
+                destinationId = "__application_sync_status__",
+                remoteAccountId = "__application__",
+                cursor = null,
+                updatedAt = "2026-10-03T12:00:00Z",
+                status = "offline",
+                pendingMutationCount = 3,
+                lastSuccessfulAt = lastSync,
+            ),
+        )
+        val repository = SyncDataRepository(
+            syncPass = ImmediateSyncPass(SyncResult.Offline(4)),
+            executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            syncCheckpointDatabase = checkpointDatabase,
+        )
+        repository.sync()
+        assertEquals(SyncStatus.Offline(4, lastSync), repository.observeStatus().value)
+        assertEquals(lastSync, checkpointDatabase.checkpoint?.lastSuccessfulAt)
+    }
+
+    @Test
     fun logsPrivacySafeRunMetricsWithoutPayloadOrAccountIdentifiers() = runTest {
         val analytics = RecordingAnalytics()
         val repository = SyncDataRepository(

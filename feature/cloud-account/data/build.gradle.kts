@@ -14,6 +14,7 @@ kotlin {
         namespace = "com.retro99.cloudaccount.data"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
+        withHostTest {}
     }
 
     iosArm64()
@@ -32,6 +33,7 @@ kotlin {
             implementation(projects.lib.cloud.implementation)
             implementation(projects.lib.preferences.api)
             implementation(projects.lib.user.api)
+            implementation(projects.lib.database.api)
         }
 
         commonTest.dependencies {

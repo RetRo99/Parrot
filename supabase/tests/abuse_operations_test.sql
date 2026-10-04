@@ -89,6 +89,8 @@ select is(
     'blocked',
     'service role can add a content hash to the block-list'
 );
+-- Service RPC access does not grant direct private-table reads.
+reset role;
 select is(
     (select count(*)::integer from public.cloud_content_blocklist
      where content_hash_algorithm = 'sha-256-v1' and content_hash = repeat('f', 64)),
@@ -115,6 +117,7 @@ select is(
     'unblocked',
     'service role can reverse a block-list decision'
 );
+reset role;
 select is(
     (select count(*)::integer from public.cloud_content_blocklist
      where content_hash_algorithm = 'sha-256-v1' and content_hash = repeat('f', 64)),
@@ -138,6 +141,7 @@ select is(
     'deleting',
     'admin takedown marks the file and returns its storage path'
 );
+reset role;
 select is(
     (select count(*)::integer from public.cloud_content_blocklist
      where content_hash_algorithm = 'sha-256-v1' and content_hash = repeat('c', 64)),
@@ -158,6 +162,7 @@ select is(
     1,
     'admin takedown records the reason and operator'
 );
+set local role service_role;
 select is(
     (public.complete_book_file_deletion('30000000-0000-0000-0000-000000000022')->>'status'),
     'removed',

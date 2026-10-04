@@ -89,10 +89,14 @@ select count(*) from public.cloud_book_links where cardinality(members) > 64;
       commit;$$
   );
   ```
-  This daily job is installed on the demo project. Its migration is
-  `20261006000000_parrot_cloud_saved_items.sql`; `20261005000000` was already
-  used there by `durable_recaps`. Preserve the durable-recap migration history
-  when integrating this branch (do not repair or reset it to deploy saved items).
+  This daily job and `20261006000000_parrot_cloud_saved_items.sql` are already
+  installed on the demo project (verified via the CLI migration history and schema).
+  `20261005000000` is occupied by `durable_recaps`. The previously unapplied
+  `recap_error_reasons` migration was moved to `20261006000100` to avoid a
+  collision with saved items. Preserve these deployed versions; no migration
+  history repair or data reset is required.
+  The CLI subsequently applied `20261006000100_recap_error_reasons.sql` and
+  verified its function and trigger; the linked database reports no pending migrations.
 - Tune the global recap cap without a deploy:
   `update public.recap_settings set value = <n> where key = 'global_daily_limit';`
   (`0` turns recaps off for everyone).

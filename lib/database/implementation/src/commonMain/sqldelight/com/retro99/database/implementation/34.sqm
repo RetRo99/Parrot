@@ -1,82 +1,13 @@
--- Bookmarks become saved items (bookmarks, highlights and notes).
---
--- Old bookmarks never reached Parrot Cloud (the server rejected them), so
--- only this device has them: they move over with new UUID ids, tombstones are
--- dropped, and their stuck outbox entries are removed. They carry no text yet;
--- snippet_pending makes the reader fill in the first sentence the next time
--- the book opens. Until then lists show the chapter title.
-
-CREATE TABLE IF NOT EXISTS saved_items (
-    id TEXT NOT NULL PRIMARY KEY,
-    book_key TEXT NOT NULL,
-    book_uuid TEXT NOT NULL,
-    book_title TEXT,
-    book_author TEXT,
-    type TEXT NOT NULL,
-    href TEXT NOT NULL,
-    media_type TEXT,
-    progression REAL,
-    total_progression REAL,
-    position INTEGER,
-    chapter_title TEXT,
-    text_before TEXT,
-    text_quote TEXT,
-    text_after TEXT,
-    color TEXT,
-    note TEXT,
-    audio_href TEXT,
-    audio_ms INTEGER,
-    snippet_pending INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    deleted_at TEXT,
-    remote_revision INTEGER
-);
-
-CREATE INDEX IF NOT EXISTS idx_saved_items_book_key ON saved_items(book_key, deleted_at);
-CREATE INDEX IF NOT EXISTS idx_saved_items_book_uuid ON saved_items(book_uuid);
-CREATE INDEX IF NOT EXISTS idx_saved_items_updated ON saved_items(updated_at);
-
-INSERT INTO saved_items(
-    id, book_key, book_uuid, book_title, book_author, type, href, media_type,
-    progression, total_progression, position, chapter_title,
-    snippet_pending, created_at, updated_at
-)
-SELECT
-    lower(
-        hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' ||
-        substr(hex(randomblob(2)), 2) || '-' ||
-        substr('89ab', 1 + (abs(random()) % 4), 1) || substr(hex(randomblob(2)), 2) || '-' ||
-        hex(randomblob(6))
-    ),
-    CASE
-        WHEN EXISTS (SELECT 1 FROM library_books AS lb WHERE lb.library_book_id = b.book_uuid)
-            THEN 'library:' || b.book_uuid
-        WHEN (SELECT bk.server_type FROM books AS bk WHERE bk.uuid = b.book_uuid) = 'audiobookshelf'
-            THEN 'audiobookshelf:' || b.book_uuid
-        WHEN (SELECT bk.server_type FROM books AS bk WHERE bk.uuid = b.book_uuid) = 'storyteller'
-            THEN 'storyteller:' || b.book_uuid
-        ELSE 'library:' || b.book_uuid
-    END,
-    b.book_uuid,
-    coalesce(
-        (SELECT lb.title FROM library_books AS lb WHERE lb.library_book_id = b.book_uuid),
-        (SELECT bk.title FROM books AS bk WHERE bk.uuid = b.book_uuid)
-    ),
-    (SELECT lb.author FROM library_books AS lb WHERE lb.library_book_id = b.book_uuid),
-    'bookmark',
-    b.locator_href,
-    b.locator_type,
-    b.progression,
-    b.total_progression,
-    b.position,
-    b.locator_title,
-    1,
-    b.created_at,
-    b.created_at
-FROM bookmarks AS b
-WHERE b.deleted_at IS NULL;
-
-DELETE FROM sync_outbox WHERE entity_type = 'bookmark';
-
-DROP TABLE IF EXISTS bookmarks;
+ALTER TABLE session_recap ADD COLUMN cloud_account_id TEXT;
+ALTER TABLE session_recap ADD COLUMN cloud_book_id TEXT;
+ALTER TABLE session_recap ADD COLUMN consent_version INTEGER NOT NULL DEFAULT 2;
+ALTER TABLE session_recap ADD COLUMN cloud_change_id INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE session_recap ADD COLUMN cloud_expires_at INTEGER;
+ALTER TABLE session_recap ADD COLUMN cloud_identity_bound INTEGER NOT NULL DEFAULT 0;
+-- No historical text may silently acquire the new storage consent.
+UPDATE session_recap SET consent_version=0, excerpt=NULL, last_sentence=NULL,
+ status=CASE WHEN status IN ('CAPTURING','PENDING','RUNNING','FAILED_RETRYABLE') THEN 'FAILED_PERMANENT' ELSE status END,
+ last_error=CASE WHEN status IN ('CAPTURING','PENDING','RUNNING','FAILED_RETRYABLE') THEN 'CONSENT_WITHDRAWN' ELSE last_error END;
+CREATE TABLE recap_cloud_delete (account_id TEXT NOT NULL, session_id TEXT NOT NULL, PRIMARY KEY(account_id,session_id));
+CREATE TABLE recap_cloud_withdrawal (account_id TEXT NOT NULL PRIMARY KEY, pending INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE recap_cloud_cursor (account_id TEXT NOT NULL, book_id TEXT NOT NULL, cursor INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(account_id,book_id));

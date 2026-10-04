@@ -17,6 +17,9 @@ sealed interface CloudAccountIntent : BaseIntent {
     data object OnSwitchToCreateAccountClicked : CloudAccountIntent
 
     data object OnSignOutClicked : CloudAccountIntent
+    data object OnSignOutConfirmed : CloudAccountIntent
+    data object OnSignOutSyncFirstClicked : CloudAccountIntent
+    data object OnSignOutDismissed : CloudAccountIntent
 
     data object OnDeleteAccountClicked : CloudAccountIntent
 

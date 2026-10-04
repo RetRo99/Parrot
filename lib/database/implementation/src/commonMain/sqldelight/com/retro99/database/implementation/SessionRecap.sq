@@ -40,7 +40,13 @@ CREATE TABLE IF NOT EXISTS session_recap (
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     ended_at INTEGER,
-    generated_at INTEGER
+    generated_at INTEGER,
+    cloud_account_id TEXT,
+    cloud_book_id TEXT,
+    consent_version INTEGER NOT NULL DEFAULT 2,
+    cloud_change_id INTEGER NOT NULL DEFAULT 0,
+    cloud_expires_at INTEGER,
+    cloud_identity_bound INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_session_recap_book ON session_recap(book_uuid, created_at);
@@ -51,9 +57,9 @@ INSERT OR IGNORE INTO session_recap(
     session_id, server_id, book_uuid, status,
     start_href, start_progression, start_total_progression,
     start_chapter_index, start_chapter_title, furthest_total_progression,
-    language, created_at, updated_at
+    language, created_at, updated_at, cloud_account_id, consent_version
 )
-VALUES (?, ?, ?, 'CAPTURING', ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, 'CAPTURING', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateCapture:
 UPDATE session_recap SET
@@ -239,7 +245,7 @@ WHERE (excerpt IS NOT NULL OR last_sentence IS NOT NULL)
 
 deleteOlderThan:
 DELETE FROM session_recap
-WHERE created_at < :cutoff AND status NOT IN ('CAPTURING', 'RUNNING');
+WHERE (created_at < :cutoff OR cloud_expires_at < :now) AND status NOT IN ('CAPTURING', 'RUNNING');
 
 -- A recap whose book is in neither book table is an orphan.
 deleteOrphans:
@@ -271,3 +277,39 @@ DELETE FROM session_recap;
 -- Rows touched by the previous statement on this connection.
 rowsChanged:
 SELECT changes();
+
+getCloudRows:
+SELECT * FROM session_recap WHERE cloud_account_id=?;
+
+markCloudQueued:
+UPDATE session_recap SET status=:status,cloud_account_id=:accountId,cloud_book_id=:bookId,
+ excerpt=NULL,last_sentence=NULL,last_error=NULL,next_attempt_at=NULL,updated_at=:now
+WHERE session_id=:sessionId AND status='RUNNING' AND consent_version=2;
+
+insertCloudRecap:
+INSERT OR IGNORE INTO session_recap(session_id,server_id,book_uuid,status,end_href,end_progression,end_total_progression,
+ language,summary,model,engine_id,created_at,updated_at,ended_at,generated_at,cloud_account_id,cloud_book_id,cloud_change_id,cloud_expires_at)
+SELECT :sessionId,:serverId,:bookUuid,:status,:endHref,:endProgression,:endTotalProgression,
+ :language,:summary,:model,'cloud',:createdAt,:updatedAt,:endedAt,:generatedAt,:cloudAccountId,:cloudBookId,:cloudChangeId,:cloudExpiresAt
+WHERE NOT EXISTS (SELECT 1 FROM recap_cloud_withdrawal WHERE account_id=:cloudAccountId)
+ AND NOT EXISTS (SELECT 1 FROM recap_cloud_delete WHERE account_id=:cloudAccountId AND session_id=:sessionId);
+
+updateCloudRecap:
+UPDATE session_recap SET status=:status,summary=:summary,model=:model,last_error=:lastError,
+ excerpt=NULL,last_sentence=NULL,end_href=:endHref,end_progression=:endProgression,
+ end_total_progression=:endTotalProgression,ended_at=:endedAt,language=:language,
+ updated_at=:updatedAt,generated_at=:generatedAt,cloud_book_id=:cloudBookId,
+ cloud_change_id=:cloudChangeId,cloud_expires_at=:cloudExpiresAt,cloud_identity_bound=1
+WHERE session_id=:sessionId AND cloud_account_id=:cloudAccountId AND :cloudChangeId>=cloud_change_id
+ AND NOT EXISTS (SELECT 1 FROM recap_cloud_withdrawal WHERE account_id=:cloudAccountId)
+ AND NOT EXISTS (SELECT 1 FROM recap_cloud_delete WHERE account_id=:cloudAccountId AND session_id=:sessionId);
+
+-- The account's recaps go outright when consent is withdrawn or the account
+-- is deleted, per the settings copy. Rows the pipeline is still writing go
+-- too; their late conditional updates then no-op on the missing row.
+purgeCloudAccount:
+DELETE FROM session_recap WHERE cloud_account_id=?;
+
+bindCloudIdentity:
+UPDATE session_recap SET cloud_book_id=:cloudBookId, cloud_identity_bound=1
+WHERE session_id=:sessionId AND cloud_identity_bound=0 AND status='RUNNING';

@@ -48,15 +48,21 @@ class CloudRecapEngineTest {
     private val tokens = FakeTokens()
     private val requests = mutableListOf<HttpRequestData>()
     private val clock = TestClock(nowMs = 1_700_000_000_000)
-    private val input = RecapInput("Excerpt text. ".repeat(20), "sl-SI", "The last sentence.")
+    private val input = RecapInput("Excerpt text. ".repeat(20), "sl-SI", "The last sentence.",
+        sessionId = "session-1", endedAt = 1_700_000_000_000)
 
     private fun engine(
         endpoint: RecapEndpoint = RecapEndpoint("https://project.supabase.co/", "pk-test"),
+        recovered: String? = null,
         handler: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData,
     ) = CloudRecapEngine(
         endpoint = endpoint,
         auth = tokens,
-        httpClient = HttpClient(MockEngine { request -> requests += request; handler(request) }) {
+        httpClient = HttpClient(MockEngine { request ->
+            if (request.json()["operation"]?.jsonPrimitive?.content == "fetch") {
+                json(HttpStatusCode.OK, """{"items":[${recovered ?: ""}],"nextCursor":0,"hasMore":false}""")
+            } else { requests += request; handler(request) }
+        }) {
             install(HttpTimeout)
         },
         clock = clock,
@@ -93,7 +99,8 @@ class CloudRecapEngineTest {
         assertEquals(input.excerpt, body["excerpt"]!!.jsonPrimitive.content)
         assertEquals("sl", body["language"]!!.jsonPrimitive.content)
         assertEquals("The last sentence.", body["lastSentence"]!!.jsonPrimitive.content)
-        assertEquals(setOf("excerpt", "language", "lastSentence"), body.keys)
+        assertEquals(setOf("excerpt", "language", "lastSentence", "consentVersion", "sessionId", "cloudBookId", "endedAt", "position"), body.keys)
+        assertEquals("session-1", body["sessionId"]!!.jsonPrimitive.content)
     }
 
     private suspend fun HttpRequestData.json() =
@@ -144,11 +151,11 @@ class CloudRecapEngineTest {
             if (request.json()["language"] == null) {
                 json(HttpStatusCode.Accepted, "{}")
             } else {
-                json(HttpStatusCode.Conflict, """{"error":"Upload incomplete"}""")
+                json(HttpStatusCode.Conflict, """{"error":"upload_incomplete"}""")
             }
         }.generate(input.copy(excerpt = "x".repeat(400_000)))
 
-        assertEquals(RecapResult.Retryable(RecapErrorCode.UNKNOWN), result)
+        assertEquals(RecapResult.Retryable(RecapErrorCode.NETWORK), result)
     }
 
     @Test
@@ -246,7 +253,7 @@ class CloudRecapEngineTest {
         assertEquals(RecapResult.Permanent(RecapErrorCode.BAD_REQUEST), mapped(400))
         assertEquals(RecapResult.Permanent(RecapErrorCode.BAD_REQUEST), mapped(405))
         assertEquals(RecapResult.Permanent(RecapErrorCode.BAD_REQUEST), mapped(413))
-        assertEquals(RecapResult.Retryable(RecapErrorCode.UNKNOWN), mapped(409))
+        assertEquals(RecapResult.Permanent(RecapErrorCode.BAD_REQUEST), mapped(409))
         assertEquals(
             RecapResult.Permanent(RecapErrorCode.EXCERPT_TOO_SHORT),
             mapped(422, """{"error":"Excerpt too short to summarise"}"""),
@@ -288,5 +295,32 @@ class CloudRecapEngineTest {
         val result = engine(RecapEndpoint("", "")) { error("no request expected") }.generate(input)
         assertEquals(RecapResult.Retryable(RecapErrorCode.SERVICE_UNAVAILABLE), result)
         assertFalse(requests.isNotEmpty())
+    }
+
+    @Test
+    fun lostAdmissionResponseRecoversExistingJobWithoutSubmission() = runTest {
+        val existing = """{"sessionId":"session-1","state":"queued","expiresAt":1800000000000}"""
+        assertEquals(RecapResult.Queued(), engine(recovered = existing) { error("must not submit") }.generate(input))
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
+    fun lostCompletionResponseRecoversResultWithoutSubmission() = runTest {
+        val existing = """{"sessionId":"session-1","state":"completed","summary":"Saved.","model":"hy3","expiresAt":1800000000000}"""
+        assertEquals(RecapResult.Success("Saved.", "hy3"), engine(recovered = existing) { error("must not submit") }.generate(input))
+        assertTrue(requests.isEmpty())
+    }
+
+    @Test
+    fun queuedResponseIsNotANetworkFailure() = runTest {
+        val result = engine { json(HttpStatusCode.Accepted,
+            """{"sessionId":"session-1","state":"running","expiresAt":1800000000000}""") }.generate(input)
+        assertEquals(RecapResult.Queued(running = true), result)
+    }
+
+    @Test
+    fun missingSessionIdentityCannotGenerate() = runTest {
+        assertEquals(RecapResult.Permanent(RecapErrorCode.BAD_REQUEST),
+            engine { error("must not submit") }.generate(input.copy(sessionId = null)))
     }
 }

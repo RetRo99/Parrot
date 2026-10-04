@@ -1,6 +1,7 @@
 package com.retro99.books.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.delete
@@ -32,9 +32,7 @@ import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -436,12 +435,13 @@ fun BookGridCard(
     }
 }
 
-/** Where a book lives. Today's server colours; This device uses the old Local colours. */
+/** Where a book lives: an Ember pill with a home-tinted dot and a bold label. */
 @Composable
 fun HomeBadge(
     home: BookHome,
     modifier: Modifier = Modifier,
 ) {
+    val colors = Ember.colors
     val serverType = when (home) {
         BookHome.ThisDevice -> ServerType.Local
         BookHome.ParrotCloud -> ServerType.ParrotCloud
@@ -453,51 +453,41 @@ fun HomeBadge(
     } else {
         serverType.displayName
     }
-    val containerColor = when (serverType) {
-        ServerType.Storyteller -> MaterialTheme.colorScheme.primaryContainer
-        ServerType.Audiobookshelf -> MaterialTheme.colorScheme.tertiaryContainer
-        ServerType.ParrotCloud -> MaterialTheme.colorScheme.surfaceVariant
-        ServerType.Local -> MaterialTheme.colorScheme.secondaryContainer
-    }
-    val contentColor = when (serverType) {
-        ServerType.Storyteller -> MaterialTheme.colorScheme.onPrimaryContainer
-        ServerType.Audiobookshelf -> MaterialTheme.colorScheme.onTertiaryContainer
-        ServerType.ParrotCloud -> MaterialTheme.colorScheme.onSurfaceVariant
-        ServerType.Local -> MaterialTheme.colorScheme.onSecondaryContainer
-    }
     val dotColor = when (serverType) {
-        ServerType.Storyteller -> MaterialTheme.colorScheme.primary
-        ServerType.Audiobookshelf -> MaterialTheme.colorScheme.tertiary
-        ServerType.ParrotCloud -> MaterialTheme.colorScheme.primary
-        ServerType.Local -> MaterialTheme.colorScheme.secondary
+        ServerType.Storyteller -> colors.accentText
+        ServerType.Audiobookshelf -> colors.success
+        ServerType.ParrotCloud -> colors.accent
+        ServerType.Local -> colors.ink2
     }
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(6.dp),
-        color = containerColor,
+    val shape = CircleShape
+    Row(
+        modifier = modifier
+            .clip(shape)
+            .background(colors.chip)
+            .border(
+                if (Ember.style.isEink) 2.dp else 1.dp,
+                colors.chipBorder,
+                shape,
+            )
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(dotColor),
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = contentColor,
-                maxLines = 1,
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = 6.sp,
-                    maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
-                ),
-            )
-        }
+        Box(
+            modifier = Modifier
+                .size(6.dp)
+                .clip(CircleShape)
+                .background(dotColor),
+        )
+        Text(
+            text = label,
+            style = Ember.type.meta.copy(
+                fontSize = if (Ember.style.isEink) 13.sp else 12.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+            color = colors.ink,
+            maxLines = 1,
+        )
     }
 }
 

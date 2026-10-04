@@ -14,6 +14,8 @@ import com.retro99.reader.domain.recap.RecapRepository
 import com.retro99.reader.domain.recap.RecapSettings
 import com.retro99.reader.domain.recap.RecapStatus
 import com.retro99.reader.domain.recap.SessionRecap
+import com.retro99.reader.domain.recap.RecapPresentation
+import kotlin.time.Clock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +37,8 @@ data class ReaderRecapBanner(
     val summary: String,
     /** False when newer sessions exist but have no recap (yet). */
     val isLatestSession: Boolean,
+    val recap: SessionRecap? = null,
+    val isWriting: Boolean = false,
 ) {
     override fun toString(): String =
         "ReaderRecapBanner(sessionId=$sessionId, chars=${summary.length}, latest=$isLatestSession)"
@@ -42,30 +46,44 @@ data class ReaderRecapBanner(
 
 data class ReaderRecapViewState(
     val banner: ReaderRecapBanner? = null,
-    val isExpanded: Boolean = false,
+    val sheetOpen: Boolean = false,
+    val presentation: RecapPresentation? = null,
+    val seen: Boolean = false,
 )
 
 sealed interface ReaderRecapIntent : BaseIntent {
     data object Visible : ReaderRecapIntent
-    data object ToggleExpanded : ReaderRecapIntent
     data object Dismiss : ReaderRecapIntent
+    data object Open : ReaderRecapIntent
+    data class OnEntry(val audioActive: Boolean) : ReaderRecapIntent
 }
 
+internal fun shouldAutoOpenRecap(presentation: RecapPresentation, endedAt: Long, openedAt: Long,
+    seen: Boolean, audioActive: Boolean, writing: Boolean): Boolean =
+    !seen && !audioActive && !writing && (presentation == RecapPresentation.EVERY_TIME ||
+        presentation == RecapPresentation.AFTER_BREAK && openedAt - endedAt > 3_600_000)
+
 /**
- * Only SUCCEEDED recaps are offered; pending and failed ones stay out of
- * the reader. [history] is newest first and holds ended sessions only.
+ * Ready and genuinely in-flight recaps have a manual entry. Failed/empty
+ * results do not. [history] is newest first and holds ended sessions only.
  */
-fun readerRecapBanner(history: List<SessionRecap>, cloudRecapsEnabled: Boolean): ReaderRecapBanner? {
+fun readerRecapBanner(history: List<SessionRecap>, cloudRecapsEnabled: Boolean,
+    currentProgression: Double? = null, requirePosition: Boolean = false): ReaderRecapBanner? {
     if (!cloudRecapsEnabled) return null
     val index = history.indexOfFirst { recap ->
-        recap.status == RecapStatus.SUCCEEDED && !recap.summary.isNullOrBlank()
+        (recap.status == RecapStatus.SUCCEEDED && !recap.summary.isNullOrBlank() ||
+            recap.status in setOf(RecapStatus.PENDING, RecapStatus.RUNNING, RecapStatus.CLOUD_QUEUED, RecapStatus.CLOUD_RUNNING)) &&
+            (!requirePosition || (currentProgression != null && recap.endPosition.totalProgression?.let { end ->
+                currentProgression >= end && currentProgression <= end + 0.02
+            } == true))
     }
     if (index < 0) return null
     val recap = history[index]
-    return ReaderRecapBanner(recap.sessionId, recap.summary.orEmpty(), isLatestSession = index == 0)
+    return ReaderRecapBanner(recap.sessionId, recap.summary.orEmpty(), isLatestSession = index == 0,
+        recap = recap, isWriting = recap.status != RecapStatus.SUCCEEDED)
 }
 
-/** Reads stored recaps only. Dismissing hides the banner and nothing else. */
+/** Reads stored recaps only. Closing marks it seen without hiding the pill. */
 @OptIn(ExperimentalCoroutinesApi::class)
 @KoinViewModel
 class ReaderRecapViewModel(
@@ -78,26 +96,47 @@ class ReaderRecapViewModel(
 
     private val dismissedNow = MutableStateFlow(emptySet<String>())
     private var exposedSessionId: String? = null
+    private var entryChecked = false
+    private var entryHistoryChecked = false
+    private var entryProgression: Double? = null
+    private val openedAt = Clock.System.now().toEpochMilliseconds()
 
     init {
+        // Entry is a one-shot opportunity, not an invitation to open a sheet
+        // later when the reader navigates back into a matching range.
+        recapRepository.observeProgression(bookUuid).onEach { progression ->
+            if (progression != null) {
+                if (entryProgression == null) entryProgression = progression
+                else if (entryProgression != progression) entryChecked = true
+            }
+        }.catch { entryChecked = true }.launchIn(viewModelScope)
         combine(
-            recapRepository.observeHistory(bookUuid),
-            recapSettings.observeCloudRecapsEnabled(),
+            recapRepository.observeHistory(bookUuid).onEach { history ->
+                if (!entryHistoryChecked) {
+                    entryHistoryChecked = true
+                    if (history.firstOrNull()?.status != RecapStatus.SUCCEEDED) entryChecked = true
+                }
+            },
+            combine(recapSettings.observeCloudRecapsEnabled(), recapSettings.observeFeatureAvailable()) { enabled, allowed -> enabled && allowed },
             dismissedNow,
-        ) { history, enabled, dismissed ->
-            readerRecapBanner(history, enabled)?.takeIf { it.sessionId !in dismissed }
+            recapRepository.observeProgression(bookUuid),
+        ) { history, enabled, _, progression ->
+            readerRecapBanner(history, enabled, progression, requirePosition = true)
         }
-            .mapLatest { banner -> banner?.takeIf { !dismissals.isDismissed(it.sessionId) } }
+            .mapLatest { banner -> banner to (banner?.let { it.sessionId in dismissedNow.value || dismissals.isDismissed(it.sessionId) } ?: false) }
             .distinctUntilChanged()
             // A missing banner is harmless; never break the reader for it.
-            .catch { emit(null) }
-            .onEach { banner ->
+            .catch { emit(null to false) }
+            .onEach { (banner, seen) ->
                 updateState { state ->
                     val sameSession = state.banner?.sessionId == banner?.sessionId
-                    state.copy(banner = banner, isExpanded = state.isExpanded && sameSession)
+                    state.copy(banner = banner, seen = seen, sheetOpen = state.sheetOpen && sameSession)
                 }
             }
             .launchIn(viewModelScope)
+        recapSettings.observePresentation().onEach { preference ->
+            updateState { it.copy(presentation = preference) }
+        }.launchIn(viewModelScope)
     }
 
     override fun onIntent(intent: ReaderRecapIntent) {
@@ -110,21 +149,30 @@ class ReaderRecapViewModel(
                     analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.RecapInteraction(UsageAction.Shown, banner.isLatestSession))
                 }
             }
-            ReaderRecapIntent.ToggleExpanded -> {
+            ReaderRecapIntent.Dismiss -> dismiss()
+            ReaderRecapIntent.Open -> if (viewState.value.banner != null) {
+                entryChecked = true
+                updateState { it.copy(sheetOpen = true) }
+            }
+            is ReaderRecapIntent.OnEntry -> {
                 val state = viewState.value
                 val banner = state.banner ?: return
-                analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.RecapInteraction(
-                    if (state.isExpanded) UsageAction.Collapsed else UsageAction.Expanded, banner.isLatestSession,
-                ))
-                updateState { it.copy(isExpanded = !it.isExpanded) }
+                if (state.presentation == null) return
+                if (entryChecked) return
+                entryChecked = true
+                val ended = banner.recap?.endedAt ?: return
+                if (banner.isLatestSession && shouldAutoOpenRecap(state.presentation, ended, openedAt, state.seen, intent.audioActive, banner.isWriting)) {
+                    updateState { it.copy(sheetOpen = true) }
+                }
             }
-            ReaderRecapIntent.Dismiss -> dismiss()
         }
     }
 
     private fun dismiss() {
+        entryChecked = true
         val banner = viewState.value.banner ?: return
         val sessionId = banner.sessionId
+        updateState { it.copy(sheetOpen = false) }
         analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.RecapInteraction(UsageAction.Dismissed, banner.isLatestSession))
         dismissedNow.update { it + sessionId }
         viewModelScope.launch {

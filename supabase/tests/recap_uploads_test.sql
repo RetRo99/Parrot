@@ -13,7 +13,9 @@ values
 insert into public.cloud_feature_allowlist (cloud_user_id, feature)
 values
     ('10000000-0000-0000-0000-000000000071', 'recap'),
-    ('10000000-0000-0000-0000-000000000072', 'recap');
+     ('10000000-0000-0000-0000-000000000072', 'recap');
+insert into public.recap_consent(user_id,enabled) values
+('10000000-0000-0000-0000-000000000071',true),('10000000-0000-0000-0000-000000000072',true);
 
 -- Access control.
 select ok(
@@ -28,13 +30,14 @@ select ok(
 );
 select ok(
     has_function_privilege('authenticated', 'public.put_recap_upload_part(uuid, integer, integer, text)', 'execute')
-    and has_function_privilege('authenticated', 'public.take_recap_upload(uuid, integer)', 'execute')
+    and not has_function_privilege('authenticated', 'public.take_recap_upload(uuid, integer)', 'execute')
     and not has_function_privilege('anon', 'public.put_recap_upload_part(uuid, integer, integer, text)', 'execute')
     and not has_function_privilege('anon', 'public.take_recap_upload(uuid, integer)', 'execute'),
-    'only signed-in users can call the upload RPCs'
+    'signed-in users can stage uploads but cannot consume them outside admission'
 );
 
-set local role authenticated;
+-- Exercise internal assembly as owner with user claims. The durable suite
+-- separately asserts authenticated cannot consume staged text directly.
 set local request.jwt.claims = '{"sub":"10000000-0000-0000-0000-000000000071","role":"authenticated","is_anonymous":false}';
 
 -- Parts may arrive in any order; take joins them by index.

@@ -1,11 +1,12 @@
 package com.retro99.base.ui.compose
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,76 +14,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import com.retro99.translations.StringRes
-import org.jetbrains.compose.resources.stringResource
-import resources.translations.general_back
-
-/**
- * Consistent screen top bar: large scannable title, optional back button
- * (always with an accessibility label) and trailing actions.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ParrotTopBar(
-    title: String,
-    modifier: Modifier = Modifier,
-    onBack: (() -> Unit)? = null,
-    actions: @Composable RowScope.() -> Unit = {},
-) {
-    TopAppBar(
-        modifier = modifier,
-        title = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-            )
-        },
-        navigationIcon = {
-            if (onBack != null) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(StringRes.general_back),
-                    )
-                }
-            }
-        },
-        actions = actions,
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.background,
-            titleContentColor = MaterialTheme.colorScheme.onBackground,
-        ),
-    )
-}
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 
 /**
  * Icon button that always shows a tooltip and carries an accessibility label.
  * Use this instead of bare [IconButton] so icon-only actions are self-explanatory.
+ * Long-press shows an `ink` bubble with `bg` text and 10dp corners; the bubble
+ * appears without animation, as e-ink requires.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,19 +53,51 @@ fun TooltipIconButton(
     modifier: Modifier = Modifier,
     tint: Color = MaterialTheme.colorScheme.onSurface,
 ) {
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-        tooltip = { PlainTooltip { Text(tooltip) } },
-        state = rememberTooltipState(),
-        modifier = modifier,
-    ) {
-        IconButton(onClick = onClick) {
+    var shown by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .combinedClickable(
+                    role = Role.Button,
+                    onClick = {
+                        shown = false
+                        onClick()
+                    },
+                    onLongClick = { shown = true },
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
             Icon(
                 imageVector = icon,
                 contentDescription = tooltip,
                 tint = tint,
             )
         }
+        if (shown) {
+            Popup(
+                popupPositionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                onDismissRequest = { shown = false },
+                properties = PopupProperties(focusable = true),
+            ) {
+                TooltipBubble(tooltip)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TooltipBubble(tooltip: String) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = Ember.colors.ink,
+    ) {
+        Text(
+            text = tooltip,
+            style = Ember.type.meta,
+            color = Ember.colors.bg,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+        )
     }
 }
 
@@ -225,65 +217,6 @@ fun SettingsToggleRow(
             )
         },
     )
-}
-
-/**
- * Empty state with a clear headline, explanation and an optional call-to-action
- * button, so first-run screens teach instead of dead-ending.
- */
-@Composable
-fun ParrotEmptyState(
-    title: String,
-    modifier: Modifier = Modifier,
-    message: String? = null,
-    icon: ImageVector? = null,
-    actionLabel: String? = null,
-    onAction: (() -> Unit)? = null,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp, vertical = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (icon != null) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(56.dp),
-            )
-        }
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            textAlign = TextAlign.Center,
-        )
-        if (message != null) {
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-        }
-        if (actionLabel != null && onAction != null) {
-            Surface(
-                onClick = onAction,
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.primary,
-            ) {
-                Text(
-                    text = actionLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                )
-            }
-        }
-    }
 }
 
 /** Thin divider between rows inside a settings card. */

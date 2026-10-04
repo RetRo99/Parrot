@@ -1,5 +1,12 @@
 # generate-recap
 
+> **Durable V2 contract:** this endpoint now submits/fetches account-owned
+> jobs; provider execution runs in `recap-worker`. See
+> [server-backed recaps](../../../docs/server-backed-recaps.md) for current
+> API, consent, worker secrets, scheduler setup and deployment checks.
+> Synchronous response/upload/quota descriptions below are historical;
+> retain the provider configuration guidance, not the old client contract.
+
 Turns a reading-session excerpt into a 2-3 sentence recap through
 [OpenCode Go](https://opencode.ai/docs/go/) (`hy3` by default).
 The provider URL and the model allow-list are fixed in `recap.ts`.

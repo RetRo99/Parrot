@@ -200,6 +200,55 @@ internal class SessionRecapSqlDelightDao(
         io { database.sessionRecapQueries.deleteAllRecaps() }
     }
 
+    override suspend fun getCloudRows(accountId: String) = io {
+        database.sessionRecapQueries.getCloudRows(accountId).executeAsList().map { it.toEntity() }
+    }
+
+    override suspend fun cacheCloudRecap(entity: SessionRecapEntity) = io {
+        database.transaction {
+        database.sessionRecapQueries.insertCloudRecap(
+            entity.sessionId, entity.serverId, entity.bookUuid, entity.status,
+            entity.endHref, entity.endProgression, entity.endTotalProgression,
+            entity.language, entity.summary, entity.model, entity.createdAt, entity.updatedAt,
+            entity.endedAt, entity.generatedAt, entity.cloudAccountId, entity.cloudBookId,
+            entity.cloudChangeId, entity.cloudExpiresAt,
+        )
+        database.sessionRecapQueries.updateCloudRecap(
+            status = entity.status, summary = entity.summary, model = entity.model, lastError = entity.lastError,
+            endHref = entity.endHref, endProgression = entity.endProgression, endTotalProgression = entity.endTotalProgression,
+            endedAt = entity.endedAt, language = entity.language, updatedAt = entity.updatedAt, generatedAt = entity.generatedAt,
+            cloudBookId = entity.cloudBookId, cloudChangeId = entity.cloudChangeId, cloudExpiresAt = entity.cloudExpiresAt,
+            sessionId = entity.sessionId, cloudAccountId = entity.cloudAccountId,
+        )
+        }
+    }
+
+    override suspend fun markCloudQueued(sessionId: String, accountId: String, cloudBookId: String?, running: Boolean, now: Long) = io {
+        database.changedOne { markCloudQueued(if (running) "CLOUD_RUNNING" else "CLOUD_QUEUED", accountId, cloudBookId, now, sessionId) }
+    }
+    override suspend fun queueCloudDeletion(accountId: String, sessionId: String) = io {
+        database.transaction {
+            database.recapCloudSyncQueries.queueDelete(accountId, sessionId)
+            database.sessionRecapQueries.deleteRecap(sessionId)
+        }
+    }
+    override suspend fun getCloudDeletions(accountId: String) = io { database.recapCloudSyncQueries.getDeletes(accountId).executeAsList() }
+    override suspend fun acknowledgeCloudDeletion(accountId: String, sessionId: String) = io { database.recapCloudSyncQueries.acknowledgeDelete(accountId, sessionId) }
+    override suspend fun queueCloudWithdrawal(accountId: String, now: Long) = io {
+        database.transaction {
+            database.recapCloudSyncQueries.queueWithdrawal(accountId)
+            database.recapCloudSyncQueries.clearCursors(accountId)
+            database.sessionRecapQueries.withdrawText(now)
+            database.sessionRecapQueries.purgeCloudAccount(accountId)
+        }
+    }
+    override suspend fun hasCloudWithdrawal(accountId: String) = io { database.recapCloudSyncQueries.getWithdrawal(accountId).executeAsOneOrNull() != null }
+    override suspend fun acknowledgeCloudWithdrawal(accountId: String) = io { database.recapCloudSyncQueries.acknowledgeWithdrawal(accountId) }
+    override suspend fun enableCloudConsent(accountId: String) = io { database.recapCloudSyncQueries.enableConsent(accountId) }
+    override suspend fun getCloudCursor(accountId: String, bookId: String) = io { database.recapCloudSyncQueries.getCursor(accountId, bookId).executeAsOneOrNull() ?: 0L }
+    override suspend fun setCloudCursor(accountId: String, bookId: String, cursor: Long) = io { database.recapCloudSyncQueries.setCursor(accountId, bookId, cursor) }
+    override suspend fun bindCloudIdentity(sessionId: String, cloudBookId: String?) = io { database.changedOne { bindCloudIdentity(cloudBookId, sessionId) } }
+
     private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }
 }
 
@@ -223,6 +272,8 @@ internal fun AppDatabase.insertCapturingRow(entity: SessionRecapEntity): Boolean
             language = entity.language,
             created_at = entity.createdAt,
             updated_at = entity.updatedAt,
+            cloud_account_id = entity.cloudAccountId,
+            consent_version = entity.consentVersion.toLong(),
         )
         true
     }
@@ -236,7 +287,7 @@ internal fun AppDatabase.applyRecapRetention(
     val queries = sessionRecapQueries
     queries.clearFinishedExcerpts()
     queries.expireExcerpts(now = now, cutoff = excerptCutoff)
-    queries.deleteOlderThan(rowCutoff)
+    queries.deleteOlderThan(cutoff = rowCutoff, now = now)
     val old = queries.rowsChanged().executeAsOne()
     queries.deleteOrphans()
     old + queries.rowsChanged().executeAsOne()
@@ -285,4 +336,10 @@ internal fun Session_recap.toEntity(): SessionRecapEntity = SessionRecapEntity(
     updatedAt = updated_at,
     endedAt = ended_at,
     generatedAt = generated_at,
+    cloudAccountId = cloud_account_id,
+    cloudBookId = cloud_book_id,
+    consentVersion = consent_version.toInt(),
+    cloudChangeId = cloud_change_id,
+    cloudExpiresAt = cloud_expires_at,
+    cloudIdentityBound = cloud_identity_bound != 0L,
 )

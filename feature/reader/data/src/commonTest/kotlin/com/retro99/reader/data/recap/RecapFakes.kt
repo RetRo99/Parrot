@@ -23,6 +23,28 @@ class TestClock(var nowMs: Long = 1_000_000L) : Clock {
 
 /** In-memory twin of SessionRecap.sq, with the same conditional rules. */
 class FakeSessionRecapDatabase : SessionRecapDatabase {
+    val withdrawals = mutableSetOf<String>()
+    val deletions = mutableSetOf<Pair<String, String>>()
+    val cursors = mutableMapOf<Pair<String, String>, Long>()
+    override suspend fun getCloudRows(accountId: String) = rows.value.values.filter { it.cloudAccountId == accountId }
+    override suspend fun cacheCloudRecap(entity: SessionRecapEntity) {
+        val old = rows.value[entity.sessionId]
+        if (old == null || (old.cloudAccountId == entity.cloudAccountId && old.cloudChangeId <= entity.cloudChangeId)) put(entity)
+    }
+    override suspend fun markCloudQueued(sessionId: String, accountId: String, cloudBookId: String?, running: Boolean, now: Long) =
+        update(sessionId, { it.status == "RUNNING" }) { it.copy(status = if (running) "CLOUD_RUNNING" else "CLOUD_QUEUED",
+            cloudAccountId = accountId, cloudBookId = cloudBookId, excerpt = null, lastSentence = null, updatedAt = now) }
+    override suspend fun queueCloudDeletion(accountId: String, sessionId: String) { deletions += accountId to sessionId; deleteRecap(sessionId) }
+    override suspend fun getCloudDeletions(accountId: String) = deletions.filter { it.first == accountId }.map { it.second }
+    override suspend fun acknowledgeCloudDeletion(accountId: String, sessionId: String) { deletions -= accountId to sessionId }
+    override suspend fun queueCloudWithdrawal(accountId: String, now: Long) { withdrawals += accountId; rows.value = rows.value.filterValues { it.cloudAccountId != accountId } }
+    override suspend fun hasCloudWithdrawal(accountId: String) = accountId in withdrawals
+    override suspend fun acknowledgeCloudWithdrawal(accountId: String) { withdrawals -= accountId }
+    override suspend fun enableCloudConsent(accountId: String) { withdrawals -= accountId }
+    override suspend fun getCloudCursor(accountId: String, bookId: String) = cursors[accountId to bookId] ?: 0L
+    override suspend fun setCloudCursor(accountId: String, bookId: String, cursor: Long) { cursors[accountId to bookId] = cursor }
+    override suspend fun bindCloudIdentity(sessionId: String, cloudBookId: String?) =
+        update(sessionId, { !it.cloudIdentityBound }) { it.copy(cloudBookId = cloudBookId, cloudIdentityBound = true) }
     val rows = MutableStateFlow<Map<String, SessionRecapEntity>>(emptyMap())
     var retentionCalls = mutableListOf<Triple<Long, Long, Long>>()
 
@@ -237,6 +259,7 @@ class FakeRecapSelector(var engine: RecapEngine?) : RecapEngineSelector {
 class FakeRecapSettings(enabled: Boolean = true) : RecapSettings {
     val enabled = MutableStateFlow(enabled)
     override fun observeCloudRecapsEnabled(): Flow<Boolean> = enabled
+    override fun observeConsentGiven(): Flow<Boolean> = enabled
     override suspend fun isCloudRecapsEnabled(): Boolean = enabled.value
     override suspend fun setCloudRecapsEnabled(enabled: Boolean) {
         this.enabled.value = enabled

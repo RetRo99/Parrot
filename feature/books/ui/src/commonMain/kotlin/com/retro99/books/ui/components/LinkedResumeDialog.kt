@@ -1,12 +1,12 @@
 package com.retro99.books.ui.components
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.AnnotatedString
+import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.base.ui.compose.EmberDialogAction
+import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.base.ui.compose.relativeTimeText
 import com.retro99.books.domain.model.BookHome
 import com.retro99.books.ui.links.label
@@ -16,6 +16,7 @@ import com.retro99.sync.domain.ObservedTime
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.resume_linked_body
+import resources.translations.resume_linked_compare
 import resources.translations.resume_linked_continue
 import resources.translations.resume_linked_listened_body
 import resources.translations.resume_linked_source_audiobook
@@ -56,6 +57,7 @@ fun LinkedResumeOffer.toUiModel() = LinkedResumeUiModel(
 /**
  * "Continue from …?" when another linked copy was read more recently. Replaces the same-copy
  * conflict dialog for this opening, so there's never more than one prompt.
+ * Three choices: they stack vertically with the main choice first and the safe option last.
  */
 @Composable
 fun LinkedResumeDialog(
@@ -63,7 +65,7 @@ fun LinkedResumeDialog(
     onContinue: () -> Unit,
     onStay: () -> Unit,
     modifier: Modifier = Modifier,
-    compareAll: (@Composable () -> Unit)? = null,
+    onCompareAll: (() -> Unit)? = null,
 ) {
     val title = if (model.isApproximate) {
         stringResource(StringRes.resume_linked_title_approximate, model.percent)
@@ -86,21 +88,29 @@ fun LinkedResumeDialog(
     } else {
         stringResource(StringRes.resume_linked_body, source, time)
     }
-    AlertDialog(
+    EmberDialog(
         onDismissRequest = onStay,
+        title = title,
+        actions = listOfNotNull(
+            EmberDialogAction(
+                label = stringResource(StringRes.resume_linked_continue),
+                style = EmberDialogActionStyle.Main,
+                onClick = onContinue,
+            ),
+            onCompareAll?.let { compare ->
+                EmberDialogAction(
+                    label = stringResource(StringRes.resume_linked_compare),
+                    style = EmberDialogActionStyle.Neutral,
+                    onClick = compare,
+                )
+            },
+            EmberDialogAction(
+                label = stringResource(StringRes.resume_linked_stay),
+                style = EmberDialogActionStyle.Neutral,
+                onClick = onStay,
+            ),
+        ),
         modifier = modifier,
-        title = { Text(text = title, style = MaterialTheme.typography.headlineSmall) },
-        text = { Text(text = body, style = MaterialTheme.typography.bodyMedium) },
-        confirmButton = {
-            Row {
-                compareAll?.invoke()
-                TextButton(onClick = onStay) {
-                    Text(stringResource(StringRes.resume_linked_stay))
-                }
-                TextButton(onClick = onContinue) {
-                    Text(stringResource(StringRes.resume_linked_continue))
-                }
-            }
-        },
+        body = AnnotatedString(body),
     )
 }

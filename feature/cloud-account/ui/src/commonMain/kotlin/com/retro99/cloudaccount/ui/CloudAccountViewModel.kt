@@ -10,6 +10,7 @@ import com.retro99.analytics.api.CloudAccountOperation
 import com.retro99.analytics.api.CloudAccountObservation
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.cloudaccount.domain.CloudAccountException
+import com.retro99.cloudaccount.domain.CloudPendingChangesRepository
 import com.retro99.cloudaccount.domain.usecase.GetCloudStorageUsageUseCase
 import com.retro99.cloudaccount.domain.model.CloudAccount
 import com.retro99.cloudaccount.domain.model.CloudAuthState
@@ -27,6 +28,7 @@ import com.retro99.cloudaccount.domain.usecase.SetAutoBackupEnabledUseCase
 import com.retro99.cloudaccount.domain.usecase.SignInCloudAccountUseCase
 import com.retro99.cloudaccount.domain.usecase.SignOutCloudAccountUseCase
 import com.retro99.sync.domain.SyncResult
+import com.retro99.sync.domain.SyncStatus
 import com.retro99.sync.domain.usecase.ObserveSyncStatusUseCase
 import com.retro99.sync.domain.usecase.SyncNowUseCase
 import kotlinx.coroutines.CancellationException
@@ -55,6 +57,7 @@ class CloudAccountViewModel(
     @Provided private val deleteCloudAccountUseCase: DeleteCloudAccountUseCase,
     @Provided private val setAutoBackupEnabledUseCase: SetAutoBackupEnabledUseCase,
     @Provided private val analytics: Analytics,
+    @Provided private val pendingChangesRepository: CloudPendingChangesRepository,
     @InjectedParam private val onBack: () -> Unit,
 ) : BaseViewModel<CloudAccountViewState, CloudAccountIntent>(CloudAccountViewState()) {
     val emailState = TextFieldState()
@@ -86,7 +89,15 @@ class CloudAccountViewModel(
             CloudAccountIntent.OnSwitchToCreateAccountClicked -> {
                 switchMode(CloudAccountMode.CreateAccount)
             }
-            CloudAccountIntent.OnSignOutClicked -> signOut()
+            CloudAccountIntent.OnSignOutClicked -> requestSignOut()
+            CloudAccountIntent.OnSignOutConfirmed -> {
+                updateState { it.copy(showSignOutConfirmation = false, signOutPendingCount = 0) }
+                signOut()
+            }
+            CloudAccountIntent.OnSignOutSyncFirstClicked -> signOutSyncFirst()
+            CloudAccountIntent.OnSignOutDismissed -> updateState {
+                if (it.isSigningOut) it else it.copy(showSignOutConfirmation = false, signOutPendingCount = 0)
+            }
             CloudAccountIntent.OnDeleteAccountClicked -> showDeleteAccountConfirmation()
             CloudAccountIntent.OnDeleteAccountConfirmed -> deleteAccount()
             is CloudAccountIntent.OnDeleteAccountDismissed ->
@@ -106,6 +117,11 @@ class CloudAccountViewModel(
         snapshotFlow {
             emailState.text.toString() to passwordState.text.toString()
         }.onEach { (email, password) ->
+            updateState {
+                if (it.error in setOf(CloudAccountError.InvalidCredentials, CloudAccountError.WeakPassword, CloudAccountError.EmailAlreadyRegistered)) {
+                    it.copy(error = null)
+                } else it
+            }
             updateFormState(email, password)
         }.launchIn(viewModelScope)
     }
@@ -163,7 +179,18 @@ class CloudAccountViewModel(
     private fun observeSyncStatus() {
         observeSyncStatusUseCase()
             .onEach { syncStatus ->
-                updateState { it.copy(syncStatus = syncStatus) }
+                updateState {
+                    it.copy(
+                        syncStatus = syncStatus,
+                        lastSuccessfulSyncAt = when (syncStatus) {
+                            is SyncStatus.Completed -> syncStatus.completedAt
+                            is SyncStatus.Idle -> syncStatus.lastSuccessfulAt ?: it.lastSuccessfulSyncAt
+                            is SyncStatus.Offline -> syncStatus.lastSuccessfulAt ?: it.lastSuccessfulSyncAt
+                            is SyncStatus.Failed -> syncStatus.lastSuccessfulAt ?: it.lastSuccessfulSyncAt
+                            else -> it.lastSuccessfulSyncAt
+                        },
+                    )
+                }
             }
             .catch { error ->
                 if (error is CancellationException || error !is Exception) throw error
@@ -626,6 +653,54 @@ class CloudAccountViewModel(
         signOut(entryPoint = "link_confirmation_dismissal")
     }
 
+    private fun requestSignOut() {
+        if (viewState.value.isSigningOut || viewState.value.syncStatus is SyncStatus.Running) return
+        val account = (viewState.value.authState as? CloudAuthState.SignedIn)?.account ?: return
+        updateState { it.copy(isLoading = true) }
+        viewModelScope.launch {
+            val pending = try {
+                pendingChangesRepository.count(account.id)
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                // Never block sign-out on a count failure; show the simple confirm instead.
+                0
+            }
+            updateState {
+                it.copy(
+                    isLoading = false,
+                    showSignOutConfirmation = true,
+                    signOutPendingCount = pending,
+                )
+            }
+        }
+    }
+
+    private fun signOutSyncFirst() {
+        if (viewState.value.isSigningOut) return
+        val account = (viewState.value.authState as? CloudAuthState.SignedIn)?.account ?: return
+        updateState { it.copy(isSigningOut = true) }
+        viewModelScope.launch {
+            try {
+                enableCloudSyncUseCase()
+                val result = syncNowUseCase()
+                val pending = remainingChangesAfterSync(result) { pendingChangesRepository.count(account.id) }
+                if ((viewState.value.authState as? CloudAuthState.SignedIn)?.account?.id != account.id) {
+                    updateState { it.copy(isSigningOut = false) }
+                    return@launch
+                }
+                if (pending == 0) {
+                    signOut(entryPoint = "sign_out_sync_first")
+                } else {
+                    // A completed bounded pass can still leave mutations or uploads.
+                    updateState { it.copy(isSigningOut = false, signOutPendingCount = pending ?: it.signOutPendingCount) }
+                }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                updateState { it.copy(isSigningOut = false) }
+            }
+        }
+    }
+
     private fun signOut(entryPoint: String = "sign_out_button") {
         if (viewState.value.isLoading) return
         updateState {
@@ -664,16 +739,28 @@ class CloudAccountViewModel(
                             error = null,
                             showVerificationMessage = false,
                             showLinkConfirmation = false,
+                            showSignOutConfirmation = false,
+                            signOutPendingCount = 0,
+                            isSigningOut = false,
                         )
                     }
                     updateFormState(emailState.text.toString(), passwordState.text.toString())
                 }
                 is CloudAccountOperationExecution.Threw -> {
                     retryTracker.recordFailure(operation)
+                    updateState {
+                        it.copy(
+                            showSignOutConfirmation = false,
+                            signOutPendingCount = 0,
+                            isSigningOut = false,
+                        )
+                    }
                     showError(execution.error)
                 }
                 is CloudAccountOperationExecution.Cancelled -> {
-                    updateState { it.copy(isLoading = false) }
+                    updateState {
+                        it.copy(isLoading = false, isSigningOut = false)
+                    }
                     updateFormState(emailState.text.toString(), passwordState.text.toString())
                 }
             }
@@ -1011,6 +1098,10 @@ class CloudAccountViewModel(
 
 private fun Throwable.toCloudAccountError(): CloudAccountError {
     return when (this) {
+        is CloudAccountException.InvalidCredentials -> CloudAccountError.InvalidCredentials
+        is CloudAccountException.NetworkUnavailable -> CloudAccountError.NetworkUnavailable
+        is CloudAccountException.WeakPassword -> CloudAccountError.WeakPassword
+        is CloudAccountException.EmailAlreadyRegistered -> CloudAccountError.EmailAlreadyRegistered
         is CloudAccountException.NotConfigured -> CloudAccountError.NotConfigured
         is CloudAccountException.ProfileAlreadyLinked -> CloudAccountError.ProfileAlreadyLinked
         is CloudAccountException.ReauthenticationRequired ->

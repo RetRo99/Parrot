@@ -45,6 +45,27 @@ object ChapterSentenceExtractor : KoinComponent {
 
             function collect() {
                 const nodes = document.querySelectorAll(sentenceSelector);
+                // Same chapter coordinate system as VisibleTextRangeDetector,
+                // including whitespace nodes and excluding script/style/noscript.
+                const spans = new Map();
+                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+                    acceptNode: function(node) {
+                        const tag = node.parentElement && node.parentElement.tagName;
+                        return !tag || tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT'
+                            ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+                let offset = 0;
+                let node;
+                while ((node = walker.nextNode())) {
+                    const el = node.parentElement.closest(sentenceSelector);
+                    if (el) {
+                        let span = spans.get(el);
+                        if (!span) { span = { start: offset, raw: '' }; spans.set(el, span); }
+                        span.raw += node.nodeValue || '';
+                    }
+                    offset += (node.nodeValue || '').length;
+                }
                 const result = [];
                 for (let i = 0; i < nodes.length; i++) {
                     const el = nodes[i];
@@ -53,7 +74,9 @@ object ChapterSentenceExtractor : KoinComponent {
                     if (el.querySelector(sentenceSelector)) continue;
                     const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
                     if (text.length === 0) continue;
-                    result.push({ id: id, t: encodeURIComponent(text) });
+                    const span = spans.get(el);
+                    result.push({ id: id, t: encodeURIComponent(text),
+                        start: span ? span.start : null, r: span ? encodeURIComponent(span.raw) : null });
                 }
                 return result;
             }
@@ -365,10 +388,20 @@ object ChapterSentenceExtractor : KoinComponent {
             if (data.status != "success") return emptyList()
             data.sentences
                 .flatMap { item ->
+                    val raw = item.rawText?.let(::percentDecode)
+                    val mapping = raw?.let(::normalizedOffsets)
+                    val normalized = raw?.replace(Regex("\\s+"), " ")?.trim()
+                    var cursor = 0
                     TtsSentenceChunker.chunk(percentDecode(item.text)).map { text ->
+                        val from = normalized?.indexOf(text, cursor) ?: -1
+                        val start = if (from >= 0) mapping?.getOrNull(from) else null
+                        val end = if (from >= 0) mapping?.getOrNull(from + text.length - 1)?.plus(1) else null
+                        if (from >= 0) cursor = from + text.length
                         ParsedSentence(
                             elementId = item.id,
                             text = text,
+                            startOffset = if (start != null) item.startOffset?.plus(start) else null,
+                            rawText = if (start != null && end != null) raw?.substring(start, end) else null,
                         )
                     }
                 }
@@ -377,10 +410,12 @@ object ChapterSentenceExtractor : KoinComponent {
                         index = index,
                         elementId = sentence.elementId,
                         text = sentence.text,
+                        startOffset = sentence.startOffset,
+                        rawText = sentence.rawText,
                     )
                 }
         } catch (e: Exception) {
-            analytics.logException(e, "Failed to parse chapter sentences, json: $json")
+            analytics.logException(e, "Failed to parse chapter sentences")
             emptyList()
         }
     }
@@ -403,6 +438,22 @@ object ChapterSentenceExtractor : KoinComponent {
         }
         return bytes.toByteArray().decodeToString()
     }
+
+    /** Maps normalized chunk characters back to unchanged chapter coordinates. */
+    private fun normalizedOffsets(raw: String): List<Int> {
+        val offsets = mutableListOf<Int>()
+        var whitespace: Int? = null
+        raw.forEachIndexed { index, char ->
+            if (char.isWhitespace()) {
+                if (offsets.isNotEmpty() && whitespace == null) whitespace = index
+            } else {
+                whitespace?.let { offsets += it }
+                whitespace = null
+                offsets += index
+            }
+        }
+        return offsets
+    }
 }
 
 @Serializable
@@ -419,6 +470,8 @@ internal data class ChapterSentenceJson(
     val id: String? = null,
     @SerialName("t")
     val text: String = "",
+    @SerialName("start") val startOffset: Int? = null,
+    @SerialName("r") val rawText: String? = null,
 )
 
 @Serializable
@@ -434,4 +487,6 @@ internal data class TextAnchorResult(
 private data class ParsedSentence(
     val elementId: String?,
     val text: String,
+    val startOffset: Int? = null,
+    val rawText: String? = null,
 )

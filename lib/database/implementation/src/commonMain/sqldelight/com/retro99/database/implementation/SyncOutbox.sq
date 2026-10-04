@@ -53,6 +53,11 @@ AND state IN ('pending', 'dispatched')
 AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
 ORDER BY local_mutation_sequence ASC;
 
+getPendingIncludingUnassigned:
+SELECT * FROM sync_outbox
+WHERE cloud_user_id = ? OR cloud_user_id IS NULL
+ORDER BY local_mutation_sequence ASC;
+
 markMutationDispatched:
 UPDATE sync_outbox
 SET state = 'dispatched'

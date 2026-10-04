@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.RecordVoiceOver
@@ -27,7 +26,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -41,6 +39,7 @@ import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.LoadingScreen
 import com.retro99.base.ui.compose.CoilImage
+import com.retro99.base.ui.compose.EmberTopBar
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
@@ -85,22 +84,9 @@ private fun AuthorDetailScreenContent(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = viewState.authorName,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { intentDispatcher(AuthorDetailIntent.OnBackClicked) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(StringRes.general_back),
-                        )
-                    }
-                },
+            EmberTopBar(
+                title = viewState.authorName,
+                onBack = { intentDispatcher(AuthorDetailIntent.OnBackClicked) },
             )
         },
         modifier = modifier,

@@ -7,7 +7,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** 34.sqm: bookmarks become saved items with a portable book key and a UUID id. */
+/** 36.sqm: bookmarks become saved items with a portable book key and a UUID id. */
 class SavedItemsMigrationTest {
 
     @Test
@@ -16,7 +16,7 @@ class SavedItemsMigrationTest {
         try {
             // Given
             executeScript(driver, readResource("v28_schema.sql"))
-            AppDatabase.Schema.migrate(driver, oldVersion = 28, newVersion = 34)
+            AppDatabase.Schema.migrate(driver, oldVersion = 28, newVersion = 36)
             executeScript(
                 driver,
                 """
@@ -43,7 +43,7 @@ class SavedItemsMigrationTest {
             )
 
             // When
-            AppDatabase.Schema.migrate(driver, oldVersion = 34, AppDatabase.Schema.version)
+            AppDatabase.Schema.migrate(driver, oldVersion = 36, AppDatabase.Schema.version)
 
             // Then
             val items = AppDatabase(driver).savedItemQueries.getAllLiveSavedItems().executeAsList()

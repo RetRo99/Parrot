@@ -1,10 +1,75 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- General -->
+    <string name="recap_last_time">Last time</string>
+    <string name="recap_settings">Recap settings</string>
+    <string name="recap_settings_title">Recaps</string>
+    <string name="recap_short_description">A short reminder of your last session</string>
+    <string name="recap_on">On</string>
+    <string name="recap_off">Off</string>
+    <string name="recap_pill_description">Recap of your last session</string>
+    <string name="recap_sheet_description">Last time. Recap of your reading session from %1$s.</string>
+    <string name="recap_continue">Continue reading</string>
+    <string name="recap_ai_notice">Written by AI · may miss details</string>
+    <string name="recap_writing_reader">Writing your recap… This usually takes under half a minute. You can start reading — it will be here under ‘Last time’.</string>
+    <string name="recap_writing">Writing your recap… Usually under half a minute.</string>
+    <string name="recap_minutes">%1$d min</string>
+    <string name="recap_today">Today</string>
+    <string name="recap_yesterday">Yesterday</string>
+    <string name="recap_switch_title">Recap my reading sessions</string>
+    <string name="recap_switch_subtitle">A short ‘last time’ when you come back to a book</string>
+    <string name="recap_show_when">Show it when I open a book</string>
+    <string name="recap_after_break">After a break</string>
+    <string name="recap_every_time">Every time</string>
+    <string name="recap_never">Never</string>
+    <string name="recap_show_helper">After a break = more than an hour since that session ended. You can always open it from ✦ Last time in the reader.</string>
+    <string name="recap_privacy_title">What happens to your text</string>
+    <string name="recap_privacy_text_lead">Deleted within 24 hours.</string>
+    <string name="recap_privacy_text_body">The text is only kept long enough to write the recap and is removed at the next cleanup.</string>
+    <string name="recap_privacy_results_lead">Recaps stay up to 180 days</string>
+    <string name="recap_privacy_results_body">in your account and sync to your signed-in devices.</string>
+    <string name="recap_privacy_provider_lead">Can't be recalled.</string>
+    <string name="recap_privacy_provider_body">Text already sent to the AI provider can't be taken back.</string>
+    <string name="recap_privacy_text">Text expires after 24 hours. It is only kept long enough to write the recap and is removed at the next cleanup.</string>
+    <string name="recap_privacy_results">Recaps stay up to 180 days in your account and sync to your signed-in devices.</string>
+    <string name="recap_privacy_provider">Can’t be recalled. Text already sent to the AI provider can’t be taken back.</string>
+    <string name="recap_privacy_details">Read the full privacy details</string>
+    <string name="recap_privacy_details_title">Privacy details</string>
+    <string name="recap_legal_excerpts">Excerpts are temporarily stored on Parrot Cloud (24-hour expiry, removed at the next cleanup) and sent to the AI provider.</string>
+    <string name="recap_legal_summaries">Summaries are stored in your account for up to 180 days and synced across signed-in devices.</string>
+    <string name="recap_legal_withdrawal">Turning this off deletes cloud recaps and their local caches when devices reconnect.</string>
+    <string name="recap_legal_recall">Text already sent to the provider cannot be recalled.</string>
+    <string name="recap_legal_existing">Existing sessions are not uploaded.</string>
+    <string name="recap_off_disclosure">Turning recaps off deletes your recaps from this device immediately, and from Parrot Cloud and your other devices when they reconnect.</string>
+    <string name="recap_consent_title">Turn on recaps?</string>
+    <string name="recap_consent_body">To write a recap, the text you read in a session is sent to Parrot Cloud and to an AI provider.</string>
+    <string name="recap_withdraw_title">Turn off recaps and delete them?</string>
+    <string name="recap_not_now">Not now</string>
+    <string name="recap_turn_on">Turn on</string>
+    <string name="recap_turn_off">Turn off</string>
+    <string name="recap_setting_failed">Couldn’t save this setting. Please try again.</string>
+    <string name="recap_none">No recap for this session yet.</string>
+    <string name="recap_write">Write a recap</string>
+    <string name="recap_too_short">Not enough read to recap. Recaps need a few pages of reading.</string>
+    <string name="recap_failed">Couldn’t write this recap. Something went wrong on our side.</string>
+    <string name="recap_retry">Try again</string>
+    <string name="recap_offline">You’re offline. The recap will be written when you’re back online.</string>
+    <string name="recap_limit">That’s all the recaps for today. New recaps are available again tomorrow.</string>
+    <string name="recap_signed_out">Sign in to Parrot Cloud to get recaps.</string>
+    <string name="recap_sign_in">Sign in</string>
+    <string name="recap_turned_off">Recaps are turned off.</string>
+    <string name="recap_turn_on_action">Turn on recaps</string>
+    <string name="recap_expired">This session is too old to recap. The text is only kept for 24 hours.</string>
+    <string name="recap_time_read">Time read</string>
+    <string name="recap_pages_read">Pages read</string>
+    <string name="recap_ended_at">Ended at</string>
+    <string name="recap_section_title">✦ Recap</string>
     <string name="general_back">Back</string>
     <string name="general_cancel">Cancel</string>
     <string name="general_close">Close</string>
     <string name="general_retry">Retry</string>
+    <string name="reader_error_title" tools:ignore="MissingTranslation">Can\'t open this book</string>
+    <string name="statistics_load_failed_title" tools:ignore="MissingTranslation">Couldn\'t load this</string>
 
     <string name="error_network_connectivity">Network connection unavailable. Please check your internet connection.</string>
     <string name="error_network_generic">A network error occurred. Please try again.</string>
@@ -510,10 +575,10 @@
     <string name="reader_tts_update_now" tools:ignore="MissingTranslation">Download now</string>
     <string name="reader_tts_update_later" tools:ignore="MissingTranslation">Later</string>
     <string name="reader_tts_system_source" tools:ignore="MissingTranslation">System</string>
-    <string name="app_settings_sync_backup" tools:ignore="MissingTranslation">Sync &amp; backup</string>
+    <string name="app_settings_sync_backup" tools:ignore="MissingTranslation">Parrot Cloud</string>
     <string name="app_settings_sync_backup_description" tools:ignore="MissingTranslation">Keep reading data available across devices</string>
     <string name="cloud_account_title" tools:ignore="MissingTranslation">Parrot Cloud</string>
-    <string name="cloud_account_description" tools:ignore="MissingTranslation">Keep your progress, bookmarks, collections, and reader settings available across devices. Book files remain on this device.</string>
+    <string name="cloud_account_description" tools:ignore="MissingTranslation">Your books and reading progress on every device.</string>
     <string name="cloud_account_email_label" tools:ignore="MissingTranslation">Email</string>
     <string name="cloud_account_email_invalid" tools:ignore="MissingTranslation">Enter a valid email address.</string>
     <string name="cloud_account_password_label" tools:ignore="MissingTranslation">Password</string>
@@ -527,7 +592,7 @@
     <string name="cloud_account_sync_not_enabled" tools:ignore="MissingTranslation">Sync is not enabled yet.</string>
     <string name="cloud_account_sync_enabled" tools:ignore="MissingTranslation">Sync is enabled.</string>
     <string name="cloud_account_link_pending" tools:ignore="MissingTranslation">This account is authenticated but is not linked to this local profile.</string>
-    <string name="cloud_account_sign_out" tools:ignore="MissingTranslation">Sign out of cloud account</string>
+    <string name="cloud_account_sign_out" tools:ignore="MissingTranslation">Sign out</string>
     <string name="cloud_account_delete" tools:ignore="MissingTranslation">Delete cloud account</string>
     <string name="cloud_account_delete_title" tools:ignore="MissingTranslation">Delete your Parrot Cloud account?</string>
     <string name="cloud_account_delete_message" tools:ignore="MissingTranslation">This permanently deletes your cloud account, backups, and cloud sync data. Imported files already on this device are kept. A redacted abuse-history record may be retained for up to 180 days.</string>
@@ -551,7 +616,7 @@
     <string name="cloud_account_sync_status_pulling" tools:ignore="MissingTranslation">Checking for changes…</string>
     <string name="cloud_account_sync_status_applying" tools:ignore="MissingTranslation">Applying changes…</string>
     <string name="cloud_account_sync_status_uploading_changes" tools:ignore="MissingTranslation">Sending changes…</string>
-    <string name="cloud_account_sync_status_uploading_files" tools:ignore="MissingTranslation">Backing up files…</string>
+    <string name="cloud_account_sync_status_uploading_files" tools:ignore="MissingTranslation">Uploading books…</string>
     <string name="cloud_account_sync_status_downloading_files" tools:ignore="MissingTranslation">Restoring files…</string>
     <string name="cloud_account_sync_status_transferring_files" tools:ignore="MissingTranslation">Transferring book files…</string>
     <string name="cloud_account_sync_status_finalizing" tools:ignore="MissingTranslation">Finishing sync…</string>
@@ -562,16 +627,16 @@
     <string name="cloud_account_sync_status_completed" tools:ignore="MissingTranslation">Sync complete: %1$d sent, %2$d received, %3$d pending.</string>
     <string name="cloud_account_sync_status_items_progress" tools:ignore="MissingTranslation">Completed %1$d of %2$d items.</string>
     <string name="cloud_account_sync_status_bytes_progress" tools:ignore="MissingTranslation">Transferred %1$d of %2$d bytes.</string>
-    <string name="cloud_account_sync_status_last_successful" tools:ignore="MissingTranslation">Last successful delivery: %s</string>
+    <string name="cloud_account_sync_status_last_successful" tools:ignore="MissingTranslation">Last synced %1$s</string>
     <string name="cloud_backup_button" tools:ignore="MissingTranslation">Add to Parrot Cloud</string>
     <string name="cloud_backup_title" tools:ignore="MissingTranslation">Add this book to Parrot Cloud?</string>
     <string name="cloud_backup_attestation" tools:ignore="MissingTranslation">I confirm I have the right to store this file in my Parrot Cloud account.</string>
-    <string name="cloud_backup_attestation_checkbox" tools:ignore="MissingTranslation">I have the right to back up this file — I own it or have permission from the rights holder.</string>
+    <string name="cloud_backup_attestation_checkbox" tools:ignore="MissingTranslation">I have the right to store these books in Parrot Cloud — I own them or have permission from the rights holder.</string>
     <string name="cloud_backup_attestation_terms" tools:ignore="MissingTranslation">Your file is stored privately and only for you. There is no sharing. We may remove it if a rights holder validly objects. See the Book Backup Terms.</string>
-    <string name="cloud_account_tos_checkbox" tools:ignore="MissingTranslation">I agree to the Terms of Service (including the Book Backup Terms) and the Privacy Policy.</string>
+    <string name="cloud_account_tos_checkbox" tools:ignore="MissingTranslation">I agree to the Terms of Service (including the Parrot Cloud book storage terms) and the Privacy Policy.</string>
     <string name="cloud_backup_autobackup_prompt_title" tools:ignore="MissingTranslation">Add imported books to Parrot Cloud automatically?</string>
-    <string name="cloud_backup_autobackup_prompt_body" tools:ignore="MissingTranslation">New books you import will be uploaded to your Parrot Cloud library. You can change this anytime in Sync &amp; Backup settings.</string>
-    <string name="cloud_backup_autobackup_confirm_body" tools:ignore="MissingTranslation">Books you import will be uploaded to your Parrot Cloud library. They count against your 5 GB storage and download bandwidth. By turning this on, you confirm the checkbox below.</string>
+    <string name="cloud_backup_autobackup_prompt_body" tools:ignore="MissingTranslation">New books you import will be uploaded to your Parrot Cloud library. You can change this anytime in Parrot Cloud settings.</string>
+    <string name="cloud_backup_autobackup_confirm_body" tools:ignore="MissingTranslation">Books you import will be uploaded to your Parrot Cloud library. They count against your storage quota. By turning this on, you confirm the checkbox below.</string>
     <string name="cloud_backup_autobackup_toggle" tools:ignore="MissingTranslation">Add new books to Parrot Cloud automatically</string>
     <string name="cloud_backup_autobackup_enable" tools:ignore="MissingTranslation">Turn on</string>
     <string name="cloud_backup_autobackup_not_now" tools:ignore="MissingTranslation">Not now</string>
@@ -1136,7 +1201,7 @@
     <string name="server_detail_address_error" tools:ignore="MissingTranslation">Enter a valid server address.</string>
     <string name="server_detail_save" tools:ignore="MissingTranslation">Save</string>
     <string name="server_detail_remove_confirm" tools:ignore="MissingTranslation">Remove</string>
-    <string name="servers_open_sync_backup" tools:ignore="MissingTranslation">Open Sync &amp; backup</string>
+    <string name="servers_open_sync_backup" tools:ignore="MissingTranslation">Open Parrot Cloud</string>
 
     <string name="login_connect_title" tools:ignore="MissingTranslation">Connect a server</string>
     <string name="login_connect_subtitle" tools:ignore="MissingTranslation">Sign in to get your books and sync progress.</string>
@@ -1354,7 +1419,7 @@
     <string name="reader_find_back_no_percent">Back to where I was</string>
     <!-- Session recaps -->
     <string name="settings_cloud_recaps_title">Cloud recaps</string>
-    <string name="settings_cloud_recaps_subtitle">Get a short AI summary after each reading session. The text you read is sent to Parrot Cloud to create it.</string>
+    <string name="settings_cloud_recaps_subtitle">Allow AI recaps: excerpts are temporarily stored on Parrot Cloud (24-hour expiry, removed at the next cleanup) and sent to the AI provider. Summaries are stored in your account for up to 180 days and synced across signed-in devices. Turning this off deletes cloud recaps and their local caches when devices reconnect. Text already sent to the provider cannot be recalled. Existing sessions are not uploaded.</string>
     <string name="settings_cloud_recaps_sign_in_hint">Sign in to Parrot Cloud to use recaps</string>
     <string name="reader_recap_last_session">Recap of your last session</string>
     <string name="reader_recap_earlier_session">Recap of an earlier session</string>
@@ -1381,7 +1446,11 @@
     <string name="statistics_recap_not_enough">Too little happened in this session to summarize.</string>
     <string name="statistics_recap_failed_retryable">Couldn't generate the recap yet. Parrot will try again automatically.</string>
     <string name="statistics_recap_failed_permanent">Couldn't generate a recap for this session.</string>
-    <string name="statistics_recap_retry">Retry</string>
+    <string name="statistics_recap_generate">Generate recap</string>
+    <string name="statistics_recap_queued">Recap queued. It will be generated when connected, subject to quota and text expiry.</string>
+    <string name="statistics_recap_request_failed">Couldn’t request the recap. Please try again.</string>
+    <string name="statistics_recap_ready">This session already has a recap.</string>
+    <string name="statistics_recap_text_unavailable">No consented text is saved for this session, so a recap can’t be generated.</string>
     <string name="statistics_recap_retry_unavailable">This recap can no longer be retried.</string>
     <string name="statistics_recap_sign_in">Sign in to Parrot Cloud to generate this recap.</string>
 
@@ -1498,4 +1567,65 @@
         <item quantity="one">%1$d note</item>
         <item quantity="other">%1$d notes</item>
     </plurals>
+    <string name="parrot_cloud_restoring">Restoring your account…</string>
+    <string name="parrot_cloud_benefit_books">Your books on every device</string>
+    <string name="parrot_cloud_benefit_progress">Reading progress and history stay in sync</string>
+    <string name="parrot_cloud_email_placeholder">you@example.com</string>
+    <string name="parrot_cloud_credentials_error">That email and password don’t match. Check both and try again.</string>
+    <string name="parrot_cloud_weak_password">Choose a stronger password and try again.</string>
+    <string name="parrot_cloud_email_registered">This email already has an account. Sign in instead.</string>
+    <string name="parrot_cloud_password_helper">Use a strong password.</string>
+    <string name="parrot_cloud_signing_in">Signing in…</string>
+    <string name="parrot_cloud_creating">Creating account…</string>
+    <string name="parrot_cloud_or">or</string>
+    <string name="parrot_cloud_google">Continue with Google</string>
+    <string name="parrot_cloud_new_account">New to Parrot Cloud?</string>
+    <string name="parrot_cloud_existing_account">Already have an account?</string>
+    <string name="parrot_cloud_create_link">Create an account</string>
+    <string name="parrot_cloud_connected_account">Connected account</string>
+    <string name="parrot_cloud_account_storage">%1$s of storage</string>
+    <string name="parrot_cloud_all_synced">✓ All synced</string>
+    <string name="parrot_cloud_syncing">Syncing…</string>
+    <string name="parrot_cloud_cant_sync">Can’t sync right now</string>
+    <string name="parrot_cloud_ready_to_sync">Ready to sync</string>
+    <string name="parrot_cloud_changes_progress">%1$d of %2$d changes</string>
+    <string name="parrot_cloud_books_progress">%1$d of %2$d books</string>
+    <string name="parrot_cloud_changes_syncing">Your changes are syncing</string>
+    <string name="parrot_cloud_try_again">Try again</string>
+    <string name="parrot_cloud_syncs">Syncs: reading progress · reading history · book details · books you add</string>
+    <string name="parrot_cloud_offline_sync">No internet connection. Your changes are saved on this phone and will sync when you’re back online.</string>
+    <string name="parrot_cloud_offline_sign_in">No internet connection. Connect to the internet and try again.</string>
+    <string name="parrot_cloud_sync_timeout">The connection took too long. Your changes are saved on this phone. Try again.</string>
+    <string name="parrot_cloud_sync_authentication">Your session has expired. Sign in again to sync. Your changes are saved on this phone.</string>
+    <string name="parrot_cloud_sync_error">Parrot Cloud couldn’t finish syncing. Your changes are saved on this phone. Try again later.</string>
+    <string name="parrot_cloud_storage_used">%1$s of %2$s</string>
+    <string name="parrot_cloud_storage_accessibility">%1$s of %2$s used</string>
+    <string name="parrot_cloud_storage_almost_full">Almost full — remove books from Parrot Cloud to make space.</string>
+    <string name="parrot_cloud_storage_unavailable">Storage usage is unavailable right now. Try syncing again later.</string>
+    <string name="parrot_cloud_automatic_books">Add new books automatically</string>
+    <string name="parrot_cloud_automatic_books_helper">Books you import are uploaded to Parrot Cloud</string>
+    <string name="parrot_cloud_books_stay">Books stay on this phone</string>
+    <string name="parrot_cloud_upload_consent">Books you import will be uploaded to Parrot Cloud. Only upload books you have the right to store in the cloud.</string>
+    <string name="parrot_cloud_sign_out_title">Sign out of Parrot Cloud?</string>
+    <string name="parrot_cloud_sign_out_body">Books downloaded to this phone stay here. Books that are only in Parrot Cloud come back when you sign in again.</string>
+    <string name="parrot_cloud_sign_out_anyway">Sign out anyway</string>
+    <string name="parrot_cloud_sync_first">Sync first</string>
+    <string name="parrot_cloud_sign_out_pending_one">1 change hasn’t synced yet.</string>
+    <string name="parrot_cloud_sign_out_pending_many">%1$d changes haven’t synced yet.</string>
+    <string name="parrot_cloud_sign_out_pending_tail">If you sign out now, they stay on this phone and won’t reach your other devices.</string>
+    <string name="parrot_cloud_delete_link">Delete Parrot Cloud account…</string>
+    <string name="parrot_cloud_delete_title">Delete your Parrot Cloud account?</string>
+    <string name="parrot_cloud_delete_message">This permanently deletes your account and everything stored in Parrot Cloud: books and reading data. Books downloaded to this phone stay here. This can’t be undone.</string>
+    <string name="parrot_cloud_delete_field">Type DELETE to confirm</string>
+    <string name="parrot_cloud_not_synced">Not synced yet</string>
+    <string name="parrot_cloud_synced_now">Last synced just now</string>
+    <string name="parrot_cloud_synced_minute">Last synced 1 minute ago</string>
+    <string name="parrot_cloud_synced_minutes">Last synced %1$d minutes ago</string>
+    <string name="parrot_cloud_synced_hour">Last synced 1 hour ago</string>
+    <string name="parrot_cloud_synced_hours">Last synced %1$d hours ago</string>
+    <string name="parrot_cloud_synced_date">Last synced %1$s</string>
+    <string name="parrot_cloud_synced_yesterday">Last synced yesterday, %1$s</string>
+    <string name="parrot_cloud_kilobytes">kilobytes</string>
+    <string name="parrot_cloud_megabytes">megabytes</string>
+    <string name="parrot_cloud_gigabytes">gigabytes</string>
 </resources>

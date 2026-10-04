@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Read side for the UI. Observing never starts generation; only the job
- * runner sends requests, and only [retry] is an explicit user action.
+ * runner sends requests; [request] and [retry] are explicit user actions.
  */
 interface RecapRepository {
     fun observeRecap(sessionId: String): Flow<SessionRecap?>
@@ -17,4 +17,11 @@ interface RecapRepository {
 
     /** Requeues a failed recap and wakes the job runner. */
     suspend fun retry(sessionId: String): RecapRetryResult
+
+    /** Explicit button action; uses the SAME session key as automatic delivery. */
+    suspend fun request(sessionId: String): RecapRequestResult
+    suspend fun delete(sessionId: String)
+    fun observeProgression(bookId: String): Flow<Double?>
 }
+
+enum class RecapRequestResult { QUEUED, IN_PROGRESS, ALREADY_GENERATED, TEXT_UNAVAILABLE, ACCOUNT_REQUIRED }

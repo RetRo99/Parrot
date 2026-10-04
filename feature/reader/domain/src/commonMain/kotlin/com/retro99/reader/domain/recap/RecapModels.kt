@@ -8,6 +8,8 @@ enum class RecapStatus {
     PENDING,
     /** Claimed by the job runner; a request may be in flight. */
     RUNNING,
+    CLOUD_QUEUED,
+    CLOUD_RUNNING,
     SUCCEEDED,
     /** The model said too little happened to summarise. */
     NOT_ENOUGH,
@@ -48,6 +50,9 @@ enum class RecapErrorCode {
 
     /** Cloud recaps was turned off; the session's text was dropped. */
     CONSENT_WITHDRAWN,
+    ACCESS_REMOVED,
+    BOOK_DELETED,
+    ACCOUNT_DELETED,
     ;
 
     /** Retrying the same input can't succeed. */
@@ -105,12 +110,28 @@ data class SessionRecap(
     val generatedAt: Long?,
     /** A failed recap whose text is still stored and wasn't rejected. */
     val canRetry: Boolean = false,
+    val activeReadingMs: Long = 0,
+    val pageAdvances: Int = 0,
 ) {
+    /** New results use two plain paragraphs; old one-block results stay intact. */
+    val summaryParts: RecapSummaryParts get() = RecapSummaryParts.parse(summary.orEmpty())
     /** True while a result may still arrive without user action. */
     val isInProgress: Boolean
         get() = status == RecapStatus.PENDING ||
+            status == RecapStatus.CLOUD_QUEUED || status == RecapStatus.CLOUD_RUNNING ||
             status == RecapStatus.RUNNING ||
             status == RecapStatus.FAILED_RETRYABLE
+}
+
+data class RecapSummaryParts(val summary: String, val stoppedAt: String? = null) {
+    override fun toString(): String = "RecapSummaryParts(chars=${summary.length}, stoppedAtChars=${stoppedAt?.length ?: 0})"
+
+    companion object {
+        fun parse(text: String): RecapSummaryParts {
+            val parts = text.split("\n\n", limit = 2)
+            return RecapSummaryParts(parts.first(), parts.getOrNull(1)?.takeIf { it.isNotBlank() })
+        }
+    }
 }
 
 /** Outcome of [RecapRepository.retry]. */
