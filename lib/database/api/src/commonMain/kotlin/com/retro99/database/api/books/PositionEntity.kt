@@ -61,6 +61,12 @@ interface PositionEntity {
     val ebookLocationRaw: String?
         get() = null
 
+    /** Cloud-originating installation identity and display label, when available. */
+    val sourceDeviceId: String?
+        get() = null
+    val deviceName: String?
+        get() = null
+
     companion object {
         const val ORIGIN_USER = "user"
         const val ORIGIN_RESTORE = "restore"

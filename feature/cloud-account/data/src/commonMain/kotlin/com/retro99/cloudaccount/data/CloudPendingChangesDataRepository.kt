@@ -40,4 +40,5 @@ internal fun isCloudMutation(entityType: String): Boolean = entityType in setOf(
     SyncOutboxEntry.ENTITY_TYPE_READING_SESSION,
     SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK,
     SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK_DECISION,
+    SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS,
 )

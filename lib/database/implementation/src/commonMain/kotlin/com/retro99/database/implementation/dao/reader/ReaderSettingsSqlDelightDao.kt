@@ -46,7 +46,7 @@ internal class ReaderSettingsSqlDelightDao(
             database.transaction {
                 mutations.forEach { mutation ->
                     upsertRow(mutation.settings)
-                    syncOutboxQueries.enqueue(mutation.outboxEntry)
+                    mutation.outboxEntry?.let(syncOutboxQueries::enqueue)
                 }
             }
         }

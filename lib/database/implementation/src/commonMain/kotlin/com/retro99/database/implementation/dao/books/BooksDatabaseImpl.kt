@@ -386,6 +386,8 @@ internal class BooksDatabaseImpl(
             totalProgression = totalProgression,
             bookTimeMs = bookTimeMs,
             ebookLocationRaw = ebookLocationRaw,
+            sourceDeviceId = sourceDeviceId,
+            deviceName = deviceName,
             position = position,
             origin = origin,
             observedAt = observedAt,

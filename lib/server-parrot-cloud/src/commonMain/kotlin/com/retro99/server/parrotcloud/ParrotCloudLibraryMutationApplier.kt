@@ -17,6 +17,7 @@ import org.koin.core.annotation.Single
 class ParrotCloudLibraryMutationApplier(
     @Provided private val libraryBookSyncApplier: LibraryBookSyncApplier,
     private val bookLinkSync: ParrotCloudBookLinkSync,
+    private val readerSettingsSync: ParrotCloudReaderSettingsSync,
     private val savedItemSync: ParrotCloudSavedItemSync,
 ) : LibraryMutationApplier {
     private val json = Json {
@@ -29,6 +30,10 @@ class ParrotCloudLibraryMutationApplier(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     ) {
+        if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS) {
+            readerSettingsSync.onAccepted(entry, response)
+            return
+        }
         // Reading sessions are append-only ledger rows: acceptance needs no
         // local metadata update, the outbox entry is simply acknowledged.
         if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_SESSION) return
@@ -52,6 +57,10 @@ class ParrotCloudLibraryMutationApplier(
         entry: SyncOutboxEntry,
         response: SyncMutationResponse,
     ) {
+        if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS) {
+            readerSettingsSync.onConflict(entry, response)
+            return
+        }
         if (entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_SESSION) return
         if (entry.entityType in BOOK_LINK_ENTITY_TYPES) {
             bookLinkSync.onConflict(entry, response)
@@ -71,6 +80,7 @@ class ParrotCloudLibraryMutationApplier(
 
     override fun discardsConflict(entry: SyncOutboxEntry): Boolean =
         entry.entityType == SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK ||
+            entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS ||
             // The newer server version was applied locally; there is nothing left to send.
             entry.entityType == SyncOutboxEntry.ENTITY_TYPE_SAVED_ITEM
 

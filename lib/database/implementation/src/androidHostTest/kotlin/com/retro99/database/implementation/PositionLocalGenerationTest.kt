@@ -63,6 +63,25 @@ class PositionLocalGenerationTest {
         assertEquals(3L, stored.local_generation)
     }
 
+    @Test
+    fun remoteOriginatingDeviceSurvivesPositionDatabaseRoundTrip() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.upsertRemotePosition(
+                TestPosition(
+                    localGeneration = 0L,
+                    sourceDeviceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                    deviceName = "Pixel Tablet",
+                ),
+            )
+        }
+
+        val stored = databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.getRemotePositionByBookUuid("book-1")
+        }
+        assertEquals("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", stored?.sourceDeviceId)
+        assertEquals("Pixel Tablet", stored?.deviceName)
+    }
+
     private data class TestPosition(
         override val localGeneration: Long,
         override val bookUuid: String = "book-1",
@@ -82,6 +101,8 @@ class PositionLocalGenerationTest {
         override val totalDurationMs: Long? = null,
         override val totalProgression: Double? = 0.2,
         override val position: Int? = 10,
+        override val sourceDeviceId: String? = null,
+        override val deviceName: String? = null,
     ) : PositionEntity
 
     /** Never emits, so [DatabaseManager] only opens the database via [DatabaseManager.withProfile]. */

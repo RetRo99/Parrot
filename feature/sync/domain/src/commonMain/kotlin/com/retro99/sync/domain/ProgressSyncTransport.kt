@@ -32,6 +32,13 @@ data class ProgressMutation(
     val snapshot: ProgressSnapshot,
     val baseVersion: String?,
     val observedAt: String?,
+    /** Cloud-only origin metadata, created with the reading mutation. */
+    val sourceDevice: ProgressSourceDevice? = null,
+)
+
+data class ProgressSourceDevice(
+    val id: String,
+    val name: String?,
 )
 
 data class ProgressSnapshot(
@@ -78,6 +85,8 @@ data class RemoteProgressSnapshot(
      * Storyteller's `timestamp`, Parrot Cloud's revision, null for Audiobookshelf.
      */
     val marker: String? = null,
+    /** Display-only origin metadata; never participates in progress comparison or echo checks. */
+    val sourceDevice: ProgressSourceDevice? = null,
 )
 
 data class ProgressChangePage(

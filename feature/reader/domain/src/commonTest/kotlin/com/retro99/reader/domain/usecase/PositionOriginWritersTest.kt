@@ -5,6 +5,8 @@ import com.retro99.reader.domain.fakes.FakeRepositoryProvider
 import com.retro99.reader.domain.fakes.serverPosition
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.server.api.PositionOrigin
+import com.retro99.server.api.InstallationDeviceIdentity
+import com.retro99.server.api.SourceDeviceIdentity
 import com.retro99.server.api.TextAnchor
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -16,6 +18,9 @@ class PositionOriginWritersTest {
 
     private val repository = FakeReaderRepository(serverId = "st-1")
     private val provider = FakeRepositoryProvider(readers = listOf(repository))
+    private val installationDeviceIdentity = InstallationDeviceIdentity {
+        SourceDeviceIdentity("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "Test tablet")
+    }
 
     @Test
     fun `the reader saving progress stamps user, now and the anchor`() = runTest {
@@ -23,13 +28,15 @@ class PositionOriginWritersTest {
         val anchor = TextAnchor(before = "It was", after = "the best of times")
 
         // When
-        SaveReadingProgressUseCase(provider)(domainPosition(textAnchor = anchor))
+        SaveReadingProgressUseCase(provider, installationDeviceIdentity)(domainPosition(textAnchor = anchor))
 
         // Then
         val saved = repository.syncedSaves.single()
         assertEquals(PositionOrigin.User, saved.origin)
         assertNotNull(saved.observedAt)
         assertEquals(anchor, saved.textAnchor)
+        assertEquals("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", saved.sourceDeviceId)
+        assertEquals("Test tablet", saved.deviceName)
     }
 
     @Test

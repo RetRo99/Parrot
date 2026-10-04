@@ -11,6 +11,7 @@ import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressPushResult
 import com.retro99.sync.domain.ProgressSnapshot
+import com.retro99.sync.domain.ProgressSourceDevice
 import com.retro99.sync.domain.ProgressSyncTransport
 import com.retro99.sync.domain.ProgressTransportCapabilities
 import com.retro99.sync.domain.RemoteProgressSnapshot
@@ -82,12 +83,16 @@ class ProgressSyncEngineTest {
         val engine = ProgressSyncEngine(outbox, positions, RecordingWrites())
 
         val outcome = engine.applyRemote(
-            remote = remoteSnapshot(),
+            remote = remoteSnapshot(
+                sourceDevice = ProgressSourceDevice("device-a", "Device A"),
+            ),
             accountId = "account-1",
         )
 
         assertEquals(ProgressPullOutcome.PreservedLocalProgress, outcome)
         assertEquals(1, positions.remotePositions.size)
+        assertEquals("device-a", positions.remotePositions.single().sourceDeviceId)
+        assertEquals("Device A", positions.remotePositions.single().deviceName)
         assertTrue(positions.localPositions.isEmpty())
         assertTrue(positions.deletedRemoteBookIds.isEmpty())
     }
@@ -99,12 +104,16 @@ class ProgressSyncEngineTest {
         val engine = ProgressSyncEngine(outbox, positions, RecordingWrites())
 
         val outcome = engine.applyRemote(
-            remote = remoteSnapshot(),
+            remote = remoteSnapshot(
+                sourceDevice = ProgressSourceDevice("device-a", "Device A"),
+            ),
             accountId = "account-1",
         )
 
         assertEquals(ProgressPullOutcome.AppliedToLocal, outcome)
         assertEquals("book-1", positions.localPositions.single().bookUuid)
+        assertEquals("device-a", positions.localPositions.single().sourceDeviceId)
+        assertEquals("Device A", positions.localPositions.single().deviceName)
         assertEquals(listOf("book-1"), positions.deletedRemoteBookIds)
     }
 
@@ -436,7 +445,9 @@ class ProgressSyncEngineTest {
         observedAt = createdAt,
     )
 
-    private fun remoteSnapshot() = RemoteProgressSnapshot(
+    private fun remoteSnapshot(
+        sourceDevice: ProgressSourceDevice? = null,
+    ) = RemoteProgressSnapshot(
         entityId = "book-1",
         remoteBookId = "remote-book-1",
         libraryBookId = "book-1",
@@ -444,6 +455,7 @@ class ProgressSyncEngineTest {
         snapshot = emptySnapshot(),
         version = "9",
         observedAt = "2026-09-22T10:01:00Z",
+        sourceDevice = sourceDevice,
     )
 
     private fun emptySnapshot() = ProgressSnapshot(

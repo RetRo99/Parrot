@@ -6,6 +6,7 @@ import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.server.api.ServerPosition
+import com.retro99.server.api.SourceDeviceIdentity
 import com.retro99.sync.domain.SyncResult
 import com.retro99.sync.domain.SyncRequest
 import com.retro99.sync.domain.SyncPhaseReporter
@@ -52,11 +53,10 @@ class ParrotCloudSyncAdapter(
     @Provided private val readingSessionSyncService: ParrotCloudReadingSessionSyncService,
     @Provided private val readingSessionChangeApplier: ParrotCloudReadingSessionChangeApplier,
     private val bookLinkSync: ParrotCloudBookLinkSync,
+    private val readerSettingsSync: ParrotCloudReaderSettingsSync,
     private val savedItemSync: ParrotCloudSavedItemSync,
 ) : SyncPass {
-    private val outboxCapability = SyncOutboxCapability(
-        unsupportedEntityTypes = setOf(SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS),
-    )
+    private val outboxCapability = SyncOutboxCapability.All
 
     private val json = Json {
         encodeDefaults = true
@@ -86,6 +86,9 @@ class ParrotCloudSyncAdapter(
             remoteAccountId = cloudUserId,
             batchSize = SYNC_BATCH_SIZE,
             selectEntries = {
+                // Pull first so an existing cloud value is not overwritten by
+                // a legacy local row that has never had a remote revision.
+                readerSettingsSync.enqueueUnsynced(cloudUserId)
                 syncOutboxPreflight.selectEligible(
                     remoteAccountId = cloudUserId,
                     maxEntries = SYNC_BATCH_SIZE,
@@ -106,6 +109,7 @@ class ParrotCloudSyncAdapter(
                             entityType = change.entityType,
                             payload = json.decodeFromString<JsonElement>(change.payload),
                             revision = change.revision,
+                            cloudUserId = cloudUserId,
                         )
                     },
                     onProgressChange = { remote ->
@@ -176,6 +180,12 @@ class ParrotCloudSyncAdapter(
                     snapshot = payload.position.toProgressSyncSnapshot(),
                     baseVersion = entry.baseRevision?.toString(),
                     observedAt = entry.createdAt,
+                    sourceDevice = payload.sourceDevice?.let { device ->
+                        com.retro99.sync.domain.ProgressSourceDevice(
+                            id = device.id,
+                            name = device.name,
+                        )
+                    },
                 )
             },
             identityResolver = parrotProgressIdentityResolver(),
@@ -231,8 +241,9 @@ class ParrotCloudSyncAdapter(
             val batch = unattempted.libraryMutationBatch()
             batch.forEach { entry -> attemptedMutationIds.add(entry.mutationId) }
             // Saved items carry only their id in the outbox; send each item's current row.
-            val freshChunk = savedItemSync.preparePush(batch)
-            if (batch.isEmpty()) break
+            val portableSettingsChunk = readerSettingsSync.preparePush(batch)
+            val freshChunk = savedItemSync.preparePush(portableSettingsChunk)
+            if (freshChunk.isEmpty()) break
             val summary = libraryMutationSyncEngine.push(
                 entries = freshChunk,
                 transport = libraryMutationTransport,
@@ -267,6 +278,7 @@ class ParrotCloudSyncAdapter(
         entityType: String,
         payload: JsonElement,
         revision: Long?,
+        cloudUserId: String,
     ) {
         when (entityType) {
             SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK -> {
@@ -282,6 +294,8 @@ class ParrotCloudSyncAdapter(
             SyncOutboxEntry.ENTITY_TYPE_BOOK_LINK_DECISION ->
                 bookLinkSync.applyRemoteDecision(payload)
             SyncOutboxEntry.ENTITY_TYPE_SAVED_ITEM -> savedItemSync.applyRemote(payload)
+            SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS ->
+                revision?.let { readerSettingsSync.applyRemote(payload, it, cloudUserId) }
         }
     }
 
@@ -296,6 +310,7 @@ class ParrotCloudSyncAdapter(
 internal data class LocalReadingPositionMutation(
     val bookUuid: String,
     val position: ServerPosition,
+    val sourceDevice: SourceDeviceIdentity? = null,
 )
 
 /**
@@ -320,5 +335,8 @@ internal fun LocalReadingPositionMutation.toParrotCloudReadingPositionPayload(
             serverId = PARROT_CLOUD_SERVER_ID,
             libraryBookId = libraryBook.libraryBookId,
         ),
+        sourceDevice = sourceDevice?.let { device ->
+            ParrotCloudSourceDevice(id = device.id, name = device.name)
+        },
     )
 }

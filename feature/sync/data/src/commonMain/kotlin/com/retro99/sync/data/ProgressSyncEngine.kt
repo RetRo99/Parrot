@@ -355,6 +355,8 @@ private fun RemoteProgressSnapshot.toPositionEntity(
         bookTimeMs = snapshot.bookTimeMs,
         ebookLocationRaw = snapshot.ebookLocationRaw,
         position = snapshot.position,
+        sourceDeviceId = sourceDevice?.id,
+        deviceName = sourceDevice?.name,
         origin = origin,
         observedAt = ObservedTime.normalize(observedAt ?: snapshot.updatedAt),
     )
@@ -383,4 +385,6 @@ private data class EnginePositionEntity(
     override val observedAt: String?,
     override val bookTimeMs: Long?,
     override val ebookLocationRaw: String?,
+    override val sourceDeviceId: String?,
+    override val deviceName: String?,
 ) : PositionEntity

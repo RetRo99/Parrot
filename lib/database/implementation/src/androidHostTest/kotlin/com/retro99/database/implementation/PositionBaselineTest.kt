@@ -50,6 +50,8 @@ class PositionBaselineTest {
             text_anchor = null,
             book_time_ms = null,
             ebook_location_raw = null,
+            source_device_id = null,
+            device_name = null,
         )
         database.positionQueries.upsertRemotePosition(
             book_uuid = "book-1",
@@ -72,6 +74,8 @@ class PositionBaselineTest {
             position = 40L,
             book_time_ms = null,
             ebook_location_raw = null,
+            source_device_id = null,
+            device_name = null,
         )
 
         val local = database.positionQueries.getPositionByBookUuid("book-1").executeAsOne()
@@ -115,6 +119,8 @@ class PositionBaselineTest {
             text_anchor = null,
             book_time_ms = null,
             ebook_location_raw = null,
+            source_device_id = null,
+            device_name = null,
         )
 
         database.positionQueries.updateRemoteRevisionIfGeneration(8L, "book-1", 2L)

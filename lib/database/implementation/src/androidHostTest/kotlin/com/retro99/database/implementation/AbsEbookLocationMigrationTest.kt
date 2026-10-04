@@ -48,11 +48,12 @@ class AbsEbookLocationMigrationTest {
             database.positionQueries.upsertPosition(
                 "book-1", "book-1", 0, null, null, null, null, "c2.xhtml", null, null, null,
                 null, null, null, 0.4, null, null, 0.5, null,
-                "remote", null, null, null, "epubcfi(/6/6!/4)",
+                "remote", null, null, null, "epubcfi(/6/6!/4)", null, null,
             )
             database.positionQueries.upsertRemotePosition(
                 "book-1", null, 1, null, null, null, "c2.xhtml", null, null, null,
                 null, null, null, 0.4, null, null, 0.5, null, null, """{"href":"c2.xhtml"}""",
+                null, null,
             )
 
             // Then

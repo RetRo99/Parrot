@@ -60,6 +60,7 @@ class ParrotCloudReaderRepository(
                         ParrotCloudReadingPositionPayload(
                             libraryBookId = bookUuid,
                             position = normalizedPosition,
+                            sourceDevice = normalizedPosition.toCloudSourceDevice(),
                         ),
                     ),
                     baseRevision = stored?.remoteRevision,
@@ -99,13 +100,24 @@ class ParrotCloudReaderRepository(
     }
 }
 
-/** The stored and pulled `reading_position` payload: `{library_book_id, position}`. */
+/** The stored and pulled `reading_position` payload. */
 @Serializable
 internal data class ParrotCloudReadingPositionPayload(
     @kotlinx.serialization.SerialName("library_book_id")
     val libraryBookId: String,
     val position: ServerPosition,
+    @kotlinx.serialization.SerialName("source_device")
+    val sourceDevice: ParrotCloudSourceDevice? = null,
 )
+
+@Serializable
+internal data class ParrotCloudSourceDevice(
+    val id: String,
+    val name: String? = null,
+)
+
+internal fun ServerPosition.toCloudSourceDevice(): ParrotCloudSourceDevice? =
+    sourceDeviceId?.let { id -> ParrotCloudSourceDevice(id = id, name = deviceName) }
 
 private fun PositionEntity.toServerPosition(bookUuid: String): ServerPosition {
     return ServerPosition(
@@ -132,6 +144,8 @@ private fun PositionEntity.toServerPosition(bookUuid: String): ServerPosition {
         origin = PositionOrigin.fromValue(origin),
         observedAt = observedAt,
         textAnchor = TextAnchor.fromJson(textAnchor),
+        deviceName = deviceName,
+        sourceDeviceId = sourceDeviceId,
     )
 }
 
@@ -159,6 +173,8 @@ internal fun ServerPosition.toParrotCloudPositionEntity(remoteRevision: Long?): 
         origin = origin.value,
         observedAt = observedAt,
         textAnchor = textAnchor?.toJson(),
+        sourceDeviceId = sourceDeviceId,
+        deviceName = deviceName,
     )
 }
 
@@ -190,6 +206,8 @@ internal fun ServerPosition.toParrotCloudPositionEntity(
         origin = origin.value,
         observedAt = observedAt,
         textAnchor = textAnchor?.toJson(),
+        sourceDeviceId = sourceDeviceId,
+        deviceName = deviceName,
     )
 }
 
@@ -221,6 +239,8 @@ internal fun ServerPosition.toParrotCloudPositionEntity(
         origin = origin.value,
         observedAt = observedAt,
         textAnchor = textAnchor?.toJson(),
+        sourceDeviceId = sourceDeviceId,
+        deviceName = deviceName,
     )
 }
 
@@ -252,6 +272,8 @@ internal fun PositionEntity.toParrotCloudPositionEntity(
         origin = origin,
         observedAt = observedAt,
         textAnchor = textAnchor,
+        sourceDeviceId = sourceDeviceId,
+        deviceName = deviceName,
     )
 }
 
@@ -279,4 +301,6 @@ internal data class ParrotCloudPositionEntity(
     override val observedAt: String? = null,
     override val textAnchor: String? = null,
     override val bookTimeMs: Long? = null,
+    override val sourceDeviceId: String? = null,
+    override val deviceName: String? = null,
 ) : PositionEntity

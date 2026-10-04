@@ -1,0 +1,4 @@
+ALTER TABLE position ADD COLUMN source_device_id TEXT;
+ALTER TABLE position ADD COLUMN device_name TEXT;
+ALTER TABLE remote_position ADD COLUMN source_device_id TEXT;
+ALTER TABLE remote_position ADD COLUMN device_name TEXT;

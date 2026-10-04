@@ -576,9 +576,9 @@
     <string name="reader_tts_update_later" tools:ignore="MissingTranslation">Later</string>
     <string name="reader_tts_system_source" tools:ignore="MissingTranslation">System</string>
     <string name="app_settings_sync_backup" tools:ignore="MissingTranslation">Parrot Cloud</string>
-    <string name="app_settings_sync_backup_description" tools:ignore="MissingTranslation">Keep reading data available across devices</string>
+    <string name="app_settings_sync_backup_description" tools:ignore="MissingTranslation">Keep your reading progress and settings in sync across devices</string>
     <string name="cloud_account_title" tools:ignore="MissingTranslation">Parrot Cloud</string>
-    <string name="cloud_account_description" tools:ignore="MissingTranslation">Your books and reading progress on every device.</string>
+    <string name="cloud_account_description" tools:ignore="MissingTranslation">Your books, reading progress and reader settings on every device.</string>
     <string name="cloud_account_email_label" tools:ignore="MissingTranslation">Email</string>
     <string name="cloud_account_email_invalid" tools:ignore="MissingTranslation">Enter a valid email address.</string>
     <string name="cloud_account_password_label" tools:ignore="MissingTranslation">Password</string>
@@ -899,7 +899,7 @@
     <string name="settings_continue_reading_title" tools:ignore="MissingTranslation">Continue-reading shortcut</string>
     <string name="settings_continue_reading_subtitle" tools:ignore="MissingTranslation">Card on the library and a mini player elsewhere</string>
     <string name="settings_servers_subtitle_default" tools:ignore="MissingTranslation">Add, remove or switch servers</string>
-    <string name="settings_sync_backup_subtitle" tools:ignore="MissingTranslation">Keep progress on all your devices</string>
+    <string name="settings_sync_backup_subtitle" tools:ignore="MissingTranslation">Keep progress and reader settings on all your devices</string>
     <string name="settings_diagnostics_title" tools:ignore="MissingTranslation">Diagnostics</string>
     <string name="settings_diagnostics_subtitle" tools:ignore="MissingTranslation">Logging, share or clear logs</string>
     <string name="settings_status_on" tools:ignore="MissingTranslation">On</string>
@@ -1167,7 +1167,7 @@
     <string name="servers_intro" tools:ignore="MissingTranslation">Where your books, progress and backups come from.</string>
     <string name="servers_add" tools:ignore="MissingTranslation">Add server</string>
     <string name="servers_empty_title" tools:ignore="MissingTranslation">No servers yet</string>
-    <string name="servers_empty_body" tools:ignore="MissingTranslation">Connect Storyteller or Audiobookshelf to get your books, or Parrot Cloud to back up and sync progress. Local books work without a server.</string>
+    <string name="servers_empty_body" tools:ignore="MissingTranslation">Connect Storyteller or Audiobookshelf to get your books, or Parrot Cloud to sync books, progress and reader settings. Local books work without a server.</string>
     <string name="servers_not_encrypted" tools:ignore="MissingTranslation">not encrypted</string>
     <string name="servers_status_connected" tools:ignore="MissingTranslation">Connected · %1$s</string>
     <string name="servers_status_connected_plain" tools:ignore="MissingTranslation">Connected</string>
@@ -1204,7 +1204,7 @@
     <string name="servers_open_sync_backup" tools:ignore="MissingTranslation">Open Parrot Cloud</string>
 
     <string name="login_connect_title" tools:ignore="MissingTranslation">Connect a server</string>
-    <string name="login_connect_subtitle" tools:ignore="MissingTranslation">Sign in to get your books and sync progress.</string>
+    <string name="login_connect_subtitle" tools:ignore="MissingTranslation">Sign in to get your books and sync progress and reader settings.</string>
     <string name="login_type_storyteller_description" tools:ignore="MissingTranslation">Ebooks with synced read-aloud</string>
     <string name="login_type_audiobookshelf_description" tools:ignore="MissingTranslation">Audiobooks and ebooks</string>
     <string name="login_address_label" tools:ignore="MissingTranslation">Server address</string>
@@ -1585,7 +1585,7 @@
     </plurals>
     <string name="parrot_cloud_restoring">Restoring your account…</string>
     <string name="parrot_cloud_benefit_books">Your books on every device</string>
-    <string name="parrot_cloud_benefit_progress">Reading progress and history stay in sync</string>
+    <string name="parrot_cloud_benefit_progress">Reading progress, history and reader settings stay in sync</string>
     <string name="parrot_cloud_email_placeholder">you@example.com</string>
     <string name="parrot_cloud_credentials_error">That email and password don’t match. Check both and try again.</string>
     <string name="parrot_cloud_weak_password">Choose a stronger password and try again.</string>
@@ -1608,7 +1608,7 @@
     <string name="parrot_cloud_books_progress">%1$d of %2$d books</string>
     <string name="parrot_cloud_changes_syncing">Your changes are syncing</string>
     <string name="parrot_cloud_try_again">Try again</string>
-    <string name="parrot_cloud_syncs">Syncs: reading progress · reading history · book details · books you add</string>
+    <string name="parrot_cloud_syncs">Syncs: reading progress · reading history · bookmarks, highlights and notes · reader settings · book details · books you add</string>
     <string name="parrot_cloud_offline_sync">No internet connection. Your changes are saved on this phone and will sync when you’re back online.</string>
     <string name="parrot_cloud_offline_sign_in">No internet connection. Connect to the internet and try again.</string>
     <string name="parrot_cloud_sync_timeout">The connection took too long. Your changes are saved on this phone. Try again.</string>

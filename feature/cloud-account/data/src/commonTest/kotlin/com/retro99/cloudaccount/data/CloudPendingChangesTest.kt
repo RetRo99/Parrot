@@ -7,10 +7,17 @@ import kotlin.test.assertTrue
 class CloudPendingChangesTest {
     @Test
     fun `only supported cloud entities count as unsynced changes`() {
-        listOf("reading_position", "reading_session", "library_book", "book_link", "book_link_decision").forEach {
+        listOf(
+            "reading_position",
+            "reading_session",
+            "library_book",
+            "book_link",
+            "book_link_decision",
+            "reader_settings",
+        ).forEach {
             assertTrue(isCloudMutation(it))
         }
-        listOf("bookmark", "collection", "reader_settings", "unknown").forEach {
+        listOf("bookmark", "collection", "unknown").forEach {
             assertFalse(isCloudMutation(it))
         }
     }

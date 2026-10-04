@@ -1,6 +1,7 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.cloud.implementation.SupabaseClientProvider
+import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.sync.domain.LibraryMutationSyncTransport
 import com.retro99.sync.domain.SyncChange
 import com.retro99.sync.domain.SyncChangePage
@@ -40,9 +41,27 @@ class ParrotCloudLibraryMutationSyncTransport(
     ): List<SyncMutationResponse> {
         if (mutations.isEmpty()) return emptyList()
 
+        val (readerSettings, libraryMutations) = mutations.partition { mutation ->
+            mutation.entityType == SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS
+        }
+        return buildList {
+            if (libraryMutations.isNotEmpty()) {
+                addAll(pushRpc("push_sync_changes", libraryMutations, cursor))
+            }
+            if (readerSettings.isNotEmpty()) {
+                addAll(pushRpc("push_reader_settings", readerSettings, cursor))
+            }
+        }
+    }
+
+    private suspend fun pushRpc(
+        functionName: String,
+        mutations: List<SyncMutationRequest>,
+        cursor: String?,
+    ): List<SyncMutationResponse> {
         val response = clientProvider.client.postgrest
             .rpc(
-                "push_sync_changes",
+                functionName,
                 buildJsonObject {
                     put(
                         "mutations",

@@ -79,6 +79,8 @@ class AudiobookBookTimeMigrationTest {
                 text_anchor = null,
                 book_time_ms = 18_450_000,
                 ebook_location_raw = null,
+                source_device_id = null,
+                device_name = null,
             )
             database.positionQueries.upsertRemotePosition(
                 book_uuid = "book-1",
@@ -101,6 +103,8 @@ class AudiobookBookTimeMigrationTest {
                 position = null,
                 book_time_ms = 21_600_000,
                 ebook_location_raw = null,
+                source_device_id = null,
+                device_name = null,
             )
 
             // Then

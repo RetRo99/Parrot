@@ -8,6 +8,7 @@ import com.retro99.sync.domain.ProgressKind
 import com.retro99.sync.domain.ProgressMutation
 import com.retro99.sync.domain.ProgressPushResult
 import com.retro99.sync.domain.ProgressSnapshot
+import com.retro99.sync.domain.ProgressSourceDevice
 import com.retro99.sync.domain.ProgressSyncTransport
 import com.retro99.sync.domain.ProgressTransportCapabilities
 import com.retro99.sync.domain.RemoteProgressSnapshot
@@ -149,6 +150,9 @@ class ParrotCloudProgressTransport(
                         bookUuid = remoteBookId,
                         libraryBookId = remoteBookId,
                     ),
+                    sourceDevice = sourceDevice?.let { device ->
+                        ParrotCloudSourceDevice(id = device.id, name = device.name)
+                    },
                 ),
             ),
             baseRevision = baseVersion?.toLongOrNull(),
@@ -170,6 +174,9 @@ class ParrotCloudProgressTransport(
             version = revision?.toString(),
             observedAt = position.updatedAt ?: position.createdAt,
             marker = revision?.toString(),
+            sourceDevice = sourceDevice?.let { device ->
+                ProgressSourceDevice(id = device.id, name = device.name)
+            },
         )
     }
 

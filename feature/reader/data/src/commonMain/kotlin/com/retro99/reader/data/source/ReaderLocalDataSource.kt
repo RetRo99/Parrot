@@ -192,13 +192,42 @@ class ReaderLocalDataSource(
 private fun ReaderSettingsEntity.toReaderSettingsMutation(): ReaderSettingsMutation {
     return ReaderSettingsMutation(
         settings = this,
-        outboxEntry = SyncOutboxEntry.new(
-            entityType = SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS,
-            entityId = key,
-            operation = SyncOutboxEntry.OPERATION_UPSERT,
-            payload = value,
-            baseRevision = remoteRevision,
-        ),
+        outboxEntry = if (isCloudSyncable()) {
+            SyncOutboxEntry.new(
+                entityType = SyncOutboxEntry.ENTITY_TYPE_READER_SETTINGS,
+                entityId = key,
+                operation = SyncOutboxEntry.OPERATION_UPSERT,
+                payload = value,
+                baseRevision = remoteRevision,
+            )
+        } else {
+            null
+        },
     )
 }
 
+/** Voice IDs are platform-specific; custom fonts themselves are stored on-device. */
+private fun ReaderSettingsEntity.isCloudSyncable(): Boolean = when (key) {
+    "tts_voice_id" -> false
+    "font_family" -> value in PORTABLE_FONT_FAMILY_VALUES
+    else -> true
+}
+
+private val PORTABLE_FONT_FAMILY_VALUES = setOf(
+    "\"default\"",
+    "\"serif\"",
+    "\"sans-serif\"",
+    "\"cursive\"",
+    "\"fantasy\"",
+    "\"monospace\"",
+    "\"AccessibleDfA\"",
+    "\"IA Writer Duospace\"",
+    "\"OpenDyslexic\"",
+    "\"Droid Sans\"",
+    "\"Atkinson Hyperlegible\"",
+    "\"Literata\"",
+    "\"Merriweather\"",
+    "\"Source Serif 4\"",
+    "\"Noto Sans\"",
+    "\"Noto Serif\"",
+)

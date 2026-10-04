@@ -35,6 +35,10 @@ class ParrotCloudProgressPayloadMapperTest {
                 totalProgression = 0.1,
                 position = 4,
             ),
+            sourceDevice = com.retro99.server.api.SourceDeviceIdentity(
+                id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                name = "Pixel Tablet",
+            ),
         )
 
         // When
@@ -45,8 +49,10 @@ class ParrotCloudProgressPayloadMapperTest {
         assertEquals(BOOK_ID, payload.position.bookUuid)
         assertEquals(PARROT_CLOUD_SERVER_ID, payload.position.serverId)
         assertEquals(0.1, payload.position.totalProgression)
+        assertEquals("Pixel Tablet", payload.sourceDevice?.name)
         val encoded = Json.Default.encodeToString(payload)
         assertTrue("\"library_book_id\":\"$BOOK_ID\"" in encoded)
+        assertTrue("\"source_device\"" in encoded)
         assertFalse("cloud_book_id" in encoded)
     }
 
@@ -67,6 +73,7 @@ class ParrotCloudProgressPayloadMapperTest {
         // Then
         assertEquals(BOOK_ID, payload.libraryBookId)
         assertEquals(0.5, payload.position.progression)
+        assertEquals(null, payload.sourceDevice)
     }
 
     private companion object {

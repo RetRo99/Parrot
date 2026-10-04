@@ -283,6 +283,7 @@ class ParrotCloudBookLinkSyncTest {
         val applier = ParrotCloudLibraryMutationApplier(
             LibraryBookSyncApplier(libraryBooks),
             classUnderTest,
+            testReaderSettingsSync(),
             testSavedItemSync(),
         )
         val decisionEntry = linkEntry("library:b1|storyteller:s1").copy(
@@ -302,6 +303,7 @@ class ParrotCloudBookLinkSyncTest {
     private fun applier() = ParrotCloudLibraryMutationApplier(
         LibraryBookSyncApplier(ParrotTestLibraryBooksDatabase()),
         classUnderTest,
+        testReaderSettingsSync(),
         testSavedItemSync(),
     )
 

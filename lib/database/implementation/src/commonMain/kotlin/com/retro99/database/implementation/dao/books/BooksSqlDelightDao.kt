@@ -599,6 +599,8 @@ internal class BooksSqlDelightDao(
                 total_progression = position.totalProgression,
                 book_time_ms = position.bookTimeMs,
                 ebook_location_raw = position.ebookLocationRaw,
+                source_device_id = position.sourceDeviceId,
+                device_name = position.deviceName,
                 position = position.position?.toLong(),
                 origin = position.origin,
                 observed_at = position.observedAt,
@@ -634,6 +636,8 @@ internal class BooksSqlDelightDao(
                     total_progression = position.totalProgression,
                     book_time_ms = position.bookTimeMs,
                     ebook_location_raw = position.ebookLocationRaw,
+                    source_device_id = position.sourceDeviceId,
+                    device_name = position.deviceName,
                     position = position.position?.toLong(),
                     origin = position.origin,
                     observed_at = position.observedAt,
@@ -684,6 +688,8 @@ internal class BooksSqlDelightDao(
                 total_progression = position.totalProgression,
                 book_time_ms = position.bookTimeMs,
                 ebook_location_raw = position.ebookLocationRaw,
+                source_device_id = position.sourceDeviceId,
+                device_name = position.deviceName,
                 position = position.position?.toLong(),
             )
         }
@@ -732,6 +738,8 @@ internal class BooksSqlDelightDao(
                         origin = row.origin,
                         observedAt = row.observed_at,
                         textAnchor = row.text_anchor,
+                        sourceDeviceId = row.source_device_id,
+                        deviceName = row.device_name,
                     )
                 }
         }
@@ -779,6 +787,8 @@ internal class BooksSqlDelightDao(
                     origin = row.origin,
                     observedAt = row.observed_at,
                     textAnchor = row.text_anchor,
+                    sourceDeviceId = row.source_device_id,
+                    deviceName = row.device_name,
                 )
             }
         }
@@ -819,6 +829,8 @@ internal class BooksSqlDelightDao(
                         origin = it.origin,
                         observedAt = it.observed_at,
                         textAnchor = it.text_anchor,
+                        sourceDeviceId = it.source_device_id,
+                        deviceName = it.device_name,
                     )
                 }
             }
@@ -866,6 +878,8 @@ internal class BooksSqlDelightDao(
                         origin = row.origin,
                         observedAt = row.observed_at,
                         textAnchor = row.text_anchor,
+                        sourceDeviceId = row.source_device_id,
+                        deviceName = row.device_name,
                     )
                 }
             }
@@ -897,6 +911,8 @@ internal class BooksSqlDelightDao(
             origin = origin,
             observedAt = observed_at,
             textAnchor = text_anchor,
+            sourceDeviceId = source_device_id,
+            deviceName = device_name,
         )
     }
 
@@ -922,6 +938,8 @@ internal class BooksSqlDelightDao(
             bookTimeMs = book_time_ms,
             ebookLocationRaw = ebook_location_raw,
             position = position?.toInt(),
+            sourceDeviceId = source_device_id,
+            deviceName = device_name,
         )
     }
 

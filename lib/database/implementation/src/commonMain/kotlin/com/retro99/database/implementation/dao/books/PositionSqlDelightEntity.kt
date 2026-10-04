@@ -27,4 +27,6 @@ data class PositionSqlDelightEntity(
     override val textAnchor: String? = null,
     override val bookTimeMs: Long? = null,
     override val ebookLocationRaw: String? = null,
+    override val sourceDeviceId: String? = null,
+    override val deviceName: String? = null,
 ) : PositionEntity

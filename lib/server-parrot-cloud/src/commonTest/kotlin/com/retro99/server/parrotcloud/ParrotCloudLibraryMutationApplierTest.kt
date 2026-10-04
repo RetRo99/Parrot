@@ -18,6 +18,7 @@ class ParrotCloudLibraryMutationApplierTest {
         val applier = ParrotCloudLibraryMutationApplier(
             LibraryBookSyncApplier(database),
             ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+            testReaderSettingsSync(),
             testSavedItemSync(),
         )
 
@@ -42,6 +43,7 @@ class ParrotCloudLibraryMutationApplierTest {
         val applier = ParrotCloudLibraryMutationApplier(
             LibraryBookSyncApplier(database),
             ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+            testReaderSettingsSync(),
             testSavedItemSync(),
         )
 
@@ -66,6 +68,7 @@ class ParrotCloudLibraryMutationApplierTest {
         val applier = ParrotCloudLibraryMutationApplier(
             LibraryBookSyncApplier(database),
             ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+            testReaderSettingsSync(),
             testSavedItemSync(),
         )
 
@@ -91,6 +94,7 @@ class ParrotCloudLibraryMutationApplierTest {
         val applier = ParrotCloudLibraryMutationApplier(
             LibraryBookSyncApplier(database),
             ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+            testReaderSettingsSync(),
             testSavedItemSync(),
         )
 
@@ -131,6 +135,7 @@ class ParrotCloudLibraryMutationApplierTest {
         val applier = ParrotCloudLibraryMutationApplier(
             LibraryBookSyncApplier(database),
             ParrotCloudBookLinkSync(ParrotTestBookLinksDatabase()),
+            testReaderSettingsSync(),
             testSavedItemSync(),
         )
         val serverBook = bookPayload().copy(libraryBookId = EXISTING_ID, remoteRevision = 7L)

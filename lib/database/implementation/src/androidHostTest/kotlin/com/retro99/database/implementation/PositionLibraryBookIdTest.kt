@@ -73,6 +73,7 @@ class PositionLibraryBookIdTest {
         database.positionQueries.upsertPosition(
             bookUuid, bookUuid, 0, null, null, "a", "a", "c1", null, null, null,
             null, null, null, 0.1, null, null, 0.1, null, "user", null, null, null, null,
+            null, null,
         )
     }
 

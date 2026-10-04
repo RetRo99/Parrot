@@ -4,5 +4,6 @@ import com.retro99.database.api.sync.SyncOutboxEntry
 
 data class ReaderSettingsMutation(
     val settings: ReaderSettingsEntity,
-    val outboxEntry: SyncOutboxEntry,
+    /** Null for device-specific preferences that are stored locally but never cloud-synced. */
+    val outboxEntry: SyncOutboxEntry?,
 )

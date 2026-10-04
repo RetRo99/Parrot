@@ -4,10 +4,15 @@ import com.retro99.database.api.statistics.BookReadingStatsEntity
 import com.retro99.database.api.statistics.DailyReadingTimeEntity
 import com.retro99.database.api.statistics.ReadingSessionDatabase
 import com.retro99.database.api.statistics.ReadingSessionEntity
+import com.retro99.database.api.reader.ReaderSettingsDatabase
+import com.retro99.database.api.reader.ReaderSettingsEntity
+import com.retro99.database.api.reader.ReaderSettingsMutation
 import com.retro99.database.api.sync.SyncCheckpoint
 import com.retro99.database.api.sync.SyncCheckpointDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
 import com.retro99.database.api.sync.SyncOutboxEntry
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 internal data class TestReadingSession(
     override val id: Long,
@@ -148,6 +153,16 @@ internal class RecordingSyncOutboxDatabase : SyncOutboxDatabase {
         enqueued.clear()
     }
 }
+
+internal fun testReaderSettingsSync(): ParrotCloudReaderSettingsSync = ParrotCloudReaderSettingsSync(
+    readerSettingsDatabase = object : ReaderSettingsDatabase {
+        override suspend fun getAll(): List<ReaderSettingsEntity> = emptyList()
+        override fun observeAll(): Flow<List<ReaderSettingsEntity>> = emptyFlow()
+        override suspend fun upsertSettings(settings: List<ReaderSettingsEntity>) = Unit
+        override suspend fun upsertSettingsWithMutations(mutations: List<ReaderSettingsMutation>) = Unit
+    },
+    syncOutboxDatabase = RecordingSyncOutboxDatabase(),
+)
 
 internal class InMemorySyncCheckpointDatabase : SyncCheckpointDatabase {
     private val checkpoints = mutableMapOf<Pair<String, String>, SyncCheckpoint>()

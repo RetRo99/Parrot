@@ -118,4 +118,18 @@ data class ServerPosition(
     val ebookLocationRaw: String? = null,
     @Transient
     val deviceName: String? = null,
+    @Transient
+    val sourceDeviceId: String? = null,
 )
+
+/** A persistent, installation-scoped identity used only to label reading-position metadata. */
+@Serializable
+data class SourceDeviceIdentity(
+    val id: String,
+    val name: String? = null,
+)
+
+fun interface InstallationDeviceIdentity {
+    /** Returns the locally persisted UUID and the current display-only platform/model label. */
+    fun getOrCreate(): SourceDeviceIdentity
+}

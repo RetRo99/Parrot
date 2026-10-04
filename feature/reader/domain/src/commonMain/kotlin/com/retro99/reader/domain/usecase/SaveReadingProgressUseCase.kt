@@ -6,6 +6,7 @@ import com.retro99.base.result.AppError
 import com.retro99.base.result.CompletableResult
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.server.api.AuthenticatedRepositoryProvider
+import com.retro99.server.api.InstallationDeviceIdentity
 import com.retro99.server.api.ServerPosition
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
@@ -22,6 +23,7 @@ import kotlin.time.Clock
 @Factory
 class SaveReadingProgressUseCase(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
+    @Provided private val installationDeviceIdentity: InstallationDeviceIdentity,
 ) {
     suspend operator fun invoke(progress: PositionDomainModel): CompletableResult {
         val serverRepository = repositoryProvider.getReaderRepository(progress.serverId)
@@ -29,7 +31,15 @@ class SaveReadingProgressUseCase(
 
         return serverRepository.saveLocalPositionWithSync(
             bookUuid = progress.bookUuid,
-            position = progress.toServerPosition(),
+            position = progress.toServerPosition().withOriginatingDevice(),
+        )
+    }
+
+    private fun ServerPosition.withOriginatingDevice(): ServerPosition {
+        val identity = installationDeviceIdentity.getOrCreate()
+        return copy(
+            deviceName = identity.name,
+            sourceDeviceId = identity.id,
         )
     }
 }
