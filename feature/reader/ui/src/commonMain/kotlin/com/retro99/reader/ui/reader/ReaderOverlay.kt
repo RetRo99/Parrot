@@ -715,6 +715,7 @@ internal fun ReaderOverlayContent(
                 onStartSleepTimer = { durationMs -> intentDispatcher(ReaderIntent.StartSleepTimer(durationMs)) },
                 onCancelSleepTimer = { intentDispatcher(ReaderIntent.CancelSleepTimer) },
                 onAudioOnly = { intentDispatcher(ReaderIntent.ToggleAudioOnlyMode) },
+                onBookmark = { onSaved(SavedAction.BookmarkSentence) },
                 onSelectSource = { narration ->
                     intentDispatcher(
                         ReaderIntent.SwitchListenSource(

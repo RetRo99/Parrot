@@ -133,6 +133,7 @@ internal class ReaderSavedItems(
     fun handle(action: SavedAction) {
         when (action) {
             SavedAction.ToggleBookmark -> toggleBookmark()
+            SavedAction.BookmarkSentence -> addBookmark()
             SavedAction.BarUndo -> undoBar()
             SavedAction.BarAddNote -> (state().bar as? SavedBar.BookmarkAdded)?.let { bar ->
                 update { it.copy(bar = null, noteEditorId = bar.itemId) }
@@ -209,6 +210,10 @@ internal class ReaderSavedItems(
             remove(existing.id)
             return
         }
+        addBookmark()
+    }
+
+    private fun addBookmark() {
         scope.launch {
             try {
                 val bookmark = newBookmark() ?: return@launch

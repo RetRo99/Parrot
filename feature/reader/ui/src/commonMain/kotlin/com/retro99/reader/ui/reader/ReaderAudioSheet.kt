@@ -1,5 +1,7 @@
 package com.retro99.reader.ui.reader
 
+import resources.translations.saved_listening_bookmark
+import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -165,6 +167,8 @@ internal data class AudioSheetActions(
     val onCancelSleepTimer: () -> Unit,
     val onAudioOnly: () -> Unit,
     val onSelectSource: (Boolean) -> Unit,
+    /** Bookmarks the sentence being read. */
+    val onBookmark: () -> Unit = {},
 )
 
 @Composable
@@ -215,7 +219,9 @@ internal fun ReaderAudioSheet(
                 } else {
                     DeviceVoiceBody(ui, hasNarration, actions)
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
+                BookmarkSentenceRow(ui.isEink, actions.onBookmark)
+                Spacer(Modifier.height(8.dp))
                 SleepTimerSection(ui, actions)
                 if (ui.isNarration) {
                     Spacer(Modifier.height(12.dp))
@@ -774,6 +780,31 @@ private fun AudioOnlyRow(checked: Boolean, isEink: Boolean, onToggle: () -> Unit
             )
         }
         Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+@Composable
+private fun BookmarkSentenceRow(isEink: Boolean, onClick: () -> Unit) {
+    val colors = Ember.colors
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .clickable(role = Role.Button, onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.material3.Icon(
+            androidx.compose.material.icons.Icons.Outlined.BookmarkAdd,
+            contentDescription = null,
+            tint = if (isEink) colors.ink else colors.accentText,
+        )
+        Spacer(Modifier.width(14.dp))
+        Text(
+            stringResource(StringRes.saved_listening_bookmark),
+            color = colors.ink,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

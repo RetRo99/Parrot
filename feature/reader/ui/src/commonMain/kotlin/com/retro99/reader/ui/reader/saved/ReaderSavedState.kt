@@ -77,6 +77,9 @@ sealed interface SavedEffect {
 /** Everything the reader can do with saved items. */
 sealed interface SavedAction {
     data object ToggleBookmark : SavedAction
+
+    /** From the listening panel: always adds a bookmark at the sentence being read. */
+    data object BookmarkSentence : SavedAction
     data object BarUndo : SavedAction
     data object BarAddNote : SavedAction
     data object BarDismiss : SavedAction
