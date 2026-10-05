@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -54,6 +55,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -78,6 +81,7 @@ import resources.translations.reader_audio_only
 import resources.translations.reader_audio_only_description
 import resources.translations.reader_audio_pitch
 import resources.translations.reader_audio_pitch_normal
+import resources.translations.reader_tts_preparing
 import resources.translations.reader_audio_previous_sentence
 import resources.translations.reader_toc_next_chapter
 import resources.translations.reader_toc_previous_chapter
@@ -479,7 +483,11 @@ private fun Transport(
 ) {
     val colors = Ember.colors
     val label = stringResource(
-        if (ui.isPlaying) StringRes.reader_overlay_pause else StringRes.reader_overlay_play,
+        when {
+            ui.isLoading -> StringRes.reader_tts_preparing
+            ui.isPlaying -> StringRes.reader_overlay_pause
+            else -> StringRes.reader_overlay_play
+        },
     )
     Row(
         Modifier.fillMaxWidth(),
@@ -500,12 +508,20 @@ private fun Transport(
                 .clip(CircleShape)
                 .background(if (ui.isEink) colors.ink else colors.accent),
         ) {
-            Icon(
-                if (ui.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = label,
-                tint = if (ui.isEink) colors.surface else colors.onAccent,
-                modifier = Modifier.size(34.dp),
-            )
+            if (ui.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp).semantics { contentDescription = label },
+                    color = if (ui.isEink) colors.surface else colors.onAccent,
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                Icon(
+                    if (ui.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = label,
+                    tint = if (ui.isEink) colors.surface else colors.onAccent,
+                    modifier = Modifier.size(34.dp),
+                )
+            }
         }
         end()
         ChapterSkipButton(

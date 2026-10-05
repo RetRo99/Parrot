@@ -73,6 +73,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -180,6 +181,7 @@ import resources.translations.reader_overlay_narration_unavailable
 import resources.translations.reader_overlay_search
 import resources.translations.reader_overlay_start_listening
 import resources.translations.reader_overlay_voice
+import resources.translations.reader_tts_preparing
 import resources.translations.reader_page_of_pages
 import resources.translations.reader_search_empty
 import resources.translations.reader_search_failed
@@ -302,7 +304,11 @@ internal fun ReaderOverlayContent(
     val nowPlaying = if (viewState.isListening) {
         val isNarration = viewState.listenSource == ListenSource.NARRATION
         val stateText = stringResource(
-            if (viewState.isPlaying) StringRes.reader_overlay_pause else StringRes.reader_overlay_play,
+            when {
+                viewState.isNarrationLoading -> StringRes.reader_tts_preparing
+                viewState.isPlaying -> StringRes.reader_overlay_pause
+                else -> StringRes.reader_overlay_play
+            },
         )
         val voiceName = selectedVoice?.name?.substringBefore('(')?.trim()
             ?: stringResource(StringRes.reader_overlay_voice)
@@ -973,7 +979,11 @@ private fun NowPlayingCard(
     val colors = Ember.colors
     val shape = RoundedCornerShape(18.dp)
     val playLabel = stringResource(
-        if (nowPlaying.isPlaying) StringRes.reader_overlay_pause else StringRes.reader_overlay_play,
+        when {
+            nowPlaying.isLoading -> StringRes.reader_tts_preparing
+            nowPlaying.isPlaying -> StringRes.reader_overlay_pause
+            else -> StringRes.reader_overlay_play
+        },
     )
     val openLabel = stringResource(StringRes.reader_overlay_open_player)
     Column(
@@ -1064,11 +1074,19 @@ private fun NowPlayingCard(
                     .clip(CircleShape)
                     .background(if (isEink) colors.ink else colors.accent),
             ) {
-                Icon(
-                    if (nowPlaying.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = playLabel,
-                    tint = if (isEink) colors.surface else colors.onAccent,
-                )
+                if (nowPlaying.isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(26.dp).semantics { contentDescription = playLabel },
+                        color = if (isEink) colors.surface else colors.onAccent,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Icon(
+                        if (nowPlaying.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = playLabel,
+                        tint = if (isEink) colors.surface else colors.onAccent,
+                    )
+                }
             }
             CardTransportButton(
                 icon = if (nowPlaying.isNarration) {
@@ -1157,7 +1175,11 @@ internal fun ReaderMiniPlayer(
 ) {
     val colors = Ember.colors
     val playLabel = stringResource(
-        if (nowPlaying.isPlaying) StringRes.reader_overlay_pause else StringRes.reader_overlay_play,
+        when {
+            nowPlaying.isLoading -> StringRes.reader_tts_preparing
+            nowPlaying.isPlaying -> StringRes.reader_overlay_pause
+            else -> StringRes.reader_overlay_play
+        },
     )
     Surface(modifier = modifier.fillMaxWidth(), color = colors.surface) {
         Column {
@@ -1180,11 +1202,19 @@ internal fun ReaderMiniPlayer(
                     enabled = !nowPlaying.isLoading,
                     modifier = Modifier.size(48.dp),
                 ) {
-                    Icon(
-                        if (nowPlaying.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = playLabel,
-                        tint = colors.ink,
-                    )
+                    if (nowPlaying.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp).semantics { contentDescription = playLabel },
+                            color = colors.ink,
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Icon(
+                            if (nowPlaying.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = playLabel,
+                            tint = colors.ink,
+                        )
+                    }
                 }
                 Text(
                     nowPlaying.miniLabel,
