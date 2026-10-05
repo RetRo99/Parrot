@@ -128,3 +128,47 @@ headroom, and 8 steps (r about 0.61) also keeps up.
 
 Still open: whether 8 vs 6 is audible blind (use the blind A/B/C check), and whether the same
 verdict holds on the Nova Air's audio (it should be identical, since threads do not change sound).
+
+## One-word latency and single-word clips (2026-10-05)
+
+Measurement for the reader's "speak word" feature (tooling commit `cc20e900`). **Xiaomi only so
+far; the Nova Air one-word run is still pending.** Same tool, debug build (now arm64-only),
+run 2026-10-05 19:05/19:07-19:10, thermal status 0, not charging. Words are synthesized at rate
+1.0, pitch 1.0, exactly as the feature will. `warm` = 5 repeats of the same word ("hello");
+`distinct` = 36 different words (the listening-check list). Cold = the first word right after
+engine load, where load includes the app's warm-up pass (matching `ensureLoaded`).
+
+Engine load: Supertonic 0.87 s load + 0.99 s warm-up, Kokoro 1.5 s + 0.95 s (4 threads both).
+System engine bind 0.31 s in a cold process (14 ms when the engine is already bound):
+Google TTS, voice `en-US-language`, `synthesizeToFile`.
+
+| engine | cold | warm median (same word) | distinct words median (range) | clip audio med |
+|---|---|---|---|---|
+| system | 502 ms | 1-3 ms | 56 ms (35-91) | 677 ms |
+| supertonic (8 steps) | 1122 ms | 1093 ms | 1091 ms (960-1143) | 1358 ms |
+| kokoro | 1345 ms | 1350 ms | 1406 ms (895-2264) | 721 ms |
+
+### Findings
+
+- **The system voice is effectively immediate**: ~500 ms once, ~60 ms for a new word after that
+  (the engine additionally caches identical text, which is why same-word repeats measure 1-3 ms).
+  With the app's own WAV cache, repeat taps cost only player start.
+- **Neural fixed cost is real but small on the phone**: about 1.1 s Supertonic, 1.35-1.4 s
+  Kokoro, roughly independent of word length (Supertonic 0.96-1.14 s across all 36 words).
+  Kokoro's outliers are digits/acronyms ("1984" 2.2 s, "HTML" 1.8 s).
+- **Cold engine** (never loaded in the session) adds load + warm-up: ~1.9 s Supertonic, ~2.5 s
+  Kokoro on top, so ~3 s / ~3.9 s tap-to-audio worst case on this phone before caching.
+- **Padding**: Supertonic clips carry ~0.32-0.36 s leading silence and ~0.5 s trailing silence
+  (median); Kokoro ~0.12/0.14 s; system ~0.02/0.21 s. Trimming the silence before caching words
+  would cut Supertonic's perceived wait by ~0.3 s. Recommended for the feature.
+- **No clipped endings anywhere**: all 216 clips (36 words x plain/period x 3 engines) decay to
+  silence (max tail20ms/peak 0.002, ends_loud 0/216, zero full-scale samples). The trailing
+  full-stop variant changes nothing measurable, so **the feature should not append a period**.
+- Signal analysis (envelopes) shows sensible multi-syllable structure on the word list; digits
+  and acronyms look letter-spelled rather than word-like ("1984", "HTML"), as expected.
+- **Honesty note**: this is waveform analysis, not a human listening pass. Prosody quality and
+  heteronym sense ("read", "wound", "record" ...) cannot be judged from the signal; the clips are
+  saved on-device in the app's Word clips section for a human check.
+
+Raw numbers: `words-<stamp>.csv` and `samples/<stamp>/samples.csv` in the app's external files
+folder; 216 WAVs under `samples/20261005-190{756,800,950}/`.
