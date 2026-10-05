@@ -578,34 +578,57 @@ internal class BooksSqlDelightDao(
 
     suspend fun upsertPosition(position: PositionSqlDelightEntity) {
         withContext(Dispatchers.IO) {
-            positionQueries.upsertPosition(
-                book_uuid = position.bookUuid,
-                library_book_id = position.bookUuid,
-                local_generation = position.localGeneration,
-                remote_revision = position.remoteRevision,
-                timestamp = position.timestamp,
-                created_at = position.createdAt,
-                updated_at = position.updatedAt,
-                locator_href = position.locatorHref,
-                locator_type = position.locatorType,
-                locator_title = position.locatorTitle,
-                locator_target = position.locatorTarget?.toLong(),
-                css_selector = position.cssSelector,
-                audio_timestamp_ms = position.audioTimestampMs,
-                chapter_index = position.chapterIndex?.toLong(),
-                progression = position.progression,
-                total_chapters = position.totalChapters?.toLong(),
-                total_duration_ms = position.totalDurationMs,
-                total_progression = position.totalProgression,
-                book_time_ms = position.bookTimeMs,
-                ebook_location_raw = position.ebookLocationRaw,
-                source_device_id = position.sourceDeviceId,
-                device_name = position.deviceName,
-                position = position.position?.toLong(),
-                origin = position.origin,
-                observed_at = position.observedAt,
-                text_anchor = position.textAnchor,
-            )
+            insertPosition(position)
+        }
+    }
+
+    private fun insertPosition(position: PositionSqlDelightEntity) {
+        positionQueries.upsertPosition(
+            book_uuid = position.bookUuid,
+            library_book_id = position.bookUuid,
+            local_generation = position.localGeneration,
+            remote_revision = position.remoteRevision,
+            timestamp = position.timestamp,
+            created_at = position.createdAt,
+            updated_at = position.updatedAt,
+            locator_href = position.locatorHref,
+            locator_type = position.locatorType,
+            locator_title = position.locatorTitle,
+            locator_target = position.locatorTarget?.toLong(),
+            css_selector = position.cssSelector,
+            audio_timestamp_ms = position.audioTimestampMs,
+            chapter_index = position.chapterIndex?.toLong(),
+            progression = position.progression,
+            total_chapters = position.totalChapters?.toLong(),
+            total_duration_ms = position.totalDurationMs,
+            total_progression = position.totalProgression,
+            book_time_ms = position.bookTimeMs,
+            ebook_location_raw = position.ebookLocationRaw,
+            source_device_id = position.sourceDeviceId,
+            device_name = position.deviceName,
+            position = position.position?.toLong(),
+            origin = position.origin,
+            observed_at = position.observedAt,
+            text_anchor = position.textAnchor,
+        )
+    }
+
+    suspend fun resolvePositionConflict(
+        position: PositionSqlDelightEntity,
+        mutation: SyncOutboxEntry?,
+        expectedLocalGeneration: Long,
+        destinationId: String?,
+    ): Boolean = withContext(Dispatchers.IO) {
+        database.transactionWithResult {
+            val stored = positionQueries.getPositionByBookUuid(position.bookUuid).executeAsOneOrNull()
+            if (stored == null || stored.local_generation != expectedLocalGeneration) {
+                return@transactionWithResult false
+            }
+            insertPosition(position)
+            syncOutboxQueries.deleteSupersededProgress(position.bookUuid, destinationId)
+            positionQueries.deleteRemotePosition(position.bookUuid)
+            mutation?.let(syncOutboxQueries::enqueue)
+            true
         }
     }
 
@@ -615,35 +638,15 @@ internal class BooksSqlDelightDao(
     ) {
         withContext(Dispatchers.IO) {
             database.transaction {
-                positionQueries.upsertPosition(
-                    book_uuid = position.bookUuid,
-                    library_book_id = position.bookUuid,
-                    local_generation = position.localGeneration,
-                    remote_revision = position.remoteRevision,
-                    timestamp = position.timestamp,
-                    created_at = position.createdAt,
-                    updated_at = position.updatedAt,
-                    locator_href = position.locatorHref,
-                    locator_type = position.locatorType,
-                    locator_title = position.locatorTitle,
-                    locator_target = position.locatorTarget?.toLong(),
-                    css_selector = position.cssSelector,
-                    audio_timestamp_ms = position.audioTimestampMs,
-                    chapter_index = position.chapterIndex?.toLong(),
-                    progression = position.progression,
-                    total_chapters = position.totalChapters?.toLong(),
-                    total_duration_ms = position.totalDurationMs,
-                    total_progression = position.totalProgression,
-                    book_time_ms = position.bookTimeMs,
-                    ebook_location_raw = position.ebookLocationRaw,
-                    source_device_id = position.sourceDeviceId,
-                    device_name = position.deviceName,
-                    position = position.position?.toLong(),
-                    origin = position.origin,
-                    observed_at = position.observedAt,
-                    text_anchor = position.textAnchor,
+                // Two writers can read the same generation before entering this transaction.
+                // Allocate it here so a stale conflict response can never match a newer save.
+                val stored = positionQueries.getPositionByBookUuid(position.bookUuid).executeAsOneOrNull()
+                val generation = maxOf(
+                    position.localGeneration,
+                    (stored?.local_generation ?: 0L) + 1L,
                 )
-                syncOutboxQueries.enqueue(mutation)
+                insertPosition(position.copy(localGeneration = generation))
+                syncOutboxQueries.enqueue(mutation.copy(localGeneration = generation))
             }
         }
     }

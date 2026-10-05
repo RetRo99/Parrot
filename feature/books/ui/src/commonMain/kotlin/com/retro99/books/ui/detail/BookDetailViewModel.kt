@@ -43,6 +43,9 @@ import com.retro99.reader.domain.usecase.ObserveDownloadStateUseCase
 import com.retro99.reader.domain.usecase.FindLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.ResolveLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase
+import com.retro99.reader.domain.usecase.GetReadingProgressWithConflictUseCase
+import com.retro99.reader.domain.model.ReadingProgressResult
+import com.github.michaelbull.result.getOrElse
 import com.retro99.server.api.ParrotCloudLibraryState
 import com.retro99.server.api.ServerRegistry
 import com.retro99.user.api.UserRegistry
@@ -83,6 +86,7 @@ class BookDetailViewModel(
     @Provided private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     @Provided private val observeFavoriteUseCase: ObserveFavoriteUseCase,
     @Provided private val resolvePositionConflictUseCase: ResolvePositionConflictUseCase,
+    @Provided private val getReadingProgressWithConflictUseCase: GetReadingProgressWithConflictUseCase,
     @Provided private val deleteBookFromDeviceUseCase: DeleteBookFromDeviceUseCase,
     @Provided private val removeFromParrotCloudUseCase: RemoveFromParrotCloudUseCase,
     @Provided private val bookFileTransferManager: BookFileTransferManager,
@@ -267,7 +271,9 @@ class BookDetailViewModel(
             }
 
             BookDetailIntent.OnConflictDialogDismissed -> {
-                updateState { it.copy(pendingOpenBookType = null) }
+                if (!viewState.value.isResolvingConflict) {
+                    updateState { it.copy(pendingOpenBookType = null, positionConflict = null) }
+                }
             }
 
             BookDetailIntent.OnLinkedResumeContinueClicked -> answerLinkedResume(accept = true)
@@ -353,39 +359,31 @@ class BookDetailViewModel(
     }
 
     private fun resolveConflictWithLocal() {
-        viewModelScope.launch {
-            val pendingBookType = viewState.value.pendingOpenBookType
-            val bookTitle = viewState.value.book?.title ?: ""
-            updateState { it.copy(isResolvingConflict = true, conflictResolutionError = null) }
-            analytics.trackUsageOperation(
-                UsageOperation.Conflict, UsageAction.Local, "book_detail",
-                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
-            ) { resolvePositionConflictUseCase.useLocal(serverId, bookUuid) }
-                .onSuccess {
-                    // Navigate to reader if user was trying to open a book
-                    pendingBookType?.let { bookType ->
-                        updateState { it.copy(pendingOpenBookType = null) }
-                        navigateToReader(bookType, bookTitle)
-                    }
-                }
-                .onFailure { error ->
-                    error.log(analytics, "BookDetailViewModel: Failed to resolve conflict with local")
-                    updateState { it.copy(conflictResolutionError = error, pendingOpenBookType = null) }
-                }
-            updateState { it.copy(isResolvingConflict = false) }
-        }
+        resolveConflict(useLocal = true)
     }
 
     private fun resolveConflictWithRemote() {
+        resolveConflict(useLocal = false)
+    }
+
+    private fun resolveConflict(useLocal: Boolean) {
+        val conflict = viewState.value.positionConflict ?: return
+        if (viewState.value.isResolvingConflict) return
+        updateState { it.copy(isResolvingConflict = true, conflictResolutionError = null) }
         viewModelScope.launch {
             val pendingBookType = viewState.value.pendingOpenBookType
             val bookTitle = viewState.value.book?.title ?: ""
-            updateState { it.copy(isResolvingConflict = true, conflictResolutionError = null) }
             analytics.trackUsageOperation(
-                UsageOperation.Conflict, UsageAction.Remote, "book_detail",
-                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
-            ) { resolvePositionConflictUseCase.useRemote(serverId, bookUuid) }
+                UsageOperation.Conflict, if (useLocal) UsageAction.Local else UsageAction.Remote, "book_detail",
+                outcome = { if (it.isOk) {
+                    if (useLocal) ProductOutcome.Queued else ProductOutcome.Succeeded
+                } else ProductOutcome.Failed },
+            ) {
+                if (useLocal) resolvePositionConflictUseCase.useLocal(conflict)
+                else resolvePositionConflictUseCase.useRemote(conflict)
+            }
                 .onSuccess {
+                    updateState { it.copy(positionConflict = null) }
                     // Navigate to reader if user was trying to open a book
                     pendingBookType?.let { bookType ->
                         updateState { it.copy(pendingOpenBookType = null) }
@@ -393,8 +391,13 @@ class BookDetailViewModel(
                     }
                 }
                 .onFailure { error ->
-                    error.log(analytics, "BookDetailViewModel: Failed to resolve conflict with remote")
-                    updateState { it.copy(conflictResolutionError = error, pendingOpenBookType = null) }
+                    error.log(analytics, "BookDetailViewModel: Failed to resolve position conflict")
+                    val refreshed = getReadingProgressWithConflictUseCase(serverId, bookUuid)
+                        .getOrElse { null } as? ReadingProgressResult.Conflict
+                    updateState { it.copy(
+                        conflictResolutionError = error,
+                        positionConflict = refreshed ?: conflict,
+                    ) }
                 }
             updateState { it.copy(isResolvingConflict = false) }
         }
@@ -445,7 +448,13 @@ class BookDetailViewModel(
                 // conflict: it already weighs this copy's local and remote positions.
                 val offer = findLinkedResumeUseCase(serverId, bookUuid)
                 val state = viewState.value
-                val hasConflict = state.progressInfo?.hasConflict == true
+                val progress = getReadingProgressWithConflictUseCase(serverId, bookUuid)
+                    .getOrElse { error ->
+                        updateState { it.copy(conflictResolutionError = error) }
+                        return@launch
+                    }
+                val conflict = progress as? ReadingProgressResult.Conflict
+                val hasConflict = conflict != null
                 when (bookDetailOpenPrompt(offer, hasConflict)) {
                     BookDetailOpenPrompt.LinkedResume -> {
                         updateState { current ->
@@ -454,7 +463,14 @@ class BookDetailViewModel(
                     }
                     // Check for conflict - show dialog for user to resolve first
                     BookDetailOpenPrompt.SameCopyConflict -> {
-                        updateState { current -> current.copy(pendingOpenBookType = bookType) }
+                        val serverName = if (serverId == com.retro99.base.server.LOCAL_SERVER_ID ||
+                            serverId == PARROT_CLOUD_SERVER_ID) "Parrot Cloud"
+                        else serverRegistry.getServer(serverId)?.let { "${it.name} (${it.type.displayName})" }.orEmpty()
+                        updateState { current -> current.copy(
+                            pendingOpenBookType = bookType, positionConflict = conflict,
+                            conflictResolutionError = null,
+                            conflictServerName = serverName,
+                        ) }
                     }
                     BookDetailOpenPrompt.None -> navigateToReader(bookType, state.book?.title ?: "")
                 }

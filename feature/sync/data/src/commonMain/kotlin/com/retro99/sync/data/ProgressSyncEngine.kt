@@ -43,7 +43,9 @@ class ProgressSyncEngine(
         identityResolver: ProgressIdentityResolver = ProgressIdentityResolver.Default,
     ): ProgressPushSummary {
         val progressEntries = entries.filter { entry ->
-            entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION
+            entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION &&
+                syncOutboxDatabase.getPending(entry.cloudUserId ?: "")
+                    .any { it.mutationId == entry.mutationId }
         }
         if (progressEntries.isEmpty()) return ProgressPushSummary()
 
@@ -65,6 +67,11 @@ class ProgressSyncEngine(
         var unresolvedCount = 0
 
         progressEntries.forEach { entry ->
+            // A choice may have superseded this request while it was in flight. Its late
+            // response must not recreate a baseline or overwrite the chosen position.
+            val stillOutstanding = syncOutboxDatabase.getPending(entry.cloudUserId ?: "")
+                .any { it.mutationId == entry.mutationId }
+            if (!stillOutstanding) return@forEach
             when (val result = resultsByMutationId[entry.mutationId]) {
                 is ProgressPushResult.Accepted -> {
                     acknowledge(entry, result.version)
@@ -104,7 +111,9 @@ class ProgressSyncEngine(
         identityResolver: ProgressIdentityResolver = ProgressIdentityResolver.Default,
     ): ProgressPullOutcome {
         val identity = identityResolver.resolve(remote)
-        val pending = syncOutboxDatabase.getPending(accountId)
+        // A local choice can be queued after this pass bound the account. Protect those
+        // unbound writes too; the next pass will bind and deliver them.
+        val pending = syncOutboxDatabase.getPendingIncludingUnassigned(accountId)
         val hasPendingLocalProgress = pending.any { entry ->
             entry.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION &&
                 entry.entityId in setOfNotNull(
@@ -118,6 +127,7 @@ class ProgressSyncEngine(
         // Guard 3: re-pulling the same server snapshot leaves the stored row alone, including
         // its origin and observation time.
         if (!hasPendingLocalProgress && stored != null && stored.isSameSnapshotAs(remote)) {
+            positionDatabase.deleteRemotePosition(identity.localBookUuid)
             return ProgressPullOutcome.AppliedToLocal
         }
         val remotePosition = remote.toPositionEntity(
@@ -129,7 +139,9 @@ class ProgressSyncEngine(
             positionDatabase.upsertRemotePosition(remotePosition)
             ProgressPullOutcome.PreservedLocalProgress
         } else {
-            positionDatabase.upsertPosition(remotePosition)
+            positionDatabase.upsertPosition(remotePosition.copy(
+                localGeneration = (stored?.localGeneration ?: -1L) + 1L,
+            ))
             positionDatabase.deleteRemotePosition(identity.localBookUuid)
             ProgressPullOutcome.AppliedToLocal
         }
@@ -235,15 +247,30 @@ class ProgressSyncEngine(
     ) {
         val identity = identityResolver.resolve(remote)
         val stored = positionDatabase.getPositionByBookUuid(identity.localBookUuid)
-        if (stored?.origin == PositionEntity.ORIGIN_LINKED_COPY) {
+        val pending = syncOutboxDatabase.getPending(entry.cloudUserId ?: "")
+        val hasNewerWrite = pending.any {
+            it.entityType == entry.entityType && it.entityId == entry.entityId &&
+                it.mutationId != entry.mutationId && it.localGeneration > entry.localGeneration
+        }
+        if (stored?.origin == PositionEntity.ORIGIN_LINKED_COPY &&
+            stored.localGeneration == entry.localGeneration && !hasNewerWrite
+        ) {
             // An automatic write from another linked copy lost to newer reading on that
             // server (Storyteller's 409, guard 13). That's the right outcome, not a choice
             // for the person: the server's position replaces ours, and nothing is retried.
             val origin = pulledOrigin(remote, identity)
-            positionDatabase.upsertPosition(remote.toPositionEntity(identity, origin))
-            positionDatabase.deleteRemotePosition(identity.localBookUuid)
-            syncOutboxDatabase.delete(entry.mutationId)
-            return
+            val applied = positionDatabase.resolvePositionConflict(
+                position = remote.toPositionEntity(identity, origin).copy(
+                    localGeneration = stored.localGeneration + 1L,
+                ),
+                mutation = null,
+                expectedLocalGeneration = entry.localGeneration,
+                destinationId = entry.cloudUserId,
+            )
+            if (applied) {
+                syncOutboxDatabase.delete(entry.mutationId)
+                return
+            }
         }
         applyRemote(
             remote = remote,
@@ -333,7 +360,7 @@ private fun PositionEntity.isSameSnapshotAs(remote: RemoteProgressSnapshot): Boo
 private fun RemoteProgressSnapshot.toPositionEntity(
     identity: ProgressIdentity,
     origin: String,
-): PositionEntity {
+): EnginePositionEntity {
     return EnginePositionEntity(
         bookUuid = identity.localBookUuid,
         libraryBookId = identity.libraryBookId,
@@ -387,4 +414,5 @@ private data class EnginePositionEntity(
     override val ebookLocationRaw: String?,
     override val sourceDeviceId: String?,
     override val deviceName: String?,
+    override val localGeneration: Long = 0L,
 ) : PositionEntity

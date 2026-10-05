@@ -22,6 +22,10 @@ class ReaderStartupPromptTest {
     private val conflict = PositionConflictUiModel(
         localPosition = position(0.1),
         remotePosition = position(0.2),
+        candidates = com.retro99.reader.domain.model.ReadingProgressResult.Conflict(
+            offer().translated.position.copy(totalProgression = 0.1),
+            offer().translated.position.copy(totalProgression = 0.2),
+        ),
     )
     private var lookups = 0
 

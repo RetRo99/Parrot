@@ -2,16 +2,14 @@ package com.retro99.reader.domain.usecase
 
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getOrElse
-import com.github.michaelbull.result.map
 import com.retro99.base.result.AppResult
 import com.retro99.database.api.books.PositionDatabase
-import com.retro99.database.api.books.PositionEntity
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReadingProgressResult
+import com.retro99.reader.domain.model.toPositionDomainModel
+import com.retro99.reader.domain.model.isSameReadingPlaceAs
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.PositionOrigin
-import com.retro99.server.api.ServerPosition
-import com.retro99.server.api.ServerReaderRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import org.koin.core.annotation.Factory
@@ -50,16 +48,16 @@ class GetReadingProgressWithConflictUseCase(
             val remoteDeferred = async {
                 val reconciledBaseline = positionDatabase.getRemotePositionByBookUuid(bookUuid)
                 if (reconciledBaseline != null) {
-                    Ok(reconciledBaseline.toServerPosition(serverId))
+                    reconciledBaseline.toPositionDomainModel(serverId).copy(origin = PositionOrigin.Remote)
                 } else {
                     // Compatibility fallback for books opened before the shared
                     // refresh has populated a durable remote baseline.
-                    serverRepository.getRemotePosition(bookUuid)
+                    serverRepository.getRemotePosition(bookUuid).getOrElse { null }?.toPositionDomainModel()
                 }
             }
 
-            val localPosition = localDeferred.await().getOrElse { null }?.toDomain()
-            val remotePosition = remoteDeferred.await().getOrElse { null }?.toDomain()
+            val localPosition = localDeferred.await().getOrElse { null }?.toPositionDomainModel()
+            val remotePosition = remoteDeferred.await()
 
             Ok(resolvePositionConflict(localPosition, remotePosition))
         }
@@ -90,7 +88,7 @@ class GetReadingProgressWithConflictUseCase(
             // positions differ. The shared engine, not a percentage threshold,
             // determines whether the remote candidate is a baseline or a local
             // replacement before this use case runs.
-            !localPosition.isSemanticallyEqualTo(remotePosition) -> {
+            !localPosition.isSameReadingPlaceAs(remotePosition) -> {
                 ReadingProgressResult.Conflict(
                     localPosition = localPosition,
                     remotePosition = remotePosition,
@@ -102,73 +100,4 @@ class GetReadingProgressWithConflictUseCase(
             }
         }
     }
-}
-
-/**
- * Maps a ServerPosition to PositionDomainModel.
- */
-private fun ServerPosition.toDomain(): PositionDomainModel {
-    return PositionDomainModel(
-        bookUuid = bookUuid,
-        serverId = serverId,
-        timestamp = timestamp,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        locatorHref = locatorHref,
-        locatorType = locatorType,
-        locatorTitle = locatorTitle,
-        locatorTarget = locatorTarget,
-        audioTimestampMs = audioTimestampMs,
-        chapterIndex = chapterIndex,
-        progression = progression,
-        totalChapters = totalChapters,
-        totalDurationMs = totalDurationMs,
-        totalProgression = totalProgression,
-        bookTimeMs = bookTimeMs,
-        position = position,
-        cssSelector = cssSelector,
-        origin = origin,
-        observedAt = observedAt,
-        textAnchor = textAnchor,
-    )
-}
-
-private fun PositionEntity.toServerPosition(serverId: String): ServerPosition {
-    return ServerPosition(
-        bookUuid = bookUuid,
-        serverId = serverId,
-        timestamp = timestamp,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
-        locatorHref = locatorHref,
-        locatorType = locatorType,
-        locatorTitle = locatorTitle,
-        locatorTarget = locatorTarget,
-        audioTimestampMs = audioTimestampMs,
-        chapterIndex = chapterIndex,
-        progression = progression,
-        totalChapters = totalChapters,
-        totalDurationMs = totalDurationMs,
-        totalProgression = totalProgression,
-        bookTimeMs = bookTimeMs,
-        position = position,
-        cssSelector = cssSelector,
-        // The remote baseline is a pulled server position.
-        origin = PositionOrigin.Remote,
-        observedAt = observedAt ?: updatedAt ?: createdAt,
-    )
-}
-
-private fun PositionDomainModel.isSemanticallyEqualTo(other: PositionDomainModel): Boolean {
-    return locatorHref == other.locatorHref &&
-        locatorType == other.locatorType &&
-        locatorTarget == other.locatorTarget &&
-        cssSelector == other.cssSelector &&
-        audioTimestampMs == other.audioTimestampMs &&
-        chapterIndex == other.chapterIndex &&
-        progression == other.progression &&
-        totalChapters == other.totalChapters &&
-        totalDurationMs == other.totalDurationMs &&
-        totalProgression == other.totalProgression &&
-        position == other.position
 }

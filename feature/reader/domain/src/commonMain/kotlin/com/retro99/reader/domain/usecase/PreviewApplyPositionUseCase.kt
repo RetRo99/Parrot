@@ -21,9 +21,10 @@ class PreviewApplyPositionUseCase(
         rows: List<CopyPositionRow>,
     ): List<ApplyPreview> {
         val sourcePosition = source.position ?: return emptyList()
-        val copies = rows.map { row -> row.copy }
+        val copies = rows.map { row -> row.copy }.distinctBy { it.key }
         return rows
             .filter { row -> row.copy.key != source.copy.key }
+            .distinctBy { row -> row.copy.key }
             .map { row ->
                 val target = row.copy
                 val translated = translatePositionUseCase(

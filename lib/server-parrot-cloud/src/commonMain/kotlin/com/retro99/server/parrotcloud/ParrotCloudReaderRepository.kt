@@ -146,6 +146,7 @@ private fun PositionEntity.toServerPosition(bookUuid: String): ServerPosition {
         textAnchor = TextAnchor.fromJson(textAnchor),
         deviceName = deviceName,
         sourceDeviceId = sourceDeviceId,
+        localGeneration = localGeneration,
     )
 }
 

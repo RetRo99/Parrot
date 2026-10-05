@@ -15,6 +15,10 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertFailsWith
 
 class PositionLocalGenerationTest {
 
@@ -82,6 +86,132 @@ class PositionLocalGenerationTest {
         assertEquals("Pixel Tablet", stored?.deviceName)
     }
 
+    @Test
+    fun acceptingRemoteAtomicallyClearsEveryProgressStateAndBaseline() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            val queries = AppDatabase(driver).syncOutboxQueries
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L))
+            booksDatabase.upsertRemotePosition(TestPosition(localGeneration = 0L, remoteRevision = 12L))
+            listOf("pending", "dispatched", "conflict_preserved").forEach { state ->
+                queries.enqueueMutation("write-$state", "server", "reading_position", "book-1", "upsert", "{}", 7L, 3L, state, "now", 0L, null, null)
+            }
+            queries.enqueueMutation("other-book", "server", "reading_position", "book-2", "upsert", "{}", null, 1L, "pending", "now", 0L, null, null)
+            queries.enqueueMutation("bookmark", "server", "saved_item", "book-1", "upsert", "{}", null, 1L, "pending", "now", 0L, null, null)
+
+            assertTrue(booksDatabase.resolvePositionConflict(
+                TestPosition(localGeneration = 4L, remoteRevision = 12L, totalProgression = 0.7),
+                null, 3L, "server",
+            ))
+            assertEquals(setOf("other-book", "bookmark"), queries.getAllMutations().executeAsList().map { it.mutation_id }.toSet())
+            assertNull(booksDatabase.getRemotePositionByBookUuid("book-1"))
+            assertEquals(12L, booksDatabase.getPositionByBookUuid("book-1")?.remoteRevision)
+            assertEquals(0.7, booksDatabase.getPositionByBookUuid("book-1")?.totalProgression)
+        }
+    }
+
+    @Test
+    fun choosingLocalAtomicallyQueuesCorrectRevisionAndKeepsOtherDestinations() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            val queries = AppDatabase(driver).syncOutboxQueries
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L))
+            booksDatabase.upsertRemotePosition(TestPosition(localGeneration = 0L))
+            queries.enqueueMutation("old", "server", "reading_position", "book-1", "upsert", "{}", 7L, 3L, "conflict_preserved", "now", 0L, null, null)
+            queries.enqueueMutation("other-server", "abs", "reading_position", "book-1", "upsert", "{}", null, 1L, "pending", "now", 0L, null, null)
+            val replacement = SyncOutboxEntry.new(
+                "reading_position", "book-1", "upsert", "{}", cloudUserId = "server", baseRevision = 12L, localGeneration = 4L,
+            )
+            assertTrue(booksDatabase.resolvePositionConflict(TestPosition(localGeneration = 4L, remoteRevision = 12L), replacement, 3L, "server"))
+            val entries = queries.getAllMutations().executeAsList()
+            assertEquals(setOf("other-server", replacement.mutationId), entries.map { it.mutation_id }.toSet())
+            assertEquals(12L, entries.last().base_revision)
+            assertEquals(4L, entries.last().local_generation)
+            assertNull(booksDatabase.getRemotePositionByBookUuid("book-1"))
+        }
+    }
+
+    @Test
+    fun staleChoiceLeavesPositionBaselineAndQueueUntouched() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            val write = SyncOutboxEntry.new("reading_position", "book-1", "upsert", "{}", localGeneration = 4L)
+            booksDatabase.upsertPositionWithMutation(TestPosition(localGeneration = 4L), write)
+            booksDatabase.upsertRemotePosition(TestPosition(localGeneration = 0L, remoteRevision = 12L))
+            assertFalse(booksDatabase.resolvePositionConflict(TestPosition(localGeneration = 4L, totalProgression = 0.8), null, 3L, null))
+            assertEquals(0.2, booksDatabase.getPositionByBookUuid("book-1")?.totalProgression)
+            assertEquals(12L, booksDatabase.getRemotePositionByBookUuid("book-1")?.remoteRevision)
+            assertEquals(write.mutationId, AppDatabase(driver).syncOutboxQueries.getAllMutations().executeAsOne().mutation_id)
+        }
+    }
+
+    @Test
+    fun libraryChoiceClearsBoundAndUnboundProgressButNotUnrelatedEntities() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            val queries = AppDatabase(driver).syncOutboxQueries
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L))
+            queries.enqueueMutation("bound", "cloud-user", "reading_position", "book-1", "upsert", "{}", null, 3L, "pending", "now", 0L, null, null)
+            queries.enqueueMutation("unbound", null, "reading_position", "book-1", "upsert", "{}", null, 3L, "dispatched", "now", 0L, null, null)
+            queries.enqueueMutation("other", null, "reading_position", "book-2", "upsert", "{}", null, 3L, "pending", "now", 0L, null, null)
+            assertTrue(booksDatabase.resolvePositionConflict(TestPosition(localGeneration = 4L), null, 3L, null))
+            assertEquals("other", queries.getAllMutations().executeAsOne().mutation_id)
+        }
+    }
+
+    @Test
+    fun missingPositionCannotConsumePendingChanges() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            assertFalse(booksDatabase.resolvePositionConflict(TestPosition(localGeneration = 1L), null, 0L, null))
+            assertNull(booksDatabase.getPositionByBookUuid("book-1"))
+        }
+    }
+
+    @Test
+    fun acceptingRemotePreservesDeviceMetadataAndAudioBookTime() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L))
+            assertTrue(booksDatabase.resolvePositionConflict(TestPosition(
+                localGeneration = 4L, deviceName = "Other tablet", sourceDeviceId = "device", bookTimeMs = 90_000L,
+            ), null, 3L, null))
+            val stored = booksDatabase.getPositionByBookUuid("book-1")!!
+            assertEquals("Other tablet", stored.deviceName)
+            assertEquals("device", stored.sourceDeviceId)
+            assertEquals(90_000L, stored.bookTimeMs)
+        }
+    }
+
+    @Test
+    fun failedReplacementRollsBackPositionQueueDeletionAndBaselineDeletion() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            val queries = AppDatabase(driver).syncOutboxQueries
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L))
+            booksDatabase.upsertRemotePosition(TestPosition(localGeneration = 0L, remoteRevision = 12L))
+            queries.enqueueMutation("old", "server", "reading_position", "book-1", "upsert", "{}", null, 3L, "conflict_preserved", "now", 0L, null, null)
+            queries.enqueueMutation("duplicate", "server", "saved_item", "other", "upsert", "{}", null, 1L, "pending", "now", 0L, null, null)
+            val invalid = SyncOutboxEntry.new("reading_position", "book-1", "upsert", "{}", cloudUserId = "server")
+                .copy(mutationId = "duplicate")
+            assertFailsWith<Exception> {
+                booksDatabase.resolvePositionConflict(TestPosition(localGeneration = 4L, totalProgression = 0.8), invalid, 3L, "server")
+            }
+            assertEquals(0.2, booksDatabase.getPositionByBookUuid("book-1")?.totalProgression)
+            assertEquals(3L, booksDatabase.getPositionByBookUuid("book-1")?.localGeneration)
+            assertEquals(12L, booksDatabase.getRemotePositionByBookUuid("book-1")?.remoteRevision)
+            assertEquals(setOf("old", "duplicate"), queries.getAllMutations().executeAsList().map { it.mutation_id }.toSet())
+        }
+    }
+
+    @Test
+    fun writersThatReadTheSameGenerationReceiveDistinctGenerationsAtCommit() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L))
+            val first = SyncOutboxEntry.new("reading_position", "book-1", "upsert", "{}", localGeneration = 4L)
+            val second = SyncOutboxEntry.new("reading_position", "book-1", "upsert", "{}", localGeneration = 4L)
+            booksDatabase.upsertPositionWithMutation(TestPosition(localGeneration = 4L), first)
+            booksDatabase.upsertPositionWithMutation(TestPosition(localGeneration = 4L, totalProgression = 0.8), second)
+            assertEquals(5L, booksDatabase.getPositionByBookUuid("book-1")?.localGeneration)
+            assertEquals(5L, AppDatabase(driver).syncOutboxQueries.getAllMutations().executeAsOne().local_generation)
+            assertFalse(booksDatabase.resolvePositionConflict(TestPosition(localGeneration = 5L), null, 4L, null))
+            assertEquals(0.8, booksDatabase.getPositionByBookUuid("book-1")?.totalProgression)
+        }
+    }
+
     private data class TestPosition(
         override val localGeneration: Long,
         override val bookUuid: String = "book-1",
@@ -103,6 +233,7 @@ class PositionLocalGenerationTest {
         override val position: Int? = 10,
         override val sourceDeviceId: String? = null,
         override val deviceName: String? = null,
+        override val bookTimeMs: Long? = null,
     ) : PositionEntity
 
     /** Never emits, so [DatabaseManager] only opens the database via [DatabaseManager.withProfile]. */

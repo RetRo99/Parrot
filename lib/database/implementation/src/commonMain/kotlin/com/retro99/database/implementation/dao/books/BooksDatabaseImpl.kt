@@ -240,6 +240,15 @@ internal class BooksDatabaseImpl(
         )
     }
 
+    override suspend fun resolvePositionConflict(
+        position: PositionEntity,
+        mutation: SyncOutboxEntry?,
+        expectedLocalGeneration: Long,
+        destinationId: String?,
+    ): Boolean = sqlDelightDao.resolvePositionConflict(
+        position.toSqlDelightEntity(), mutation, expectedLocalGeneration, destinationId,
+    )
+
     override suspend fun upsertRemotePosition(position: PositionEntity) {
         sqlDelightDao.upsertRemotePosition(position.toSqlDelightEntity())
     }

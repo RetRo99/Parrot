@@ -38,5 +38,17 @@ data class PositionDomainModel(
      * whole-book. Null when the files' lengths aren't known.
      */
     val bookTimeMs: Long? = null,
+    val localGeneration: Long = 0L,
+    val remoteRevision: Long? = null,
+    val deviceName: String? = null,
+    val sourceDeviceId: String? = null,
+    val ebookLocationRaw: String? = null,
 )
 
+/** Reading-place equality shared by restoration and the positions panel; excludes attribution. */
+fun PositionDomainModel.isSameReadingPlaceAs(other: PositionDomainModel): Boolean =
+    locatorHref == other.locatorHref && locatorType == other.locatorType &&
+        locatorTarget == other.locatorTarget && cssSelector == other.cssSelector &&
+        audioTimestampMs == other.audioTimestampMs && chapterIndex == other.chapterIndex &&
+        progression == other.progression && totalProgression == other.totalProgression &&
+        bookTimeMs == other.bookTimeMs && position == other.position

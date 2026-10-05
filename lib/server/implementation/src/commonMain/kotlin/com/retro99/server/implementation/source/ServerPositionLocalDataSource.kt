@@ -57,7 +57,10 @@ class ServerPositionLocalDataSource(
             } else {
                 positionDatabase.upsertPosition(
                     position.keepingEbookLocationOf(storedPosition)
-                        .toPositionEntity(storedPosition?.remoteRevision),
+                        .toPositionEntity(
+                            storedPosition?.remoteRevision,
+                            localGeneration = (storedPosition?.localGeneration ?: 0L) + 1L,
+                        ),
                 )
             }
         }
@@ -191,6 +194,7 @@ private fun PositionEntity.toServerPosition(): ServerPosition {
         textAnchor = TextAnchor.fromJson(textAnchor),
         deviceName = deviceName,
         sourceDeviceId = sourceDeviceId,
+        localGeneration = localGeneration,
     )
 }
 

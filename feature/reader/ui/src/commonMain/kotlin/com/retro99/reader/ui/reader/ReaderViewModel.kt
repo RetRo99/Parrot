@@ -1,5 +1,7 @@
 package com.retro99.reader.ui.reader
 
+import com.github.michaelbull.result.getOrElse
+
 import androidx.compose.ui.text.intl.Locale
 import androidx.lifecycle.viewModelScope
 import com.retro99.preferences.api.PreferencesKey
@@ -149,7 +151,10 @@ class ReaderViewModel(
     @InjectedParam private val linkedResumeResolved: Boolean,
     @InjectedParam private val onComparePositions: () -> Unit,
     @Provided private val initializeReaderUseCase: InitializeReaderUseCase,
+    @Provided private val serverRegistry: com.retro99.server.api.ServerRegistry,
     @Provided private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
+    @Provided private val resolvePositionConflictUseCase: com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase,
+    @Provided private val getReadingProgressWithConflictUseCase: com.retro99.reader.domain.usecase.GetReadingProgressWithConflictUseCase,
     @Provided private val findLinkedResumeUseCase: FindLinkedResumeUseCase,
     @Provided private val resolveLinkedResumeUseCase: ResolveLinkedResumeUseCase,
     @Provided private val observeAppliedPositionUseCase: ObserveAppliedPositionUseCase,
@@ -767,10 +772,14 @@ class ReaderViewModel(
     }
 
     private suspend fun openPublication(data: ReaderInitializationData) {
+        val conflictServerName = if (serverId == com.retro99.base.server.LOCAL_SERVER_ID ||
+            serverId == com.retro99.base.server.PARROT_CLOUD_SERVER_ID) "Parrot Cloud"
+        else serverRegistry.getServer(serverId)?.let { "${it.name} (${it.type.displayName})" }.orEmpty()
         val settings = data.initialSettings.toUiModel()
         val customFonts = getCustomReaderFontsUseCase().first()
         val bookType = data.bookType
         val (position, conflict) = data.progressResult.toUiData()
+        restoredPositionSaveGuard.restored(position)
         // Checked while the publication opens; it waits at most 2 seconds for servers.
         val startupPrompt = viewModelScope.async {
             readerStartupPrompt(linkedResumeResolved, conflict, ::findLinkedResume)
@@ -819,6 +828,7 @@ class ReaderViewModel(
                     publicationState = publicationState,
                     bookType = bookType,
                     positionConflict = prompt.positionConflict,
+                    conflictServerName = conflictServerName,
                     linkedResumeOffer = prompt.linkedResumeOffer,
                     error = null,
                     currentAudioPositionMs = position?.audioTimestampMs ?: 0L,
@@ -1669,34 +1679,55 @@ class ReaderViewModel(
     }
 
     private fun resolveConflictWithLocal() {
-        val conflict = viewState.value.positionConflict ?: return
-        viewModelScope.launch {
-            updateState { it.copy(positionConflict = null) }
-            analytics.trackUsageOperation(
-                UsageOperation.Conflict, UsageAction.Local, "reader", outcome = { ProductOutcome.Queued },
-            ) { bookController.goToPosition(conflict.localPosition) }
-        }
+        resolveConflict(useLocal = true)
     }
 
     private fun resolveConflictWithRemote() {
+        resolveConflict(useLocal = false)
+    }
+
+    private fun resolveConflict(useLocal: Boolean) {
         val conflict = viewState.value.positionConflict ?: return
-        val currentState = viewState.value
+        if (viewState.value.isResolvingConflict) return
+        updateState { it.copy(isResolvingConflict = true, conflictResolutionError = null) }
         viewModelScope.launch {
-            updateState {
-                it.copy(
-                    positionConflict = null,
-                    currentAudioPositionMs = conflict.remotePosition.audioTimestampMs ?: 0L,
-                )
-            }
+            val selected = if (useLocal) conflict.localPosition else conflict.remotePosition
             analytics.trackUsageOperation(
-                UsageOperation.Conflict, UsageAction.Remote, "reader", outcome = { ProductOutcome.Queued },
-            ) { bookController.goToPosition(conflict.remotePosition) }
-            // Also update the audio position if this is a ReadAloud book with actual media overlays
-            if (currentState.isReadAloud) {
-                audioController.setInitialAudioPosition(conflict.remotePosition.audioTimestampMs)
+                UsageOperation.Conflict,
+                if (useLocal) UsageAction.Local else UsageAction.Remote,
+                "reader",
+                outcome = { if (it.isOk) {
+                    if (useLocal) ProductOutcome.Queued else ProductOutcome.Succeeded
+                } else ProductOutcome.Failed },
+            ) {
+                if (useLocal) resolvePositionConflictUseCase.useLocal(conflict.candidates)
+                else resolvePositionConflictUseCase.useRemote(conflict.candidates)
+            }.onSuccess {
+                // Keep the prompt up while navigating so its locator callback cannot
+                // turn accepting a server snapshot into a fresh local reading write.
+                restoredPositionSaveGuard.restored(selected)
+                updatePublicationState { it.copy(position = selected) }
+                bookController.goToPosition(selected)
+                updateState { it.copy(
+                    positionConflict = null,
+                    currentAudioPositionMs = selected.audioTimestampMs ?: 0L,
+                ) }
+                if (viewState.value.isReadAloud) {
+                    audioController.setInitialAudioPosition(selected.audioTimestampMs)
+                }
+            }.onFailure { error ->
+                val refreshed = getReadingProgressWithConflictUseCase(serverId, bookUuid)
+                    .getOrElse { null }?.toUiData()?.conflict
+                updateState { it.copy(
+                    conflictResolutionError = error,
+                    positionConflict = refreshed ?: conflict,
+                ) }
             }
+            updateState { it.copy(isResolvingConflict = false) }
         }
     }
+
+    private val restoredPositionSaveGuard = RestoredPositionSaveGuard()
 
     private suspend fun findLinkedResume(): LinkedResumeOffer? {
         return try {
@@ -1742,11 +1773,17 @@ class ReaderViewModel(
     private fun observeAppliedPositions() {
         observeAppliedPositionUseCase(serverId, bookUuid, afterMillis = nowMillis())
             .onEach { position ->
+                val restored = position.toUiModel()
+                restoredPositionSaveGuard.restored(restored)
+                updatePublicationState { it.copy(position = restored) }
                 updateState { state ->
-                    state.copy(linkedResumeOffer = null, positionConflict = null)
+                    state.copy(
+                        linkedResumeOffer = null, positionConflict = null,
+                        currentAudioPositionMs = position.audioTimestampMs ?: state.currentAudioPositionMs,
+                    )
                 }
                 if (position.locatorHref != null) {
-                    bookController.goToPosition(position.toUiModel())
+                    bookController.goToPosition(restored)
                 } else {
                     position.totalProgression?.let { progression ->
                         bookController.goToTotalProgression(progression)
@@ -1780,6 +1817,7 @@ class ReaderViewModel(
 
         val currentState = viewState.value
         val audioTimestamp = currentState.currentAudioPositionMs.takeIf { it > 0 }
+        if (!restoredPositionSaveGuard.shouldSave(position, audioTimestamp)) return
         positionSaveCoordinator.submit(createPositionDomainModel(position, audioTimestamp))
     }
 
@@ -2994,6 +3032,7 @@ class ReaderViewModel(
     /** @return the position submitted for saving, or null when nothing was saved. */
     private suspend fun saveCurrentAudioPositionSync(): PositionDomainModel? {
         val currentState = viewState.value
+        if (currentState.positionConflict != null || currentState.linkedResumeOffer != null) return null
         val audioPositionMs = currentState.currentAudioPositionMs
         val currentPosition = currentState.currentPosition
 
@@ -3003,6 +3042,7 @@ class ReaderViewModel(
         if (currentPosition == null) {
             return null
         }
+        if (!restoredPositionSaveGuard.shouldSave(currentPosition, audioPositionMs)) return null
 
 
         val position = createPositionDomainModel(currentPosition, audioPositionMs)
@@ -3013,9 +3053,11 @@ class ReaderViewModel(
     /** @return the final position saved, or null when there was none. */
     private suspend fun saveCurrentPositionForClose(): PositionDomainModel? {
         val currentState = viewState.value
+        if (currentState.positionConflict != null || currentState.linkedResumeOffer != null) return null
         val currentPosition = currentState.currentPosition ?: return null
         val audioPositionMs = currentState.currentAudioPositionMs
             .takeIf { currentState.isReadAloud && currentState.listenSource == ListenSource.NARRATION && it > 0 }
+        if (!restoredPositionSaveGuard.shouldSave(currentPosition, audioPositionMs)) return null
         val position = createPositionDomainModel(currentPosition, audioPositionMs)
         positionSaveCoordinator.saveForClose(position)
         return position

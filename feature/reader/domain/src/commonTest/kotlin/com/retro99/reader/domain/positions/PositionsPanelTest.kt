@@ -182,6 +182,58 @@ class PositionsPanelTest {
     }
 
     @Test
+    fun `different local and server positions remain separately selectable`() = runTest {
+        store("st", 0.2, "2026-10-01T10:00:00Z", PositionEntity.ORIGIN_USER)
+        storytellerServer.remote["st"] = serverPosition("st", "st-1", 0.8, observedAt = "2026-10-01T12:00:00Z")
+        val rows = rows(listOf(library, storyteller))("local", "lib").orEmpty().filter { it.copy == storyteller }
+        assertEquals(2, rows.size)
+        assertEquals(setOf(0.2, 0.8), rows.map { it.position?.totalProgression }.toSet())
+        assertEquals(2, rows.map { it.candidateId }.distinct().size)
+        assertTrue(rows.all { it.isConflict })
+        assertEquals(1, rows.count { it.isLocalCandidate })
+        assertEquals(1, rows.count { it.isLatest })
+    }
+
+    @Test
+    fun `a library cloud baseline is not hidden by a newer device position`() = runTest {
+        store("lib", 0.8, "2026-10-02T10:00:00Z", PositionEntity.ORIGIN_USER)
+        positions.upsertRemotePosition(StoredPosition("lib", totalProgression = 0.2, observedAt = "2026-10-01T10:00:00Z", origin = PositionEntity.ORIGIN_REMOTE))
+        val rows = rows(listOf(library, storyteller))("local", "lib").orEmpty().filter { it.copy == library }
+        assertEquals(2, rows.size)
+        assertEquals(0.8, rows.first().position?.totalProgression)
+        assertEquals(0.2, rows.last().position?.totalProgression)
+        assertEquals(PositionSource.Server, rows.last().sourceLabel)
+    }
+
+    @Test
+    fun `identical places with different times are one candidate rather than a conflict`() = runTest {
+        store("st", 0.2, "2026-10-01T10:00:00Z", PositionEntity.ORIGIN_USER)
+        storytellerServer.remote["st"] = serverPosition("st", "st-1", 0.2, observedAt = "2026-10-01T12:00:00Z")
+        val rows = rows(listOf(library, storyteller))("local", "lib").orEmpty().filter { it.copy == storyteller }
+        assertEquals(1, rows.size)
+        assertFalse(rows.single().isConflict)
+    }
+
+    @Test
+    fun `duplicate conflict candidates do not create duplicate write targets`() = runTest {
+        store("lib", 0.2, "2026-10-01T10:00:00Z", PositionEntity.ORIGIN_USER)
+        store("st", 0.3, "2026-10-01T10:00:00Z", PositionEntity.ORIGIN_USER)
+        storytellerServer.remote["st"] = serverPosition("st", "st-1", 0.8, observedAt = "2026-10-01T12:00:00Z")
+        val rows = rows(listOf(library, storyteller))("local", "lib").orEmpty()
+        val previews = PreviewApplyPositionUseCase(files.translateUseCase(positions))(rows.first { it.copy == library }, rows)
+        assertEquals(1, previews.size)
+        assertEquals(storyteller.key, previews.single().target.key)
+    }
+
+    @Test
+    fun `restored positions are explicitly attributed and never latest reading`() = runTest {
+        store("lib", 0.2, "2026-10-01T10:00:00Z", PositionEntity.ORIGIN_RESTORE)
+        val row = rows(listOf(library, storyteller))("local", "lib").orEmpty().first()
+        assertEquals(PositionSource.Restored, row.sourceLabel)
+        assertFalse(row.isLatest)
+    }
+
+    @Test
     fun `collapse to start or end is unticked with a warning`() = runTest {
         // Given: in the target, the sentence comes after a long preamble, in the last 0.5%.
         files.chapters["lib"] = book("a", listOf(4, 4, 4))

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -77,8 +78,8 @@ class SyncDataRepository(
         fileTransferStatusSources.forEachIndexed { index, source ->
             diagnosticsScope.launch {
                 source.observe().collect { transferStatus ->
-                    transferStatuses.value = transferStatuses.value.toMutableList().also { statuses ->
-                        statuses[index] = transferStatus
+                    transferStatuses.update { current ->
+                        current.toMutableList().also { statuses -> statuses[index] = transferStatus }
                     }
                     publishStatus()
                 }
@@ -231,7 +232,7 @@ class SyncDataRepository(
     }
 
     private fun publishStatus() {
-        status.value = mergeTransferStatuses(syncStatus.value, transferStatuses.value)
+        status.update { mergeTransferStatuses(syncStatus.value, transferStatuses.value) }
     }
 
     private fun combineResults(

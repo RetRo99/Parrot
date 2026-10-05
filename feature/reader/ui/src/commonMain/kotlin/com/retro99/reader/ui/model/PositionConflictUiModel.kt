@@ -9,6 +9,8 @@ import com.retro99.reader.domain.model.ReadingProgressResult
 data class PositionConflictUiModel(
     val localPosition: PositionUiModel,
     val remotePosition: PositionUiModel,
+    /** Full immutable candidates, including the generation and cloud revision. */
+    val candidates: ReadingProgressResult.Conflict,
 )
 
 /**
@@ -34,6 +36,7 @@ fun ReadingProgressResult.toUiData(): ProgressResultUiData = when (this) {
         conflict = PositionConflictUiModel(
             localPosition = localPosition.toUiModel(),
             remotePosition = remotePosition.toUiModel(),
+            candidates = this,
         ),
     )
 }

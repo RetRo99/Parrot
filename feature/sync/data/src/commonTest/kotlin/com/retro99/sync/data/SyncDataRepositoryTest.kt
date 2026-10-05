@@ -398,6 +398,26 @@ class SyncDataRepositoryTest {
     }
 
     @Test
+    fun simultaneousTransferSourcesDoNotLoseEachOthersProgress() = runTest {
+        val sources = List(32) {
+            RecordingFileTransferStatusSource(FileTransferStatus(
+                phase = SyncPhase.UPLOADING_FILES, activeItems = 1, totalItems = 2,
+                bytesTransferred = 10, totalBytes = 20,
+            ))
+        }
+        val repository = SyncDataRepository(
+            syncPass = ImmediateSyncPass(), executionContextProvider = RecordingContextProvider(),
+            syncOutboxPreflight = SyncOutboxPreflight(RecordingOutbox()),
+            fileTransferStatusSources = sources,
+        )
+        sources.forEach { it.awaitFirstEmission() }
+        assertEquals(SyncStatus.Running(
+            phase = SyncPhase.UPLOADING_FILES, completedItems = 32, totalItems = 64,
+            bytesTransferred = 320, totalBytes = 640,
+        ), repository.observeStatus().value)
+    }
+
+    @Test
     fun offlineResultRetainsQueuedCountInObservableStatusAndCheckpoint() = runTest {
         val checkpointDatabase = StatusRecordingCheckpointDatabase()
         val repository = SyncDataRepository(

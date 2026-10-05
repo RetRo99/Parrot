@@ -22,6 +22,8 @@ data class BookDetailViewState(
     val progressInfo: BookProgressInfoUiModel? = null,
     val isResolvingConflict: Boolean = false,
     val conflictResolutionError: AppError? = null,
+    val positionConflict: com.retro99.reader.domain.model.ReadingProgressResult.Conflict? = null,
+    val conflictServerName: String = "",
     /** The book type the user wants to open, shown when there's a conflict to resolve first */
     val pendingOpenBookType: BookType? = null,
     /** Whether "Add to Parrot Cloud" is shown: some media type of a library book can go. */

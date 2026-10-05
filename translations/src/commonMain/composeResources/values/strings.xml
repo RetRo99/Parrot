@@ -258,7 +258,7 @@
     <!-- Reader Position Conflict Dialog -->
     <string name="reader_conflict_title">Reading Position Conflict</string>
     <string name="reader_conflict_message">Your reading position differs between this device and the server. Which position would you like to use?</string>
-    <string name="reader_conflict_local_title">This Device</string>
+    <string name="reader_conflict_local_title">Saved on this device</string>
     <string name="reader_conflict_remote_title">Server</string>
     <string name="reader_conflict_chapter">Chapter %1$d of %2$d</string>
     <string name="reader_conflict_progress">%1$d% complete</string>
@@ -1281,7 +1281,12 @@
     <string name="positions_warn_end" tools:ignore="MissingTranslation">This would mark %1$s as almost finished.</string>
     <string name="positions_not_supported" tools:ignore="MissingTranslation">Can't update %1$s yet.</string>
     <string name="positions_apply" tools:ignore="MissingTranslation">Apply</string>
-    <string name="positions_applied" tools:ignore="MissingTranslation">Updated %1$s</string>
+    <string name="positions_applied" tools:ignore="MissingTranslation">Saved for %1$s · waiting to sync</string>
+    <string name="positions_local_candidate" tools:ignore="MissingTranslation">Conflict · saved on this device</string>
+    <string name="positions_server_candidate" tools:ignore="MissingTranslation">Conflict · server position</string>
+    <string name="positions_restored" tools:ignore="MissingTranslation">Restored position %1$s</string>
+    <string name="positions_unknown_source" tools:ignore="MissingTranslation">Position source unknown</string>
+    <string name="positions_set_from_unknown" tools:ignore="MissingTranslation">Set from another copy %1$s</string>
     <string name="positions_apply_failed" tools:ignore="MissingTranslation">Couldn't update %1$s</string>
     <string name="resume_linked_compare" tools:ignore="MissingTranslation">Compare all</string>
     <string name="positions_audio_position" tools:ignore="MissingTranslation">%1$s of %2$s</string>

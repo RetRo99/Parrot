@@ -122,11 +122,15 @@ internal fun BookDetailDialogs(
             onCompareAll = { dispatch(BookDetailIntent.OnLinkedResumeCompareClicked) },
         )
     } else if (offer == null && state.pendingOpenBookType != null &&
-        state.progressInfo?.hasConflict == true) {
+        state.positionConflict != null) {
         LaunchedEffect(Unit) { dispatch(BookDetailIntent.OnPromptVisible(UsageOperation.Conflict)) }
         PositionConflictDialog(
-            localProgressPercent = state.progressInfo.localProgressPercent ?: 0,
-            remoteProgressPercent = state.progressInfo.remoteProgressPercent ?: 0,
+            localProgressPercent = ((state.positionConflict.localPosition.totalProgression ?: 0.0) * 100).toInt(),
+            remoteProgressPercent = ((state.positionConflict.remotePosition.totalProgression ?: 0.0) * 100).toInt(),
+            remoteTitle = state.conflictServerName,
+            localDetail = com.retro99.books.ui.components.positionCandidateDetail(state.positionConflict.localPosition),
+            remoteDetail = com.retro99.books.ui.components.positionCandidateDetail(state.positionConflict.remotePosition),
+            isResolving = state.isResolvingConflict,
             onUseLocal = { dispatch(BookDetailIntent.OnUseLocalPositionClicked) },
             onUseRemote = { dispatch(BookDetailIntent.OnUseRemotePositionClicked) },
             onDismissRequest = { dispatch(BookDetailIntent.OnConflictDialogDismissed) },

@@ -48,6 +48,10 @@ fun PositionConflictDialog(
     onUseRemote: () -> Unit,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    remoteTitle: String = "",
+    localDetail: String? = null,
+    remoteDetail: String? = null,
+    isResolving: Boolean = false,
 ) {
     PositionConflictDialogContent(
         localContent = {
@@ -55,17 +59,21 @@ fun PositionConflictDialog(
                 title = stringResource(StringRes.reader_conflict_local_title),
                 progressPercent = localProgressPercent,
                 onClick = onUseLocal,
+                detail = localDetail,
+                enabled = !isResolving,
             )
         },
         remoteContent = {
             ProgressCard(
-                title = stringResource(StringRes.reader_conflict_remote_title),
+                title = remoteTitle.ifBlank { stringResource(StringRes.reader_conflict_remote_title) },
                 progressPercent = remoteProgressPercent,
                 onClick = onUseRemote,
+                detail = remoteDetail,
+                enabled = !isResolving,
             )
         },
-        onUseLocal = onUseLocal,
-        onUseRemote = onUseRemote,
+        onUseLocal = { if (!isResolving) onUseLocal() },
+        onUseRemote = { if (!isResolving) onUseRemote() },
         onDismissRequest = onDismissRequest,
         modifier = modifier,
     )
@@ -124,6 +132,8 @@ private fun ProgressCard(
     progressPercent: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    detail: String? = null,
+    enabled: Boolean = true,
 ) {
     val shape = RoundedCornerShape(16.dp)
     Column(
@@ -136,7 +146,7 @@ private fun ProgressCard(
                 Ember.colors.chipBorder,
                 shape,
             )
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -146,6 +156,7 @@ private fun ProgressCard(
             color = Ember.colors.ink,
         )
         Spacer(modifier = Modifier.height(8.dp))
+        detail?.let { Text(it, style = Ember.type.meta, color = Ember.colors.ink2) }
         Text(
             text = stringResource(
                 StringRes.reader_conflict_progress,

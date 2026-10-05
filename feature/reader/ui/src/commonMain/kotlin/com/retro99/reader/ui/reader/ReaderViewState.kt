@@ -22,6 +22,9 @@ data class ReaderViewState(
     val localFilePath: String? = null,
     val publicationState: PublicationState? = null,
     val positionConflict: PositionConflictUiModel? = null,
+    val isResolvingConflict: Boolean = false,
+    val conflictResolutionError: AppError? = null,
+    val conflictServerName: String = "",
     /** A newer reading in another linked copy, offered in place of [positionConflict]. */
     val linkedResumeOffer: LinkedResumeOffer? = null,
     val isSettingsVisible: Boolean = false,

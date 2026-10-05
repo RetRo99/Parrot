@@ -70,7 +70,7 @@ class PositionsViewModel(
 
     private fun preview() {
         val state = viewState.value
-        val source = state.rows.firstOrNull { row -> row.copy.key.value == state.selectedKey }
+        val source = state.rows.firstOrNull { row -> row.candidateId == state.selectedKey }
             ?: return
         viewModelScope.launch {
             val previews = previewApplyPositionUseCase(source, state.rows)
@@ -89,7 +89,7 @@ class PositionsViewModel(
     private fun apply() {
         val state = viewState.value
         if (state.isApplying) return
-        val source = state.rows.firstOrNull { row -> row.copy.key.value == state.selectedKey }
+        val source = state.rows.firstOrNull { row -> row.candidateId == state.selectedKey }
             ?: return
         val ticked = state.previews.orEmpty()
             .filter { preview -> preview.enabled && preview.target.key.value in state.checkedKeys }

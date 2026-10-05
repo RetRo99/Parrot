@@ -12,6 +12,7 @@ import com.retro99.reader.domain.linked.latestRealReading
 import com.retro99.reader.domain.linked.observedAtMillis
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.toPositionDomainModel
+import com.retro99.reader.domain.model.isSameReadingPlaceAs
 import com.retro99.reader.domain.positions.CopyPositionRow
 import com.retro99.reader.domain.positions.PositionSource
 import com.retro99.reader.domain.translate.CopyContentCache
@@ -43,12 +44,22 @@ class ObserveCopyPositionsUseCase(
         val copies = linkedCopiesSource.linkedCopies(serverId, bookUuid) ?: return null
         val fetched = remoteCopyPositions.fetch(copies.all)
 
-        val chosen = copies.all.map { copy ->
+        val chosen = copies.all.flatMap { copy ->
             val local = positionDatabase.getPositionByBookUuid(copy.uuid)
                 ?.toPositionDomainModel(copy.serverId)
             val fetch = fetched[copy]
             val remote = (fetch as? RemoteFetch.Fetched)?.position
-            Choice(copy, newer(local, remote), isStale = fetch == RemoteFetch.Failed)
+                ?: positionDatabase.getRemotePositionByBookUuid(copy.uuid)
+                    ?.toPositionDomainModel(copy.serverId)?.copy(origin = PositionOrigin.Remote)
+            val primary = newer(local, remote)
+            val isConflict = local != null && remote != null && !local.isSameReadingPlaceAs(remote)
+            if (isConflict) {
+                val primaryLocal = primary === local
+                listOf(
+                    Choice(copy, primary, fetch == RemoteFetch.Failed, true, primaryLocal),
+                    Choice(copy, if (primaryLocal) remote else local, fetch == RemoteFetch.Failed, true, !primaryLocal),
+                )
+            } else listOf(Choice(copy, primary, fetch == RemoteFetch.Failed))
         }
         val latest = latestRealReading(
             chosen.mapNotNull { choice ->
@@ -64,9 +75,14 @@ class ObserveCopyPositionsUseCase(
                 observedAt = position?.observedAt,
                 origin = position?.origin,
                 sourceLabel = sourceOf(position, choice.copy, copies.all),
-                isLatest = latest != null && latest.copy.key == choice.copy.key,
+                isLatest = latest != null && latest.copy.key == choice.copy.key && latest.position === position,
                 isStale = choice.isStale,
                 excerpt = position?.let { found -> excerptOf(choice.copy, found) },
+                candidateId = choice.copy.key.value + if (choice.isConflict) {
+                    if (choice.isLocal) "|local" else "|server"
+                } else "",
+                isConflict = choice.isConflict,
+                isLocalCandidate = choice.isLocal,
             )
         }
     }
@@ -75,6 +91,8 @@ class ObserveCopyPositionsUseCase(
         val copy: LinkedCopy,
         val position: PositionDomainModel?,
         val isStale: Boolean,
+        val isConflict: Boolean = false,
+        val isLocal: Boolean = true,
     )
 
     /** The server's position when it's newer than the stored one. */
@@ -102,7 +120,8 @@ class ObserveCopyPositionsUseCase(
                 ?.let(CopyKey::parse)
             PositionSource.SetFrom(copies.firstOrNull { other -> other.key == sourceKey })
         }
-        PositionOrigin.Restore, null -> PositionSource.Unknown
+        PositionOrigin.Restore -> PositionSource.Restored
+        null -> PositionSource.Unknown
     }
 
     /** The stored anchor, or the text at the locator when the copy's file is here. */

@@ -3,6 +3,10 @@ package com.retro99.reader.domain.usecase
 import com.retro99.reader.domain.fakes.FakeReaderRepository
 import com.retro99.reader.domain.fakes.FakeRepositoryProvider
 import com.retro99.reader.domain.fakes.serverPosition
+import com.retro99.reader.domain.fakes.FakePositionDatabase
+import com.retro99.reader.domain.fakes.StoredPosition
+import com.retro99.reader.domain.model.ReadingProgressResult
+import com.retro99.reader.domain.model.toPositionDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.server.api.PositionOrigin
 import com.retro99.server.api.InstallationDeviceIdentity
@@ -50,11 +54,15 @@ class PositionOriginWritersTest {
         )
 
         // When
-        ResolvePositionConflictUseCase(provider).useRemote(serverId = "st-1", bookUuid = "book-1")
+        val database = FakePositionDatabase()
+        database.upsertPosition(StoredPosition("book-1"))
+        ResolvePositionConflictUseCase(database, installationDeviceIdentity).useRemote(
+            ReadingProgressResult.Conflict(domainPosition(null), repository.remote.getValue("book-1").toPositionDomainModel()),
+        )
 
         // Then
-        val saved = repository.localSaves.single()
-        assertEquals(PositionOrigin.Remote, saved.origin)
+        val saved = database.local.value.getValue("book-1")
+        assertEquals(PositionOrigin.Remote.value, saved.origin)
         assertEquals("2026-10-01T08:00:00Z", saved.observedAt)
     }
 
@@ -69,10 +77,14 @@ class PositionOriginWritersTest {
         )
 
         // When
-        ResolvePositionConflictUseCase(provider).useLocal(serverId = "st-1", bookUuid = "book-1")
+        val database = FakePositionDatabase()
+        database.upsertPosition(StoredPosition("book-1"))
+        ResolvePositionConflictUseCase(database, installationDeviceIdentity).useLocal(
+            ReadingProgressResult.Conflict(repository.local.getValue("book-1").toPositionDomainModel(), domainPosition(null)),
+        )
 
         // Then
-        assertEquals(PositionOrigin.User, repository.syncedSaves.single().origin)
+        assertEquals(PositionOrigin.User.value, database.local.value.getValue("book-1").origin)
     }
 
     private fun domainPosition(textAnchor: TextAnchor?) = PositionDomainModel(

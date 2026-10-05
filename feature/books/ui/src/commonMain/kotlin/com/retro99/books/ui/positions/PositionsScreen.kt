@@ -35,6 +35,8 @@ import com.retro99.base.ui.LoadingScreen
 import com.retro99.base.ui.compose.EmberTopBar
 import com.retro99.base.ui.compose.relativeTimeText
 import com.retro99.books.domain.model.links.LinkedCopy
+import com.retro99.books.domain.model.links.CopySource
+import com.retro99.books.domain.model.BookHome
 import com.retro99.books.ui.links.label
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.positions.ApplyPreview
@@ -68,6 +70,11 @@ import resources.translations.positions_title
 import resources.translations.positions_use_this
 import resources.translations.positions_warn_end
 import resources.translations.positions_warn_start
+import resources.translations.positions_local_candidate
+import resources.translations.positions_server_candidate
+import resources.translations.positions_restored
+import resources.translations.positions_unknown_source
+import resources.translations.positions_set_from_unknown
 import resources.translations.resume_linked_source_audiobook
 import resources.translations.resume_linked_source_ebook
 import resources.translations.resume_linked_source_readaloud
@@ -111,12 +118,12 @@ private fun PositionsScreenContent(
         },
     ) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            items(viewState.rows, key = { row -> row.copy.key.value }) { row ->
+            items(viewState.rows, key = { row -> row.candidateId }) { row ->
                 PositionRow(
                     row = row,
-                    isSelected = row.copy.key.value == viewState.selectedKey,
+                    isSelected = row.candidateId == viewState.selectedKey,
                     onClick = {
-                        intentDispatcher(PositionsIntent.OnRowClicked(row.copy.key.value))
+                        intentDispatcher(PositionsIntent.OnRowClicked(row.candidateId))
                     },
                     onUseThis = { intentDispatcher(PositionsIntent.OnUseThisPositionClicked) },
                 )
@@ -168,7 +175,12 @@ private fun PositionRow(
                 }
             }
             row.position?.let { position ->
+                if (row.isConflict) Text(
+                    stringResource(if (row.isLocalCandidate) StringRes.positions_local_candidate else StringRes.positions_server_candidate),
+                    style = MaterialTheme.typography.labelMedium,
+                )
                 Text(text = positionText(position), style = MaterialTheme.typography.bodyMedium)
+                position.deviceName?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             }
             sourceText(row)?.let { text ->
                 Text(text = text, style = MaterialTheme.typography.bodySmall)
@@ -323,13 +335,17 @@ private fun sourceText(row: CopyPositionRow): String? {
     return when (val source = row.sourceLabel) {
         PositionSource.ThisDevice -> stringResource(StringRes.positions_from_device, time)
         PositionSource.Server ->
-            stringResource(StringRes.positions_from_server, row.copy.home.label(), time)
-        is PositionSource.SetFrom -> stringResource(
-            StringRes.positions_set_from,
-            source.copy?.let { copy -> copyLabel(copy) }.orEmpty(),
-            time,
-        )
-        PositionSource.Unknown -> null
+            stringResource(
+                StringRes.positions_from_server,
+                if (row.copy.key.source == CopySource.Library) BookHome.ParrotCloud.label()
+                else row.copy.home.label(),
+                time,
+            )
+        is PositionSource.SetFrom -> source.copy?.let { copy ->
+            stringResource(StringRes.positions_set_from, copyLabel(copy), time)
+        } ?: stringResource(StringRes.positions_set_from_unknown, time)
+        PositionSource.Restored -> stringResource(StringRes.positions_restored, time)
+        PositionSource.Unknown -> if (row.position != null) stringResource(StringRes.positions_unknown_source) else null
     }
 }
 

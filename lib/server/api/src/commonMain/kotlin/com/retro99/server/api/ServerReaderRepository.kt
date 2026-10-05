@@ -120,6 +120,8 @@ data class ServerPosition(
     val deviceName: String? = null,
     @Transient
     val sourceDeviceId: String? = null,
+    @Transient
+    val localGeneration: Long = 0L,
 )
 
 /** A persistent, installation-scoped identity used only to label reading-position metadata. */

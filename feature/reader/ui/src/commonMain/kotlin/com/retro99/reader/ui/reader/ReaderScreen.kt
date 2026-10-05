@@ -333,6 +333,9 @@ private fun ReaderScreenContent(
                 conflict = conflict,
                 onUseLocal = { intentDispatcher(ReaderIntent.UseLocalPosition) },
                 onUseRemote = { intentDispatcher(ReaderIntent.UseRemotePosition) },
+                serverName = viewState.conflictServerName,
+                isResolving = viewState.isResolvingConflict,
+                error = viewState.conflictResolutionError?.toString(),
             )
         }
 

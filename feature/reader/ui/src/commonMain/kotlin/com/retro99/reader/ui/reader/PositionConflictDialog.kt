@@ -39,24 +39,32 @@ fun PositionConflictDialog(
     onUseLocal: () -> Unit,
     onUseRemote: () -> Unit,
     modifier: Modifier = Modifier,
+    serverName: String = "",
+    isResolving: Boolean = false,
+    error: String? = null,
 ) {
     PositionConflictDialogContent(
         localContent = {
             PositionCard(
                 title = stringResource(StringRes.reader_conflict_local_title),
                 position = conflict.localPosition,
-                onClick = onUseLocal,
+                onClick = { if (!isResolving) onUseLocal() },
+                detail = com.retro99.books.ui.components.positionCandidateDetail(conflict.candidates.localPosition),
             )
         },
         remoteContent = {
-            PositionCard(
-                title = stringResource(StringRes.reader_conflict_remote_title),
-                position = conflict.remotePosition,
-                onClick = onUseRemote,
-            )
+            Column {
+                PositionCard(
+                    title = serverName.ifBlank { stringResource(StringRes.reader_conflict_remote_title) },
+                    position = conflict.remotePosition,
+                    onClick = { if (!isResolving) onUseRemote() },
+                    detail = com.retro99.books.ui.components.positionCandidateDetail(conflict.candidates.remotePosition),
+                )
+                error?.let { Text(it, color = Ember.colors.ink2) }
+            }
         },
-        onUseLocal = onUseLocal,
-        onUseRemote = onUseRemote,
+        onUseLocal = { if (!isResolving) onUseLocal() },
+        onUseRemote = { if (!isResolving) onUseRemote() },
         onDismissRequest = { /* Don't allow dismiss without choosing */ },
         modifier = modifier,
     )
@@ -68,6 +76,7 @@ private fun PositionCard(
     position: PositionUiModel,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    detail: String? = null,
 ) {
     val shape = RoundedCornerShape(16.dp)
     Column(
@@ -90,6 +99,7 @@ private fun PositionCard(
             color = Ember.colors.ink,
         )
         Spacer(modifier = Modifier.height(8.dp))
+        detail?.let { Text(it, style = Ember.type.meta, color = Ember.colors.ink2) }
         position.title?.let { chapterTitle ->
             Text(
                 text = chapterTitle,

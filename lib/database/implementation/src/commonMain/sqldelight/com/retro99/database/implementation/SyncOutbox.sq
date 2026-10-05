@@ -97,6 +97,11 @@ AND state = 'pending';
 deleteMutation:
 DELETE FROM sync_outbox WHERE mutation_id = ?;
 
+deleteSupersededProgress:
+DELETE FROM sync_outbox
+WHERE entity_type = 'reading_position' AND entity_id = :bookUuid
+AND (:destinationId IS NULL OR cloud_user_id = :destinationId);
+
 deleteMutationsByEntityType:
 DELETE FROM sync_outbox WHERE entity_type = ?;
 

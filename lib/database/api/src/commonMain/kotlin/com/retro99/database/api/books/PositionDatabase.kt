@@ -16,6 +16,19 @@ interface PositionDatabase : DataClearable {
         mutation: SyncOutboxEntry,
     )
 
+    /**
+     * Atomically settles a choice: replace the position, remove superseded progress writes
+     * and the remote candidate, and optionally queue the replacement. A stale choice must
+     * not overwrite reading saved while the prompt (or a network request) was open.
+     * A null destination denotes the library's Parrot Cloud queue, including unbound writes.
+     */
+    suspend fun resolvePositionConflict(
+        position: PositionEntity,
+        mutation: SyncOutboxEntry?,
+        expectedLocalGeneration: Long,
+        destinationId: String?,
+    ): Boolean = error("Atomic position conflict resolution is not implemented")
+
     suspend fun updateRemoteRevision(
         bookUuid: String,
         remoteRevision: Long,

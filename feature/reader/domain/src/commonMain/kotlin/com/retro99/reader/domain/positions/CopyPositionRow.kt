@@ -17,7 +17,9 @@ sealed interface PositionSource {
     /** `manual` or `linked_copy`: set from another copy, when the write log names it. */
     data class SetFrom(val copy: LinkedCopy?) : PositionSource
 
-    /** A restored position, or no position. */
+    data object Restored : PositionSource
+
+    /** No attributable source. */
     data object Unknown : PositionSource
 }
 
@@ -34,6 +36,10 @@ data class CopyPositionRow(
     val isStale: Boolean,
     /** A few words around the position, when they're known. */
     val excerpt: TextAnchor?,
+    /** Separate local/server candidates stay selectable without duplicating write targets. */
+    val candidateId: String = copy.key.value,
+    val isConflict: Boolean = false,
+    val isLocalCandidate: Boolean = true,
 )
 
 enum class ApplyWarning {

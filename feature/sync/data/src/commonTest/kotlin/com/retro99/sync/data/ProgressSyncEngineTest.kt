@@ -73,6 +73,40 @@ class ProgressSyncEngineTest {
     }
 
     @Test
+    fun `a superseded selection is not dispatched or sent`() = runTest {
+        val outbox = RecordingOutboxDatabase(emptyList())
+        var sent = false
+        val summary = ProgressSyncEngine(outbox, RecordingPositionDatabase(), RecordingWrites()).push(
+            listOf(outboxEntry("gone")), RecordingTransport(onPush = { sent = true }),
+            ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertEquals(ProgressPushSummary(), summary)
+        assertTrue(outbox.dispatchedIds.isEmpty())
+        assertTrue(!sent)
+    }
+
+    @Test
+    fun `clean remote replacement advances generation rather than resetting it`() = runTest {
+        val positions = RecordingPositionDatabase()
+        positions.upsertPosition(storedLinkedCopy(generation = 8L))
+        ProgressSyncEngine(RecordingOutboxDatabase(emptyList()), positions, RecordingWrites())
+            .applyRemote(remoteSnapshot(), "account-1")
+        assertEquals(9L, positions.localPositions.last().localGeneration)
+    }
+
+    @Test
+    fun `a clean identical pull also removes a leftover conflict baseline`() = runTest {
+        val positions = RecordingPositionDatabase()
+        val engine = ProgressSyncEngine(RecordingOutboxDatabase(emptyList()), positions, RecordingWrites())
+        engine.applyRemote(remoteSnapshot(), "account-1")
+        val savedCount = positions.localPositions.size
+        positions.deletedRemoteBookIds.clear()
+        engine.applyRemote(remoteSnapshot(), "account-1")
+        assertEquals(savedCount, positions.localPositions.size)
+        assertEquals(listOf("book-1"), positions.deletedRemoteBookIds)
+    }
+
+    @Test
     fun dirtyPullStoresRemoteBaselineWithoutReplacingLocalPosition() = runTest {
         val pending = outboxEntry(
             mutationId = "pending-1",
@@ -95,6 +129,18 @@ class ProgressSyncEngineTest {
         assertEquals("Device A", positions.remotePositions.single().deviceName)
         assertTrue(positions.localPositions.isEmpty())
         assertTrue(positions.deletedRemoteBookIds.isEmpty())
+    }
+
+    @Test
+    fun `a local choice queued after account binding survives an in flight cloud pull`() = runTest {
+        val write = outboxEntry("new-choice").copy(cloudUserId = null)
+        val outbox = RecordingOutboxDatabase(listOf(write))
+        val positions = RecordingPositionDatabase()
+        positions.upsertPosition(storedLinkedCopy(generation = 2L, origin = PositionEntity.ORIGIN_MANUAL))
+        val outcome = ProgressSyncEngine(outbox, positions, RecordingWrites()).applyRemote(remoteSnapshot(), "account-1")
+        assertEquals(ProgressPullOutcome.PreservedLocalProgress, outcome)
+        assertEquals(PositionEntity.ORIGIN_MANUAL, positions.localPositions.last().origin)
+        assertEquals(1, positions.remotePositions.size)
     }
 
     @Test
@@ -219,7 +265,115 @@ class ProgressSyncEngineTest {
             assertTrue(outbox.conflictIds.isEmpty())
         }
 
-    private fun storedLinkedCopy(): PositionEntity = object : PositionEntity {
+    @Test
+    fun `old automatic conflict cannot overwrite newer automatic progress`() = runTest {
+        val entry = outboxEntry("old", localGeneration = 1L)
+        val outbox = RecordingOutboxDatabase(listOf(entry, outboxEntry("new", localGeneration = 2L)))
+        val positions = RecordingPositionDatabase()
+        positions.upsertPosition(storedLinkedCopy(generation = 2L))
+        ProgressSyncEngine(outbox, positions, RecordingWrites()).push(
+            listOf(entry), RecordingTransport(listOf(ProgressPushResult.Conflict("old", remoteSnapshot()))),
+            ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertEquals(2L, positions.localPositions.last().localGeneration)
+        assertEquals(PositionEntity.ORIGIN_LINKED_COPY, positions.localPositions.last().origin)
+        assertEquals(1, positions.remotePositions.size)
+        assertEquals(listOf("old"), outbox.conflictIds)
+        assertTrue(outbox.deletedIds.isEmpty())
+    }
+
+    @Test
+    fun `old automatic conflict cannot overwrite newer real reading`() = runTest {
+        val entry = outboxEntry("old")
+        val outbox = RecordingOutboxDatabase(listOf(entry))
+        val positions = RecordingPositionDatabase()
+        positions.upsertPosition(storedLinkedCopy(generation = 2L, origin = PositionEntity.ORIGIN_USER))
+        ProgressSyncEngine(outbox, positions, RecordingWrites()).push(
+            listOf(entry), RecordingTransport(listOf(ProgressPushResult.Conflict("old", remoteSnapshot()))),
+            ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertEquals(PositionEntity.ORIGIN_USER, positions.localPositions.last().origin)
+        assertEquals(2L, positions.localPositions.last().localGeneration)
+        assertEquals(listOf("old"), outbox.conflictIds)
+    }
+
+    @Test
+    fun `generation is checked again inside automatic conflict transaction`() = runTest {
+        val entry = outboxEntry("old")
+        val outbox = RecordingOutboxDatabase(listOf(entry))
+        val positions = RecordingPositionDatabase()
+        positions.upsertPosition(storedLinkedCopy())
+        positions.beforeResolution = { positions.upsertPosition(storedLinkedCopy(generation = 2L)) }
+        ProgressSyncEngine(outbox, positions, RecordingWrites()).push(
+            listOf(entry), RecordingTransport(listOf(ProgressPushResult.Conflict("old", remoteSnapshot()))),
+            ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertEquals(2L, positions.localPositions.last().localGeneration)
+        assertEquals(1, positions.remotePositions.size)
+        assertEquals(listOf("old"), outbox.conflictIds)
+        assertTrue(outbox.deletedIds.isEmpty())
+    }
+
+    @Test
+    fun `newer queued write prevents automatic replacement even if local generation matches`() = runTest {
+        val entry = outboxEntry("old")
+        val outbox = RecordingOutboxDatabase(listOf(entry, outboxEntry("new", localGeneration = 2L)))
+        val positions = RecordingPositionDatabase()
+        positions.upsertPosition(storedLinkedCopy())
+        ProgressSyncEngine(outbox, positions, RecordingWrites()).push(
+            listOf(entry), RecordingTransport(listOf(ProgressPushResult.Conflict("old", remoteSnapshot()))),
+            ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertEquals(PositionEntity.ORIGIN_LINKED_COPY, positions.localPositions.last().origin)
+        assertEquals(listOf("old"), outbox.conflictIds)
+    }
+
+    @Test
+    fun `late conflict response after a user choice cannot recreate a conflict`() = runTest {
+        val entry = outboxEntry("superseded")
+        val outbox = RecordingOutboxDatabase(listOf(entry))
+        val positions = RecordingPositionDatabase()
+        positions.upsertPosition(storedLinkedCopy())
+        val summary = ProgressSyncEngine(outbox, positions, RecordingWrites()).push(
+            listOf(entry), RecordingTransport(
+                listOf(ProgressPushResult.Conflict(entry.mutationId, remoteSnapshot())),
+                onPush = { outbox.delete(entry.mutationId) },
+            ), ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertEquals(0, summary.conflictCount)
+        assertTrue(positions.remotePositions.isEmpty())
+        assertTrue(outbox.conflictIds.isEmpty())
+        assertEquals(PositionEntity.ORIGIN_LINKED_COPY, positions.localPositions.last().origin)
+    }
+
+    @Test
+    fun `late acceptance after a user choice cannot update its revision`() = runTest {
+        val entry = outboxEntry("superseded")
+        val outbox = RecordingOutboxDatabase(listOf(entry))
+        val positions = RecordingPositionDatabase()
+        ProgressSyncEngine(outbox, positions, RecordingWrites()).push(
+            listOf(entry), RecordingTransport(
+                listOf(ProgressPushResult.Accepted(entry.mutationId, "42")),
+                onPush = { outbox.delete(entry.mutationId) },
+            ), ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertTrue(positions.revisionUpdates.isEmpty())
+    }
+
+    @Test
+    fun `late rejection after a user choice does not schedule its superseded write`() = runTest {
+        val entry = outboxEntry("superseded")
+        val outbox = RecordingOutboxDatabase(listOf(entry))
+        ProgressSyncEngine(outbox, RecordingPositionDatabase(), RecordingWrites()).push(
+            listOf(entry), RecordingTransport(
+                listOf(ProgressPushResult.Rejected(entry.mutationId, "offline")),
+                onPush = { outbox.delete(entry.mutationId) },
+            ), ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertTrue(outbox.failureIds.isEmpty())
+    }
+
+    private fun storedLinkedCopy(generation: Long = 1L, origin: String = PositionEntity.ORIGIN_LINKED_COPY): PositionEntity = object : PositionEntity {
         override val bookUuid = "book-1"
         override val timestamp: Long? = 5L
         override val createdAt: String? = null
@@ -235,7 +389,8 @@ class ProgressSyncEngineTest {
         override val totalDurationMs: Long? = null
         override val totalProgression: Double? = 0.2
         override val position: Int? = null
-        override val origin: String = PositionEntity.ORIGIN_LINKED_COPY
+        override val origin: String = origin
+        override val localGeneration = generation
     }
 
     @Test
@@ -476,6 +631,7 @@ class ProgressSyncEngineTest {
 private class RecordingTransport(
     private val pushResults: List<ProgressPushResult> = emptyList(),
     private val fetchResults: Map<String, RemoteProgressSnapshot> = emptyMap(),
+    private val onPush: suspend () -> Unit = {},
 ) : ProgressSyncTransport {
     var fetchedBookIds: Set<String> = emptySet()
 
@@ -500,7 +656,10 @@ private class RecordingTransport(
 
     override suspend fun pushProgress(
         mutations: List<ProgressMutation>,
-    ): List<ProgressPushResult> = pushResults
+    ): List<ProgressPushResult> {
+        onPush()
+        return pushResults
+    }
 }
 
 private class RecordingOutboxDatabase(
@@ -517,7 +676,11 @@ private class RecordingOutboxDatabase(
 
     override suspend fun bindUnassignedMutations(cloudUserId: String) = Unit
 
-    override suspend fun getPending(cloudUserId: String): List<SyncOutboxEntry> = entries.toList()
+    override suspend fun getPending(cloudUserId: String): List<SyncOutboxEntry> =
+        entries.filter { it.cloudUserId == cloudUserId }
+
+    override suspend fun getPendingIncludingUnassigned(cloudUserId: String): List<SyncOutboxEntry> =
+        entries.filter { it.cloudUserId == cloudUserId || it.cloudUserId == null }
 
     override suspend fun updateBaseRevision(mutationId: String, baseRevision: Long) = Unit
 
@@ -562,6 +725,20 @@ private class RecordingPositionDatabase : PositionDatabase {
     val remotePositions = mutableListOf<PositionEntity>()
     val deletedRemoteBookIds = mutableListOf<String>()
     val revisionUpdates = mutableListOf<RevisionUpdate>()
+    var beforeResolution: suspend () -> Unit = {}
+
+    override suspend fun resolvePositionConflict(
+        position: PositionEntity,
+        mutation: SyncOutboxEntry?,
+        expectedLocalGeneration: Long,
+        destinationId: String?,
+    ): Boolean {
+        beforeResolution()
+        if (getPositionByBookUuid(position.bookUuid)?.localGeneration != expectedLocalGeneration) return false
+        upsertPosition(position)
+        deleteRemotePosition(position.bookUuid)
+        return true
+    }
 
     override suspend fun upsertPosition(position: PositionEntity) {
         localPositions += position

@@ -12,6 +12,28 @@ class FakePositionDatabase : PositionDatabase {
     val local = MutableStateFlow<Map<String, PositionEntity>>(emptyMap())
     val remote = mutableMapOf<String, PositionEntity>()
     val mutations = mutableListOf<SyncOutboxEntry>()
+    var resolutionFails = false
+    var beforeResolution: suspend () -> Unit = {}
+
+    override suspend fun resolvePositionConflict(
+        position: PositionEntity,
+        mutation: SyncOutboxEntry?,
+        expectedLocalGeneration: Long,
+        destinationId: String?,
+    ): Boolean {
+        beforeResolution()
+        if (resolutionFails) error("database write failed")
+        if (local.value[position.bookUuid]?.localGeneration != expectedLocalGeneration) return false
+        mutations.removeAll {
+            it.entityType == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION &&
+                it.entityId == position.bookUuid &&
+                (destinationId == null || it.cloudUserId == destinationId)
+        }
+        remote.remove(position.bookUuid)
+        upsertPosition(position)
+        mutation?.let { mutations += it }
+        return true
+    }
 
     override suspend fun upsertPosition(position: PositionEntity) {
         local.value = local.value + (position.bookUuid to position)
@@ -79,6 +101,12 @@ data class StoredPosition(
     override val cssSelector: String? = null,
     override val chapterIndex: Int? = null,
     override val totalChapters: Int? = null,
+    override val localGeneration: Long = 0L,
+    override val libraryBookId: String? = null,
+    override val deviceName: String? = null,
+    override val sourceDeviceId: String? = null,
+    override val ebookLocationRaw: String? = null,
+    override val bookTimeMs: Long? = null,
 ) : PositionEntity {
     override val createdAt: String? = updatedAt
     override val locatorType: String? = null

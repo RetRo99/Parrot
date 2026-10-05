@@ -29,6 +29,11 @@ fun PositionEntity.toPositionDomainModel(serverId: String): PositionDomainModel 
         origin = PositionOrigin.fromValue(origin),
         observedAt = observedAt ?: updatedAt ?: createdAt,
         textAnchor = TextAnchor.fromJson(textAnchor),
+        localGeneration = localGeneration,
+        remoteRevision = remoteRevision,
+        deviceName = deviceName,
+        sourceDeviceId = sourceDeviceId,
+        ebookLocationRaw = ebookLocationRaw,
     )
 
 fun ServerPosition.toPositionDomainModel(): PositionDomainModel = PositionDomainModel(
@@ -53,6 +58,11 @@ fun ServerPosition.toPositionDomainModel(): PositionDomainModel = PositionDomain
     origin = origin,
     observedAt = observedAt ?: updatedAt ?: createdAt,
     textAnchor = textAnchor,
+    localGeneration = localGeneration,
+    remoteRevision = remoteRevision,
+    deviceName = deviceName,
+    sourceDeviceId = sourceDeviceId,
+    ebookLocationRaw = ebookLocationRaw,
 )
 
 fun PositionDomainModel.toServerPosition(): ServerPosition = ServerPosition(
@@ -77,4 +87,9 @@ fun PositionDomainModel.toServerPosition(): ServerPosition = ServerPosition(
     origin = origin,
     observedAt = observedAt,
     textAnchor = textAnchor,
+    localGeneration = localGeneration,
+    remoteRevision = remoteRevision,
+    deviceName = deviceName,
+    sourceDeviceId = sourceDeviceId,
+    ebookLocationRaw = ebookLocationRaw,
 )
