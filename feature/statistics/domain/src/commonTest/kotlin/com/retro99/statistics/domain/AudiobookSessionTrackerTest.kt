@@ -136,4 +136,56 @@ class AudiobookSessionTrackerTest {
         assertEquals(5_000L, saved.single().startTime)
         assertEquals(2_000L, saved.single().durationMs)
     }
+
+    @Test
+    fun aShortPauseLikeASpeakWordInterruptionKeepsOneSession() {
+        val tracker = tracker()
+        tracker.setBook("a", "A")
+        tracker.setPlaying(true)
+        now = 2_000L
+        tracker.setPlaying(false) // The dictionary speaks a word: pause and resume.
+        now = 3_500L
+        tracker.setPlaying(true)
+        now = 8_000L
+        tracker.setPlaying(false)
+        tracker.finish()
+        assertEquals(1, saved.size)
+        val session = saved.single()
+        assertEquals(0L, session.startTime)
+        assertEquals(8_000L, session.endTime)
+        // Active time only: the 1.5 s word pause is excluded, the pause gaps never counted.
+        assertEquals(6_500L, session.durationMs)
+    }
+
+    @Test
+    fun aPauseBeyondTheGraceStillSplitsSessions() {
+        val tracker = tracker()
+        tracker.setBook("a", "A")
+        tracker.setPlaying(true)
+        now = 2_000L
+        tracker.setPlaying(false)
+        now = 2_000L + AudiobookSessionTracker.DEFAULT_MERGE_PAUSE_MS + 1
+        tracker.setPlaying(true)
+        now += 4_000L
+        tracker.finish()
+        assertEquals(listOf(2_000L, 4_000L), saved.map { session -> session.durationMs })
+    }
+
+    @Test
+    fun resumingAfterAShortPauseEndsTheOldSessionAtItsPauseTime() {
+        val tracker = tracker()
+        tracker.setBook("a", "A")
+        tracker.setPlaying(true)
+        now = 1_000L
+        tracker.setPlaying(false)
+        now = 2_000L
+        tracker.setPlaying(true)
+        now = 6_000L
+        tracker.setPlaying(false)
+        now = 60_000L // Service stops long after the last pause.
+        tracker.finish()
+        val session = saved.single()
+        assertEquals(6_000L, session.endTime)
+        assertEquals(5_000L, session.durationMs)
+    }
 }
