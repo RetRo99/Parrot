@@ -15,9 +15,11 @@ android {
         versionName = "1.0"
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.toVersion(libs.versions.jdk.get().toInt())
         targetCompatibility = JavaVersion.toVersion(libs.versions.jdk.get().toInt())
     }
+    sourceSets["main"].assets.srcDir("../dictionary/dist/oewn-2025-1")
     // This harness is never shipped as a release app.
 }
 
@@ -26,10 +28,16 @@ androidComponents.beforeVariants(androidComponents.selector().withBuildType("rel
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(projects.base)
     implementation(projects.baseUi)
     implementation(projects.feature.books.domain)
     implementation(projects.feature.books.ui)
+    implementation(projects.feature.reader.ui)
+    implementation(projects.feature.saved.ui)
+    implementation(projects.lib.dictionary)
+    implementation(libs.sqldelight.android.driver)
+    implementation(libs.coroutines)
     implementation(projects.lib.server.api)
     implementation(libs.androidx.activity.compose)
     implementation(compose.foundation)

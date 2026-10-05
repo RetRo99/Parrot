@@ -126,6 +126,7 @@ class LibraryBookMergeTest {
         database.savedItemQueries.upsertSavedItem(
             "b1", "library:$FROM", FROM, null, null, "bookmark", "c1", null, null, null, null, null,
             null, null, null, null, null, null, null, 0, "2026-09-01", "2026-09-01", null, null,
+            null, null, null, null, null,
         )
         database.readingSessionQueries.insertSession(
             FROM, "Book", "ebook", 1, 2, 1, null, null, null, null, null,

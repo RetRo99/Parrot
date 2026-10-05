@@ -59,6 +59,7 @@ import resources.translations.saved_bar_add_note
 import resources.translations.saved_bar_bookmark_removed
 import resources.translations.saved_bar_bookmarked
 import resources.translations.saved_bar_highlight_removed
+import resources.translations.saved_bar_word_removed
 import resources.translations.saved_bar_highlighted
 import resources.translations.saved_bar_undo
 import resources.translations.saved_copy
@@ -112,8 +113,11 @@ internal fun SavedBarHost(
         )
         is SavedBar.Removed -> SavedUndoBar(
             message = stringResource(
-                if (bar.items.all { item -> item.type == SavedItemType.Bookmark }) StringRes.saved_bar_bookmark_removed
-                else StringRes.saved_bar_highlight_removed,
+                when {
+                    bar.items.all { item -> item.type == SavedItemType.Bookmark } -> StringRes.saved_bar_bookmark_removed
+                    bar.items.all { item -> item.type == SavedItemType.Word } -> StringRes.saved_bar_word_removed
+                    else -> StringRes.saved_bar_highlight_removed
+                },
             ),
             undoLabel = undo,
             onUndo = { onSaved(SavedAction.BarUndo) },
@@ -167,8 +171,9 @@ private val RibbonShape = GenericShape { size, _ ->
  * @param pageTopDp where the page's top edge sits inside this box, in dp.
  */
 @Composable
-internal fun SelectionToolbar(
+fun SelectionToolbar(
     selection: ReaderTextSelection,
+    definition: com.retro99.dictionary.DefinitionState? = null,
     pageTopDp: Float,
     bottomObstructionDp: Float,
     topObstructionDp: Float,
@@ -209,6 +214,8 @@ internal fun SelectionToolbar(
                     .then(if (eink) Modifier.border(2.dp, colors.ink, toolbarShape) else Modifier),
             ) {
                 Column(Modifier.padding(8.dp)) {
+                    definition?.let { com.retro99.saved.ui.dictionary.DefinitionStrip(it,
+                        onMore = { onSaved(SavedAction.OpenDictionary) }, onDownload = { onSaved(SavedAction.DownloadDictionary) }) }
                     Row(
                         Modifier.fillMaxWidth().padding(start = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -243,7 +250,7 @@ internal fun SelectionToolbar(
                         ToolbarButton(stringResource(StringRes.saved_select_note), { onSaved(SavedAction.NoteSelection) }, Modifier.weight(1f))
                         ToolbarButton(stringResource(StringRes.saved_copy), { onSaved(SavedAction.CopySelection) }, Modifier.weight(1f))
                         ToolbarButton(stringResource(StringRes.saved_search), { onSaved(SavedAction.SearchSelection) }, Modifier.weight(1f))
-                        ToolbarButton(stringResource(StringRes.saved_share), { onSaved(SavedAction.ShareSelection) }, Modifier.weight(1f))
+                        if (!eink) ToolbarButton(stringResource(StringRes.saved_share), { onSaved(SavedAction.ShareSelection) }, Modifier.weight(1f))
                     }
                 }
             }
@@ -320,7 +327,20 @@ internal fun ReaderSavedHost(
         }
     }
 
-    saved.detail?.let { item ->
+    saved.dictionaryEntry?.let { entry ->
+        val item = saved.detail?.takeIf { it.type == SavedItemType.Word }
+        com.retro99.saved.ui.dictionary.DictionaryEntrySheet(entry,
+            onDismiss = { onSaved(SavedAction.CloseDictionary); onSaved(SavedAction.CloseDetail) },
+            onCopy = { onSaved(SavedAction.CopyDefinition) },
+            onHighlight = if (saved.dictionarySelection != null) ({ onSaved(SavedAction.HighlightDictionaryWord) }) else null,
+            onSave = if (saved.dictionarySelection != null) ({ onSaved(SavedAction.SaveWord) }) else null,
+            saved = saved.dictionarySaved,
+            error = saved.dictionaryError,
+            onEdit = item?.let { ({ onSaved(SavedAction.CloseDictionary); onSaved(SavedAction.EditNote(it.id)) }) },
+            onDelete = item?.let { ({ onSaved(SavedAction.CloseDictionary); onSaved(SavedAction.Remove(it.id)) }) },
+        )
+    }
+    saved.detail?.takeIf { it.type != SavedItemType.Word }?.let { item ->
         SavedItemDetailSheet(
             item = item,
             onDismiss = { onSaved(SavedAction.CloseDetail) },

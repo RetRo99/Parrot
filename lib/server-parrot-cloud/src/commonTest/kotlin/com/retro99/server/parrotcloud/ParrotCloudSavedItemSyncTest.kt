@@ -23,6 +23,21 @@ class ParrotCloudSavedItemSyncTest {
     private val sync = ParrotCloudSavedItemSync(items, outbox)
 
     @Test
+    fun `a word snapshot survives push and pull`() = runTest {
+        val word = ParrotCloudSavedItemPayload(itemId = "word-1", bookKey = "library:book-a", type = "word", href = "chapter.xhtml",
+            updatedAt = "2026-10-05T10:00:00Z", wordSelected = "mice", wordHeadword = "mouse", wordLanguage = "en",
+            wordGloss = "a small rodent", wordPartOfSpeech = "noun").toEntity("book-a")
+        items.put(word)
+        val prepared = sync.preparePush(listOf(queued(word.id))).single()
+        val payload = Json.parseToJsonElement(prepared.payload)
+        assertEquals("mouse", payload.jsonObject.getValue("word_headword").jsonPrimitive.content)
+        val otherItems = InMemorySavedItems()
+        ParrotCloudSavedItemSync(otherItems, DeletingOutbox()).applyRemote(payload)
+        assertEquals("mice", otherItems.rows.getValue(word.id).wordSelected)
+        assertEquals("a small rodent", otherItems.rows.getValue(word.id).wordGloss)
+    }
+
+    @Test
     fun `a pushed entry carries the item's current row`() = runTest {
         // Given
         items.put(row(id = "11111111-1111-4111-8111-111111111111", note = "Latest note"))

@@ -10,6 +10,7 @@ import com.retro99.saved.domain.model.SavedAudioPosition
 import com.retro99.saved.domain.model.SavedBookRef
 import com.retro99.saved.domain.model.SavedItem
 import com.retro99.saved.domain.model.SavedItemType
+import com.retro99.saved.domain.model.SavedWord
 import com.retro99.saved.domain.model.SavedLocation
 import com.retro99.saved.domain.model.TextAnchor
 import kotlinx.coroutines.flow.Flow
@@ -30,10 +31,10 @@ class SavedItemsDataRepository(
 ) : SavedItemsRepository {
 
     override fun observeForBook(bookKeys: Set<String>, bookUuids: Set<String>): Flow<List<SavedItem>> =
-        database.observeForBooks(bookKeys, bookUuids).map { rows -> rows.map { row -> row.toDomain() } }
+        database.observeForBooks(bookKeys, bookUuids).map { rows -> rows.mapNotNull { row -> row.toDomain() } }
 
     override fun observeAll(): Flow<List<SavedItem>> =
-        database.observeAll().map { rows -> rows.map { row -> row.toDomain() } }
+        database.observeAll().map { rows -> rows.mapNotNull { row -> row.toDomain() } }
 
     override suspend fun get(id: String): SavedItem? = database.get(id)?.toDomain()
 
@@ -58,7 +59,7 @@ class SavedItemsDataRepository(
     }
 
     override suspend fun getSnippetPending(bookUuid: String): List<SavedItem> =
-        database.getSnippetPending(bookUuid).map { row -> row.toDomain() }
+        database.getSnippetPending(bookUuid).mapNotNull { row -> row.toDomain() }
 
     override fun observePendingSyncCount(): Flow<Long> = database.observePendingSyncCount()
 }
@@ -71,10 +72,13 @@ internal fun SavedItemEntity.toOutboxEntry(): SyncOutboxEntry = SyncOutboxEntry.
     baseRevision = remoteRevision,
 )
 
-internal fun SavedItemEntity.toDomain(): SavedItem = SavedItem(
+internal fun SavedItemEntity.toDomain(): SavedItem? {
+    val knownType = SavedItemType.fromId(type) ?: return null
+    if (knownType == SavedItemType.Word && (wordHeadword.isNullOrBlank() || wordGloss.isNullOrBlank())) return null
+    return SavedItem(
     id = id,
     book = SavedBookRef(key = bookKey, uuid = bookUuid, title = bookTitle, author = bookAuthor),
-    type = SavedItemType.fromId(type),
+    type = knownType,
     location = SavedLocation(
         href = href,
         mediaType = mediaType,
@@ -91,7 +95,10 @@ internal fun SavedItemEntity.toDomain(): SavedItem = SavedItem(
     createdAt = parseInstant(createdAt),
     updatedAt = parseInstant(updatedAt),
     remoteRevision = remoteRevision,
+    word = if (knownType == SavedItemType.Word && wordHeadword != null && wordGloss != null)
+        SavedWord(wordSelected ?: textQuote.orEmpty(), wordHeadword!!, wordLanguage ?: "en", wordGloss!!, wordPartOfSpeech) else null,
 )
+}
 
 internal fun SavedItem.toEntity(remoteRevision: Long? = this.remoteRevision): SavedItemRecord = SavedItemRecord(
     id = id,
@@ -118,6 +125,11 @@ internal fun SavedItem.toEntity(remoteRevision: Long? = this.remoteRevision): Sa
     updatedAt = updatedAt.toString(),
     deletedAt = null,
     remoteRevision = remoteRevision,
+    wordSelected = word?.selected,
+    wordHeadword = word?.headword,
+    wordLanguage = word?.language,
+    wordGloss = word?.gloss,
+    wordPartOfSpeech = word?.partOfSpeech,
 )
 
 private fun parseInstant(value: String): Instant =
@@ -148,6 +160,11 @@ internal data class SavedItemRecord(
     override val updatedAt: String,
     override val deletedAt: String?,
     override val remoteRevision: Long?,
+    override val wordSelected: String? = null,
+    override val wordHeadword: String? = null,
+    override val wordLanguage: String? = null,
+    override val wordGloss: String? = null,
+    override val wordPartOfSpeech: String? = null,
 ) : SavedItemEntity {
     companion object {
         fun from(entity: SavedItemEntity) = SavedItemRecord(
@@ -175,6 +192,11 @@ internal data class SavedItemRecord(
             updatedAt = entity.updatedAt,
             deletedAt = entity.deletedAt,
             remoteRevision = entity.remoteRevision,
+            wordSelected = entity.wordSelected,
+            wordHeadword = entity.wordHeadword,
+            wordLanguage = entity.wordLanguage,
+            wordGloss = entity.wordGloss,
+            wordPartOfSpeech = entity.wordPartOfSpeech,
         )
     }
 }

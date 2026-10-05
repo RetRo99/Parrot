@@ -231,11 +231,10 @@ private fun SettingsScreenContent(
                         .verticalScroll(rememberScrollState()),
                 ) {
                     when (selectedTab) {
-                        ReaderSettingsTab.TEXT -> TextTab(
-                            viewState = viewState,
-                            intentDispatcher = intentDispatcher,
-                            onAddFont = { fontPickerLauncher.launch() },
-                        )
+                        ReaderSettingsTab.TEXT -> {
+                            TextTab(viewState = viewState, intentDispatcher = intentDispatcher, onAddFont = { fontPickerLauncher.launch() })
+                            com.retro99.saved.ui.dictionary.DictionaryPackCard()
+                        }
 
                         ReaderSettingsTab.PAGE -> PageTab(viewState, intentDispatcher)
                         ReaderSettingsTab.PROGRESS -> ProgressTab(viewState, intentDispatcher)

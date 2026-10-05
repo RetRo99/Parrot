@@ -55,6 +55,7 @@ kotlin {
             api(projects.lib.epub.implementation)
         }
         commonMain.dependencies {
+            implementation(projects.lib.dictionary)
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

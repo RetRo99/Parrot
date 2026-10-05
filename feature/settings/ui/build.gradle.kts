@@ -23,6 +23,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.lib.dictionary)
+            implementation(projects.feature.saved.ui)
             implementation(libs.koin.core)
             api(libs.koin.annotations)
             implementation(libs.koin.compose.viewmodel)

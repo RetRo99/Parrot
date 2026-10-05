@@ -50,6 +50,7 @@ internal object SavedMarks {
      * can say which of them start on the page it is showing.
      */
     fun marks(items: List<SavedItem>, style: SavedMarkStyle): List<PageMark> = items.mapNotNull { item ->
+        if (item.type == SavedItemType.Word) return@mapNotNull null
         val anchor = item.anchor ?: return@mapNotNull null
         val isHighlight = item.type == SavedItemType.Highlight
         val color = item.color ?: HighlightColor.Default

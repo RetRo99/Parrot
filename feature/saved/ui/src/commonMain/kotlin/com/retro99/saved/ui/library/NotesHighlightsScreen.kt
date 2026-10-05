@@ -47,6 +47,7 @@ import com.retro99.base.ui.compose.EmberSectionHeader
 import com.retro99.books.domain.model.BookType
 import com.retro99.saved.domain.model.SavedCounts
 import com.retro99.saved.domain.model.SavedItemType
+import resources.translations.saved_bar_word_removed
 import com.retro99.saved.ui.SavedBookList
 import com.retro99.saved.ui.SavedEmptyState
 import com.retro99.saved.ui.SavedExportSheet
@@ -137,8 +138,11 @@ fun NotesHighlightsScreen(
             },
             bottomBar = {
                 if (state.removed != null) SavedUndoBar(
-                    message = stringResource(if (state.removed.type == SavedItemType.Bookmark)
-                        StringRes.saved_bar_bookmark_removed else StringRes.saved_bar_highlight_removed),
+                    message = stringResource(when (state.removed.type) {
+                        SavedItemType.Bookmark -> StringRes.saved_bar_bookmark_removed
+                        SavedItemType.Word -> StringRes.saved_bar_word_removed
+                        SavedItemType.Highlight -> StringRes.saved_bar_highlight_removed
+                    }),
                     undoLabel = stringResource(StringRes.saved_bar_undo),
                     onUndo = { dispatch(NotesHighlightsIntent.UndoDelete) },
                 )

@@ -1,6 +1,11 @@
 package com.retro99.reader.ui.reader.saved
 
 import com.retro99.base.ui.sharing.FileSharer
+import com.retro99.dictionary.*
+import com.retro99.saved.domain.model.SavedWord
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import com.retro99.reader.domain.usecase.ResolveSavedBookUseCase
 import com.retro99.reader.domain.usecase.SavedBookIdentity
 import com.retro99.reader.ui.model.PositionUiModel
@@ -45,6 +50,7 @@ internal data class ReaderSavedContext(
     val bookTitle: String,
     val bookAuthor: String?,
     val isListening: Boolean,
+    val bookLanguage: String? = null,
     /** The table-of-contents title for a resource, when there is one. */
     val chapterTitleFor: (href: String) -> String?,
 )
@@ -87,7 +93,10 @@ internal class ReaderSavedItems(
     private val fileSharer: FileSharer,
     private val pendingJump: PendingSavedJump,
     private val onError: (Throwable, String) -> Unit,
+    private val dictionary: DictionaryService,
 ) {
+    private var packPromptOffered = false
+    private var wordSaveJob: Job? = null
     private var identity: SavedBookIdentity? = null
     private var serverId = ""
     private var bookUuid = ""
@@ -101,6 +110,17 @@ internal class ReaderSavedItems(
     private val resolvingSnippets = mutableSetOf<String>()
 
     fun start(serverId: String, bookUuid: String) {
+        scope.launch {
+            dictionary.acquire()
+            try { awaitCancellation() } finally { withContext(NonCancellable) { dictionary.release() } }
+        }
+        scope.launch {
+            dictionary.state.collectLatest {
+                val selected = state().selection ?: return@collectLatest
+                val definition = resolveDefinition(selected.text.quote, refresh = true)
+                update { saved -> if (saved.selection == selected) saved.copy(definition = definition) else saved }
+            }
+        }
         this.serverId = serverId
         this.bookUuid = bookUuid
         scope.launch {
@@ -110,6 +130,11 @@ internal class ReaderSavedItems(
                 update { saved ->
                     saved.copy(
                         items = items,
+                        dictionarySaved = saved.dictionaryEntry?.let { entry ->
+                            saved.dictionarySelection?.let { selection ->
+                                items.any { it.isWordAt(entry.headword, selection.href, selection.text.toTextAnchor()) }
+                            } ?: true
+                        } ?: false,
                         bookmarkTicks = items.filter { item -> item.type == SavedItemType.Bookmark }
                             .mapNotNull { item -> item.location.totalProgression },
                     )
@@ -131,7 +156,7 @@ internal class ReaderSavedItems(
                     delay(SELECTION_SETTLE_MS)
                     readSelection()
                 } else {
-                    update { it.copy(selection = null) }
+                    update { it.copy(selection = null, definition = null) }
                 }
             }
         }
@@ -158,6 +183,21 @@ internal class ReaderSavedItems(
             SavedAction.ShareSelection -> withSelection { text -> share(text.quote.oneLine()) }
             SavedAction.SearchSelection -> withSelection { text -> openSearch(text.quote.oneLine().take(SEARCH_MAX_CHARS)) }
             SavedAction.DismissSelection -> clearSelection()
+            SavedAction.DownloadDictionary -> dictionary.download()
+            SavedAction.OpenDictionary -> (state().definition as? DefinitionState.Found)?.let { found ->
+                update { it.copy(dictionaryEntry = found.entry, dictionarySelection = it.selection,
+                    dictionarySaved = it.selection?.let { selection ->
+                        it.items.any { item -> item.isWordAt(found.entry.headword, selection.href, selection.text.toTextAnchor()) }
+                    } ?: false, dictionaryError = null) }
+            }
+            SavedAction.CloseDictionary -> { update { it.copy(dictionaryEntry = null, dictionarySelection = null) }; clearSelection() }
+            SavedAction.CopyDefinition -> state().dictionaryEntry?.let { copy(it.copyText) }
+            SavedAction.HighlightDictionaryWord -> scope.launch {
+                val selected = state().dictionarySelection ?: return@launch
+                update { it.copy(selection = selected, dictionaryEntry = null, dictionarySelection = null) }
+                highlightSelection(state().lastColor)
+            }
+            SavedAction.SaveWord -> if (wordSaveJob?.isActive != true) { wordSaveJob = scope.launch { saveWord() } }
 
             is SavedAction.OpenDetail -> openDetail(action.id)
             SavedAction.CloseDetail -> update { it.copy(detailId = null) }
@@ -202,7 +242,7 @@ internal class ReaderSavedItems(
             update { it.copy(bar = null) }
             barPageKey = null
         }
-        if (state().selection != null) update { it.copy(selection = null) }
+        if (state().selection != null) update { it.copy(selection = null, definition = null) }
         pageJob?.cancel()
         pageJob = scope.launch {
             delay(PAGE_SETTLE_MS)
@@ -278,7 +318,8 @@ internal class ReaderSavedItems(
     private suspend fun readSelection() {
         val position = context().position ?: return
         val text = bookController().selectionForToolbar()
-        update { it.copy(selection = text?.let { selection -> ReaderTextSelection(position.href, position.type, selection) }) }
+        val definition = text?.let { resolveDefinition(it.quote) }
+        update { it.copy(selection = text?.let { selection -> ReaderTextSelection(position.href, position.type, selection) }, definition = definition) }
         if (text != null) watchSelection()
     }
 
@@ -289,10 +330,46 @@ internal class ReaderSavedItems(
             while (state().selection != null) {
                 delay(SELECTION_POLL_MS)
                 val text = bookController().selectionForToolbar()
+                val old = state().selection
+                val definition = if (text?.quote != old?.text?.quote) text?.let { resolveDefinition(it.quote) } else state().definition
                 update { saved -> saved.copy(selection = saved.selection?.let { current ->
                     text?.let { current.copy(text = it) }
-                }) }
+                }, definition = definition) }
             }
+        }
+    }
+
+    private suspend fun resolveDefinition(selection: String, refresh: Boolean = false): DefinitionState? {
+        val word = dictionaryWord(selection) ?: return null
+        val language = context().bookLanguage
+        if (!language.isNullOrBlank() && !isEnglish(language)) return null
+        val pack = dictionary.state.value
+        if (!pack.installed) {
+            if (!isEnglish(language)) return null
+            if (!packPromptOffered || pack.downloading || pack.error != null || refresh && state().definition is DefinitionState.Pack) {
+                packPromptOffered = true
+                return DefinitionState.Pack(pack)
+            }
+            return null
+        }
+        val entry = dictionary.lookup(word)
+        return entry?.let { DefinitionState.Found(it) } ?: if (isEnglish(language)) DefinitionState.NotFound(word) else null
+    }
+
+    private suspend fun saveWord() {
+        val entry = state().dictionaryEntry ?: return
+        val selection = state().dictionarySelection ?: return
+        if (state().dictionarySaved) return
+        try {
+            val existing = state().items.firstOrNull { it.type == SavedItemType.Word && it.word?.headword.equals(entry.headword, ignoreCase = true) }
+            val fresh = newItem(SavedItemType.Word, selection.href, selection.mediaType, selection.text, null)
+                .copy(word = SavedWord(selection.text.quote.take(100), entry.headword, "en", entry.firstSense.gloss.take(160), entry.partOfSpeech), snippetPending = false)
+            saveItems(if (existing == null) fresh else fresh.copy(id = existing.id, createdAt = existing.createdAt, note = existing.note, remoteRevision = existing.remoteRevision))
+            update { it.copy(dictionarySaved = true, dictionaryError = null) }
+        } catch (error: CancellationException) { throw error }
+        catch (error: Throwable) {
+            onError(error, "ReaderSavedItems: failed to save word")
+            update { it.copy(dictionaryError = "Could not save word. Try again.") }
         }
     }
 
@@ -303,7 +380,7 @@ internal class ReaderSavedItems(
     }
 
     private fun clearSelection() {
-        update { it.copy(selection = null) }
+        update { it.copy(selection = null, definition = null) }
         bookController().clearSelection()
         scope.launch { bookController().runPageScript(SavedPageScript.clearSelection()) }
     }
@@ -363,7 +440,14 @@ internal class ReaderSavedItems(
 
     private fun openDetail(id: String) {
         if (item(id) == null) return
-        update { it.copy(detailId = id, selection = null) }
+        val saved = item(id) ?: return
+        if (saved.type == SavedItemType.Word && saved.word != null) {
+            scope.launch {
+                val word = saved.word ?: return@launch
+                val entry = dictionary.lookup(word.headword) ?: DictionaryEntry(word.headword, groups = listOf(DictionaryGroup(word.partOfSpeech ?: "", listOf(DictionarySense(word.gloss)))))
+                update { it.copy(dictionaryEntry = entry, dictionarySelection = null, dictionarySaved = true, detailId = id, selection = null) }
+            }
+        } else update { it.copy(detailId = id, selection = null) }
     }
 
     private fun edit(id: String, change: (SavedItem) -> SavedItem) {
@@ -574,7 +658,9 @@ internal class ReaderSavedItems(
     }
 
     private fun SavedItem.shareText(): String = buildString {
-        append("“").append(text?.oneLine() ?: location.chapterTitle.orEmpty()).append("”")
+        val snapshot = word
+        if (snapshot != null) append(snapshot.headword).append(" — ").append(snapshot.gloss)
+        else append("“").append(text?.oneLine() ?: location.chapterTitle.orEmpty()).append("”")
         val title = context().bookTitle
         if (title.isNotBlank()) append(" — ").append(title)
         if (hasNote) append("\n\n").append(note!!.trim())

@@ -60,6 +60,8 @@ data class NotesHighlightsViewState(
         val needle = query.trim()
         if (needle.isEmpty()) return true
         return item.text?.contains(needle, ignoreCase = true) == true ||
+            item.word?.headword?.contains(needle, ignoreCase = true) == true ||
+            item.word?.gloss?.contains(needle, ignoreCase = true) == true ||
             item.note?.contains(needle, ignoreCase = true) == true ||
             item.location.chapterTitle?.contains(needle, ignoreCase = true) == true
     }
@@ -209,7 +211,7 @@ class NotesHighlightsViewModel(
     }
 
     private fun itemText(item: SavedItem): String =
-        listOfNotNull(item.text, item.note?.takeIf { it.isNotBlank() }).joinToString("\n\n")
+        listOfNotNull(item.word?.let { "${it.headword} — ${it.gloss}" } ?: item.text, item.note?.takeIf { it.isNotBlank() }).joinToString("\n\n")
 
     private fun back() {
         val state = viewState.value

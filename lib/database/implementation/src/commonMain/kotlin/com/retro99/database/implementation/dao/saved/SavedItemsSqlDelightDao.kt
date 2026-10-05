@@ -158,6 +158,11 @@ internal fun SavedItemQueries.insertRow(item: SavedItemEntity) {
         updated_at = item.updatedAt,
         deleted_at = item.deletedAt,
         remote_revision = item.remoteRevision,
+        word_selected = item.wordSelected,
+        word_headword = item.wordHeadword,
+        word_language = item.wordLanguage,
+        word_gloss = item.wordGloss,
+        word_part_of_speech = item.wordPartOfSpeech,
     )
 }
 
@@ -186,6 +191,11 @@ private fun Saved_items.toEntity(): SavedItemEntity = SavedItemRow(
     updatedAt = updated_at,
     deletedAt = deleted_at,
     remoteRevision = remote_revision,
+    wordSelected = word_selected,
+    wordHeadword = word_headword,
+    wordLanguage = word_language,
+    wordGloss = word_gloss,
+    wordPartOfSpeech = word_part_of_speech,
 )
 
 private data class SavedItemRow(
@@ -213,4 +223,9 @@ private data class SavedItemRow(
     override val updatedAt: String,
     override val deletedAt: String?,
     override val remoteRevision: Long?,
+    override val wordSelected: String?,
+    override val wordHeadword: String?,
+    override val wordLanguage: String?,
+    override val wordGloss: String?,
+    override val wordPartOfSpeech: String?,
 ) : SavedItemEntity

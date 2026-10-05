@@ -490,9 +490,10 @@ internal fun ReaderOverlayContent(
                     ),
                 )
             }
-            saved.selection?.let { selection ->
+            saved.selection?.takeIf { saved.dictionaryEntry == null }?.let { selection ->
                 SelectionToolbar(
                     selection = selection,
+                    definition = saved.definition,
                     pageTopDp = settings.marginVertical.toFloat(),
                     bottomObstructionDp = with(density) {
                         ((readerBottomPx ?: 0f) - (bottomControlsTopPx ?: readerBottomPx ?: 0f))

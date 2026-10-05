@@ -13,6 +13,7 @@ import com.retro99.cloudaccount.data.di.CloudAccountDataModule
 import com.retro99.cloudaccount.domain.di.CloudAccountDomainModule
 import com.retro99.cloudaccount.ui.di.CloudAccountUiModule
 import com.retro99.database.implementation.di.DatabaseModule
+import com.retro99.dictionary.DictionaryModule
 import com.retro99.epub.implementation.di.EpubModule
 import com.retro99.home.data.di.HomeDataModule
 import com.retro99.home.ui.di.HomeUiModule
@@ -53,6 +54,7 @@ import org.koin.core.annotation.Module
         UserModule::class,  // Must be before modules that depend on UserRegistry
         CloudModule::class,
         DatabaseModule::class,
+        DictionaryModule::class,
         NetworkingModule::class,
         ServerModule::class,
         EpubModule::class,

@@ -15,6 +15,11 @@ data class ReaderSavedState(
     val onPageIds: Set<String> = emptySet(),
     /** The reader's text selection, while our toolbar shows. */
     val selection: ReaderTextSelection? = null,
+    val definition: com.retro99.dictionary.DefinitionState? = null,
+    val dictionaryEntry: com.retro99.dictionary.DictionaryEntry? = null,
+    val dictionarySelection: ReaderTextSelection? = null,
+    val dictionarySaved: Boolean = false,
+    val dictionaryError: String? = null,
     val detailId: String? = null,
     val noteEditorId: String? = null,
     val bar: SavedBar? = null,
@@ -90,6 +95,12 @@ sealed interface SavedAction {
     data object SearchSelection : SavedAction
     data object ShareSelection : SavedAction
     data object DismissSelection : SavedAction
+    data object OpenDictionary : SavedAction
+    data object CloseDictionary : SavedAction
+    data object DownloadDictionary : SavedAction
+    data object CopyDefinition : SavedAction
+    data object HighlightDictionaryWord : SavedAction
+    data object SaveWord : SavedAction
 
     data class OpenDetail(val id: String) : SavedAction
     data object CloseDetail : SavedAction

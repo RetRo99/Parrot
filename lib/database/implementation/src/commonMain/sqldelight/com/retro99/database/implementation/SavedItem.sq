@@ -32,7 +32,12 @@ CREATE TABLE IF NOT EXISTS saved_items (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     deleted_at TEXT,
-    remote_revision INTEGER
+    remote_revision INTEGER,
+    word_selected TEXT,
+    word_headword TEXT,
+    word_language TEXT,
+    word_gloss TEXT,
+    word_part_of_speech TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_saved_items_book_key ON saved_items(book_key, deleted_at);
@@ -44,9 +49,9 @@ INSERT OR REPLACE INTO saved_items(
     id, book_key, book_uuid, book_title, book_author, type, href, media_type,
     progression, total_progression, position, chapter_title,
     text_before, text_quote, text_after, color, note, audio_href, audio_ms,
-    snippet_pending, created_at, updated_at, deleted_at, remote_revision
+    snippet_pending, created_at, updated_at, deleted_at, remote_revision, word_selected, word_headword, word_language, word_gloss, word_part_of_speech
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getSavedItemById:
 SELECT * FROM saved_items WHERE id = ?;

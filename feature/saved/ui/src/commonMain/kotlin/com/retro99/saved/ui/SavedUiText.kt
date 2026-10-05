@@ -34,6 +34,7 @@ import resources.translations.saved_color_sage
 import resources.translations.saved_color_sky
 import resources.translations.saved_kind_bookmark
 import resources.translations.saved_kind_highlight
+import resources.translations.saved_kind_word
 import resources.translations.saved_meta_listening
 import resources.translations.saved_meta_percent
 import resources.translations.saved_note_label
@@ -55,7 +56,7 @@ fun EmberHighlights.of(color: HighlightColor): EmberHighlightColor = when (color
 @Composable
 fun SavedItem.barColor(): Color = when {
     Ember.style.isEink -> Ember.colors.ink
-    type == SavedItemType.Bookmark -> Ember.colors.accent
+    type != SavedItemType.Highlight -> Ember.colors.accent
     else -> Ember.colors.highlights.of(color ?: HighlightColor.Default).bar
 }
 
@@ -71,7 +72,7 @@ fun HighlightColor.label(): String = stringResource(
 
 @Composable
 fun SavedItem.kindLabel(): String = stringResource(
-    if (type == SavedItemType.Highlight) StringRes.saved_kind_highlight else StringRes.saved_kind_bookmark,
+    when (type) { SavedItemType.Highlight -> StringRes.saved_kind_highlight; SavedItemType.Bookmark -> StringRes.saved_kind_bookmark; SavedItemType.Word -> StringRes.saved_kind_word },
 )
 
 /** "41%" or "listening, 4:12:08". */
@@ -116,7 +117,7 @@ fun SavedItem.accessibilityText(): String {
 
 /** The sentence or quote; a migrated bookmark shows its chapter until its sentence is known. */
 @Composable
-fun SavedItem.displayText(): String = text?.collapseWhitespace()
+fun SavedItem.displayText(): String = word?.let { "${it.headword} — ${it.gloss}" } ?: text?.collapseWhitespace()
     ?: location.chapterTitle?.takeIf { title -> title.isNotBlank() }
     ?: stringResource(StringRes.saved_untitled_chapter)
 
@@ -147,4 +148,5 @@ fun savedExportLabels(): SavedItemsExport.Labels = SavedItemsExport.Labels(
     note = stringResource(StringRes.saved_note_label),
     listeningFormat = stringResource(StringRes.saved_meta_listening, "%s"),
     untitledChapter = stringResource(StringRes.saved_untitled_chapter),
+    word = stringResource(StringRes.saved_kind_word),
 )

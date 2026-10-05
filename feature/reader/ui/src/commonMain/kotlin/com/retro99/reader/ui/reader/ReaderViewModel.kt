@@ -172,6 +172,7 @@ class ReaderViewModel(
     @Provided private val observeSavedSyncStateUseCase: ObserveSavedSyncStateUseCase,
     @Provided private val resolveSavedBookUseCase: ResolveSavedBookUseCase,
     @Provided private val fileSharer: FileSharer,
+    @Provided private val dictionaryService: com.retro99.dictionary.DictionaryService,
     @Provided private val pendingSavedJump: com.retro99.saved.domain.PendingSavedJump,
     @Provided private val publicationService: EpubPublicationService,
     @Provided private val analytics: Analytics,
@@ -2610,6 +2611,7 @@ class ReaderViewModel(
                     bookTitle = state.bookTitle,
                     bookAuthor = state.bookAuthor.takeIf { author -> author.isNotBlank() },
                     isListening = state.isListening,
+                    bookLanguage = state.bookLanguage,
                     chapterTitleFor = { href ->
                         state.tableOfContents.firstOrNull { item ->
                             normaliseTocHref(item.href) == normaliseTocHref(href)
@@ -2631,6 +2633,7 @@ class ReaderViewModel(
             resolveBook = resolveSavedBookUseCase,
             fileSharer = fileSharer,
             pendingJump = pendingSavedJump,
+            dictionary = dictionaryService,
             onError = { error, message -> analytics.logException(error, message) },
         )
     }

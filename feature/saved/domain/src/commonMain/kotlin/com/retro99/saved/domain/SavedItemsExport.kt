@@ -17,6 +17,7 @@ object SavedItemsExport {
         /** "listening, %s" with the audio time. */
         val listeningFormat: String,
         val untitledChapter: String,
+        val word: String = "Word",
     )
 
     fun plainText(
@@ -33,11 +34,13 @@ object SavedItemsExport {
             appendLine(chapter)
             chapterItems.forEach { item ->
                 appendLine()
-                item.text?.let { text -> appendLine("“$text”") }
+                if (item.word != null) appendLine("${item.word.headword} — ${item.word.gloss}")
+                else item.text?.let { text -> appendLine("“$text”") }
                 if (item.hasNote) appendLine("${labels.note}: ${item.note!!.trim()}")
                 appendLine(item.meta(labels))
             }
         }
+        if (items.any { it.word != null }) appendLine("\nDictionary excerpts: Open English WordNet (https://en-word.net), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), based on Princeton WordNet (https://wordnet.princeton.edu/license-and-commercial-use). Trimmed by Parrot.")
     }.trimEnd() + "\n"
 
     fun markdown(
@@ -56,7 +59,8 @@ object SavedItemsExport {
             appendLine("## ${chapter.escapeMarkdownLine()}")
             chapterItems.forEach { item ->
                 appendLine()
-                item.text?.let { text ->
+                if (item.word != null) appendLine("${item.word.headword.escapeMarkdownLine()} — ${item.word.gloss.escapeMarkdownLine()}")
+                else item.text?.let { text ->
                     text.lines().forEach { line -> appendLine("> $line") }
                     appendLine()
                 }
@@ -67,6 +71,7 @@ object SavedItemsExport {
                 appendLine("*${item.meta(labels)}*")
             }
         }
+        if (items.any { it.word != null }) appendLine("\nDictionary excerpts: Open English WordNet (https://en-word.net), CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), based on Princeton WordNet (https://wordnet.princeton.edu/license-and-commercial-use). Trimmed by Parrot.")
     }.trimEnd() + "\n"
 
     /** Consecutive items of one chapter, in the order given (book order). */
@@ -86,7 +91,7 @@ object SavedItemsExport {
     }
 
     private fun SavedItem.meta(labels: Labels): String {
-        val kind = if (type == SavedItemType.Highlight) labels.highlight else labels.bookmark
+        val kind = when (type) { SavedItemType.Highlight -> labels.highlight; SavedItemType.Bookmark -> labels.bookmark; SavedItemType.Word -> labels.word }
         val where = audio?.let { position ->
             labels.listeningFormat.replace("%s", formatAudioTime(position.offsetMs))
         } ?: location.totalProgression?.let { progression -> "${percent(progression)}%" }

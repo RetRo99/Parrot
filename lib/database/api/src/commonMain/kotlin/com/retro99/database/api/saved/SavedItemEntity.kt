@@ -29,9 +29,15 @@ interface SavedItemEntity {
     val updatedAt: String
     val deletedAt: String?
     val remoteRevision: Long?
+    val wordSelected: String? get() = null
+    val wordHeadword: String? get() = null
+    val wordLanguage: String? get() = null
+    val wordGloss: String? get() = null
+    val wordPartOfSpeech: String? get() = null
 
     companion object {
         const val TYPE_BOOKMARK = "bookmark"
         const val TYPE_HIGHLIGHT = "highlight"
+        const val TYPE_WORD = "word"
     }
 }

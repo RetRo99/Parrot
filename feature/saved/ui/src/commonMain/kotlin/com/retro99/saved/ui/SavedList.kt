@@ -71,6 +71,7 @@ import resources.translations.saved_filter_all
 import resources.translations.saved_filter_bookmarks
 import resources.translations.saved_filter_highlights
 import resources.translations.saved_filter_notes
+import resources.translations.saved_filter_words
 import resources.translations.saved_note_label
 import resources.translations.saved_no_matching_items
 import resources.translations.saved_sync_offline
@@ -112,6 +113,8 @@ fun SavedBookList(
     val visible = items.filter { item ->
         filter.matches(item) && (needle.isEmpty() ||
             item.text?.contains(needle, ignoreCase = true) == true ||
+            item.word?.headword?.contains(needle, ignoreCase = true) == true ||
+            item.word?.gloss?.contains(needle, ignoreCase = true) == true ||
             item.note?.contains(needle, ignoreCase = true) == true ||
             item.location.chapterTitle?.contains(needle, ignoreCase = true) == true)
     }
@@ -180,6 +183,7 @@ fun SavedFilterChips(
                         SavedFilter.Bookmarks -> StringRes.saved_filter_bookmarks
                         SavedFilter.Highlights -> StringRes.saved_filter_highlights
                         SavedFilter.Notes -> StringRes.saved_filter_notes
+                        SavedFilter.Words -> StringRes.saved_filter_words
                     },
                 ),
                 selected = option == filter,
@@ -259,13 +263,14 @@ fun SavedItemRow(
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        text = item.displayText(),
-                        style = quoteStyle(quoteFont),
+                        text = item.word?.let { listOfNotNull(it.headword, it.partOfSpeech).joinToString(" · ") } ?: item.displayText(),
+                        style = if (item.word != null) Ember.type.cardTitle else quoteStyle(quoteFont),
                         color = colors.ink,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                         textDecoration = if (Ember.style.isEink && item.color != null) TextDecoration.Underline else null,
                     )
+                    item.word?.let { Text(it.gloss, color = colors.ink, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(top = 4.dp)) }
                     if (item.hasNote) {
                         SavedNoteBox(item.note!!, Modifier.padding(top = 10.dp))
                     }

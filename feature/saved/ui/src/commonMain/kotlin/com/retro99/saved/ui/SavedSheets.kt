@@ -110,6 +110,10 @@ fun SavedItemDetailSheet(
     onRemove: () -> Unit,
     quoteFont: FontFamily? = null,
 ) {
+    if (item.type == SavedItemType.Word && item.word != null) {
+        SavedWordDetail(item, onDismiss, onCopy, onEditNote, onRemove)
+        return
+    }
     val colors = Ember.colors
     val eink = Ember.style.isEink
     EmberBottomSheet(onDismiss = onDismiss) {
@@ -391,6 +395,7 @@ fun SavedExportSheet(
 fun savedCountsText(counts: SavedCounts): String = listOfNotNull(
     counts.bookmarks.takeIf { it > 0 }?.let { n -> pluralStringResource(PluralRes.saved_count_bookmarks, n, n) },
     counts.highlights.takeIf { it > 0 }?.let { n -> pluralStringResource(PluralRes.saved_count_highlights, n, n) },
+    counts.words.takeIf { it > 0 }?.let { n -> "$n words" },
     counts.notes.takeIf { it > 0 }?.let { n -> pluralStringResource(PluralRes.saved_count_notes, n, n) },
 ).joinToString(" · ")
 
@@ -457,4 +462,20 @@ private fun SheetAction(
         }
         Text(label, color = tint, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
     }
+}
+
+@Composable
+private fun SavedWordDetail(item: SavedItem, onDismiss: () -> Unit, onCopy: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val word = item.word ?: return
+    val dictionary: com.retro99.dictionary.DictionaryService = org.koin.compose.koinInject()
+    val entry by androidx.compose.runtime.produceState(
+        initialValue = com.retro99.dictionary.DictionaryEntry(word.headword, groups = listOf(
+            com.retro99.dictionary.DictionaryGroup(word.partOfSpeech ?: "", listOf(com.retro99.dictionary.DictionarySense(word.gloss))))),
+        key1 = item.id,
+    ) {
+        dictionary.acquire()
+        try { value = dictionary.lookup(word.headword) ?: value }
+        finally { kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { dictionary.release() } }
+    }
+    com.retro99.saved.ui.dictionary.DictionaryEntrySheet(entry, onDismiss, onCopy, onEdit = onEdit, onDelete = onDelete)
 }

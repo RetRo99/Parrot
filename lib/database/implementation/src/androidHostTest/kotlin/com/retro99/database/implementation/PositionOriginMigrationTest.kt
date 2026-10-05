@@ -152,6 +152,6 @@ class PositionOriginMigrationTest {
     }
 
     private companion object {
-        const val LATEST = 38L
+        const val LATEST = 39L
     }
 }

@@ -1,0 +1,12 @@
+# English dictionary pack
+
+Pinned input: [Open English WordNet 2025 LMF XML](https://github.com/globalwordnet/english-wordnet/releases/download/2025-edition/english-wordnet-2025.xml.gz).
+
+Build: `python3 tools/dictionary/build_pack.py /path/to/english-wordnet-2025.xml.gz tools/dictionary/dist/oewn-2025-1`.
+The output is a separate SQLite database, not part of the app database. The base English pack is now bundled in `lib/dictionary/src/commonMain/composeResources/files/english.sqlite` for both Android and iOS; no download is needed. Generated build output in `dist/` is ignored by Git, but the bundled resource is versioned. To replace it, rebuild from the pinned input, copy `english.sqlite` to that resource path, and update the version/size/hash in `ENGLISH_PACK` and the build's `verifyBundledDictionary` gate together. Retain the offline licence notices in `translations/src/commonMain/composeResources/files/dictionary/`.
+
+Optional downloaded updates use `english.sqlite` and `manifest.json` release assets in the existing `RetRo99/tts-models` host. Publish the per-version asset plus the discovery manifest as `dictionary/english-manifest.json`, with both licence files alongside the release. Updates are installed only after the user explicitly checks and requests them. Removing a downloaded update falls back to the app's bundled pack; it never disables offline English lookup.
+
+Licence verified from the project's [LICENSE.md](https://github.com/globalwordnet/english-wordnet/blob/main/LICENSE.md) and [WNDB_License.txt](https://github.com/globalwordnet/english-wordnet/blob/main/WNDB_License.txt) on 2026-10-05. Open English WordNet is CC BY 4.0; its Princeton WordNet foundation retains the WordNet licence. Both permit commercial redistribution. Retain both copyright and licence notices, credit both teams, link to the sources and licence, and identify the modifications. Neither requires share-alike. App code remains separate from dictionary data. The full notices also appear in the app's offline attribution sheet.
+
+Schema: `entries(headword PRIMARY KEY, entry_json)` contains ordered part-of-speech groups, IPA where present, and up to four senses per group with one optional example. `forms(form, headword)` stores the source's irregular forms. `metadata` records source, version, input hash and modifications. Only single-word entries are included; no relations, translations or etymologies are retained. Selection lookup never uses a network client.

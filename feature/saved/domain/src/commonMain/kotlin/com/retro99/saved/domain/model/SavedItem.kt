@@ -5,10 +5,11 @@ import kotlin.time.Instant
 enum class SavedItemType(val id: String) {
     Bookmark("bookmark"),
     Highlight("highlight"),
+    Word("word"),
     ;
 
     companion object {
-        fun fromId(id: String): SavedItemType = entries.firstOrNull { type -> type.id == id } ?: Bookmark
+        fun fromId(id: String): SavedItemType? = entries.firstOrNull { type -> type.id == id }
     }
 }
 
@@ -47,7 +48,7 @@ data class SavedLocation(
     val chapterTitle: String?,
 )
 
-/** A bookmark or highlight. A "note" is any item with [note] text. */
+/** A bookmark, highlight or word. A "note" is any item with [note] text. */
 data class SavedItem(
     val id: String,
     val book: SavedBookRef,
@@ -63,6 +64,7 @@ data class SavedItem(
     val createdAt: Instant,
     val updatedAt: Instant,
     val remoteRevision: Long?,
+    val word: SavedWord? = null,
 ) {
     val hasNote: Boolean get() = !note.isNullOrBlank()
 
@@ -70,6 +72,11 @@ data class SavedItem(
     val text: String? get() = anchor?.quote?.takeIf { quote -> quote.isNotBlank() }
 
     val isListeningBookmark: Boolean get() = type == SavedItemType.Bookmark && audio != null
+
+    /** A saved headword elsewhere must remain saveable so its anchor can be updated. */
+    fun isWordAt(headword: String, href: String, anchor: TextAnchor): Boolean =
+        type == SavedItemType.Word && word?.headword.equals(headword, ignoreCase = true) &&
+            location.href == href && this.anchor == anchor
 }
 
 /** The book an item belongs to, with a title snapshot for books this device doesn't have. */
@@ -91,6 +98,7 @@ enum class SavedFilter {
     Bookmarks,
     Highlights,
     Notes,
+    Words,
     ;
 
     fun matches(item: SavedItem): Boolean = when (this) {
@@ -98,6 +106,7 @@ enum class SavedFilter {
         Bookmarks -> item.type == SavedItemType.Bookmark
         Highlights -> item.type == SavedItemType.Highlight
         Notes -> item.hasNote
+        Words -> item.type == SavedItemType.Word
     }
 }
 
@@ -112,14 +121,25 @@ data class SavedCounts(
     val bookmarks: Int,
     val highlights: Int,
     val notes: Int,
+    val words: Int = 0,
 ) {
-    val total: Int get() = bookmarks + highlights
+    val total: Int get() = bookmarks + highlights + words
 
     companion object {
         fun of(items: List<SavedItem>) = SavedCounts(
             bookmarks = items.count { item -> item.type == SavedItemType.Bookmark },
             highlights = items.count { item -> item.type == SavedItemType.Highlight },
             notes = items.count { item -> item.hasNote },
+            words = items.count { item -> item.type == SavedItemType.Word },
         )
     }
 }
+
+/** A small dictionary snapshot, independent of the downloaded pack. */
+data class SavedWord(
+    val selected: String,
+    val headword: String,
+    val language: String,
+    val gloss: String,
+    val partOfSpeech: String?,
+)

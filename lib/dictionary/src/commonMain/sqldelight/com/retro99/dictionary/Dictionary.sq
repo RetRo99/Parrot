@@ -1,0 +1,12 @@
+CREATE TABLE entries (headword TEXT NOT NULL PRIMARY KEY, entry_json TEXT NOT NULL);
+CREATE TABLE forms (form TEXT NOT NULL, headword TEXT NOT NULL, PRIMARY KEY (form,headword)) WITHOUT ROWID;
+CREATE TABLE metadata (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL);
+
+entry:
+SELECT entry_json FROM entries WHERE headword = ?;
+
+forms:
+SELECT headword FROM forms WHERE form = ? ORDER BY headword;
+
+version:
+SELECT value FROM metadata WHERE key = 'version';

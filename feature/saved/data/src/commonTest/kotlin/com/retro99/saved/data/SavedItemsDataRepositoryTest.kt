@@ -25,6 +25,23 @@ class SavedItemsDataRepositoryTest {
     private val repository = SavedItemsDataRepository(database)
 
     @Test
+    fun `unknown types are ignored rather than becoming bookmarks`() {
+        assertNull(highlight().toEntity().copy(type = "future-type").toDomain())
+    }
+
+    @Test
+    fun `word snapshots survive storage deletion and undo`() = runTest {
+        val word = com.retro99.saved.domain.model.SavedWord("running", "run", "en", "move fast", "verb")
+        val item = highlight().copy(type = SavedItemType.Word, word = word)
+        repository.save(listOf(item))
+        assertEquals(word, repository.get(item.id)?.word)
+        val removed = repository.delete(item.id)!!
+        assertEquals(word, removed.word)
+        repository.save(listOf(removed))
+        assertEquals(word, repository.get(item.id)?.word)
+    }
+
+    @Test
     fun `saving queues an upsert that names the item`() = runTest {
         // When
         repository.save(listOf(highlight()))

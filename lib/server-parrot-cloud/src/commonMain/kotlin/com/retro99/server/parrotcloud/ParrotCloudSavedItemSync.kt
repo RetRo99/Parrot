@@ -160,6 +160,16 @@ internal data class ParrotCloudSavedItemPayload(
     val deletedAt: String? = null,
     @SerialName("remote_revision")
     val remoteRevision: Long? = null,
+    @SerialName("word_selected")
+    val wordSelected: String? = null,
+    @SerialName("word_headword")
+    val wordHeadword: String? = null,
+    @SerialName("word_language")
+    val wordLanguage: String? = null,
+    @SerialName("word_gloss")
+    val wordGloss: String? = null,
+    @SerialName("word_part_of_speech")
+    val wordPartOfSpeech: String? = null,
 )
 
 internal fun SavedItemEntity.toPayload() = ParrotCloudSavedItemPayload(
@@ -184,6 +194,11 @@ internal fun SavedItemEntity.toPayload() = ParrotCloudSavedItemPayload(
     createdAt = createdAt,
     updatedAt = updatedAt,
     deletedAt = deletedAt,
+    wordSelected = wordSelected,
+    wordHeadword = wordHeadword,
+    wordLanguage = wordLanguage,
+    wordGloss = wordGloss,
+    wordPartOfSpeech = wordPartOfSpeech,
 )
 
 /**
@@ -216,6 +231,11 @@ internal fun ParrotCloudSavedItemPayload.toEntity(localBookUuid: String?): Saved
     updatedAt = updatedAt.normalizedInstant(),
     deletedAt = deletedAt?.normalizedInstant(),
     remoteRevision = remoteRevision,
+    wordSelected = wordSelected,
+    wordHeadword = wordHeadword,
+    wordLanguage = wordLanguage,
+    wordGloss = wordGloss,
+    wordPartOfSpeech = wordPartOfSpeech,
 )
 
 /** Postgres writes "+00:00"; store the same "Z" form the app writes. */
@@ -246,4 +266,9 @@ private data class RemoteSavedItem(
     override val updatedAt: String,
     override val deletedAt: String?,
     override val remoteRevision: Long?,
+    override val wordSelected: String? = null,
+    override val wordHeadword: String? = null,
+    override val wordLanguage: String? = null,
+    override val wordGloss: String? = null,
+    override val wordPartOfSpeech: String? = null,
 ) : SavedItemEntity

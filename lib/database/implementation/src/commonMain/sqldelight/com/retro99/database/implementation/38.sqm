@@ -1,0 +1,6 @@
+-- A short word snapshot; full entries stay in the separate offline dictionary pack.
+ALTER TABLE saved_items ADD COLUMN word_selected TEXT;
+ALTER TABLE saved_items ADD COLUMN word_headword TEXT;
+ALTER TABLE saved_items ADD COLUMN word_language TEXT;
+ALTER TABLE saved_items ADD COLUMN word_gloss TEXT;
+ALTER TABLE saved_items ADD COLUMN word_part_of_speech TEXT;

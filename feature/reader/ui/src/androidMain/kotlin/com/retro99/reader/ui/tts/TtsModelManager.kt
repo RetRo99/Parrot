@@ -363,47 +363,16 @@ class TtsModelManager(
             }
         }
         try {
-            when (val responseCode = connection.responseCode) {
-                HttpURLConnection.HTTP_OK -> {
-                    // The server ignored the range request: restart from scratch.
-                    partial.delete()
-                    offset = 0L
-                }
-
-                HTTP_PARTIAL_CONTENT -> Unit
-
-                HTTP_RANGE_NOT_SATISFIABLE -> {
-                    partial.delete()
-                    throw IOException("Resume rejected for ${file.path}")
-                }
-
-                else -> {
-                    if (responseCode !in HTTP_SUCCESS_RANGE) {
-                        throw IOException(
-                            "Download failed for ${file.path} with HTTP $responseCode",
-                        )
-                    }
-                }
-            }
+            val responseCode = connection.responseCode
+            if (responseCode == HTTP_RANGE_NOT_SATISFIABLE) partial.delete()
+            offset = com.retro99.packs.packResumeOffset(responseCode, connection.getHeaderField("Content-Range"), offset, file.size)
+            if (offset == 0L) partial.delete()
             connection.inputStream.use { input ->
                 FileOutputStream(partial, offset > 0L).use { output ->
-                    val buffer = ByteArray(BUFFER_SIZE)
-                    var downloaded = offset
-                    onBytes(downloaded)
-                    while (true) {
-                        currentCoroutineContext().ensureActive()
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        output.write(buffer, 0, read)
-                        downloaded += read
-                        onBytes(downloaded)
-                    }
-                    if (downloaded != file.size) {
-                        throw IOException(
-                            "Incomplete download for ${file.path}: " +
-                                    "$downloaded of ${file.size} bytes",
-                        )
-                    }
+                    com.retro99.packs.copyPackBytes(file.size, offset,
+                        read = { buffer -> input.read(buffer) },
+                        write = { buffer, count -> output.write(buffer, 0, count) },
+                        onBytes = onBytes)
                 }
             }
         } finally {
