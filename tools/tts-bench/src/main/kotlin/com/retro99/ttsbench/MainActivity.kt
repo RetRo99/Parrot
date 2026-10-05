@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 object BenchHolder {
@@ -52,6 +54,7 @@ object BenchHolder {
 class MainActivity : ComponentActivity() {
 
     private val controller by lazy { BenchHolder.get(this) }
+    private val scope = MainScope()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,15 +67,32 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleIntent(intent)
     }
 
     private fun handleIntent(intent: Intent?) {
-        val requested = intent?.getStringExtra("mode") ?: return
-        val mode = BenchMode.entries.firstOrNull { entry -> entry.extra == requested } ?: return
-        controller.start(mode)
+        val requested = intent?.getStringExtra("mode")
+        if (requested != null) {
+            val mode = BenchMode.entries.firstOrNull { entry -> entry.extra == requested } ?: return
+            controller.start(mode)
+            return
+        }
+        val wordClips = intent?.getStringExtra("wordclips") ?: return
+        val engines = when (wordClips) {
+            "all" -> WordEngine.entries
+            else -> WordEngine.entries.filter { engine -> engine.id == wordClips }
+        }
+        if (engines.isEmpty()) return
+        scope.launch {
+            engines.forEach { engine -> controller.wordLab.prepareWordClips(engine) }
+        }
     }
 }
 
@@ -105,6 +125,7 @@ private fun BenchScreen(controller: BenchController) {
 
         SamplesSection(controller.samples, controller.player)
         ListeningSection(controller.lab, controller.player)
+        WordClipsSection(controller.wordLab, controller.player)
         SummaryTable(state.summaries)
 
         Text("Log", style = MaterialTheme.typography.titleSmall)

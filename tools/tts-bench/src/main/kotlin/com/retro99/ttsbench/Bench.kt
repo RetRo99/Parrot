@@ -71,6 +71,7 @@ enum class BenchMode(val extra: String, val label: String) {
     FULL("full", "Supertonic matrix"),
     QUICK("quick", "Supertonic quick"),
     KOKORO("kokoro", "Kokoro baseline"),
+    WORD("word", "One-word latency"),
     SAMPLES("samples", "Samples to hear"),
     ALL("all", "Everything"),
 }
@@ -98,6 +99,7 @@ class BenchController(context: Context) {
     val samples = SampleStore(appContext)
     val player = SamplePlayer()
     val lab = ListeningLab(store, samples, ::log)
+    val wordLab = WordLab(appContext, store, samples, ::log)
 
     fun start(mode: BenchMode) {
         if (job?.isActive == true) return
@@ -106,22 +108,32 @@ class BenchController(context: Context) {
         job = scope.launch {
             val runDir = samples.newRun(stamp, mode.extra)
             val measurements = mutableListOf<Measurement>()
+            val wordMeasurements = mutableListOf<WordMeasurement>()
             val loads = mutableListOf<String>()
             try {
-                if (mode != BenchMode.KOKORO) runSupertonic(mode, runDir, measurements, loads)
-                if (mode == BenchMode.KOKORO || mode == BenchMode.ALL) {
-                    runKokoro(mode, runDir, measurements, loads)
+                when (mode) {
+                    BenchMode.WORD -> runWordBench(runDir, wordMeasurements, loads)
+                    else -> {
+                        if (mode != BenchMode.KOKORO) runSupertonic(mode, runDir, measurements, loads)
+                        if (mode == BenchMode.KOKORO || mode == BenchMode.ALL) {
+                            runKokoro(mode, runDir, measurements, loads)
+                        }
+                        if (mode == BenchMode.ALL) runWordBench(runDir, wordMeasurements, loads)
+                    }
                 }
                 val path = writeCsv(stamp, measurements, loads)
+                val wordsPath = writeWordsCsv(stamp, wordMeasurements)
                 _state.update { current ->
                     current.copy(
                         running = false,
-                        status = "Done: ${measurements.size} measurements",
+                        status = "Done: ${measurements.size} measurements, " +
+                            "${wordMeasurements.size} word rows",
                         summaries = summarize(measurements),
                         csvPath = path,
                     )
                 }
                 log("DONE csv=$path")
+                wordsPath?.let { path -> log("DONE words csv=$path") }
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -129,6 +141,9 @@ class BenchController(context: Context) {
                 log("FAILED: ${error.message}")
                 if (measurements.isNotEmpty()) {
                     log("PARTIAL csv=${writeCsv(stamp, measurements, loads)}")
+                }
+                if (wordMeasurements.isNotEmpty()) {
+                    log("PARTIAL words csv=${writeWordsCsv(stamp, wordMeasurements)}")
                 }
                 _state.update { current -> current.copy(running = false, status = "Failed") }
             }
@@ -192,6 +207,211 @@ class BenchController(context: Context) {
             measureConfig(engine, 0, repeats, mode, runDir, measurements)
         } finally {
             engine.release()
+        }
+    }
+
+    /**
+     * One-word latency, cold and warm: what a speaker tap on the dictionary strip pays per
+     * engine. Cold is the first word right after load (`BenchEngine.load` has already run the
+     * app's warm-up pass, matching `ensureLoaded`); warm is [WORD_REPEATS] repeats.
+     */
+    private suspend fun runWordBench(
+        runDir: File,
+        words: MutableList<WordMeasurement>,
+        loads: MutableList<String>,
+    ) {
+        setStatus("One-word: system TTS")
+        measureSystemWord(runDir, words, loads)
+
+        val threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 4)
+        setStatus("One-word: Supertonic")
+        val (supertonicDir, supertonicVersion) =
+            withContext(Dispatchers.IO) { store.ensure(ModelKind.SUPERTONIC.id) }
+        val supertonic = withContext(Dispatchers.IO) {
+            BenchEngine.loadSupertonic(supertonicDir, supertonicVersion, threads)
+        }
+        recordLoad(supertonic, loads)
+        try {
+            measureNeuralWord(supertonic, APP_GENERATION_STEPS, runDir, words)
+        } finally {
+            supertonic.release()
+        }
+
+        setStatus("One-word: Kokoro")
+        val (kokoroDir, kokoroVersion) =
+            withContext(Dispatchers.IO) { store.ensure(ModelKind.KOKORO.id) }
+        val kokoro = withContext(Dispatchers.IO) {
+            BenchEngine.loadKokoro(kokoroDir, kokoroVersion, threads)
+        }
+        recordLoad(kokoro, loads)
+        try {
+            measureNeuralWord(kokoro, 0, runDir, words)
+        } finally {
+            kokoro.release()
+        }
+
+        logWordSummary(words)
+    }
+
+    private suspend fun measureNeuralWord(
+        engine: BenchEngine,
+        steps: Int,
+        runDir: File,
+        into: MutableList<WordMeasurement>,
+    ) {
+        val coldStart = SystemClock.elapsedRealtime()
+        val audio = withContext(Dispatchers.Default) { engine.generate(WORD_TEXT, steps) }
+        val coldMs = SystemClock.elapsedRealtime() - coldStart
+        val audioMs = audio.samples.size * MS_PER_SECOND / audio.sampleRate
+        val sampleFile = SampleStore.fileName(engine.kind.id, engine.threads, steps, "word-cold")
+        audio.save(File(runDir, sampleFile).absolutePath)
+        into += wordMeasurement(
+            engine = engine.kind.id,
+            version = engine.version,
+            threads = engine.threads,
+            steps = steps,
+            phase = PHASE_COLD,
+            run = 1,
+            generationMs = coldMs,
+            audioMs = audioMs,
+            sampleRate = audio.sampleRate,
+            sampleFile = sampleFile,
+        )
+        log("WORD ${engine.kind.id} cold gen=${coldMs}ms audio=${audioMs}ms")
+        for (run in 1..WORD_REPEATS) {
+            val warmStart = SystemClock.elapsedRealtime()
+            val warmAudio = withContext(Dispatchers.Default) { engine.generate(WORD_TEXT, steps) }
+            val warmMs = SystemClock.elapsedRealtime() - warmStart
+            val warmAudioMs = warmAudio.samples.size * MS_PER_SECOND / warmAudio.sampleRate
+            into += wordMeasurement(
+                engine = engine.kind.id,
+                version = engine.version,
+                threads = engine.threads,
+                steps = steps,
+                phase = PHASE_WARM,
+                run = run,
+                generationMs = warmMs,
+                audioMs = warmAudioMs,
+                sampleRate = warmAudio.sampleRate,
+                sampleFile = "",
+            )
+            log("WORD ${engine.kind.id} warm run=$run gen=${warmMs}ms audio=${warmAudioMs}ms")
+        }
+    }
+
+    private suspend fun measureSystemWord(
+        runDir: File,
+        into: MutableList<WordMeasurement>,
+        loads: MutableList<String>,
+    ) {
+        val engine = SystemTtsEngine.create(appContext)
+        if (engine == null) {
+            log("WORD system: TTS engine failed to bind")
+            return
+        }
+        loads += "system,${engine.engineName},0,0,${engine.bindMs},0"
+        log(
+            "LOAD system engine=${engine.engineName} voice=${engine.voiceId} " +
+                "bind=${engine.bindMs}ms",
+        )
+        try {
+            val coldFile = File(runDir, SampleStore.fileName(SYSTEM_MODEL_ID, 0, 0, "word-cold"))
+            val coldStart = SystemClock.elapsedRealtime()
+            val coldOk = engine.synthesizeToFile(WORD_TEXT, coldFile)
+            val coldMs = SystemClock.elapsedRealtime() - coldStart
+            val coldInfo = if (coldOk) readWavInfo(coldFile) else null
+            if (coldInfo == null) {
+                coldFile.delete()
+                log("WORD system cold FAILED after ${coldMs}ms")
+                return
+            }
+            into += wordMeasurement(
+                engine = SYSTEM_MODEL_ID,
+                version = engine.engineName,
+                threads = 0,
+                steps = 0,
+                phase = PHASE_COLD,
+                run = 1,
+                generationMs = coldMs,
+                audioMs = coldInfo.durationMs,
+                sampleRate = coldInfo.sampleRate,
+                sampleFile = coldFile.name,
+            )
+            log("WORD system cold gen=${coldMs}ms audio=${coldInfo.durationMs}ms")
+
+            val warmFile = File(appContext.cacheDir, "word-warm.wav")
+            for (run in 1..WORD_REPEATS) {
+                val warmStart = SystemClock.elapsedRealtime()
+                val warmOk = engine.synthesizeToFile(WORD_TEXT, warmFile)
+                val warmMs = SystemClock.elapsedRealtime() - warmStart
+                val warmInfo = if (warmOk) readWavInfo(warmFile) else null
+                if (warmInfo == null) {
+                    log("WORD system warm run=$run FAILED after ${warmMs}ms")
+                    continue
+                }
+                into += wordMeasurement(
+                    engine = SYSTEM_MODEL_ID,
+                    version = engine.engineName,
+                    threads = 0,
+                    steps = 0,
+                    phase = PHASE_WARM,
+                    run = run,
+                    generationMs = warmMs,
+                    audioMs = warmInfo.durationMs,
+                    sampleRate = warmInfo.sampleRate,
+                    sampleFile = "",
+                )
+                log("WORD system warm run=$run gen=${warmMs}ms audio=${warmInfo.durationMs}ms")
+            }
+            warmFile.delete()
+        } finally {
+            engine.close()
+        }
+    }
+
+    private fun wordMeasurement(
+        engine: String,
+        version: String,
+        threads: Int,
+        steps: Int,
+        phase: String,
+        run: Int,
+        generationMs: Long,
+        audioMs: Long,
+        sampleRate: Int,
+        sampleFile: String,
+    ): WordMeasurement = WordMeasurement(
+        engine = engine,
+        version = version,
+        threads = threads,
+        steps = steps,
+        phase = phase,
+        run = run,
+        generationMs = generationMs,
+        audioMs = audioMs,
+        sampleRate = sampleRate,
+        thermal = DeviceState.thermalStatus(appContext),
+        charging = DeviceState.isCharging(appContext),
+        sampleFile = sampleFile,
+    )
+
+    private fun logWordSummary(words: List<WordMeasurement>) {
+        words.groupBy { row -> row.engine }.forEach { (engine, rows) ->
+            val cold = rows.firstOrNull { row -> row.phase == PHASE_COLD }?.generationMs
+            val warm = rows.filter { row -> row.phase == PHASE_WARM }
+            val warmMedian = warm
+                .takeIf { rows -> rows.isNotEmpty() }
+                ?.let { rows -> median(rows.map { row -> row.generationMs.toDouble() }).toLong() }
+            val audioMs = rows.firstOrNull()?.audioMs
+            log(
+                "WORDS %s cold=%s warm-median=%s audio=%s".format(
+                    Locale.US,
+                    engine,
+                    cold?.let { ms -> "${ms}ms" } ?: "-",
+                    warmMedian?.let { ms -> "${ms}ms" } ?: "-",
+                    audioMs?.let { ms -> "${ms}ms" } ?: "-",
+                ),
+            )
         }
     }
 
@@ -367,6 +587,28 @@ class BenchController(context: Context) {
         return results.absolutePath
     }
 
+    /** `words-<stamp>.csv`; null when the run produced no word rows. */
+    private fun writeWordsCsv(stamp: String, words: List<WordMeasurement>): String? {
+        if (words.isEmpty()) return null
+        val dir = appContext.getExternalFilesDir(null) ?: appContext.filesDir
+        val results = File(dir, "words-$stamp.csv")
+        results.bufferedWriter().use { writer ->
+            writer.appendLine("# ${device.summary()}")
+            writer.appendLine(
+                "engine,version,threads,steps,phase,run,generation_ms,audio_ms,sample_rate," +
+                    "thermal,charging,sample_file",
+            )
+            for (row in words) {
+                writer.appendLine(
+                    "${row.engine},${row.version},${row.threads},${row.steps},${row.phase}," +
+                        "${row.run},${row.generationMs},${row.audioMs},${row.sampleRate}," +
+                        "${row.thermal},${row.charging},${row.sampleFile}",
+                )
+            }
+        }
+        return results.absolutePath
+    }
+
     private fun setStatus(status: String) {
         _state.update { current -> current.copy(status = status) }
     }
@@ -378,6 +620,8 @@ class BenchController(context: Context) {
 
     private companion object {
         const val REPEATS = 3
+        const val WORD_REPEATS = 5
+        const val SYSTEM_MODEL_ID = "system"
         const val MS_PER_SECOND = 1000L
         const val MAX_LOG = 200
     }

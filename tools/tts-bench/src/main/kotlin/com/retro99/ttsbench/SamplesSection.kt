@@ -92,7 +92,7 @@ fun SamplesSection(store: SampleStore, player: SamplePlayer) {
     }
 
     val groups = selected.rows.groupBy { row -> row.passage }
-    val passageOrder = PASSAGES.map { passage -> passage.name } + KIND_LISTENING
+    val passageOrder = PASSAGES.map { passage -> passage.name } + KIND_WORD + KIND_LISTENING
     passageOrder.filter { name -> name in groups }.forEach { name ->
         val rows = groups.getValue(name)
         Text(
