@@ -38,12 +38,18 @@ class ResolveSavedBookOpenUseCase(
     suspend operator fun invoke(bookKey: String): SavedBookOpenTarget {
         val book = books().firstOrNull { candidate -> candidate.copyKey().value == bookKey }
             ?: return SavedBookOpenTarget.Unavailable
-        // Read-aloud first: the same file reads as text and plays narration.
-        val cached = listOf(BookType.READALOUD, BookType.EBOOK).firstOrNull { type ->
-            runCatching { readerRepository.isEbookCached(book.uuid, type) }.getOrDefault(false)
+        // Library books open directly from their device_files path; they aren't in the
+        // reader's download cache. Server books, in contrast, use that reader cache.
+        val openableType = when (book) {
+            is BookDomainModel.LibraryBook -> listOf(BookType.READALOUD, BookType.EBOOK)
+                .firstOrNull { type -> book.deviceFilePath(type) != null }
+            is BookDomainModel.StorytellerBook -> listOf(BookType.READALOUD, BookType.EBOOK)
+                .firstOrNull { type ->
+                    runCatching { readerRepository.isEbookCached(book.uuid, type) }.getOrDefault(false)
+                }
         }
-        return if (cached != null) {
-            SavedBookOpenTarget.Open(book.serverId, book.uuid, cached)
+        return if (openableType != null) {
+            SavedBookOpenTarget.Open(book.serverId, book.uuid, openableType)
         } else {
             SavedBookOpenTarget.Download(book.serverId, book.uuid, book.title)
         }
