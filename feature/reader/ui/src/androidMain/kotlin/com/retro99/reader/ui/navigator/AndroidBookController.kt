@@ -881,8 +881,8 @@ class AndroidBookController internal constructor() : BookController {
     }
 
     /**
-     * The fill behind each highlight, which also carries the taps on its detail sheet. On
-     * e-ink the fill is transparent: the rules are drawn by [SavedPageScript], and the
+     * The fill each highlight blends onto the page, which also carries the taps on its detail
+     * sheet. On e-ink the fill is transparent: the rules are drawn by [SavedPageScript], and the
      * decoration is there only so the range can be tapped.
      */
     override fun applySavedDecorations(marks: List<PageMark>) {
@@ -893,7 +893,7 @@ class AndroidBookController internal constructor() : BookController {
             Decoration(
                 id = mark.id,
                 locator = locator,
-                style = SavedHighlightStyle(tint = mark.fill),
+                style = SavedHighlightStyle(tint = mark.fill, darkPage = mark.darkPage),
             )
         }
         controllerScope.launch {

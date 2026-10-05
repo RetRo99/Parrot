@@ -92,6 +92,16 @@ class SavedMarksTest {
     }
 
     @Test
+    fun `the fill is told whether it lands on a dark page`() {
+        // Given: the same highlight on a light and on a dark page.
+        val darkPage = lightPage.copy(darkPage = true)
+
+        // Then: the fill blends by darkening onto the first and lightening onto the second.
+        assertFalse(SavedMarks.marks(listOf(highlight("a")), lightPage).single().darkPage)
+        assertTrue(SavedMarks.marks(listOf(highlight("a")), darkPage).single().darkPage)
+    }
+
+    @Test
     fun `a bookmark with a note is left to the ribbon and marked nowhere in the text`() {
         // When
         val mark = SavedMarks.marks(listOf(highlight("a", type = SavedItemType.Bookmark, note = "mine")), lightPage).single()

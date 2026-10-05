@@ -401,7 +401,9 @@ data class SavedDecorationLocator(
     val before: String?,
     val highlight: String,
     val after: String?,
-    /** Fill behind the text, ARGB, alpha included. A transparent fill (e-ink) is only there
+    /** Fill blended onto the text, ARGB, alpha included. A transparent fill (e-ink) is only there
      *  to carry the taps: the rules and edge bars are drawn by the page script. */
     val fill: Int,
+    /** The fill lands on a dark page: it lightens onto the glyphs instead of darkening them. */
+    val darkPage: Boolean = false,
 )

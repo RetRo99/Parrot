@@ -832,8 +832,14 @@ data class PageMark(
     val before: String? = null,
     val after: String? = null,
     val progression: Double? = null,
-    /** Fill behind the text, or 0 when the theme draws none (e-ink). */
+    /** Fill blended onto the text, or 0 when the theme draws none (e-ink). */
     val fill: Int = 0,
+    /**
+     * The fill lands on a dark page, so it blends by lightening onto the text rather than
+     * darkening onto it. Either way the glyphs stay the colour they are and the tint keeps
+     * its own look - and no background the book paints can hide the fill.
+     */
+    val darkPage: Boolean = false,
     /** Whether the navigator draws a tap target for this range. */
     val tappable: Boolean = false,
     /** Colour of the rule under the range, or 0 for none. */

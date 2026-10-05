@@ -18,6 +18,8 @@ data class SavedMarkStyle(
     val rules: Map<HighlightColor, Int> = emptyMap(),
     /** No colours and no fills: highlights become rules instead. */
     val eink: Boolean = false,
+    /** Whether the page under the fills is dark; see [PageMark.darkPage]. */
+    val darkPage: Boolean = false,
     /** Accent colour of the bar at the edge of the page; black on e-ink. */
     val barColor: Int = 0,
     /** Page margins in dp, one per side: the bar is dropped on a side with no room for it. */
@@ -61,6 +63,7 @@ internal object SavedMarks {
             after = anchor.after,
             progression = item.location.progression,
             fill = if (isHighlight) style.fills[color] ?: 0 else 0,
+            darkPage = style.darkPage,
             tappable = isHighlight,
             ruleColor = if (isHighlight) style.rules[color] ?: 0 else 0,
             ruleCount = rules(style, isHighlight, hasNote),

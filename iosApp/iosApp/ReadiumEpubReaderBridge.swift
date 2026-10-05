@@ -575,22 +575,30 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
     // MARK: - Bookmarks and highlights
 
     private static let savedGroup = "saved"
-    private static let savedHighlightStyle = Decoration.Style.Id(rawValue: "parrotHighlight")
+    private static let savedHighlightStyleLight = Decoration.Style.Id(rawValue: "parrotHighlightLight")
+    private static let savedHighlightStyleDark = Decoration.Style.Id(rawValue: "parrotHighlightDark")
 
-    /// Readium's templates plus ours: a highlight that keeps the tint's own alpha. It is also
-    /// what carries the taps on e-ink, where the fill is transparent and the rules and edge
-    /// bars are drawn by the page script.
+    /// Readium's templates plus ours: a highlight that keeps the tint's own alpha and blends
+    /// onto the page instead of covering the glyphs - multiplying on a light page leaves the
+    /// dark glyphs under it dark, screening on a dark page leaves the light ones light. It is
+    /// also what carries the taps on e-ink, where the fill is transparent and the rules and
+    /// edge bars are drawn by the page script.
     private static func decorationTemplates() -> [Decoration.Style.Id: HTMLDecorationTemplate] {
         var templates = HTMLDecorationTemplate.defaultTemplates()
-        templates[savedHighlightStyle] = HTMLDecorationTemplate(
+        templates[savedHighlightStyleLight] = savedHighlightTemplate(blend: "multiply")
+        templates[savedHighlightStyleDark] = savedHighlightTemplate(blend: "screen")
+        return templates
+    }
+
+    private static func savedHighlightTemplate(blend: String) -> HTMLDecorationTemplate {
+        HTMLDecorationTemplate(
             layout: .boxes,
             element: { decoration in
                 let tint = (decoration.style.config as? Decoration.Style.HighlightConfig)?.tint ?? .yellow
-                return "<div class=\"parrot-saved-highlight\" style=\"background-color: \(cssColor(tint)) !important\"></div>"
+                return "<div class=\"parrot-saved-highlight\" style=\"background-color: \(cssColor(tint)) !important; mix-blend-mode: \(blend)\"></div>"
             },
-            stylesheet: ".parrot-saved-highlight { border-radius: 3px; }"
+            stylesheet: ".parrot-saved-highlight { z-index: 0; border-radius: 3px; box-sizing: border-box; }"
         )
-        return templates
     }
 
     private static func cssColor(_ color: UIColor) -> String {
@@ -627,7 +635,10 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
             highlights.append(Decoration(
                 id: saved.id,
                 locator: locator,
-                style: Decoration.Style(id: Self.savedHighlightStyle, config: Decoration.Style.HighlightConfig(tint: highlightColorFromArgb(saved.fill)))
+                style: Decoration.Style(
+                    id: saved.darkPage ? Self.savedHighlightStyleDark : Self.savedHighlightStyleLight,
+                    config: Decoration.Style.HighlightConfig(tint: highlightColorFromArgb(saved.fill))
+                )
             ))
         }
         navigator.apply(decorations: highlights, in: Self.savedGroup)

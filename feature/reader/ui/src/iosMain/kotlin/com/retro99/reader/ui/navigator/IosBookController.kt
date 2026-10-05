@@ -457,6 +457,7 @@ class IosBookController(
                     highlight = mark.quote,
                     after = mark.after,
                     fill = mark.fill,
+                    darkPage = mark.darkPage,
                 )
             },
         )

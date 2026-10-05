@@ -285,6 +285,7 @@ internal fun ReaderSavedHost(
             (if (eink) Color.Black else palette.of(color).line).toArgb()
         },
         eink = eink,
+        darkPage = isDarkPage,
         // The bar is the accent, matching the ribbon; e-ink has only black.
         barColor = (if (eink) Color.Black else Ember.colors.accent).toArgb(),
         marginLeftDp = marginHorizontalDp,
