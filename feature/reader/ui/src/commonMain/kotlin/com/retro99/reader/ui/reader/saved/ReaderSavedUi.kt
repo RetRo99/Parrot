@@ -15,19 +15,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
@@ -75,12 +73,23 @@ import kotlin.math.roundToInt
 /** Page highlight fills, independent of the profile/chrome theme. */
 private val ReaderDayHighlights = com.retro99.base.ui.compose.EmberDayHighlights.let { palette ->
     palette.copy(
-        amber = palette.amber.copy(fill = Color(0xFFFBE3A6)),
-        rose = palette.rose.copy(fill = Color(0xFFF8CFCB)),
-        sage = palette.sage.copy(fill = Color(0xFFD3E6C4)),
-        sky = palette.sky.copy(fill = Color(0xFFCCE0F2)),
+        amber = palette.amber.copy(fill = Color(0xFFFBE3A6), bar = Color.Black.copy(alpha = 0.12f)),
+        rose = palette.rose.copy(fill = Color(0xFFF8CFCB), bar = Color.Black.copy(alpha = 0.12f)),
+        sage = palette.sage.copy(fill = Color(0xFFD3E6C4), bar = Color.Black.copy(alpha = 0.12f)),
+        sky = palette.sky.copy(fill = Color(0xFFCCE0F2), bar = Color.Black.copy(alpha = 0.12f)),
     )
 }
+
+private val ReaderNightHighlights = com.retro99.base.ui.compose.EmberHighlights(
+    amber = com.retro99.base.ui.compose.EmberHighlightColor(Color(0xFF6B4E16), Color.Transparent),
+    rose = com.retro99.base.ui.compose.EmberHighlightColor(Color(0xFF6A2F2B), Color.Transparent),
+    sage = com.retro99.base.ui.compose.EmberHighlightColor(Color(0xFF34502A), Color.Transparent),
+    sky = com.retro99.base.ui.compose.EmberHighlightColor(Color(0xFF27465F), Color.Transparent),
+)
+
+/** The toolbar dots follow the page mode, independently of the app's chrome palette. */
+internal fun selectionToolbarHighlightPalette(isDarkPage: Boolean) =
+    if (isDarkPage) ReaderNightHighlights else ReaderDayHighlights
 
 /** "Bookmarked · Add note · Undo", "Bookmark removed · Undo", or a refusal. */
 @Composable
@@ -163,7 +172,7 @@ internal fun SelectionToolbar(
     pageTopDp: Float,
     bottomObstructionDp: Float,
     topObstructionDp: Float,
-    pageBackground: Color,
+    isDarkPage: Boolean,
     onSaved: (SavedAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -189,51 +198,55 @@ internal fun SelectionToolbar(
             }
         }
         Popup(popupPositionProvider = position, properties = PopupProperties(focusable = false)) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = colors.surface,
-            shadowElevation = if (eink) 0.dp else 12.dp,
-            border = if (eink) androidx.compose.foundation.BorderStroke(2.dp, colors.ink) else null,
-            modifier = Modifier
-                .padding(horizontal = 16.dp)
-                .width(minOf(maxWidth, 480.dp)),
-        ) {
-            Column(Modifier.padding(8.dp)) {
-                Row(
-                    Modifier.fillMaxWidth().padding(start = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (eink) {
-                        // No colours on e-ink: one button, kept as amber for other devices.
-                        ToolbarButton(
-                            label = stringResource(StringRes.saved_select_highlight),
-                            onClick = { onSaved(SavedAction.Highlight(HighlightColor.Default)) },
-                            modifier = Modifier.weight(1f),
-                        )
-                    } else {
-                        Text(
-                            stringResource(StringRes.saved_select_highlight),
-                            color = colors.ink2,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            modifier = Modifier.weight(1f),
-                        )
-                        HighlightColorDots(selected = null, onSelect = { color -> onSaved(SavedAction.Highlight(color)) },
-                            palette = if (pageBackground.luminance() < 0.4f) com.retro99.base.ui.compose.EmberNightHighlights else ReaderDayHighlights,
-                            compact = true, pageBackground = pageBackground)
+            val toolbarShape = RoundedCornerShape(20.dp)
+            Box(
+                Modifier
+                    .padding(horizontal = 16.dp)
+                    .width(minOf(maxWidth, 480.dp))
+                    .shadow(if (eink) 0.dp else 12.dp, toolbarShape, clip = true)
+                    .clip(toolbarShape)
+                    .background(colors.surface, toolbarShape)
+                    .then(if (eink) Modifier.border(2.dp, colors.ink, toolbarShape) else Modifier),
+            ) {
+                Column(Modifier.padding(8.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (eink) {
+                            // No colours on e-ink: one button, kept as amber for other devices.
+                            ToolbarButton(
+                                label = stringResource(StringRes.saved_select_highlight),
+                                onClick = { onSaved(SavedAction.Highlight(HighlightColor.Default)) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        } else {
+                            Text(
+                                stringResource(StringRes.saved_select_highlight),
+                                color = colors.ink2,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                modifier = Modifier.weight(1f),
+                            )
+                            HighlightColorDots(
+                                selected = null,
+                                onSelect = { color -> onSaved(SavedAction.Highlight(color)) },
+                                palette = selectionToolbarHighlightPalette(isDarkPage),
+                                compact = true,
+                            )
+                        }
+                    }
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        ToolbarButton(stringResource(StringRes.saved_select_note), { onSaved(SavedAction.NoteSelection) }, Modifier.weight(1f))
+                        ToolbarButton(stringResource(StringRes.saved_copy), { onSaved(SavedAction.CopySelection) }, Modifier.weight(1f))
+                        ToolbarButton(stringResource(StringRes.saved_search), { onSaved(SavedAction.SearchSelection) }, Modifier.weight(1f))
+                        ToolbarButton(stringResource(StringRes.saved_share), { onSaved(SavedAction.ShareSelection) }, Modifier.weight(1f))
                     }
                 }
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    ToolbarButton(stringResource(StringRes.saved_select_note), { onSaved(SavedAction.NoteSelection) }, Modifier.weight(1f))
-                    ToolbarButton(stringResource(StringRes.saved_copy), { onSaved(SavedAction.CopySelection) }, Modifier.weight(1f))
-                    ToolbarButton(stringResource(StringRes.saved_search), { onSaved(SavedAction.SearchSelection) }, Modifier.weight(1f))
-                    ToolbarButton(stringResource(StringRes.saved_share), { onSaved(SavedAction.ShareSelection) }, Modifier.weight(1f))
-                }
             }
-        }
         }
     }
 }

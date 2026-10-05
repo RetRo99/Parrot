@@ -499,7 +499,7 @@ internal fun ReaderOverlayContent(
                             .coerceAtLeast(0f).toDp().value
                     },
                     topObstructionDp = if (controlsVisible && !searchActive) 65f else 0f,
-                    pageBackground = settings.theme.backgroundColor(),
+                    isDarkPage = settings.theme.isDarkPage,
                     onSaved = onSaved,
                     modifier = Modifier.matchParentSize(),
                 )
