@@ -67,6 +67,10 @@ class IosTtsController : TtsController {
 
     override fun togglePlayback() = Unit
 
+    override fun pause() = Unit
+
+    override fun resume() = Unit
+
     override fun stop() = Unit
 
     override fun setRate(rate: Float) = Unit

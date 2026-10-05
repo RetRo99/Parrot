@@ -22,6 +22,15 @@ interface NarrationController : AutoCloseable {
 
     fun togglePlayback()
 
+    /**
+     * Pauses playback without the toggle race. Interruption flows (spoken word taps)
+     * pair this with [resume] and only call it while this controller reports [isPlaying].
+     */
+    fun pause()
+
+    /** Resumes playback paused by [pause]. Never starts fresh playback. */
+    fun resume()
+
     fun setPlaybackSpeed(speed: Float)
 
     fun skipForward()

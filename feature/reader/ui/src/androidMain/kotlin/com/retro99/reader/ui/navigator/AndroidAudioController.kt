@@ -212,6 +212,16 @@ class AndroidAudioController(
         }
     }
 
+    override fun pause() {
+        player.pause()
+    }
+
+    override fun resume() {
+        if (hasStartedPlayback) {
+            player.resume()
+        }
+    }
+
     override fun resetPlaybackState() {
         // Only reset if not currently playing - when playing, the audio drives the state
         if (mediaPlaybackController.isPlaying.value) return

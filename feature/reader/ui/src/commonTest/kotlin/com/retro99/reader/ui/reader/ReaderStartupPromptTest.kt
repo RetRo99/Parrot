@@ -30,7 +30,7 @@ class ReaderStartupPromptTest {
     private var lookups = 0
 
     @Test
-    fun `after book detail asked, the reader shows no second prompt`() = runTest {
+    fun `after book detail asked the reader shows no second prompt`() = runTest {
         // When
         val prompt = readerStartupPrompt(
             linkedResumeResolved = true,

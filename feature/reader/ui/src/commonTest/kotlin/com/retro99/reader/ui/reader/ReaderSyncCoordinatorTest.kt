@@ -83,6 +83,10 @@ private class FakeNarrationController : NarrationController {
 
     override fun togglePlayback() = Unit
 
+    override fun pause() = Unit
+
+    override fun resume() = Unit
+
     override fun setPlaybackSpeed(speed: Float) = Unit
 
     override fun skipForward() = Unit

@@ -127,6 +127,20 @@ class TtsModelManager(
         updateToLatest = updateToLatest,
     )
 
+    /**
+     * Complete model files already on disk, adopting an orphaned install when its `.active`
+     * marker is missing. Pure filesystem work: never touches the manifest or [installVersion],
+     * so warm-up and the speak-word path cannot start a download through it.
+     */
+    fun kokoroModelFilesIfPresent(): KokoroModelFiles? =
+        activeModelFiles(KOKORO_MODEL_ID, ::kokoroModelFiles, ::isComplete)
+            ?: adoptLocalModel(KOKORO_MODEL_ID, ::kokoroModelFiles, ::isComplete)
+
+    /** See [kokoroModelFilesIfPresent]. */
+    fun supertonicModelFilesIfPresent(): SupertonicModelFiles? =
+        activeModelFiles(SUPERTONIC_MODEL_ID, ::supertonicModelFiles, ::isComplete)
+            ?: adoptLocalModel(SUPERTONIC_MODEL_ID, ::supertonicModelFiles, ::isComplete)
+
     private suspend fun <T> ensureModel(
         modelId: String,
         files: (File) -> T,

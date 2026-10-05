@@ -152,6 +152,16 @@ class IosAudioController(
         }
     }
 
+    override fun pause() {
+        bridge.pauseAudio()
+    }
+
+    override fun resume() {
+        if (hasStartedPlayback) {
+            bridge.resumeAudio()
+        }
+    }
+
     override fun resetPlaybackState() {
         // Only reset if not currently playing - when playing, the audio drives the state
         if (_audioPlaybackState.value.isPlaying) return

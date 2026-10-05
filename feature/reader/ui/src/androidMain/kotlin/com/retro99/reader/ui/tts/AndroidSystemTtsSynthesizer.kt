@@ -62,11 +62,17 @@ class AndroidSystemTtsSynthesizer(
         }
 
         override fun onStop(utteranceId: String?, interrupted: Boolean) {
-            val id = utteranceId ?: return
-            val deferred = pendingResults.remove(id) ?: return
+            cancelUtterance(utteranceId, "TTS stopped")
+        }
+    }
+
+    /** Completes one utterance as cancelled without touching the other pending requests. */
+    private fun cancelUtterance(utteranceId: String?, reason: String) {
+        val id = utteranceId ?: return
+        pendingResults.remove(id)?.let { deferred ->
             pendingFiles.remove(id)?.delete()
             deferred.complete(
-                TtsSynthesisResult(status = TtsSynthesisStatus.CANCELLED, error = "TTS stopped"),
+                TtsSynthesisResult(status = TtsSynthesisStatus.CANCELLED, error = reason),
             )
         }
     }
@@ -180,6 +186,7 @@ class AndroidSystemTtsSynthesizer(
 
             try {
                 withTimeoutOrNull(CALLBACK_TIMEOUT_MS) { deferred.await() } ?: run {
+                    // Wedged-engine recovery: only a global stop gets the platform unstuck.
                     stop()
                     TtsSynthesisResult(
                         status = TtsSynthesisStatus.TIMEOUT,
@@ -187,7 +194,9 @@ class AndroidSystemTtsSynthesizer(
                     )
                 }
             } catch (error: CancellationException) {
-                stop()
+                // Per-utterance cancel only: a cancelled word request must not complete the
+                // read-aloud sentence synthesizing beside it as CANCELLED (speak-word path).
+                cancelUtterance(utteranceId, error.message ?: "TTS synthesis cancelled")
                 throw error
             }
         }

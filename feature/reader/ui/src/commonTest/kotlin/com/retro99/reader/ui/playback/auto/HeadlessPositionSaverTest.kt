@@ -26,7 +26,7 @@ class HeadlessPositionSaverTest {
     )
 
     @Test
-    fun `the final save propagates once, stamped with the observation time`() = runTest {
+    fun `the final save propagates once and is stamped with the observation time`() = runTest {
         // Given
         val position = position(audioMs = 42_000)
 

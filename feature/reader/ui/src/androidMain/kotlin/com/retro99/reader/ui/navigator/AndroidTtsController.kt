@@ -466,6 +466,14 @@ class AndroidTtsController(
         }
     }
 
+    override fun pause() {
+        engine.pause()
+    }
+
+    override fun resume() {
+        engine.resume()
+    }
+
     override fun stop() {
         cancelActivePlaybackAttempt()
         engine.stop()
