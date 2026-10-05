@@ -1,11 +1,15 @@
 package com.retro99.reader.ui.navigator
 
 import android.content.Context
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.retro99.analytics.api.Analytics
+import com.retro99.analytics.api.ReaderAnalyticsEvent
 import com.retro99.reader.domain.usecase.GetReaderSettingsUseCase
 import com.retro99.reader.ui.di.ReaderScope
 import com.retro99.reader.ui.model.LocatorState
+import com.retro99.reader.ui.playback.MediaPlaybackController
 import com.retro99.reader.ui.playback.NotificationPermissionHandler
 import com.retro99.reader.ui.publication.EpubPublication
 import com.retro99.reader.ui.tts.NeuralVoicePackage
@@ -23,6 +27,20 @@ import com.retro99.reader.ui.tts.TtsVoicePreparationForegroundService
 import com.retro99.reader.ui.tts.TtsVoicePreparationState
 import com.retro99.reader.ui.tts.TtsVoicePreparationStateHolder
 import com.retro99.reader.ui.tts.TtsModelManager
+import com.retro99.reader.ui.tts.MediaPlaybackWordInterruption
+import com.retro99.reader.ui.tts.ResolvedWord
+import com.retro99.reader.ui.tts.SpeakWordCoordinator
+import com.retro99.reader.ui.tts.SpeakWordFailure
+import com.retro99.reader.ui.tts.SpeakWordState
+import com.retro99.reader.ui.tts.SupertonicTermsStore
+import com.retro99.reader.ui.tts.TtsAudioGenerator
+import com.retro99.reader.ui.tts.TtsWordAudioSource
+import com.retro99.reader.ui.tts.TtsWordPlayer
+import com.retro99.reader.ui.tts.WordAudioInterruption
+import com.retro99.reader.ui.tts.WordVoiceResolution
+import com.retro99.reader.ui.tts.isSpeakableWordForm
+import com.retro99.reader.ui.tts.prepareWordForSpeech
+import com.retro99.reader.ui.tts.resolveWordVoice
 import com.retro99.reader.ui.tts.neuralVoicePackage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -57,14 +75,19 @@ import java.util.UUID
 @Scoped(binds = [TtsController::class])
 class AndroidTtsController(
     @Provided private val context: Context,
+    @Provided private val analytics: Analytics,
     private val epubPublication: EpubPublication,
     private val bookController: BookController,
     private val engine: TtsReadAloudEngine,
     private val synthesizer: TtsSynthesizer,
+    private val audioGenerator: TtsAudioGenerator,
     private val modelManager: TtsModelManager,
     private val notificationPermissionHandler: NotificationPermissionHandler,
     private val preparationStateHolder: TtsVoicePreparationStateHolder,
     private val previewPlayer: TtsPreviewPlayer,
+    private val wordPlayer: TtsWordPlayer,
+    private val mediaPlaybackController: MediaPlaybackController,
+    private val supertonicTermsStore: SupertonicTermsStore,
     private val getReaderSettingsUseCase: GetReaderSettingsUseCase,
 ) : TtsController {
 
@@ -145,6 +168,33 @@ class AndroidTtsController(
     private var previewJob: Job? = null
     private var resumeNarrationAfterPreview = false
 
+    private val wordCoordinator = SpeakWordCoordinator(
+        scope = controllerScope,
+        audioSource = TtsWordAudioSource(audioGenerator = audioGenerator, engine = engine),
+        player = wordPlayer,
+        interruptions = listOf(
+            ReadAloudWordInterruption(),
+            MediaPlaybackWordInterruption(mediaPlaybackController),
+        ),
+    )
+
+    override val wordState: Flow<SpeakWordState> = wordCoordinator.state
+
+    override val wordFailures: Flow<SpeakWordFailure> = wordCoordinator.failures
+
+    private inner class ReadAloudWordInterruption : WordAudioInterruption {
+
+        override fun isPlayingNow(): Boolean = engine.isPlaying.value
+
+        override fun pause() {
+            this@AndroidTtsController.pause()
+        }
+
+        override fun resume() {
+            this@AndroidTtsController.resume()
+        }
+    }
+
     init {
         engine.stopIfPlayingAnotherBook(epubPublication.bookUuid)
 
@@ -209,6 +259,17 @@ class AndroidTtsController(
                         ),
                     )
                 }
+            }
+        }
+
+        controllerScope.launch {
+            wordCoordinator.failures.collect { failure ->
+                analytics.logEvent(
+                    ReaderAnalyticsEvent.SpeakWordFailed(
+                        voiceId = failure.voiceId,
+                        isNeural = failure.isNeural,
+                    ),
+                )
             }
         }
     }
@@ -281,6 +342,59 @@ class AndroidTtsController(
         previewJob = null
         previewPlayer.stop()
         resumeNarrationAfterPreview()
+    }
+
+    override suspend fun canSpeakWord(language: String): Boolean =
+        currentWordVoice(language) is WordVoiceResolution.Usable
+
+    override fun speakWord(word: String, language: String) {
+        controllerScope.launch {
+            if (!isSpeakableWordForm(word)) return@launch
+            val resolution = currentWordVoice(language)
+            if (resolution !is WordVoiceResolution.Usable) return@launch
+            val settings = getReaderSettingsUseCase().first()
+            wordCoordinator.speak(
+                ResolvedWord(
+                    text = prepareWordForSpeech(word),
+                    voiceId = resolution.voiceId,
+                    voiceName = resolution.name,
+                    isNeural = resolution.isNeural,
+                    rate = minOf(TtsSpeechRate.coerce(settings.ttsRate), MAX_WORD_RATE),
+                ),
+            )
+        }
+    }
+
+    override fun stopWord() {
+        wordCoordinator.stop()
+    }
+
+    override fun warmUpWordVoice(language: String) {
+        controllerScope.launch {
+            if (isPowerSaveMode(context)) return@launch
+            val resolution = currentWordVoice(language)
+            if (resolution !is WordVoiceResolution.Usable || !resolution.isNeural) return@launch
+            synthesizer.warmUp(resolution.voiceId)
+        }
+    }
+
+    /**
+     * Resolves the word voice fresh right before every use, so the hard gates (pack
+     * downloaded, Supertonic terms accepted, no preparation running) hold at the moment of
+     * synthesis and a word request can never reach the pack install path.
+     */
+    private suspend fun currentWordVoice(language: String): WordVoiceResolution {
+        if (!synthesizer.awaitReady()) return WordVoiceResolution.Hidden
+        val settings = getReaderSettingsUseCase().first()
+        return resolveWordVoice(
+            selectedVoiceId = settings.ttsVoiceId,
+            voices = synthesizer.availableVoices(),
+            defaultSystemVoiceId = synthesizer.defaultVoice()?.id,
+            hasAcceptedSupertonicTerms = supertonicTermsStore.hasAcceptedCurrentTerms(),
+            preparingPackage = (preparationStateHolder.state.value as? TtsVoicePreparationState.Running)
+                ?.voicePackage,
+            language = language,
+        )
     }
 
     override suspend fun prepareVoice(
@@ -519,6 +633,8 @@ class AndroidTtsController(
 
     override fun close() {
         stopPreview()
+        wordCoordinator.close()
+        wordPlayer.close()
         previewPlayer.close()
         controllerScope.cancel()
     }
@@ -764,5 +880,10 @@ class AndroidTtsController(
         const val CHAPTER_READY_TIMEOUT_MS = 5_000L
         const val DEFAULT_BOOK_TITLE = "Reading Aloud"
         const val TAG = "AndroidTtsController"
+        const val MAX_WORD_RATE = 1f
     }
 }
+
+/** Warm-up is skipped in battery saver; there is no in-app power-save flag. */
+private fun isPowerSaveMode(context: Context): Boolean =
+    (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true

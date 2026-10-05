@@ -74,6 +74,8 @@ class SherpaOnnxSynthesizer(
 
     override fun activeModelVersion(voiceId: String?): String? = modelManager.activeKokoroVersion()
 
+    override suspend fun warmUp(voiceId: String?): Boolean = ensureLoadedIfDownloaded() != null
+
     override suspend fun deleteNeuralVoicePackage(
         voicePackage: NeuralVoicePackage,
     ): Boolean {
@@ -176,10 +178,23 @@ class SherpaOnnxSynthesizer(
         onProgress: ((TtsPreparationProgress) -> Unit)? = null,
     ): OfflineTts? {
         engine?.let { existing -> return existing }
+        val files = modelManager.ensureKokoroModel(onProgress) ?: return null
+        return loadEngine(files, onProgress)
+    }
+
+    /** Load-only variant for speak-word warm-up; can never reach the model download path. */
+    private suspend fun ensureLoadedIfDownloaded(): OfflineTts? {
+        engine?.let { existing -> return existing }
+        val files = modelManager.kokoroModelFilesIfPresent() ?: return null
+        return loadEngine(files, onProgress = null)
+    }
+
+    private suspend fun loadEngine(
+        files: KokoroModelFiles,
+        onProgress: ((TtsPreparationProgress) -> Unit)?,
+    ): OfflineTts? {
         return loadMutex.withLock {
             engine?.let { existing -> return@withLock existing }
-
-            val files = modelManager.ensureKokoroModel(onProgress) ?: return@withLock null
             onProgress?.invoke(TtsPreparationProgress.Finalizing)
 
             try {

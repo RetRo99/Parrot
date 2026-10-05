@@ -50,6 +50,13 @@ class TtsSynthesizerRouter(
             null -> null
         }
 
+    override suspend fun warmUp(voiceId: String?): Boolean =
+        when (voiceId.neuralVoicePackage()) {
+            NeuralVoicePackage.KOKORO -> kokoroSynthesizer.warmUp(voiceId)
+            NeuralVoicePackage.SUPERTONIC -> supertonicSynthesizer.warmUp(voiceId)
+            null -> false
+        }
+
     override suspend fun deleteNeuralVoicePackage(
         voicePackage: NeuralVoicePackage,
     ): Boolean = when (voicePackage) {

@@ -1,5 +1,6 @@
 package com.retro99.reader.ui.tts
 
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -25,13 +26,7 @@ class TtsAudioGenerator(
         pitch: Float,
     ): TtsSynthesisResult {
         val effectiveRate = TtsSpeechRate.coerce(rate)
-        val key = cache.key(
-            voiceId = voiceId.orEmpty(),
-            modelVersion = synthesizer.activeModelVersion(voiceId),
-            rate = effectiveRate,
-            pitch = pitch,
-            text = text,
-        )
+        val key = cacheKey(text, voiceId, effectiveRate, pitch)
         return withContext(Dispatchers.IO) {
             withSynthesisLock(key) {
                 cache.get(key)?.let { cachedFile ->
@@ -68,6 +63,23 @@ class TtsAudioGenerator(
             }
         }
     }
+
+    /** The cached WAV for identical text and parameters, or null. Skips the synthesis gate. */
+    fun findCached(
+        text: String,
+        voiceId: String?,
+        rate: Float,
+        pitch: Float,
+    ): File? = cache.get(cacheKey(text, voiceId, TtsSpeechRate.coerce(rate), pitch))
+
+    private fun cacheKey(text: String, voiceId: String?, rate: Float, pitch: Float): String =
+        cache.key(
+            voiceId = voiceId.orEmpty(),
+            modelVersion = synthesizer.activeModelVersion(voiceId),
+            rate = rate,
+            pitch = pitch,
+            text = text,
+        )
 
     private suspend fun <T> withSynthesisLock(key: String, block: suspend () -> T): T {
         val entry = lockRegistryMutex.withLock {

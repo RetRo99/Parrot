@@ -541,6 +541,7 @@ class TtsReadAloudEngine(
 
     private fun prefetch(from: Int) {
         if (sentences.isEmpty()) return
+        if (prefetchHolds > 0) return
         val end = (from + PREFETCH_AHEAD).coerceAtMost(sentences.size)
         for (index in from until end) {
             if (index < 0) continue
@@ -572,6 +573,28 @@ class TtsReadAloudEngine(
             }
             prefetchJobs[index] = job
             job.start()
+        }
+    }
+
+    private var prefetchHolds = 0
+
+    /**
+     * Holds sentence prefetch and drops queued prefetch work past the next sentence, so a
+     * one-word synthesis reaches the single synthesis permit ahead of read-aloud's backlog.
+     * The sentence that plays next is never cancelled. Pair with [resumePrefetchAfterWord].
+     */
+    fun holdPrefetchForWord() {
+        prefetchHolds++
+        cancelPrefetch(exceptIndex = currentIndex + 1)
+    }
+
+    /** Lifts one hold and refills the backlog when the last hold lifts. */
+    fun resumePrefetchAfterWord() {
+        if (prefetchHolds == 0) return
+        prefetchHolds--
+        if (prefetchHolds > 0) return
+        if (sentences.isNotEmpty() && currentIndex >= 0) {
+            prefetch(currentIndex + 1)
         }
     }
 

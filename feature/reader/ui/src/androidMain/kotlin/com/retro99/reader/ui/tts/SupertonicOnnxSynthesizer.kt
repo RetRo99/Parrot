@@ -76,6 +76,8 @@ class SupertonicOnnxSynthesizer(
     override fun activeModelVersion(voiceId: String?): String? =
         modelManager.activeSupertonicVersion()
 
+    override suspend fun warmUp(voiceId: String?): Boolean = ensureLoadedIfDownloaded() != null
+
     override suspend fun deleteNeuralVoicePackage(
         voicePackage: NeuralVoicePackage,
     ): Boolean {
@@ -187,10 +189,23 @@ class SupertonicOnnxSynthesizer(
         onProgress: ((TtsPreparationProgress) -> Unit)? = null,
     ): OfflineTts? {
         engine?.let { existing -> return existing }
+        val files = modelManager.ensureSupertonicModel(onProgress) ?: return null
+        return loadEngine(files, onProgress)
+    }
+
+    /** Load-only variant for speak-word warm-up; can never reach the model download path. */
+    private suspend fun ensureLoadedIfDownloaded(): OfflineTts? {
+        engine?.let { existing -> return existing }
+        val files = modelManager.supertonicModelFilesIfPresent() ?: return null
+        return loadEngine(files, onProgress = null)
+    }
+
+    private suspend fun loadEngine(
+        files: SupertonicModelFiles,
+        onProgress: ((TtsPreparationProgress) -> Unit)?,
+    ): OfflineTts? {
         return loadMutex.withLock {
             engine?.let { existing -> return@withLock existing }
-
-            val files = modelManager.ensureSupertonicModel(onProgress) ?: return@withLock null
             onProgress?.invoke(TtsPreparationProgress.Finalizing)
 
             try {

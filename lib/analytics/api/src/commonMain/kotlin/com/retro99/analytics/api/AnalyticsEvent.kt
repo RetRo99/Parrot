@@ -567,6 +567,21 @@ sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
     }
 
     /**
+     * Tracks a failed dictionary "speak word" synthesis. The only analytics the feature emits:
+     * successful words are silent and preview events are never reused.
+     */
+    data class SpeakWordFailed(
+        val voiceId: String,
+        val isNeural: Boolean,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "speak_word_failed"
+        override val parameters: Map<String, Any> = mapOf(
+            "voice_id" to voiceId,
+            "is_neural" to isNeural,
+        )
+    }
+
+    /**
      * Tracks when the text-to-speech voice settings screen is opened.
      */
     data class TtsVoiceSettingsOpened(
