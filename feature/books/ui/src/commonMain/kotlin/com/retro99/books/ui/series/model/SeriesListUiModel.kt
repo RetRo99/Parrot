@@ -9,5 +9,7 @@ data class SeriesListUiModel(
     val featured: Int?,
     val coverUrl: String?,
     val bookCount: Int,
+    val finishedCount: Int = 0,
+    val author: String? = null,
+    val progress: Double = 0.0,
 )
-

@@ -1,141 +1,83 @@
 package com.retro99.books.ui.series.detail
 
-import androidx.compose.foundation.text.input.TextFieldState
-import androidx.compose.foundation.text.input.delete
-import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.viewModelScope
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
-import com.retro99.analytics.api.Analytics
-import com.retro99.analytics.api.FeatureUsageAnalyticsEvent
-import com.retro99.analytics.api.DiscoveryRoute
-import com.retro99.analytics.api.DiscoveryDestination
-import com.retro99.analytics.api.logFeatureUsage
-import com.retro99.analytics.api.BookAnalyticsEvent
-import com.retro99.analytics.api.NavigationAnalyticsEvent
-import com.retro99.base.result.log
+import com.retro99.analytics.api.*
 import com.retro99.base.ui.BaseViewModel
-import com.retro99.books.domain.usecase.GetBooksBySeriesUseCase
-import com.retro99.books.domain.usecase.ObserveAllFavoritesUseCase
-import com.retro99.books.domain.usecase.ToggleFavoriteUseCase
+import com.retro99.base.result.AppError
+import com.retro99.base.result.log
+import com.retro99.books.domain.model.normalisedSeriesName
+import com.retro99.books.domain.model.BookWithProgressDomainModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.toUiModel
+import com.retro99.books.ui.series.SeriesFailureUiModel
+import com.retro99.reader.domain.usecase.ObserveSeriesBrowseUseCase
+import com.retro99.reader.domain.usecase.ObserveAllBooksWithProgressUseCase
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.launch
-import org.koin.core.annotation.InjectedParam
-import org.koin.core.annotation.KoinViewModel
-import org.koin.core.annotation.Provided
+import kotlinx.coroutines.flow.catch
+import org.koin.core.annotation.*
 
 @KoinViewModel
 class SeriesDetailViewModel(
     @InjectedParam private val seriesUuid: String,
     @InjectedParam private val seriesName: String,
-    @InjectedParam private val onNavigateToBookDetail: (book: BookUiModel) -> Unit,
+    @InjectedParam private val onNavigateToBookDetail: (BookUiModel) -> Unit,
     @InjectedParam private val onBack: () -> Unit,
-    @Provided private val getBooksBySeriesUseCase: GetBooksBySeriesUseCase,
-    @Provided private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
-    @Provided private val observeAllFavoritesUseCase: ObserveAllFavoritesUseCase,
+    @Provided private val observeBrowse: ObserveSeriesBrowseUseCase,
+    @Provided private val observeProgress: ObserveAllBooksWithProgressUseCase,
     @Provided private val analytics: Analytics,
-) : BaseViewModel<SeriesDetailViewState, SeriesDetailIntent>(
-    SeriesDetailViewState(
-        seriesUuid = seriesUuid,
-        seriesName = seriesName,
-    ),
-) {
-
-    val searchFieldState = TextFieldState()
-
-    init {
-        observeBooks()
-        observeFavorites()
-        observeSearchQuery()
-    }
+) : BaseViewModel<SeriesDetailViewState, SeriesDetailIntent>(SeriesDetailViewState(seriesUuid = seriesUuid, seriesName = seriesName)) {
+    private var loadJob: Job? = null
+    private var loadGeneration = 0
+    init { load(false) }
 
     override fun onIntent(intent: SeriesDetailIntent) {
         when (intent) {
             SeriesDetailIntent.OnBackClicked -> onBack()
-            SeriesDetailIntent.OnRefresh -> observeBooks()
-            SeriesDetailIntent.OnSearchToggled -> toggleSearch()
+            SeriesDetailIntent.OnRefresh -> load(true)
+            SeriesDetailIntent.OnSearchToggled -> updateState { it.copy(isSearchVisible = !it.isSearchVisible) }
             is SeriesDetailIntent.OnBookClicked -> {
                 analytics.logFeatureUsage(FeatureUsageAnalyticsEvent.DiscoverySelected(DiscoveryRoute.Series, DiscoveryDestination.Book))
                 onNavigateToBookDetail(intent.book)
             }
-            is SeriesDetailIntent.OnFavoriteClicked -> toggleFavorite(intent.bookUuid)
         }
     }
 
-    private fun toggleSearch() {
-        val currentlyVisible = viewState.value.isSearchVisible
-        // Only track when opening search, not closing
-        if (!currentlyVisible) {
-            analytics.logEvent(NavigationAnalyticsEvent.SearchOpened(source = "series_detail"))
-        }
-        if (currentlyVisible) {
-            searchFieldState.edit { delete(0, length) }
-        }
-        updateState { it.copy(isSearchVisible = !currentlyVisible) }
-    }
-
-    private fun observeSearchQuery() {
-        snapshotFlow { searchFieldState.text.toString() }
-            .onEach { query ->
-                updateState { it.copy(searchQuery = query) }
+    private fun load(refresh: Boolean) {
+        val generation = ++loadGeneration
+        loadJob?.cancel()
+        updateState { it.copy(isRefreshing = refresh, error = null) }
+        val fetched = mutableSetOf<Pair<String, String>>()
+        var refreshing = refresh
+        loadJob = observeBrowse().onEach { snapshot ->
+            val series = snapshot.series.find { normalisedSeriesName(it.name) == normalisedSeriesName(seriesName) }
+            updateState { it.copy(
+                rows = series?.books.orEmpty().map { row -> SeriesDetailRow(row.key, row.book.toUiModel(), row.position, row.progress) },
+                failedSources = snapshot.failures.map { SeriesFailureUiModel(it.serverId, snapshot.sourceNames[it.serverId] ?: "server") },
+                finishedCount = series?.finishedCount ?: 0,
+                inProgressCount = series?.inProgressCount ?: 0,
+                progress = series?.progress ?: 0.0,
+                isLoading = false, isRefreshing = refreshing,
+            ) }
+            val pending = series?.books.orEmpty().map { it.book }
+                .distinctBy { it.serverId to it.uuid }.filter { fetched.add(it.serverId to it.uuid) }
+            if (pending.isNotEmpty() || refreshing) {
+                try {
+                    observeProgress.fetchRemoteProgress(pending.map { BookWithProgressDomainModel(it, null) })
+                } catch (failure: Exception) {
+                    if (failure is CancellationException) throw failure
+                    val error = AppError.UnknownError(failure).log(analytics, "Series progress refresh failed")
+                    if (generation == loadGeneration) updateState { it.copy(error = error) }
+                } finally {
+                    refreshing = false
+                    if (generation == loadGeneration) updateState { it.copy(isRefreshing = false) }
+                }
             }
-            .launchIn(viewModelScope)
-    }
-
-    private fun toggleFavorite(bookUuid: String) {
-        val currentIsFavorite = viewState.value.favoriteBookUuids.contains(bookUuid)
-        analytics.logEvent(
-            BookAnalyticsEvent.FavoriteToggled(
-                bookUuid = bookUuid,
-                isFavorite = !currentIsFavorite,
-                source = "series_detail",
-            ),
-        )
-        viewModelScope.launch {
-            toggleFavoriteUseCase(bookUuid)
-        }
-    }
-
-    private fun observeFavorites() {
-        observeAllFavoritesUseCase()
-            .onEach { favoriteUuids ->
-                updateState { it.copy(favoriteBookUuids = favoriteUuids) }
-            }
-            .launchIn(viewModelScope)
-    }
-
-    private fun observeBooks() {
-        getBooksBySeriesUseCase(seriesName)
-            .onStart {
-                updateState { it.copy(isLoading = true, error = null) }
-            }
-            .onEach { result ->
-                result
-                    .onSuccess { books ->
-                        updateState {
-                            it.copy(
-                                books = books.map { book -> book.toUiModel() },
-                                isLoading = false,
-                                isRefreshing = false,
-                                error = null,
-                            )
-                        }
-                    }
-                    .onFailure { error ->
-                        error.log(analytics, "SeriesDetailViewModel: Failed to load series books")
-                        updateState {
-                            it.copy(
-                                isLoading = false,
-                                isRefreshing = false,
-                                error = error,
-                            )
-                        }
-                    }
-            }
-            .launchIn(viewModelScope)
+        }.catch { failure ->
+            val error = AppError.UnknownError(failure).log(analytics, "Series detail load failed")
+            updateState { it.copy(error = error, isLoading = false, isRefreshing = false) }
+        }.launchIn(viewModelScope)
     }
 }

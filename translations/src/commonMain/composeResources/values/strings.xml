@@ -131,7 +131,7 @@
 
     <!-- Home Bottom Navigation -->
     <string name="home_tab_books">Books</string>
-    <string name="home_tab_series">Series</string>
+    <string name="home_tab_series">Browse</string>
     <string name="home_tab_authors">Authors</string>
     <string name="home_tab_settings">Settings</string>
     <string name="home_continue_reading">Continue Reading</string>

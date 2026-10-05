@@ -11,5 +11,6 @@ data class BookWithProgressDomainModel(
      * Null if no progress or cache exists for this book.
      */
     val progressInfo: BookProgressInfoDomainModel?,
+    val lastOpenedMillis: Long? = null,
+    val currentlyReading: Boolean = false,
 )
-

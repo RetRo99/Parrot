@@ -7,5 +7,5 @@ data class SeriesDomainModel(
     val position: Double?,
     val createdAt: String?,
     val updatedAt: String?,
+    val sources: List<SeriesSource> = emptyList(),
 )
-

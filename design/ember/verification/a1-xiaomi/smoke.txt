@@ -1,0 +1,4 @@
+PASS: E-ink search changes results only on submit
+PASS: submitted search restored after actual fixture process death
+PASS: detail Back preserves the calling list's submitted search
+PASS: list scroll restored after actual fixture process death

@@ -1,6 +1,8 @@
 package com.retro99.reader.domain.usecase
 
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Err
+import com.retro99.base.result.AppError
 import com.github.michaelbull.result.get
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
@@ -36,6 +38,35 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ObserveAllBooksWithProgressUseCaseTest {
+
+    @Test
+    fun `raw snapshot keeps linked versions separate for membership aggregation`() = runTest {
+        val books = useCase(emptyList(), emptySet()).observeSnapshot(groupLinked = false).first().books
+        assertEquals(3, books.size)
+        assertEquals(setOf("s1", "s2", "b1"), books.map { it.book.uuid }.toSet())
+    }
+
+    @Test
+    fun `failed source is reported while other books remain available`() = runTest {
+        val provider = FakeProvider(listOf(storytellerBook, libraryBook), failedServerId = "st-1")
+        val useCase = ObserveAllBooksWithProgressUseCase(provider, FakeReaderSettings(emptySet(), null),
+            FakePositions(emptyList()), FakeLinks(emptyList()), RemotePositionStore(provider))
+        val snapshot = useCase.observeSnapshot().first()
+        assertEquals(listOf("b1"), snapshot.books.map { it.book.uuid })
+        assertEquals(listOf("st-1"), snapshot.failures.map { it.serverId })
+    }
+
+    @Test
+    fun `refresh failure retains last known books without disguising the failure`() = runTest {
+        val provider = FakeProvider(listOf(storytellerBook, libraryBook))
+        val useCase = ObserveAllBooksWithProgressUseCase(provider, FakeReaderSettings(emptySet(), null),
+            FakePositions(emptyList()), FakeLinks(emptyList()), RemotePositionStore(provider))
+        assertEquals(2, useCase.observeSnapshot(groupLinked = false).first().books.size)
+        provider.failedServerId = "st-1"
+        val stale = useCase.observeSnapshot(groupLinked = false).first()
+        assertEquals(2, stale.books.size)
+        assertEquals(listOf("st-1"), stale.failures.map { it.serverId })
+    }
 
     private val storytellerBook = serverBook("s1", "st-1", ServerType.Storyteller)
     private val libraryBook = serverBook("b1", LOCAL_SERVER_ID, ServerType.Local).copy(
@@ -184,11 +215,12 @@ class ObserveAllBooksWithProgressUseCaseTest {
         override fun observeAllPositions(): Flow<List<ServerPosition>> = flowOf(positions)
     }
 
-    private class FakeProvider(books: List<ServerBook>) : AuthenticatedRepositoryProvider {
+    private class FakeProvider(books: List<ServerBook>, var failedServerId: String? = null) : AuthenticatedRepositoryProvider {
         private val repositories = books.groupBy { book -> book.serverId }.map { (id, list) ->
             object : ServerBooksRepository {
                 override val serverId = id
-                override fun getBooks(): Flow<AppResult<List<ServerBook>>> = flowOf(Ok(list))
+                override fun getBooks(): Flow<AppResult<List<ServerBook>>> = flowOf(
+                    if (id == failedServerId) Err(AppError.ApiError(503)) else Ok(list))
                 override fun getBook(uuid: String): Flow<AppResult<ServerBook>> = emptyFlow()
                 override suspend fun saveBook(book: ServerBook): CompletableResult = Ok(Unit)
                 override suspend fun searchBooks(query: String) = Ok(list)

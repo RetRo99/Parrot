@@ -34,6 +34,7 @@ plugins {
 
 include(":androidApp")
 include(":tools:tts-bench")
+include(":tools:ember-fixtures")
 include(":composeApp")
 include(":base")
 include(":base-ui")

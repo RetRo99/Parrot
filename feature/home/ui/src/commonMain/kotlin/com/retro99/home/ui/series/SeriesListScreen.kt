@@ -12,10 +12,11 @@ import com.retro99.books.ui.series.SeriesListScreen as BooksSeriesListScreen
 fun SeriesListScreen(
     onNavigateToSeriesDetail: (series: SeriesListUiModel) -> Unit = {},
     modifier: Modifier = Modifier,
+    onConnectServer: () -> Unit = {},
 ) {
     BooksSeriesListScreen(
         onNavigateToSeriesDetail = onNavigateToSeriesDetail,
         modifier = modifier,
+        onConnectServer = onConnectServer,
     )
 }
-

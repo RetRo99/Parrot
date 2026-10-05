@@ -1,13 +1,20 @@
 package com.retro99.reader.domain.usecase
 
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.getOrElse
+import com.github.michaelbull.result.onFailure
+import com.github.michaelbull.result.onSuccess
 import com.retro99.base.result.AppResult
+import com.retro99.base.result.AppError
+import com.retro99.base.server.LOCAL_SERVER_ID
+import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.books.domain.BookLinksRepository
 import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.books.domain.model.BookProgressInfoDomainModel
 import com.retro99.books.domain.model.BookType
 import com.retro99.books.domain.model.BookWithProgressDomainModel
+import com.retro99.books.domain.model.SeriesSourceFailure
 import com.retro99.books.domain.model.links.BookLink
 import com.retro99.books.domain.model.links.copyKey
 import com.retro99.books.domain.model.links.groupLinkedBooks
@@ -28,9 +35,16 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.catch
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
 import kotlin.time.Instant
+
+data class BooksProgressSnapshot(
+    val books: List<BookWithProgressDomainModel>,
+    val failures: List<SeriesSourceFailure>,
+)
 
 /**
  * Combined use case that observes all books with their progress information.
@@ -55,34 +69,52 @@ class ObserveAllBooksWithProgressUseCase(
     @Provided private val bookLinksRepository: BookLinksRepository,
     @Provided private val remotePositionStore: RemotePositionStore,
 ) {
+    private val lastKnownBooks = mutableMapOf<String, List<ServerBook>>()
     /**
      * Observes all books with their progress information.
      *
      * @return Flow of books with progress, sorted by title
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    operator fun invoke(): Flow<AppResult<List<BookWithProgressDomainModel>>> {
+    operator fun invoke(groupLinked: Boolean = true): Flow<AppResult<List<BookWithProgressDomainModel>>> =
+        observeSnapshot(groupLinked).map { Ok(it.books) }
+
+    fun observeSnapshot(groupLinked: Boolean = true): Flow<BooksProgressSnapshot> {
         return repositoryProvider.observeBooksRepositories()
             .flatMapLatest { repositories ->
                 val bookFlows = repositories.map { repo ->
-                    repo.getBooks()
+                    repo.getBooks().catch { emit(Err(AppError.UnknownError(it))) }
                 }
 
                 if (bookFlows.isEmpty()) {
-                    flowOf(Ok(emptyList()))
+                    flowOf(BooksProgressSnapshot(emptyList(), emptyList()))
                 } else {
                     // Combine all book flows with position observation and the shared remote
                     // progress store
                     combine(
                         combine(bookFlows) { results ->
-                            results.flatMap { result -> result.getOrElse { emptyList() } }
+                            val failures = mutableListOf<SeriesSourceFailure>()
+                            results.forEachIndexed { index, result ->
+                                result.onFailure { failures += SeriesSourceFailure(repositories[index].serverId, it) }
+                            }
+                            val books = results.flatMapIndexed { index, result ->
+                                val serverId = repositories[index].serverId
+                                val keepLastKnown = !groupLinked && serverId != LOCAL_SERVER_ID && serverId != PARROT_CLOUD_SERVER_ID
+                                if (keepLastKnown) result.onSuccess { lastKnownBooks[serverId] = it }
+                                result.getOrElse { if (keepLastKnown) lastKnownBooks[serverId].orEmpty() else emptyList() }
+                            }
+                            books to failures.toList()
                         },
                         positionLocalSource.observeAllPositions(),
                         remotePositionStore.observe(),
                         bookLinksRepository.observeLinks(),
                         observeCurrentlyReading(),
                     ) { books, localPositions, remotePositions, links, currentlyReading ->
-                        buildBooksWithProgress(books, localPositions, remotePositions, links, currentlyReading)
+                        BooksProgressSnapshot(
+                            buildBooksWithProgress(books.first, localPositions, remotePositions, if (groupLinked) links else emptyList(), currentlyReading)
+                                .getOrElse { emptyList() },
+                            books.second,
+                        )
                     }
                 }
             }
@@ -141,6 +173,8 @@ class ObserveAllBooksWithProgressUseCase(
             BookWithProgressDomainModel(
                 book = serverBook.toBookDomainModel(),
                 progressInfo = progressInfo,
+                lastOpenedMillis = serverBook.toBookDomainModel().lastOpenedMillis(localPositionMap[bookUuid]),
+                currentlyReading = serverBook.serverId == currentlyReading?.serverId && serverBook.uuid == currentlyReading.bookUuid,
             )
         }
 

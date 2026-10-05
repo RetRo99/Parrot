@@ -399,6 +399,7 @@ fun HomeNavigation(
 
                     entry<HomeDestination.SeriesList> {
                         SeriesListScreen(
+                            onConnectServer = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.ServerManagement)) },
                             onNavigateToSeriesDetail = { series ->
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(

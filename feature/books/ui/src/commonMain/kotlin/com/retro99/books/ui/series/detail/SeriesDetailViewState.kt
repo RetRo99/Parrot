@@ -2,27 +2,25 @@ package com.retro99.books.ui.series.detail
 
 import com.retro99.base.result.AppError
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.books.ui.series.SeriesFailureUiModel
+
+data class SeriesDetailRow(
+    val key: String,
+    val book: BookUiModel,
+    val position: Double?,
+    val progress: Double?,
+)
 
 data class SeriesDetailViewState(
     val seriesUuid: String = "",
     val seriesName: String = "",
-    val books: List<BookUiModel> = emptyList(),
-    val favoriteBookUuids: Set<String> = emptySet(),
-    val searchQuery: String = "",
     val isSearchVisible: Boolean = false,
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val error: AppError? = null,
-) {
-    val filteredBooks: List<BookUiModel>
-        get() = if (searchQuery.isBlank()) {
-            books
-        } else {
-            val query = searchQuery.lowercase()
-            books.filter { book ->
-                book.title.lowercase().contains(query) ||
-                        book.authors.any { it.lowercase().contains(query) }
-            }
-        }
-}
-
+    val rows: List<SeriesDetailRow> = emptyList(),
+    val failedSources: List<SeriesFailureUiModel> = emptyList(),
+    val finishedCount: Int = 0,
+    val inProgressCount: Int = 0,
+    val progress: Double = 0.0,
+)

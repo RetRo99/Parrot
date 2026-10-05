@@ -8,6 +8,4 @@ sealed interface SeriesDetailIntent : BaseIntent {
     data object OnRefresh : SeriesDetailIntent
     data object OnSearchToggled : SeriesDetailIntent
     data class OnBookClicked(val book: BookUiModel) : SeriesDetailIntent
-    data class OnFavoriteClicked(val bookUuid: String) : SeriesDetailIntent
 }
-
