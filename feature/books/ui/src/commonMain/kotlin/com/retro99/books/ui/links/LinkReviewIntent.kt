@@ -9,4 +9,5 @@ sealed interface LinkReviewIntent : BaseIntent {
     data class OnSkipClicked(val pairKey: String) : LinkReviewIntent
     data object OnLinkAllConfidentClicked : LinkReviewIntent
     data object OnMessageDismissed : LinkReviewIntent
+    data object OnRetry : LinkReviewIntent
 }

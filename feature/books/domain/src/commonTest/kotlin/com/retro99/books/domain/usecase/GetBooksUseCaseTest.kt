@@ -1,8 +1,10 @@
 package com.retro99.books.domain.usecase
 
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.get
 import com.retro99.base.result.AppResult
+import com.retro99.base.result.AppError
 import com.retro99.base.result.CompletableResult
 import com.retro99.books.domain.BookLinksRepository
 import com.retro99.books.domain.model.links.BookLink
@@ -20,6 +22,9 @@ import com.retro99.server.api.ServerType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -54,6 +59,38 @@ class GetBooksUseCaseTest {
         // Then
         assertEquals(listOf("a1", "s1", "a2"), books.map { book -> book.uuid })
         assertEquals(emptyList(), books.flatMap { book -> book.linkedCopies })
+    }
+
+    @Test
+    fun `linking catalogue exposes failures and retains last successful source books`() = runTest {
+        val delegate = repository("st-1", ServerType.Storyteller, "s1" to "Dune")
+        val failure = AppError.NotFoundError("offline")
+        val failing = object : ServerBooksRepository by delegate {
+            override fun getBooks(): Flow<AppResult<List<ServerBook>>> = flow {
+                emit(delegate.getBooks().first())
+                delay(1)
+                emit(Err(failure))
+            }
+        }
+        val useCase = GetBooksUseCase(provider(failing), linksRepository(emptyList()))
+        val snapshots = useCase.observeCatalogue().toList()
+        assertEquals(listOf("s1"), snapshots.last().books.map { it.uuid })
+        assertEquals(mapOf("st-1" to failure), snapshots.last().failures)
+        assertEquals(emptyMap(), snapshots.first().failures)
+    }
+
+    @Test
+    fun `initial catalogue failure remains distinguishable from successful empty source`() = runTest {
+        val delegate = repository("st-1", ServerType.Storyteller)
+        val failure = AppError.NotFoundError("offline")
+        val failing = object : ServerBooksRepository by delegate {
+            override fun getBooks(): Flow<AppResult<List<ServerBook>>> = flowOf(Err(failure))
+        }
+        val snapshot = GetBooksUseCase(provider(failing), linksRepository(emptyList())).observeCatalogue().first()
+        assertEquals(emptyList(), snapshot.books)
+        assertEquals(mapOf("st-1" to failure), snapshot.failures)
+        assertEquals(emptyMap(), GetBooksUseCase(provider(delegate), linksRepository(emptyList()))
+            .observeCatalogue().first().failures)
     }
 
     @Test

@@ -3,8 +3,10 @@ package com.retro99.books.domain.usecase
 import co.touchlab.kermit.Logger
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getOrElse
+import com.github.michaelbull.result.getError
 import com.github.michaelbull.result.map as resultMap
 import com.retro99.base.result.AppResult
+import com.retro99.base.result.AppError
 import com.retro99.books.domain.BookLinksRepository
 import com.retro99.books.domain.model.BookDomainModel
 import com.retro99.books.domain.model.links.CopyKey
@@ -17,6 +19,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map as flowMap
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
@@ -33,6 +37,35 @@ class GetBooksUseCase(
     @Provided private val bookLinksRepository: BookLinksRepository,
 ) {
     private val logger = Logger.withTag("čič")
+
+    data class CatalogueSnapshot(
+        val books: List<BookDomainModel>,
+        val failures: Map<String, AppError> = emptyMap(),
+    )
+
+    /** Ungrouped catalogue for linking: a failed source is not an empty source. */
+    fun observeCatalogue(): Flow<CatalogueSnapshot> = flow {
+        val lastKnown = mutableMapOf<String, List<BookDomainModel>>()
+        emitAll(repositoryProvider.observeBooksRepositories().flatMapLatest { repositories ->
+            lastKnown.keys.retainAll(repositories.map { it.serverId }.toSet())
+            val flows = repositories.map { repository ->
+                repository.getBooks().flowMap { result ->
+                    val error = result.getError()
+                    val books = if (error == null) {
+                        result.getOrElse { emptyList() }.map { it.toBookDomainModel() }
+                            .also { lastKnown[repository.serverId] = it }
+                    } else lastKnown[repository.serverId].orEmpty()
+                    CatalogueSnapshot(books, error?.let { mapOf(repository.serverId to it) }.orEmpty())
+                }
+            }
+            if (flows.isEmpty()) flowOf(CatalogueSnapshot(emptyList())) else combine(flows) { snapshots ->
+                CatalogueSnapshot(
+                    books = snapshots.flatMap { it.books }.sortedBy { it.title.lowercase() },
+                    failures = snapshots.flatMap { it.failures.entries }.associate { it.toPair() },
+                )
+            }
+        })
+    }
 
     /**
      * @param groupLinked when true, the copies of a linked book are listed as one book: its

@@ -62,3 +62,34 @@ process death, detail Back preserving the query, and scroll restoration after pr
   upstream book UUIDs across server instances requires identity/storage migration, not this UI pass.
 - Last-known Series source data is in-memory, not a new durable offline catalogue.
 - Fixture screen captures are not evidence of production navigation/DI or live server networking.
+
+## B — partial implementation
+
+- Picker and suggestion prevalidation now checks both complete link groups, including members
+  not present in the current catalogue.
+- Local link/separate writes carry an expected membership snapshot; SQL checks it inside the
+  write transaction, before any membership, decision or outbox changes. A concurrent sync change
+  refuses the stale edit rather than overwriting it. The check is conservative across all live
+  groups; an unrelated membership change also requires retry.
+- ISBNs require valid checksums (and ISBN-13 prefixes); ASINs require ten ASCII alphanumeric
+  characters. Identifier labels reflect verified shared data; bulk eligibility requires shared
+  ISBN, never title-match score or ASIN alone.
+- Bulk failures retain both titles and a reason rather than silently counting only successes.
+- Manual picker selection opens a confirmation sheet, with a disabled textual Linking state
+  and inline failures. This is not yet the final tile/layout design.
+- A new linking catalogue stream exposes source errors and retains last-successful books
+  during failed emissions. The picker and review use it, with retry. Retention is observer-local,
+  not durable caching; retry starts a fresh observer.
+- Remaining to complete B: full Ember picker/review layout and grouping, accessible
+  version tiles, review/bulk confirmation and busy guards, return-to-detail Linked snackbar,
+  decision-only Undo, separation confirmation/failure handling and unused section removal,
+  isolated linking fixtures/captures and final Android/iOS verification.
+- Decision Undo requires a sync-compatible clear/tombstone: the current Cloud mutation and
+  table accept only `never`/`skip`, and LWW uses `decided_at`. Backdating Skip or just deleting a
+  local row would not safely undo a synced decision. Do not use either workaround or deploy
+  migrations against the user's real server during fixture verification.
+- Android debug APK and iOS simulator framework build successfully; books-domain,
+  books-data and database host tests pass. With explicit authorization, the real Parrot debug
+  APK was installed on the Xiaomi using `adb install -r` and launched for owner testing,
+  without clearing app data. Linking actions in that build affect the real library. No B
+  fixture captures or complete end-to-end verification are claimed yet.

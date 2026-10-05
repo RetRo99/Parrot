@@ -72,6 +72,7 @@ private fun LinkPickerScreenContent(
     modifier: Modifier = Modifier,
 ) {
     val errorMessage = when {
+        viewState.linkFailureMessage != null -> viewState.linkFailureMessage
         viewState.sameSourceError != null -> stringResource(
             StringRes.link_error_same_source,
             viewState.sameSourceError.label(),
@@ -79,7 +80,11 @@ private fun LinkPickerScreenContent(
         viewState.error != null -> stringResource(viewState.error.toStringRes())
         else -> null
     }
-    if (errorMessage != null) {
+    if (viewState.pendingBook != null && viewState.currentBook != null) {
+        LinkConfirmationSheet(viewState.currentBook, viewState.pendingBook, viewState.isLinking, errorMessage,
+            onDismiss = { intentDispatcher(LinkPickerIntent.OnDismissConfirmation) },
+            onConfirm = { intentDispatcher(LinkPickerIntent.OnConfirmLink) })
+    } else if (errorMessage != null) {
         EmberDialog(
             onDismissRequest = { intentDispatcher(LinkPickerIntent.OnErrorDismissed) },
             title = "",
@@ -119,6 +124,14 @@ private fun LinkPickerScreenContent(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
+                if (viewState.catalogueFailures.isNotEmpty()) item("catalogue-error") {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("Couldn’t load versions from ${viewState.catalogueFailures.size} source(s). Some versions may be missing.")
+                        androidx.compose.material3.TextButton(onClick = { intentDispatcher(LinkPickerIntent.OnRetry) }) {
+                            Text("Try again")
+                        }
+                    }
+                }
                 items(
                     items = viewState.filteredBooks,
                     key = { book -> "${book.serverId}:${book.uuid}" },

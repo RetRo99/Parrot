@@ -7,8 +7,10 @@ import com.retro99.analytics.api.UsageOperation
 import com.retro99.analytics.api.UsageAction
 import com.retro99.analytics.api.trackUsageOperation
 import com.github.michaelbull.result.onFailure
+import com.github.michaelbull.result.getError
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.links.LinkDecisionType
+import com.retro99.books.domain.model.links.CopySource
 import com.retro99.books.domain.model.links.LinkSuggestion
 import com.retro99.books.domain.model.links.repeatedLinkSource
 import com.retro99.books.domain.usecase.DecideLinkUseCase
@@ -18,6 +20,7 @@ import com.retro99.books.ui.model.toUiModel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
@@ -37,15 +40,23 @@ class LinkReviewViewModel(
     LinkReviewViewState(),
 ) {
     private var suggestions: List<LinkSuggestion> = emptyList()
+    private var reviewJob: Job? = null
 
     init {
-        observeLinkSuggestionsUseCase()
-            .onEach { current ->
+        observeReview()
+    }
+
+    private fun observeReview() {
+        reviewJob?.cancel()
+        reviewJob = observeLinkSuggestionsUseCase.observeReview()
+            .onEach { snapshot ->
+                val current = snapshot.suggestions
                 suggestions = current
                 updateState { state ->
                     state.copy(
                         suggestions = current.map { suggestion -> suggestion.toUiModel() },
                         isLoading = false,
+                        catalogueFailures = snapshot.failures,
                     )
                 }
             }
@@ -55,13 +66,14 @@ class LinkReviewViewModel(
     override fun onIntent(intent: LinkReviewIntent) {
         when (intent) {
             LinkReviewIntent.OnBackClicked -> onBack()
+            LinkReviewIntent.OnRetry -> observeReview()
             is LinkReviewIntent.OnLinkClicked -> link(intent.pairKey)
             is LinkReviewIntent.OnNotSameBookClicked ->
                 decide(intent.pairKey, LinkDecisionType.Never)
             is LinkReviewIntent.OnSkipClicked -> decide(intent.pairKey, LinkDecisionType.Skip)
             LinkReviewIntent.OnLinkAllConfidentClicked -> linkAllConfident()
             LinkReviewIntent.OnMessageDismissed -> updateState { state ->
-                state.copy(linkedCount = null, sameSourceError = null, error = null)
+                state.copy(linkedCount = null, sameSourceError = null, error = null, bulkFailures = emptyList())
             }
         }
     }
@@ -92,13 +104,14 @@ class LinkReviewViewModel(
         }
     }
 
-    /** Links every suggestion scoring 90 or more; the rest stay for one-by-one review. */
+    /** Links verified ISBN matches sequentially, reporting every failed pair. */
     private fun linkAllConfident() {
         val confident = suggestions.filter { suggestion -> suggestion.isConfident }
         if (confident.isEmpty()) return
         viewModelScope.launch {
+            val failures = mutableListOf<String>()
             // One at a time: an earlier link can make a later one invalid (a source would
-            // repeat), and that one is then simply not counted.
+            // repeat). Keep the reason for each pair rather than silently dropping it.
             val linkedCount = analytics.trackUsageOperation(
                 UsageOperation.Link, UsageAction.BulkLink, "link_review", confident.size,
                 outcome = { count -> when (count) {
@@ -108,10 +121,22 @@ class LinkReviewViewModel(
                 } },
             ) {
                 confident.count { suggestion ->
-                    linkBooksUseCase(suggestion.first.key, suggestion.second.key).isOk
+                    val result = linkBooksUseCase(suggestion.first.key, suggestion.second.key)
+                    result.getError()?.let { error ->
+                        val reason = error.repeatedLinkSource()?.let { source ->
+                            val name = when (source) {
+                                CopySource.Library -> "library"
+                                CopySource.Storyteller -> "Storyteller"
+                                CopySource.Audiobookshelf -> "Audiobookshelf"
+                            }
+                            "already linked to another $name version"
+                        } ?: "couldn’t save the link; try again"
+                        failures += "${suggestion.first.title} / ${suggestion.second.title}: $reason"
+                    }
+                    result.isOk
                 }
             }
-            updateState { state -> state.copy(linkedCount = linkedCount) }
+            updateState { state -> state.copy(linkedCount = linkedCount, bulkFailures = failures) }
         }
     }
 

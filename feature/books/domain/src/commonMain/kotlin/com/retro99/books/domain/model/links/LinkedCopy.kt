@@ -93,6 +93,9 @@ fun linkPickerCandidates(
     val key = book.copyKey()
     val linked = links.firstOrNull { link -> key in link.members }?.members.orEmpty()
     return books
-        .filter { other -> other.copyKey().source != key.source && other.copyKey() !in linked }
+        .filter { other ->
+            val otherKey = other.copyKey()
+            otherKey != key && otherKey !in linked && repeatedMergeSource(key, otherKey, links) == null
+        }
         .distinctBy { other -> other.copyKey() }
 }

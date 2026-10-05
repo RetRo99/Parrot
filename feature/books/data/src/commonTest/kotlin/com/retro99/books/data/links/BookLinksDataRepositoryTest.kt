@@ -19,6 +19,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 class BookLinksDataRepositoryTest {
 
@@ -256,6 +257,31 @@ class BookLinksDataRepositoryTest {
         createdAt = createdAt,
         updatedAt = createdAt,
     )
+
+    @Test
+    fun `sync membership change between validation and write cannot be overwritten`() = runTest {
+        setup(link("link-1", "library:b1", "storyteller:s1"))
+        val synced = link("link-1", "library:b1", "storyteller:s1", "audiobookshelf:a2")
+        database.beforeWrite = { database.links.value = mapOf(synced.linkId to synced) }
+
+        assertFailsWith<IllegalStateException> { classUnderTest.link(library, audiobookshelf) }
+
+        assertEquals(listOf(synced), database.liveLinks)
+        assertTrue(database.outbox.isEmpty())
+    }
+
+    @Test
+    fun `sync membership change cannot be overwritten by separation either`() = runTest {
+        setup(link("link-1", "library:b1", "storyteller:s1"))
+        val synced = link("link-1", "library:b1", "storyteller:s1", "audiobookshelf:a1")
+        database.beforeWrite = { database.links.value = mapOf(synced.linkId to synced) }
+
+        assertFailsWith<IllegalStateException> { classUnderTest.unlink(storyteller) }
+
+        assertEquals(listOf(synced), database.liveLinks)
+        assertTrue(database.decisions.value.isEmpty())
+        assertTrue(database.outbox.isEmpty())
+    }
 
     private object DirectDatabaseExecutor : DatabaseExecutor {
         override suspend fun <T> executeDatabaseOperation(

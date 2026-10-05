@@ -89,6 +89,13 @@ internal fun AppDatabase.readBookLinkDecisions(): List<BookLinkDecisionEntity> =
  */
 internal fun AppDatabase.writeBookLinks(write: BookLinkWrite) {
     transaction {
+        write.expectedMemberships?.let { expected ->
+            val current = bookLinkQueries.selectLiveBookLinkMembers().executeAsList()
+                .toEntities().associate { link -> link.linkId to link.members.toSet() }
+            check(current == expected) {
+                "Linked versions changed. Review them and try again."
+            }
+        }
         val (tombstones, liveLinks) = write.links.partition { link -> link.deletedAt != null }
         tombstones.forEach { link ->
             upsertBookLinkRow(link)

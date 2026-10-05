@@ -13,6 +13,7 @@ data class LinkSuggestionUiModel(
     val score: Int,
     val reason: SuggestionReason,
     val isConfident: Boolean,
+    val identifierLabel: String? = null,
 )
 
 data class SuggestedBookUiModel(
@@ -28,6 +29,11 @@ fun LinkSuggestion.toUiModel() = LinkSuggestionUiModel(
     score = score,
     reason = reason,
     isConfident = isConfident,
+    identifierLabel = when {
+        sharedIsbn != null -> "Same ISBN"
+        sharedAsin != null -> "Same ASIN"
+        else -> null
+    },
 )
 
 private fun LinkCandidate.toUiModel() = SuggestedBookUiModel(

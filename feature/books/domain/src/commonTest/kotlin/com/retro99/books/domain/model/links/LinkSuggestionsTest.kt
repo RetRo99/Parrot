@@ -169,7 +169,7 @@ class LinkSuggestionsTest {
     }
 
     @Test
-    fun `suggestLinks suggests likely pairs with the confident ones first`() {
+    fun `suggestLinks ranks likely pairs but title matches are never bulk eligible`() {
         // Given
         val candidates = listOf(
             candidate("storyteller:s1", "The Hobbit", "J. R. R. Tolkien"),
@@ -184,7 +184,7 @@ class LinkSuggestionsTest {
         // Then
         assertEquals(
             listOf(
-                Triple("library:b1|storyteller:s1", 100, true),
+                Triple("library:b1|storyteller:s1", 100, false),
                 Triple("audiobookshelf:a1|library:b1", 72, false),
                 Triple("audiobookshelf:a1|storyteller:s1", 72, false),
             ),
@@ -192,6 +192,36 @@ class LinkSuggestionsTest {
                 Triple(suggestion.pairKey, suggestion.score, suggestion.isConfident)
             },
         )
+    }
+
+    @Test
+    fun `only a verified shared ISBN is bulk eligible`() {
+        val first = candidate("library:b1", "Emma", "Jane Austen")
+        val second = candidate("storyteller:s1", "Emma", "Jane Austen")
+        fun suggestion(identifier: String) = LinkSuggestion(
+            first.copy(identifiers = setOf(identifier)), second.copy(identifiers = setOf(identifier)),
+            100, SuggestionReason.IdentifierMatch,
+        )
+        assertTrue(suggestion("9780261102217").isConfident)
+        assertEquals(false, suggestion("9780261102218").isConfident)
+        assertEquals(false, suggestion("asin:B007978NPG").isConfident)
+        assertEquals("asin:B007978NPG", suggestion("asin:B007978NPG").sharedAsin)
+        assertNull(suggestion("asin:bad").sharedAsin)
+        assertNull(normalizeIsbn("0261102215"))
+    }
+
+    @Test
+    fun `whole group conflict excludes pair even when selected sources differ`() {
+        val candidates = listOf(
+            candidate("library:b1", "Emma", "Jane Austen"),
+            candidate("audiobookshelf:a1", "Emma", "Jane Austen"),
+        )
+        val links = listOf(
+            testLink("first", "library:b1", "storyteller:s1"),
+            testLink("second", "audiobookshelf:a1", "storyteller:s2"),
+        )
+        assertEquals(CopySource.Storyteller, repeatedMergeSource(candidates[0].key, candidates[1].key, links))
+        assertTrue(suggestLinks(candidates, links, emptyMap(), now).isEmpty())
     }
 
     @Test

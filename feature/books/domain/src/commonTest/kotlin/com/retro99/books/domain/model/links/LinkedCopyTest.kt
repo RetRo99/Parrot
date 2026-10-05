@@ -82,4 +82,19 @@ class LinkedCopyTest {
         // Then: no Storyteller books, and not the library copy it is already linked to
         assertEquals(listOf("a1"), candidates.map { book -> book.uuid })
     }
+
+    @Test
+    fun `picker excludes an otherwise different source when its group collides`() {
+        val links = listOf(
+            testLink("first", "library:b1", "storyteller:s1"),
+            testLink("second", "audiobookshelf:a1", "storyteller:s2"),
+        )
+        assertEquals(emptyList(), linkPickerCandidates(library, books, links))
+    }
+
+    @Test
+    fun `picker excludes the source already present even when current version is different`() {
+        val links = listOf(testLink("first", "library:b1", "storyteller:s1"))
+        assertEquals(listOf("a1"), linkPickerCandidates(library, books, links).map { it.uuid })
+    }
 }

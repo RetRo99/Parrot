@@ -11,4 +11,6 @@ data class BookLinkWrite(
     val links: List<BookLinkEntity> = emptyList(),
     val decisions: List<BookLinkDecisionEntity> = emptyList(),
     val outboxEntries: List<SyncOutboxEntry> = emptyList(),
+    /** Local edits must not overwrite membership changed by sync after validation. */
+    val expectedMemberships: Map<String, Set<String>>? = null,
 )

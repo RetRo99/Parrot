@@ -32,7 +32,6 @@ import com.retro99.base.ui.compose.EmberDialog
 import com.retro99.base.ui.compose.EmberDialogAction
 import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.base.ui.compose.EmberTopBar
-import com.retro99.books.domain.model.links.SuggestionReason
 import com.retro99.books.ui.components.HomeBadge
 import com.retro99.books.ui.model.LinkSuggestionUiModel
 import com.retro99.books.ui.model.SuggestedBookUiModel
@@ -44,11 +43,7 @@ import resources.translations.general_back
 import resources.translations.general_ok
 import resources.translations.link_error_same_source
 import resources.translations.link_not_same_book
-import resources.translations.link_reason_identifier
-import resources.translations.link_reason_title_author
 import resources.translations.link_review_link
-import resources.translations.link_review_link_all_confident
-import resources.translations.link_review_linked_count
 import resources.translations.link_review_skip
 import resources.translations.link_review_title
 
@@ -82,7 +77,13 @@ private fun LinkReviewScreenContent(
 ) {
     val message = when {
         viewState.linkedCount != null ->
-            stringResource(StringRes.link_review_linked_count, viewState.linkedCount)
+            buildString {
+                append("${viewState.linkedCount} linked")
+                if (viewState.bulkFailures.isNotEmpty()) {
+                    append(" · ${viewState.bulkFailures.size} couldn’t be linked\n")
+                    append(viewState.bulkFailures.joinToString("\n"))
+                }
+            }
         viewState.sameSourceError != null -> stringResource(
             StringRes.link_error_same_source,
             viewState.sameSourceError.label(),
@@ -120,6 +121,10 @@ private fun LinkReviewScreenContent(
                 .padding(paddingValues),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         ) {
+            if (viewState.catalogueFailures.isNotEmpty()) item("catalogue-error") {
+                Text("Couldn’t load some versions. Suggestions from those sources may be missing.")
+                TextButton(onClick = { intentDispatcher(LinkReviewIntent.OnRetry) }) { Text("Try again") }
+            }
             if (viewState.confidentCount > 0) {
                 item(key = "link-all") {
                     Button(
@@ -127,10 +132,7 @@ private fun LinkReviewScreenContent(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
-                            stringResource(
-                                StringRes.link_review_link_all_confident,
-                                viewState.confidentCount,
-                            ),
+                            "Link the ${viewState.confidentCount} matches with the same ISBN",
                         )
                     }
                 }
@@ -165,10 +167,6 @@ private fun SuggestionRow(
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val reason = when (suggestion.reason) {
-        SuggestionReason.IdentifierMatch -> StringRes.link_reason_identifier
-        SuggestionReason.TitleAndAuthor -> StringRes.link_reason_title_author
-    }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -178,7 +176,7 @@ private fun SuggestionRow(
         SuggestedBook(book = suggestion.first)
         SuggestedBook(book = suggestion.second)
         Text(
-            text = stringResource(reason),
+            text = suggestion.identifierLabel ?: "Same title and author — check it’s the same edition",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

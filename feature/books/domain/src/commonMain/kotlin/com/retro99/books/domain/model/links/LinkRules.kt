@@ -25,6 +25,13 @@ fun mergeLinks(first: BookLink, second: BookLink): BookLink? {
 fun Set<CopyKey>.repeatedSource(): CopySource? =
     groupBy { key -> key.source }.entries.firstOrNull { (_, keys) -> keys.size > 1 }?.key
 
+/** Validate both complete groups, not just the two selected versions. */
+fun repeatedMergeSource(first: CopyKey, second: CopyKey, links: List<BookLink>): CopySource? {
+    val firstMembers = links.firstOrNull { first in it.members }?.members.orEmpty() + first
+    val secondMembers = links.firstOrNull { second in it.members }?.members.orEmpty() + second
+    return (firstMembers + secondMembers).repeatedSource()
+}
+
 /**
  * Which of two links survives a merge: the one created first, then the smaller id. A
  * creation time that can't be read counts as newest.

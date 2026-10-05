@@ -7,4 +7,7 @@ sealed interface LinkPickerIntent : BaseIntent {
     data class OnSearchQueryChanged(val query: String) : LinkPickerIntent
     data class OnBookPicked(val serverId: String, val bookUuid: String) : LinkPickerIntent
     data object OnErrorDismissed : LinkPickerIntent
+    data object OnConfirmLink : LinkPickerIntent
+    data object OnDismissConfirmation : LinkPickerIntent
+    data object OnRetry : LinkPickerIntent
 }

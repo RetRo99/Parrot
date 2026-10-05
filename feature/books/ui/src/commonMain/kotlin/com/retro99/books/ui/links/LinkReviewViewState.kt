@@ -12,6 +12,8 @@ data class LinkReviewViewState(
     /** Set when a link failed because both books come from this source. */
     val sameSourceError: CopySource? = null,
     val error: AppError? = null,
+    val bulkFailures: List<String> = emptyList(),
+    val catalogueFailures: Map<String, AppError> = emptyMap(),
 ) {
     val confidentCount: Int
         get() = suggestions.count { suggestion -> suggestion.isConfident }

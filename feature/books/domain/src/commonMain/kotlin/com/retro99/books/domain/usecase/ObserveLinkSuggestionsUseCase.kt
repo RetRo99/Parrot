@@ -1,6 +1,6 @@
 package com.retro99.books.domain.usecase
 
-import com.github.michaelbull.result.getOrElse
+import com.retro99.base.result.AppError
 import com.retro99.books.domain.BookLinksRepository
 import com.retro99.books.domain.model.links.BookLink
 import com.retro99.books.domain.model.links.LinkCandidate
@@ -49,20 +49,27 @@ class ObserveLinkSuggestionsUseCase(
     private var cachedSnapshot: Snapshot? = null
     private var cachedSuggestions: List<LinkSuggestion> = emptyList()
 
-    operator fun invoke(): Flow<List<LinkSuggestion>> = combine(
-        getBooksUseCase(groupLinked = false),
+    data class ReviewSnapshot(
+        val suggestions: List<LinkSuggestion>,
+        val failures: Map<String, AppError>,
+    )
+
+    operator fun invoke(): Flow<List<LinkSuggestion>> = observeReview().map { it.suggestions }
+
+    fun observeReview(): Flow<ReviewSnapshot> = combine(
+        getBooksUseCase.observeCatalogue(),
         bookLinksRepository.observeLinks(),
         bookLinksRepository.observeDecisions(),
-    ) { booksResult, links, decisions ->
-        val candidates = booksResult.getOrElse { emptyList() }
+    ) { catalogue, links, decisions ->
+        val candidates = catalogue.books
             .map { book -> book.toLinkCandidate() }
             .distinctBy { candidate -> candidate.key }
             .sortedBy { candidate -> candidate.key.value }
         // A skipped pair comes back after 30 days, so a snapshot is good for one day.
-        Snapshot(candidates, links, decisions, day = now().toEpochMilliseconds() / DAY_MILLIS)
+        val snapshot = Snapshot(candidates, links, decisions, day = now().toEpochMilliseconds() / DAY_MILLIS)
+        ReviewSnapshot(suggestionsFor(snapshot), catalogue.failures)
     }
         .distinctUntilChanged()
-        .map { snapshot -> suggestionsFor(snapshot) }
         .flowOn(dispatcher)
 
     private suspend fun suggestionsFor(snapshot: Snapshot): List<LinkSuggestion> =

@@ -12,6 +12,11 @@ data class LinkPickerViewState(
     /** Set when linking failed because both books come from this source. */
     val sameSourceError: CopySource? = null,
     val error: AppError? = null,
+    val currentBook: BookUiModel? = null,
+    val pendingBook: BookUiModel? = null,
+    val isLinking: Boolean = false,
+    val linkFailureMessage: String? = null,
+    val catalogueFailures: Map<String, AppError> = emptyMap(),
 ) {
     val filteredBooks: List<BookUiModel>
         get() {

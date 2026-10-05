@@ -14,6 +14,7 @@ internal class FakeBookLinksDatabase(vararg initialLinks: BookLinkEntity) : Book
     val links = MutableStateFlow(initialLinks.associateBy(BookLinkEntity::linkId))
     val decisions = MutableStateFlow(emptyMap<String, BookLinkDecisionEntity>())
     val outbox = mutableListOf<SyncOutboxEntry>()
+    var beforeWrite: (() -> Unit)? = null
 
     val liveLinks: List<BookLinkEntity>
         get() = links.value.values.filter { link -> link.deletedAt == null }
@@ -33,6 +34,12 @@ internal class FakeBookLinksDatabase(vararg initialLinks: BookLinkEntity) : Book
         decisions.value[pairKey]
 
     override suspend fun write(write: BookLinkWrite) {
+        beforeWrite?.also { beforeWrite = null }?.invoke()
+        write.expectedMemberships?.let { expected ->
+            check(liveLinks.associate { link -> link.linkId to link.members.toSet() } == expected) {
+                "Linked versions changed. Review them and try again."
+            }
+        }
         val updated = links.value.toMutableMap()
         write.links.sortedBy { link -> link.deletedAt == null }.forEach { link ->
             updated[link.linkId] = if (link.deletedAt != null) {

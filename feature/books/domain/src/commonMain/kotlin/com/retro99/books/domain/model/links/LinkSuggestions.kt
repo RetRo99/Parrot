@@ -41,8 +41,13 @@ data class LinkSuggestion(
 ) {
     val pairKey: String get() = pairKey(first.key, second.key)
 
-    /** Sure enough for "Link all confident matches". Everything else is review only. */
-    val isConfident: Boolean get() = score >= CONFIDENT_SCORE
+    val sharedIsbn: String? get() = first.identifiers.intersect(second.identifiers)
+        .firstOrNull { normalizeIsbn(it) == it }
+    val sharedAsin: String? get() = first.identifiers.intersect(second.identifiers)
+        .firstOrNull { it.startsWith("asin:") && validAsin(it.removePrefix("asin:")) }
+
+    /** Only verified ISBN matches are offered for bulk linking. */
+    val isConfident: Boolean get() = sharedIsbn != null
 }
 
 const val CONFIDENT_SCORE = 90
@@ -191,13 +196,21 @@ fun bestAuthorSimilarity(first: List<String>, second: List<String>): Double? {
 
 /** The ISBN-13 for an ISBN-10 or ISBN-13, digits only. Null when it is neither. */
 fun normalizeIsbn(value: String): String? {
+    if (value.any { it !in '0'..'9' && it !in "xX- " }) return null
     val compact = value.filter { character -> character.isDigit() || character in "xX" }
         .uppercase()
     return when {
-        compact.length == ISBN_13_LENGTH && compact.all { character -> character.isDigit() } ->
-            compact
+        compact.length == ISBN_13_LENGTH && (compact.startsWith("978") || compact.startsWith("979")) &&
+            compact.all { character -> character.isDigit() } ->
+            compact.takeIf { digits ->
+                digits.mapIndexed { index, digit -> digit.digitToInt() * if (index % 2 == 0) 1 else 3 }.sum() % 10 == 0
+            }
         compact.length == ISBN_10_LENGTH &&
             compact.dropLast(1).all { character -> character.isDigit() } -> {
+            val checksum = compact.mapIndexed { index, character ->
+                (if (character == 'X' && index == 9) 10 else character.digitToInt()) * (10 - index)
+            }.sum()
+            if (checksum % 11 != 0) return null
             val body = "978" + compact.dropLast(1)
             val sum = body.mapIndexed { index, character ->
                 character.digitToInt() * if (index % 2 == 0) 1 else 3
@@ -210,6 +223,9 @@ fun normalizeIsbn(value: String): String? {
 
 private const val ISBN_13_LENGTH = 13
 private const val ISBN_10_LENGTH = 10
+
+private fun validAsin(value: String): Boolean =
+    value.length == 10 && value.all { it in 'A'..'Z' || it in '0'..'9' }
 
 /** Two-letter code for a language tag ("en-US") or a common English name ("German"). */
 private fun languageCode(language: String): String {
@@ -225,7 +241,9 @@ fun scorePair(a: LinkCandidate, b: LinkCandidate): SuggestionScore? {
     ) {
         return null
     }
-    val sharedIdentifier = a.identifiers.intersect(b.identifiers).isNotEmpty()
+    val sharedIdentifier = a.identifiers.intersect(b.identifiers).any {
+        normalizeIsbn(it) == it || (it.startsWith("asin:") && validAsin(it.removePrefix("asin:")))
+    }
     if (sharedIdentifier) return SuggestionScore(100, SuggestionReason.IdentifierMatch)
 
     val titleScore = tokenSortSimilarity(normalizeTitle(a.title), normalizeTitle(b.title))
@@ -275,6 +293,7 @@ fun suggestLinks(
                 }
                 val pair = pairKey(first.key, second.key)
                 if (first.source == second.source || !seenPairs.add(pair)) return@forEach
+                if (repeatedMergeSource(first.key, second.key, links) != null) return@forEach
                 if (second.source in linkedSources[first.key].orEmpty() ||
                     first.source in linkedSources[second.key].orEmpty()
                 ) {
@@ -327,7 +346,7 @@ fun BookDomainModel.toLinkCandidate(): LinkCandidate = LinkCandidate(
     language = (this as? BookDomainModel.StorytellerBook)?.language,
     identifiers = setOfNotNull(
         isbn?.let { value -> normalizeIsbn(value) },
-        asin?.takeIf { value -> value.isNotBlank() }?.let { value -> "asin:${value.uppercase()}" },
+        asin?.trim()?.uppercase()?.takeIf(::validAsin)?.let { value -> "asin:$value" },
     ),
     home = home,
 )

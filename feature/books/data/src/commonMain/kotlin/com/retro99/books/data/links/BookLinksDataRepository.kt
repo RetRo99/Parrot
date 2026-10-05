@@ -116,6 +116,7 @@ internal class BookLinksDataRepository(
         bookLinksDatabase.write(
             BookLinkWrite(
                 links = dropped + survivor,
+                expectedMemberships = links.associate { link -> link.linkId to link.members.toSet() },
                 // Deletions first, so Parrot Cloud frees the members before the survivor
                 // claims them.
                 outboxEntries = dropped.map { link -> link.toOutbox() } + survivor.toOutbox(),
@@ -125,7 +126,8 @@ internal class BookLinksDataRepository(
     }
 
     private suspend fun unlinkLocked(copy: CopyKey) {
-        val link = bookLinksDatabase.getLinks()
+        val links = bookLinksDatabase.getLinks()
+        val link = links
             .firstOrNull { link -> copy.value in link.members }
             ?: return
         val now = now()
@@ -140,6 +142,7 @@ internal class BookLinksDataRepository(
         bookLinksDatabase.write(
             BookLinkWrite(
                 links = listOf(updated),
+                expectedMemberships = links.associate { stored -> stored.linkId to stored.members.toSet() },
                 decisions = decisions,
                 outboxEntries = listOf(updated.toOutbox(removedMembers = listOf(copy.value))) +
                     decisions.map { decision -> decision.toOutbox() },
