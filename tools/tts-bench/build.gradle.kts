@@ -14,6 +14,11 @@ android {
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 1
         versionName = "0.1.0"
+        // The test devices are arm64; the other ABIs' ONNX runtimes triple the APK and
+        // wireless adb cannot push it reliably.
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
     }
     packaging {
         resources {

@@ -54,7 +54,13 @@ android {
         }
     }
     buildTypes {
-        getByName("debug")
+        getByName("debug") {
+            // Test devices are arm64; the other ABIs' ONNX runtimes inflate debug installs
+            // past what wireless adb can push. Release keeps its full ABI set.
+            ndk {
+                abiFilters += "arm64-v8a"
+            }
+        }
         getByName("release") {
             isMinifyEnabled = true
             isShrinkResources = true
