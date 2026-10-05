@@ -14,6 +14,9 @@ import com.retro99.reader.ui.navigator.PageAnchor
 import com.retro99.reader.ui.navigator.PageMark
 import com.retro99.reader.ui.navigator.PageText
 import com.retro99.reader.ui.navigator.SavedPageScript
+import com.retro99.reader.ui.navigator.TtsController
+import com.retro99.reader.ui.tts.SpeakWordState
+import com.retro99.reader.ui.tts.isSpeakableWordForm
 import com.retro99.reader.ui.reader.ReaderSearchResult
 import com.retro99.saved.domain.HighlightMerger
 import com.retro99.saved.domain.PendingSavedJump
@@ -94,9 +97,12 @@ internal class ReaderSavedItems(
     private val pendingJump: PendingSavedJump,
     private val onError: (Throwable, String) -> Unit,
     private val dictionary: DictionaryService,
+    private val tts: () -> TtsController,
 ) {
     private var packPromptOffered = false
     private var wordSaveJob: Job? = null
+    private var speakFailureJob: Job? = null
+    private var speakWarmUpJob: Job? = null
     private var identity: SavedBookIdentity? = null
     private var serverId = ""
     private var bookUuid = ""
@@ -119,6 +125,7 @@ internal class ReaderSavedItems(
                 val selected = state().selection ?: return@collectLatest
                 val definition = resolveDefinition(selected.text.quote, refresh = true)
                 update { saved -> if (saved.selection == selected) saved.copy(definition = definition) else saved }
+                refreshSpeakWord()
             }
         }
         this.serverId = serverId
@@ -156,12 +163,21 @@ internal class ReaderSavedItems(
                     delay(SELECTION_SETTLE_MS)
                     readSelection()
                 } else {
-                    update { it.copy(selection = null, definition = null) }
+                    tts().stopWord()
+                    update { it.copy(selection = null, definition = null, speakWord = it.speakWord.copy(visible = false)) }
                 }
             }
         }
         scope.launch { bookController().savedDecorationTaps.collect { id -> openDetail(id) } }
         scope.launch { bookController().pageReloads.collect { refreshDecorations() } }
+        scope.launch {
+            tts().wordState.collect { wordState ->
+                update { saved -> saved.copy(speakWord = saved.speakWord.copy(state = wordState)) }
+            }
+        }
+        scope.launch {
+            tts().wordFailures.collect { showSpeakFailure() }
+        }
     }
 
     fun handle(action: SavedAction) {
@@ -189,6 +205,7 @@ internal class ReaderSavedItems(
                     dictionarySaved = it.selection?.let { selection ->
                         it.items.any { item -> item.isWordAt(found.entry.headword, selection.href, selection.text.toTextAnchor()) }
                     } ?: false, dictionaryError = null) }
+                refreshSpeakWord()
             }
             SavedAction.CloseDictionary -> { update { it.copy(dictionaryEntry = null, dictionarySelection = null) }; clearSelection() }
             SavedAction.CopyDefinition -> state().dictionaryEntry?.let { copy(it.copyText) }
@@ -198,6 +215,7 @@ internal class ReaderSavedItems(
                 highlightSelection(state().lastColor)
             }
             SavedAction.SaveWord -> if (wordSaveJob?.isActive != true) { wordSaveJob = scope.launch { saveWord() } }
+            SavedAction.SpeakWord -> speakWord()
 
             is SavedAction.OpenDetail -> openDetail(action.id)
             SavedAction.CloseDetail -> update { it.copy(detailId = null) }
@@ -242,7 +260,14 @@ internal class ReaderSavedItems(
             update { it.copy(bar = null) }
             barPageKey = null
         }
-        if (state().selection != null) update { it.copy(selection = null, definition = null) }
+        if (state().selection != null) {
+            tts().stopWord()
+            update { it.copy(selection = null, definition = null, speakWord = it.speakWord.copy(visible = false)) }
+        }
+        // E-ink keeps the failure line still until the next discrete event; a page turn is one.
+        if (state().speakWord.failureSerial != null) {
+            update { it.copy(speakWord = it.speakWord.copy(failureSerial = null)) }
+        }
         pageJob?.cancel()
         pageJob = scope.launch {
             delay(PAGE_SETTLE_MS)
@@ -319,7 +344,10 @@ internal class ReaderSavedItems(
         val position = context().position ?: return
         val text = bookController().selectionForToolbar()
         val definition = text?.let { resolveDefinition(it.quote) }
+        // A new selection is a new word: anything spoken for the old one stops.
+        tts().stopWord()
         update { it.copy(selection = text?.let { selection -> ReaderTextSelection(position.href, position.type, selection) }, definition = definition) }
+        refreshSpeakWord()
         if (text != null) watchSelection()
     }
 
@@ -331,10 +359,16 @@ internal class ReaderSavedItems(
                 delay(SELECTION_POLL_MS)
                 val text = bookController().selectionForToolbar()
                 val old = state().selection
-                val definition = if (text?.quote != old?.text?.quote) text?.let { resolveDefinition(it.quote) } else state().definition
+                val changed = text?.quote != old?.text?.quote
+                val definition = if (changed) text?.let { resolveDefinition(it.quote) } else state().definition
+                if (changed) {
+                    tts().stopWord()
+                    update { it.copy(speakWord = it.speakWord.copy(visible = false)) }
+                }
                 update { saved -> saved.copy(selection = saved.selection?.let { current ->
                     text?.let { current.copy(text = it) }
                 }, definition = definition) }
+                if (changed) refreshSpeakWord()
             }
         }
     }
@@ -380,7 +414,8 @@ internal class ReaderSavedItems(
     }
 
     private fun clearSelection() {
-        update { it.copy(selection = null, definition = null) }
+        tts().stopWord()
+        update { it.copy(selection = null, definition = null, speakWord = it.speakWord.copy(visible = false)) }
         bookController().clearSelection()
         scope.launch { bookController().runPageScript(SavedPageScript.clearSelection()) }
     }
@@ -441,11 +476,13 @@ internal class ReaderSavedItems(
     private fun openDetail(id: String) {
         if (item(id) == null) return
         val saved = item(id) ?: return
+        tts().stopWord()
         if (saved.type == SavedItemType.Word && saved.word != null) {
             scope.launch {
                 val word = saved.word ?: return@launch
                 val entry = dictionary.lookup(word.headword) ?: DictionaryEntry(word.headword, groups = listOf(DictionaryGroup(word.partOfSpeech ?: "", listOf(DictionarySense(word.gloss)))))
                 update { it.copy(dictionaryEntry = entry, dictionarySelection = null, dictionarySaved = true, detailId = id, selection = null) }
+                refreshSpeakWord()
             }
         } else update { it.copy(detailId = id, selection = null) }
     }
@@ -488,6 +525,68 @@ internal class ReaderSavedItems(
         barJob = scope.launch {
             delay(BAR_VISIBLE_MS)
             update { saved -> if (saved.bar?.serial == bar.serial) saved.copy(bar = null) else saved }
+        }
+    }
+
+    // ==================== Speak word ====================
+
+    /** A tap speaks the selected surface form; while Preparing or Speaking it cancels. */
+    private fun speakWord() {
+        if (state().speakWord.state != SpeakWordState.Idle) {
+            tts().stopWord()
+            return
+        }
+        val surface = speakSurface() ?: return
+        if (!isSpeakableWordForm(surface)) return
+        update { it.copy(speakWord = it.speakWord.copy(failureSerial = null)) }
+        tts().speakWord(surface, SPEAK_WORD_LANGUAGE)
+    }
+
+    /** The selected surface form a speaker tap speaks: the selection, else the saved word. */
+    private fun speakSurface(): String? =
+        state().dictionarySelection?.text?.quote
+            ?: state().selection?.text?.quote
+            ?: state().detail?.word?.selected
+
+    /**
+     * Shows the speaker button when the surface form is speakable and some voice can say it,
+     * and warms the engine only if the surface survives ~300 ms: quick mis-taps must not load
+     * a 130 MB model (battery saver is skipped inside the controller).
+     */
+    private fun refreshSpeakWord() {
+        scope.launch {
+            val surface = speakSurface()
+            val inDictionaryContext =
+                state().definition is DefinitionState.Found || state().dictionaryEntry != null
+            val visible = surface != null && inDictionaryContext &&
+                isSpeakableWordForm(surface) &&
+                tts().canSpeakWord(SPEAK_WORD_LANGUAGE)
+            update { it.copy(speakWord = it.speakWord.copy(visible = visible)) }
+            if (visible) {
+                speakWarmUpJob?.cancel()
+                speakWarmUpJob = scope.launch {
+                    delay(SPEAK_WARM_UP_DELAY_MS)
+                    if (state().speakWord.visible) tts().warmUpWordVoice(SPEAK_WORD_LANGUAGE)
+                }
+            }
+        }
+    }
+
+    private fun showSpeakFailure() {
+        val failureSerial = nextSerial()
+        update { it.copy(speakWord = it.speakWord.copy(failureSerial = failureSerial)) }
+        // E-ink keeps the line until the next discrete event instead of timing it away.
+        if (decorationStyle?.eink == true) return
+        speakFailureJob?.cancel()
+        speakFailureJob = scope.launch {
+            delay(SPEAK_FAILURE_VISIBLE_MS)
+            update { saved ->
+                if (saved.speakWord.failureSerial == failureSerial) {
+                    saved.copy(speakWord = saved.speakWord.copy(failureSerial = null))
+                } else {
+                    saved
+                }
+            }
         }
     }
 
@@ -706,6 +805,9 @@ internal class ReaderSavedItems(
         const val PAGE_SETTLE_MS = 250L
         const val BAR_VISIBLE_MS = 5_000L
         const val SEARCH_MAX_CHARS = 120
+        const val SPEAK_FAILURE_VISIBLE_MS = 3_000L
+        const val SPEAK_WARM_UP_DELAY_MS = 300L
+        const val SPEAK_WORD_LANGUAGE = "en"
     }
 }
 

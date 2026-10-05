@@ -125,6 +125,7 @@ import com.retro99.reader.ui.reader.saved.ReaderSavedHost
 import com.retro99.reader.ui.reader.saved.SavedAction
 import com.retro99.reader.ui.reader.saved.SavedBarHost
 import com.retro99.reader.ui.reader.saved.SelectionToolbar
+import com.retro99.reader.ui.reader.saved.toSpeakUi
 import androidx.compose.ui.graphics.luminance
 import com.retro99.reader.ui.model.ChapterReadingTimeInfo
 import com.retro99.reader.ui.model.PositionUiModel
@@ -494,6 +495,7 @@ internal fun ReaderOverlayContent(
                 SelectionToolbar(
                     selection = selection,
                     definition = saved.definition,
+                    speakWord = saved.speakWord.toSpeakUi(),
                     pageTopDp = settings.marginVertical.toFloat(),
                     bottomObstructionDp = with(density) {
                         ((readerBottomPx ?: 0f) - (bottomControlsTopPx ?: readerBottomPx ?: 0f))

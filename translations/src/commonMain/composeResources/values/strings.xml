@@ -1653,6 +1653,12 @@
     <string name="parrot_cloud_megabytes">megabytes</string>
     <string name="parrot_cloud_gigabytes">gigabytes</string>
     <string name="dictionary_more">More</string>
+    <string name="dictionary_pronounce">Pronounce</string>
+    <string name="dictionary_speak_stop">Stop</string>
+    <string name="dictionary_speak_preparing">Preparing… tap to cancel</string>
+    <string name="dictionary_speak_preparing_voice">Preparing %1$s…</string>
+    <string name="dictionary_speak_failed">Couldn\'t play this word.</string>
+    <string name="dictionary_speak_announce_preparing">Preparing</string>
     <string name="dictionary_no_definition">No definition for “%1$s”.</string>
     <string name="dictionary_missing_words">Names and rare words may be missing.</string>
     <string name="dictionary_downloading">Downloading… %1$d%%</string>

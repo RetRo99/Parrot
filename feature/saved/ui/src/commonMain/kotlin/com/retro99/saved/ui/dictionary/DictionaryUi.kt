@@ -8,7 +8,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.outlined.VolumeUp
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -17,22 +21,114 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberBottomSheet
 import com.retro99.dictionary.*
 import com.retro99.translations.StringRes
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import resources.translations.*
 
+/** Speaker-button phase in the strip and sheet; mirrors the TTS word state. */
+enum class SpeakWordPhase { Idle, Preparing, Speaking }
+
+data class SpeakWordUi(
+    val visible: Boolean = false,
+    val phase: SpeakWordPhase = SpeakWordPhase.Idle,
+    val voiceName: String = "",
+    val failure: Boolean = false,
+)
+
+/**
+ * The "Pronounce" button: a tinted circle left of More (40dp) or beside the headword (44dp).
+ * Idle shows a speaker, Preparing a progress ring (a static hourglass on e-ink), Speaking a
+ * stop square. A light haptic fires on tap and respects the system touch-feedback setting.
+ * TalkBack announces "Preparing" once and nothing when the word starts, since the word itself
+ * is the feedback.
+ */
 @Composable
-fun DefinitionStrip(state: DefinitionState, onMore: () -> Unit, onDownload: () -> Unit) {
+fun SpeakWordButton(state: SpeakWordUi, onClick: () -> Unit, size: Dp, modifier: Modifier = Modifier) {
+    val colors = Ember.colors
+    val eink = Ember.style.isEink
+    val haptics = LocalHapticFeedback.current
+    val preparing = state.phase == SpeakWordPhase.Preparing
+    val speaking = state.phase == SpeakWordPhase.Speaking
+    val label = when {
+        speaking -> stringResource(StringRes.dictionary_speak_stop)
+        preparing -> stringResource(StringRes.dictionary_speak_preparing)
+        else -> stringResource(StringRes.dictionary_pronounce)
+    }
+    val announcement = if (preparing) stringResource(StringRes.dictionary_speak_announce_preparing) else ""
+    Box(Modifier.size(0.dp).semantics { liveRegion = LiveRegionMode.Polite; contentDescription = announcement })
+    Box(
+        modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(if (eink) Color.Transparent else colors.accent.copy(alpha = 0.12f))
+            .then(if (eink) Modifier.border(2.dp, colors.ink, CircleShape) else Modifier)
+            .clickable(role = Role.Button) {
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onClick()
+            }
+            .semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) {
+        val tint = if (eink) colors.ink else colors.accent
+        when {
+            speaking -> Icon(Icons.Filled.Stop, null, tint = tint, modifier = Modifier.size(size * 0.45f))
+            preparing && eink -> Icon(Icons.Outlined.HourglassEmpty, null, tint = tint, modifier = Modifier.size(size * 0.5f))
+            preparing -> CircularProgressIndicator(color = colors.accent, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+            else -> Icon(Icons.Outlined.VolumeUp, null, tint = tint, modifier = Modifier.size(size * 0.55f))
+        }
+    }
+}
+
+/**
+ * The 13sp ink2 line under the definition: the wait explanation ("Preparing <voice>…") or the
+ * failure notice. Preparing explains itself after 3 s on Day/Night and at once on e-ink; the
+ * failure line is timed by the caller on Day/Night and sticky on e-ink.
+ */
+@Composable
+fun SpeakWordNoticeLine(state: SpeakWordUi, modifier: Modifier = Modifier) {
+    val eink = Ember.style.isEink
+    var showPreparing by remember(state.phase) {
+        mutableStateOf(eink && state.phase == SpeakWordPhase.Preparing)
+    }
+    LaunchedEffect(state.phase) {
+        if (!eink && state.phase == SpeakWordPhase.Preparing) {
+            delay(PREPARING_NOTICE_MS)
+            showPreparing = true
+        }
+    }
+    val text = when {
+        state.failure -> stringResource(StringRes.dictionary_speak_failed)
+        showPreparing && state.voiceName.isNotBlank() ->
+            stringResource(StringRes.dictionary_speak_preparing_voice, state.voiceName)
+        else -> return
+    }
+    Text(text, color = Ember.colors.ink2, fontSize = 13.sp, modifier = modifier)
+}
+
+private const val PREPARING_NOTICE_MS = 3_000L
+
+@Composable
+fun DefinitionStrip(
+    state: DefinitionState,
+    speak: SpeakWordUi = SpeakWordUi(),
+    onSpeak: () -> Unit = {},
+    onMore: () -> Unit,
+    onDownload: () -> Unit,
+) {
     val colors = Ember.colors
     Column(Modifier.fillMaxWidth()) {
         when (state) {
@@ -48,8 +144,9 @@ fun DefinitionStrip(state: DefinitionState, onMore: () -> Unit, onDownload: () -
                     }
                     Text(state.entry.firstSense.gloss, color = colors.ink, fontSize = 14.sp, lineHeight = 20.sp,
                         maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (speak.visible) SpeakWordNoticeLine(speak, Modifier.padding(top = 2.dp))
                 }
-                // Reserved pronunciation slot stays hidden until the audio work is approved.
+                if (speak.visible) SpeakWordButton(speak, onSpeak, size = 40.dp, modifier = Modifier.padding(end = 8.dp))
                 DictionaryPill(stringResource(StringRes.dictionary_more), onMore, Modifier.widthIn(min = 64.dp), accentLabel = true)
             }
             is DefinitionState.NotFound -> Column(Modifier.padding(horizontal = 8.dp, vertical = 10.dp).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }) {
@@ -81,6 +178,8 @@ fun DictionaryEntrySheet(
     error: String? = null,
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    speak: SpeakWordUi = SpeakWordUi(),
+    onSpeak: () -> Unit = {},
 ) {
     var attribution by remember { mutableStateOf(false) }
     BoxWithConstraints {
@@ -96,6 +195,7 @@ fun DictionaryEntrySheet(
                                 modifier = Modifier.widthIn(max = 120.dp).padding(horizontal = 8.dp))
                         }
                     }
+                    if (speak.visible) SpeakWordButton(speak, onSpeak, size = 44.dp, modifier = Modifier.padding(end = 4.dp))
                     IconButton(onDismiss, Modifier.size(48.dp)) { Icon(Icons.Outlined.Close, stringResource(StringRes.dictionary_close), tint = Ember.colors.ink2) }
                 }
                 Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(top = 8.dp)
@@ -117,6 +217,7 @@ fun DictionaryEntrySheet(
                         }
                     }
                 }
+                if (speak.visible) SpeakWordNoticeLine(speak, Modifier.padding(top = 8.dp))
                 error?.let { Text(it, color = Ember.colors.error, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp)) }
                 Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     DictionaryPill(stringResource(StringRes.dictionary_copy), onCopy, Modifier.weight(1f))

@@ -2634,6 +2634,7 @@ class ReaderViewModel(
             fileSharer = fileSharer,
             pendingJump = pendingSavedJump,
             dictionary = dictionaryService,
+            tts = { ttsController },
             onError = { error, message -> analytics.logException(error, message) },
         )
     }

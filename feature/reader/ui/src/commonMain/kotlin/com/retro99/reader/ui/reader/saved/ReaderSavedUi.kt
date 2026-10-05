@@ -163,6 +163,19 @@ private val RibbonShape = GenericShape { size, _ ->
     close()
 }
 
+/** Maps the reader's speak-word status onto the dictionary UI's small state. */
+internal fun SpeakWordStatus.toSpeakUi(): com.retro99.saved.ui.dictionary.SpeakWordUi =
+    com.retro99.saved.ui.dictionary.SpeakWordUi(
+        visible = visible,
+        phase = when (state) {
+            com.retro99.reader.ui.tts.SpeakWordState.Idle -> com.retro99.saved.ui.dictionary.SpeakWordPhase.Idle
+            is com.retro99.reader.ui.tts.SpeakWordState.Preparing -> com.retro99.saved.ui.dictionary.SpeakWordPhase.Preparing
+            com.retro99.reader.ui.tts.SpeakWordState.Speaking -> com.retro99.saved.ui.dictionary.SpeakWordPhase.Speaking
+        },
+        voiceName = (state as? com.retro99.reader.ui.tts.SpeakWordState.Preparing)?.voiceName.orEmpty(),
+        failure = failureSerial != null,
+    )
+
 /**
  * The toolbar for a selection: "Highlight" with four colour dots (one tap highlights and
  * closes), then Note · Copy · Search · Share. Placed below the selection, or above it when
@@ -174,6 +187,7 @@ private val RibbonShape = GenericShape { size, _ ->
 fun SelectionToolbar(
     selection: ReaderTextSelection,
     definition: com.retro99.dictionary.DefinitionState? = null,
+    speakWord: com.retro99.saved.ui.dictionary.SpeakWordUi = com.retro99.saved.ui.dictionary.SpeakWordUi(),
     pageTopDp: Float,
     bottomObstructionDp: Float,
     topObstructionDp: Float,
@@ -215,6 +229,7 @@ fun SelectionToolbar(
             ) {
                 Column(Modifier.padding(8.dp)) {
                     definition?.let { com.retro99.saved.ui.dictionary.DefinitionStrip(it,
+                        speak = speakWord, onSpeak = { onSaved(SavedAction.SpeakWord) },
                         onMore = { onSaved(SavedAction.OpenDictionary) }, onDownload = { onSaved(SavedAction.DownloadDictionary) }) }
                     Row(
                         Modifier.fillMaxWidth().padding(start = 10.dp),
@@ -338,6 +353,8 @@ internal fun ReaderSavedHost(
             error = saved.dictionaryError,
             onEdit = item?.let { ({ onSaved(SavedAction.CloseDictionary); onSaved(SavedAction.EditNote(it.id)) }) },
             onDelete = item?.let { ({ onSaved(SavedAction.CloseDictionary); onSaved(SavedAction.Remove(it.id)) }) },
+            speak = saved.speakWord.toSpeakUi(),
+            onSpeak = { onSaved(SavedAction.SpeakWord) },
         )
     }
     saved.detail?.takeIf { it.type != SavedItemType.Word }?.let { item ->

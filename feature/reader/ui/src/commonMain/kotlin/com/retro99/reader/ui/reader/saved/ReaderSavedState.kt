@@ -1,6 +1,7 @@
 package com.retro99.reader.ui.reader.saved
 
 import com.retro99.reader.ui.navigator.PageText
+import com.retro99.reader.ui.tts.SpeakWordState
 import com.retro99.saved.domain.model.HighlightColor
 import com.retro99.saved.domain.model.SavedFilter
 import com.retro99.saved.domain.model.SavedItem
@@ -20,6 +21,7 @@ data class ReaderSavedState(
     val dictionarySelection: ReaderTextSelection? = null,
     val dictionarySaved: Boolean = false,
     val dictionaryError: String? = null,
+    val speakWord: SpeakWordStatus = SpeakWordStatus(),
     val detailId: String? = null,
     val noteEditorId: String? = null,
     val bar: SavedBar? = null,
@@ -49,6 +51,14 @@ data class ReaderTextSelection(
     val href: String,
     val mediaType: String?,
     val text: PageText,
+)
+
+/** The speaker button beside a dictionary word, for the strip and the entry sheet. */
+data class SpeakWordStatus(
+    val visible: Boolean = false,
+    val state: SpeakWordState = SpeakWordState.Idle,
+    /** Serial of the visible "Couldn't play this word." line, or null. */
+    val failureSerial: Long? = null,
 )
 
 /** The bar above the progress strip. */
@@ -101,6 +111,9 @@ sealed interface SavedAction {
     data object CopyDefinition : SavedAction
     data object HighlightDictionaryWord : SavedAction
     data object SaveWord : SavedAction
+
+    /** Speaks the selected word; while it speaks or prepares, a tap cancels. */
+    data object SpeakWord : SavedAction
 
     data class OpenDetail(val id: String) : SavedAction
     data object CloseDetail : SavedAction
