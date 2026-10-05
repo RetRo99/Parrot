@@ -116,7 +116,16 @@ class SherpaOnnxSynthesizer(
                 withContext(Dispatchers.IO) {
                     val activeEngine = engine
                         ?: throw CancellationException("Kokoro engine released")
-                    activeEngine.generate(text, speakerId, speed)
+                    activeEngine.generateWithCallback(text, speakerId, speed) {
+                        if (
+                            requestJob?.isActive == false ||
+                            cancellationGeneration.get() != requestGeneration
+                        ) {
+                            1
+                        } else {
+                            0
+                        }
+                    }
                 }
             }
             if (requestJob?.isActive == false) {
