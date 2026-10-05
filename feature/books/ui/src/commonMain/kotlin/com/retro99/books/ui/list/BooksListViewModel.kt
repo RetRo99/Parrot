@@ -29,8 +29,6 @@ import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookHome
 import com.retro99.books.domain.BookFileTransferManager
-import com.retro99.books.domain.BookFileTransferRejectedException
-import com.retro99.books.domain.usecase.BackupAllBooksUseCase
 import com.retro99.books.domain.model.BookWithProgressDomainModel
 import com.retro99.books.domain.usecase.ImportEpubUseCase
 import com.retro99.books.domain.usecase.StartBookFileUploadUseCase
@@ -42,13 +40,17 @@ import com.retro99.books.ui.model.BookListViewMode
 import com.retro99.books.ui.model.BookListSettings
 import com.retro99.books.ui.model.BookQuickFilter
 import com.retro99.books.ui.model.BookSortConfig
+import com.retro99.books.ui.model.CloudBackupBook
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.books.ui.model.cloudBackupBooks
+import com.retro99.books.ui.model.cloudBackupUploadBookIds
 import com.retro99.books.ui.model.RecentSearches
 import com.retro99.books.ui.model.toUiModel
 import com.retro99.cloudaccount.domain.CloudAccountRepository
 import com.retro99.cloudaccount.domain.CloudProfileLinkRepository
 import com.retro99.cloudaccount.domain.UploadRightsAttestationRepository
 import com.retro99.cloudaccount.domain.model.isActiveFor
+import com.retro99.cloudaccount.domain.usecase.GetCloudStorageUsageUseCase
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.preferences.implementation.usecase.ObserveUserPreferenceUseCase
 import com.retro99.preferences.implementation.usecase.SaveUserPreferenceUseCase
@@ -61,10 +63,13 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
 import kotlin.time.TimeSource
+
+private val ACTIVE_UPLOAD_STATES = setOf("pending", "transferring", "verifying", "finalizing")
 
 @KoinViewModel
 class BooksListViewModel(
@@ -77,7 +82,7 @@ class BooksListViewModel(
     @Provided private val observeUserPreferenceUseCase: ObserveUserPreferenceUseCase,
     @Provided private val saveUserPreferenceUseCase: SaveUserPreferenceUseCase,
     @Provided private val bookFileTransferManager: BookFileTransferManager,
-    @Provided private val backupAllBooksUseCase: BackupAllBooksUseCase,
+    @Provided private val getCloudStorageUsageUseCase: GetCloudStorageUsageUseCase,
     @Provided private val uploadRightsAttestationRepository: UploadRightsAttestationRepository,
     @Provided private val cloudProfileLinkRepository: CloudProfileLinkRepository,
     @Provided private val cloudAccountRepository: CloudAccountRepository,
@@ -87,6 +92,7 @@ class BooksListViewModel(
 ) : BaseViewModel<BooksListViewState, BooksListIntent>(BooksListViewState()) {
 
     private var currentBooks: List<BookWithProgressDomainModel> = emptyList()
+    private var backupTransfersJob: Job? = null
     val searchFieldState = TextFieldState()
     private val featureExposure = FeatureExposureTracker(analytics, "books_library")
     private var lastSearchResults: Triple<String, BookFilterState, Int>? = null
@@ -151,29 +157,30 @@ class BooksListViewModel(
             is BooksListIntent.OnFavoriteClicked -> toggleFavorite(intent.bookUuid)
             is BooksListIntent.OnImportBook -> importBook(intent.file, intent.openAfterImport)
             BooksListIntent.OnImportedBookOpened -> updateState { it.copy(importedBookToOpen = null) }
-            BooksListIntent.OnBackupAllClicked -> updateState {
-                it.copy(
-                    showBackupAllConfirmation = true,
-                    backupAllRightsAttested = false,
-                    backupAllQueuedCount = null,
-                    backupAllFailedCount = null,
-                    backupAllError = null,
-                )
-            }
+            BooksListIntent.OnCloudBackupClicked -> openCloudBackupSelection()
             BooksListIntent.OnCloudBackupNoteDismissed -> dismissCloudBackupNote()
-            is BooksListIntent.OnBackupAllAttestationChanged -> updateState {
-                it.copy(backupAllRightsAttested = intent.attested)
-            }
-            BooksListIntent.OnBackupAllConfirmed -> backUpAllBooks()
-            BooksListIntent.OnBackupAllDismissed -> updateState {
-                it.copy(showBackupAllConfirmation = false, backupAllRightsAttested = false)
-            }
-            BooksListIntent.OnBackupAllResultDismissed -> updateState {
-                it.copy(
-                    backupAllQueuedCount = null,
-                    backupAllFailedCount = null,
-                    backupAllError = null,
+            is BooksListIntent.OnCloudBackupBookToggled -> updateState { state ->
+                state.copy(
+                    selectedCloudBackupBookIds = if (intent.selected) {
+                        state.selectedCloudBackupBookIds + intent.bookId
+                    } else {
+                        state.selectedCloudBackupBookIds - intent.bookId
+                    },
                 )
+            }
+            BooksListIntent.OnCloudBackupSelectAll -> updateState { state ->
+                state.copy(selectedCloudBackupBookIds = state.cloudBackupBooks.mapTo(mutableSetOf()) { it.id })
+            }
+            BooksListIntent.OnCloudBackupSelectNone -> updateState {
+                it.copy(selectedCloudBackupBookIds = emptySet())
+            }
+            is BooksListIntent.OnCloudBackupAttestationChanged -> updateState {
+                it.copy(cloudBackupRightsAttested = intent.attested)
+            }
+            BooksListIntent.OnCloudBackupConfirmed -> addSelectedBooksToCloud()
+            BooksListIntent.OnCloudBackupDismissed -> closeCloudBackupSelection()
+            BooksListIntent.OnCloudBackupSnackbarDismissed -> updateState {
+                it.copy(cloudBackupSnackbarBookCount = null)
             }
             is BooksListIntent.OnImportBackupAttestationChanged -> updateState {
                 it.copy(importBackupRightsAttested = intent.attested)
@@ -352,6 +359,42 @@ class BooksListViewModel(
         saveUserPreferenceUseCase(PreferencesKey.CloudBackupNoteDismissed, true)
     }
 
+    private var observedBackupTransferBookIds: Set<String> = emptySet()
+
+    private fun observeBackupTransfers(books: List<BookUiModel>) {
+        val bookIds = books.cloudBackupUploadBookIds()
+        if (bookIds == observedBackupTransferBookIds) return
+        observedBackupTransferBookIds = bookIds
+        backupTransfersJob?.cancel()
+        if (bookIds.isEmpty()) {
+            updateState { it.copy(uploadingBookIds = emptySet(), activeCloudUploads = emptyMap()) }
+            return
+        }
+        val transferFlows = bookIds.map { bookId ->
+            bookFileTransferManager.observeForBook(PARROT_CLOUD_SERVER_ID, bookId)
+        }
+        backupTransfersJob = combine(transferFlows) { transferLists ->
+            bookIds.zip(transferLists.asList())
+                .mapNotNull { (bookId, transfers) ->
+                    val activeUploads = transfers.filter { transfer ->
+                        transfer.direction == "upload" && transfer.state in ACTIVE_UPLOAD_STATES
+                    }
+                    bookId.takeIf { activeUploads.isNotEmpty() }?.let { it to activeUploads }
+                }
+                .toMap()
+        }
+            .distinctUntilChanged()
+            .onEach { activeUploads ->
+                updateState {
+                    it.copy(
+                        uploadingBookIds = activeUploads.keys,
+                        activeCloudUploads = activeUploads,
+                    )
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
     private fun toggleFavorite(bookUuid: String) {
         val currentIsFavorite = viewState.value.favoriteBookUuids.contains(bookUuid)
         analytics.logEvent(
@@ -417,6 +460,7 @@ class BooksListViewModel(
                                 error = null,
                             )
                         }
+                        observeBackupTransfers(uiBooks)
                     }
                     .onFailure { error ->
                         if (!initialReported) {
@@ -566,63 +610,129 @@ class BooksListViewModel(
         }
     }
 
-    private fun backUpAllBooks() {
-        if (!viewState.value.supportsCloudBackup || !viewState.value.backupAllRightsAttested || viewState.value.isBackingUpAll) return
-        updateState { it.copy(isBackingUpAll = true, backupAllError = null) }
+    private fun openCloudBackupSelection() {
+        val candidates = viewState.value.cloudBackupBooks
+        updateState {
+            it.copy(
+                showCloudBackupSelection = true,
+                selectedCloudBackupBookIds = candidates.mapTo(linkedSetOf(), CloudBackupBook::id),
+                cloudBackupRightsAttested = false,
+                isAddingBooksToCloud = false,
+                cloudStorageAvailableBytes = null,
+                isLoadingCloudStorage = true,
+                cloudStorageUnavailable = false,
+            )
+        }
+        viewModelScope.launch {
+            try {
+                val usage = getCloudStorageUsageUseCase()
+                updateState {
+                    it.copy(
+                        cloudStorageAvailableBytes = usage.availableBytes,
+                        isLoadingCloudStorage = false,
+                        cloudStorageUnavailable = false,
+                    )
+                }
+            } catch (exception: CancellationException) {
+                throw exception
+            } catch (_: Exception) {
+                updateState { it.copy(isLoadingCloudStorage = false, cloudStorageUnavailable = true) }
+            }
+        }
+    }
+
+    private fun closeCloudBackupSelection() {
+        if (viewState.value.isAddingBooksToCloud) return
+        updateState {
+            it.copy(
+                showCloudBackupSelection = false,
+                selectedCloudBackupBookIds = emptySet(),
+                cloudBackupRightsAttested = false,
+            )
+        }
+    }
+
+    private fun addSelectedBooksToCloud() {
+        val state = viewState.value
+        val selectedBooks = state.selectedCloudBackupBooks
+        if (!state.supportsCloudBackup || !state.cloudBackupRightsAttested || selectedBooks.isEmpty() ||
+            state.cloudBackupOverQuota || state.isLoadingCloudStorage || state.isAddingBooksToCloud
+        ) return
+        updateState { it.copy(isAddingBooksToCloud = true) }
         viewModelScope.launch {
             val started = TimeSource.Monotonic.markNow()
             analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(true, "queue", ProductOutcome.Started, 0L))
+            val localProfileId = userRegistry.getActiveProfileIdOrDefault()
             try {
-                val localProfileId = userRegistry.getActiveProfileIdOrDefault()
                 if (!hasActiveCloudAccount(localProfileId)) {
-                    analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(true, "queue", ProductOutcome.Failed, started.elapsedNow().inWholeMilliseconds,
-                        errorCategory = BackupErrorCategory.AuthenticationUnavailable))
+                    analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(
+                        true, "queue", ProductOutcome.Failed, started.elapsedNow().inWholeMilliseconds,
+                        errorCategory = BackupErrorCategory.AuthenticationUnavailable,
+                    ))
                     updateState {
                         it.copy(
-                            showBackupAllConfirmation = false,
-                            backupAllRightsAttested = false,
-                            isBackingUpAll = false,
+                            showCloudBackupSelection = false,
+                            cloudBackupRightsAttested = false,
+                            isAddingBooksToCloud = false,
                             supportsCloudBackup = false,
                         )
                     }
                     return@launch
                 }
                 recordUploadAttestationIfRequired(localProfileId)
-                val result = backupAllBooksUseCase(
-                    serverId = PARROT_CLOUD_SERVER_ID,
-                    localProfileId = localProfileId,
-                )
+                updateState {
+                    it.copy(
+                        showCloudBackupSelection = false,
+                        selectedCloudBackupBookIds = emptySet(),
+                        cloudBackupRightsAttested = false,
+                        isAddingBooksToCloud = false,
+                        cloudBackupSnackbarBookCount = selectedBooks.size,
+                    )
+                }
+
+                var queuedFiles = 0
+                var failedFiles = 0
+                selectedBooks.forEach { candidate ->
+                    candidate.mediaTypes.forEach { mediaType ->
+                        try {
+                            startBookFileUploadUseCase(
+                                serverId = PARROT_CLOUD_SERVER_ID,
+                                libraryBookId = candidate.id,
+                                mediaType = mediaType,
+                                localProfileId = localProfileId,
+                            )
+                            queuedFiles++
+                        } catch (exception: CancellationException) {
+                            throw exception
+                        } catch (_: Exception) {
+                            failedFiles++
+                        }
+                    }
+                }
                 analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(
-                    bulk = true, stage = "queue",
-                    outcome = if (result.failedCount == 0) ProductOutcome.Queued else if (result.queuedCount > 0) ProductOutcome.Partial else ProductOutcome.Failed,
+                    bulk = true,
+                    stage = "queue",
+                    outcome = when {
+                        failedFiles == 0 -> ProductOutcome.Queued
+                        queuedFiles > 0 -> ProductOutcome.Partial
+                        else -> ProductOutcome.Failed
+                    },
                     durationMs = started.elapsedNow().inWholeMilliseconds,
-                    queuedCount = result.queuedCount, failedCount = result.failedCount,
-                    errorCategory = BackupErrorCategory.QueueFailed.takeIf { result.failedCount > 0 },
+                    queuedCount = queuedFiles,
+                    failedCount = failedFiles,
+                    errorCategory = BackupErrorCategory.QueueFailed.takeIf { failedFiles > 0 },
                 ))
-                updateState {
-                    it.copy(
-                        showBackupAllConfirmation = false,
-                        backupAllRightsAttested = false,
-                        isBackingUpAll = false,
-                        backupAllQueuedCount = result.queuedCount,
-                        backupAllFailedCount = result.failedCount,
-                    )
-                }
             } catch (exception: CancellationException) {
-                analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(true, "queue", ProductOutcome.Cancelled, started.elapsedNow().inWholeMilliseconds))
+                analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(
+                    true, "queue", ProductOutcome.Cancelled, started.elapsedNow().inWholeMilliseconds,
+                ))
                 throw exception
-            } catch (exception: Exception) {
-                analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(true, "queue", ProductOutcome.Failed, started.elapsedNow().inWholeMilliseconds,
-                    errorCategory = BackupErrorCategory.QueueFailed))
-                updateState {
-                    it.copy(
-                        showBackupAllConfirmation = false,
-                        backupAllRightsAttested = false,
-                        isBackingUpAll = false,
-                        backupAllError = (exception as? BookFileTransferRejectedException)?.reason
-                            ?: "backup_all_failed",
-                    )
-                }
+            } catch (_: Exception) {
+                analytics.logEvent(ProductAnalyticsEvent.BookBackupOperation(
+                    true, "queue", ProductOutcome.Failed, started.elapsedNow().inWholeMilliseconds,
+                    errorCategory = BackupErrorCategory.QueueFailed,
+                ))
+                updateState { it.copy(isAddingBooksToCloud = false) }
             }
         }
     }

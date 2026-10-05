@@ -354,6 +354,11 @@ fun HomeNavigation(
                                     HomeNavigationIntent.NavigateTo(HomeDestination.LinkReview),
                                 )
                             },
+                            onNavigateToParrotCloud = {
+                                intentDispatcher(
+                                    HomeNavigationIntent.NavigateTo(HomeDestination.SyncAndBackup),
+                                )
+                            },
                             onNavigateToBookDetail = { book ->
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(

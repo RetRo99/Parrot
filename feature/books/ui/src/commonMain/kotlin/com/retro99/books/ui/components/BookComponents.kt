@@ -49,6 +49,7 @@ import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberCover
 import com.retro99.base.ui.compose.EmberProgress
 import com.retro99.books.domain.model.BookHome
+import com.retro99.books.domain.BookFileTransfer
 import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.isOnThisDevice
@@ -67,6 +68,9 @@ import resources.translations.books_progress_local
 import resources.translations.books_progress_remote
 import resources.translations.books_search_clear
 import resources.translations.books_search_placeholder
+import resources.translations.cloud_backup_finishing
+import resources.translations.cloud_backup_progress
+import resources.translations.cloud_backup_queued
 import resources.translations.library_home_this_device
 
 /**
@@ -96,6 +100,7 @@ fun BookItemCard(
     showDivider: Boolean = false,
     highlightQuery: String = "",
     showFavorite: Boolean = true,
+    activeCloudUploads: List<BookFileTransfer> = emptyList(),
     headerContent: @Composable (() -> Unit)? = null,
     subtitleContent: @Composable (() -> Unit)? = null,
 ) {
@@ -123,6 +128,7 @@ fun BookItemCard(
                 data = book.coverUrl,
                 cacheKey = book.uuid,
                 contentDescription = book.title,
+                fallbackLabel = book.title,
                 modifier = Modifier.size(width = 44.dp, height = 66.dp),
             )
 
@@ -156,6 +162,8 @@ fun BookItemCard(
                     isOnThisPhone = book.isOnThisDevice(progressInfo),
                     showSource = showServerBadge,
                 )
+
+                CloudBackupTransferLine(activeCloudUploads)
 
                 subtitleContent?.invoke()
 
@@ -338,6 +346,7 @@ fun BookGridCard(
     modifier: Modifier = Modifier,
     progressInfo: BookProgressInfoUiModel? = null,
     showServerBadge: Boolean = true,
+    activeCloudUploads: List<BookFileTransfer> = emptyList(),
 ) {
     val colors = Ember.colors
     val style = Ember.style
@@ -352,6 +361,7 @@ fun BookGridCard(
             data = book.coverUrl,
             cacheKey = book.uuid,
             contentDescription = book.title,
+            fallbackLabel = book.title,
             elevation = style.coverElevation,
             modifier = Modifier
                 .fillMaxWidth()
@@ -412,6 +422,7 @@ fun BookGridCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
+        CloudBackupTransferLine(activeCloudUploads)
         if (book.authors.isNotEmpty()) {
             Text(
                 text = book.authors.joinToString(", "),
@@ -432,6 +443,32 @@ fun BookGridCard(
             }
         }
     }
+}
+
+@Composable
+private fun CloudBackupTransferLine(transfers: List<BookFileTransfer>) {
+    if (transfers.isEmpty()) return
+    val colors = Ember.colors
+    val type = Ember.type
+    val transferred = transfers.sumOf(BookFileTransfer::bytesTransferred)
+    val total = transfers.sumOf(BookFileTransfer::totalBytes)
+    val text = when {
+        transfers.any { transfer -> transfer.state == "transferring" } -> {
+            val percent = if (total > 0) (transferred * 100 / total).toInt().coerceIn(0, 100) else 0
+            stringResource(StringRes.cloud_backup_progress, percent)
+        }
+        transfers.any { transfer -> transfer.state == "pending" } ->
+            stringResource(StringRes.cloud_backup_queued)
+        else -> stringResource(StringRes.cloud_backup_finishing)
+    }
+    Text(
+        text = text,
+        style = type.meta.copy(fontSize = 13.sp),
+        color = colors.accentText,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 /** The plain-text name of where a book lives: "Storyteller", "Parrot Cloud", "This device". */

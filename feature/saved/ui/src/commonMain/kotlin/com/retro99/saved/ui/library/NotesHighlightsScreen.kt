@@ -191,7 +191,8 @@ fun NotesHighlightsScreen(
                                     Row(Modifier.fillMaxWidth().clickable {
                                         dispatch(NotesHighlightsIntent.OpenBook(item.book.key))
                                     }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        EmberCover(info?.coverUrl, item.book.key, null, Modifier.size(32.dp, 48.dp))
+                                        EmberCover(info?.coverUrl, item.book.key, null, Modifier.size(32.dp, 48.dp),
+                                            fallbackLabel = info?.title ?: item.book.title)
                                         Text(info?.title ?: item.book.title.orEmpty(), color = Ember.colors.ink2,
                                             style = Ember.type.meta, maxLines = 2,
                                             modifier = Modifier.padding(start = 12.dp).weight(1f))
@@ -211,7 +212,8 @@ fun NotesHighlightsScreen(
                                     Row(Modifier.fillMaxWidth().clickable {
                                         dispatch(NotesHighlightsIntent.OpenBook(book.key))
                                     }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        EmberCover(book.coverUrl, book.key, null, Modifier.size(40.dp, 60.dp))
+                                        EmberCover(book.coverUrl, book.key, null, Modifier.size(40.dp, 60.dp),
+                                            fallbackLabel = book.title)
                                         Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                                             Text(book.title, style = Ember.type.bookTitle, color = Ember.colors.ink,
                                                 maxLines = 2, overflow = TextOverflow.Ellipsis)

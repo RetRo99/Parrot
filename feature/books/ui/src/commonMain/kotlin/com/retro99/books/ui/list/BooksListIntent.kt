@@ -25,12 +25,15 @@ sealed interface BooksListIntent : BaseIntent {
     data class OnFavoriteClicked(val bookUuid: String) : BooksListIntent
     data class OnImportBook(val file: PlatformFile, val openAfterImport: Boolean = false) : BooksListIntent
     data object OnImportedBookOpened : BooksListIntent
-    data object OnBackupAllClicked : BooksListIntent
+    data object OnCloudBackupClicked : BooksListIntent
     data object OnCloudBackupNoteDismissed : BooksListIntent
-    data class OnBackupAllAttestationChanged(val attested: Boolean) : BooksListIntent
-    data object OnBackupAllConfirmed : BooksListIntent
-    data object OnBackupAllDismissed : BooksListIntent
-    data object OnBackupAllResultDismissed : BooksListIntent
+    data class OnCloudBackupBookToggled(val bookId: String, val selected: Boolean) : BooksListIntent
+    data object OnCloudBackupSelectAll : BooksListIntent
+    data object OnCloudBackupSelectNone : BooksListIntent
+    data class OnCloudBackupAttestationChanged(val attested: Boolean) : BooksListIntent
+    data object OnCloudBackupConfirmed : BooksListIntent
+    data object OnCloudBackupDismissed : BooksListIntent
+    data object OnCloudBackupSnackbarDismissed : BooksListIntent
     data class OnImportBackupAttestationChanged(val attested: Boolean) : BooksListIntent
     data object OnImportBackupConfirmed : BooksListIntent
     data object OnImportBackupDismissed : BooksListIntent

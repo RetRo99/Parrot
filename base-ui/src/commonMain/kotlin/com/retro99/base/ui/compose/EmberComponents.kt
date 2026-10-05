@@ -36,6 +36,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -43,6 +46,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImagePainter
+import androidx.compose.ui.text.style.TextOverflow
 
 private const val PROGRESS_ANIMATION_MILLIS = 600
 
@@ -103,6 +108,7 @@ fun EmberCover(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     elevation: Dp = 0.dp,
+    fallbackLabel: String? = contentDescription,
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     val colors = Ember.colors
@@ -115,6 +121,7 @@ fun EmberCover(
     } else {
         Modifier
     }
+    var imageLoaded by remember(data, cacheKey) { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -122,14 +129,45 @@ fun EmberCover(
             .clip(shape)
             .then(border),
     ) {
-        CoilImage(
-            data = data,
-            cacheKey = cacheKey,
-            contentDescription = contentDescription,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.matchParentSize(),
-        )
+        if (data != null) {
+            CoilImage(
+                data = data,
+                cacheKey = cacheKey,
+                contentDescription = contentDescription,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize(),
+                onState = { state -> imageLoaded = state is AsyncImagePainter.State.Success },
+            )
+        }
+        if (!imageLoaded) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(if (style.isEink) colors.surface else colors.track),
+                contentAlignment = Alignment.Center,
+            ) {
+                val initials = fallbackInitials(fallbackLabel)
+                if (initials.isNotEmpty()) {
+                    Text(
+                        text = initials,
+                        style = Ember.type.screenTitle.copy(fontSize = 18.sp, lineHeight = 20.sp),
+                        color = colors.ink2,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip,
+                    )
+                }
+            }
+        }
         content()
+    }
+}
+
+private fun fallbackInitials(title: String?): String {
+    val words = title.orEmpty().trim().split(Regex("\\s+")).filter(String::isNotEmpty)
+    return when {
+        words.size > 1 -> words.take(2).mapNotNull { it.firstOrNull() }.joinToString("").uppercase()
+        words.size == 1 -> words.first().take(2).uppercase()
+        else -> ""
     }
 }
 

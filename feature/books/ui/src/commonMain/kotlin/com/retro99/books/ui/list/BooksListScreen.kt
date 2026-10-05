@@ -77,6 +77,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -142,18 +146,11 @@ import resources.translations.books_sort_z_to_a
 import resources.translations.books_view_grid
 import resources.translations.books_view_list
 import resources.translations.cloud_backup_all_message
-import resources.translations.cloud_backup_all_queued
-import resources.translations.cloud_backup_all_summary
-import resources.translations.cloud_backup_all_result_title
-import resources.translations.cloud_backup_all_title
 import resources.translations.cloud_backup_attestation_checkbox
 import resources.translations.cloud_backup_autobackup_enable
 import resources.translations.cloud_backup_autobackup_not_now
 import resources.translations.cloud_backup_autobackup_prompt_body
 import resources.translations.cloud_backup_autobackup_prompt_title
-import resources.translations.cloud_backup_confirm
-import resources.translations.general_cancel
-import resources.translations.general_close
 
 private const val SEARCH_DEBOUNCE_MS = 150L
 private const val EINK_SEARCH_DEBOUNCE_MS = 500L
@@ -167,6 +164,7 @@ fun BooksListScreen(
     initialImportRequestId: Long? = null,
     onInitialImportRequestConsumed: (Long) -> Unit = {},
     onNavigateToLinkReview: () -> Unit = {},
+    onNavigateToParrotCloud: () -> Unit = {},
     onOpenImportedBook: (String) -> Unit = {},
     viewModel: BooksListViewModel = koinViewModel { parametersOf(onNavigateToBookDetail) },
 ) {
@@ -192,6 +190,7 @@ fun BooksListScreen(
             initialImportRequestId = initialImportRequestId,
             onInitialImportRequestConsumed = onInitialImportRequestConsumed,
             onNavigateToLinkReview = onNavigateToLinkReview,
+            onNavigateToParrotCloud = onNavigateToParrotCloud,
             onOpenImportedBook = onOpenImportedBook,
         )
     }
@@ -209,6 +208,7 @@ private fun BooksListScreenContent(
     initialImportRequestId: Long? = null,
     onInitialImportRequestConsumed: (Long) -> Unit = {},
     onNavigateToLinkReview: () -> Unit = {},
+    onNavigateToParrotCloud: () -> Unit = {},
     onOpenImportedBook: (String) -> Unit = {},
 ) {
     var openAfterImport by rememberSaveable { mutableStateOf(false) }
@@ -287,6 +287,23 @@ private fun BooksListScreenContent(
         )
     }
     var showFilterSheet by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val snackbarBookCount = viewState.cloudBackupSnackbarBookCount
+    val backupSnackbarMessage = if (snackbarBookCount != null) {
+        cloudBackupSnackbarMessage(snackbarBookCount)
+    } else null
+    val cloudBackupSnackbarAction = stringResource(cloudBackupSnackbarActionLabel())
+    LaunchedEffect(viewState.cloudBackupSnackbarBookCount) {
+        val message = backupSnackbarMessage ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = message,
+            actionLabel = cloudBackupSnackbarAction,
+            duration = SnackbarDuration.Long,
+        )
+        intentDispatcher(BooksListIntent.OnCloudBackupSnackbarDismissed)
+        if (result == SnackbarResult.ActionPerformed) onNavigateToParrotCloud()
+    }
 
     LaunchedEffect(viewState.sortConfig, viewState.filterState.activeQuickFilters) {
         listState.scrollToItem(0)
@@ -340,66 +357,26 @@ private fun BooksListScreenContent(
         )
     }
 
-    if (viewState.showBackupAllConfirmation) {
-        EmberDialog(
-            onDismissRequest = {
-                if (!viewState.isBackingUpAll) intentDispatcher(BooksListIntent.OnBackupAllDismissed)
+    if (viewState.showCloudBackupSelection) {
+        CloudBackupSelectionSheet(
+            books = viewState.cloudBackupBooks,
+            selectedBookIds = viewState.selectedCloudBackupBookIds,
+            selectedBytes = viewState.selectedCloudBackupBytes,
+            availableBytes = viewState.cloudStorageAvailableBytes,
+            storageLoading = viewState.isLoadingCloudStorage,
+            storageUnavailable = viewState.cloudStorageUnavailable,
+            rightsAttested = viewState.cloudBackupRightsAttested,
+            isAdding = viewState.isAddingBooksToCloud,
+            onBookToggled = { bookId, selected ->
+                intentDispatcher(BooksListIntent.OnCloudBackupBookToggled(bookId, selected))
             },
-            title = stringResource(StringRes.cloud_backup_all_title),
-            actions = listOf(
-                EmberDialogAction(
-                    label = stringResource(StringRes.general_cancel),
-                    style = EmberDialogActionStyle.Neutral,
-                    enabled = !viewState.isBackingUpAll,
-                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllDismissed) },
-                ),
-                EmberDialogAction(
-                    label = stringResource(StringRes.cloud_backup_confirm),
-                    style = EmberDialogActionStyle.Main,
-                    enabled = viewState.backupAllRightsAttested && !viewState.isBackingUpAll,
-                    showProgress = viewState.isBackingUpAll,
-                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllConfirmed) },
-                ),
-            ),
-            content = {
-                Column {
-                    Text(stringResource(StringRes.cloud_backup_all_message))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(top = 12.dp),
-                    ) {
-                        Checkbox(
-                            checked = viewState.backupAllRightsAttested,
-                            onCheckedChange = {
-                                intentDispatcher(BooksListIntent.OnBackupAllAttestationChanged(it))
-                            },
-                        )
-                        Text(stringResource(StringRes.cloud_backup_attestation_checkbox))
-                    }
-                }
+            onSelectAll = { intentDispatcher(BooksListIntent.OnCloudBackupSelectAll) },
+            onSelectNone = { intentDispatcher(BooksListIntent.OnCloudBackupSelectNone) },
+            onRightsChanged = { attested ->
+                intentDispatcher(BooksListIntent.OnCloudBackupAttestationChanged(attested))
             },
-        )
-    }
-
-    if (viewState.backupAllQueuedCount != null || viewState.backupAllError != null) {
-        EmberDialog(
-            onDismissRequest = { intentDispatcher(BooksListIntent.OnBackupAllResultDismissed) },
-            title = stringResource(StringRes.cloud_backup_all_result_title),
-            body = AnnotatedString(
-                viewState.backupAllError
-                    ?: stringResource(
-                        StringRes.cloud_backup_all_summary,
-                        viewState.backupAllQueuedCount ?: 0,
-                        viewState.backupAllFailedCount ?: 0,
-                    ),
-            ),
-            actions = listOf(
-                EmberDialogAction(
-                    label = stringResource(StringRes.general_close),
-                    style = EmberDialogActionStyle.Neutral,
-                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllResultDismissed) },
-                ),
-            ),
+            onConfirm = { intentDispatcher(BooksListIntent.OnCloudBackupConfirmed) },
+            onDismiss = { intentDispatcher(BooksListIntent.OnCloudBackupDismissed) },
         )
     }
 
@@ -432,7 +409,7 @@ private fun BooksListScreenContent(
             if (viewState.showCloudBackupNote) {
                 CloudBackupNoteCard(
                     bookCount = viewState.localOnlyBookCount,
-                    onClick = { intentDispatcher(BooksListIntent.OnBackupAllClicked) },
+                    onClick = { intentDispatcher(BooksListIntent.OnCloudBackupClicked) },
                     onDismiss = { intentDispatcher(BooksListIntent.OnCloudBackupNoteDismissed) },
                 )
             }
@@ -464,6 +441,9 @@ private fun BooksListScreenContent(
     Scaffold(
         modifier = modifier,
         containerColor = colors.bg,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState, modifier = Modifier.padding(bottom = 96.dp))
+        },
         // Bottom insets belong to the dock, which rides above the keyboard while searching.
         contentWindowInsets = WindowInsets.safeDrawing.only(
             WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
@@ -543,6 +523,7 @@ private fun BooksListScreenContent(
                                 },
                                 progressInfo = viewState.bookProgressInfo[book.uuid],
                                 showServerBadge = viewState.showServerBadge,
+                                activeCloudUploads = viewState.activeCloudUploads[book.uuid].orEmpty(),
                                 subtitleContent = {
                                     val seriesInfo = book.series.firstOrNull()
                                     if (seriesInfo != null) {
@@ -668,6 +649,7 @@ private fun BooksGrid(
                 },
                 progressInfo = viewState.bookProgressInfo[book.uuid],
                 showServerBadge = viewState.showServerBadge,
+                activeCloudUploads = viewState.activeCloudUploads[book.uuid].orEmpty(),
             )
         }
     }

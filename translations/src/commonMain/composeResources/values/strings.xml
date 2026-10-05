@@ -679,6 +679,22 @@
     <string name="cloud_backup_note_add_count" tools:ignore="MissingTranslation">Add %1$d books on this phone to Parrot Cloud</string>
     <string name="cloud_backup_note_add_count_one" tools:ignore="MissingTranslation">Add 1 book on this phone to Parrot Cloud</string>
     <string name="cloud_backup_note_dismiss" tools:ignore="MissingTranslation">Dismiss</string>
+    <string name="cloud_backup_selection_title" tools:ignore="MissingTranslation">Add to Parrot Cloud</string>
+    <string name="cloud_backup_selection_subtitle" tools:ignore="MissingTranslation">Books that are only on this phone. They upload in the background and stay on this phone too.</string>
+    <string name="cloud_backup_selection_book_count" tools:ignore="MissingTranslation">%1$d books on this phone</string>
+    <string name="cloud_backup_selection_book_count_one" tools:ignore="MissingTranslation">1 book on this phone</string>
+    <string name="cloud_backup_selection_select_none" tools:ignore="MissingTranslation">Select none</string>
+    <string name="cloud_backup_selection_select_all" tools:ignore="MissingTranslation">Select all</string>
+    <string name="cloud_backup_selection_summary" tools:ignore="MissingTranslation">%1$d books · %2$s · %3$s free in Parrot Cloud</string>
+    <string name="cloud_backup_selection_summary_one" tools:ignore="MissingTranslation">1 book · %1$s · %2$s free in Parrot Cloud</string>
+    <string name="cloud_backup_selection_not_enough_space" tools:ignore="MissingTranslation">Not enough space — %1$s selected, %2$s free</string>
+    <string name="cloud_backup_selection_mobile_data" tools:ignore="MissingTranslation">You’re on mobile data.</string>
+    <string name="cloud_backup_selection_storage_unavailable" tools:ignore="MissingTranslation">Storage usage is unavailable right now.</string>
+    <string name="cloud_backup_selection_add_one" tools:ignore="MissingTranslation">Add 1 book</string>
+    <string name="cloud_backup_selection_add_count" tools:ignore="MissingTranslation">Add %1$d books</string>
+    <string name="cloud_backup_selection_snackbar_one" tools:ignore="MissingTranslation">Adding 1 book to Parrot Cloud</string>
+    <string name="cloud_backup_selection_snackbar_count" tools:ignore="MissingTranslation">Adding %1$d books to Parrot Cloud</string>
+    <string name="cloud_backup_selection_view" tools:ignore="MissingTranslation">View</string>
     <string name="cloud_backup_all_title" tools:ignore="MissingTranslation">Add all books to Parrot Cloud?</string>
     <string name="cloud_backup_all_message" tools:ignore="MissingTranslation">Books on this device will be queued for upload to Parrot Cloud.</string>
     <string name="cloud_backup_all_queued" tools:ignore="MissingTranslation">Queued %1$d books for upload.</string>

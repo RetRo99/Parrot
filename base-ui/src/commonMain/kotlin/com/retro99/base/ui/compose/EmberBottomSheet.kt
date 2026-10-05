@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,6 +41,7 @@ private const val SCRIM_ALPHA = 0.62f
 fun EmberBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    showTopBorder: Boolean = false,
     footer: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -61,7 +63,7 @@ fun EmberBottomSheet(
                     .border(2.dp, colors.line, shape)
                     .then(if (footer == null) Modifier.navigationBarsPadding() else Modifier),
             ) {
-                EmberSheetHandle()
+                EmberSheetHandle(showTopBorder && !style.isEink)
                 content()
                 footer?.invoke()
             }
@@ -75,7 +77,7 @@ fun EmberBottomSheet(
             containerColor = colors.surface,
             contentColor = colors.ink,
             scrimColor = colors.nav.copy(alpha = SCRIM_ALPHA),
-            dragHandle = { EmberSheetHandle() },
+            dragHandle = { EmberSheetHandle(showTopBorder && !style.isEink) },
             content = {
                 content()
                 footer?.invoke()
@@ -85,18 +87,23 @@ fun EmberBottomSheet(
 }
 
 @Composable
-private fun EmberSheetHandle() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 12.dp, bottom = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
+private fun EmberSheetHandle(showTopBorder: Boolean) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (showTopBorder) {
+            Box(Modifier.fillMaxWidth().height(2.dp).background(Ember.colors.line))
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp, bottom = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
         Box(
             modifier = Modifier
                 .size(width = 40.dp, height = 4.dp)
                 .background(Ember.colors.ink2, CircleShape),
         )
+        }
     }
 }
 

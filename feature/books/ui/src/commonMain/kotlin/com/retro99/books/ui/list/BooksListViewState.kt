@@ -1,6 +1,7 @@
 package com.retro99.books.ui.list
 
 import com.retro99.base.result.AppError
+import com.retro99.books.domain.BookFileTransfer
 import com.retro99.books.domain.model.BookHome
 import com.retro99.books.ui.model.BookFilterState
 import com.retro99.books.ui.model.BookListViewMode
@@ -8,12 +9,13 @@ import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookQuickFilter
 import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookSortOption
+import com.retro99.books.ui.model.CloudBackupBook
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.books.ui.model.SortDirection
 import com.retro99.books.ui.model.availableHomes
+import com.retro99.books.ui.model.cloudBackupBooks
 import com.retro99.books.ui.model.filterByHome
 import com.retro99.books.ui.model.isOnThisDevice
-import com.retro99.books.ui.model.localOnlyBookCount
 import com.retro99.books.ui.model.showHomeBadge
 
 data class BooksListViewState(
@@ -31,12 +33,16 @@ data class BooksListViewState(
     val isImporting: Boolean = false,
     val importedBookToOpen: String? = null,
     val supportsCloudBackup: Boolean = false,
-    val showBackupAllConfirmation: Boolean = false,
-    val backupAllRightsAttested: Boolean = false,
-    val isBackingUpAll: Boolean = false,
-    val backupAllQueuedCount: Int? = null,
-    val backupAllFailedCount: Int? = null,
-    val backupAllError: String? = null,
+    val showCloudBackupSelection: Boolean = false,
+    val selectedCloudBackupBookIds: Set<String> = emptySet(),
+    val cloudBackupRightsAttested: Boolean = false,
+    val isAddingBooksToCloud: Boolean = false,
+    val cloudStorageAvailableBytes: Long? = null,
+    val isLoadingCloudStorage: Boolean = false,
+    val cloudStorageUnavailable: Boolean = false,
+    val uploadingBookIds: Set<String> = emptySet(),
+    val activeCloudUploads: Map<String, List<BookFileTransfer>> = emptyMap(),
+    val cloudBackupSnackbarBookCount: Int? = null,
     val pendingAutoBackupBookUuid: String? = null,
     val pendingAutoBackupMediaType: String? = null,
     val importBackupRightsAttested: Boolean = false,
@@ -51,9 +57,22 @@ data class BooksListViewState(
     val showLinkSuggestionsBanner: Boolean
         get() = linkSuggestionCount > 0
 
+    /** Exact books the Parrot Cloud selection sheet can enqueue. */
+    val cloudBackupBooks: List<CloudBackupBook>
+        get() = books.cloudBackupBooks(uploadingBookIds)
+
     /** Books that live only on this phone: what the Parrot Cloud note offers to add. */
     val localOnlyBookCount: Int
-        get() = books.localOnlyBookCount()
+        get() = cloudBackupBooks.size
+
+    val selectedCloudBackupBooks: List<CloudBackupBook>
+        get() = cloudBackupBooks.filter { book -> book.id in selectedCloudBackupBookIds }
+
+    val selectedCloudBackupBytes: Long
+        get() = selectedCloudBackupBooks.sumOf(CloudBackupBook::sizeBytes)
+
+    val cloudBackupOverQuota: Boolean
+        get() = cloudStorageAvailableBytes?.let { selectedCloudBackupBytes > it } == true
 
     /** The Parrot Cloud note is useful only when signed in and something is still local-only. */
     val showCloudBackupNote: Boolean

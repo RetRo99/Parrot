@@ -32,13 +32,8 @@ fun BookUiModel.isOnThisDevice(progressInfo: BookProgressInfoUiModel?): Boolean 
         is BookUiModel.StorytellerBook -> progressInfo?.hasAnyCached == true
     }
 
-/**
- * Books that live only on this phone: nothing has a copy of them in Parrot Cloud yet.
- * These are what the "add to Parrot Cloud" note offers to upload.
- */
-fun List<BookUiModel>.localOnlyBookCount(): Int = count { book ->
-    BookHome.ThisDevice in book.homes && BookHome.ParrotCloud !in book.homes
-}
+/** Books the Parrot Cloud banner can offer to add, before active-queue exclusions are applied. */
+fun List<BookUiModel>.localOnlyBookCount(): Int = cloudBackupBooks().size
 
 /** A linked book matches when any of its copies has that home. */
 fun List<BookUiModel>.filterByHome(home: BookHome?): List<BookUiModel> =
