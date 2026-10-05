@@ -39,7 +39,6 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -194,7 +193,7 @@ internal fun ReaderAudioSheet(
                     Column(Modifier.weight(1f)) {
                         Text(
                             stringResource(StringRes.reader_overlay_listening),
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = Ember.type.screenTitle.copy(fontSize = 24.sp, lineHeight = 32.sp),
                             color = colors.ink,
                         )
                         Text(

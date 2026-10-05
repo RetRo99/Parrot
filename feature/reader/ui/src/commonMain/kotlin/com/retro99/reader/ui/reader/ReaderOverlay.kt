@@ -75,7 +75,6 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
@@ -465,12 +464,13 @@ internal fun ReaderOverlayContent(
             if (isZooming) {
                 Surface(
                     modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
-                    shape = MaterialTheme.shapes.medium,
+                    color = Ember.colors.surface.copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(12.dp),
                 ) {
                     Text(
                         text = "${(temporaryFontScale * 100).roundToInt()}%",
-                        style = MaterialTheme.typography.headlineLarge,
+                        style = Ember.type.meta.copy(fontSize = 32.sp, lineHeight = 40.sp),
+                        color = Ember.colors.ink,
                         modifier = Modifier.padding(16.dp),
                     )
                 }
