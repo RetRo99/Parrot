@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
@@ -128,9 +129,10 @@ private fun PreviewButton(
 ) {
     val colors = Ember.colors
     val active = isPreviewing && isPreviewPlaying
+    val loading = isPreviewing && !isPreviewPlaying
     val description = when {
         !enabled -> stringResource(StringRes.reader_voices_preview_after_download)
-        active -> stringResource(StringRes.reader_tts_stop_preview)
+        active || loading -> stringResource(StringRes.reader_tts_stop_preview)
         else -> stringResource(StringRes.reader_voices_preview_voice, name)
     }
     Box(
@@ -138,7 +140,7 @@ private fun PreviewButton(
             .size(PREVIEW_TARGET)
             .clip(CircleShape)
             .clickable(enabled = enabled, role = Role.Button) {
-                if (active) onStopPreview() else onPreview()
+                if (active || loading) onStopPreview() else onPreview()
             }
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -155,11 +157,18 @@ private fun PreviewButton(
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                if (active) Icons.Default.Stop else Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = colors.ink,
-            )
+            when {
+                loading -> CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    color = if (isEink) colors.ink else colors.accent,
+                    strokeWidth = 2.dp,
+                )
+                else -> Icon(
+                    if (active) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = colors.ink,
+                )
+            }
         }
     }
 }

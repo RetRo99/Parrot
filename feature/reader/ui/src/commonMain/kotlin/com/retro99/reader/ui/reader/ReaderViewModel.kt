@@ -265,6 +265,8 @@ class ReaderViewModel(
     /** Element id of the sentence the device voice last read; used to hand over to narration. */
     private var ttsCurrentElementId: String? = null
     private var ttsCurrentSentence: com.retro99.reader.ui.tts.TtsSentence? = null
+    /** Latest preview request, used to restore its row if stopping the previous preview emits IDLE. */
+    private var latestTtsPreviewKey: String? = null
 
     private val syncCoordinator: ReaderSyncCoordinator by lazy {
         readerScope.get<ReaderSyncCoordinator>().also {
@@ -1208,7 +1210,7 @@ class ReaderViewModel(
                 isNeural = isNeural,
             ),
         )
-        ttsController.stopPreview()
+        stopTtsPreview()
         ttsController.selectVoice(voiceId)
         updatePublicationState { publicationState ->
             publicationState.copy(
@@ -1449,13 +1451,13 @@ class ReaderViewModel(
     }
 
     private fun closeVoiceSettings() {
-        ttsController.stopPreview()
+        stopTtsPreview()
         updateState { state -> state.copy(isVoiceSettingsVisible = false) }
     }
 
     private fun setTtsRate(rate: Float) {
         analytics.logEvent(ReaderAnalyticsEvent.TtsRateChanged(bookUuid = bookUuid, rate = rate))
-        ttsController.stopPreview()
+        stopTtsPreview()
         ttsController.setRate(rate)
         updatePublicationState { publicationState ->
             publicationState.copy(
@@ -1469,7 +1471,7 @@ class ReaderViewModel(
         analytics.logEvent(
             ReaderAnalyticsEvent.TtsPitchChanged(bookUuid = bookUuid, pitch = pitch),
         )
-        ttsController.stopPreview()
+        stopTtsPreview()
         ttsController.setPitch(pitch)
         updatePublicationState { publicationState ->
             publicationState.copy(
@@ -1495,7 +1497,7 @@ class ReaderViewModel(
             disableTtsSentencePlayback()
             ttsPreparationJob?.cancel()
             ttsPreparationJob = null
-            ttsController.stopPreview()
+            stopTtsPreview()
         } else {
             enableTtsSentencePlayback()
             val selectedVoice = viewState.value.ttsVoices
@@ -1578,9 +1580,11 @@ class ReaderViewModel(
     }
 
     private fun startTtsPreview(voiceId: String?, text: String) {
+        val previewKey = voiceId ?: TTS_SYSTEM_VOICE_KEY
+        latestTtsPreviewKey = previewKey
         updateState { state ->
             state.copy(
-                ttsPreviewingVoiceId = voiceId ?: TTS_SYSTEM_VOICE_KEY,
+                ttsPreviewingVoiceId = previewKey,
                 isTtsPreviewPlaying = false,
             )
         }
@@ -1588,6 +1592,13 @@ class ReaderViewModel(
     }
 
     private fun stopTtsPreview() {
+        latestTtsPreviewKey = null
+        updateState { state ->
+            state.copy(
+                ttsPreviewingVoiceId = null,
+                isTtsPreviewPlaying = false,
+            )
+        }
         ttsController.stopPreview()
     }
 
@@ -1621,11 +1632,17 @@ class ReaderViewModel(
                     }
 
                     TtsPreviewState.LOADING -> updateState { viewState ->
-                        viewState.copy(isTtsPreviewPlaying = false)
+                        viewState.copy(
+                            ttsPreviewingVoiceId = latestTtsPreviewKey ?: viewState.ttsPreviewingVoiceId,
+                            isTtsPreviewPlaying = false,
+                        )
                     }
 
                     TtsPreviewState.SPEAKING -> updateState { viewState ->
-                        viewState.copy(isTtsPreviewPlaying = true)
+                        viewState.copy(
+                            ttsPreviewingVoiceId = latestTtsPreviewKey ?: viewState.ttsPreviewingVoiceId,
+                            isTtsPreviewPlaying = true,
+                        )
                     }
                 }
             }
