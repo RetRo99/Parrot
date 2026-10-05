@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.ime
@@ -65,6 +66,9 @@ private val EinkBorder = 2.dp
 private val ActiveBorder = 1.5.dp
 private val KeyboardShownBottomPadding = 8.dp
 private val KeyboardHiddenBottomPadding = 20.dp
+private val DockBottomPadding = 16.dp
+/** Room left between the dock and the last row of a list, so the row can scroll clear of it. */
+private val DockClearance = 24.dp
 
 /**
  * Gap under the active search dock: tight above the keyboard, roomier above the screen edge.
@@ -73,6 +77,23 @@ private val KeyboardHiddenBottomPadding = 20.dp
 internal fun searchDockBottomPadding(imeBottomPx: Int): Dp =
     if (imeBottomPx > 0) KeyboardShownBottomPadding else KeyboardHiddenBottomPadding
 private val ActiveEinkBorder = 2.5.dp
+
+/**
+ * How much bottom padding a list under the [LibraryDock] needs for its last row to scroll
+ * fully above the dock: the dock's height, the gap it leaves below, the navigation bar it
+ * rides above while searching (when the tab bar is out of the way and the list reaches the
+ * screen edge), and clear space between the two.
+ */
+@Composable
+fun libraryDockBottomPadding(isSearchActive: Boolean): Dp {
+    val belowDock = if (isSearchActive) KeyboardHiddenBottomPadding else DockBottomPadding
+    val navigationBar = if (isSearchActive) {
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    } else {
+        0.dp
+    }
+    return DockHeight + belowDock + navigationBar + DockClearance
+}
 
 /**
  * Floating search field and Add button pinned above the bottom navigation on the Library tab.
@@ -99,7 +120,7 @@ fun LibraryDock(
                 ),
             )
     } else {
-        Modifier.padding(bottom = 16.dp)
+        Modifier.padding(bottom = DockBottomPadding)
     }
 
     Row(

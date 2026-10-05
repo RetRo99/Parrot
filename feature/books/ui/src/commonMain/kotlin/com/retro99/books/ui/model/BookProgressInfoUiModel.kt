@@ -1,6 +1,7 @@
 package com.retro99.books.ui.model
 
 import com.retro99.books.domain.model.BookProgressInfoDomainModel
+import com.retro99.books.domain.model.progressPercentOf
 
 /**
  * UI model for book progress and cache information.
@@ -31,32 +32,29 @@ data class BookProgressInfoUiModel(
     val remoteDeviceName: String? = null,
 ) {
     /**
+     * Returns the progress to display (prefers local if available).
+     */
+    val displayProgression: Double?
+        get() = localProgression ?: remoteProgression
+
+    /**
      * Returns the display progress (prefers local) as a percentage (0-100).
+     * The same [progressPercentOf] the domain model uses, so no surface rounds differently.
      */
     val progressPercent: Int
-        get() = ((displayProgression ?: 0.0) * 100).toInt()
+        get() = progressPercentOf(displayProgression)
 
     /**
      * Returns the local progress as a percentage (0-100), or null if no local progress.
      */
     val localProgressPercent: Int?
-        get() = localProgression?.let { (it * 100).toInt() }
+        get() = localProgression?.let { fraction -> progressPercentOf(fraction) }
 
     /**
      * Returns the remote progress as a percentage (0-100), or null if no remote progress.
      */
     val remoteProgressPercent: Int?
-        get() = remoteProgression?.let { (it * 100).toInt() }
-
-    /**
-     * Returns true if there's a conflict between local and remote progress.
-     */
-
-    /**
-     * Returns the progress to display (prefers local if available).
-     */
-    val displayProgression: Double?
-        get() = localProgression ?: remoteProgression
+        get() = remoteProgression?.let { fraction -> progressPercentOf(fraction) }
 }
 
 fun BookProgressInfoDomainModel.toUiModel(): BookProgressInfoUiModel {

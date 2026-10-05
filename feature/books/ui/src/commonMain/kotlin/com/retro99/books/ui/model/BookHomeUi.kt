@@ -7,7 +7,6 @@ import com.retro99.books.domain.model.BookHome
  * counts with every home it has a copy in.
  */
 fun List<BookUiModel>.showHomeBadge(): Boolean = availableHomes().size > 1
-
 /** Every home in the list, linked copies included. */
 fun List<BookUiModel>.availableHomes(): List<BookHome> =
     flatMap { book -> book.homes }.distinct()
@@ -32,6 +31,14 @@ fun BookUiModel.isOnThisDevice(progressInfo: BookProgressInfoUiModel?): Boolean 
         is BookUiModel.LibraryBook -> hasDeviceCopy
         is BookUiModel.StorytellerBook -> progressInfo?.hasAnyCached == true
     }
+
+/**
+ * Books that live only on this phone: nothing has a copy of them in Parrot Cloud yet.
+ * These are what the "add to Parrot Cloud" note offers to upload.
+ */
+fun List<BookUiModel>.localOnlyBookCount(): Int = count { book ->
+    BookHome.ThisDevice in book.homes && BookHome.ParrotCloud !in book.homes
+}
 
 /** A linked book matches when any of its copies has that home. */
 fun List<BookUiModel>.filterByHome(home: BookHome?): List<BookUiModel> =

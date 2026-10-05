@@ -13,6 +13,7 @@ import com.retro99.books.ui.model.SortDirection
 import com.retro99.books.ui.model.availableHomes
 import com.retro99.books.ui.model.filterByHome
 import com.retro99.books.ui.model.isOnThisDevice
+import com.retro99.books.ui.model.localOnlyBookCount
 import com.retro99.books.ui.model.showHomeBadge
 
 data class BooksListViewState(
@@ -40,6 +41,8 @@ data class BooksListViewState(
     val pendingAutoBackupMediaType: String? = null,
     val importBackupRightsAttested: Boolean = false,
     val isStartingImportBackup: Boolean = false,
+    /** The "add your local books to Parrot Cloud" note is hidden forever once dismissed. */
+    val cloudBackupNoteDismissed: Boolean = false,
     val error: AppError? = null,
     /** Pairs of books that may be the same across servers, waiting for review. */
     val linkSuggestionCount: Int = 0,
@@ -47,6 +50,14 @@ data class BooksListViewState(
     /** The "books may be the same" row shows only while something is waiting. */
     val showLinkSuggestionsBanner: Boolean
         get() = linkSuggestionCount > 0
+
+    /** Books that live only on this phone: what the Parrot Cloud note offers to add. */
+    val localOnlyBookCount: Int
+        get() = books.localOnlyBookCount()
+
+    /** The Parrot Cloud note is useful only when signed in and something is still local-only. */
+    val showCloudBackupNote: Boolean
+        get() = supportsCloudBackup && !cloudBackupNoteDismissed && localOnlyBookCount > 0
 
     val showImportBackupAttestation: Boolean
         get() = pendingAutoBackupBookUuid != null

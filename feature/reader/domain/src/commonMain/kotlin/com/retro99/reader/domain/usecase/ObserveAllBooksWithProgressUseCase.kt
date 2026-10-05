@@ -14,6 +14,7 @@ import com.retro99.books.domain.model.links.groupLinkedBooks
 import com.retro99.books.domain.model.toBookDomainModel
 import com.retro99.reader.domain.ReaderSettingsRepository
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
+import com.retro99.reader.domain.progress.RemotePositionStore
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.ServerBook
 import com.retro99.server.api.ServerPosition
@@ -22,7 +23,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -43,6 +43,9 @@ import kotlin.time.Instant
  *
  * The copies of a linked book are one entry: its primary copy, with that copy's progress,
  * carrying the other copies as `linkedCopies`.
+ *
+ * Remote progress comes from the shared [RemotePositionStore], the same value book details
+ * and the continue-reading card read, so no surface can show a staler number than another.
  */
 @Factory
 class ObserveAllBooksWithProgressUseCase(
@@ -50,13 +53,8 @@ class ObserveAllBooksWithProgressUseCase(
     @Provided private val readerSettingsRepository: ReaderSettingsRepository,
     @Provided private val positionLocalSource: ServerPositionLocalSource,
     @Provided private val bookLinksRepository: BookLinksRepository,
+    @Provided private val remotePositionStore: RemotePositionStore,
 ) {
-    // Cache of remote progressions - fetched once per refresh
-    private val remoteProgressionCache = mutableMapOf<String, Double?>()
-
-    // Trigger to force re-evaluation when remote progress is fetched
-    private val refreshTrigger = MutableStateFlow(0)
-
     /**
      * Observes all books with their progress information.
      *
@@ -73,17 +71,18 @@ class ObserveAllBooksWithProgressUseCase(
                 if (bookFlows.isEmpty()) {
                     flowOf(Ok(emptyList()))
                 } else {
-                    // Combine all book flows with position observation and refresh trigger
+                    // Combine all book flows with position observation and the shared remote
+                    // progress store
                     combine(
                         combine(bookFlows) { results ->
                             results.flatMap { result -> result.getOrElse { emptyList() } }
                         },
                         positionLocalSource.observeAllPositions(),
-                        refreshTrigger,
+                        remotePositionStore.observe(),
                         bookLinksRepository.observeLinks(),
                         observeCurrentlyReading(),
-                    ) { books, localPositions, _, links, currentlyReading ->
-                        buildBooksWithProgress(books, localPositions, links, currentlyReading)
+                    ) { books, localPositions, remotePositions, links, currentlyReading ->
+                        buildBooksWithProgress(books, localPositions, remotePositions, links, currentlyReading)
                     }
                 }
             }
@@ -101,23 +100,17 @@ class ObserveAllBooksWithProgressUseCase(
             books.map { bookWithProgress ->
                 async {
                     val book = bookWithProgress.book
-                    val readerRepo = repositoryProvider.getReaderRepository(book.serverId)
-                    val remotePosition = readerRepo?.getRemotePosition(book.uuid)
-                        ?.getOrElse { null }
-                    remoteProgressionCache[book.uuid] = remotePosition?.totalProgression
+                    remotePositionStore.refresh(serverId = book.serverId, bookUuid = book.uuid)
                 }
             }.awaitAll()
         }
-
-        // Trigger re-emission of the flow with updated remote progress
-        refreshTrigger.value++
     }
 
     /**
-     * Clears the remote progress cache.
+     * Clears the shared remote progress store.
      */
     fun clearCache() {
-        remoteProgressionCache.clear()
+        remotePositionStore.clear()
     }
 
     private fun observeCurrentlyReading(): Flow<CurrentlyReadingDomainModel?> =
@@ -128,6 +121,7 @@ class ObserveAllBooksWithProgressUseCase(
     private suspend fun buildBooksWithProgress(
         books: List<ServerBook>,
         localPositions: List<ServerPosition>,
+        remotePositions: Map<String, ServerPosition>,
         links: List<BookLink>,
         currentlyReading: CurrentlyReadingDomainModel?,
     ): AppResult<List<BookWithProgressDomainModel>> {
@@ -136,7 +130,7 @@ class ObserveAllBooksWithProgressUseCase(
 
         val booksWithProgress = books.map { serverBook ->
             val bookUuid = serverBook.uuid
-            val remoteProgression = remoteProgressionCache[bookUuid]
+            val remoteProgression = remotePositions[bookUuid]?.totalProgression
 
             val progressInfo = createProgressInfo(
                 serverBook = serverBook,

@@ -31,8 +31,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -50,7 +48,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.CloudUpload
 import resources.translations.books_shelf_title
 import resources.translations.books_library_title
 import com.retro99.base.ui.compose.Ember
@@ -58,7 +55,6 @@ import com.retro99.base.ui.compose.EmberDialog
 import com.retro99.base.ui.compose.EmberDialogAction
 import com.retro99.base.ui.compose.EmberDialogActionStyle
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.outlined.SwapVert
@@ -80,7 +76,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -104,13 +99,16 @@ import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.compose.EmberEmptyState
 import com.retro99.books.ui.components.BookFilterBottomSheet
+import com.retro99.books.ui.components.CloudBackupNoteCard
 import com.retro99.books.ui.components.BookGridCard
 import com.retro99.books.ui.components.BookItemCard
 import com.retro99.books.ui.links.LinkSuggestionsBanner
 import com.retro99.books.ui.components.BookSearchBar
 import com.retro99.books.ui.components.LibraryDock
+import com.retro99.books.ui.components.libraryDockBottomPadding
 import com.retro99.books.ui.components.ShelfHeader
 import com.retro99.books.ui.model.BookListViewMode
+import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookSortOption
 import com.retro99.books.ui.model.BookUiModel
@@ -143,7 +141,6 @@ import resources.translations.books_sort_title
 import resources.translations.books_sort_z_to_a
 import resources.translations.books_view_grid
 import resources.translations.books_view_list
-import resources.translations.cloud_backup_backup_all
 import resources.translations.cloud_backup_all_message
 import resources.translations.cloud_backup_all_queued
 import resources.translations.cloud_backup_all_summary
@@ -158,9 +155,6 @@ import resources.translations.cloud_backup_confirm
 import resources.translations.general_cancel
 import resources.translations.general_close
 
-/** Bottom padding that keeps the last row clear of the floating dock. */
-private val DockContentPadding = 96.dp
-
 private const val SEARCH_DEBOUNCE_MS = 150L
 private const val EINK_SEARCH_DEBOUNCE_MS = 500L
 
@@ -168,7 +162,7 @@ private const val EINK_SEARCH_DEBOUNCE_MS = 500L
 fun BooksListScreen(
     onNavigateToBookDetail: (book: BookUiModel) -> Unit,
     modifier: Modifier = Modifier,
-    headerContent: @Composable ((books: List<BookUiModel>) -> Unit)? = null,
+    headerContent: @Composable ((books: List<BookUiModel>, bookProgressInfo: Map<String, BookProgressInfoUiModel>) -> Unit)? = null,
     onSearchActiveChanged: (Boolean) -> Unit = {},
     initialImportRequestId: Long? = null,
     onInitialImportRequestConsumed: (Long) -> Unit = {},
@@ -210,7 +204,7 @@ private fun BooksListScreenContent(
     searchFieldState: TextFieldState,
     intentDispatcher: IntentDispatcher<BooksListIntent>,
     modifier: Modifier = Modifier,
-    headerContent: @Composable ((books: List<BookUiModel>) -> Unit)? = null,
+    headerContent: @Composable ((books: List<BookUiModel>, bookProgressInfo: Map<String, BookProgressInfoUiModel>) -> Unit)? = null,
     onSearchActiveChanged: (Boolean) -> Unit = {},
     initialImportRequestId: Long? = null,
     onInitialImportRequestConsumed: (Long) -> Unit = {},
@@ -433,23 +427,14 @@ private fun BooksListScreenContent(
         Column(modifier = Modifier.fillMaxWidth()) {
             LibraryHeader()
 
-            headerContent?.invoke(viewState.books)
+            headerContent?.invoke(viewState.books, viewState.bookProgressInfo)
 
-            if (viewState.supportsCloudBackup) {
-                OutlinedButton(
+            if (viewState.showCloudBackupNote) {
+                CloudBackupNoteCard(
+                    bookCount = viewState.localOnlyBookCount,
                     onClick = { intentDispatcher(BooksListIntent.OnBackupAllClicked) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CloudUpload,
-                        contentDescription = null,
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(StringRes.cloud_backup_backup_all) + "…")
-                }
+                    onDismiss = { intentDispatcher(BooksListIntent.OnCloudBackupNoteDismissed) },
+                )
             }
 
             if (viewState.showLinkSuggestionsBanner) {
@@ -538,7 +523,7 @@ private fun BooksListScreenContent(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = DockContentPadding),
+                        contentPadding = PaddingValues(bottom = libraryDockBottomPadding(isSearchActive = false)),
                     ) {
                         item(key = "top") { topContent() }
                         itemsIndexed(
@@ -630,7 +615,11 @@ private fun BooksGrid(
         state = gridState,
         columns = GridCells.Adaptive(minSize = 100.dp),
         modifier = modifier,
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = DockContentPadding),
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            end = 20.dp,
+            bottom = libraryDockBottomPadding(isSearchActive = false),
+        ),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {

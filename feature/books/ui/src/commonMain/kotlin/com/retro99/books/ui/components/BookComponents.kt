@@ -21,14 +21,11 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.delete
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DownloadDone
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Headphones
-import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -55,16 +51,18 @@ import com.retro99.base.ui.compose.EmberProgress
 import com.retro99.books.domain.model.BookHome
 import com.retro99.books.ui.model.BookProgressInfoUiModel
 import com.retro99.books.ui.model.BookUiModel
+import com.retro99.books.ui.model.isOnThisDevice
 import com.retro99.books.ui.model.showDownloadedIcon
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+import resources.translations.book_detail_read_along
 import resources.translations.books_action_favorite
 import resources.translations.books_action_unfavorite
 import resources.translations.books_cached_indicator
 import resources.translations.books_media_audio
 import resources.translations.books_media_ebook
-import resources.translations.books_media_readaloud
+import resources.translations.books_on_this_phone
 import resources.translations.books_progress_local
 import resources.translations.books_progress_remote
 import resources.translations.books_search_clear
@@ -138,15 +136,25 @@ fun BookItemCard(
                     text = highlightedText(book.title, highlightQuery),
                     style = type.bookTitle,
                     color = colors.ink,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                BookMetaRow(
+                if (book.authors.isNotEmpty()) {
+                    Text(
+                        text = highlightedText(book.authors.joinToString(", "), highlightQuery),
+                        style = type.meta,
+                        color = colors.ink2,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                BookMetaLine(
                     book = book,
-                    isCached = book.showDownloadedIcon(progressInfo),
-                    showServerBadge = showServerBadge,
-                    highlightQuery = highlightQuery,
+                    isOnThisPhone = book.isOnThisDevice(progressInfo),
+                    showSource = showServerBadge,
                 )
 
                 subtitleContent?.invoke()
@@ -158,7 +166,10 @@ fun BookItemCard(
             }
 
             if (showFavorite) {
-                IconButton(onClick = onFavoriteClick) {
+                IconButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier.size(48.dp),
+                ) {
                     Icon(
                         imageVector = if (isFavorite) {
                             Icons.Filled.Favorite
@@ -172,7 +183,8 @@ fun BookItemCard(
                                 StringRes.books_action_favorite
                             },
                         ),
-                        tint = if (isFavorite) colors.accentText else colors.ink2,
+                        tint = if (isFavorite) colors.accent else colors.ink2,
+                        modifier = Modifier.size(24.dp),
                     )
                 }
             }
@@ -180,61 +192,48 @@ fun BookItemCard(
     }
 }
 
-/** "Author · icon Format" line under a book title. */
+/**
+ * The quiet line under the title: "eBook · On this phone · Storyteller".
+ * What the book is, whether it is downloaded, and — only when the user has more than one
+ * source connected — where it comes from, as plain text.
+ */
 @Composable
-private fun BookMetaRow(
+private fun BookMetaLine(
     book: BookUiModel,
-    isCached: Boolean,
-    showServerBadge: Boolean,
+    isOnThisPhone: Boolean,
+    showSource: Boolean,
     modifier: Modifier = Modifier,
-    highlightQuery: String = "",
 ) {
     val colors = Ember.colors
     val type = Ember.type
 
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        if (book.authors.isNotEmpty()) {
-            Text(
-                text = highlightedText(book.authors.joinToString(", "), highlightQuery),
-                style = type.meta,
-                color = colors.ink2,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            Text(text = "·", style = type.meta, color = colors.ink2)
-        }
-        BookFormat.entries.filter { format -> format.isAvailableFor(book) }.forEach { format ->
-            Icon(
-                imageVector = format.icon,
-                contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = colors.ink2,
-            )
-            Text(
-                text = stringResource(format.labelRes),
-                style = type.meta,
-                color = colors.ink2,
-                maxLines = 1,
-            )
-        }
-        if (isCached) {
-            Icon(
-                imageVector = Icons.Outlined.DownloadDone,
-                contentDescription = stringResource(StringRes.books_cached_indicator),
-                modifier = Modifier.size(14.dp),
-                tint = colors.ink2,
-            )
-        }
-        if (showServerBadge) {
-            // A linked book shows one badge per home it has a copy in.
-            book.homes.forEach { home -> HomeBadge(home = home) }
-        }
+    val formats = BookFormat.entries
+        .filter { format -> format.isAvailableFor(book) }
+        .map { format -> stringResource(format.labelRes) }
+    val downloaded = if (isOnThisPhone) {
+        listOf(stringResource(StringRes.books_on_this_phone))
+    } else {
+        emptyList()
     }
+    // "This device" as a source is what the downloaded part already says.
+    val sources = if (showSource) {
+        book.homes
+            .filter { home -> home != BookHome.ThisDevice || !isOnThisPhone }
+            .map { home -> homeLabel(home) }
+    } else {
+        emptyList()
+    }
+    val line = (formats + downloaded + sources).joinToString(" · ")
+    if (line.isEmpty()) return
+
+    Text(
+        text = line,
+        style = type.meta.copy(fontSize = 13.sp),
+        color = colors.ink2,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier.fillMaxWidth(),
+    )
 }
 
 /**
@@ -314,12 +313,12 @@ private fun ProgressLine(
 }
 
 private enum class BookFormat(
-    val icon: ImageVector,
     val labelRes: StringResource,
 ) {
-    Ebook(Icons.AutoMirrored.Outlined.MenuBook, StringRes.books_media_ebook),
-    Audio(Icons.Outlined.Headphones, StringRes.books_media_audio),
-    Readaloud(Icons.Outlined.RecordVoiceOver, StringRes.books_media_readaloud),
+    Ebook(StringRes.books_media_ebook),
+    Audio(StringRes.books_media_audio),
+    // The same words book details uses for this format.
+    Readaloud(StringRes.book_detail_read_along),
     ;
 
     fun isAvailableFor(book: BookUiModel): Boolean = when (this) {
@@ -435,6 +434,21 @@ fun BookGridCard(
     }
 }
 
+/** The plain-text name of where a book lives: "Storyteller", "Parrot Cloud", "This device". */
+@Composable
+fun homeLabel(home: BookHome): String = when (home) {
+    BookHome.ThisDevice -> stringResource(StringRes.library_home_this_device)
+    else -> home.serverType.displayName
+}
+
+private val BookHome.serverType: ServerType
+    get() = when (this) {
+        BookHome.ThisDevice -> ServerType.Local
+        BookHome.ParrotCloud -> ServerType.ParrotCloud
+        BookHome.Storyteller -> ServerType.Storyteller
+        BookHome.Audiobookshelf -> ServerType.Audiobookshelf
+    }
+
 /** Where a book lives: an Ember pill with a home-tinted dot and a bold label. */
 @Composable
 fun HomeBadge(
@@ -442,17 +456,8 @@ fun HomeBadge(
     modifier: Modifier = Modifier,
 ) {
     val colors = Ember.colors
-    val serverType = when (home) {
-        BookHome.ThisDevice -> ServerType.Local
-        BookHome.ParrotCloud -> ServerType.ParrotCloud
-        BookHome.Storyteller -> ServerType.Storyteller
-        BookHome.Audiobookshelf -> ServerType.Audiobookshelf
-    }
-    val label = if (home == BookHome.ThisDevice) {
-        stringResource(StringRes.library_home_this_device)
-    } else {
-        serverType.displayName
-    }
+    val serverType = home.serverType
+    val label = homeLabel(home)
     val dotColor = when (serverType) {
         ServerType.Storyteller -> colors.accentText
         ServerType.Audiobookshelf -> colors.success

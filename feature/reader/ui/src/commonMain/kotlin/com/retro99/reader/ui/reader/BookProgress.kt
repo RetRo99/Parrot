@@ -1,8 +1,10 @@
 package com.retro99.reader.ui.reader
 
+import com.retro99.books.domain.model.progressPercentOf
+
 /**
  * The single book-progress percentage shown across the reader (strip, Contents, bookmarks).
- * Floors, so "71%" stays until the reader has truly reached 72%, and 100% only appears at the end.
+ * Delegates to the shared [progressPercentOf], the same value the library and book details
+ * show for the same book.
  */
-internal fun bookPercent(totalProgression: Double?): Int =
-    ((totalProgression ?: 0.0).coerceIn(0.0, 1.0) * 100).toInt()
+internal fun bookPercent(totalProgression: Double?): Int = progressPercentOf(totalProgression)

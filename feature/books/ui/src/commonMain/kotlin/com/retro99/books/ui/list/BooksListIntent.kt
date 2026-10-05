@@ -26,6 +26,7 @@ sealed interface BooksListIntent : BaseIntent {
     data class OnImportBook(val file: PlatformFile, val openAfterImport: Boolean = false) : BooksListIntent
     data object OnImportedBookOpened : BooksListIntent
     data object OnBackupAllClicked : BooksListIntent
+    data object OnCloudBackupNoteDismissed : BooksListIntent
     data class OnBackupAllAttestationChanged(val attested: Boolean) : BooksListIntent
     data object OnBackupAllConfirmed : BooksListIntent
     data object OnBackupAllDismissed : BooksListIntent

@@ -100,6 +100,9 @@ sealed class PreferencesKey(val name: String) {
     /** Recap session ids whose reader banner was dismissed, newest last. */
     data object DismissedRecapBanners : PreferencesKey("DismissedRecapBanners")
 
+    /** The library note offering to add local books to Parrot Cloud, hidden once dismissed. */
+    data object CloudBackupNoteDismissed : PreferencesKey("CloudBackupNoteDismissed")
+
     // User profile keys (device-level, not user-scoped)
     data object UserProfiles : PreferencesKey("UserProfiles")
     data object ActiveProfileId : PreferencesKey("ActiveProfileId")

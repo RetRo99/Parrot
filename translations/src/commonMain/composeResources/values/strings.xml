@@ -178,7 +178,7 @@
     <string name="books_series_with_position">%1$s #%2$s</string>
     <string name="books_media_ebook">eBook</string>
     <string name="books_media_audio">Audio</string>
-    <string name="books_media_readaloud">ReadALoud</string>
+    <string name="books_media_readaloud">Read-along</string>
     <string name="books_media_ready">Ready</string>
     <string name="books_media_delete">Delete</string>
     <string name="books_media_download">Download</string>
@@ -237,6 +237,7 @@
     <!-- Book Progress -->
     <string name="books_reading_progress">Reading Progress</string>
     <string name="books_cached_indicator">Downloaded</string>
+    <string name="books_on_this_phone" tools:ignore="MissingTranslation">On this phone</string>
     <string name="books_progress_local">Local</string>
     <string name="books_progress_remote">Remote</string>
 
@@ -675,6 +676,9 @@
     <string name="cloud_backup_unknown_state" tools:ignore="MissingTranslation">Transfer status unavailable.</string>
     <string name="cloud_backup_all_button" tools:ignore="MissingTranslation">Add all</string>
     <string name="cloud_backup_backup_all" tools:ignore="MissingTranslation">Add all books on this device to Parrot Cloud</string>
+    <string name="cloud_backup_note_add_count" tools:ignore="MissingTranslation">Add %1$d books on this phone to Parrot Cloud</string>
+    <string name="cloud_backup_note_add_count_one" tools:ignore="MissingTranslation">Add 1 book on this phone to Parrot Cloud</string>
+    <string name="cloud_backup_note_dismiss" tools:ignore="MissingTranslation">Dismiss</string>
     <string name="cloud_backup_all_title" tools:ignore="MissingTranslation">Add all books to Parrot Cloud?</string>
     <string name="cloud_backup_all_message" tools:ignore="MissingTranslation">Books on this device will be queued for upload to Parrot Cloud.</string>
     <string name="cloud_backup_all_queued" tools:ignore="MissingTranslation">Queued %1$d books for upload.</string>
@@ -751,7 +755,6 @@
 
     <!-- Continue reading -->
     <string name="continue_reading_title" tools:ignore="MissingTranslation">Continue reading</string>
-    <string name="continue_reading_more" tools:ignore="MissingTranslation">More options</string>
     <string name="continue_reading_clear" tools:ignore="MissingTranslation">Clear</string>
     <string name="continue_reading_position_save_failed" tools:ignore="MissingTranslation">Bubble position could not be saved.</string>
 

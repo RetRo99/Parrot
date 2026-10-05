@@ -41,6 +41,24 @@ data class BookProgressInfoDomainModel(
         get() = isEbookCached || isAudiobookCached || isReadaloudCached
 
     /**
+     * Returns the display progress (prefers local if available).
+     */
+    val displayProgression: Double?
+        get() = localProgression ?: remoteProgression
+
+    /** The percent every surface shows for this book. See [progressPercentOf]. */
+    val progressPercent: Int
+        get() = progressPercentOf(displayProgression)
+
+    /** The local progress as a percentage (0-100), or null if no local progress. */
+    val localProgressPercent: Int?
+        get() = localProgression?.let { fraction -> progressPercentOf(fraction) }
+
+    /** The remote progress as a percentage (0-100), or null if no remote progress. */
+    val remoteProgressPercent: Int?
+        get() = remoteProgression?.let { fraction -> progressPercentOf(fraction) }
+
+    /**
      * Returns true if both reconciled candidates exist and their exact progress
      * values differ. The shared sync engine decides which candidate is a clean
      * remote apply or a preserved dirty baseline; this model does not choose a
@@ -52,11 +70,4 @@ data class BookProgressInfoDomainModel(
             val remote = remoteProgression ?: return false
             return local != remote
         }
-
-    /**
-     * Returns the progress to display (prefers local if available).
-     */
-    val displayProgression: Double?
-        get() = localProgression ?: remoteProgression
-
 }

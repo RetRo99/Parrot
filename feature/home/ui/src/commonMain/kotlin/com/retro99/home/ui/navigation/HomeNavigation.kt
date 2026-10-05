@@ -364,7 +364,7 @@ fun HomeNavigation(
                                     )
                                 )
                             },
-                            headerContent = { books ->
+                            headerContent = { books, bookProgressInfo ->
                                 if (uiState.showContinueReading) {
                                     currentlyReading?.let { book ->
                                         ContinueReadingShelf(
@@ -375,6 +375,7 @@ fun HomeNavigation(
                                                 }
                                                 ?.authors
                                                 ?.joinToString(", "),
+                                            progressInfo = bookProgressInfo[book.bookUuid],
                                             onClick = {
                                                 intentDispatcher(
                                                     HomeNavigationIntent.RequestOpenReader(

@@ -3,7 +3,6 @@ package com.retro99.reader.domain.usecase
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.fold
-import com.github.michaelbull.result.getOrElse
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.books.domain.model.BookProgressInfoDomainModel
@@ -11,6 +10,7 @@ import com.retro99.books.domain.model.BookType
 import com.retro99.books.domain.model.BookWithProgressDomainModel
 import com.retro99.books.domain.model.toBookDomainModel
 import com.retro99.reader.domain.ReaderSettingsRepository
+import com.retro99.reader.domain.progress.RemotePositionStore
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.ServerBook
 import com.retro99.server.api.ServerPosition
@@ -34,6 +34,7 @@ class ObserveBookWithProgressUseCase(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
     @Provided private val readerSettingsRepository: ReaderSettingsRepository,
     @Provided private val positionLocalSource: ServerPositionLocalSource,
+    @Provided private val remotePositionStore: RemotePositionStore,
 ) {
     /**
      * Observes a book with its progress information.
@@ -80,10 +81,10 @@ class ObserveBookWithProgressUseCase(
         serverBook: ServerBook,
         localPosition: ServerPosition?,
     ): AppResult<BookWithProgressDomainModel> {
-        val readerRepository = repositoryProvider.getReaderRepository(serverId)
-
-        // Fetch remote position (one-time per emission)
-        val remotePosition = readerRepository?.getRemotePosition(bookUuid)?.getOrElse { null }
+        // Refresh the shared remote position store (once per emission) and read the remote
+        // position back from it: the same value the library list shows for this book.
+        remotePositionStore.refresh(serverId = serverId, bookUuid = bookUuid)
+        val remotePosition = remotePositionStore.get(bookUuid)
         val remoteProgression = remotePosition?.totalProgression
         val displayPosition = if (localPosition?.totalProgression != null) localPosition else remotePosition
 

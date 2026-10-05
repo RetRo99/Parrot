@@ -98,6 +98,7 @@ class BooksListViewModel(
         observeFavorites()
         observeRecentSearches()
         observeLinkSuggestions()
+        observeCloudBackupNoteDismissed()
     }
 
     private fun observeLinkSuggestions() {
@@ -159,6 +160,7 @@ class BooksListViewModel(
                     backupAllError = null,
                 )
             }
+            BooksListIntent.OnCloudBackupNoteDismissed -> dismissCloudBackupNote()
             is BooksListIntent.OnBackupAllAttestationChanged -> updateState {
                 it.copy(backupAllRightsAttested = intent.attested)
             }
@@ -334,6 +336,20 @@ class BooksListViewModel(
                 updateState { it.copy(recentSearches = recents?.queries.orEmpty()) }
             }
             .launchIn(viewModelScope)
+    }
+
+    private fun observeCloudBackupNoteDismissed() {
+        observeUserPreferenceUseCase<Boolean>(PreferencesKey.CloudBackupNoteDismissed)
+            .onEach { dismissed ->
+                updateState { it.copy(cloudBackupNoteDismissed = dismissed == true) }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    /** Hidden for good; the action itself stays available on the Parrot Cloud screen. */
+    private fun dismissCloudBackupNote() {
+        updateState { it.copy(cloudBackupNoteDismissed = true) }
+        saveUserPreferenceUseCase(PreferencesKey.CloudBackupNoteDismissed, true)
     }
 
     private fun toggleFavorite(bookUuid: String) {

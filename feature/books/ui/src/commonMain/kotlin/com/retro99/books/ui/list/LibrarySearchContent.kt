@@ -39,6 +39,7 @@ import com.retro99.books.ui.components.BookItemCard
 import com.retro99.books.ui.components.directionLabel
 import com.retro99.books.ui.components.highlightedText
 import com.retro99.books.ui.components.labelRes
+import com.retro99.books.ui.components.libraryDockBottomPadding
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.books_search_clear
@@ -52,9 +53,6 @@ import resources.translations.books_search_recent_fill
 import resources.translations.books_search_recent_item
 import resources.translations.books_search_recent_title
 import resources.translations.books_series_with_position
-
-/** Bottom padding that keeps the last result clear of the floating dock. */
-private val ResultsBottomPadding = 96.dp
 
 /** Everything the Library shows below its title while search is active. */
 @Composable
@@ -238,7 +236,7 @@ private fun SearchResults(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = ResultsBottomPadding),
+            contentPadding = PaddingValues(bottom = libraryDockBottomPadding(isSearchActive = true)),
         ) {
             itemsIndexed(
                 items = results,

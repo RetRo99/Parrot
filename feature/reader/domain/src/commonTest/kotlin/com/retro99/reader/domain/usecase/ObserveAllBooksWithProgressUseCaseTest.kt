@@ -17,6 +17,7 @@ import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
 import com.retro99.reader.domain.model.CustomReaderFontDomainModel
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel
+import com.retro99.reader.domain.progress.RemotePositionStore
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.MediaResource
 import com.retro99.server.api.ServerBook
@@ -107,12 +108,16 @@ class ObserveAllBooksWithProgressUseCaseTest {
         positions: List<ServerPosition>,
         cachedBookUuids: Set<String>,
         currentlyReading: CurrentlyReadingDomainModel? = null,
-    ) = ObserveAllBooksWithProgressUseCase(
-        repositoryProvider = FakeProvider(listOf(storytellerBook, otherBook, libraryBook)),
-        readerSettingsRepository = FakeReaderSettings(cachedBookUuids, currentlyReading),
-        positionLocalSource = FakePositions(positions),
-        bookLinksRepository = FakeLinks(listOf(link)),
-    )
+    ): ObserveAllBooksWithProgressUseCase {
+        val provider = FakeProvider(listOf(storytellerBook, otherBook, libraryBook))
+        return ObserveAllBooksWithProgressUseCase(
+            repositoryProvider = provider,
+            readerSettingsRepository = FakeReaderSettings(cachedBookUuids, currentlyReading),
+            positionLocalSource = FakePositions(positions),
+            bookLinksRepository = FakeLinks(listOf(link)),
+            remotePositionStore = RemotePositionStore(provider),
+        )
+    }
 
     private fun serverBook(uuid: String, serverId: String, serverType: ServerType) = ServerBook(
         uuid = uuid,
