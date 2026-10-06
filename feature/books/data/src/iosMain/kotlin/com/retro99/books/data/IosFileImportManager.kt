@@ -10,7 +10,7 @@ import com.retro99.books.data.source.LibraryLocalSource
 import com.retro99.books.domain.FileImportManager
 import com.retro99.books.domain.ImportedBookFile
 import com.retro99.books.domain.model.BookType
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO

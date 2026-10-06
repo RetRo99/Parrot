@@ -24,8 +24,9 @@ internal class LibraryBooksDatabaseImpl(
     override suspend fun countLibraryBooksWithDeviceFiles(): Int =
         dao.countLibraryBooksWithDeviceFiles()
 
-    override suspend fun updateLastOpenedAt(libraryBookId: String, lastOpenedAt: String) =
+    override suspend fun updateLastOpenedAt(libraryBookId: String, lastOpenedAt: String) {
         dao.updateLastOpenedAt(libraryBookId, lastOpenedAt)
+    }
 
     override suspend fun insertImportedBook(
         book: LibraryBookEntity,
@@ -48,11 +49,13 @@ internal class LibraryBooksDatabaseImpl(
 
     override suspend fun upsertDeviceFile(file: DeviceFileEntity) = dao.upsertDeviceFile(file)
 
-    override suspend fun deleteDeviceFile(libraryBookId: String, mediaType: String) =
+    override suspend fun deleteDeviceFile(libraryBookId: String, mediaType: String) {
         dao.deleteDeviceFile(libraryBookId, mediaType)
+    }
 
-    override suspend fun setOriginForBook(libraryBookId: String, origin: String) =
+    override suspend fun setOriginForBook(libraryBookId: String, origin: String) {
         dao.setOriginForBook(libraryBookId, origin)
+    }
 
     override suspend fun mergeLibraryBook(fromId: String, intoId: String): List<String> =
         dao.mergeLibraryBook(fromId, intoId)

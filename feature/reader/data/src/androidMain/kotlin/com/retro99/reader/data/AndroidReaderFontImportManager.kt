@@ -7,7 +7,9 @@ import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.reader.domain.ReaderFontImportManager
 import com.retro99.reader.domain.model.CustomReaderFontDomainModel
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Provided
@@ -42,13 +44,10 @@ class AndroidReaderFontImportManager(
             val safeName = displayName.toSafeCssToken()
             val destFile = File(fontsDir, "$id.$extension")
 
-            context.contentResolver.openInputStream(platformFile.uri)?.use { inputStream ->
-                FileOutputStream(destFile).use { outputStream ->
-                    inputStream.copyTo(outputStream, bufferSize = 8192)
-                }
-            } ?: return@withContext Err(
-                AppError.UnknownError(Throwable("Could not open input stream for font"))
-            )
+            val bytes = platformFile.readBytes()
+            FileOutputStream(destFile).use { outputStream ->
+                outputStream.write(bytes)
+            }
 
             if (destFile.length() == 0L) {
                 destFile.delete()

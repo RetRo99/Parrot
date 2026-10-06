@@ -40,9 +40,8 @@ import com.retro99.base.ui.compose.Ember
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel
 import com.retro99.settings.ui.model.toDomainModel
 import com.retro99.translations.StringRes
-import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.core.PickerMode
-import io.github.vinceglb.filekit.core.PickerType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.dialogs.FileKitType
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import resources.translations.general_close
@@ -114,8 +113,7 @@ private fun SettingsScreenContent(
     val retryLabel = stringResource(StringRes.settings_retry)
     var selectedTab by remember { mutableStateOf(ReaderSettingsTabMemory.lastTab) }
     val fontPickerLauncher = rememberFilePickerLauncher(
-        type = PickerType.File(extensions = listOf("ttf", "otf", "woff", "woff2")),
-        mode = PickerMode.Single,
+        type = FileKitType.File(extensions = listOf("ttf", "otf", "woff", "woff2")),
     ) { file ->
         if (file == null) {
             intentDispatcher(SettingsIntent.OnCustomFontImportCancelled)

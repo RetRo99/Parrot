@@ -96,9 +96,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.github.vinceglb.filekit.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.core.PickerMode
-import io.github.vinceglb.filekit.core.PickerType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.dialogs.FileKitMode
+import io.github.vinceglb.filekit.dialogs.FileKitType
 import com.retro99.base.ui.BaseScreen
 import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.compose.EmberEmptyState
@@ -213,8 +213,7 @@ private fun BooksListScreenContent(
 ) {
     var openAfterImport by rememberSaveable { mutableStateOf(false) }
     val filePickerLauncher = rememberFilePickerLauncher(
-        type = PickerType.File(extensions = listOf("epub")),
-        mode = PickerMode.Single,
+        type = FileKitType.File(extensions = listOf("epub")),
     ) { file ->
         file?.let {
             intentDispatcher(BooksListIntent.OnImportBook(it, openAfterImport = openAfterImport))

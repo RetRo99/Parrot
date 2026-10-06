@@ -17,7 +17,7 @@ class CloudSessionManagerTest {
 
     @Test
     fun `missing session returns null`() = runTest {
-        assertNull(manager.forProfile("profile-a").loadSession())
+        assertNull(manager.forProfile("profile-a").loadSessionOrNull())
     }
 
     @Test
@@ -27,7 +27,7 @@ class CloudSessionManagerTest {
         preferences.putString(accountKey, "account-a")
         preferences.putString(sessionKey, "invalid")
 
-        assertNull(manager.forProfile("profile-a").loadSession())
+        assertNull(manager.forProfile("profile-a").loadSessionOrNull())
         assertNull(preferences.getStringOrNull(accountKey))
         assertNull(preferences.getStringOrNull(sessionKey))
     }
@@ -39,7 +39,7 @@ class CloudSessionManagerTest {
         preferences.putString(profileBAccountKey, "account-b")
         preferences.putString(profileBSessionKey, "invalid")
 
-        assertNull(manager.forProfile("profile-a").loadSession())
+        assertNull(manager.forProfile("profile-a").loadSessionOrNull())
 
         assertEquals("account-b", preferences.getStringOrNull(profileBAccountKey))
         assertEquals("invalid", preferences.getStringOrNull(profileBSessionKey))
@@ -55,7 +55,7 @@ class CloudSessionManagerTest {
         assertNull(
             preferences.getStringOrNull(PreferencesKey.CloudSession("profile-a", "account-a")),
         )
-        assertEquals("account-b", profileManager.loadSession()?.user?.id)
+        assertEquals("account-b", profileManager.loadSessionOrNull()?.user?.id)
         profileManager.deleteSession()
         assertNull(manager.storedCloudAccountId("profile-a"))
         assertNull(
@@ -99,7 +99,7 @@ class CloudSessionManagerTest {
         previousManager.deleteSession()
         previousManager.invalidate(clearStoredSession = true)
 
-        assertEquals("account-b", replacementManager.loadSession()?.user?.id)
+        assertEquals("account-b", replacementManager.loadSessionOrNull()?.user?.id)
         assertEquals("account-b", manager.storedCloudAccountId("profile-a"))
     }
 
@@ -112,7 +112,7 @@ class CloudSessionManagerTest {
         profileManager.saveSession(session("account-b"))
 
         assertNull(manager.storedCloudAccountId("profile-a"))
-        assertNull(manager.forProfile("profile-a").loadSession())
+        assertNull(manager.forProfile("profile-a").loadSessionOrNull())
         assertNull(
             preferences.getStringOrNull(PreferencesKey.CloudSession("profile-a", "account-a")),
         )
@@ -128,7 +128,7 @@ class CloudSessionManagerTest {
 
         profileManager.deleteSession()
 
-        assertNull(profileManager.loadSession())
+        assertNull(profileManager.loadSessionOrNull())
         assertNull(manager.storedCloudAccountId("profile-a"))
         assertEquals("account-a", manager.reauthenticationAccountId("profile-a"))
         assertNull(manager.reauthenticationAccountId("profile-b"))
@@ -145,7 +145,7 @@ class CloudSessionManagerTest {
         profileManager.saveSession(session("account-b"))
 
         assertNull(manager.reauthenticationAccountId("profile-a"))
-        assertEquals("account-b", profileManager.loadSession()?.user?.id)
+        assertEquals("account-b", profileManager.loadSessionOrNull()?.user?.id)
     }
 
     @Test

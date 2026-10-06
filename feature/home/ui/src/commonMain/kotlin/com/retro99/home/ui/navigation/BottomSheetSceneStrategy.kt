@@ -241,7 +241,7 @@ fun <T : Any> BottomSheetNavDisplay(
         backStack = backStack,
         onBack = onBack,
         modifier = modifier,
-        sceneStrategy = bottomSheetStrategy,
+        sceneStrategies = listOf(bottomSheetStrategy),
         entryDecorators = entryDecorators,
         entryProvider = bottomSheetEntryProvider(entryProvider),
     )

@@ -3,7 +3,7 @@ package com.retro99.books.domain.usecase
 import com.retro99.base.result.AppResult
 import com.retro99.books.domain.FileImportManager
 import com.retro99.books.domain.ImportedBookFile
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
 

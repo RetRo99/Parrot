@@ -48,10 +48,11 @@ internal class LinkedCopyWritesDatabaseImpl(
             ?.toEntity()
     }
 
-    override suspend fun setMarker(targetKey: String, marker: String) =
+    override suspend fun setMarker(targetKey: String, marker: String) {
         withContext(Dispatchers.IO) {
             queries.setMarker(marker, targetKey)
         }
+    }
 }
 
 internal fun Linked_copy_writes.toEntity() = LinkedCopyWriteEntity(

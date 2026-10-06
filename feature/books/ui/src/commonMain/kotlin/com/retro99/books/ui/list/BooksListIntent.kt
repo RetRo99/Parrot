@@ -6,7 +6,7 @@ import com.retro99.books.ui.model.BookListViewMode
 import com.retro99.books.ui.model.BookQuickFilter
 import com.retro99.books.ui.model.BookSortConfig
 import com.retro99.books.ui.model.BookUiModel
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
 
 sealed interface BooksListIntent : BaseIntent {
     data object OnLinkSuggestionsVisible : BooksListIntent

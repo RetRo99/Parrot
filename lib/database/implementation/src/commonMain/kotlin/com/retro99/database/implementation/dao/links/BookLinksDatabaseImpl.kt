@@ -22,9 +22,11 @@ internal class BookLinksDatabaseImpl(
 
     override suspend fun write(write: BookLinkWrite) = dao.write(write)
 
-    override suspend fun setLinkRemoteRevision(linkId: String, remoteRevision: Long) =
+    override suspend fun setLinkRemoteRevision(linkId: String, remoteRevision: Long) {
         dao.setLinkRemoteRevision(linkId, remoteRevision)
+    }
 
-    override suspend fun setDecisionRemoteRevision(pairKey: String, remoteRevision: Long) =
+    override suspend fun setDecisionRemoteRevision(pairKey: String, remoteRevision: Long) {
         dao.setDecisionRemoteRevision(pairKey, remoteRevision)
+    }
 }

@@ -12,7 +12,8 @@ import com.retro99.books.data.source.LibraryLocalSource
 import com.retro99.books.domain.FileImportManager
 import com.retro99.books.domain.ImportedBookFile
 import com.retro99.books.domain.model.BookType
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Provided
@@ -40,13 +41,10 @@ class AndroidFileImportManager(
         // Keep .epub as the final extension so Readium recognizes the staged file format.
         val stagedFile = File(context.cacheDir, "${UUID.randomUUID()}.tmp.epub")
         try {
-            context.contentResolver.openInputStream(platformFile.uri)?.use { inputStream ->
-                FileOutputStream(stagedFile).use { outputStream ->
-                    inputStream.copyTo(outputStream, bufferSize = 8192)
-                }
-            } ?: return@withContext Err(
-                AppError.UnknownError(Throwable("Could not open input stream for file")),
-            )
+            val bytes = platformFile.readBytes()
+            FileOutputStream(stagedFile).use { outputStream ->
+                outputStream.write(bytes)
+            }
 
             val fileSize = stagedFile.length()
             if (fileSize == 0L) {

@@ -75,7 +75,7 @@ class AuthExtTest {
             requestStarted.await()
 
             assertIs<SessionStatus.Authenticated>(client.auth.sessionStatus.value)
-            assertEquals("old-refresh-token", profileManager.loadSession()?.refreshToken)
+            assertEquals("old-refresh-token", profileManager.loadSessionOrNull()?.refreshToken)
         } finally {
             releaseResponse.complete(Unit)
             client.close()
@@ -88,7 +88,7 @@ class AuthExtTest {
             assertIs<SessionStatus.Authenticated>(status)
             assertEquals(
                 "new-refresh-token",
-                manager.forProfile("profile-a").loadSession()?.refreshToken,
+                manager.forProfile("profile-a").loadSessionOrNull()?.refreshToken,
             )
             assertNull(manager.reauthenticationAccountId("profile-a"))
         }
@@ -100,7 +100,7 @@ class AuthExtTest {
             assertIs<SessionStatus.RefreshFailure>(status)
             assertEquals(
                 "old-refresh-token",
-                manager.forProfile("profile-a").loadSession()?.refreshToken,
+                manager.forProfile("profile-a").loadSessionOrNull()?.refreshToken,
             )
             assertNull(manager.reauthenticationAccountId("profile-a"))
         }
@@ -110,7 +110,7 @@ class AuthExtTest {
     fun `revoked token retains only the reauthentication account`() = runTest {
         verifyRestoration(HttpStatusCode.BadRequest) { status, manager ->
             assertIs<SessionStatus.NotAuthenticated>(status)
-            assertNull(manager.forProfile("profile-a").loadSession())
+            assertNull(manager.forProfile("profile-a").loadSessionOrNull())
             assertEquals("account-a", manager.reauthenticationAccountId("profile-a"))
         }
     }
@@ -160,7 +160,7 @@ class AuthExtTest {
             }
         }
         try {
-            client.auth.restoreCloudSession(profileManager.loadSession())
+            client.auth.restoreCloudSession(profileManager.loadSessionOrNull())
             val restoration = async { client.auth.awaitInitialization() }
             requestStarted.await()
 

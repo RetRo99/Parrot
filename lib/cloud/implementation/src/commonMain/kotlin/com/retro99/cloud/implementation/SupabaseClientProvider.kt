@@ -155,7 +155,7 @@ class SupabaseClientProvider(
         }
         clientState.value = profileClientState
         val profileClient = profileClientState.client ?: error("Cloud client was not created")
-        val restoredSession = profileClient.auth.sessionManager.loadSession()
+        val restoredSession = profileClient.auth.sessionManager.loadSessionOrNull()
         profileClient.auth.restoreCloudSession(restoredSession)
         val initializedState = clientState.value
         if (initializedState.client === profileClient && initializedState.profileId == localProfileId) {

@@ -1,7 +1,7 @@
 package com.retro99.books.domain
 
 import com.retro99.base.result.AppResult
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
 
 /**
  * Imports EPUB files into your library.

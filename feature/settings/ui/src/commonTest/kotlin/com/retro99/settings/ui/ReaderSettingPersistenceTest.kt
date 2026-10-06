@@ -22,7 +22,7 @@ import com.retro99.reader.domain.usecase.ImportCustomReaderFontUseCase
 import com.retro99.reader.domain.usecase.SaveReaderSettingsUseCase
 import com.retro99.reader.domain.write.LinkedCopyPropagationSetting
 import com.retro99.settings.ui.model.ReaderThemeUiModel
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow

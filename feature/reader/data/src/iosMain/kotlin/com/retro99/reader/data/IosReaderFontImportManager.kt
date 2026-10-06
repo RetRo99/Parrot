@@ -6,7 +6,8 @@ import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.reader.domain.ReaderFontImportManager
 import com.retro99.reader.domain.model.CustomReaderFontDomainModel
-import io.github.vinceglb.filekit.core.PlatformFile
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.name
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO

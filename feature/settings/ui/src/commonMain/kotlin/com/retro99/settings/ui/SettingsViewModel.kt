@@ -381,7 +381,7 @@ class SettingsViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun importCustomFont(file: io.github.vinceglb.filekit.core.PlatformFile) {
+    private fun importCustomFont(file: io.github.vinceglb.filekit.PlatformFile) {
         viewModelScope.launch {
             importCustomReaderFontUseCase(file)
                 .onSuccess { font ->

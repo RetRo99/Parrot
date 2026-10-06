@@ -492,7 +492,7 @@ class BooksListViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun importBook(file: io.github.vinceglb.filekit.core.PlatformFile, openAfterImport: Boolean) {
+    private fun importBook(file: io.github.vinceglb.filekit.PlatformFile, openAfterImport: Boolean) {
         viewModelScope.launch {
             updateState { it.copy(isImporting = true) }
             analytics.trackUsageOperation(

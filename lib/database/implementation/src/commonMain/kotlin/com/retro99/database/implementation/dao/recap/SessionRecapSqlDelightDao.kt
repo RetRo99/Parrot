@@ -233,7 +233,9 @@ internal class SessionRecapSqlDelightDao(
         }
     }
     override suspend fun getCloudDeletions(accountId: String) = io { database.recapCloudSyncQueries.getDeletes(accountId).executeAsList() }
-    override suspend fun acknowledgeCloudDeletion(accountId: String, sessionId: String) = io { database.recapCloudSyncQueries.acknowledgeDelete(accountId, sessionId) }
+    override suspend fun acknowledgeCloudDeletion(accountId: String, sessionId: String) {
+        io { database.recapCloudSyncQueries.acknowledgeDelete(accountId, sessionId) }
+    }
     override suspend fun queueCloudWithdrawal(accountId: String, now: Long) = io {
         database.transaction {
             database.recapCloudSyncQueries.queueWithdrawal(accountId)
@@ -243,10 +245,16 @@ internal class SessionRecapSqlDelightDao(
         }
     }
     override suspend fun hasCloudWithdrawal(accountId: String) = io { database.recapCloudSyncQueries.getWithdrawal(accountId).executeAsOneOrNull() != null }
-    override suspend fun acknowledgeCloudWithdrawal(accountId: String) = io { database.recapCloudSyncQueries.acknowledgeWithdrawal(accountId) }
-    override suspend fun enableCloudConsent(accountId: String) = io { database.recapCloudSyncQueries.enableConsent(accountId) }
+    override suspend fun acknowledgeCloudWithdrawal(accountId: String) {
+        io { database.recapCloudSyncQueries.acknowledgeWithdrawal(accountId) }
+    }
+    override suspend fun enableCloudConsent(accountId: String) {
+        io { database.recapCloudSyncQueries.enableConsent(accountId) }
+    }
     override suspend fun getCloudCursor(accountId: String, bookId: String) = io { database.recapCloudSyncQueries.getCursor(accountId, bookId).executeAsOneOrNull() ?: 0L }
-    override suspend fun setCloudCursor(accountId: String, bookId: String, cursor: Long) = io { database.recapCloudSyncQueries.setCursor(accountId, bookId, cursor) }
+    override suspend fun setCloudCursor(accountId: String, bookId: String, cursor: Long) {
+        io { database.recapCloudSyncQueries.setCursor(accountId, bookId, cursor) }
+    }
     override suspend fun bindCloudIdentity(sessionId: String, cloudBookId: String?) = io { database.changedOne { bindCloudIdentity(cloudBookId, sessionId) } }
 
     private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { block() }

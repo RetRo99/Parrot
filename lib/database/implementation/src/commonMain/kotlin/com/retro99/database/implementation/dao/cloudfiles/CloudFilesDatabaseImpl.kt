@@ -8,7 +8,9 @@ import kotlinx.coroutines.flow.Flow
 internal class CloudFilesDatabaseImpl(
     private val dao: CloudFilesSqlDelightDao,
 ) : CloudFilesDatabase {
-    override suspend fun upsertFileState(file: CloudBookFileEntity) = dao.upsertFileState(file)
+    override suspend fun upsertFileState(file: CloudBookFileEntity) {
+        dao.upsertFileState(file)
+    }
 
     override suspend fun getFileStates(libraryBookId: String) = dao.getFileStates(libraryBookId)
 
@@ -24,15 +26,23 @@ internal class CloudFilesDatabaseImpl(
         libraryBookId: String,
         mediaType: String,
         relativePath: String,
-    ) = dao.deleteFileState(libraryBookId, mediaType, relativePath)
+    ) {
+        dao.deleteFileState(libraryBookId, mediaType, relativePath)
+    }
 
-    override suspend fun insertTransfer(transfer: CloudFileTransferEntity) = dao.saveTransfer(transfer)
+    override suspend fun insertTransfer(transfer: CloudFileTransferEntity) {
+        dao.saveTransfer(transfer)
+    }
 
     override suspend fun getTransfer(transferId: String) = dao.getTransfer(transferId)
 
-    override suspend fun updateTransfer(transfer: CloudFileTransferEntity) = dao.saveTransfer(transfer)
+    override suspend fun updateTransfer(transfer: CloudFileTransferEntity) {
+        dao.saveTransfer(transfer)
+    }
 
-    override suspend fun deleteTransfer(transferId: String) = dao.deleteTransfer(transferId)
+    override suspend fun deleteTransfer(transferId: String) {
+        dao.deleteTransfer(transferId)
+    }
 
     override suspend fun getTransfers(serverId: String, states: List<String>) =
         dao.getTransfers(serverId, states)

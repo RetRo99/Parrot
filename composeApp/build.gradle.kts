@@ -158,3 +158,11 @@ kotzilla {
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
 }
+
+koinCompiler {
+    // Koin 1.2.x compile-safety cannot see @ComponentScan-discovered definitions across
+    // KMP module boundaries (klib hints), so it reports false KOIN-D002 for types that
+    // resolve fine at runtime (e.g. Preferences <- MultiplatformPreferences).
+    // Re-enable when cross-module scan results are visible to the plugin.
+    compileSafety = false
+}

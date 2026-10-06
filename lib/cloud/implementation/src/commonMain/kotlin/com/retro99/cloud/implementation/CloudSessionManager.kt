@@ -3,6 +3,7 @@ package com.retro99.cloud.implementation
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import io.github.jan.supabase.auth.SessionManager
+import io.github.jan.supabase.auth.exception.NoSessionFoundException
 import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -66,7 +67,10 @@ internal class ProfileSessionManager(
         }
     }
 
-    override suspend fun loadSession(): UserSession? = mutex.withLock {
+    override suspend fun loadSession(): UserSession =
+        loadSessionOrNull() ?: throw NoSessionFoundException()
+
+    override suspend fun loadSessionOrNull(): UserSession? = mutex.withLock {
         if (invalidated) return@withLock null
         val cloudUserId = preferences.getStringOrNull(
             PreferencesKey.CloudSessionAccount(localProfileId),

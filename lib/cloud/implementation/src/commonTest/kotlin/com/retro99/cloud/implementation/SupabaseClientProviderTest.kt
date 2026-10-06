@@ -65,7 +65,7 @@ class SupabaseClientProviderTest {
 
             assertEquals(
                 "account-a",
-                sessionManager.forProfile("profile-a").loadSession()?.user?.id,
+                sessionManager.forProfile("profile-a").loadSessionOrNull()?.user?.id,
             )
             assertEquals("profile-b", userRegistry.getActiveProfileId())
         }
