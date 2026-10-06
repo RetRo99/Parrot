@@ -101,10 +101,34 @@ Fixture scenarios: normal, pair, full, error, loading, unlinked, no-selection, a
 apply-all, apply-start, apply-no-match, apply-not-supported, updating, success, partial,
 none and details. Fixtures never touch production accounts, positions or sync workers.
 
+## Authorized Samsung production-app integration
+
+- Installed the final Android debug APK without clearing application data.
+- There were no active linked groups, so created one deliberate temporary test link
+  through the normal UI between the downloaded Storyteller book and the existing
+  "The Crossing" test library copy. This seed exercises different texts/approximate
+  matching; it is not a claim that the titles are actually the same book.
+- Verified real book title/device naming, separate local/server disagreement candidates,
+  Latest and excerpts, disabled initial action, source selection, and pull-to-refresh.
+- The real apply preview includes only the other version, not either candidate of the
+  source's own version. Approximate matching starts unticked; ticking changes the
+  action from Update 0 versions to Update 1 version. Dismissed without applying.
+- Verified the inline "open this version" link opens Book details with its existing
+  conflict card; did not resolve or overwrite that conflict.
+- Removed the temporary link via the UI, then returned to the still-open positions
+  screen. Resume refresh correctly shows the unlinked state, preserves its introduction
+  and removes the bottom action bar.
+- Read-only before/after database comparisons confirm all saved reading places,
+  origins and reading times are unchanged and there are zero active links.
+- Removed only the test's new, unsynced "never link" decision with a temporary guarded
+  instrumentation helper; decisions now match the baseline. The helper APK/source and
+  device helper jar were removed. The normal unlink tombstone is retained.
+- Real application screenshots: `positions-demo-screen.png`, `positions-demo-apply.png`,
+  `positions-demo-unlinked.png`. These use the phone's existing Night preference.
+  Day/E-ink and actual write outcomes were exercised in the isolated fixtures/domain
+  tests; the integration deliberately did not change any saved reading position.
+
 ## Deferred
 
 - Endpoint-specific reconciliation, as requested.
 - A server-acknowledged "synced" notice variant; current outcomes report local saves.
-- Real demo-book integration is distinct from the completed isolated fixture pass.
-  The Samsung is authorized; there were no existing linked groups in its database
-  when inspected read-only. Any integration test seed must remain limited to demo data.
