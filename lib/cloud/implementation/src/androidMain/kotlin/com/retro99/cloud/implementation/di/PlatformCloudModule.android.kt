@@ -10,6 +10,7 @@ import com.retro99.cloud.implementation.transfer.TusLocalFileSource
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import org.koin.core.annotation.Module
+import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 
 @Module
@@ -37,7 +38,12 @@ actual class PlatformCloudModule {
     @Single
     fun provideTusLocalFileSource(): TusLocalFileSource = AndroidTusLocalFileSource()
 
+    /**
+     * Dedicated upload client. Qualified so it never collides with the shared app
+     * HttpClient binding (see TusUploadClient).
+     */
     @Single
+    @Named("tus")
     fun provideTusHttpClient(): HttpClient = HttpClient(OkHttp)
 }
 

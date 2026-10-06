@@ -488,8 +488,8 @@ class LoginViewModel(
         if (viewState.value.isLoading || viewState.value.serverConfigurationUnavailable) return
         val url = ServerAddress.normalize(urlState.text.toString())
         val serverType = viewState.value.selectedServerType
-        val username = usernameState.text.toString()
-        val password = passwordState.text.toString()
+        val username = usernameState.text.toString().trim()
+        val password = passwordState.text.toString().trim()
         hasAttemptedCredentialsSubmit = true
         updateFormState(url, username, password)
 

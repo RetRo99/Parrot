@@ -330,6 +330,7 @@ private fun LoginScreenContent(
                 isSecure = true,
                 passwordVisible = passwordVisible,
                 keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.None,
                     autoCorrectEnabled = false,
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done,

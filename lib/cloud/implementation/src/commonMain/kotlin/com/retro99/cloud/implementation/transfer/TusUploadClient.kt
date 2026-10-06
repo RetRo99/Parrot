@@ -8,12 +8,13 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.Url
+import org.koin.core.annotation.Named
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 @Single
 class TusUploadClient(
-    @Provided private val httpClient: HttpClient,
+    @Provided @Named("tus") private val httpClient: HttpClient,
     @Provided private val localFileSource: TusLocalFileSource,
 ) {
     suspend fun upload(

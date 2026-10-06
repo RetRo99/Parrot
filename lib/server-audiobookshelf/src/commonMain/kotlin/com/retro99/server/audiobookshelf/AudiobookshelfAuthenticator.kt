@@ -14,6 +14,7 @@ import com.retro99.server.api.ServerValidationResult
 import com.retro99.server.audiobookshelf.model.AudiobookshelfLoginRequest
 import com.retro99.server.audiobookshelf.model.AudiobookshelfLoginResponse
 import io.ktor.client.HttpClient
+import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -137,6 +138,8 @@ class AudiobookshelfAuthenticator(
         return when {
             e.message?.contains("401") == true ->
                 AppError.AuthError("Invalid credentials", isInvalidCredentials = true)
+            e is NoTransformationFoundException ->
+                AppError.AuthError("Server returned an unexpected response")
             networkFailure.isExpectedFailure -> AppError.NetworkError(
                 throwable = e,
                 isConnectivity = networkFailure.isConnectivity,

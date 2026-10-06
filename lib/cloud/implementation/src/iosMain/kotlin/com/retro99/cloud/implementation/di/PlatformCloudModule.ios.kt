@@ -6,6 +6,7 @@ import com.retro99.cloud.implementation.transfer.TusLocalFileSource
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.Darwin
 import org.koin.core.annotation.Module
+import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 import platform.Foundation.NSBundle
 import platform.Foundation.NSURL
@@ -46,7 +47,12 @@ actual class PlatformCloudModule {
     @Single
     fun provideTusLocalFileSource(): TusLocalFileSource = IosTusLocalFileSource()
 
+    /**
+     * Dedicated unqualified-free upload client. Qualified so it never collides with the
+     * shared app HttpClient binding (see TusUploadClient).
+     */
     @Single
+    @Named("tus")
     fun provideTusHttpClient(): HttpClient = HttpClient(Darwin)
 }
 
