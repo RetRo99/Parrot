@@ -292,12 +292,32 @@ interface EpubReaderBridge {
     fun setOnSelectionChangedCallback(callback: ((Boolean) -> Unit)?)
     fun clearSelection()
 
+    /**
+     * Frame of the navigator's visible WebView relative to the navigator root, plus the root
+     * size, all in points (points and CSS px are both dp here). Lets Kotlin map rects measured
+     * inside the WebView onto the Compose space the selection toolbar is anchored in.
+     */
+    fun webViewGeometry(callback: (EpubWebViewGeometry?) -> Unit)
+
     /** Replaces every saved highlight on the page. */
     fun applySavedDecorations(decorations: List<SavedDecorationLocator>)
 
     /** Called with a saved item's id when the reader taps its highlight. */
     fun setOnSavedDecorationTapCallback(callback: ((String) -> Unit)?)
 }
+
+/**
+ * Frame of the iOS navigator's visible WebView relative to the navigator root, and the root
+ * size, in points. Produced by the Swift bridge; consumed by [com.retro99.reader.ui.navigator.IosBookController].
+ */
+data class EpubWebViewGeometry(
+    val x: Double,
+    val y: Double,
+    val width: Double,
+    val height: Double,
+    val rootWidth: Double,
+    val rootHeight: Double,
+)
 
 data class SearchResultLocator(
     val href: String,

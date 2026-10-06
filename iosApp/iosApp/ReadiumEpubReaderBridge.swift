@@ -996,6 +996,49 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
         }
     }
 
+    // MARK: - Selection toolbar geometry
+
+    /// Frame of the navigator's visible WebView relative to the navigator root, plus the root
+    /// size, all in points. Kotlin maps rects measured inside the WebView onto the Compose
+    /// space the selection toolbar is anchored in (mirrors the Android implementation).
+    func webViewGeometry(callback: @escaping (EpubWebViewGeometry?) -> Void) {
+        Task { @MainActor in
+            guard let navigator = navigatorViewController else {
+                callback(nil)
+                return
+            }
+
+            // Readium pools two same-sized WebViews for page turns, so the largest one
+            // carries the geometry both need; fall back to the first if none has area.
+            var largest: WKWebView?
+            var largestArea: CGFloat = 0
+            var first: WKWebView?
+            func visit(_ view: UIView) {
+                if let webview = view as? WKWebView {
+                    let area = webview.bounds.width * webview.bounds.height
+                    if first == nil { first = webview }
+                    if area > largestArea { largestArea = area; largest = webview }
+                }
+                view.subviews.forEach(visit)
+            }
+            visit(navigator.view)
+            guard let webview = (largest ?? first) else {
+                callback(nil)
+                return
+            }
+
+            let frame = webview.convert(webview.bounds, to: navigator.view)
+            callback(EpubWebViewGeometry(
+                x: Double(frame.minX),
+                y: Double(frame.minY),
+                width: Double(frame.width),
+                height: Double(frame.height),
+                rootWidth: Double(navigator.view.bounds.width),
+                rootHeight: Double(navigator.view.bounds.height)
+            ))
+        }
+    }
+
     // MARK: - Private Media Overlay Helpers
 
     private func handlePlaybackStateChanged(_ state: MediaPlaybackState) {

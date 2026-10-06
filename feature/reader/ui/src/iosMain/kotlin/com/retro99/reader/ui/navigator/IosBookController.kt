@@ -3,6 +3,7 @@ package com.retro99.reader.ui.navigator
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_DOUBLE_TAP_TIMEOUT_MS
 import com.retro99.reader.ui.bridge.AudioLocator
 import com.retro99.reader.ui.bridge.EpubReaderBridge
+import com.retro99.reader.ui.bridge.EpubWebViewGeometry
 import com.retro99.reader.ui.bridge.EpubReaderSettings
 import com.retro99.reader.ui.bridge.SavedDecorationLocator
 import com.retro99.reader.ui.reader.ReaderSearchResult
@@ -438,6 +439,32 @@ class IosBookController(
     }
 
     override fun clearSelection() = bridge.clearSelection()
+
+    /**
+     * Maps the WebView-local selection rect onto the space the Compose toolbar is anchored
+     * in, mirroring [com.retro99.reader.ui.navigator.AndroidBookController.selectionForToolbar].
+     * The WKWebView carries its own frame and insets inside Readium's navigator, so the raw
+     * getBoundingClientRect values would anchor the toolbar at the wrong position.
+     */
+    override suspend fun selectionForToolbar(): PageText? {
+        val text = SavedPageScript.parseAnchor(runPageScript(SavedPageScript.selection())) ?: return null
+        val rect = text.rect ?: return text
+        val geometry = suspendCancellableCoroutine<EpubWebViewGeometry?> { continuation ->
+            bridge.webViewGeometry { value -> if (continuation.isActive) continuation.resume(value) }
+        } ?: return text
+        if (geometry.width <= 0.0 || geometry.rootWidth <= 0.0) return text
+        // viewport.width is the WebView's CSS px width, so this absorbs zoom; points are dp.
+        val scale = geometry.width / (text.viewport?.width?.takeIf { it > 0.0 } ?: geometry.width)
+        return text.copy(
+            rect = PageRect(
+                left = geometry.x + rect.left * scale,
+                top = geometry.y + rect.top * scale,
+                right = geometry.x + rect.right * scale,
+                bottom = geometry.y + rect.bottom * scale,
+            ),
+            viewport = PageSize(width = geometry.rootWidth, height = geometry.rootHeight),
+        )
+    }
 
     override suspend fun runPageScript(script: String): String? = suspendCancellableCoroutine { continuation ->
         bridge.evaluateJavaScript(script) { value ->
