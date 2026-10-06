@@ -22,7 +22,12 @@ enum class PositionOrigin(val value: String) {
 
     /** Real reading wins when copies are compared (P1). */
     val isRealReading: Boolean
-        get() = this == User || this == Remote || this == Manual
+        // Explicit decisions: echoes and restores must never compete with actual reading.
+        // Keep the exhaustive decision test in PositionsPanelTest in sync with new origins.
+        get() = when (this) {
+            User, Remote, Manual -> true
+            Restore, LinkedCopy -> false
+        }
 
     companion object {
         fun fromValue(value: String?): PositionOrigin =

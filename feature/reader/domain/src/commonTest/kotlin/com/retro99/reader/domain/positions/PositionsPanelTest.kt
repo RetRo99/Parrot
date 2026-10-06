@@ -34,6 +34,43 @@ import kotlin.test.assertTrue
 
 class PositionsPanelTest {
 
+    @Test
+    fun `every origin has an explicit real reading decision`() {
+        val decisions = mapOf(
+            PositionOrigin.User to true,
+            PositionOrigin.Remote to true,
+            PositionOrigin.Manual to true,
+            PositionOrigin.Restore to false,
+            PositionOrigin.LinkedCopy to false,
+        )
+        assertEquals(PositionOrigin.entries.toSet(), decisions.keys)
+        decisions.forEach { (origin, expected) -> assertEquals(expected, origin.isRealReading) }
+    }
+
+    @Test
+    fun `failed fetch never marks a device reading stale`() = runTest {
+        store("st", 0.8, "2026-10-02T10:00:00Z", PositionEntity.ORIGIN_USER)
+        storytellerServer.remoteFails = true
+        val row = rows(listOf(library, storyteller))("local", "lib").orEmpty()
+            .single { it.copy == storyteller }
+        assertFalse(row.isStale)
+    }
+
+    @Test
+    fun `failed fetch marks only the server member of a conflict stale`() = runTest {
+        store("st", 0.8, "2026-10-02T10:00:00Z", PositionEntity.ORIGIN_USER)
+        positions.upsertRemotePosition(StoredPosition(
+            "st", totalProgression = 0.2, observedAt = "2026-10-01T10:00:00Z",
+            origin = PositionEntity.ORIGIN_REMOTE,
+        ))
+        storytellerServer.remoteFails = true
+        val pair = rows(listOf(library, storyteller))("local", "lib").orEmpty()
+            .filter { it.copy == storyteller }
+        assertEquals(2, pair.size)
+        assertFalse(pair.single { it.isLocalCandidate }.isStale)
+        assertTrue(pair.single { !it.isLocalCandidate }.isStale)
+    }
+
     private val library = linkedCopy(CopySource.Library, "lib", serverId = "local")
     private val storyteller = linkedCopy(CopySource.Storyteller, "st", serverId = "st-1")
     private val absEbook = linkedCopy(CopySource.Audiobookshelf, "abse", serverId = "abs-1")

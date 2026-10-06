@@ -56,10 +56,16 @@ class ObserveCopyPositionsUseCase(
             if (isConflict) {
                 val primaryLocal = primary === local
                 listOf(
-                    Choice(copy, primary, fetch == RemoteFetch.Failed, true, primaryLocal),
-                    Choice(copy, if (primaryLocal) remote else local, fetch == RemoteFetch.Failed, true, !primaryLocal),
+                    Choice(copy, primary, fetch == RemoteFetch.Failed && !primaryLocal, true, primaryLocal),
+                    Choice(copy, if (primaryLocal) remote else local, fetch == RemoteFetch.Failed && primaryLocal, true, !primaryLocal),
                 )
-            } else listOf(Choice(copy, primary, fetch == RemoteFetch.Failed))
+            } else listOf(Choice(
+                copy,
+                primary,
+                fetch == RemoteFetch.Failed && primary != null &&
+                    (primary === remote || primary.origin == PositionOrigin.Remote),
+                isLocal = primary !== remote,
+            ))
         }
         val latest = latestRealReading(
             chosen.mapNotNull { choice ->
