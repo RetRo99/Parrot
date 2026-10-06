@@ -150,6 +150,36 @@ class ResolvePositionConflictUseCaseTest {
         assertEquals("old", database.mutations.single().mutationId)
     }
 
+    @Test fun `failed local choice can be retried without losing either candidate`() = runTest {
+        val conflict = conflict()
+        database.mutations += entry("old")
+        database.resolutionFails = true
+
+        assertFalse(resolver.useLocal(conflict).isOk)
+        assertEquals(local, database.local.value["book"])
+        assertEquals(remote, database.remote["book"])
+        assertEquals("old", database.mutations.single().mutationId)
+
+        database.resolutionFails = false
+        assertTrue(resolver.useLocal(conflict).isOk)
+        assertEquals(local.totalProgression, database.local.value.getValue("book").totalProgression)
+        assertEquals(5L, database.local.value.getValue("book").localGeneration)
+        assertTrue(database.remote.isEmpty())
+        assertEquals(9L, database.mutations.single().baseRevision)
+    }
+
+    @Test fun `repeated remote choice cannot advance generation or queue another write`() = runTest {
+        val conflict = conflict()
+        assertTrue(resolver.useRemote(conflict).isOk)
+        val selected = database.local.value.getValue("book")
+
+        assertFalse(resolver.useRemote(conflict).isOk)
+        assertEquals(selected, database.local.value.getValue("book"))
+        assertEquals(5L, selected.localGeneration)
+        assertTrue(database.mutations.isEmpty())
+        assertTrue(database.remote.isEmpty())
+    }
+
     @Test fun `missing local position does not consume the remote candidate`() = runTest {
         val conflict = conflict()
         database.deletePosition("book")

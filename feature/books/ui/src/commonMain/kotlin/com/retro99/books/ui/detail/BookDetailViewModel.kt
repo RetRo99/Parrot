@@ -387,7 +387,9 @@ class BookDetailViewModel(
                     // Navigate to reader if user was trying to open a book
                     pendingBookType?.let { bookType ->
                         updateState { it.copy(pendingOpenBookType = null) }
-                        navigateToReader(bookType, bookTitle)
+                        // Either choice settled the opening prompt. Do not ask again in
+                        // the reader while the selected position is still syncing.
+                        navigateToReader(bookType, bookTitle, linkedResumeResolved = true)
                     }
                 }
                 .onFailure { error ->

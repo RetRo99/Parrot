@@ -11,7 +11,8 @@ internal data class ReaderStartupPrompt(
 
 /**
  * A newer reading in a linked copy replaces the same-copy conflict. When book detail already
- * asked ([linkedResumeResolved]), the reader asks nothing and doesn't look again.
+ * settled either opening prompt ([linkedResumeResolved]), the reader asks nothing and doesn't
+ * look again.
  */
 internal suspend fun readerStartupPrompt(
     linkedResumeResolved: Boolean,

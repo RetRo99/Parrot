@@ -30,6 +30,48 @@ class ReaderStartupPromptTest {
     private var lookups = 0
 
     @Test
+    fun `startup prompt matrix shows at most one prompt and skips lookup only after an answer`() = runTest {
+        for (answered in listOf(false, true)) {
+            for (hasConflict in listOf(false, true)) {
+                for (hasLinkedOffer in listOf(false, true)) {
+                    var calls = 0
+                    val candidate = conflict.takeIf { hasConflict }
+                    val linked = offer().takeIf { hasLinkedOffer }
+                    val prompt = readerStartupPrompt(answered, candidate) { calls++; linked }
+                    val context = "answered=$answered, conflict=$hasConflict, linked=$hasLinkedOffer"
+
+                    assertEquals(if (answered) 0 else 1, calls, context)
+                    assertEquals(if (answered) null else linked, prompt.linkedResumeOffer, context)
+                    assertEquals(
+                        if (answered || hasLinkedOffer) null else candidate,
+                        prompt.positionConflict,
+                        context,
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `an answered opening never calls a failing linked lookup`() = runTest {
+        val prompt = readerStartupPrompt(true, conflict) {
+            error("An already answered opening must not fetch linked progress")
+        }
+
+        assertEquals(ReaderStartupPrompt(), prompt)
+    }
+
+    @Test
+    fun `suppressing the handoff does not suppress a later independent opening`() = runTest {
+        assertEquals(ReaderStartupPrompt(), readerStartupPrompt(true, conflict) { lookups++; null })
+
+        val laterPrompt = readerStartupPrompt(false, conflict) { lookups++; null }
+
+        assertEquals(conflict, laterPrompt.positionConflict)
+        assertEquals(1, lookups)
+    }
+
+    @Test
     fun `after book detail asked the reader shows no second prompt`() = runTest {
         // When
         val prompt = readerStartupPrompt(
@@ -40,6 +82,19 @@ class ReaderStartupPromptTest {
 
         // Then
         assertEquals(ReaderStartupPrompt(), prompt)
+        assertEquals(0, lookups)
+    }
+
+    @Test
+    fun `a same-copy choice in book detail suppresses a stale conflict on reader open`() = runTest {
+        val prompt = readerStartupPrompt(
+            linkedResumeResolved = true,
+            positionConflict = conflict,
+            findLinkedResume = { lookups++; null },
+        )
+
+        assertNull(prompt.positionConflict)
+        assertNull(prompt.linkedResumeOffer)
         assertEquals(0, lookups)
     }
 
