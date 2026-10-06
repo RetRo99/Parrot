@@ -50,6 +50,7 @@ import com.retro99.books.ui.components.conflictSourceName
 import com.github.michaelbull.result.getOrElse
 import com.retro99.server.api.ParrotCloudLibraryState
 import com.retro99.server.api.ServerRegistry
+import com.retro99.server.api.positionDeviceName
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -438,11 +439,7 @@ class BookDetailViewModel(
     }
 
     /** What this device calls itself in position wording ("This phone"); empty if unavailable. */
-    private fun thisDeviceName(): String = try {
-        installationDeviceIdentity.selfReferenceName()
-    } catch (exception: Exception) {
-        ""
-    }
+    private fun thisDeviceName(): String = installationDeviceIdentity.positionDeviceName()
 
     private fun handleReadClick(bookType: BookType, listenMode: Boolean = false) {
         updateState { state -> state.copy(pendingListenMode = listenMode) }

@@ -6,110 +6,145 @@ import com.retro99.analytics.api.ProductOutcome
 import com.retro99.analytics.api.UsageOperation
 import com.retro99.analytics.api.UsageAction
 import com.retro99.analytics.api.trackUsageOperation
-import com.retro99.reader.domain.write.CopyWriteResult
 import com.retro99.base.ui.BaseViewModel
-import com.retro99.reader.domain.usecase.ApplyPositionUseCase
-import com.retro99.reader.domain.usecase.ObserveCopyPositionsUseCase
-import com.retro99.reader.domain.usecase.PreviewApplyPositionUseCase
+import com.retro99.reader.domain.positions.ApplyPreview
+import com.retro99.reader.domain.positions.CopyPositionRow
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
 
-/** The positions panel (§1.3b): every copy's position, and applying one to the others. */
 @KoinViewModel
 class PositionsViewModel(
     @InjectedParam private val serverId: String,
     @InjectedParam private val bookUuid: String,
     @InjectedParam private val onBack: () -> Unit,
-    @Provided private val observeCopyPositionsUseCase: ObserveCopyPositionsUseCase,
-    @Provided private val previewApplyPositionUseCase: PreviewApplyPositionUseCase,
-    @Provided private val applyPositionUseCase: ApplyPositionUseCase,
+    @InjectedParam private val onOpenVersion: (String, String) -> Unit,
+    @Provided private val data: PositionsDataSource,
     @Provided private val analytics: Analytics,
 ) : BaseViewModel<PositionsViewState, PositionsIntent>(PositionsViewState()) {
+    private var loadJob: Job? = null
+    private var previewJob: Job? = null
 
     init {
         loadRows()
+        viewModelScope.launch {
+            data.changes().drop(1).collect {
+                if (!viewState.value.isApplying) loadRows(refresh = true)
+            }
+        }
     }
 
     override fun onIntent(intent: PositionsIntent) {
         when (intent) {
             PositionsIntent.OnBackClicked -> onBack()
-
-            is PositionsIntent.OnRowClicked -> updateState { state ->
-                state.copy(
-                    selectedKey = intent.copyKey.takeIf { key -> key != state.selectedKey },
-                )
+            is PositionsIntent.OnOpenVersion -> onOpenVersion(intent.serverId, intent.uuid)
+            is PositionsIntent.OnRowClicked -> {
+                val state = viewState.value
+                if (state.isApplying || state.previews != null) return
+                if (state.rows.none { it.candidateId == intent.copyKey && it.position != null }) return
+                previewJob?.cancel()
+                updateState { it.copy(selectedKey = intent.copyKey, isPreviewing = false) }
             }
-
             PositionsIntent.OnUseThisPositionClicked -> preview()
-
             is PositionsIntent.OnTargetToggled -> updateState { state ->
-                val checked = if (intent.copyKey in state.checkedKeys) {
-                    state.checkedKeys - intent.copyKey
-                } else {
-                    state.checkedKeys + intent.copyKey
-                }
-                state.copy(checkedKeys = checked)
+                if (state.isApplying || state.previews.orEmpty().none {
+                        it.enabled && it.target.key.value == intent.copyKey
+                    }) state
+                else state.copy(checkedKeys = if (intent.copyKey in state.checkedKeys)
+                    state.checkedKeys - intent.copyKey else state.checkedKeys + intent.copyKey)
             }
-
-            PositionsIntent.OnApplyClicked -> apply()
-
-            PositionsIntent.OnSheetDismissed -> updateState { state ->
-                state.copy(previews = null, checkedKeys = emptySet(), results = null)
+            PositionsIntent.OnApplyClicked -> {
+                val state = viewState.value
+                val source = state.rows.firstOrNull { it.candidateId == state.selectedKey } ?: return
+                apply(source, state.previews.orEmpty().filter { it.enabled && it.target.key.value in state.checkedKeys })
+            }
+            PositionsIntent.OnSheetDismissed -> {
+                if (viewState.value.isApplying) return
+                previewJob?.cancel()
+                updateState { it.copy(previews = null, checkedKeys = emptySet(), results = null, isPreviewing = false) }
+            }
+            PositionsIntent.OnRefresh, PositionsIntent.OnResume -> if (!viewState.value.isApplying) loadRows(refresh = true)
+            PositionsIntent.OnNoticeDismissed -> updateState { it.copy(notice = null) }
+            PositionsIntent.OnFailureDetailsClicked -> updateState { it.copy(showFailureDetails = true) }
+            PositionsIntent.OnFailureDetailsDismissed -> updateState { it.copy(showFailureDetails = false) }
+            PositionsIntent.OnRetryApplyClicked -> {
+                val state = viewState.value
+                state.retrySource?.let { apply(it, state.retryTargets) }
             }
         }
     }
 
-    private fun loadRows() {
-        viewModelScope.launch {
-            val rows = observeCopyPositionsUseCase(serverId, bookUuid).orEmpty()
-            updateState { state -> state.copy(isLoading = false, rows = rows) }
+    private fun loadRows(refresh: Boolean = false) {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            updateState { it.copy(isRefreshing = refresh, isLoading = it.rows.isEmpty(), loadError = false) }
+            try {
+                val metadata = data.metadata(serverId, bookUuid)
+                updateState { it.copy(bookTitle = metadata.bookTitle, deviceName = metadata.deviceName,
+                    serverNames = metadata.serverNames) }
+                val rows = data.load(serverId, bookUuid)
+                updateState { state -> state.copy(
+                    isLoading = false, isRefreshing = false, isUnlinked = rows == null,
+                    rows = rows.orEmpty(),
+                    bookTitle = metadata.bookTitle.ifBlank { rows?.firstOrNull()?.copy?.title.orEmpty() },
+                    selectedKey = state.selectedKey?.takeIf { key -> rows.orEmpty().any { it.candidateId == key && it.position != null } },
+                    previews = state.previews.takeIf { rows != null },
+                ) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                updateState { it.copy(isLoading = false, isRefreshing = false, loadError = true, isUnlinked = false) }
+            }
         }
     }
 
     private fun preview() {
         val state = viewState.value
-        val source = state.rows.firstOrNull { row -> row.candidateId == state.selectedKey }
-            ?: return
-        viewModelScope.launch {
-            val previews = previewApplyPositionUseCase(source, state.rows)
-            updateState { state ->
-                state.copy(
-                    previews = previews,
-                    checkedKeys = previews
-                        .filter { preview -> preview.defaultChecked }
-                        .mapTo(mutableSetOf()) { preview -> preview.target.key.value },
-                    results = null,
-                )
+        if (state.isApplying || state.isPreviewing || state.loadError || state.isUnlinked) return
+        val source = state.rows.firstOrNull { it.candidateId == state.selectedKey && it.position != null } ?: return
+        previewJob?.cancel()
+        previewJob = viewModelScope.launch {
+            updateState { it.copy(isPreviewing = true) }
+            try {
+                val previews = data.preview(source, state.rows)
+                updateState { it.copy(previews = previews,
+                    checkedKeys = previews.filter { it.enabled && it.defaultChecked }.mapTo(mutableSetOf()) { it.target.key.value },
+                    results = null, isPreviewing = false) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                updateState { it.copy(isPreviewing = false, loadError = true) }
             }
         }
     }
 
-    private fun apply() {
-        val state = viewState.value
-        if (state.isApplying) return
-        val source = state.rows.firstOrNull { row -> row.candidateId == state.selectedKey }
-            ?: return
-        val ticked = state.previews.orEmpty()
-            .filter { preview -> preview.enabled && preview.target.key.value in state.checkedKeys }
-        if (ticked.isEmpty()) return
-        updateState { current -> current.copy(isApplying = true) }
+    private fun apply(source: CopyPositionRow, targets: List<ApplyPreview>) {
+        if (viewState.value.isApplying || targets.isEmpty()) return
+        loadJob?.cancel()
+        updateState { it.copy(isApplying = true, notice = null) }
         viewModelScope.launch {
-            val results = analytics.trackUsageOperation(
-                UsageOperation.ApplyPosition, UsageAction.Apply, "positions", ticked.size,
-                outcome = { results ->
-                    val written = results.count { it.result == CopyWriteResult.Written }
-                    when {
-                        written == ticked.size -> ProductOutcome.Succeeded
-                        written == 0 -> ProductOutcome.Failed
-                        else -> ProductOutcome.Partial
-                    }
-                },
-            ) { applyPositionUseCase(source, ticked) }
-            val rows = observeCopyPositionsUseCase(serverId, bookUuid).orEmpty()
-            updateState { current ->
-                current.copy(isApplying = false, results = results, rows = rows)
+            try {
+                val results = analytics.trackUsageOperation(
+                    UsageOperation.ApplyPosition, UsageAction.Apply, "positions", targets.size,
+                    outcome = { results ->
+                        val notice = positionApplyNotice(results)
+                        when {
+                            notice.updated == targets.size -> ProductOutcome.Succeeded
+                            notice.updated == 0 -> ProductOutcome.Failed
+                            else -> ProductOutcome.Partial
+                        }
+                    },
+                ) { data.apply(source, targets) }
+                updateState { it.copy(isApplying = false, previews = null, checkedKeys = emptySet(),
+                    results = results, notice = positionApplyNotice(results), retrySource = source, retryTargets = targets) }
+                loadRows(refresh = true)
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) {
+                updateState { it.copy(isApplying = false, previews = null, checkedKeys = emptySet(),
+                    notice = PositionsNotice(0, emptyList()), retrySource = source, retryTargets = targets) }
+                loadRows(refresh = true)
             }
         }
     }

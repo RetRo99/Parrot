@@ -526,6 +526,11 @@ fun HomeNavigation(
                             serverId = destination.serverId,
                             bookUuid = destination.bookUuid,
                             onBack = { requestBack("toolbar_back") },
+                            onOpenVersion = { serverId, uuid ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(
+                                    HomeDestination.BookDetail(serverId = serverId, bookUuid = uuid),
+                                ))
+                            },
                         )
                     }
 

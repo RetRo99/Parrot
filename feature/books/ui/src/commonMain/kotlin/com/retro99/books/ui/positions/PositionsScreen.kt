@@ -87,9 +87,10 @@ fun PositionsScreen(
     serverId: String,
     bookUuid: String,
     onBack: () -> Unit,
+    onOpenVersion: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PositionsViewModel = koinViewModel {
-        parametersOf(serverId, bookUuid, onBack)
+        parametersOf(serverId, bookUuid, onBack, onOpenVersion)
     },
 ) {
     BaseScreen(

@@ -1,5 +1,7 @@
 package com.retro99.reader.ui.reader
 
+import com.retro99.server.api.positionDeviceName
+
 import com.github.michaelbull.result.getOrElse
 
 import androidx.compose.ui.text.intl.Locale
@@ -781,11 +783,7 @@ class ReaderViewModel(
     }
 
     private suspend fun openPublication(data: ReaderInitializationData) {
-        val thisDeviceName = try {
-            installationDeviceIdentity.selfReferenceName()
-        } catch (exception: Exception) {
-            ""
-        }
+        val thisDeviceName = installationDeviceIdentity.positionDeviceName()
         val conflictServerName = conflictSourceName(serverId, serverRegistry)
         val settings = data.initialSettings.toUiModel()
         val customFonts = getCustomReaderFontsUseCase().first()
