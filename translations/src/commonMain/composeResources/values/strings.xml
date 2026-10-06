@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="positions_no_match">Can't be matched to this place</string>
+    <string name="positions_missing_file">Can't be matched to this place — download it first</string>
     <!-- General -->
     <string name="recap_last_time">Last time</string>
     <string name="recap_settings">Recap settings</string>

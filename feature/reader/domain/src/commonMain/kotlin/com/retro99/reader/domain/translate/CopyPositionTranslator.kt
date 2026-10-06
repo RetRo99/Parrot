@@ -4,6 +4,7 @@ import com.retro99.books.domain.model.links.CopyKey
 import com.retro99.epub.api.EpubChapterText
 import com.retro99.epub.api.ReadaloudTiming
 import com.retro99.reader.domain.model.PositionDomainModel
+import com.retro99.server.api.TextAnchor
 import com.retro99.server.api.audio.trackPosition
 import com.retro99.sync.domain.ProgressKind
 
@@ -24,6 +25,8 @@ data class CopyContent(
     val chapterCount: Int? = null,
     /** An audiobook's file lengths in playlist order, when known. */
     val trackDurationsMs: List<Long>? = null,
+    /** Captured by the file loader, not inferred from missing parsed chapters. */
+    val fileMissing: Boolean = false,
 ) {
     val isAudio: Boolean get() = kind == ProgressKind.AUDIO
 
@@ -52,12 +55,24 @@ class CopyPositionTranslator(
         target: CopyContent,
         others: List<CopyContent> = emptyList(),
     ): TranslatedPosition? {
+        return (translateOutcome(source, position, target, others) as? TranslationOutcome.Success)
+            ?.translated
+    }
+
+    fun translateOutcome(
+        source: CopyContent,
+        position: PositionDomainModel,
+        target: CopyContent,
+        others: List<CopyContent> = emptyList(),
+    ): TranslationOutcome {
         val request = Request(source, position, target, others)
-        return sameFile(request)
+        val translated = sameFile(request)
             ?: textAnchor(request)
             ?: smil(request)
             ?: trackToText(request).takeIf { _ -> !target.isAudio }
             ?: proportional(request)
+        return translated?.let(TranslationOutcome::Success)
+            ?: TranslationOutcome.Failure(request.failure)
     }
 
     private class Request(
@@ -66,6 +81,13 @@ class CopyPositionTranslator(
         val target: CopyContent,
         val others: List<CopyContent>,
     ) {
+        var failure: TranslationFailure = TranslationFailure.Unknown
+
+        fun missingText(copy: CopyContent) {
+            if (copy.fileMissing && failure == TranslationFailure.Unknown) {
+                failure = TranslationFailure.MissingFile(copy.key)
+            }
+        }
         val hasText: Boolean = !source.isAudio && position.locatorHref != null
 
         /**
@@ -120,10 +142,16 @@ class CopyPositionTranslator(
 
     private fun textAnchor(request: Request): TranslatedPosition? {
         if (!request.hasText || request.target.isAudio) return null
-        val targetChapters = request.target.chapters ?: return null
+        val targetChapters = request.target.chapters ?: run {
+            request.missingText(request.target)
+            return null
+        }
         val anchor = sourceAnchor(request) ?: return null
         val point = matcher.match(anchor, targetChapters, request.position.totalProgression)
-            ?: return null
+            ?: run {
+                request.failure = TranslationFailure.NoMatch
+                return null
+            }
         return textResult(
             target = request.target,
             chapters = targetChapters,
@@ -133,7 +161,11 @@ class CopyPositionTranslator(
         )
     }
 
-    private fun sourceAnchor(request: Request) = request.position.textAnchor
+    private fun sourceAnchor(request: Request): TextAnchor? {
+        if (request.position.textAnchor == null && request.source.chapters == null) {
+            request.missingText(request.source)
+        }
+        return request.position.textAnchor
         ?: request.source.chapters?.let { chapters ->
             chapters.pointOf(
                 href = request.position.locatorHref,
@@ -141,6 +173,7 @@ class CopyPositionTranslator(
                 cssSelector = request.position.cssSelector,
             )?.let { point -> chapters.anchorAt(point) }
         }
+    }
 
     private fun smil(request: Request): TranslatedPosition? {
         val audioMs = request.audioMs
@@ -177,7 +210,10 @@ class CopyPositionTranslator(
                 audioMs = globalMs,
             )
         }
-        val targetChapters = request.target.chapters ?: return null
+        val targetChapters = request.target.chapters ?: run {
+            request.missingText(request.target)
+            return null
+        }
         val anchor = readaloud.chapters.anchorAt(point) ?: return null
         val match = matcher.match(
             anchor,
@@ -225,7 +261,10 @@ class CopyPositionTranslator(
                 audioMs = bridgeMs,
             )
         }
-        val targetChapters = request.target.chapters ?: return null
+        val targetChapters = request.target.chapters ?: run {
+            request.missingText(request.target)
+            return null
+        }
         val anchor = readaloud.chapters.anchorAt(point) ?: return null
         val match = matcher.match(
             anchor,

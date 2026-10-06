@@ -4,6 +4,7 @@ import com.retro99.reader.domain.positions.ApplyDisabledReason
 import com.retro99.reader.domain.positions.ApplyPreview
 import com.retro99.reader.domain.positions.ApplyWarning
 import com.retro99.reader.domain.positions.CopyPositionRow
+import com.retro99.reader.domain.translate.TranslationOutcome
 import com.retro99.reader.domain.write.CopyWriteGuards
 import org.koin.core.annotation.Factory
 
@@ -27,14 +28,17 @@ class PreviewApplyPositionUseCase(
             .distinctBy { row -> row.copy.key }
             .map { row ->
                 val target = row.copy
-                val translated = translatePositionUseCase(
+                val outcome = translatePositionUseCase.outcome(
                     source.copy,
                     sourcePosition,
                     target,
                     copies,
                 )
+                val translated = (outcome as? TranslationOutcome.Success)?.translated
                 val disabledReason = when {
-                    translated == null -> ApplyDisabledReason.NoTranslation
+                    outcome is TranslationOutcome.Failure ->
+                        ApplyDisabledReason.NoTranslation(outcome.cause)
+                    translated == null -> error("Success must carry a translated position")
                     !CopyWriteGuards.isWritable(target, translated.position) ->
                         ApplyDisabledReason.NotSupported
                     else -> null

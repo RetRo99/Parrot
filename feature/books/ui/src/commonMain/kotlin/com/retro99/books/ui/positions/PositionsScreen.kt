@@ -40,6 +40,7 @@ import com.retro99.books.domain.model.BookHome
 import com.retro99.books.ui.links.label
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.positions.ApplyPreview
+import com.retro99.reader.domain.positions.ApplyDisabledReason
 import com.retro99.reader.domain.positions.ApplyWarning
 import com.retro99.reader.domain.positions.CopyPositionRow
 import com.retro99.reader.domain.positions.PositionSource
@@ -367,7 +368,10 @@ private fun previewText(preview: ApplyPreview): String? {
 @Composable
 private fun warningText(preview: ApplyPreview): String? {
     val name = preview.target.home.label()
+    val reason = preview.disabledReason
     return when {
+        reason is ApplyDisabledReason.NoTranslation ->
+            stringResource(reason.messageResource())
         preview.disabledReason != null ->
             stringResource(StringRes.positions_not_supported, name)
         preview.warning == ApplyWarning.CollapseToStart ->

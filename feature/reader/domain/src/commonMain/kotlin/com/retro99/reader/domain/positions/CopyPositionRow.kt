@@ -3,6 +3,7 @@ package com.retro99.reader.domain.positions
 import com.retro99.books.domain.model.links.LinkedCopy
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.translate.TranslatedPosition
+import com.retro99.reader.domain.translate.TranslationFailure
 import com.retro99.server.api.PositionOrigin
 import com.retro99.server.api.TextAnchor
 
@@ -50,12 +51,12 @@ enum class ApplyWarning {
     CollapseToEnd,
 }
 
-enum class ApplyDisabledReason {
+sealed interface ApplyDisabledReason {
     /** Guard 11: the copy's server can't take this kind of position yet. */
-    NotSupported,
+    data object NotSupported : ApplyDisabledReason
 
-    /** No translation: the copy's file isn't here and there's no percentage to go on. */
-    NoTranslation,
+    /** Translation failed; the cause is captured where mapping was attempted. */
+    data class NoTranslation(val cause: TranslationFailure) : ApplyDisabledReason
 }
 
 /** Where applying a position would put one other copy, and whether it's ticked. */

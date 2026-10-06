@@ -22,6 +22,49 @@ class CopyPositionTranslatorTest {
     private val targetChapters = book("b", listOf(3, 3, 3, 3), headings = true)
 
     @Test
+    fun `missing required target text reports the missing version`() {
+        val source = copy(CopySource.Library, "lib", chapters = sourceChapters)
+        val target = copy(CopySource.Storyteller, "st").copy(fileMissing = true)
+        val place = textPosition(sourceChapters, "a-s5").copy(totalProgression = null)
+        assertEquals(
+            TranslationOutcome.Failure(TranslationFailure.MissingFile(target.key)),
+            translator.translateOutcome(source, place, target),
+        )
+        assertNull(translator.translate(source, place, target))
+    }
+
+    @Test
+    fun `present file with unmatched anchor reports no match`() {
+        val source = copy(CopySource.Library, "lib", chapters = sourceChapters)
+        val target = copy(CopySource.Storyteller, "st", chapters = emptyList())
+        val place = textPosition(sourceChapters, "a-s5").copy(totalProgression = null)
+        assertEquals(
+            TranslationOutcome.Failure(TranslationFailure.NoMatch),
+            translator.translateOutcome(source, place, target),
+        )
+        assertNull(translator.translate(source, place, target))
+    }
+
+    @Test
+    fun `unknown file availability does not recommend downloading`() {
+        val source = copy(CopySource.Library, "lib", chapters = sourceChapters)
+        val target = copy(CopySource.Storyteller, "st")
+        val place = textPosition(sourceChapters, "a-s5").copy(totalProgression = null)
+        assertEquals(
+            TranslationOutcome.Failure(TranslationFailure.Unknown),
+            translator.translateOutcome(source, place, target),
+        )
+    }
+
+    @Test
+    fun `missing file does not turn a proportional success into failure`() {
+        val source = copy(CopySource.Library, "lib", chapters = sourceChapters)
+        val target = copy(CopySource.Storyteller, "st").copy(fileMissing = true)
+        val result = translator.translateOutcome(source, textPosition(sourceChapters, "a-s5"), target)
+        assertTrue(result is TranslationOutcome.Success)
+    }
+
+    @Test
     fun `the same file content is exact and keeps the locator`() {
         // Given
         val source = copy(CopySource.Library, "lib", chapters = sourceChapters, contentHash = "h1")

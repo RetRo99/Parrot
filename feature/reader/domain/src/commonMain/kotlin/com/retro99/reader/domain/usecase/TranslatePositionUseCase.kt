@@ -9,6 +9,7 @@ import com.retro99.reader.domain.translate.CopyContentCache
 import com.retro99.reader.domain.translate.CopyFileLocator
 import com.retro99.reader.domain.translate.CopyPositionTranslator
 import com.retro99.reader.domain.translate.TranslatedPosition
+import com.retro99.reader.domain.translate.TranslationOutcome
 import com.retro99.reader.domain.translate.TranslationCache
 import com.retro99.reader.domain.translate.progressKind
 import com.retro99.sync.domain.ProgressKind
@@ -53,22 +54,35 @@ class TranslatePositionUseCase(
         target: LinkedCopy,
         others: List<LinkedCopy> = emptyList(),
     ): TranslatedPosition? {
+        return (outcome(source, position, target, others) as? TranslationOutcome.Success)?.translated
+    }
+
+    suspend fun outcome(
+        source: LinkedCopy,
+        position: PositionDomainModel,
+        target: LinkedCopy,
+        others: List<LinkedCopy> = emptyList(),
+    ): TranslationOutcome {
         val cacheKey = position.observedAt
             ?.let { observedAt -> "${source.key.value}|$observedAt|${target.key.value}" }
-        cacheKey?.let { key -> translationCache.get(key) }?.let { cached -> return cached }
+        cacheKey?.let { key -> translationCache.get(key) }?.let { cached ->
+            return TranslationOutcome.Success(cached)
+        }
 
         val bridges = others
             .filter { copy -> copy.key != source.key && copy.key != target.key }
             .filter { copy -> copy.hasReadaloud }
             .map { copy -> content(copy) }
             .filter { content -> content.readaloud != null }
-        val result = translator.translate(
+        val result = translator.translateOutcome(
             source = content(source, knownDurationMs = position.knownBookDurationMs()),
             position = position,
             target = content(target),
             others = bridges,
         )
-        if (result != null && cacheKey != null) translationCache.put(cacheKey, result)
+        if (result is TranslationOutcome.Success && cacheKey != null) {
+            translationCache.put(cacheKey, result.translated)
+        }
         return result
     }
 
@@ -105,6 +119,7 @@ class TranslatePositionUseCase(
                 ?.let { found -> contentCache.timing(found.path) },
             audioDurationMs = audioDuration,
             trackDurationsMs = trackDurations,
+            fileMissing = hasFile && file == null,
         )
     }
 }
