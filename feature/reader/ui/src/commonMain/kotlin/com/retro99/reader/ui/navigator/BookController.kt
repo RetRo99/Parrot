@@ -220,6 +220,18 @@ interface BookController : AutoCloseable {
     /** Selection bounds in navigator coordinates, including platform WebView insets. */
     suspend fun selectionForToolbar(): PageText? = SavedPageScript.parseAnchor(runPageScript(SavedPageScript.selection()))
 
+    /**
+     * When true, the platform reports taps on the reader content natively through
+     * [nativeReaderTaps], and Compose's own tap zones are disabled. iOS hands interop
+     * touches over to UIKit after ~150 ms, so Compose never sees more than a truncated
+     * tap; the native gesture pipeline sees the full touch, and a long press that starts
+     * text selection arrives as a tap cancellation instead of a tap.
+     */
+    val handlesNativeTaps: Boolean get() = false
+
+    /** Taps on the reader content, with the tap point as a fraction of the navigator size. */
+    val nativeReaderTaps: Flow<NativeReaderTap> get() = kotlinx.coroutines.flow.emptyFlow()
+
     /** Replaces every bookmark and highlight decoration. */
     fun applySavedDecorations(marks: List<PageMark>) = Unit
 
@@ -232,3 +244,6 @@ interface BookController : AutoCloseable {
      */
     val pageReloads: Flow<Unit> get() = kotlinx.coroutines.flow.emptyFlow()
 }
+
+/** A tap on the reader content, with the tap point as a fraction of the navigator size. */
+data class NativeReaderTap(val xFraction: Double, val yFraction: Double)

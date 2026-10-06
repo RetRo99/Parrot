@@ -1,6 +1,7 @@
 package com.retro99.reader.ui.navigator
 
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel.Companion.DEFAULT_DOUBLE_TAP_TIMEOUT_MS
+import com.retro99.base.nowMillis
 import com.retro99.reader.ui.bridge.AudioLocator
 import com.retro99.reader.ui.bridge.EpubReaderBridge
 import com.retro99.reader.ui.bridge.EpubWebViewGeometry
@@ -33,6 +34,7 @@ import kotlinx.coroutines.sync.withLock
 import org.koin.core.annotation.Scope
 import org.koin.core.annotation.Scoped
 import kotlin.coroutines.resume
+import kotlin.math.abs
 
 /**
  * iOS implementation of [BookController].
@@ -84,8 +86,17 @@ class IosBookController(
 
     private val sentenceDoubleTapRecognizer = SentenceDoubleTapRecognizer()
 
+    /** Echo dedupe for [nativeReaderTaps]: last tap's fractions and down time. */
+    private var lastTapX = Double.NaN
+    private var lastTapY = Double.NaN
+    private var lastTapAtMs = 0L
+
     private val _selectionChanges = MutableSharedFlow<Boolean>(extraBufferCapacity = 16)
     override val selectionChanges: Flow<Boolean> = _selectionChanges
+
+    private val _nativeReaderTaps = MutableSharedFlow<NativeReaderTap>(extraBufferCapacity = 16)
+    override val nativeReaderTaps: Flow<NativeReaderTap> = _nativeReaderTaps
+    override val handlesNativeTaps: Boolean = true
 
     private val _savedDecorationTaps = MutableSharedFlow<String>(extraBufferCapacity = 4)
     override val savedDecorationTaps: Flow<String> = _savedDecorationTaps
@@ -94,6 +105,19 @@ class IosBookController(
         setupCallbacks()
         bridge.setOnSelectionChangedCallback { present -> _selectionChanges.tryEmit(present) }
         bridge.setOnSavedDecorationTapCallback { id -> _savedDecorationTaps.tryEmit(id) }
+        bridge.setOnReaderTapCallback { tap ->
+            // Readium surfaces one physical tap through both its touches pipeline and its
+            // fallback tap recognizer; the second arrival is an echo of the first.
+            val now = nowMillis()
+            val isEcho = !lastTapX.isNaN() &&
+                now - lastTapAtMs < NATIVE_TAP_ECHO_MS &&
+                abs(tap.xFraction - lastTapX) < NATIVE_TAP_ECHO_SLOP &&
+                abs(tap.yFraction - lastTapY) < NATIVE_TAP_ECHO_SLOP
+            lastTapX = tap.xFraction
+            lastTapY = tap.yFraction
+            lastTapAtMs = now
+            if (!isEcho) _nativeReaderTaps.tryEmit(tap)
+        }
         // Only inject tap detection script for ReadAloud books
         if (bridge.hasMediaOverlays()) {
             enableSentenceTapDetection()
@@ -495,6 +519,7 @@ class IosBookController(
         sentenceDoubleTapRecognizer.reset()
         bridge.setOnSelectionChangedCallback(null)
         bridge.setOnSavedDecorationTapCallback(null)
+        bridge.setOnReaderTapCallback(null)
         // Note: No need to call getRemoveTapDetectorScript() here.
         // The WebView and its JavaScript context will be destroyed when the
         // navigator is closed, so the event listener will be cleaned up automatically.
@@ -509,6 +534,10 @@ class IosBookController(
 
         /** Delay before injecting tap detection script to ensure WebView is ready */
         private const val SCRIPT_INJECTION_DELAY_MS = 500L
+
+        /** Echo dedupe for reader taps: max age and positional slop of an echo. */
+        private const val NATIVE_TAP_ECHO_MS = 100L
+        private const val NATIVE_TAP_ECHO_SLOP = 0.02
     }
 }
 

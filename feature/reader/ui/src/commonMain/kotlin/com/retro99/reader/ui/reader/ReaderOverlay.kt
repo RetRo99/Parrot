@@ -255,6 +255,51 @@ internal fun ReaderOverlayContent(
     val saved = viewState.saved
     val pageBookmark = saved.pageBookmark
     val onSaved: (SavedAction) -> Unit = { action -> intentDispatcher(ReaderIntent.Saved(action)) }
+    val isEink = Ember.style.isEink
+    val searchActive = viewState.selectedSearchIndex != null
+
+    // The reader's tap-zone actions. They feed Compose's gesture modifier on Android; on iOS
+    // Compose only observes the first ~150 ms of interop touches, so taps arrive through the
+    // [BookController.nativeReaderTaps] native pipeline and the zone logic lives here too.
+    val onLeftTapAction: () -> Unit = {
+        when (settings.leftTapAction) {
+            NavigationAction.NEXT_PAGE -> intentDispatcher(ReaderIntent.GoToNextPage)
+            NavigationAction.PREVIOUS_PAGE -> intentDispatcher(ReaderIntent.GoToPreviousPage)
+        }
+    }
+    val onRightTapAction: () -> Unit = {
+        when (settings.rightTapAction) {
+            NavigationAction.NEXT_PAGE -> intentDispatcher(ReaderIntent.GoToNextPage)
+            NavigationAction.PREVIOUS_PAGE -> intentDispatcher(ReaderIntent.GoToPreviousPage)
+        }
+    }
+    val onMiddleTapAction: () -> Unit = {
+        if (searchActive) intentDispatcher(ReaderIntent.ToggleFindBar)
+        else {
+            controlsVisible = !controlsVisible
+            if (controlsVisible) lastInteractionTime = nowMillis()
+        }
+    }
+    /** Saved-highlight hits are resolved before zones, like the modifier's [onContentTap]. */
+    val savedTapCheck: suspend () -> Boolean = {
+        val id = SavedPageScript.parseSavedTap(bookController.runPageScript(SavedPageScript.takeSavedTap()))
+        if (id != null) onSaved(SavedAction.OpenDetail(id))
+        id != null
+    }
+    if (bookController.handlesNativeTaps) {
+        LaunchedEffect(
+            settings.tapNavigationEnabled, settings.leftTapAction, settings.rightTapAction, searchActive,
+        ) {
+            bookController.nativeReaderTaps.collect { tap ->
+                if (savedTapCheck()) return@collect
+                when {
+                    tap.xFraction < 1.0 / 3.0 -> if (settings.tapNavigationEnabled) onLeftTapAction()
+                    tap.xFraction > 2.0 / 3.0 -> if (settings.tapNavigationEnabled) onRightTapAction()
+                    else -> onMiddleTapAction()
+                }
+            }
+        }
+    }
     // One resolver feeds the header, the sheet and the progress strip, so they always agree.
     val currentLocation = remember(
         viewState.tableOfContents,
@@ -273,8 +318,6 @@ internal fun ReaderOverlayContent(
     val selectedVoice = viewState.ttsVoices.firstOrNull { it.id == viewState.selectedTtsVoiceId }
     val voiceDetail = selectedVoice?.let { "${it.locale} · ${it.name.substringBefore('(').trim()}" }
         ?: "System voice"
-    val isEink = Ember.style.isEink
-    val searchActive = viewState.selectedSearchIndex != null
     LaunchedEffect(controlsVisible, searchActive, viewState.isReadAloud, viewState.isTtsReadAloud, viewState.isListenSheetVisible) {
         if (controlsVisible && !searchActive) {
             intentDispatcher(ReaderIntent.FeatureVisible(com.retro99.analytics.api.UsageFeature.Bookmarks))
@@ -413,13 +456,8 @@ internal fun ReaderOverlayContent(
                         detectDoubleTaps = viewState.isReadAloud || (viewState.isTtsReadAloud && settings.ttsEnabled),
                         doubleTapTimeoutMs = settings.doubleTapTimeoutMs,
                         tapNavigationEnabled = settings.tapNavigationEnabled,
-                        onContentTap = {
-                            val id = SavedPageScript.parseSavedTap(
-                                bookController.runPageScript(SavedPageScript.takeSavedTap()),
-                            )
-                            if (id != null) onSaved(SavedAction.OpenDetail(id))
-                            id != null
-                        },
+                        tapZonesEnabled = !bookController.handlesNativeTaps,
+                        onContentTap = savedTapCheck,
                         onZoomChange = { scale ->
                             isZooming = true
                             temporaryFontScale = (settings.fontSize * scale).toFloat().coerceIn(0.5f, 3f)
@@ -444,25 +482,9 @@ internal fun ReaderOverlayContent(
                             }
                             isZooming = false
                         },
-                        onLeftTap = {
-                            when (settings.leftTapAction) {
-                                NavigationAction.NEXT_PAGE -> intentDispatcher(ReaderIntent.GoToNextPage)
-                                NavigationAction.PREVIOUS_PAGE -> intentDispatcher(ReaderIntent.GoToPreviousPage)
-                            }
-                        },
-                        onRightTap = {
-                            when (settings.rightTapAction) {
-                                NavigationAction.NEXT_PAGE -> intentDispatcher(ReaderIntent.GoToNextPage)
-                                NavigationAction.PREVIOUS_PAGE -> intentDispatcher(ReaderIntent.GoToPreviousPage)
-                            }
-                        },
-                         onMiddleTap = {
-                             if (searchActive) intentDispatcher(ReaderIntent.ToggleFindBar)
-                             else {
-                                 controlsVisible = !controlsVisible
-                                 if (controlsVisible) lastInteractionTime = nowMillis()
-                             }
-                        },
+                        onLeftTap = onLeftTapAction,
+                        onRightTap = onRightTapAction,
+                        onMiddleTap = onMiddleTapAction,
                     ),
             )
 

@@ -25,6 +25,8 @@ import kotlin.coroutines.coroutineContext
  * - Tap in right third of screen (e.g., next page)
  * - Tap in middle third of screen (e.g., toggle controls)
  * - Double-tap detection (when detectDoubleTaps is true)
+ * - Long presses are never treated as taps: the hold belongs to the native
+ *   content (text selection) on both platforms.
  *
  * @param containerSize The size of the container for calculating tap regions
  * @param detectDoubleTaps If true, waits doubleTapTimeoutMs before firing single taps
@@ -32,6 +34,9 @@ import kotlin.coroutines.coroutineContext
  * @param doubleTapTimeoutMs Timeout in milliseconds to wait for a second tap before treating as single tap.
  *                           Only used when detectDoubleTaps is true.
  * @param tapNavigationEnabled If false, left/right taps are disabled (middle tap still works)
+ * @param tapZonesEnabled If false, all tap zones (left/right/middle) are disabled because the
+ *                        platform reports content taps natively; on iOS Compose only observes
+ *                        the first ~150 ms of interop touches and would misfire on long presses
  * @param onZoomChange Callback during zoom gesture with relative scale (1.0 = no change)
  * @param onZoomEnd Callback when zoom gesture ends with final relative scale
  * @param onLeftTap Callback when user taps left third of screen (only called if tapNavigationEnabled)
@@ -47,6 +52,7 @@ internal fun Modifier.readerGestures(
     detectDoubleTaps: Boolean = false,
     doubleTapTimeoutMs: Int = DEFAULT_DOUBLE_TAP_TIMEOUT_MS,
     tapNavigationEnabled: Boolean = true,
+    tapZonesEnabled: Boolean = true,
     onZoomChange: (scale: Double) -> Unit,
     onZoomEnd: (finalScale: Double) -> Unit,
     onLeftTap: () -> Unit,
@@ -63,7 +69,7 @@ internal fun Modifier.readerGestures(
     val currentOnDoubleTap = rememberUpdatedState(onDoubleTap)
     val currentOnContentTap = rememberUpdatedState(onContentTap)
 
-    return this.pointerInput(containerSize, detectDoubleTaps, doubleTapTimeoutMs, tapNavigationEnabled) {
+    return this.pointerInput(containerSize, detectDoubleTaps, doubleTapTimeoutMs, tapNavigationEnabled, tapZonesEnabled) {
         val touchSlop = viewConfiguration.touchSlop
         var lastTapTimeMs = 0L
         var pendingTapJob: Job? = null
@@ -71,6 +77,7 @@ internal fun Modifier.readerGestures(
 
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false)
+            val downTimeMs = nowMillis()
             val downPosition = down.position
             var zoomAccumulator = 1f
             var gestureActive = false
@@ -111,8 +118,12 @@ internal fun Modifier.readerGestures(
                 currentOnZoomEnd.value(zoomAccumulator.toDouble())
             }
 
-            // Handle taps for page navigation and controls toggle
-            if (isSingleTap && containerSize.width > 0) {
+            // Handle taps for page navigation and controls toggle. A long press belongs to
+            // the native content (text selection), never to the zones: on iOS the Compose
+            // gesture outlives the native selection start and would flip the page or toggle
+            // the controls; on Android the same hold inside the middle zone toggled them.
+            val isLongPress = nowMillis() - downTimeMs >= viewConfiguration.longPressTimeoutMillis
+            if (isSingleTap && !isLongPress && tapZonesEnabled && containerSize.width > 0) {
                 val tapX = down.position.x
                 val leftThird = containerSize.width / 3f
                 val rightThird = containerSize.width * 2f / 3f

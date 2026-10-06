@@ -3,6 +3,7 @@ package com.retro99.reader.ui.bridge
 import com.retro99.reader.domain.model.CustomReaderFontDomainModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
+import com.retro99.reader.ui.navigator.NativeReaderTap
 import platform.UIKit.UIViewController
 
 data class EpubReaderCustomFont(
@@ -291,6 +292,13 @@ interface EpubReaderBridge {
     // true whenever the reader selects text or changes the selection.
     fun setOnSelectionChangedCallback(callback: ((Boolean) -> Unit)?)
     fun clearSelection()
+
+    /**
+     * Called with a content tap, with the point as a fraction of the navigator size.
+     * Long presses that start text selection are never reported: they arrive as a tap
+     * cancellation natively instead.
+     */
+    fun setOnReaderTapCallback(callback: ((NativeReaderTap) -> Unit)?)
 
     /**
      * Frame of the navigator's visible WebView relative to the navigator root, plus the root

@@ -118,6 +118,7 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
     private var onSentenceTapCallback: ((String) -> Void)?
     private var onSelectionChangedCallback: ((KotlinBoolean) -> Void)?
     private var onSavedDecorationTapCallback: ((String) -> Void)?
+    private var onReaderTapCallback: ((NativeReaderTap) -> Void)?
     private var savedDecorations: [SavedDecorationLocator] = []
 
     // Cached table of contents (populated when publication is opened)
@@ -617,6 +618,10 @@ class ReadiumEpubReaderBridge: EpubReaderBridge {
 
     func setOnSavedDecorationTapCallback(callback: ((String) -> Void)?) {
         onSavedDecorationTapCallback = callback
+    }
+
+    func setOnReaderTapCallback(callback: ((NativeReaderTap) -> Void)?) {
+        onReaderTapCallback = callback
     }
 
     func applySavedDecorations(decorations: [SavedDecorationLocator]) {
@@ -1155,6 +1160,21 @@ extension ReadiumEpubReaderBridge: EPUBNavigatorDelegate {
     func navigator(_ navigator: SelectableNavigator, shouldShowMenuForSelection selection: Selection) -> Bool {
         onSelectionChangedCallback?(KotlinBoolean(value: true))
         return false
+    }
+
+    /// Clean taps on the reader content, seen with the full native touch sequence (unlike
+    /// Compose, which only observes the first ~150 ms of interop touches). Long presses that
+    /// start text selection arrive as touch cancellations natively, so they never emit a tap.
+    func navigator(_ navigator: any VisualNavigator, didTapAt point: CGPoint) {
+        guard
+            let root = navigatorViewController?.view,
+            root.bounds.width > 0,
+            root.bounds.height > 0
+        else { return }
+        onReaderTapCallback?(NativeReaderTap(
+            xFraction: Double(point.x / root.bounds.width),
+            yFraction: Double(point.y / root.bounds.height)
+        ))
     }
 
     func navigator(_ navigator: any Navigator, presentError error: NavigatorError) {
