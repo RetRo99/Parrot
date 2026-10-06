@@ -186,6 +186,7 @@ fun <T : Any> bottomSheetEntryProvider(
         val config = bottomSheetDestination.bottomSheetConfig
         NavEntry(
             key = key,
+            contentKey = baseEntry.contentKey,
             metadata = baseEntry.metadata + bottomSheet(config),
             content = { baseEntry.Content() },
         )

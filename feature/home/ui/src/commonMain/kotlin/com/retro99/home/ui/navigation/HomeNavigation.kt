@@ -263,13 +263,7 @@ fun HomeNavigation(
 
     val requestBack: (String) -> Unit = { entryPoint ->
         val source = navigationState.currentDestination
-        val currentStack = navigationState.currentBackStack
-        val destination = when {
-            currentStack.size > 1 -> currentStack[currentStack.lastIndex - 1]
-            navigationState.currentTab != navigationState.startTab ->
-                navigationState.backStacks[navigationState.startTab]?.lastOrNull()
-            else -> null
-        }
+        val destination = navigationState.backDestination
         intentDispatcher(
             if (source != null && destination != null) {
                 HomeNavigationIntent.GoBack(
@@ -330,8 +324,8 @@ fun HomeNavigation(
                 }
             },
         ) { paddingValues ->
-            BottomSheetNavDisplay(
-                backStack = navigationState.currentBackStack,
+            HomeTabNavDisplay(
+                navigationState = navigationState,
                 onBack = { requestBack("system_back") },
                 modifier = Modifier.padding(paddingValues),
                 entryProvider = entryProvider {

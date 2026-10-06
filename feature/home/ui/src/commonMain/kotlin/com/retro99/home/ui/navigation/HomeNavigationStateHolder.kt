@@ -2,10 +2,12 @@ package com.retro99.home.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.navigation3.runtime.NavKey
@@ -25,9 +27,11 @@ import kotlinx.serialization.json.Json
 @Composable
 fun rememberHomeNavigationState(
     startTab: HomeTab = HomeTab.DEFAULT,
+    rootBackPolicy: HomeRootBackPolicy = platformHomeRootBackPolicy(),
 ): HomeNavigationStateHolder {
     // Remember the current tab, persisted across process death
     val currentTab = rememberSaveable { mutableStateOf(startTab) }
+    val entryStateGeneration = rememberSaveable { mutableStateOf(0) }
 
     // Create a back stack for each tab using rememberSaveable
     // Each back stack automatically persists its state using kotlinx.serialization
@@ -45,11 +49,13 @@ fun rememberHomeNavigationState(
         )
     }
 
-    return remember(startTab) {
+    return remember(startTab, rootBackPolicy) {
         HomeNavigationStateHolder(
             startTab = startTab,
             currentTabState = currentTab,
             backStacks = backStacks,
+            rootBackPolicy = rootBackPolicy,
+            entryStateGenerationState = entryStateGeneration,
         )
     }
 }
@@ -83,7 +89,13 @@ class HomeNavigationStateHolder(
     val startTab: HomeTab,
     private val currentTabState: MutableState<HomeTab>,
     val backStacks: Map<HomeTab, SnapshotStateList<HomeDestination>>,
+    val rootBackPolicy: HomeRootBackPolicy = platformHomeRootBackPolicy(),
+    private val entryStateGenerationState: MutableState<Int> = mutableStateOf(0),
 ) : NavKey {
+    /** Gives even unchanged tab roots fresh entry state after changing profiles. */
+    var entryStateGeneration by entryStateGenerationState
+        private set
+
     /**
      * The currently selected tab.
      */
@@ -105,6 +117,15 @@ class HomeNavigationStateHolder(
     val currentDestination: HomeDestination?
         get() = currentBackStack.lastOrNull()
 
+    /** Shared by back handling and telemetry so they cannot disagree about the target. */
+    val backDestination: HomeDestination?
+        get() = when {
+            currentBackStack.size > 1 -> currentBackStack[currentBackStack.lastIndex - 1]
+            rootBackPolicy == HomeRootBackPolicy.ReturnToStartTab && currentTab != startTab ->
+                backStacks[startTab]?.lastOrNull()
+            else -> null
+        }
+
     /**
      * Navigate to a destination within the current tab.
      */
@@ -122,7 +143,7 @@ class HomeNavigationStateHolder(
     /**
      * Handle back navigation.
      *
-     * @return true if back was handled, false if at root of default tab.
+     * @return true if back was handled, false if the current root has no back destination.
      */
     fun goBack(): Boolean {
         val stack = currentBackStack
@@ -130,12 +151,14 @@ class HomeNavigationStateHolder(
             // Pop the current tab's back stack
             stack.removeLastOrNull()
             true
-        } else if (currentTab != startTab) {
+        } else if (
+            rootBackPolicy == HomeRootBackPolicy.ReturnToStartTab && currentTab != startTab
+        ) {
             // If at the root of a non-default tab, switch to the default tab
             currentTab = startTab
             true
         } else {
-            // At the root of the default tab
+            // This platform policy has no back action at the selected root.
             false
         }
     }
@@ -162,6 +185,7 @@ class HomeNavigationStateHolder(
      * Used when switching user profiles to ensure a clean navigation state.
      */
     fun resetAllStacks() {
+        entryStateGeneration += 1
         HomeTab.entries.forEach { tab ->
             val stack = backStacks[tab] ?: return@forEach
             stack.clear()
@@ -184,4 +208,3 @@ private val HomeDestinationListSaver = Saver<SnapshotStateList<HomeDestination>,
         Json.decodeFromString<List<HomeDestination>>(jsonString).toMutableStateList()
     }
 )
-
