@@ -49,6 +49,7 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
     data class Positions(
         val serverId: String,
         val bookUuid: String,
+        val bookTitle: String = "",
     ) : HomeDestination
 
     /** "Same book?": review books that may be the same across servers. */

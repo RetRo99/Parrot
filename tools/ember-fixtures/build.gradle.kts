@@ -34,6 +34,8 @@ dependencies {
     implementation(projects.feature.books.domain)
     implementation(projects.feature.books.ui)
     implementation(projects.feature.reader.ui)
+    implementation(projects.feature.reader.domain)
+    implementation(projects.feature.sync.domain)
     implementation(projects.feature.saved.ui)
     implementation(projects.lib.dictionary)
     implementation(libs.sqldelight.android.driver)

@@ -460,12 +460,13 @@ fun HomeNavigation(
                                 )
                             },
                             onBack = { requestBack("toolbar_back") },
-                            onNavigateToPositions = { serverId, bookUuid ->
+                            onNavigateToPositions = { serverId, bookUuid, bookTitle ->
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(
                                         HomeDestination.Positions(
                                             serverId = serverId,
                                             bookUuid = bookUuid,
+                                            bookTitle = bookTitle,
                                         ),
                                     ),
                                 )
@@ -525,6 +526,7 @@ fun HomeNavigation(
                         PositionsScreen(
                             serverId = destination.serverId,
                             bookUuid = destination.bookUuid,
+                            bookTitle = destination.bookTitle,
                             onBack = { requestBack("toolbar_back") },
                             onOpenVersion = { serverId, uuid ->
                                 intentDispatcher(HomeNavigationIntent.NavigateTo(

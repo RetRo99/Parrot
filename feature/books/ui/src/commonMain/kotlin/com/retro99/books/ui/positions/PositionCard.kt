@@ -14,6 +14,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,7 +48,7 @@ internal fun PositionCard(row: CopyPositionRow, state: PositionsViewState, onCli
         .semantics(mergeDescendants = true) { contentDescription = description }
         .padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Box(Modifier.padding(top = 2.dp)) { PositionRadio(selected) }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f).clearAndSetSemantics {}, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 BasicText(label, Modifier.weight(1f), style = Ember.type.meta.copy(fontSize = 13.sp,
                     fontWeight = FontWeight.Bold, color = Ember.colors.ink2), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -57,7 +62,7 @@ internal fun PositionCard(row: CopyPositionRow, state: PositionsViewState, onCli
                 Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(Modifier.width(3.dp).height(30.dp).background(Ember.colors.chipBorder))
                     BasicText(positionSentence(anchor.before, anchor.after), style = Ember.type.bookTitle.copy(
-                        fontSize = 14.sp, lineHeight = 19.sp, color = Ember.colors.ink2), maxLines = 2,
+                        fontSize = 14.sp, lineHeight = 19.sp, fontWeight = FontWeight.Normal, color = Ember.colors.ink2), maxLines = 2,
                         overflow = TextOverflow.Ellipsis)
                 }
             }
@@ -66,9 +71,25 @@ internal fun PositionCard(row: CopyPositionRow, state: PositionsViewState, onCli
     }
 }
 
+@Composable
+internal fun PositionPairNote(onOpen: () -> Unit) {
+    val note = stringResource(StringRes.positions_pair_note)
+    val link = stringResource(StringRes.positions_open_version)
+    val color = Ember.colors.accentText
+    val text = buildAnnotatedString {
+        append(note); append(" ")
+        withLink(LinkAnnotation.Clickable("open-version", TextLinkStyles(SpanStyle(color = color,
+            fontWeight = FontWeight.Bold))) { onOpen() }) { append(link) }
+    }
+    BasicText(text, Modifier.padding(horizontal = 4.dp), style = Ember.type.meta.copy(
+        fontSize = 13.sp, lineHeight = 18.sp, color = Ember.colors.ink2))
+}
+
 /** Preserve the sentence crossing the anchor; omit surrounding sentences and cursor markers. */
 internal fun positionSentence(before: String, after: String): String {
     val left = before.split(Regex("(?<=[.!?])\\s+")).lastOrNull().orEmpty()
     val right = after.split(Regex("(?<=[.!?])\\s+")).firstOrNull().orEmpty()
-    return (left + right).trim()
+    val separator = if (left.isNotEmpty() && right.isNotEmpty() &&
+        !left.last().isWhitespace() && !right.first().isWhitespace()) " " else ""
+    return (left + separator + right).trim()
 }

@@ -78,7 +78,7 @@ fun BookDetailScreen(
     onBack: () -> Unit,
     onNavigateToLinkPicker: (serverId: String, bookUuid: String) -> Unit,
     onNavigateToBookDetail: (serverId: String, bookUuid: String) -> Unit,
-    onNavigateToPositions: (serverId: String, bookUuid: String) -> Unit,
+    onNavigateToPositions: (serverId: String, bookUuid: String, bookTitle: String) -> Unit,
     onNavigateToServers: () -> Unit,
     onNavigateToSavedItems: (String) -> Unit,
     bottomNavigationHeight: Dp = 0.dp,

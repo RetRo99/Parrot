@@ -31,8 +31,18 @@ class FixtureActivity : ComponentActivity() {
             else -> EmberMode.Day
         }
         val empty = intent.getBooleanExtra("empty", false)
+        val positions = intent.getStringExtra("positions")
+        if (positions != null) {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        }
         setContent {
             ParrotTheme(mode) {
+                if (positions != null) {
+                    PositionsFixture(positions)
+                    return@ParrotTheme
+                }
                 var selected by rememberSaveable { mutableStateOf(intent.getStringExtra("series")) }
                 val longList by rememberSaveable { mutableStateOf(intent.getBooleanExtra("longlist", false)) }
                 var offline by rememberSaveable { mutableStateOf(intent.getBooleanExtra("offline", false)) }

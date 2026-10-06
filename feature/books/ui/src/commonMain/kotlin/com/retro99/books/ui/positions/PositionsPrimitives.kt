@@ -12,12 +12,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import com.retro99.base.ui.compose.Ember
 
@@ -33,18 +37,21 @@ internal fun boldParts(text: String, vararg parts: String): AnnotatedString = bu
 internal fun PositionsText(
     text: String, modifier: Modifier = Modifier, fontSize: TextUnit = 13.sp,
     bold: Boolean = false, title: Boolean = false, error: Boolean = false, maxLines: Int = Int.MAX_VALUE,
-) = PositionsText(AnnotatedString(text), modifier, fontSize, bold, title, error, maxLines)
+    textAlign: TextAlign = TextAlign.Start,
+) = PositionsText(AnnotatedString(text), modifier, fontSize, bold, title, error, maxLines, textAlign)
 
 @Composable
 internal fun PositionsText(
     text: AnnotatedString, modifier: Modifier = Modifier, fontSize: TextUnit = 13.sp,
     bold: Boolean = false, title: Boolean = false, error: Boolean = false, maxLines: Int = Int.MAX_VALUE,
+    textAlign: TextAlign = TextAlign.Start,
 ) {
     BasicText(text, modifier, style = (if (title) Ember.type.screenTitle else Ember.type.meta).copy(
         fontSize = if (title) 22.sp else fontSize,
         lineHeight = if (title) 28.sp else fontSize * 1.35f,
         fontWeight = if (bold || title || (error && Ember.style.isEink)) FontWeight.Bold else FontWeight.Normal,
         color = if (error) Ember.colors.error else if (bold || title) Ember.colors.ink else Ember.colors.ink2,
+        textAlign = textAlign,
     ), maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 }
 
@@ -69,6 +76,15 @@ internal fun PositionsLink(text: String, onClick: () -> Unit) {
 }
 
 @Composable
+internal fun PositionsCloseButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(Modifier.size(44.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+        .semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
+        BasicText("×", Modifier.clearAndSetSemantics {}, style = Ember.type.meta.copy(
+            fontSize = 24.sp, color = Ember.colors.ink2))
+    }
+}
+
+@Composable
 internal fun PositionsBusy() {
     if (Ember.style.isEink) return
     val transition = rememberInfiniteTransition(label = "positions busy")
@@ -83,8 +99,8 @@ internal fun PositionsBusy() {
 internal fun PositionsEmptyState(title: String, explanation: String, action: String, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 64.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        PositionsText(title, title = true)
-        if (explanation.isNotEmpty()) PositionsText(explanation, fontSize = 15.sp)
+        PositionsText(title, title = true, textAlign = TextAlign.Center)
+        if (explanation.isNotEmpty()) PositionsText(explanation, fontSize = 15.sp, textAlign = TextAlign.Center)
         PositionsButton(action, onClick)
     }
 }
@@ -100,10 +116,16 @@ internal fun PositionRadio(selected: Boolean) {
 @Composable
 internal fun PositionCheckbox(checked: Boolean, enabled: Boolean) {
     val shape = RoundedCornerShape(6.dp)
-    Box(Modifier.size(26.dp).background(if (checked) Ember.colors.accent else Ember.colors.surface, shape)
+    val checkColor = Ember.colors.onAccent
+    Box(Modifier.size(26.dp).background(if (checked) Ember.colors.accent else Color.Transparent, shape)
         .border(2.dp, if (checked) Ember.colors.accent else if (enabled) Ember.colors.ink2 else Ember.colors.chipBorder, shape),
         contentAlignment = Alignment.Center) {
-        if (checked) BasicText("✓", style = Ember.type.meta.copy(fontSize = 20.sp,
-            fontWeight = FontWeight.Bold, color = Ember.colors.onAccent))
+        if (checked) Canvas(Modifier.size(16.dp)) {
+            val stroke = 2.5.dp.toPx()
+            drawLine(checkColor, Offset(size.width * .15f, size.height * .5f),
+                Offset(size.width * .4f, size.height * .75f), strokeWidth = stroke, cap = StrokeCap.Round)
+            drawLine(checkColor, Offset(size.width * .4f, size.height * .75f),
+                Offset(size.width * .85f, size.height * .25f), strokeWidth = stroke, cap = StrokeCap.Round)
+        }
     }
 }

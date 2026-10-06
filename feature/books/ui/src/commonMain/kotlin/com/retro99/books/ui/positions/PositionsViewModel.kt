@@ -23,9 +23,10 @@ class PositionsViewModel(
     @InjectedParam private val bookUuid: String,
     @InjectedParam private val onBack: () -> Unit,
     @InjectedParam private val onOpenVersion: (String, String) -> Unit,
+    @InjectedParam private val initialBookTitle: String,
     @Provided private val data: PositionsDataSource,
     @Provided private val analytics: Analytics,
-) : BaseViewModel<PositionsViewState, PositionsIntent>(PositionsViewState()) {
+) : BaseViewModel<PositionsViewState, PositionsIntent>(PositionsViewState(bookTitle = initialBookTitle)) {
     private var loadJob: Job? = null
     private var previewJob: Job? = null
 
@@ -84,14 +85,14 @@ class PositionsViewModel(
             updateState { it.copy(isRefreshing = refresh, isLoading = it.rows.isEmpty(), loadError = false) }
             try {
                 val metadata = data.metadata(serverId, bookUuid)
-                updateState { it.copy(bookTitle = metadata.bookTitle, deviceName = metadata.deviceName,
+                updateState { it.copy(bookTitle = metadata.bookTitle.ifBlank { it.bookTitle }, deviceName = metadata.deviceName,
                     serverNames = metadata.serverNames) }
                 val rows = data.load(serverId, bookUuid)
                 updateState { state -> state.copy(
                     isLoading = false, isRefreshing = false, isUnlinked = rows == null,
                     rows = rows.orEmpty(),
-                    bookTitle = metadata.bookTitle.ifBlank { rows?.firstOrNull()?.copy?.title.orEmpty() },
-                    selectedKey = state.selectedKey?.takeIf { key -> rows.orEmpty().any { it.candidateId == key && it.position != null } },
+                    bookTitle = metadata.bookTitle.ifBlank { rows?.firstOrNull()?.copy?.title ?: state.bookTitle },
+                    selectedKey = refreshedSelection(state, rows.orEmpty()),
                     previews = state.previews.takeIf { rows != null },
                     sheetSource = state.sheetSource.takeIf { rows != null },
                 ) }
@@ -100,6 +101,17 @@ class PositionsViewModel(
                 updateState { it.copy(isLoading = false, isRefreshing = false, loadError = true, isUnlinked = false) }
             }
         }
+    }
+
+    private fun refreshedSelection(state: PositionsViewState, rows: List<CopyPositionRow>): String? {
+        val key = state.selectedKey ?: return null
+        rows.firstOrNull { it.candidateId == key && it.position != null }?.let { return it.candidateId }
+        val previous = state.rows.firstOrNull { it.candidateId == key } ?: return null
+        // A disagreement resolving changes candidateId from key|local/server back to key.
+        return rows.firstOrNull {
+            it.copy.key == previous.copy.key && it.position != null &&
+                (!it.isConflict || it.isLocalCandidate == previous.isLocalCandidate)
+        }?.candidateId
     }
 
     private fun preview() {

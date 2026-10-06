@@ -1,6 +1,7 @@
 package com.retro99.books.ui.positions
 
 import com.github.michaelbull.result.fold
+import com.retro99.books.domain.BookLinksRepository
 import com.retro99.reader.domain.positions.ApplyPreview
 import com.retro99.reader.domain.positions.CopyPositionRow
 import com.retro99.reader.domain.usecase.ApplyPositionUseCase
@@ -43,6 +44,7 @@ class DefaultPositionsDataSource(
     @Provided private val identity: InstallationDeviceIdentity,
     @Provided private val repositories: AuthenticatedRepositoryProvider,
     @Provided private val positions: ServerPositionLocalSource,
+    @Provided private val links: BookLinksRepository,
 ) : PositionsDataSource {
     override suspend fun metadata(serverId: String, bookUuid: String): PositionsMetadata {
         val title = repositories.getBooksRepository(serverId)?.getBook(bookUuid)?.first()
@@ -50,7 +52,15 @@ class DefaultPositionsDataSource(
         return PositionsMetadata(title, identity.positionDeviceName(),
             registry.getAllServers().associate { it.id to it.name })
     }
-    override suspend fun load(serverId: String, bookUuid: String) = observe(serverId, bookUuid)
+    override suspend fun load(serverId: String, bookUuid: String): List<CopyPositionRow>? {
+        val rows = observe(serverId, bookUuid)
+        // The existing domain API also returns null when linked copies can't be loaded.
+        // Only call it "no longer linked" when the persisted link really is gone.
+        if (rows == null && links.observeLinks().first().any { link ->
+                link.members.size > 1 && link.members.any { it.id == bookUuid }
+            }) error("Linked versions could not be loaded")
+        return rows
+    }
     override suspend fun preview(source: CopyPositionRow, rows: List<CopyPositionRow>) = preview.invoke(source, rows)
     override suspend fun apply(source: CopyPositionRow, previews: List<ApplyPreview>) = apply.invoke(source, previews)
     override fun changes(): Flow<Unit> = positions.observeAllPositions()

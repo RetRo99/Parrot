@@ -80,7 +80,7 @@ class BookDetailViewModel(
     @InjectedParam private val onBack: () -> Unit,
     @InjectedParam private val onNavigateToLinkPicker: (serverId: String, bookUuid: String) -> Unit,
     @InjectedParam private val onNavigateToBookDetail: (serverId: String, bookUuid: String) -> Unit,
-    @InjectedParam private val onNavigateToPositions: (serverId: String, bookUuid: String) -> Unit,
+    @InjectedParam private val onNavigateToPositions: (serverId: String, bookUuid: String, bookTitle: String) -> Unit,
     @Provided private val observeBookWithProgressUseCase: ObserveBookWithProgressUseCase,
     @Provided private val downloadMediaUseCase: DownloadMediaUseCase,
     @Provided private val cancelDownloadUseCase: CancelDownloadUseCase,
@@ -289,10 +289,10 @@ class BookDetailViewModel(
                 updateState { state ->
                     state.beginPositionComparison()
                 }
-                onNavigateToPositions(serverId, bookUuid)
+                onNavigateToPositions(serverId, bookUuid, viewState.value.book?.title.orEmpty())
             }
 
-            BookDetailIntent.OnReadingPositionsClicked -> onNavigateToPositions(serverId, bookUuid)
+            BookDetailIntent.OnReadingPositionsClicked -> onNavigateToPositions(serverId, bookUuid, viewState.value.book?.title.orEmpty())
 
             BookDetailIntent.OnSameBookAsClicked -> onNavigateToLinkPicker(serverId, bookUuid)
 

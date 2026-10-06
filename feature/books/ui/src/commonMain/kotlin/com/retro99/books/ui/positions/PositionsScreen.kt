@@ -36,8 +36,9 @@ fun PositionsScreen(
     bookUuid: String,
     onBack: () -> Unit,
     onOpenVersion: (String, String) -> Unit,
+    bookTitle: String = "",
     modifier: Modifier = Modifier,
-    viewModel: PositionsViewModel = koinViewModel { parametersOf(serverId, bookUuid, onBack, onOpenVersion) },
+    viewModel: PositionsViewModel = koinViewModel { parametersOf(serverId, bookUuid, onBack, onOpenVersion, bookTitle) },
 ) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, viewModel) {
@@ -119,11 +120,8 @@ fun PositionsScreenContent(
                         }
                         if (row.isConflict && viewState.rows.getOrNull(index + 1)?.copy?.key != row.copy.key) {
                             item(key = "pair:${row.copy.key.value}") {
-                                Column(Modifier.padding(horizontal = 4.dp)) {
-                                    PositionsText(stringResource(StringRes.positions_pair_note))
-                                    PositionsLink(stringResource(StringRes.positions_open_version)) {
+                                PositionPairNote {
                                         dispatch(PositionsIntent.OnOpenVersion(row.copy.serverId, row.copy.uuid))
-                                    }
                                 }
                             }
                         }

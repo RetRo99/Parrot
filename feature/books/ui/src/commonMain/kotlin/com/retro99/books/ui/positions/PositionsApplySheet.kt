@@ -32,9 +32,7 @@ internal fun PositionsApplySheet(state: PositionsViewState, previews: List<Apply
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             PositionsText(stringResource(StringRes.positions_move_title), Modifier.weight(1f), title = true)
             val close = stringResource(StringRes.positions_close)
-            Box(Modifier.semantics { contentDescription = close }) {
-                PositionsLink("×") { if (!state.isApplying) dispatch(PositionsIntent.OnSheetDismissed) }
-            }
+            PositionsCloseButton(close, enabled = !state.isApplying) { dispatch(PositionsIntent.OnSheetDismissed) }
         }
         source?.position?.let { position ->
             val label = copyLabel(source.copy, state, source)
@@ -56,7 +54,7 @@ internal fun PositionsApplySheet(state: PositionsViewState, previews: List<Apply
                 .padding(12.dp), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 PositionCheckbox(checked, enabled)
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f).clearAndSetSemantics {}) {
                     PositionsText(label, fontSize = 15.sp, bold = true)
                     PositionsText(result, error = preview.warning != null ||
                         preview.translated?.confidence == TranslationConfidence.Approximate)

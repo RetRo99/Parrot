@@ -1,6 +1,7 @@
 package com.retro99.books.ui.positions
 
 import androidx.compose.runtime.Composable
+import com.retro99.base.nowMillis
 import com.retro99.base.ui.compose.relativeTimeText
 import com.retro99.books.domain.model.BookHome
 import com.retro99.books.domain.model.links.LinkedCopy
@@ -27,7 +28,8 @@ internal fun copyLabel(copy: LinkedCopy, state: PositionsViewState, row: CopyPos
         else copy.home.label()
     val sameKindServers = state.rows.filter { it.copy.key.source == copy.key.source }.map { it.copy.serverId }.distinct()
     val serverName = state.serverNames[copy.serverId]?.takeIf { sameKindServers.size > 1 }
-    val named = if (serverName == null) home else "$home ($serverName)"
+    // Registry names are already user-facing (e.g. "Storyteller (home)"); don't wrap them again.
+    val named = serverName ?: home
     val suffix = if (row?.isConflict == true) " · " + stringResource(
         if (row.isLocalCandidate) StringRes.positions_phone_suffix else StringRes.positions_server_suffix, phone,
     ) else ""
@@ -41,7 +43,7 @@ internal fun positionText(position: PositionDomainModel, copy: LinkedCopy): Stri
         ?: position.audioTimestampMs?.takeIf { (position.totalChapters ?: 1) <= 1 } else null
     val chapter = position.locatorTitle?.takeIf { it.isNotBlank() }
         ?: position.chapterIndex?.let { stringResource(StringRes.position_conflict_chapter_only, it + 1) }
-    if (chapter == null && audio == null) return stringResource(StringRes.positions_about, percent)
+    if (chapter == null && audio == null) return stringResource(StringRes.positions_place_about, percent)
     return listOfNotNull(chapter, audio?.let(::clockTime), "$percent%").joinToString(" · ")
 }
 
@@ -52,7 +54,10 @@ internal fun clockTime(ms: Long): String {
 
 @Composable
 internal fun sourceText(row: CopyPositionRow, state: PositionsViewState): String {
-    val time = ObservedTime.toEpochMillis(row.observedAt)?.let { relativeTimeText(it) }.orEmpty()
+    val time = ObservedTime.toEpochMillis(row.observedAt)?.let {
+        if ((nowMillis() - it) / 86_400_000L == 1L) stringResource(StringRes.positions_yesterday)
+        else relativeTimeText(it)
+    }.orEmpty()
     return when (val source = row.sourceLabel) {
         is PositionSource.SetFrom -> source.copy?.let {
             stringResource(StringRes.positions_set_from, copyLabel(it, state), time)
@@ -79,7 +84,13 @@ internal fun previewResultText(preview: ApplyPreview): String = when (val reason
         null -> preview.translated?.let { translated ->
             if (translated.confidence == TranslationConfidence.Approximate)
                 stringResource(StringRes.positions_goes_approximate, displayPercentOf(translated.position))
-            else stringResource(StringRes.positions_goes_reliable, positionText(translated.position, preview.target))
+            else {
+                val audio = translated.position.bookTimeMs?.takeIf {
+                    preview.target.hasAudiobook && !preview.target.hasEbook && !preview.target.hasReadaloud
+                }
+                stringResource(StringRes.positions_goes_reliable,
+                    audio?.let(::clockTime) ?: positionText(translated.position, preview.target))
+            }
         } ?: stringResource(StringRes.positions_no_match)
     }
 }

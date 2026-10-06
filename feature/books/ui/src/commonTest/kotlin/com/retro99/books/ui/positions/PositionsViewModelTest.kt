@@ -63,7 +63,7 @@ class PositionsViewModelTest {
     private fun test(body: suspend TestScope.(Fake, PositionsViewModel) -> Unit) = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         val fake = Fake()
-        val vm = PositionsViewModel("server", "source", {}, { _, _ -> }, fake, analytics)
+        val vm = PositionsViewModel("server", "source", {}, { _, _ -> }, "The Lantern Ferry", fake, analytics)
         val store = ViewModelStore().also { it.put("positions", vm) }
         try { runCurrent(); body(fake, vm) } finally { store.clear(); Dispatchers.resetMain() }
     }
@@ -159,5 +159,22 @@ class PositionsViewModelTest {
         assertNotNull(vm.viewState.value.previews)
         advanceTimeBy(100); runCurrent()
         assertFalse(vm.viewState.value.isApplying)
+    }
+    @Test fun `selection migrates when a conflict resolves to a single row`() = test { fake, vm ->
+        val conflict = source.copy(candidateId = source.copy.key.value + "|local", isConflict = true)
+        fake.rows = listOf(conflict)
+        vm.onIntent(PositionsIntent.OnRefresh); runCurrent()
+        vm.onIntent(PositionsIntent.OnRowClicked(conflict.candidateId))
+        fake.rows = listOf(source.copy(candidateId = source.copy.key.value))
+        vm.onIntent(PositionsIntent.OnRefresh); runCurrent()
+        assertEquals(source.copy.key.value, vm.viewState.value.selectedKey)
+    }
+    @Test fun `live card changes cannot change the confirmed preview source`() = test { fake, vm ->
+        vm.onIntent(PositionsIntent.OnRowClicked("source"))
+        vm.onIntent(PositionsIntent.OnUseThisPositionClicked); runCurrent()
+        fake.rows = listOf(source.copy(position = source.position!!.copy(totalProgression = .8)))
+        vm.onIntent(PositionsIntent.OnRefresh); runCurrent()
+        assertEquals(.8, vm.viewState.value.rows.single().position!!.totalProgression)
+        assertEquals(.62, vm.viewState.value.sheetSource!!.position!!.totalProgression)
     }
 }

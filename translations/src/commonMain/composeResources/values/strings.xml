@@ -24,7 +24,9 @@
     <string name="positions_move_title">Move the others here?</string>
     <string name="positions_move_intro">From %1$s at %2$s. Tick the versions to update.</string>
     <string name="positions_goes_reliable">Goes to %1$s — the same place</string>
-    <string name="positions_goes_approximate">Goes to about %1$d%% — may be a little off</string>
+    <string name="positions_goes_approximate">Goes to about %1$d% — may be a little off</string>
+    <string name="positions_place_about">About %1$d%</string>
+    <string name="positions_yesterday">yesterday</string>
     <string name="positions_jump_start">Would jump to the start of the book</string>
     <string name="positions_jump_end">Would jump to the end of the book</string>
     <string name="positions_cannot_update">Can't be updated from here yet</string>
