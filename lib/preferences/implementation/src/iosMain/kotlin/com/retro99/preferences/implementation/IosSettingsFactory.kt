@@ -8,6 +8,8 @@ import com.russhwolf.settings.Settings
 class IosSettingsFactory : Settings.Factory {
 
     override fun create(name: String?): Settings {
-        return KeychainSettings(service = name ?: "SecureSettings")
+        // KeychainSettings is not observable; MultiplatformPreferences requires
+        // ObservableSettings for its flows, so wrap it with in-process notifications.
+        return ObservableKeychainSettings(KeychainSettings(service = name ?: "SecureSettings"))
     }
 }

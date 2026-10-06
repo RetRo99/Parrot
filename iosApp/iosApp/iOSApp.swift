@@ -69,7 +69,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         }
         SyncTriggerBridge.shared.onRecovery { success in
             completion.complete(success: success.boolValue)
-            return KotlinUnit()
         }
     }
 
