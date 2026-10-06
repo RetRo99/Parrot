@@ -59,13 +59,13 @@ class PositionsViewModel(
             }
             PositionsIntent.OnApplyClicked -> {
                 val state = viewState.value
-                val source = state.rows.firstOrNull { it.candidateId == state.selectedKey } ?: return
+                val source = state.sheetSource ?: return
                 apply(source, state.previews.orEmpty().filter { it.enabled && it.target.key.value in state.checkedKeys })
             }
             PositionsIntent.OnSheetDismissed -> {
                 if (viewState.value.isApplying) return
                 previewJob?.cancel()
-                updateState { it.copy(previews = null, checkedKeys = emptySet(), results = null, isPreviewing = false) }
+                updateState { it.copy(previews = null, sheetSource = null, checkedKeys = emptySet(), results = null, isPreviewing = false) }
             }
             PositionsIntent.OnRefresh, PositionsIntent.OnResume -> if (!viewState.value.isApplying) loadRows(refresh = true)
             PositionsIntent.OnNoticeDismissed -> updateState { it.copy(notice = null) }
@@ -93,6 +93,7 @@ class PositionsViewModel(
                     bookTitle = metadata.bookTitle.ifBlank { rows?.firstOrNull()?.copy?.title.orEmpty() },
                     selectedKey = state.selectedKey?.takeIf { key -> rows.orEmpty().any { it.candidateId == key && it.position != null } },
                     previews = state.previews.takeIf { rows != null },
+                    sheetSource = state.sheetSource.takeIf { rows != null },
                 ) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
@@ -110,7 +111,7 @@ class PositionsViewModel(
             updateState { it.copy(isPreviewing = true) }
             try {
                 val previews = data.preview(source, state.rows)
-                updateState { it.copy(previews = previews,
+                updateState { it.copy(previews = previews, sheetSource = source,
                     checkedKeys = previews.filter { it.enabled && it.defaultChecked }.mapTo(mutableSetOf()) { it.target.key.value },
                     results = null, isPreviewing = false) }
             } catch (cancelled: CancellationException) { throw cancelled }
@@ -137,12 +138,12 @@ class PositionsViewModel(
                         }
                     },
                 ) { data.apply(source, targets) }
-                updateState { it.copy(isApplying = false, previews = null, checkedKeys = emptySet(),
+                updateState { it.copy(isApplying = false, previews = null, sheetSource = null, checkedKeys = emptySet(),
                     results = results, notice = positionApplyNotice(results), retrySource = source, retryTargets = targets) }
                 loadRows(refresh = true)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
-                updateState { it.copy(isApplying = false, previews = null, checkedKeys = emptySet(),
+                updateState { it.copy(isApplying = false, previews = null, sheetSource = null, checkedKeys = emptySet(),
                     notice = PositionsNotice(0, emptyList()), retrySource = source, retryTargets = targets) }
                 loadRows(refresh = true)
             }

@@ -41,6 +41,7 @@ class PositionsViewModelTest {
         var results = listOf(ApplyResult(target, CopyWriteResult.Written))
         var fail = false
         var delayLoad = false
+        var delayApply = false
         var loads = 0
         var cancellations = 0
         val changes = MutableStateFlow(0)
@@ -53,7 +54,10 @@ class PositionsViewModelTest {
             return rows
         }
         override suspend fun preview(source: CopyPositionRow, rows: List<CopyPositionRow>) = previews
-        override suspend fun apply(source: CopyPositionRow, previews: List<ApplyPreview>) = results
+        override suspend fun apply(source: CopyPositionRow, previews: List<ApplyPreview>): List<ApplyResult> {
+            if (delayApply) delay(100)
+            return results
+        }
         override fun changes() = changes.map { Unit }
     }
     private fun test(body: suspend TestScope.(Fake, PositionsViewModel) -> Unit) = runTest {
@@ -140,5 +144,20 @@ class PositionsViewModelTest {
             assertTrue(vm.viewState.value.checkedKeys.isEmpty())
             vm.onIntent(PositionsIntent.OnSheetDismissed)
         }
+    }
+    @Test fun `applying locks tiles selection dismissal and repeated submission`() = test { fake, vm ->
+        vm.onIntent(PositionsIntent.OnRowClicked("source"))
+        vm.onIntent(PositionsIntent.OnUseThisPositionClicked); runCurrent()
+        fake.delayApply = true
+        vm.onIntent(PositionsIntent.OnApplyClicked); runCurrent()
+        assertTrue(vm.viewState.value.isApplying)
+        vm.onIntent(PositionsIntent.OnTargetToggled(target.key.value))
+        vm.onIntent(PositionsIntent.OnRowClicked("target"))
+        vm.onIntent(PositionsIntent.OnSheetDismissed)
+        assertEquals("source", vm.viewState.value.selectedKey)
+        assertEquals(1, vm.viewState.value.checkedKeys.size)
+        assertNotNull(vm.viewState.value.previews)
+        advanceTimeBy(100); runCurrent()
+        assertFalse(vm.viewState.value.isApplying)
     }
 }

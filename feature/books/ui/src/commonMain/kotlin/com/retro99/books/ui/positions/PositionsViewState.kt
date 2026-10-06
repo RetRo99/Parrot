@@ -18,6 +18,8 @@ data class PositionsViewState(
     val selectedKey: String? = null,
     /** Where applying would put the other copies; the apply sheet is open while set. */
     val previews: List<ApplyPreview>? = null,
+    /** Freeze the preview's source so live updates cannot change what the user confirms. */
+    val sheetSource: CopyPositionRow? = null,
     /** Ticked targets, by copy key. */
     val checkedKeys: Set<String> = emptySet(),
     val isApplying: Boolean = false,

@@ -2,6 +2,7 @@ package com.retro99.base.ui.compose
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -52,6 +53,9 @@ data class EmberColors(
     val bookHero: Color = bg,
     /** Highlight colours for saved highlights. */
     val highlights: EmberHighlights = EmberDayHighlights,
+    /** Gentle selected-position fill and apply target tiles. */
+    val note: Color = accent.copy(alpha = .06f).compositeOver(surface),
+    val tile: Color = bg,
 )
 
 /**
