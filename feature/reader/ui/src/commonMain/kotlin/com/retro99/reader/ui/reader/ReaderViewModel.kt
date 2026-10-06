@@ -44,8 +44,11 @@ import com.retro99.base.result.AppError
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
 import com.retro99.books.domain.model.BookType
+import com.retro99.books.ui.components.ConflictSide
+import com.retro99.books.ui.components.conflictSourceName
 import com.retro99.reader.domain.linked.LinkedResumeOffer
 import com.retro99.reader.domain.model.CurrentlyReadingDomainModel
+import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReaderInitializationData
 import com.retro99.reader.domain.model.ReaderSettingsDomainModel
@@ -77,6 +80,7 @@ import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.domain.usecase.SetCurrentlyReadingUseCase
 import com.retro99.reader.ui.di.InitialAudioPosition
 import com.retro99.reader.ui.di.ReaderScope
+import com.retro99.reader.ui.model.PositionConflictUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
 import com.retro99.reader.ui.model.toDomainModel
@@ -182,6 +186,7 @@ class ReaderViewModel(
     @Provided private val saveUserPreferenceUseCase: SaveUserPreferenceUseCase,
     @Provided private val recapSessionRecorder: RecapSessionRecorder,
     @Provided private val recapSettings: RecapSettings,
+    @Provided private val installationDeviceIdentity: com.retro99.server.api.InstallationDeviceIdentity,
 ) : BaseViewModel<ReaderViewState, ReaderIntent>(
     ReaderViewState(
         bookUuid = bookUuid,
@@ -478,6 +483,7 @@ class ReaderViewModel(
             ReaderIntent.OnSettingsClicked -> onSettingsClick()
             ReaderIntent.UseLocalPosition -> resolveConflictWithLocal()
             ReaderIntent.UseRemotePosition -> resolveConflictWithRemote()
+            ReaderIntent.DismissSettleBar -> updateState { it.copy(positionSettleBar = null) }
             ReaderIntent.ContinueLinkedResume -> continueLinkedResume()
             ReaderIntent.StayLinkedResume -> stayLinkedResume()
             ReaderIntent.CompareLinkedPositions -> {
@@ -775,9 +781,12 @@ class ReaderViewModel(
     }
 
     private suspend fun openPublication(data: ReaderInitializationData) {
-        val conflictServerName = if (serverId == com.retro99.base.server.LOCAL_SERVER_ID ||
-            serverId == com.retro99.base.server.PARROT_CLOUD_SERVER_ID) "Parrot Cloud"
-        else serverRegistry.getServer(serverId)?.let { "${it.name} (${it.type.displayName})" }.orEmpty()
+        val thisDeviceName = try {
+            installationDeviceIdentity.selfReferenceName()
+        } catch (exception: Exception) {
+            ""
+        }
+        val conflictServerName = conflictSourceName(serverId, serverRegistry)
         val settings = data.initialSettings.toUiModel()
         val customFonts = getCustomReaderFontsUseCase().first()
         val bookType = data.bookType
@@ -785,7 +794,13 @@ class ReaderViewModel(
         restoredPositionSaveGuard.restored(position)
         // Checked while the publication opens; it waits at most 2 seconds for servers.
         val startupPrompt = viewModelScope.async {
-            readerStartupPrompt(linkedResumeResolved, conflict, ::findLinkedResume)
+            readerStartupPrompt(
+                linkedResumeResolved,
+                conflict,
+                remoteName = conflictServerName,
+                thisDeviceName = thisDeviceName,
+                findLinkedResume = ::findLinkedResume,
+            )
         }
 
         publicationService.openPublication(
@@ -831,7 +846,9 @@ class ReaderViewModel(
                     publicationState = publicationState,
                     bookType = bookType,
                     positionConflict = prompt.positionConflict,
+                    positionSettleBar = prompt.positionSettleBar,
                     conflictServerName = conflictServerName,
+                    thisDeviceName = thisDeviceName,
                     linkedResumeOffer = prompt.linkedResumeOffer,
                     error = null,
                     currentAudioPositionMs = position?.audioTimestampMs ?: 0L,
@@ -1704,10 +1721,25 @@ class ReaderViewModel(
         resolveConflict(useLocal = false)
     }
 
+    /**
+     * Applies one side of a conflict, whether the interactive dialog answered it or the
+     * quiet bar's action did; the bar mirrors the message afterwards (spec §2).
+     */
     private fun resolveConflict(useLocal: Boolean) {
-        val conflict = viewState.value.positionConflict ?: return
+        val settle = viewState.value.positionConflict == null
+        val conflict = if (settle) {
+            viewState.value.positionSettleBar?.candidates
+        } else {
+            viewState.value.positionConflict?.candidates
+        } ?: return
         if (viewState.value.isResolvingConflict) return
-        updateState { it.copy(isResolvingConflict = true, conflictResolutionError = null) }
+        updateState {
+            it.copy(
+                isResolvingConflict = true,
+                conflictResolutionError = null,
+                resolvingConflictSide = if (useLocal) ConflictSide.Local else ConflictSide.Remote,
+            )
+        }
         viewModelScope.launch {
             val selected = if (useLocal) conflict.localPosition else conflict.remotePosition
             analytics.trackUsageOperation(
@@ -1718,14 +1750,15 @@ class ReaderViewModel(
                     if (useLocal) ProductOutcome.Queued else ProductOutcome.Succeeded
                 } else ProductOutcome.Failed },
             ) {
-                if (useLocal) resolvePositionConflictUseCase.useLocal(conflict.candidates)
-                else resolvePositionConflictUseCase.useRemote(conflict.candidates)
+                if (useLocal) resolvePositionConflictUseCase.useLocal(conflict)
+                else resolvePositionConflictUseCase.useRemote(conflict)
             }.onSuccess {
                 // Keep the prompt up while navigating so its locator callback cannot
                 // turn accepting a server snapshot into a fresh local reading write.
-                restoredPositionSaveGuard.restored(selected)
-                updatePublicationState { it.copy(position = selected) }
-                bookController.goToPosition(selected)
+                val restored = selected.toUiModel()
+                restoredPositionSaveGuard.restored(restored)
+                updatePublicationState { it.copy(position = restored) }
+                bookController.goToPosition(restored)
                 updateState { it.copy(
                     positionConflict = null,
                     currentAudioPositionMs = selected.audioTimestampMs ?: 0L,
@@ -1733,17 +1766,51 @@ class ReaderViewModel(
                 if (viewState.value.isReadAloud) {
                     audioController.setInitialAudioPosition(selected.audioTimestampMs)
                 }
+                // The quiet bar answers once and mirrors itself: "Kept your place" and
+                // "Moved to N%" swap sides so the earlier answer can be undone (spec §2).
+                if (settle) {
+                    updateState { state ->
+                        state.copy(positionSettleBar = state.positionSettleBar?.copy(movedToOther = !useLocal))
+                    }
+                }
             }.onFailure { error ->
-                val refreshed = getReadingProgressWithConflictUseCase(serverId, bookUuid)
-                    .getOrElse { null }?.toUiData()?.conflict
-                updateState { it.copy(
-                    conflictResolutionError = error,
-                    positionConflict = refreshed ?: conflict,
-                ) }
+                error.log(analytics, "ReaderViewModel: Failed to resolve position conflict")
+                if (settle) {
+                    // Keep the bar so the person can try again with fresh candidates:
+                    // while the bar is up the reader keeps saving, and a busy generation
+                    // invalidates the captured candidates but not the person's intent.
+                    val refreshed = getReadingProgressWithConflictUseCase(serverId, bookUuid)
+                        .getOrElse { null } as? ReadingProgressResult.Conflict
+                    updateState { state ->
+                        state.copy(
+                            isResolvingConflict = false,
+                            positionSettleBar = state.positionSettleBar?.let { bar ->
+                                bar.copy(candidates = refreshed ?: bar.candidates)
+                            },
+                        )
+                    }
+                } else {
+                    val refreshed = getReadingProgressWithConflictUseCase(serverId, bookUuid)
+                        .getOrElse { null }?.toUiData()?.conflict
+                    updateState { it.copy(
+                        conflictResolutionError = error,
+                        positionConflict = refreshed ?: refreshedFromCandidates(),
+                    ) }
+                }
             }
             updateState { it.copy(isResolvingConflict = false) }
         }
     }
+
+    /** Keeps the same candidates visible after a failed attempt; nothing is approved. */
+    private fun refreshedFromCandidates(): PositionConflictUiModel? =
+        viewState.value.positionConflict?.let { conflict ->
+            PositionConflictUiModel(
+                localPosition = conflict.candidates.localPosition.toUiModel(),
+                remotePosition = conflict.candidates.remotePosition.toUiModel(),
+                candidates = conflict.candidates,
+            )
+        }
 
     private val restoredPositionSaveGuard = RestoredPositionSaveGuard()
 
@@ -1796,7 +1863,7 @@ class ReaderViewModel(
                 updatePublicationState { it.copy(position = restored) }
                 updateState { state ->
                     state.copy(
-                        linkedResumeOffer = null, positionConflict = null,
+                        linkedResumeOffer = null, positionConflict = null, positionSettleBar = null,
                         currentAudioPositionMs = position.audioTimestampMs ?: state.currentAudioPositionMs,
                     )
                 }
@@ -2405,6 +2472,8 @@ class ReaderViewModel(
                 searchOrigin = if (turns >= 3) null else state.searchOrigin,
                 jumpOriginPageTurns = jumpTurns,
                 jumpOrigin = if (jumpTurns >= 3) null else state.jumpOrigin,
+                // The settle bar yields at the first page turn (spec §2).
+                positionSettleBar = null,
             )
         }
     }

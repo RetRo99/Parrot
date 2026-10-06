@@ -1,5 +1,6 @@
 package com.retro99.reader.ui.model
 
+import com.retro99.reader.domain.model.ConflictDecision
 import com.retro99.reader.domain.model.ReadingProgressResult
 
 /**
@@ -22,8 +23,26 @@ data class ProgressResultUiData(
 )
 
 /**
+ * A self-settled conflict whose answer showed up as the quiet bar (spec §2). Keeps both
+ * candidates so the bar's action can still apply the other side through the usual
+ * resolve logic.
+ */
+data class PositionSettleUi(
+    /** Full immutable candidates, including the generation and cloud revision. */
+    val candidates: ReadingProgressResult.Conflict,
+    /** The other copy's display name: "Storyteller", "Parrot Cloud", "Storytellr…". */
+    val remoteName: String,
+    /** What this device calls itself: "This phone", "This iPhone", "This tablet". */
+    val thisDeviceName: String,
+    /** True when the reader moved to the other position ("Moved to 86%"); false keeps. */
+    val movedToOther: Boolean,
+)
+
+/**
  * Maps a [ReadingProgressResult] to UI models.
- * For conflicts, returns the local position as the initial position.
+ * For conflicts, the initial position follows the decision: a self-settled
+ * [ConflictDecision.MoveToOther] starts from the other position; everything
+ * else keeps this device's position (the dialog answers later).
  */
 fun ReadingProgressResult.toUiData(): ProgressResultUiData = when (this) {
     is ReadingProgressResult.Resolved -> ProgressResultUiData(
@@ -32,7 +51,10 @@ fun ReadingProgressResult.toUiData(): ProgressResultUiData = when (this) {
     )
 
     is ReadingProgressResult.Conflict -> ProgressResultUiData(
-        position = localPosition.toUiModel(),
+        position = when (decision) {
+            is ConflictDecision.MoveToOther -> remotePosition.toUiModel()
+            else -> localPosition.toUiModel()
+        },
         conflict = PositionConflictUiModel(
             localPosition = localPosition.toUiModel(),
             remotePosition = remotePosition.toUiModel(),

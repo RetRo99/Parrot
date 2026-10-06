@@ -5,7 +5,10 @@ import com.retro99.books.domain.model.links.CopyKey
 import com.retro99.books.domain.model.links.CopySource
 import com.retro99.books.domain.model.links.LinkedCopy
 import com.retro99.reader.domain.linked.LinkedResumeOffer
+import com.retro99.reader.domain.model.ConflictDecision
 import com.retro99.reader.domain.model.PositionDomainModel
+import com.retro99.reader.domain.model.ReadingProgressResult
+import com.retro99.reader.domain.model.conflictDecision
 import com.retro99.reader.domain.translate.TranslatedPosition
 import com.retro99.reader.domain.translate.TranslationConfidence
 import com.retro99.reader.domain.translate.TranslationStrategy
@@ -76,7 +79,7 @@ class ReaderStartupPromptTest {
         // When
         val prompt = readerStartupPrompt(
             linkedResumeResolved = true,
-            positionConflict = conflict,
+            conflict = conflict,
             findLinkedResume = { lookups++; offer() },
         )
 
@@ -89,7 +92,7 @@ class ReaderStartupPromptTest {
     fun `a same-copy choice in book detail suppresses a stale conflict on reader open`() = runTest {
         val prompt = readerStartupPrompt(
             linkedResumeResolved = true,
-            positionConflict = conflict,
+            conflict = conflict,
             findLinkedResume = { lookups++; null },
         )
 
@@ -103,7 +106,7 @@ class ReaderStartupPromptTest {
         // When
         val prompt = readerStartupPrompt(
             linkedResumeResolved = false,
-            positionConflict = conflict,
+            conflict = conflict,
             findLinkedResume = { offer() },
         )
 
@@ -113,17 +116,101 @@ class ReaderStartupPromptTest {
     }
 
     @Test
-    fun `without a linked offer the same-copy conflict is shown`() = runTest {
+    fun `without a linked offer an ambiguous conflict is shown`() = runTest {
         // When
         val prompt = readerStartupPrompt(
             linkedResumeResolved = false,
-            positionConflict = conflict,
+            conflict = conflict,
             findLinkedResume = { null },
         )
 
         // Then
         assertEquals(conflict, prompt.positionConflict)
         assertNull(prompt.linkedResumeOffer)
+        assertNull(prompt.positionSettleBar)
+    }
+
+    @Test
+    fun `a settled keep becomes the quiet bar without a dialog`() = runTest {
+        // When
+        val prompt = readerStartupPrompt(
+            linkedResumeResolved = false,
+            conflict = settledConflict(
+                localProgression = 0.86,
+                remoteProgression = 0.78,
+                localObserved = "2026-10-01T11:00:00Z",
+                remoteObserved = "2026-10-01T08:00:00Z",
+            ),
+            remoteName = "Storyteller",
+            findLinkedResume = { null },
+        )
+
+        // Then
+        assertNull(prompt.positionConflict)
+        assertEquals("Storyteller", prompt.positionSettleBar?.remoteName)
+        assertEquals(false, prompt.positionSettleBar?.movedToOther)
+        assertEquals(true, prompt.settleDecision is ConflictDecision.KeepThis)
+    }
+
+    @Test
+    fun `a settled move becomes the mirrored quiet bar`() = runTest {
+        // When
+        val prompt = readerStartupPrompt(
+            linkedResumeResolved = false,
+            conflict = settledConflict(
+                localProgression = 0.78,
+                remoteProgression = 0.86,
+                localObserved = "2026-10-01T08:00:00Z",
+                remoteObserved = "2026-10-01T11:00:00Z",
+            ),
+            remoteName = "Storyteller",
+            thisDeviceName = "This phone",
+            findLinkedResume = { null },
+        )
+
+        // Then
+        assertNull(prompt.positionConflict)
+        assertEquals(true, prompt.positionSettleBar?.movedToOther)
+        assertEquals(true, prompt.settleDecision is ConflictDecision.MoveToOther)
+    }
+
+    @Test
+    fun `a difference under one percent says nothing at all`() = runTest {
+        // When
+        val prompt = readerStartupPrompt(
+            linkedResumeResolved = false,
+            conflict = settledConflict(
+                localProgression = 0.80,
+                remoteProgression = 0.805,
+                localObserved = "2026-10-01T08:00:00Z",
+                remoteObserved = "2026-10-01T11:00:00Z",
+            ),
+            findLinkedResume = { null },
+        )
+
+        // Then
+        assertNull(prompt.positionConflict)
+        assertNull(prompt.positionSettleBar)
+    }
+
+    @Test
+    fun `a missing timestamp asks which position to keep`() = runTest {
+        // When
+        val prompt = readerStartupPrompt(
+            linkedResumeResolved = false,
+            conflict = settledConflict(
+                localProgression = 0.78,
+                remoteProgression = 0.86,
+                localObserved = null,
+                remoteObserved = "2026-10-01T11:00:00Z",
+            ),
+            findLinkedResume = { null },
+        )
+
+        // Then
+        assertEquals(true, prompt.settleDecision is ConflictDecision.Ask)
+        assertEquals(true, prompt.positionConflict != null)
+        assertNull(prompt.positionSettleBar)
     }
 
     private fun position(progression: Double) = PositionUiModel(
@@ -136,6 +223,49 @@ class ReaderStartupPromptTest {
         totalProgression = progression,
         chapterIndex = null,
         totalChapters = null,
+    )
+
+    /** A conflict whose candidates differ in percent and reading time (spec §1). */
+    private fun settledConflict(
+        localProgression: Double,
+        remoteProgression: Double,
+        localObserved: String?,
+        remoteObserved: String?,
+    ): PositionConflictUiModel {
+        val local = domainPosition(localProgression, localObserved)
+        val remote = domainPosition(remoteProgression, remoteObserved)
+        return PositionConflictUiModel(
+            localPosition = position(localProgression),
+            remotePosition = position(remoteProgression),
+            candidates = ReadingProgressResult.Conflict(
+                localPosition = local,
+                remotePosition = remote,
+                decision = conflictDecision(local, remote),
+            ),
+        )
+    }
+
+    private fun domainPosition(
+        progression: Double,
+        observedAt: String?,
+    ) = PositionDomainModel(
+        bookUuid = "book",
+        serverId = "local",
+        timestamp = null,
+        createdAt = null,
+        updatedAt = null,
+        locatorHref = "c.xhtml",
+        locatorType = null,
+        locatorTitle = null,
+        locatorTarget = null,
+        audioTimestampMs = null,
+        chapterIndex = null,
+        progression = progression,
+        totalChapters = null,
+        totalDurationMs = null,
+        totalProgression = progression,
+        position = null,
+        observedAt = observedAt,
     )
 
     private fun offer(): LinkedResumeOffer {

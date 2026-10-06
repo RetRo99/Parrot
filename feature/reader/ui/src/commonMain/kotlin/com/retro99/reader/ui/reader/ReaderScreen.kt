@@ -335,7 +335,9 @@ private fun ReaderScreenContent(
                 onUseLocal = { intentDispatcher(ReaderIntent.UseLocalPosition) },
                 onUseRemote = { intentDispatcher(ReaderIntent.UseRemotePosition) },
                 serverName = viewState.conflictServerName,
+                thisDeviceName = viewState.thisDeviceName,
                 isResolving = viewState.isResolvingConflict,
+                resolvingSide = viewState.resolvingConflictSide,
                 error = viewState.conflictResolutionError?.toString(),
             )
         }
@@ -443,6 +445,20 @@ internal fun ReaderMessageHost(
         drawRect(surface, topLeft = Offset(0f, size.height - gap), size = Size(size.width, gap))
     }) {
         when {
+            !viewState.isContentsVisible && viewState.positionSettleBar != null -> {
+                val settle = viewState.positionSettleBar
+                PositionSettleBar(
+                    model = settle,
+                    onSettle = {
+                        if (settle.movedToOther) {
+                            dispatch(ReaderIntent.UseLocalPosition)
+                        } else {
+                            dispatch(ReaderIntent.UseRemotePosition)
+                        }
+                    },
+                    onTimeout = { dispatch(ReaderIntent.DismissSettleBar) },
+                )
+            }
             !viewState.isContentsVisible && viewState.saved.bar != null ->
                 com.retro99.reader.ui.reader.saved.SavedBarHost(viewState.saved.bar, { dispatch(ReaderIntent.Saved(it)) })
             viewState.showPositionSaveFailed -> PositionSaveFailedSnackbar(true, { dispatch(ReaderIntent.RetryPositionSave) },

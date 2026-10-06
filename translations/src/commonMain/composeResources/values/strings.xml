@@ -255,15 +255,22 @@
     <string name="reader_time_remaining_minutes">%1$d min left</string>
     <string name="reader_time_remaining_less_than_minute">&lt;1 min left</string>
 
-    <!-- Reader Position Conflict Dialog -->
-    <string name="reader_conflict_title">Reading Position Conflict</string>
-    <string name="reader_conflict_message">Your reading position differs between this device and the server. Which position would you like to use?</string>
-    <string name="reader_conflict_local_title">Saved on this device</string>
-    <string name="reader_conflict_remote_title">Server</string>
-    <string name="reader_conflict_chapter">Chapter %1$d of %2$d</string>
-    <string name="reader_conflict_progress">%1$d% complete</string>
-    <string name="reader_conflict_use_local">Use This Device</string>
-    <string name="reader_conflict_use_remote">Use Server</string>
+    <!-- Reader Position Conflict: Where do you want to continue? -->
+    <string name="position_conflict_title">Where do you want to continue?</string>
+    <string name="position_conflict_other_replaced">The other position is replaced.</string>
+    <string name="position_conflict_latest">Latest</string>
+    <string name="position_conflict_chapter_labelled">Chapter %1$d, %2$s</string>
+    <string name="position_conflict_chapter_only">Chapter %1$d</string>
+    <string name="position_conflict_progress">%1$d%</string>
+    <string name="position_conflict_percent_word">%1$d percent</string>
+    <string name="position_conflict_error">Couldn\'t update the reading position.</string>
+    <!-- %2$s is this device, lowercase: "this phone" / "this iPhone" -->
+    <string name="position_bar_kept_title">Kept your place · %1$d%</string>
+    <string name="position_bar_kept_detail">%1$s was at %2$d%, %3$s</string>
+    <string name="position_bar_moved_title">Moved to %1$d%</string>
+    <string name="position_bar_moved_detail">From %1$s · %2$s was at %3$d%</string>
+    <string name="position_bar_use_other">Use %1$d%</string>
+    <string name="position_bar_go_back">Go back to %1$d%</string>
 
     <!-- Notification Permission Denied Dialog -->
     <string name="notification_permission_title">Notification Permission Required</string>

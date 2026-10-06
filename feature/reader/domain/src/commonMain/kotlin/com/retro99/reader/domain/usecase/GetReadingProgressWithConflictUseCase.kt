@@ -6,6 +6,7 @@ import com.retro99.base.result.AppResult
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReadingProgressResult
+import com.retro99.reader.domain.model.conflictDecision
 import com.retro99.reader.domain.model.toPositionDomainModel
 import com.retro99.reader.domain.model.isSameReadingPlaceAs
 import com.retro99.server.api.AuthenticatedRepositoryProvider
@@ -85,13 +86,13 @@ class GetReadingProgressWithConflictUseCase(
                 ReadingProgressResult.Resolved(localPosition)
             }
             // Both exist - preserve both candidates when their semantic
-            // positions differ. The shared engine, not a percentage threshold,
-            // determines whether the remote candidate is a baseline or a local
-            // replacement before this use case runs.
+            // positions differ. The decision only weighs newer/further and
+            // triggers the dialog when the answer is not obvious.
             !localPosition.isSameReadingPlaceAs(remotePosition) -> {
                 ReadingProgressResult.Conflict(
                     localPosition = localPosition,
                     remotePosition = remotePosition,
+                    decision = conflictDecision(localPosition, remotePosition),
                 )
             }
             // Same semantic position - reconcile metadata without prompting.

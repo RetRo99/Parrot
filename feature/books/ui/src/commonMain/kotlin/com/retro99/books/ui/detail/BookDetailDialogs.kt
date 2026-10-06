@@ -14,12 +14,15 @@ import com.retro99.base.ui.compose.EmberDialogAction
 import com.retro99.base.ui.compose.EmberDialogActionStyle
 import com.retro99.books.ui.components.LinkedResumeDialog
 import com.retro99.books.ui.components.PositionConflictDialog
+import com.retro99.books.ui.components.positionOffer
+import com.retro99.books.ui.components.positionObservedMillis
 import com.retro99.books.ui.components.toUiModel
 import com.retro99.books.ui.links.UnlinkCopyConfirmationDialog
 import com.retro99.books.ui.model.BookUiModel
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.general_cancel
+import resources.translations.position_conflict_error
 import resources.translations.books_delete_cache_title
 import resources.translations.books_delete_cache_message
 import resources.translations.books_delete_cache_confirm
@@ -124,13 +127,24 @@ internal fun BookDetailDialogs(
     } else if (offer == null && state.pendingOpenBookType != null &&
         state.positionConflict != null) {
         LaunchedEffect(Unit) { dispatch(BookDetailIntent.OnPromptVisible(UsageOperation.Conflict)) }
+        val conflict = state.positionConflict
+        val localMillis = positionObservedMillis(conflict.localPosition)
+        val remoteMillis = positionObservedMillis(conflict.remotePosition)
         PositionConflictDialog(
-            localProgressPercent = ((state.positionConflict.localPosition.totalProgression ?: 0.0) * 100).toInt(),
-            remoteProgressPercent = ((state.positionConflict.remotePosition.totalProgression ?: 0.0) * 100).toInt(),
-            remoteTitle = state.conflictServerName,
-            localDetail = com.retro99.books.ui.components.positionCandidateDetail(state.positionConflict.localPosition),
-            remoteDetail = com.retro99.books.ui.components.positionCandidateDetail(state.positionConflict.remotePosition),
+            localOffer = positionOffer(
+                position = conflict.localPosition,
+                whereName = state.thisDeviceName,
+                isLatest = localMillis != null && remoteMillis != null && localMillis > remoteMillis,
+                preferDeviceName = false,
+            ),
+            remoteOffer = positionOffer(
+                position = conflict.remotePosition,
+                whereName = state.conflictServerName,
+                isLatest = localMillis != null && remoteMillis != null && remoteMillis > localMillis,
+            ),
             isResolving = state.isResolvingConflict,
+            resolvingSide = state.resolvingConflictSide,
+            error = state.conflictResolutionError?.let { stringResource(StringRes.position_conflict_error) },
             onUseLocal = { dispatch(BookDetailIntent.OnUseLocalPositionClicked) },
             onUseRemote = { dispatch(BookDetailIntent.OnUseRemotePositionClicked) },
             onDismissRequest = { dispatch(BookDetailIntent.OnConflictDialogDismissed) },

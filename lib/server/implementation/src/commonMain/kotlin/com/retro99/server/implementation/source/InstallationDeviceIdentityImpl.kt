@@ -25,6 +25,9 @@ class InstallationDeviceIdentityImpl(
         )
     }
 
+    override fun selfReferenceName(): String =
+        platformSelfReferenceLabel()?.takeIf { it.isNotBlank() } ?: "This device"
+
     @OptIn(ExperimentalUuidApi::class)
     private fun String.isUuid(): Boolean = runCatching { Uuid.parse(this) }.isSuccess
 

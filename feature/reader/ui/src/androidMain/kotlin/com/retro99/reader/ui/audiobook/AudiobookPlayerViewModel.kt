@@ -33,6 +33,7 @@ import com.retro99.reader.domain.audio.audiobookResumeTarget
 import com.retro99.reader.domain.audio.buildAudiobookPosition
 import com.retro99.reader.domain.audio.chooseTrackDurations
 import com.retro99.reader.domain.model.PositionDomainModel
+import com.retro99.reader.domain.model.ConflictDecision
 import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.reader.domain.usecase.GetReadingProgressWithConflictUseCase
 import com.retro99.reader.domain.usecase.PropagateToLinkedCopiesUseCase
@@ -445,7 +446,12 @@ class AudiobookPlayerViewModel(
                 ?.let { result ->
                     when (result) {
                         is ReadingProgressResult.Resolved -> result.position
-                        is ReadingProgressResult.Conflict -> result.localPosition
+                        // A self-settled conflict keeps the settled side; the caveat-free
+                        // audiobook flow has no bar that offers the way back (spec §1).
+                        is ReadingProgressResult.Conflict -> when (result.decision) {
+                            is ConflictDecision.MoveToOther -> result.remotePosition
+                            else -> result.localPosition
+                        }
                     }
                 }
         } catch (e: Exception) {

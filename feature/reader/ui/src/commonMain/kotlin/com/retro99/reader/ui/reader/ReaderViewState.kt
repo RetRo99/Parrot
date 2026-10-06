@@ -6,6 +6,7 @@ import com.retro99.reader.domain.linked.LinkedResumeOffer
 import com.retro99.reader.ui.model.ChapterInfo
 import com.retro99.reader.ui.model.ChapterReadingTimeInfo
 import com.retro99.reader.ui.model.PositionConflictUiModel
+import com.retro99.reader.ui.model.PositionSettleUi
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.TocItemUiModel
 import com.retro99.reader.ui.publication.PublicationState
@@ -23,8 +24,18 @@ data class ReaderViewState(
     val publicationState: PublicationState? = null,
     val positionConflict: PositionConflictUiModel? = null,
     val isResolvingConflict: Boolean = false,
+    /** The conflict side being applied right now; shows the progress on its card. */
+    val resolvingConflictSide: com.retro99.books.ui.components.ConflictSide? = null,
     val conflictResolutionError: AppError? = null,
     val conflictServerName: String = "",
+    /**
+     * A self-settled conflict announcing itself as the quiet bar (spec §2); it does not
+     * block anything, and the next page turn clears it. Unlike [positionConflict], the
+     * reader may keep saving the followed position while it shows.
+     */
+    val positionSettleBar: PositionSettleUi? = null,
+    /** What this device calls itself: "This phone", "This iPhone", "This tablet". */
+    val thisDeviceName: String = "",
     /** A newer reading in another linked copy, offered in place of [positionConflict]. */
     val linkedResumeOffer: LinkedResumeOffer? = null,
     val isSettingsVisible: Boolean = false,

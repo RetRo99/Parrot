@@ -6,6 +6,7 @@ import com.retro99.reader.domain.fakes.FakeReaderRepository
 import com.retro99.reader.domain.fakes.FakeRepositoryProvider
 import com.retro99.reader.domain.fakes.StoredPosition
 import com.retro99.reader.domain.fakes.serverPosition
+import com.retro99.reader.domain.model.ConflictDecision
 import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.server.api.PositionOrigin
 import kotlinx.coroutines.test.runTest
@@ -77,10 +78,73 @@ class GetReadingProgressWithConflictUseCaseTest {
         assertIs<ReadingProgressResult.Resolved>(progress())
     }
 
-    @Test fun `differences below one displayed percent remain conflicts`() = runTest {
+    @Test fun `differences below one displayed percent are not a conflict to answer`() = runTest {
         repository.local["book"] = local()
         repository.remote["book"] = local().copy(totalProgression = 0.2001)
-        assertIs<ReadingProgressResult.Conflict>(progress())
+        assertEquals(
+            ConflictDecision.Silence,
+            assertIs<ReadingProgressResult.Conflict>(progress()).decision,
+        )
+    }
+
+    @Test fun `a newer and further device settles itself by keeping`() = runTest {
+        repository.local["book"] = local().copy(
+            totalProgression = 0.86, progression = 0.86,
+            observedAt = "2026-10-01T11:00:00Z",
+        )
+        repository.remote["book"] = local().copy(
+            totalProgression = 0.78, progression = 0.78,
+            remoteRevision = 9L,
+            observedAt = "2026-10-01T08:00:00Z",
+        )
+        val decision = assertIs<ReadingProgressResult.Conflict>(progress()).decision
+        assertIs<ConflictDecision.KeepThis>(decision)
+    }
+
+    @Test fun `a newer and further remote settles itself by moving`() = runTest {
+        repository.local["book"] = local().copy(
+            totalProgression = 0.78, progression = 0.78,
+            observedAt = "2026-10-01T08:00:00Z",
+        )
+        repository.remote["book"] = local().copy(
+            totalProgression = 0.86, progression = 0.86,
+            remoteRevision = 9L,
+            observedAt = "2026-10-01T11:00:00Z",
+        )
+        val decision = assertIs<ReadingProgressResult.Conflict>(progress()).decision
+        assertIs<ConflictDecision.MoveToOther>(decision)
+    }
+
+    @Test fun `a mixed newer and further conflict asks which position to keep`() = runTest {
+        repository.local["book"] = local().copy(
+            totalProgression = 0.86, progression = 0.86,
+            observedAt = "2026-10-01T08:00:00Z",
+        )
+        repository.remote["book"] = local().copy(
+            totalProgression = 0.78, progression = 0.78,
+            remoteRevision = 9L,
+            observedAt = "2026-10-01T11:00:00Z",
+        )
+        assertEquals(
+            ConflictDecision.Ask,
+            assertIs<ReadingProgressResult.Conflict>(progress()).decision,
+        )
+    }
+
+    @Test fun `a missing reading time asks which position to keep`() = runTest {
+        repository.local["book"] = local().copy(
+            totalProgression = 0.78, progression = 0.78,
+            observedAt = null, updatedAt = null,
+        )
+        repository.remote["book"] = local().copy(
+            totalProgression = 0.86, progression = 0.86,
+            remoteRevision = 9L,
+            observedAt = "2026-10-01T11:00:00Z",
+        )
+        assertEquals(
+            ConflictDecision.Ask,
+            assertIs<ReadingProgressResult.Conflict>(progress()).decision,
+        )
     }
 
     @Test fun `different text selectors at identical percentage remain conflicts`() = runTest {

@@ -45,6 +45,8 @@ import com.retro99.reader.domain.usecase.ResolveLinkedResumeUseCase
 import com.retro99.reader.domain.usecase.ResolvePositionConflictUseCase
 import com.retro99.reader.domain.usecase.GetReadingProgressWithConflictUseCase
 import com.retro99.reader.domain.model.ReadingProgressResult
+import com.retro99.books.ui.components.ConflictSide
+import com.retro99.books.ui.components.conflictSourceName
 import com.github.michaelbull.result.getOrElse
 import com.retro99.server.api.ParrotCloudLibraryState
 import com.retro99.server.api.ServerRegistry
@@ -105,6 +107,7 @@ class BookDetailViewModel(
     @Provided private val findLinkedResumeUseCase: FindLinkedResumeUseCase,
     @Provided private val resolveLinkedResumeUseCase: ResolveLinkedResumeUseCase,
     @Provided private val serverRegistry: ServerRegistry,
+    @Provided private val installationDeviceIdentity: com.retro99.server.api.InstallationDeviceIdentity,
 ) : BaseViewModel<BookDetailViewState, BookDetailIntent>(
     BookDetailViewState(),
 ) {
@@ -369,7 +372,13 @@ class BookDetailViewModel(
     private fun resolveConflict(useLocal: Boolean) {
         val conflict = viewState.value.positionConflict ?: return
         if (viewState.value.isResolvingConflict) return
-        updateState { it.copy(isResolvingConflict = true, conflictResolutionError = null) }
+        updateState {
+            it.copy(
+                isResolvingConflict = true,
+                conflictResolutionError = null,
+                resolvingConflictSide = if (useLocal) ConflictSide.Local else ConflictSide.Remote,
+            )
+        }
         viewModelScope.launch {
             val pendingBookType = viewState.value.pendingOpenBookType
             val bookTitle = viewState.value.book?.title ?: ""
@@ -428,6 +437,13 @@ class BookDetailViewModel(
             .launchIn(viewModelScope)
     }
 
+    /** What this device calls itself in position wording ("This phone"); empty if unavailable. */
+    private fun thisDeviceName(): String = try {
+        installationDeviceIdentity.selfReferenceName()
+    } catch (exception: Exception) {
+        ""
+    }
+
     private fun handleReadClick(bookType: BookType, listenMode: Boolean = false) {
         updateState { state -> state.copy(pendingListenMode = listenMode) }
         analytics.logEvent(
@@ -456,22 +472,26 @@ class BookDetailViewModel(
                         return@launch
                     }
                 val conflict = progress as? ReadingProgressResult.Conflict
-                val hasConflict = conflict != null
+                // Only the ambiguous conflict opens a prompt (spec §1); a self-settling
+                // decision (newer+further, or under one percent) yields to the reader,
+                // which shows the quiet bar for it.
+                val hasConflict = conflict?.decision?.isInteractive == true
                 when (bookDetailOpenPrompt(offer, hasConflict)) {
                     BookDetailOpenPrompt.LinkedResume -> {
                         updateState { current ->
                             current.copy(linkedResumeOffer = offer, pendingOpenBookType = bookType)
                         }
                     }
-                    // Check for conflict - show dialog for user to resolve first
+                    // Check for conflict - show dialog for user to resolve first.
+                    // Only the ambiguous conflicts open it (spec §1); obvious ones
+                    // settle themselves when the reader opens.
                     BookDetailOpenPrompt.SameCopyConflict -> {
-                        val serverName = if (serverId == com.retro99.base.server.LOCAL_SERVER_ID ||
-                            serverId == PARROT_CLOUD_SERVER_ID) "Parrot Cloud"
-                        else serverRegistry.getServer(serverId)?.let { "${it.name} (${it.type.displayName})" }.orEmpty()
+                        val serverName = conflictSourceName(serverId, serverRegistry)
                         updateState { current -> current.copy(
                             pendingOpenBookType = bookType, positionConflict = conflict,
                             conflictResolutionError = null,
                             conflictServerName = serverName,
+                            thisDeviceName = thisDeviceName(),
                         ) }
                     }
                     BookDetailOpenPrompt.None -> navigateToReader(bookType, state.book?.title ?: "")

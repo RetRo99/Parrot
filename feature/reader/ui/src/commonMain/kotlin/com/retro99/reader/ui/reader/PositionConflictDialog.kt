@@ -1,37 +1,18 @@
 package com.retro99.reader.ui.reader
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.retro99.base.ui.compose.Ember
-import com.retro99.books.ui.components.PositionConflictDialogContent
+import com.retro99.reader.domain.linked.observedAtMillis
 import com.retro99.reader.ui.model.PositionConflictUiModel
-import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
-import resources.translations.reader_conflict_chapter
-import resources.translations.reader_conflict_local_title
-import resources.translations.reader_conflict_progress
-import resources.translations.reader_conflict_remote_title
+import resources.translations.position_conflict_error
+import com.retro99.books.ui.components.PositionConflictDialog as BooksPositionConflictDialog
+import com.retro99.books.ui.components.positionOffer as booksPositionOffer
 
 /**
- * Dialog for resolving position conflicts with full position details.
- * Used in the reader when we have complete position information.
+ * Dialog for resolving position conflicts with the full position details. Used in the
+ * reader when both sides are complete; each option card is the button (spec §3).
  */
 @Composable
 fun PositionConflictDialog(
@@ -40,97 +21,36 @@ fun PositionConflictDialog(
     onUseRemote: () -> Unit,
     modifier: Modifier = Modifier,
     serverName: String = "",
+    /** What this device calls itself: "This phone", "This iPhone", "This tablet". */
+    thisDeviceName: String = "",
     isResolving: Boolean = false,
+    resolvingSide: com.retro99.books.ui.components.ConflictSide? = null,
     error: String? = null,
 ) {
-    PositionConflictDialogContent(
-        localContent = {
-            PositionCard(
-                title = stringResource(StringRes.reader_conflict_local_title),
-                position = conflict.localPosition,
-                onClick = { if (!isResolving) onUseLocal() },
-                detail = com.retro99.books.ui.components.positionCandidateDetail(conflict.candidates.localPosition),
-            )
-        },
-        remoteContent = {
-            Column {
-                PositionCard(
-                    title = serverName.ifBlank { stringResource(StringRes.reader_conflict_remote_title) },
-                    position = conflict.remotePosition,
-                    onClick = { if (!isResolving) onUseRemote() },
-                    detail = com.retro99.books.ui.components.positionCandidateDetail(conflict.candidates.remotePosition),
-                )
-                error?.let { Text(it, color = Ember.colors.ink2) }
-            }
-        },
-        onUseLocal = { if (!isResolving) onUseLocal() },
-        onUseRemote = { if (!isResolving) onUseRemote() },
+    val candidates = conflict.candidates
+    val localMillis = candidates.localPosition.observedAtMillis
+    val remoteMillis = candidates.remotePosition.observedAtMillis
+    // The newer position is listed first; strictly newer only, ties are peers.
+    val remoteNewer = localMillis != null && remoteMillis != null && remoteMillis > localMillis
+    val localNewer = localMillis != null && remoteMillis != null && localMillis > remoteMillis
+    BooksPositionConflictDialog(
+        localOffer = booksPositionOffer(
+            position = candidates.localPosition,
+            whereName = thisDeviceName,
+            isLatest = localNewer,
+            preferDeviceName = false,
+        ),
+        remoteOffer = booksPositionOffer(
+            position = candidates.remotePosition,
+            whereName = serverName,
+            isLatest = remoteNewer,
+        ),
+        onUseLocal = onUseLocal,
+        onUseRemote = onUseRemote,
         onDismissRequest = { /* Don't allow dismiss without choosing */ },
+        isResolving = isResolving,
+        resolvingSide = resolvingSide,
+        error = error?.let { stringResource(StringRes.position_conflict_error) },
         modifier = modifier,
     )
-}
-
-@Composable
-private fun PositionCard(
-    title: String,
-    position: PositionUiModel,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    detail: String? = null,
-) {
-    val shape = RoundedCornerShape(16.dp)
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(shape)
-            .background(Ember.colors.bg)
-            .border(
-                if (Ember.style.isEink) 2.dp else 1.dp,
-                Ember.colors.chipBorder,
-                shape,
-            )
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = title,
-            style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
-            color = Ember.colors.ink,
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        detail?.let { Text(it, style = Ember.type.meta, color = Ember.colors.ink2) }
-        position.title?.let { chapterTitle ->
-            Text(
-                text = chapterTitle,
-                style = Ember.type.meta.copy(fontSize = 13.sp, lineHeight = 18.sp),
-                color = Ember.colors.ink2,
-                maxLines = 2,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-        }
-        val chapterIndex = position.chapterIndex
-        val totalChapters = position.totalChapters
-        if (chapterIndex != null && totalChapters != null) {
-            Text(
-                text = stringResource(
-                    StringRes.reader_conflict_chapter,
-                    chapterIndex + 1,
-                    totalChapters,
-                ),
-                style = Ember.type.meta.copy(fontSize = 13.sp, lineHeight = 18.sp),
-                color = Ember.colors.ink2,
-            )
-        }
-        position.totalProgression?.let { progress ->
-            Text(
-                text = stringResource(
-                    StringRes.reader_conflict_progress,
-                    (progress * 100).toInt(),
-                ),
-                style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
-                color = Ember.colors.accentText,
-            )
-        }
-    }
 }

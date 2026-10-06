@@ -134,4 +134,12 @@ data class SourceDeviceIdentity(
 fun interface InstallationDeviceIdentity {
     /** Returns the locally persisted UUID and the current display-only platform/model label. */
     fun getOrCreate(): SourceDeviceIdentity
+
+    /**
+     * What this device calls itself in position wording: "This phone", "This iPhone" or
+     * "This tablet"; "This device" when the platform can't say more. Companion to
+     * [getOrCreate], whose label stays provenance ("Google Pixel 7") while this one is
+     * spoken position ("This phone · 12 minutes ago").
+     */
+    fun selfReferenceName(): String = "This device"
 }

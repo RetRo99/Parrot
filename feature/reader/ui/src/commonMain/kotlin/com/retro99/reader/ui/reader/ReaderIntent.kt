@@ -89,6 +89,12 @@ sealed interface ReaderIntent : BaseIntent {
      */
     data object UseRemotePosition : ReaderIntent
 
+    /**
+     * The quiet settle bar reached its six seconds (or e-ink page turn is pending)
+     * without an answer; nothing is written and no message is owed (spec §2).
+     */
+    data object DismissSettleBar : ReaderIntent
+
     /** "Continue" in the linked resume prompt: jump to the other copy's place. */
     data object ContinueLinkedResume : ReaderIntent
 

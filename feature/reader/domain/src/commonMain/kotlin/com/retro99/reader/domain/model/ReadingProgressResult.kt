@@ -22,14 +22,18 @@ sealed class ReadingProgressResult {
 
     /**
      * A conflict was detected between local and remote positions.
-     * The user should be prompted to choose which position to use.
+     * The user should be prompted to choose which position to use, unless the decision
+     * settles itself ([ConflictDecision.KeepThis], [ConflictDecision.MoveToOther] or
+     * [ConflictDecision.Silence]); then no dialog appears.
      *
      * @param localPosition The position stored locally on this device
      * @param remotePosition The position stored on the server
+     * @param decision Why the positions differ and how the conflict presents
      */
     data class Conflict(
         val localPosition: PositionDomainModel,
         val remotePosition: PositionDomainModel,
+        val decision: ConflictDecision = ConflictDecision.Ask,
     ) : ReadingProgressResult()
 }
 
