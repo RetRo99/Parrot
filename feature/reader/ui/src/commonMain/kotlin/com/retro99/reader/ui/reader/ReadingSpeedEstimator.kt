@@ -36,6 +36,8 @@ internal class ReadingSpeedEstimator(
     /** Cached words per page for the current chapter */
     private var cachedWordsPerPage: Double = 0.0
 
+    private var cachedTotalPages: Int? = null
+
     /** Accumulated active reading time in milliseconds (excludes idle periods) */
     private var activeReadingTimeMs: Long = 0L
 
@@ -107,11 +109,20 @@ internal class ReadingSpeedEstimator(
             cachedChapterWordCount = totalWords
             cachedChapterHref = chapterHref
             resetChapter(currentTimeMs, currentPage)
+            cachedTotalPages = chapterInfo?.totalPages
             cachedWordsPerPage = wordsPerPage(cachedChapterWordCount, totalPages)
         } else if (totalWords != null && cachedChapterWordCount == null) {
             // Word count arrived after initial locator emission
             cachedChapterWordCount = totalWords
             cachedWordsPerPage = wordsPerPage(totalWords, totalPages)
+        }
+
+        if (chapterInfo != null && cachedTotalPages != totalPages) {
+            // A reflow renumbers pages; it is not a page turn. Old dwell samples used
+            // different words-per-page geometry and must not influence new measurements.
+            resetChapter(currentTimeMs, currentPage)
+            cachedTotalPages = totalPages
+            cachedWordsPerPage = wordsPerPage(cachedChapterWordCount, totalPages)
         }
 
         if (chapterInfo != null) {
@@ -247,15 +258,18 @@ internal class ReadingSpeedEstimator(
             return null
         }
 
-        // Use page-based calculation if available (more precise)
-        val remainingWords = if (chapterInfo != null && cachedWordsPerPage > 0) {
+        // Single-page geometry also occurs in vertical scroll mode. Prefer resource
+        // progression there, rather than treating the entire chapter as already read.
+        val remainingWords = if (chapterInfo != null && chapterInfo.totalPages > 1) {
             val remainingPages = (chapterInfo.totalPages - chapterInfo.currentPage)
-                .coerceAtLeast(0)
-            (remainingPages * cachedWordsPerPage).toInt()
+                .coerceIn(0, chapterInfo.totalPages)
+            (totalWords.toDouble() * remainingPages / chapterInfo.totalPages).toInt()
         } else if (chapterProgression != null) {
             // Fallback to progression-based calculation
             val remainingFraction = (1.0 - chapterProgression).coerceIn(0.0, 1.0)
             (totalWords * remainingFraction).toInt()
+        } else if (chapterInfo != null) {
+            0
         } else {
             return null
         }

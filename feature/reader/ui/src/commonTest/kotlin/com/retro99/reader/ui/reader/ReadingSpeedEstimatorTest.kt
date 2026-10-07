@@ -171,6 +171,45 @@ class ReadingSpeedEstimatorTest {
         assertNull(estimator.establishedReadingSpeedWpm.value)
     }
 
+    @Test
+    fun `single page geometry uses progression for time remaining`() {
+        val info = estimator.onLocator(
+            chapterHref = "ch1",
+            progression = 0.3,
+            chapterInfo = ChapterInfo(1, 1, 2000),
+            fallbackWpm = 200,
+        )
+        assertNotNull(info)
+        assertEquals(1400, info.remainingWords)
+        assertEquals(7, info.remainingMinutes)
+    }
+
+    @Test
+    fun `reflow updates remaining words without counting a page turn`() {
+        page(page = 1, atMs = 0)
+        val info = page(page = 2, atMs = 60_000, totalPages = 20)
+        assertNotNull(info)
+        assertEquals(1800, info.remainingWords)
+        assertEquals(9, info.remainingMinutes)
+        assertEquals(0, estimator.sessionPagesRead())
+        assertNull(estimator.establishedReadingSpeedWpm.value)
+
+        // New measurements use 100 words per page, not the old 200.
+        val measured = page(page = 3, atMs = 90_000, totalPages = 20)
+        assertNotNull(measured)
+        assertEquals(200, estimator.establishedReadingSpeedWpm.value)
+        assertEquals(1, estimator.sessionPagesRead())
+    }
+
+    @Test
+    fun `reflow cannot report more remaining words than the chapter contains`() {
+        page(page = 1, atMs = 0)
+        val info = page(page = 1, atMs = 0, totalPages = 15)
+        assertNotNull(info)
+        assertEquals(1866, info.remainingWords)
+        assertTrue(info.remainingWords <= info.totalWords)
+    }
+
     private fun page(
         href: String = "ch1",
         page: Int,
