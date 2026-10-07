@@ -1,5 +1,66 @@
 # Reading positions — Ember implementation and verification
 
+## Test cleanup rule
+
+When removing test data, remove the queued outbox mutation as well as its row, or
+let the change sync and undo it through the normal UI. Removing only a local row
+does not cancel an upload and a later pull can restore it.
+
+## Review follow-up
+
+`tile` removed in favor of `bg`; selected fill renamed `surfaceSelected` with an
+explicit white/surface E-ink value. Shared `date_yesterday` replaces the Book details
+and positions-specific strings; positions uses `calendarDateLabel()` for calendar-day
+boundaries. Zero selection says "Choose a version to update" and cannot submit.
+Unused old positions title/conflict resources removed (historical docs retain names).
+
+### Follow-up Samsung real apply and sync
+
+Created a disposable UI link from the downloaded Psalm Storyteller copy to The Crossing
+Cloud test copy. Starting local total progression: source 0.8796296296296297; target 0.
+Selected the source's local candidate and ticked only the approximate Cloud target.
+Apply closed the sheet and reloaded cards: target About 88%, manual/Set from Storyteller,
+Latest. Snackbar: "Updated 1 version · saved on this phone, syncing". Direct capture:
+`design/screens/positions-demo-applied.png`.
+
+After normal UI Sync now, target remote_revision advanced 38 → 39 and the target's
+reading_position mutation left the outbox. The target retained total progression
+0.8796296296296297 and origin manual. This verifies Cloud acknowledgement, not merely
+the snackbar. Opening target Book details shows 87% (existing truncating formatter).
+Reader-open verification is incomplete: the cloud-only target offers Download eBook,
+but tapping it did not download/open the test file during this run.
+
+No genuine partial apply was produced and no `positions-demo-partial.png` is fabricated.
+An offline server push is asynchronous after successful local apply, so it does not
+cause the apply result to be partial. The existing isolated partial fixture remains
+separate from a real production-app failure test.
+
+Unlinked using normal UI, then Sync now. Final database: zero active links; no book_link
+or book_link_decision mutations in the outbox. The disposable target intentionally
+retains the applied 88% position, acknowledged at Cloud revision 39. Normal unlink
+tombstones and Never decisions remain synced; no normal UI to clear a Never decision
+was found. No row-only cleanup was used.
+
+### Baseline link tests: report only
+
+At 7a2d2a76 (5a01fdec parent), the same four LinkPicker/LinkReview assertions fail.
+Manual picking works on Samsung: choose → confirmation sheet → confirm → saved link.
+Tests omit OnConfirmLink, so neither success nor same-source error is actually attempted.
+Review tests assume score >=90 means confident; production isConfident requires a
+shared normalized valid ISBN. On Samsung, temporarily seeded a shared ISBN on Atomic
+Habits and The Crossing locally/offline (both original metadata fields were null).
+UI displayed Same ISBN and "Link the 1 matches with the same ISBN"; bulk action returned
+"1 linked" and library aggregation went from 21 books to 20. Unlinked through UI,
+restored temporary ISBN fields before reconnecting, and synced the unlink. Temporary
+instrumentation APK and source removed; Wi-Fi/mobile data restored. No link implementation
+or baseline tests changed.
+
+Night normal/pair/apply captures added. Concurrent unrelated edits were found in positions
+renderers/fixtures; they were preserved and are included in a separate visual-review
+commit with the owner's approval. The resource now matches the capture assertion:
+"Not started yet". Night captures were independently checked against the production
+screen/sheet titles and saved directly from the device.
+
 Specification: the supplied `POSITIONS_PROMPT.md` and eight reference screenshots.
 The uncommitted audit was not needed. Endpoint-specific reconciliation remains deferred.
 
