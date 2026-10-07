@@ -1,0 +1,12 @@
+a[href^="mailto:"]:not(.button) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: .18em;
+  overflow-wrap: anywhere;
+}
+a[href^="mailto:"]:hover { text-decoration: underline; text-decoration-thickness: 2px; }
+a[href^="mailto:"]:focus-visible { outline: 3px solid var(--accent-text); outline-offset: 4px; border-radius: 4px; }

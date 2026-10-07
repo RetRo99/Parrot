@@ -1,0 +1,25 @@
+---
+import Page from './Page.astro';
+interface Props {
+  title: string;
+  description: string;
+  eyebrow?: string;
+  lead?: string;
+  sections: { id: string; text: string }[];
+}
+const { title, description, eyebrow = 'Legal', lead, sections } = Astro.props;
+const showContents = sections.length >= 4;
+---
+<Page title={title} description={description}>
+  <div class="container document-page legal-page">
+    <div class="page-heading">
+      <p class="eyebrow">{eyebrow}</p><h1><slot name="title">{title}</slot></h1>
+      <div class="lead legal-lead"><slot name="lead">{lead && <p>{lead}</p>}</slot></div>
+      <slot name="notices" />
+    </div>
+    <div class:list={['legal-columns', { 'without-toc': !showContents }]}>
+      {showContents && <nav class="legal-toc" aria-label="On this page"><p>On this page</p><ol>{sections.map(section => <li><a href={`#${section.id}`}>{section.text.replace(/^\d+\.\s*/, '')}</a></li>)}</ol><slot name="toc-extra" /></nav>}
+      <div class="legal-body"><slot /></div>
+    </div>
+  </div>
+</Page>

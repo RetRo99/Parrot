@@ -29,7 +29,7 @@ export function parseLegal(source: string, kind: 'privacy' | 'terms') {
   const sections = tokens.slice(firstSection).filter(token => token.type === 'heading' && token.depth === 2)
     .map(token => ({ text: (token as { text: string }).text, id: sectionId((token as { text: string }).text) }));
   const renderer = new marked.Renderer();
-  renderer.heading = ({ text, depth, tokens: inlineTokens }) => `<h${depth} id="${sectionId(text)}">${renderer.parser.parseInline(inlineTokens)}</h${depth}>\n`;
+  renderer.heading = ({ text, depth, tokens: inlineTokens }) => `<h${depth} id="${sectionId(text)}">${renderer.parser.parseInline(inlineTokens).replace(/^\d+\.\s*/, '')}</h${depth}>\n`;
   const render = (items: typeof tokens) => marked.parser(items, { renderer });
   const lastUpdated = data.lastUpdated;
   if (lastUpdated !== undefined && (typeof lastUpdated !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(lastUpdated) || Number.isNaN(Date.parse(lastUpdated)) || new Date(lastUpdated).toISOString().slice(0, 10) !== lastUpdated)) {

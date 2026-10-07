@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { handleContact } from '../functions/api/contact.js';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { chromium } from 'playwright';
 
 function setup() {
   let calls = 0;
@@ -26,6 +28,36 @@ test('Valid form sends plain text to fixed recipient, then redirects', async () 
   assert.deepEqual(s.payload().to, ['retar.rok@gmail.com']);
   assert.equal(s.payload().reply_to, 'reader@example.com');
   assert.equal(s.payload().html, undefined);
+});
+test('Browser form preserves same-origin POST origin under the shipped referrer policy', async () => {
+  const policy = readFileSync(new URL('../public/_headers', import.meta.url), 'utf8')
+    .match(/Referrer-Policy:\s*(\S+)/)[1];
+  assert.equal(policy, 'same-origin');
+  let postedOrigin;
+  const server = createServer((req, res) => {
+    if (req.method === 'POST') {
+      postedOrigin = req.headers.origin;
+      req.resume();
+      res.end('Accepted');
+    } else {
+      res.setHeader('Referrer-Policy', policy);
+      res.setHeader('Content-Type', 'text/html');
+      res.end('<form action="/api/contact" method="post"><button>Send</button></form>');
+    }
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  let browser;
+  try {
+    browser = await chromium.launch();
+    const page = await browser.newPage();
+    const origin = `http://127.0.0.1:${server.address().port}`;
+    await page.goto(origin);
+    await Promise.all([page.waitForURL(`${origin}/api/contact`), page.getByRole('button', { name: 'Send' }).click()]);
+    assert.equal(postedOrigin, origin);
+  } finally {
+    await browser?.close();
+    await new Promise(resolve => server.close(resolve));
+  }
 });
 test('Validation, header injection, cross-origin and oversized bodies never send', async () => {
   const s = setup();
@@ -61,6 +93,15 @@ test('Unconfigured form, DB failures and provider failures fail safely', async (
 });
 test('GET rejected', async () => {
   assert.equal((await handleContact({ request: new Request('https://parrotapp.dev/api/contact'), env: {} })).status, 405);
+});
+test('Error email uses shared script-free link styling and bypasses email obfuscation', async () => {
+  const s = setup();
+  const response = await handleContact({ request: s.request({ email: 'bad' }), env: s.env }, s.send);
+  assert.match(response.headers.get('content-security-policy'), /style-src 'self'/);
+  const html = await response.text();
+  assert.match(html, /href="\/email-links\.css"/);
+  assert.match(html, /<!--email_off-->[\s\S]*href="mailto:retar\.rok@gmail\.com"[\s\S]*<!--\/email_off-->/);
+  assert.doesNotMatch(html, /<script|email-protection/);
 });
 test('Real SQLite schema enforces quota, rotating buckets and expired-counter cleanup', async () => {
   const database = new DatabaseSync(':memory:');

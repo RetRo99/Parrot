@@ -1,12 +1,12 @@
 ---
-import Page from '../layouts/Page.astro';
+import LegalPage from '../layouts/LegalPage.astro';
 import { contactHref, site } from '../config';
+const sections = [{ id: 'send-a-report', text: '1. Send a report' }, { id: 'request-review', text: '2. Request review' }];
 ---
-<Page title="Copyright and abuse" description="How to report suspected copyright infringement or abuse involving Parrot Cloud, or request review of a restriction.">
-  <div class="container document-page">
-    <div class="page-heading"><p class="eyebrow">Parrot Cloud</p><h1>Copyright and abuse</h1><p class="lead">Parrot Cloud is a private library, not a public book-sharing service.</p></div>
+<LegalPage title="Copyright and abuse" eyebrow="Parrot Cloud" lead="Parrot Cloud is a private library, not a public book-sharing service." sections={sections} description="How to report suspected copyright infringement or abuse involving Parrot Cloud, or request review of a restriction.">
+  <div class="legal-prose numbered-prose">
     <p>[LAWYER CHECK market-specific notice requirements, designated-agent details and appeal procedures.]</p>
-    <h2>Send a report</h2>
+    <section aria-labelledby="send-a-report"><h2 id="send-a-report">Send a report</h2>
     <p>Contact <a href={contactHref}>{site.supportEmail}</a> with:</p>
     <ul>
       <li>Your name, contact details and whether you are the rights holder or their authorized representative.</li>
@@ -16,7 +16,8 @@ import { contactHref, site } from '../config';
       <li>For copyright notices, a statement that you have a good-faith belief the use is not authorized by the rights holder, their agent or the law; and that your information is accurate and you are authorized to act. Include your electronic signature.</li>
     </ul>
     <p>We may ask for additional information required by applicable law. Do not send account passwords or access tokens. Relevant report details may be shared with the affected user where required or appropriate; see our <a href="/privacy">privacy policy</a>.</p>
-    <h2>Request review</h2>
+    </section><section aria-labelledby="request-review"><h2 id="request-review">Request review</h2>
     <p>If your file or account was restricted and you believe this was a mistake, contact us with the decision details, file identifier if available and your explanation. We will explain any applicable formal counter-notice process. This page does not promise automatic restoration or replace statutory procedures.</p>
+    </section>
   </div>
-</Page>
+</LegalPage>

@@ -1,17 +1,18 @@
 ---
-import Page from '../layouts/Page.astro';
+import LegalPage from '../layouts/LegalPage.astro';
 import { contactHref, site } from '../config';
+const sections = [{ id: 'operator', text: '1. Operator' }, { id: 'policies-and-requests', text: '2. Policies and requests' }];
 ---
-<Page title="Legal notice" description="Publisher and contact information for Parrot and Parrot Cloud.">
-  <div class="container document-page">
-    <div class="page-heading"><p class="eyebrow">Publisher</p><h1>Legal notice</h1><p class="lead">Who operates Parrot and Parrot Cloud.</p></div>
+<LegalPage title="Legal notice" eyebrow="Publisher" lead="Who operates Parrot and Parrot Cloud." sections={sections} description="Publisher and contact information for Parrot and Parrot Cloud.">
+  <div class="legal-prose numbered-prose">
     <p>[CONFIRM legal operator identity and applicable business disclosure requirements. Lunaria is the publisher brand; legal operator identity remains deferred.]</p>
-    <h2>Operator</h2>
+    <section aria-labelledby="operator"><h2 id="operator">Operator</h2>
     <p>{site.legalName}<br />{site.address}</p>
     <p>Contact: <a href={contactHref}>{site.supportEmail}</a></p>
     <p>[CONFIRM registration number, register, VAT details and other mandatory disclosures if applicable; omit only after confirming they are not required.]</p>
-    <h2>Policies and requests</h2>
+    </section><section aria-labelledby="policies-and-requests"><h2 id="policies-and-requests">Policies and requests</h2>
     <ul><li><a href="/privacy">Privacy policy</a></li><li><a href="/terms">Terms of use</a></li><li><a href="/delete-account">Account deletion</a></li><li><a href="/copyright">Copyright and abuse</a></li></ul>
     <p>Parrot is an independent project and is not affiliated with Storyteller or Audiobookshelf.</p>
+    </section>
   </div>
-</Page>
+</LegalPage>

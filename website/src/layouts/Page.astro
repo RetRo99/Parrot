@@ -1,10 +1,11 @@
 ---
 import { Image } from 'astro:assets';
 import logo from '../assets/logo-crop.webp';
-import darkLogo from '../assets/logo-dark.webp';
+import darkLogo from '../assets/logo-mark-dark.svg';
 import { earlyAccessHref, site } from '../config';
 import '../styles/tokens.css';
 import '../styles/site.css';
+import '../styles/email-links.css';
 interface Props { title?: string; description: string }
 const { title, description } = Astro.props;
 const pageTitle = title ? `${title} · Parrot` : 'Parrot · Read it. Hear it. Keep your place.';
@@ -19,12 +20,13 @@ const pageTitle = title ? `${title} · Parrot` : 'Parrot · Read it. Hear it. Ke
     <title>{pageTitle}</title>
   </head>
   <body>
+    <Fragment set:html="<!--email_off-->" />
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
       <div class="container header-inner">
         <a class="brand" href="/" aria-label="Parrot home">
-          <Image class="logo-light" src={logo} alt="" width={34} height={34} format="webp" />
-          <Image class="logo-dark" src={darkLogo} alt="" width={34} height={34} format="webp" />
+          <Image class="logo-light" src={logo} alt="" width={72} height={72} format="webp" />
+          <img class="logo-dark" src={darkLogo.src} alt="" width="36" height="36" />
           <span>Parrot</span>
         </a>
         <nav aria-label="Main navigation">
@@ -40,8 +42,8 @@ const pageTitle = title ? `${title} · Parrot` : 'Parrot · Read it. Hear it. Ke
       <div class="container footer-inner">
         <div>
           <a class="brand" href="/" aria-label="Parrot home">
-            <Image class="logo-light" src={logo} alt="" width={26} height={26} format="webp" />
-            <Image class="logo-dark" src={darkLogo} alt="" width={26} height={26} format="webp" />
+            <Image class="logo-light" src={logo} alt="" width={56} height={56} format="webp" />
+            <img class="logo-dark" src={darkLogo.src} alt="" width="28" height="28" />
             <span>Parrot</span>
           </a>
           <p>© 2026 {site.legalName}, Slovenia</p>
@@ -57,5 +59,6 @@ const pageTitle = title ? `${title} · Parrot` : 'Parrot · Read it. Hear it. Ke
         </nav>
       </div>
     </footer>
+    <Fragment set:html="<!--/email_off-->" />
   </body>
 </html>

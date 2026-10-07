@@ -25,10 +25,10 @@ const questions = [
         <section class="contact-card" id="contact"><h2>Write to us</h2><p>Tell us what happened and which device you use. A person will answer.</p>
           <form class="contact-form" action="/api/contact" method="post">
             <label for="contact-email">Your email</label>
-            <input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required />
+            <div class="contact-field"><input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" aria-describedby="contact-email-error" required /><p class="field-error" id="contact-email-error">Enter a valid email address.</p></div>
             <label for="contact-message">Message</label>
-            <textarea id="contact-message" name="message" rows="6" minlength="10" maxlength="5000" required></textarea>
-            <div class="contact-trap" aria-hidden="true"><label for="contact-website">Leave this field empty</label><input id="contact-website" name="website" tabindex="-1" autocomplete="off" /></div>
+            <div class="contact-field"><textarea id="contact-message" name="message" rows="6" minlength="10" maxlength="5000" aria-describedby="contact-message-error" required></textarea><p class="field-error" id="contact-message-error">Your message must contain between 10 and 5,000 characters.</p></div>
+            <div class="contact-trap" hidden aria-hidden="true" inert><input id="contact-website" name="website" aria-hidden="true" tabindex="-1" autocomplete="off" /></div>
             <p class="small">Your email and message are processed by Cloudflare and Resend and delivered to our Gmail inbox to answer your request. Please don’t include passwords or book files. <a href="/privacy">Privacy policy</a>.</p>
             <button class="button" type="submit">Send message</button>
           </form>

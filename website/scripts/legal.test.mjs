@@ -18,6 +18,7 @@ test('All numbered sections, approved dates and unresolved details are retained'
     assert.match(document.body, /brand Lunaria/);
     assert.match(document.body, /\[ADDRESS\]/);
     assert.match(document.body, /legal operator identity remains deferred/);
+    assert.doesNotMatch(document.body, /<h2[^>]*>\d+\./, 'Section numbers come from shared template CSS, not duplicated source numbers');
   }
 });
 test('Privacy covers website processing and optional content transfers', () => {
@@ -31,7 +32,7 @@ test('Deletion and reporting pages stay accessible from the footer', () => {
   for (const route of ['delete-account', 'copyright', 'legal-notice']) {
     assert.ok(footer.includes(`href="/${route}"`));
     const source = readFileSync(new URL(`../src/pages/${route}.astro`, import.meta.url), 'utf8');
-    assert.match(source, /Page title=/);
+    assert.match(source, /LegalPage title=/);
   }
   const deletion = readFileSync(new URL('../src/pages/delete-account.astro', import.meta.url), 'utf8');
   assert.match(deletion, /mailto:/);

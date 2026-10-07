@@ -4,13 +4,13 @@ const SENDER = 'Parrot Support <support@parrotapp.dev>';
 const headers = {
   'Content-Type': 'text/html; charset=utf-8',
   'Cache-Control': 'no-store',
-  'Content-Security-Policy': "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+  'Content-Security-Policy': "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
   'Referrer-Policy': 'no-referrer',
   'X-Content-Type-Options': 'nosniff',
 };
 
 function error(status, message) {
-  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Message not sent · Parrot</title></head><body><main><h1>Message not sent</h1><p>${message}</p><p>Use your browser’s Back button to return to your message, or <a href="/support#contact">return to support</a>. You can also email <a href="mailto:${RECIPIENT}">${RECIPIENT}</a>.</p></main></body></html>`, { status, headers });
+  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Message not sent · Parrot</title><link rel="stylesheet" href="/email-links.css"></head><body><!--email_off--><main><h1>Message not sent</h1><p>${message}</p><p>Use your browser’s Back button to return to your message, or <a href="/support#contact">return to support</a>. You can also email <a href="mailto:${RECIPIENT}">${RECIPIENT}</a>.</p></main><!--/email_off--></body></html>`, { status, headers });
 }
 
 function accepted() {
