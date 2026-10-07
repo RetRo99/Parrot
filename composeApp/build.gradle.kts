@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
-    alias(libs.plugins.kotzilla)
     alias(libs.plugins.koinCompilerPlugin)
 }
 
@@ -66,7 +65,6 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.koin.core)
             api(libs.koin.annotations)
-            implementation(libs.kotzilla.sdk.compose)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.navigation3.ui)
@@ -147,12 +145,6 @@ compose.desktop {
 compose.resources {
     publicResClass = false
     generateResClass = always
-}
-
-kotzilla {
-    versionName = "1.0.0"
-    keyGeneration = io.kotzilla.gradle.ext.KotzillaKeyGeneration.COMPOSE
-    composeInstrumentation = true
 }
 
 dependencies {

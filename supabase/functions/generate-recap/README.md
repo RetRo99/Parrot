@@ -8,33 +8,46 @@
 > retain the provider configuration guidance, not the old client contract.
 
 Turns a reading-session excerpt into a 2-3 sentence recap through
-[OpenCode Go](https://opencode.ai/docs/go/) (`hy3` by default).
+[DeepInfra](https://deepinfra.com/mistralai/Mistral-Nemo-Instruct-2407/api)
+using `mistralai/Mistral-Nemo-Instruct-2407`.
 The provider URL and the model allow-list are fixed in `recap.ts`.
 
-> Terms caveat: OpenCode Go is designed for coding-agent traffic and
-> personal use; this function is for a single personal, non-commercial app.
+> Migration is local until deployed and tested with a DeepInfra key. The model
+> page lists Apache 2.0 licensing and zero content retention. Provider DPA and
+> transfer safeguards still need review; update user disclosures before rollout.
 
 ## Secrets
 
 | Name | Required | Default | Notes |
 |---|---|---|---|
-| `OPENCODE_GO_API_KEY` | yes | — | Missing → 503 |
+| `DEEPINFRA_API_KEY` | yes | — | Missing → 503; old Go key is not used |
 | `RECAP_ENABLED` | yes | off | Kill switch; anything but `true` → 503 |
-| `RECAP_MODEL` | no | `hy3` | Only `hy3`, `glm-5.3-flash` or `mimo-v2.6-flash`; else 503 |
+| `RECAP_MODEL` | no | `mistralai/Mistral-Nemo-Instruct-2407` | Only this model; stale Go values fail closed |
 | `RECAP_DAILY_LIMIT` | no | `30` | Recaps per user per UTC day, 1-1000; else 503 |
 
 All four are read per request, so changes apply without a redeploy.
 
 ```sh
-supabase secrets set OPENCODE_GO_API_KEY=<your-opencode-go-key> --project-ref <project-ref>
+supabase secrets set DEEPINFRA_API_KEY=<your-deepinfra-key> --project-ref <project-ref>
 supabase secrets set RECAP_ENABLED=true --project-ref <project-ref>
-supabase secrets set RECAP_MODEL=<hy3|glm-5.3-flash|mimo-v2.6-flash> --project-ref <project-ref>
+supabase secrets set RECAP_MODEL=mistralai/Mistral-Nemo-Instruct-2407 --project-ref <project-ref>
 supabase secrets set RECAP_DAILY_LIMIT=<n> --project-ref <project-ref>
 ```
 
 Turn recaps off: `supabase secrets set RECAP_ENABLED=false --project-ref <project-ref>`.
 
 ## Deploy
+
+For the DeepInfra migration, keep `RECAP_ENABLED=false` while setting the new
+key and replacing any old `RECAP_MODEL` value. Deploy **both** `generate-recap`
+and `recap-worker` because both import the shared provider code. Run an
+allowlisted smoke test and check English/Slovenian output, cost, latency and
+long-session truncation before broader enablement. Never paste keys into chat
+or commit them. Revoke/remove the obsolete Go key after a successful rollout.
+
+```sh
+supabase functions deploy recap-worker --project-ref <project-ref>
+```
 
 The function needs the `consume_recap_quota` RPC from
 `supabase/migrations/20261002000000_parrot_cloud_recap_usage.sql` and the
@@ -79,11 +92,12 @@ one. A missing part gives 409 and the parts are dropped, so the app starts a
 new upload. Abandoned parts are deleted after an hour (on the user's next
 upload and by `purge_cloud_retention`).
 
-The excerpt is everything the user read in the session; there is no cap.
+The worker uses at most the latest 192,000 characters of the session.
 
-- Up to 250k chars (`CHUNK_CHARS`, ~57k English / ~100k dense Slovenian tokens,
-  well inside `hy3`'s 192k input) it is one model call.
-- Longer excerpts are split at line or sentence breaks into parts of up to 250k
+- Up to 24k UTF-16 units (`CHUNK_CHARS`) it is one model call. This encodes to
+  at most 72k UTF-8 bytes, conservatively below the 131,072-token context with
+  prompt/output headroom, without relying on English-only token estimates.
+- Longer excerpts are split at line or sentence breaks into parts of up to 24k
   chars. Each part gets short factual notes (map, 4 calls at a time), then one
   call merges the notes, in reading order, into the 2-3 sentence recap with the
   same rules (map-reduce). Notes are internal and never returned or logged.
@@ -91,11 +105,12 @@ The excerpt is everything the user read in the session; there is no cap.
   at 150 s). Each call has a 60 s timeout and retries once only on 5xx/network
   with at least 10 s left; part calls stop 35 s early to leave time to merge.
   Any failed part fails the recap with that part's status.
-- Time budget: past 2M chars (`MAX_INPUT_CHARS`, ~20 h of reading, ~9 parts) the
-  most recent 2M are used and the log line says `trimmed`.
+- Time budget: past 192k chars (`MAX_INPUT_CHARS`) the most recent 192k are used
+  and the log line says `trimmed`. This keeps the map stage to about eight parts.
 - One recap uses one quota unit however many model calls it takes.
 
-Measured on `hy3` via Go (2026-10-02): 8k chars 3.2 s; 40k 4.0 s; 300k chars in
+Historical only, not DeepInfra performance: measured on `hy3` via Go
+(2026-10-02): 8k chars 3.2 s; 40k 4.0 s; 300k chars in
 one call 11.4 s; a whole novel (690k chars, 3 parts + merge) 14.2 s; 2M chars
 (9 parts + merge) 31.2 s.
 

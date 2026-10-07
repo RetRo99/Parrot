@@ -8,7 +8,7 @@ import {
   type Env,
   type FetchFn,
   generateRecap,
-  GO_CHAT_URL,
+  CHAT_URL,
   goErrorType,
   isEnabled,
   loadConfig,
@@ -56,37 +56,39 @@ Deno.test('kill switch is on only for the exact string "true"', () => {
 })
 
 Deno.test('config defaults model and daily limit', () => {
-  assertEquals(loadConfig(envOf({ OPENCODE_GO_API_KEY: FAKE_KEY })), {
+  assertEquals(loadConfig(envOf({ DEEPINFRA_API_KEY: FAKE_KEY })), {
     ok: true,
-    config: { apiKey: FAKE_KEY, model: 'hy3', dailyLimit: 30 },
+    config: { apiKey: FAKE_KEY, model: 'mistralai/Mistral-Nemo-Instruct-2407', dailyLimit: 30 },
   })
 })
 
 Deno.test('config accepts allow-listed models and a valid limit', () => {
   const r = loadConfig(envOf({
-    OPENCODE_GO_API_KEY: FAKE_KEY,
-    RECAP_MODEL: 'glm-5.3-flash',
+    DEEPINFRA_API_KEY: FAKE_KEY,
+    RECAP_MODEL: 'mistralai/Mistral-Nemo-Instruct-2407',
     RECAP_DAILY_LIMIT: '5',
   }))
-  assertEquals(r, { ok: true, config: { apiKey: FAKE_KEY, model: 'glm-5.3-flash', dailyLimit: 5 } })
+  assertEquals(r, { ok: true, config: { apiKey: FAKE_KEY, model: 'mistralai/Mistral-Nemo-Instruct-2407', dailyLimit: 5 } })
 })
 
 Deno.test('config fails closed', () => {
+  assertEquals(loadConfig(envOf({ OPENCODE_GO_API_KEY: FAKE_KEY })), { ok: false, reason: 'missing_key' })
+  assertEquals(loadConfig(envOf({ DEEPINFRA_API_KEY: FAKE_KEY, RECAP_MODEL: 'hy3' })), { ok: false, reason: 'model_not_allowed' })
   assertEquals(loadConfig(envOf({})), { ok: false, reason: 'missing_key' })
-  assertEquals(loadConfig(envOf({ OPENCODE_GO_API_KEY: '  ' })), {
+  assertEquals(loadConfig(envOf({ DEEPINFRA_API_KEY: '  ' })), {
     ok: false,
     reason: 'missing_key',
   })
   for (const model of ['qwen3.8-flash', 'gpt-6-luna', 'deepseek-v4-flash', 'MIMO-V2.6-FLASH']) {
     assertEquals(
-      loadConfig(envOf({ OPENCODE_GO_API_KEY: FAKE_KEY, RECAP_MODEL: model })),
+      loadConfig(envOf({ DEEPINFRA_API_KEY: FAKE_KEY, RECAP_MODEL: model })),
       { ok: false, reason: 'model_not_allowed' },
       model,
     )
   }
   for (const limit of ['0', '-1', 'abc', '1.5', '1001', '99999']) {
     assertEquals(
-      loadConfig(envOf({ OPENCODE_GO_API_KEY: FAKE_KEY, RECAP_DAILY_LIMIT: limit })),
+      loadConfig(envOf({ DEEPINFRA_API_KEY: FAKE_KEY, RECAP_DAILY_LIMIT: limit })),
       { ok: false, reason: 'bad_daily_limit' },
       limit,
     )
@@ -295,8 +297,8 @@ Deno.test('provider: sends the fixed URL, headers and body', async () => {
 
   assertEquals(f.calls.length, 1)
   const { url, init } = f.calls[0]
-  assertEquals(url, GO_CHAT_URL)
-  assertEquals(url, 'https://opencode.ai/zen/go/v1/chat/completions')
+  assertEquals(url, CHAT_URL)
+  assertEquals(url, 'https://api.deepinfra.com/v1/openai/chat/completions')
   assertEquals(init.method, 'POST')
   const h = new Headers(init.headers)
   assertEquals(h.get('Authorization'), `Bearer ${FAKE_KEY}`)

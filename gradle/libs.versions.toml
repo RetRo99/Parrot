@@ -1,6 +1,5 @@
 [versions]
 agp = "9.1.0"
-kotzilla = "1.4.2"
 compileSdk = "37"
 minSdk = "29"
 targetSdk = "36"
@@ -115,8 +114,6 @@ navigationevent-compose = { module = "org.jetbrains.androidx.navigationevent:nav
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 
-# Kotzilla
-kotzilla-sdk-compose = { group = "io.kotzilla", name = "kotzilla-sdk-compose", version.ref = "kotzilla" }
 
 # Archiving (bzip2 model extraction)
 
@@ -193,7 +190,6 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 koinCompilerPlugin = { id = "io.insert-koin.compiler.plugin", version.ref = "koin-compiler-plugin" }
 kotlinxSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-kotzilla = { id = "io.kotzilla.kotzilla-plugin", version.ref = "kotzilla" }
 crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "gradlePlugins-crashlytics" }
 googleServices = { id = "com.google.gms.google-services", version.ref = "gradlePlugins-google-services" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

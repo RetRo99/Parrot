@@ -1,14 +1,13 @@
-// OpenCode Go provider, prompt and output checks for generate-recap. No
+// DeepInfra provider, prompt and output checks for generate-recap. No
 // Deno.serve and no direct env reads, so it can be tested with fakes.
 
 // A constant, not env, so the function can never proxy to another host.
-export const GO_CHAT_URL = 'https://opencode.ai/zen/go/v1/chat/completions'
+export const CHAT_URL = 'https://api.deepinfra.com/v1/openai/chat/completions'
 export const USER_AGENT = 'parrot-recap/1.0'
 
-// Only Go models served on /chat/completions; others use other formats.
-// hy3: fastest worst case + best Slovenian in the 2026-10-02 bench.
-export const ALLOWED_MODELS: readonly string[] = ['hy3', 'glm-5.3-flash', 'mimo-v2.6-flash']
-export const DEFAULT_MODEL = 'hy3'
+// Fixed directly hosted text model; no third-party model routing or fallback.
+export const DEFAULT_MODEL = 'mistralai/Mistral-Nemo-Instruct-2407'
+export const ALLOWED_MODELS: readonly string[] = [DEFAULT_MODEL]
 export const DEFAULT_DAILY_LIMIT = 30
 const MAX_DAILY_LIMIT = 1000
 
@@ -17,24 +16,22 @@ export const MAX_HINT_CHARS = 300
 export const MAX_SUMMARY_CHARS = 600
 export const NOT_ENOUGH = 'NOT_ENOUGH'
 
-// Go models may reason, and it is undocumented whether max_tokens counts
-// reasoning, so leave headroom well above a 2-3 sentence answer.
+// Headroom for factual map notes and a 2-3 sentence answer.
 export const MAX_OUTPUT_TOKENS = 600
 export const TEMPERATURE = 0.3
-// Go queues: measured 12-52 s for ~60 output tokens on 2026-10-02.
-// A 300k-char input took 11 s, so prompt size barely moves this.
+// Provider latency must be remeasured before live rollout.
 export const TIMEOUT_MS = 60_000
 const RETRY_DELAY_MS = 400
 
-// No excerpt cap. One call takes up to CHUNK_CHARS: hy3 on Go accepts
-// 192k input tokens and this is ~57k English, ~100k dense Slovenian
-// tokens. Longer excerpts are recapped per part, then merged.
-export const CHUNK_CHARS = 250_000
+// Conservative byte-token upper bound: 24k UTF-16 units encode to at most
+// 72k UTF-8 bytes, leaving ample prompt/output room in the 131,072-token
+// context even for non-English text. Longer excerpts use map-reduce.
+export const CHUNK_CHARS = 24_000
 export const MAP_CONCURRENCY = 4
 export const MAX_PARTIAL_CHARS = 1_500
-// Time budget, not a product cap: ~8 parts is two map waves, which fit
-// the deadline. ~20 h of reading; older text beyond it is dropped.
-export const MAX_INPUT_CHARS = 2_000_000
+// Keep at most eight parts (two map waves), not dozens of smaller calls.
+// Older text beyond this limit is dropped; live latency still needs testing.
+export const MAX_INPUT_CHARS = 192_000
 // The Edge gateway answers 504 at 150 s; leave room for auth and quota.
 export const DEADLINE_MS = 135_000
 // Map calls stop this early so the merge call still has time.
@@ -67,7 +64,7 @@ export function isEnabled(env: Env): boolean {
 
 /** Fails closed: any bad value means 503, never a silent fallback. */
 export function loadConfig(env: Env): ConfigResult {
-  const apiKey = env('OPENCODE_GO_API_KEY')?.trim()
+  const apiKey = env('DEEPINFRA_API_KEY')?.trim()
   if (!apiKey) return { ok: false, reason: 'missing_key' }
 
   const model = env('RECAP_MODEL')?.trim() || DEFAULT_MODEL
@@ -363,7 +360,7 @@ async function attemptOnce(
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
   try {
-    const res = await deps.fetch(GO_CHAT_URL, {
+    const res = await deps.fetch(CHAT_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

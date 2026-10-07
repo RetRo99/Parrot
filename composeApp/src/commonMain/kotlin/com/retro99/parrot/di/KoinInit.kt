@@ -1,7 +1,6 @@
 package com.retro99.parrot.di
 
 import com.retro99.base.AppInitializer
-import io.kotzilla.sdk.analytics.koin.analytics
 import org.koin.core.KoinApplication
 import org.koin.core.module.Module
 import org.koin.plugin.module.dsl.startKoin
@@ -22,7 +21,6 @@ fun initKoin(
     return startKoin<ParrotKoinApp> {
         platformConfiguration()
         modules(additionalModules)
-        analytics()
     }.also { koinApp ->
         koinApp.koin.getAll<AppInitializer>().forEach {
             try {
@@ -34,4 +32,3 @@ fun initKoin(
         }
     }
 }
-

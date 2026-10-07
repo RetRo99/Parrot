@@ -112,7 +112,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.work.runtime)
     implementation(libs.koin.android)
-    implementation(libs.kotzilla.sdk.compose)
     implementation(libs.datetime)
     debugImplementation(libs.compose.uiTooling)
 }

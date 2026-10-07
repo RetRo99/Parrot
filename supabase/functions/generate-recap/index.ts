@@ -3,7 +3,7 @@
 // Authenticated durable recap submission, lookup, consent and deletion.
 // Generation runs in recap-worker; this HTTP request never calls a provider.
 //
-// Provider: OpenCode Go (OpenAI-compatible /chat/completions) at a fixed
+// Provider: DeepInfra (OpenAI-compatible /chat/completions) at a fixed
 // URL with a server-side model allow-list; see recap.ts. Secrets and
 // deploy commands are in README.md next to this file.
 //

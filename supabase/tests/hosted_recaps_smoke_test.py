@@ -1,7 +1,8 @@
 """Run explicitly against a disposable, CLI-linked hosted project.
 
 Creates/deletes its own confirmed Auth user and book. Calls the configured AI
-provider once (may incur cost). Never prints keys, JWTs, excerpts or summaries.
+provider once (may incur cost). Never prints keys, JWTs or excerpts. Summaries
+are printed only with explicit --show-summary; --excerpt-file supplies test text.
 Requires logged-in Supabase CLI; uses only Python's standard library.
 Usage: python3 supabase/tests/hosted_recaps_smoke_test.py PROJECT_REF
 """
@@ -16,7 +17,7 @@ import urllib.request
 import uuid
 
 
-def run(project):
+def run(project, excerpt=None, show_summary=False):
     cli = "/opt/homebrew/bin/supabase"
     result = subprocess.run([cli, "projects", "api-keys", "--project-ref", project],
                             check=True, capture_output=True, text=True)
@@ -68,7 +69,10 @@ def run(project):
                    "The letter revealed that her brother had sailed to the northern island. "
                    "She packed a lantern and boarded the ferry to find him. "
                    "During the crossing she met a sailor who agreed to guide her to the island tower.",
-                   "lastSentence": "The sailor agreed to guide her to the island tower."}
+                    "lastSentence": "The sailor agreed to guide her to the island tower."}
+        if excerpt is not None:
+            payload["excerpt"] = excerpt
+            payload["lastSentence"] = excerpt.strip().splitlines()[-1]
         assert http(endpoint, payload, jwt)[0] == 403, "missing_consent_not_refused"
         assert http(endpoint, {"operation": "consent", "enabled": True}, jwt)[0] == 200, "consent_failed"
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
@@ -86,6 +90,8 @@ def run(project):
             time.sleep(5)
         assert record["state"] == "completed", "provider_job_did_not_complete: " + record["state"]
         assert 0 < len(record.get("summary", "")) <= 600, "invalid_summary"
+        if show_summary:
+            print("GENERATED RECAP:", record["summary"])
         rows = sql("select count(*)::integer as jobs, bool_and(charged and excerpt is null and last_sentence is null) as clean "
                    "from public.recap_jobs where user_id='" + user_id + "';")
         assert rows == [{"jobs": 1, "clean": True}], "duplicate_jobs_or_unscrubbed_text"
@@ -106,7 +112,11 @@ def run(project):
 
 if __name__ == "__main__":
     try:
-        run(sys.argv[1])
+        excerpt = None
+        if "--excerpt-file" in sys.argv:
+            with open(sys.argv[sys.argv.index("--excerpt-file") + 1], encoding="utf-8") as source:
+                excerpt = source.read()
+        run(sys.argv[1], excerpt, "--show-summary" in sys.argv)
     except Exception as error:
         # Assertions contain fixed diagnostic codes only.
         print("FAILED:", str(error) if isinstance(error, (AssertionError, RuntimeError)) else type(error).__name__)
