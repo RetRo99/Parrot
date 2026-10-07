@@ -37,20 +37,20 @@ internal fun boldParts(text: String, vararg parts: String): AnnotatedString = bu
 internal fun PositionsText(
     text: String, modifier: Modifier = Modifier, fontSize: TextUnit = 13.sp,
     bold: Boolean = false, title: Boolean = false, error: Boolean = false, maxLines: Int = Int.MAX_VALUE,
-    textAlign: TextAlign = TextAlign.Start,
-) = PositionsText(AnnotatedString(text), modifier, fontSize, bold, title, error, maxLines, textAlign)
+    textAlign: TextAlign = TextAlign.Start, color: Color? = null,
+) = PositionsText(AnnotatedString(text), modifier, fontSize, bold, title, error, maxLines, textAlign, color)
 
 @Composable
 internal fun PositionsText(
     text: AnnotatedString, modifier: Modifier = Modifier, fontSize: TextUnit = 13.sp,
     bold: Boolean = false, title: Boolean = false, error: Boolean = false, maxLines: Int = Int.MAX_VALUE,
-    textAlign: TextAlign = TextAlign.Start,
+    textAlign: TextAlign = TextAlign.Start, color: Color? = null,
 ) {
     BasicText(text, modifier, style = (if (title) Ember.type.screenTitle else Ember.type.meta).copy(
         fontSize = if (title) 22.sp else fontSize,
         lineHeight = if (title) 28.sp else fontSize * 1.35f,
         fontWeight = if (bold || title || (error && Ember.style.isEink)) FontWeight.Bold else FontWeight.Normal,
-        color = if (error) Ember.colors.error else if (bold || title) Ember.colors.ink else Ember.colors.ink2,
+        color = color ?: if (error) Ember.colors.error else if (bold || title) Ember.colors.ink else Ember.colors.ink2,
         textAlign = textAlign,
     ), maxLines = maxLines, overflow = TextOverflow.Ellipsis)
 }
@@ -107,7 +107,7 @@ internal fun PositionsEmptyState(title: String, explanation: String, action: Str
 
 @Composable
 internal fun PositionRadio(selected: Boolean) {
-    Box(Modifier.size(22.dp).border(2.dp, if (selected) Ember.colors.accent else Ember.colors.chipBorder, CircleShape),
+    Box(Modifier.size(22.dp).border(2.dp, if (selected) Ember.colors.accent else Ember.colors.ink2, CircleShape),
         contentAlignment = Alignment.Center) {
         if (selected) Box(Modifier.size(9.dp).background(Ember.colors.accent, CircleShape))
     }

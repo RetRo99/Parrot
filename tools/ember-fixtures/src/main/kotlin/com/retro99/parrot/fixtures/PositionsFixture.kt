@@ -25,7 +25,9 @@ fun PositionsFixture(scenario: String) {
         when (event) {
             is PositionsIntent.OnRowClicked -> if (state.rows.any { it.candidateId == event.copyKey && it.position != null })
                 state = state.copy(selectedKey = event.copyKey)
-            PositionsIntent.OnUseThisPositionClicked -> state = state.copy(previews = fixturePreviews(),
+            PositionsIntent.OnUseThisPositionClicked -> state = state.copy(previews = fixturePreviews().filter { preview ->
+                state.rows.any { it.copy.key == preview.target.key }
+            },
                 sheetSource = state.rows.first { it.candidateId == state.selectedKey },
                 checkedKeys = fixturePreviews().filter { it.defaultChecked }.map { it.target.key.value }.toSet())
             is PositionsIntent.OnTargetToggled -> if (!state.isApplying && state.previews.orEmpty().any { it.enabled && it.target.key.value == event.copyKey })
@@ -89,7 +91,11 @@ fun seededPositions(scenario: String): PositionsViewState {
         "pair" -> pair
         "full" -> normal + pair.filter { it.copy.key != st.key }.map { it.copy(isLatest = false) } +
             positionRow(second, place(second, .25, 3, 6_000_000, false), local = false)
-        else -> normal
+        else -> normal + positionRow(version("readalong", BookHome.ParrotCloud, readalong = true), null)
+    }.let { rows ->
+        if (scenario in listOf("apply-all", "apply-start"))
+            rows + positionRow(version("collapse", BookHome.Storyteller, server = "st-work"), null)
+        else rows
     }
     val selected = if (scenario == "pair") rows[2] else rows[0]
     val state = PositionsViewState(bookTitle = "The Lantern Ferry", deviceName = "This phone",

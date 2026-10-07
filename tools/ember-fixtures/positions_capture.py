@@ -62,6 +62,10 @@ for theme in args.themes:
         }.get(scenario)
         if expected:
             assert expected in labels, f"Missing {expected!r} in {scenario}"
+        if scenario == "normal":
+            assert "Read-along" in labels and "Not started yet" in labels
+            readalong = next(node for node in tree.iter() if "Read-along" in node.get("content-desc", ""))
+            assert readalong.get("enabled") == "false", "Unstarted version must not be selectable"
         if scenario == "apply-no-match":
             assert "download it first" not in labels
         focused()

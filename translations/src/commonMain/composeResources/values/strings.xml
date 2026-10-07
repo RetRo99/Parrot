@@ -7,7 +7,7 @@
     <string name="positions_on_device">On %1$s</string>
     <string name="positions_phone_suffix">on %1$s</string>
     <string name="positions_server_suffix">on the server</string>
-    <string name="positions_not_started">Not started</string>
+    <string name="positions_not_started">Not started yet</string>
     <string name="positions_no_reading">No reading here yet</string>
     <string name="positions_unavailable">Unavailable</string>
     <string name="positions_read_on">Read on %1$s · %2$s</string>

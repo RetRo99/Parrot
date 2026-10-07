@@ -11,7 +11,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
@@ -45,7 +44,7 @@ internal fun PositionsApplySheet(state: PositionsViewState, previews: List<Apply
             val shape = RoundedCornerShape(16.dp)
             val label = copyLabel(preview.target, state)
             val result = previewResultText(preview)
-            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).alpha(if (preview.enabled) 1f else .5f)
+            Row(Modifier.fillMaxWidth().heightIn(min = 64.dp)
                 .clip(shape).background(if (Ember.style.isEink) Ember.colors.surface else Ember.colors.bg)
                 .then(if (Ember.style.isEink) Modifier.border(2.dp, Ember.colors.line, shape) else Modifier)
                 .toggleable(checked, enabled = enabled, role = Role.Checkbox,
@@ -55,7 +54,7 @@ internal fun PositionsApplySheet(state: PositionsViewState, previews: List<Apply
                 horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 PositionCheckbox(checked, enabled)
                 Column(Modifier.weight(1f).clearAndSetSemantics {}) {
-                    PositionsText(label, fontSize = 15.sp, bold = true)
+                    PositionsText(label, fontSize = 15.sp, bold = preview.enabled, color = Ember.colors.ink)
                     PositionsText(result, error = preview.warning != null ||
                         preview.translated?.confidence == TranslationConfidence.Approximate)
                 }

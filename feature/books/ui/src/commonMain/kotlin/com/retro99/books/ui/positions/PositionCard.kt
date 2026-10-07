@@ -10,7 +10,6 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
@@ -40,7 +39,7 @@ internal fun PositionCard(row: CopyPositionRow, state: PositionsViewState, onCli
     val unavailable = stringResource(StringRes.positions_unavailable)
     val description = listOfNotNull(label, place.replace("%", " percent"), attribution,
         latest.takeIf { row.isLatest }, unavailable.takeIf { !available }).joinToString(", ")
-    Row(Modifier.fillMaxWidth().alpha(if (available) 1f else .55f).clip(shape)
+    Row(Modifier.fillMaxWidth().clip(shape)
         .background(if (selected) Ember.colors.surfaceSelected else Ember.colors.surface)
         .border(if (selected || Ember.style.isEink) 2.dp else 1.dp,
             if (selected) Ember.colors.accent else Ember.colors.line, shape)
