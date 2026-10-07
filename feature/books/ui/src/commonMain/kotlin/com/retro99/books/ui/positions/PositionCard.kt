@@ -41,7 +41,7 @@ internal fun PositionCard(row: CopyPositionRow, state: PositionsViewState, onCli
     val description = listOfNotNull(label, place.replace("%", " percent"), attribution,
         latest.takeIf { row.isLatest }, unavailable.takeIf { !available }).joinToString(", ")
     Row(Modifier.fillMaxWidth().alpha(if (available) 1f else .55f).clip(shape)
-        .background(if (selected && !Ember.style.isEink) Ember.colors.note else Ember.colors.surface)
+        .background(if (selected) Ember.colors.surfaceSelected else Ember.colors.surface)
         .border(if (selected || Ember.style.isEink) 2.dp else 1.dp,
             if (selected) Ember.colors.accent else Ember.colors.line, shape)
         .selectable(selected, enabled = available, role = Role.RadioButton, onClick = onClick)

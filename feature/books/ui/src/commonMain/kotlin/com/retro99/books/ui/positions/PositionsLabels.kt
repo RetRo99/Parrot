@@ -1,7 +1,8 @@
 package com.retro99.books.ui.positions
 
 import androidx.compose.runtime.Composable
-import com.retro99.base.nowMillis
+import com.retro99.base.calendarDateLabel
+import com.retro99.base.CalendarDateLabel
 import com.retro99.base.ui.compose.relativeTimeText
 import com.retro99.books.domain.model.BookHome
 import com.retro99.books.domain.model.links.LinkedCopy
@@ -55,7 +56,7 @@ internal fun clockTime(ms: Long): String {
 @Composable
 internal fun sourceText(row: CopyPositionRow, state: PositionsViewState): String {
     val time = ObservedTime.toEpochMillis(row.observedAt)?.let {
-        if ((nowMillis() - it) / 86_400_000L == 1L) stringResource(StringRes.positions_yesterday)
+        if (calendarDateLabel(row.observedAt) == CalendarDateLabel.Yesterday) stringResource(StringRes.date_yesterday)
         else relativeTimeText(it)
     }.orEmpty()
     return when (val source = row.sourceLabel) {

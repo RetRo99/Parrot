@@ -54,8 +54,7 @@ data class EmberColors(
     /** Highlight colours for saved highlights. */
     val highlights: EmberHighlights = EmberDayHighlights,
     /** Gentle selected-position fill and apply target tiles. */
-    val note: Color = accent.copy(alpha = .06f).compositeOver(surface),
-    val tile: Color = bg,
+    val surfaceSelected: Color = accent.copy(alpha = .06f).compositeOver(surface),
 )
 
 /**
@@ -197,6 +196,7 @@ val EmberEinkColors = EmberColors(
     ink2 = Color(0xFF222222),
     line = Color.Black,
     accent = Color.Black,
+    surfaceSelected = Color.White,
     accentText = Color.Black,
     onAccent = Color.White,
     navActive = Color.Black,

@@ -11,6 +11,7 @@ parser.add_argument("--serial", required=True)
 parser.add_argument("--allow-device", action="store_true")
 parser.add_argument("--output", default="design/screens")
 parser.add_argument("--themes", nargs="+", default=["day", "eink"], choices=["day", "eink", "night"])
+parser.add_argument("--scenarios", nargs="+", default=None)
 args = parser.parse_args()
 if not args.serial.startswith("emulator-") and not args.allow_device:
     parser.error("A real device requires explicit --allow-device authorization")
@@ -43,8 +44,8 @@ def focused():
 
 run("install", "--no-streaming", "-r", str(root / "tools/ember-fixtures/build/outputs/apk/debug/ember-fixtures-debug.apk"))
 for theme in args.themes:
-    for scenario in ("normal", "pair", "error", "apply", "apply-all", "apply-start", "apply-no-match", "apply-not-supported",
-                     "loading", "unlinked", "updating", "success", "partial", "none", "details", "no-selection", "full"):
+    for scenario in (args.scenarios or ("normal", "pair", "error", "apply", "apply-all", "apply-start", "apply-no-match", "apply-not-supported",
+                     "loading", "unlinked", "updating", "success", "partial", "none", "details", "no-selection", "full")):
         run("shell", "am", "force-stop", package)
         run("shell", "am", "start", "-W", "-n", f"{package}/.FixtureActivity", "--es", "theme", theme,
             "--es", "positions", scenario)

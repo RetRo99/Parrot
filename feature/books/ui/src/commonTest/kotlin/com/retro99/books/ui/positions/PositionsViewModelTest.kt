@@ -12,6 +12,7 @@ import com.retro99.reader.domain.write.CopyWriteResult
 import com.retro99.translations.StringRes
 import resources.translations.positions_missing_file
 import resources.translations.positions_no_match
+import resources.translations.positions_choose_version
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.test.*
@@ -43,6 +44,7 @@ class PositionsViewModelTest {
         var delayLoad = false
         var delayApply = false
         var loads = 0
+        var applies = 0
         var cancellations = 0
         val changes = MutableStateFlow(0)
         override suspend fun metadata(serverId: String, bookUuid: String) =
@@ -55,6 +57,7 @@ class PositionsViewModelTest {
         }
         override suspend fun preview(source: CopyPositionRow, rows: List<CopyPositionRow>) = previews
         override suspend fun apply(source: CopyPositionRow, previews: List<ApplyPreview>): List<ApplyResult> {
+            applies++
             if (delayApply) delay(100)
             return results
         }
@@ -79,6 +82,18 @@ class PositionsViewModelTest {
         assertEquals("source", vm.viewState.value.selectedKey)
         vm.onIntent(PositionsIntent.OnRowClicked("target"))
         assertEquals("target", vm.viewState.value.selectedKey)
+    }
+    @Test fun `unticking last target leaves sheet open and prevents apply`() = test { fake, vm ->
+        vm.onIntent(PositionsIntent.OnRowClicked("source"))
+        vm.onIntent(PositionsIntent.OnUseThisPositionClicked); runCurrent()
+        vm.onIntent(PositionsIntent.OnTargetToggled(target.key.value))
+        assertTrue(vm.viewState.value.checkedKeys.isEmpty())
+        assertEquals(StringRes.positions_choose_version, applyButtonResource(vm.viewState.value.checkedKeys.size))
+        vm.onIntent(PositionsIntent.OnApplyClicked); runCurrent()
+        assertEquals(0, fake.applies)
+        assertFalse(vm.viewState.value.isApplying)
+        assertNotNull(vm.viewState.value.previews)
+        assertNull(vm.viewState.value.notice)
     }
     @Test fun `sheet defaults toggles disabled gating and dismiss cleanup`() = test { _, vm ->
         vm.onIntent(PositionsIntent.OnRowClicked("source"))

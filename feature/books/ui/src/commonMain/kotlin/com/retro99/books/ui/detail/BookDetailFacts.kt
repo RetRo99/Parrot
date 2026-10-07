@@ -35,7 +35,7 @@ import resources.translations.book_detail_duration_hours
 import resources.translations.book_detail_duration_minutes
 import resources.translations.book_detail_fact_pair
 import resources.translations.book_detail_today
-import resources.translations.book_detail_yesterday
+import resources.translations.date_yesterday
 
 @Composable
 internal fun durationText(millis: Long): String {
@@ -48,7 +48,7 @@ internal fun durationText(millis: Long): String {
 @Composable
 private fun factDate(raw: String?): String? = when (val label = calendarDateLabel(raw)) {
     CalendarDateLabel.Today -> stringResource(StringRes.book_detail_today)
-    CalendarDateLabel.Yesterday -> stringResource(StringRes.book_detail_yesterday)
+    CalendarDateLabel.Yesterday -> stringResource(StringRes.date_yesterday)
     is CalendarDateLabel.Medium -> label.text
     null -> null
 }

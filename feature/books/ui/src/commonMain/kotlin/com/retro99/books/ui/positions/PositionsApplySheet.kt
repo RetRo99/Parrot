@@ -46,7 +46,7 @@ internal fun PositionsApplySheet(state: PositionsViewState, previews: List<Apply
             val label = copyLabel(preview.target, state)
             val result = previewResultText(preview)
             Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).alpha(if (preview.enabled) 1f else .5f)
-                .clip(shape).background(if (Ember.style.isEink) Ember.colors.surface else Ember.colors.tile)
+                .clip(shape).background(if (Ember.style.isEink) Ember.colors.surface else Ember.colors.bg)
                 .then(if (Ember.style.isEink) Modifier.border(2.dp, Ember.colors.line, shape) else Modifier)
                 .toggleable(checked, enabled = enabled, role = Role.Checkbox,
                     onValueChange = { dispatch(PositionsIntent.OnTargetToggled(preview.target.key.value)) })
@@ -65,11 +65,17 @@ internal fun PositionsApplySheet(state: PositionsViewState, previews: List<Apply
         val count = previews.count { it.enabled && it.target.key.value in state.checkedKeys }
         PositionsButton(
             if (state.isApplying) stringResource(StringRes.positions_updating)
-            else stringResource(if (count == 1) StringRes.positions_update_one else StringRes.positions_update_many, count),
+            else stringResource(applyButtonResource(count), count),
             { dispatch(PositionsIntent.OnApplyClicked) }, Modifier.fillMaxWidth().padding(bottom = 8.dp),
             enabled = count > 0 && !state.isApplying, busy = state.isApplying,
         )
     }
+}
+
+internal fun applyButtonResource(count: Int) = when (count) {
+    0 -> StringRes.positions_choose_version
+    1 -> StringRes.positions_update_one
+    else -> StringRes.positions_update_many
 }
 
 /** Local-save wording lives here; a confirmed synced variant can be added later. */
