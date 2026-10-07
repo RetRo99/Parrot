@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { handleContact } from '../functions/api/contact.js';
+import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 
 function setup() {
   let calls = 0;
@@ -59,4 +61,26 @@ test('Unconfigured form, DB failures and provider failures fail safely', async (
 });
 test('GET rejected', async () => {
   assert.equal((await handleContact({ request: new Request('https://parrotapp.dev/api/contact'), env: {} })).status, 405);
+});
+test('Real SQLite schema enforces quota, rotating buckets and expired-counter cleanup', async () => {
+  const database = new DatabaseSync(':memory:');
+  database.exec(readFileSync(new URL('../functions-schema.sql', import.meta.url), 'utf8'));
+  const s = setup();
+  s.env.CONTACT_DB = { prepare(sql) { return { bind(...values) {
+    const statement = database.prepare(sql);
+    return { run: async () => statement.run(...values), first: async () => statement.get(...values) ?? null };
+  } }; } };
+  try {
+    const start = 3600000;
+    for (let i = 0; i < 5; i++) assert.equal((await handleContact({ request: s.request(), env: s.env }, s.send, start)).status, 303);
+    assert.equal((await handleContact({ request: s.request(), env: s.env }, s.send, start)).status, 429);
+    const previous = database.prepare('SELECT * FROM contact_limits').get();
+    assert.equal(previous.count, 5);
+    assert.match(previous.key, /^[a-f0-9]{64}$/);
+    assert.equal((await handleContact({ request: s.request(), env: s.env }, s.send, start + 3600000)).status, 303);
+    const rows = database.prepare('SELECT * FROM contact_limits').all();
+    assert.equal(rows.length, 1);
+    assert.notEqual(rows[0].key, previous.key);
+    assert.equal(rows[0].count, 1);
+  } finally { database.close(); }
 });

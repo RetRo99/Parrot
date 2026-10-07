@@ -2,7 +2,7 @@
 export const site = {
   domain: 'parrotapp.dev',
   supportEmail: 'retar.rok@gmail.com',
-  legalName: '[LEGAL NAME]',
+  legalName: 'Lunaria',
   address: '[ADDRESS]',
 };
 

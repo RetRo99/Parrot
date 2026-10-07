@@ -9,13 +9,15 @@ test('Required legal app anchors are stable', () => {
   assert.ok(loadLegal('privacy').sections.some(section => section.id === 'recaps'));
   assert.ok(loadLegal('terms').sections.some(section => section.id === 'your-books-and-notes'));
 });
-test('All numbered sections and draft notices are retained', () => {
+test('All numbered sections, approved dates and unresolved details are retained', () => {
   for (const [kind, count] of [['privacy', 14], ['terms', 14]]) {
     const document = loadLegal(kind);
     assert.equal(document.sections.length, count);
-    assert.match(document.notices, /Draft · not yet in force/);
-    assert.match(document.notices, /DRAFT for legal review/);
-    assert.match(document.body, /\[LEGAL NAME\]/);
+    assert.match(document.notices, /Effective date: 7 October 2026/);
+    assert.doesNotMatch(document.notices, /Draft|not yet in force|DRAFT/);
+    assert.match(document.body, /brand Lunaria/);
+    assert.match(document.body, /\[ADDRESS\]/);
+    assert.match(document.body, /legal operator identity remains deferred/);
   }
 });
 test('Privacy covers website processing and optional content transfers', () => {
@@ -37,7 +39,9 @@ test('Deletion and reporting pages stay accessible from the footer', () => {
   assert.match(deletion, /Never send your password/);
 });
 test('Last updated is never fabricated', () => {
-  const source = readFileSync(new URL('../../design/ember/website/legal/privacy.md', import.meta.url), 'utf8');
+  const approved = readFileSync(new URL('../../design/ember/website/legal/privacy.md', import.meta.url), 'utf8');
+  assert.equal(parseLegal(approved, 'privacy').lastUpdated, '2026-10-07');
+  const source = approved.replace(/^---\n[\s\S]*?\n---\n/, '');
   assert.equal(parseLegal(source, 'privacy').lastUpdated, undefined);
   assert.equal(parseLegal(`---\nlastUpdated: '2026-10-07'\n---\n${source}`, 'privacy').lastUpdated, '2026-10-07');
   assert.throws(() => parseLegal(`---\nlastUpdated: '2026-02-30'\n---\n${source}`, 'privacy'));
