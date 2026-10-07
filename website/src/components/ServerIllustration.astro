@@ -1,0 +1,14 @@
+---
+const servers = [
+  { initial: 'S', name: 'Storyteller', detail: 'books.example.com · 86 books' },
+  { initial: 'A', name: 'Audiobookshelf', detail: 'shelf.example.com · 214 books' },
+  { initial: 'P', name: 'Parrot Cloud', detail: '23 books · synced 5 min ago' },
+];
+---
+<figure class="server-illustration" aria-label="Illustration of connected Storyteller, Audiobookshelf and Parrot Cloud libraries">
+  {servers.map(server => <div class="server-row">
+    <span class="server-initial" aria-hidden="true">{server.initial}</span>
+    <div class="server-description"><strong>{server.name}</strong><span>{server.detail}</span></div>
+    <span class="connected">Connected</span>
+  </div>)}
+</figure>

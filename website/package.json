@@ -1,0 +1,23 @@
+{
+  "name": "parrot-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/prepare-images.mjs && ASTRO_TELEMETRY_DISABLED=1 astro dev --host 127.0.0.1",
+    "build": "node scripts/check-tokens.mjs && node scripts/prepare-images.mjs && ASTRO_TELEMETRY_DISABLED=1 astro build && node scripts/check-output.mjs",
+    "build:preview": "node scripts/check-tokens.mjs && node scripts/prepare-images.mjs && ASTRO_TELEMETRY_DISABLED=1 astro build && node scripts/check-output.mjs --allow-drafts",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview --host 127.0.0.1",
+    "test": "node --test scripts/*.test.mjs",
+    "test:browser": "node scripts/browser-check.mjs"
+  },
+  "dependencies": {
+    "astro": "^7.3.6",
+    "marked": "^17.0.0",
+    "sharp": "^0.35.5",
+    "yaml": "^2.8.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "playwright": "^1.58.0"
+  }
+}

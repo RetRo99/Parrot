@@ -1,0 +1,19 @@
+---
+// Labels and values transcribed from the approved real Day/Night position captures.
+// HTML keeps those labels readable instead of scaling screenshot typography down.
+const copies = [
+  { label: 'eBook · On this phone', position: 'Chapter 8 · 62%', detail: 'Read on this phone · 5 min ago', latest: true },
+  { label: 'Audiobook · Storyteller', position: 'Chapter 7 · 4:12:08 · 43%', detail: 'Listened on Pixel Tablet · Yesterday', latest: false },
+];
+---
+<figure class="positions-illustration" aria-label="Parrot reading positions, based on real app captures">
+  {copies.map(copy => <div class:list={['position-copy', { latest: copy.latest }]}>
+    <span class="position-radio" aria-hidden="true"></span>
+    <div class="position-content">
+    <div class="position-label">{copy.label}{copy.latest && <strong>Latest</strong>}</div>
+    <strong>{copy.position}</strong><p>{copy.detail}</p>
+    {copy.latest && <p class="position-quote">“It was not mine to open,” he said at last.</p>}
+    </div>
+  </div>)}
+  <figcaption class="illustration-action">Use this position…</figcaption>
+</figure>

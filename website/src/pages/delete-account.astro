@@ -1,0 +1,22 @@
+---
+import Page from '../layouts/Page.astro';
+import { site } from '../config';
+const requestHref = `mailto:${site.supportEmail}?subject=${encodeURIComponent('Parrot Cloud account deletion request')}`;
+---
+<Page title="Delete your Parrot account" description="Request deletion of your Parrot Cloud account and associated data, in the app or by email.">
+  <div class="container document-page">
+    <div class="page-heading"><p class="eyebrow">Parrot Cloud</p><h1>Delete your account</h1><p class="lead">You can request deletion without reinstalling Parrot.</p></div>
+    <h2>In the app</h2>
+    <p>Open Settings → Parrot Cloud → Delete Parrot Cloud account… Sign in again if asked, then confirm deletion. Signing out or uninstalling the app does not delete your cloud account.</p>
+    <h2>Without the app</h2>
+    <p>Email us from the address associated with your Parrot Cloud account. Ask to delete your account and associated data. We may need to verify that the account belongs to you. Never send your password.</p>
+    <p><a class="button" href={requestHref}>Request account deletion</a></p>
+    <p>Or write to <a href={requestHref}>{site.supportEmail}</a>. We respond to privacy requests within one month, subject to any lawful extension explained to you.</p>
+    <h2>What deletion removes</h2>
+    <p>Your cloud account, uploaded library and associated synced data, including reading activity, annotations and recaps. Save your own copies of books and notes before deleting: account deletion is permanent.</p>
+    <h2>What deletion does not remove</h2>
+    <p>Books on your own Storyteller or Audiobookshelf servers and files already on your devices are not deleted. Remove those separately if you wish.</p>
+    <p>Limited file-operation audit records are retained for up to 180 days with the account identifier removed. Blocked-file hashes, previously sent monitoring data and infrastructure backups have separate retention rules described in the <a href="/privacy">privacy policy</a>.</p>
+    <p><strong>Draft:</strong> [CONFIRM deployed cleanup schedules, provider deletion procedures, backup expiry and a working support mailbox before publication.]</p>
+  </div>
+</Page>

@@ -1,0 +1,41 @@
+---
+import Page from '../layouts/Page.astro';
+import { contactHref, site } from '../config';
+const guides = [
+  ['Connect Storyteller', ['Open Parrot and choose Add a library.', 'Type your server’s address. Parrot checks it and recognises Storyteller.', 'Sign in. Your books appear in the Library.']],
+  ['Connect Audiobookshelf', ['Open Parrot and choose Add a library.', 'Type your server’s address. Parrot recognises Audiobookshelf.', 'Sign in with your Audiobookshelf account.']],
+  ['Start with Parrot Cloud', ['Parrot Cloud is by invitation for now. Write to us to ask for one.', 'Open Settings → Parrot Cloud and create an account.', 'Add books from your device. They appear everywhere you sign in.']],
+];
+const questions = [
+  ['Parrot can’t reach my server', 'Check that the address opens in a browser on the same device. If your server is only reachable at home, you need to be on that network or use a VPN.'],
+  ['The audiobook and ebook are in different places', 'Open the book, then Reading positions. Pick the place you want and choose which versions should follow.'],
+  ['Read-along doesn’t highlight the text', 'Highlighting needs an ebook that includes synced narration, such as one made with Storyteller. On Android, other ebooks can be read aloud with a downloaded voice.'],
+  ['Which file types can I add to Parrot Cloud?', 'EPUB, including EPUBs with narration. [CONFIRM audiobook formats]'],
+  ['Does Parrot Cloud cost anything?', 'Not during early access. If we add paid plans later, you will see the price first and nothing is charged unless you choose to buy.'],
+  ['Which languages does the dictionary support?', 'English for now.'],
+];
+---
+<Page title="Support" description="Getting started with Parrot, common questions, and how to reach a person.">
+  <div class="container document-page support-page">
+    <div class="page-heading"><p class="eyebrow">Support</p><h1>How can we help?</h1><p class="lead">Getting started, common questions, and how to reach a person.</p></div>
+    <section aria-labelledby="getting-started"><h2 id="getting-started">Getting started</h2><div class="getting-started-grid">{guides.map(([title, steps]) => <article class="card guide-card"><h3>{title}</h3><ol>{(steps as string[]).map(step => <li>{step}</li>)}</ol></article>)}</div></section>
+    <div class="support-columns">
+      <section aria-labelledby="common-questions"><h2 id="common-questions">Common questions</h2><div class="question-list">{questions.map(([title, text]) => <article><h3>{title}</h3><p>{text}</p></article>)}</div></section>
+      <aside class="support-aside" aria-label="Contact and account deletion">
+        <section class="contact-card" id="contact"><h2>Write to us</h2><p>Tell us what happened and which device you use. A person will answer.</p>
+          <form class="contact-form" action="/api/contact" method="post">
+            <label for="contact-email">Your email</label>
+            <input id="contact-email" name="email" type="email" autocomplete="email" maxlength="254" required />
+            <label for="contact-message">Message</label>
+            <textarea id="contact-message" name="message" rows="6" minlength="10" maxlength="5000" required></textarea>
+            <div class="contact-trap" aria-hidden="true"><label for="contact-website">Leave this field empty</label><input id="contact-website" name="website" tabindex="-1" autocomplete="off" /></div>
+            <p class="small">Your email and message are processed by Cloudflare and Resend and delivered to our Gmail inbox to answer your request. Please don’t include passwords or book files. <a href="/privacy">Privacy policy</a>.</p>
+            <button class="button" type="submit">Send message</button>
+          </form>
+          <p class="contact-fallback small">Prefer email? <a href={contactHref}>{site.supportEmail}</a></p>
+        </section>
+        <section class="card delete-card" id="delete-account"><h2>Delete your account</h2><p>In the app: Settings → Parrot Cloud → Delete Parrot Cloud account… Books on your own servers and on your devices are not touched.</p><p><a href="/delete-account">Deletion instructions, email requests and retention details</a> are available even without the app.</p></section>
+      </aside>
+    </div>
+  </div>
+</Page>

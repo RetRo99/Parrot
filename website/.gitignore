@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.astro/
+test-results/
+src/assets/positions-crop-*.webp
+src/assets/logo-crop.webp
+src/assets/logo-dark.webp

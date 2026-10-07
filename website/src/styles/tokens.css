@@ -1,0 +1,71 @@
+/* EmberColors from base-ui/.../EmberTokens.kt. Checked on every build. */
+:root {
+  color-scheme: light dark;
+  --bg: #F7F1E8;
+  --surface: #FFFFFF;
+  --nav: #F1E8DB;
+  --ink: #221A13;
+  --ink2: #5E5145;
+  --line: #E6DBCB;
+  --accent: #A9561F;
+  --accent-text: #9A4D1A;
+  --on-accent: #FFFFFF;
+  --nav-active: #F3D9C3;
+  --nav-active-content: #221A13;
+  --track: #EADFCF;
+  --chip: #FFFFFF;
+  --chip-border: #E6DBCB;
+  --cover-border: transparent;
+  --error: #BA1A1A;
+  --on-error: #FFFFFF;
+  --chip-selected-text: #9A4D1A;
+  --muted-accent: #D9B597;
+  --destructive: #A8321F;
+  --success: #3E6B2E;
+  --error-container: #FBE6E3;
+  --welcome-hero: #EFDFCB;
+  --welcome-page: #FFFFFF;
+  --welcome-page-ink: #221A13;
+  --welcome-highlight: #F3D9C3;
+  --welcome-cover-green: #2B4A3C;
+  --welcome-cover-red: #8E3B2E;
+  --welcome-chip: #FFFFFF;
+  --book-hero: #EFDFCB;
+  --surface-selected: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16110D;
+    --surface: #211A14;
+    --nav: #120E0A;
+    --ink: #F2E8DA;
+    --ink2: #B3A594;
+    --line: #33291F;
+    --accent: #D98A4E;
+    --accent-text: #E59A5F;
+    --on-accent: #1C0F05;
+    --nav-active: #3A2615;
+    --nav-active-content: #E59A5F;
+    --track: #3A2E23;
+    --chip: #211A14;
+    --chip-border: #3A2E23;
+    --cover-border: #4A3B2C;
+    --error: #FFB4AB;
+    --on-error: #690005;
+    --chip-selected-text: #F2C39A;
+    --muted-accent: #7A5A40;
+    --destructive: #F08A7A;
+    --success: #9CC58A;
+    --error-container: #3D1C18;
+    --welcome-hero: #2A1E15;
+    --welcome-page: #E9DCC7;
+    --welcome-page-ink: #2A2019;
+    --welcome-highlight: #F0C79C;
+    --welcome-cover-green: #2B4A3C;
+    --welcome-cover-red: #7A3434;
+    --welcome-chip: #3A2615;
+    --book-hero: #2E2016;
+    --surface-selected: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+}

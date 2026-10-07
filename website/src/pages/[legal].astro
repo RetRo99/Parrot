@@ -1,0 +1,22 @@
+---
+import Page from '../layouts/Page.astro';
+import { loadLegal } from '../lib/legal';
+export function getStaticPaths() {
+  return ['privacy', 'terms'].map(legal => ({ params: { legal } }));
+}
+const kind = Astro.params.legal as 'privacy' | 'terms';
+const document = loadLegal(kind);
+const other = kind === 'privacy' ? { href: '/terms', text: 'Terms of use' } : { href: '/privacy', text: 'Privacy policy' };
+---
+<Page title={document.title} description={kind === 'privacy' ? 'What Parrot knows about you, why, and how to remove it.' : 'The agreement between you and us when you use Parrot and Parrot Cloud.'}>
+  <div class="container document-page legal-page">
+    <div class="page-heading"><p class="eyebrow">Legal</p><h1>{document.title}</h1><div class="lead legal-lead" set:html={document.lead} />
+      {document.lastUpdated ? <p class="updated">Last updated: <time datetime={document.lastUpdated}>{document.lastUpdated}</time></p> : <p class="updated">Last updated: [LAST UPDATED — set lastUpdated in the source front matter]</p>}
+      <div class="legal-notices" set:html={document.notices} />
+    </div>
+    <div class="legal-columns">
+      <nav class="legal-toc" aria-label="On this page"><p>On this page</p><ol>{document.sections.map(section => <li><a href={`#${section.id}`}>{section.text}</a></li>)}</ol><a class="text-action" href={other.href}>{other.text} →</a></nav>
+      <div class="legal-body"><section class="short-version card" aria-labelledby="short-version"><h2 id="short-version">The short version</h2><div set:html={document.short} /></section><div class="legal-prose" set:html={document.body} /></div>
+    </div>
+  </div>
+</Page>

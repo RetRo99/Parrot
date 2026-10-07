@@ -1,0 +1,17 @@
+---
+import Page from '../layouts/Page.astro';
+import { contactHref, site } from '../config';
+---
+<Page title="Legal notice" description="Publisher and contact information for Parrot and Parrot Cloud.">
+  <div class="container document-page">
+    <div class="page-heading"><p class="eyebrow">Publisher</p><h1>Legal notice</h1><p class="lead">Who operates Parrot and Parrot Cloud.</p></div>
+    <p><strong>Draft:</strong> [CONFIRM publisher identity, country and applicable business disclosure requirements before publication.]</p>
+    <h2>Operator</h2>
+    <p>{site.legalName}<br />{site.address}</p>
+    <p>Contact: <a href={contactHref}>{site.supportEmail}</a></p>
+    <p>[CONFIRM registration number, register, VAT details and other mandatory disclosures if applicable; omit only after confirming they are not required.]</p>
+    <h2>Policies and requests</h2>
+    <ul><li><a href="/privacy">Privacy policy</a></li><li><a href="/terms">Terms of use</a></li><li><a href="/delete-account">Account deletion</a></li><li><a href="/copyright">Copyright and abuse</a></li></ul>
+    <p>Parrot is an independent project and is not affiliated with Storyteller or Audiobookshelf.</p>
+  </div>
+</Page>

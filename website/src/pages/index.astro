@@ -1,0 +1,54 @@
+---
+import Page from '../layouts/Page.astro';
+import ReaderIllustration from '../components/ReaderIllustration.astro';
+import ServerIllustration from '../components/ServerIllustration.astro';
+import PositionsIllustration from '../components/PositionsIllustration.astro';
+import { earlyAccessHref } from '../config';
+const features = [
+  ['Read-along', 'For ebooks that include synced narration, such as those made with Storyteller, each sentence lights up as it is read.'],
+  ['Voices on your device', 'No audiobook? On Android, a downloaded voice reads any ebook aloud, and the text is processed on the device.'],
+  ['Offline dictionary', 'Tap a word to see what it means. The English dictionary works offline, and your lookups never leave the device.'],
+  ['Highlights and notes', 'Four colours, notes in the margin, and one list of everything you marked. Export it as text or Markdown.'],
+  ['Reading statistics', 'See how long you read and listened, by day and by book, and look back at each session.'],
+  ['Made for e-ink', 'A black-and-white theme with no animation and clear outlines, for e-readers that run Android.'],
+];
+---
+<Page description="Parrot is a reader for your own ebooks and audiobooks. Read it. Hear it. Keep your place.">
+  <section class="container hero" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">For Android phones, tablets and e-ink readers</p>
+      <h1 id="hero-title"><span>Read it. Hear it.</span><br /><span>Keep your place.</span></h1>
+      <p class="hero-lead">Parrot is a reader for your own ebooks and audiobooks. It can highlight the text as the narrator reads, and it remembers where you are in every version of a book.</p>
+      <div class="hero-actions"><span class="coming-soon">Coming soon to Google Play</span><a href={earlyAccessHref}>Ask for early access →</a></div>
+      <p class="hero-note">Free to use with your own Storyteller or Audiobookshelf server. An iPhone version is in the works.</p>
+    </div>
+    <ReaderIllustration />
+  </section>
+  <div class="works-strip"><div class="container works-inner"><span>Works with</span><strong>Storyteller</strong><strong>Audiobookshelf</strong><strong>Parrot Cloud</strong></div></div>
+  <section class="container feature-rows" id="features" aria-label="Your books and reading positions">
+    <div class="feature-row positions-row">
+      <div class="feature-copy"><p class="eyebrow">Ebook and audiobook together</p><h2>One place, in every version</h2><p>Read the ebook at home and listen to the audiobook on the way. Link the versions of a book and Parrot shows where you are in each one, and moves the others to the matching place when you ask.</p></div>
+      <PositionsIllustration />
+    </div>
+    <div class="feature-row">
+      <div class="feature-copy"><p class="eyebrow">Your library</p><h2>Your books stay yours</h2><p>Connect the Storyteller or Audiobookshelf server you already run and your library appears. Download what you want and read offline. Your books go straight from your server to your device, never through us.</p></div>
+      <ServerIllustration />
+    </div>
+  </section>
+  <section class="feature-band" aria-labelledby="reader-needs"><div class="container"><h2 id="reader-needs">Everything a reader needs</h2><div class="feature-cards">{features.map(([title, text]) => <article class="card"><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+  <div class="container lower-home">
+    <section class="cloud-block" id="cloud" aria-labelledby="cloud-title">
+      <div><p class="eyebrow">Parrot Cloud · early access</p><h2 id="cloud-title">No server? We’ll keep<br class="desktop-break" /> your library.</h2><p>Add your own books to Parrot Cloud and they are on every device you sign in to, with your place, highlights and notes.</p><p class="small">By invitation while we finish it · free during early access</p></div>
+      <ul class="check-list"><li>Your own books, on every device you sign in to</li><li>Your place, highlights and notes follow you</li><li>A private library: nobody else can see it</li></ul>
+    </section>
+    <section class="home-questions" aria-labelledby="questions-title">
+      <div><h2 id="questions-title">Questions</h2><a class="text-action" href="/support">All help and contact →</a></div>
+      <div class="question-list">
+        <article><h3>Is Parrot free?</h3><p>Yes. The app is free to use with your own Storyteller or Audiobookshelf server. Parrot Cloud is in early access: by invitation, and free for now.</p></article>
+        <article><h3>Where do the books come from?</h3><p>From you. Parrot is a reader, not a shop: it opens the books on your server or the ones you add to Parrot Cloud.</p></article>
+        <article><h3>Can I read without a connection?</h3><p>Yes. Download a book and it stays on the device. Your place syncs the next time you’re online.</p></article>
+        <article><h3>What do you know about my reading?</h3><p>Books on your own server go straight to your device, except for files you choose to back up and excerpts you send for optional recaps. The app sends usage statistics and crash reports. With Parrot Cloud we also store your library and reading activity so they can follow you. The <a href="/privacy">privacy policy</a> has the details.</p></article>
+      </div>
+    </section>
+  </div>
+</Page>

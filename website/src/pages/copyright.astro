@@ -1,0 +1,22 @@
+---
+import Page from '../layouts/Page.astro';
+import { contactHref, site } from '../config';
+---
+<Page title="Copyright and abuse" description="How to report suspected copyright infringement or abuse involving Parrot Cloud, or request review of a restriction.">
+  <div class="container document-page">
+    <div class="page-heading"><p class="eyebrow">Parrot Cloud</p><h1>Copyright and abuse</h1><p class="lead">Parrot Cloud is a private library, not a public book-sharing service.</p></div>
+    <p><strong>Draft for legal review:</strong> [LAWYER CHECK market-specific notice requirements, designated-agent details and appeal procedures before publication.]</p>
+    <h2>Send a report</h2>
+    <p>Contact <a href={contactHref}>{site.supportEmail}</a> with:</p>
+    <ul>
+      <li>Your name, contact details and whether you are the rights holder or their authorized representative.</li>
+      <li>A description of the copyrighted work or other issue.</li>
+      <li>Information identifying the stored material, such as a file identifier or SHA-256 hash if available. A book title alone may not identify a specific private file.</li>
+      <li>An explanation of why you believe the use is unauthorized or unlawful, and supporting evidence.</li>
+      <li>For copyright notices, a statement that you have a good-faith belief the use is not authorized by the rights holder, their agent or the law; and that your information is accurate and you are authorized to act. Include your electronic signature.</li>
+    </ul>
+    <p>We may ask for additional information required by applicable law. Do not send account passwords or access tokens. Relevant report details may be shared with the affected user where required or appropriate; see our <a href="/privacy">privacy policy</a>.</p>
+    <h2>Request review</h2>
+    <p>If your file or account was restricted and you believe this was a mistake, contact us with the decision details, file identifier if available and your explanation. We will explain any applicable formal counter-notice process. This page does not promise automatic restoration or replace statutory procedures.</p>
+  </div>
+</Page>
