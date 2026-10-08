@@ -1,7 +1,7 @@
 # OPDS server support: research and implementation plan
 
-**Status:** approved for implementation, starting at Phase 0; no application
-implementation changes made yet. Reviewed
+**Status:** Phase 1 protocol core complete and its gate met; Phase 2 not started.
+No user-visible OPDS application integration yet. Reviewed
 against the codebase on 2026-10-08: open gaps are in §10, the designer brief is
 in §11, and design passes 1–3 with the remaining open points are in §11.7.  
 **Research date:** 2026-10-08.  
@@ -614,6 +614,17 @@ recorded result.
 
 **Gate:** equivalent protocol behavior on both platforms; no provider-specific
 logic required for synthetic/custom catalogues.
+
+**Gate verification (2026-10-08, `opds/phase1-protocol-core`): met.** Test-first
+steps 1–7 are complete. The shared fixture/MockEngine suite passes 159/159 on
+Android host and 159/159 on iOS simulator, with no failed or skipped tests;
+`:lib:opds:api:assemble` and `:lib:opds:implementation:assemble` both pass after
+retiring the Phase 0 harness. No provider-name strings or provider-specific
+branches occur in production `lib/opds` sources; remaining name hits are in
+fixture registries and fixture-driven tests. Private-network advisories classify
+literal IP addresses and local hostnames, not DNS resolution. Persisted caching,
+live-provider/device QA and application integration remain later-phase work;
+sample downloading remains an open product decision and is not implemented.
 
 ### Phase 2 — first-class server and capability routing
 
