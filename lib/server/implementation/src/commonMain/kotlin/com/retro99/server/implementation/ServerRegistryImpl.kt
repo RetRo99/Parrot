@@ -152,7 +152,7 @@ class ServerRegistryImpl(
             id = id,
             name = name,
             type = type,
-            baseUrl = baseUrl.trimEnd('/'),
+            baseUrl = if (type == ServerType.Opds) baseUrl else baseUrl.trimEnd('/'),
             addedAt = Clock.System.now().toEpochMilliseconds(),
         )
 

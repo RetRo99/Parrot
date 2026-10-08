@@ -10,6 +10,27 @@ import kotlinx.serialization.json.Json
 import kotlin.test.*
 
 class ServerRegistryPersistenceTest {
+    @Test fun catalogue_address_is_exact_through_add_update_and_restart() = runTest {
+        val addresses = listOf("https://catalogue.example/opds/", "https://catalogue.example/opds", "https://catalogue.example/opds/?key=secret&library=2", "https://catalogue.example/a/deep/library/feed/")
+        val preferences = RegistryPreferences()
+        val registry = registry(preferences)
+        for ((index, address) in addresses.withIndex()) {
+            val added = registry.addServerWithId("source-$index", "Catalogue", ServerType.Opds, address)
+            assertEquals(address, added.baseUrl)
+            assertEquals(address, registry(preferences).getServer(added.id)?.baseUrl)
+            val updatedAddress = addresses[(index + 1) % addresses.size]
+            registry.updateServer(added.copy(baseUrl = updatedAddress))
+            assertEquals(updatedAddress, registry.getServer(added.id)?.baseUrl)
+            assertEquals(updatedAddress, registry(preferences).getServer(added.id)?.baseUrl)
+        }
+    }
+
+    @Test fun existing_types_still_trim_trailing_slashes_on_add() = runTest {
+        val registry = registry(RegistryPreferences())
+        for (type in listOf(ServerType.Storyteller, ServerType.Audiobookshelf, ServerType.Local, ServerType.ParrotCloud)) {
+            assertEquals("https://library.example", registry.addServerWithId(type.identifier, type.displayName, type, "https://library.example///").baseUrl)
+        }
+    }
     private fun registry(preferences: RegistryPreferences, profile: String = "profile-a") =
         ServerRegistryImpl(preferences, RegistryUser(profile), emptyList())
 
