@@ -57,7 +57,7 @@ class ServerBookEntityRoundTripTest {
     }
 
     @Test
-    fun `language, isbn, asin and audio length survive the cache round trip`() {
+    fun `language isbn asin and audio length survive the cache round trip`() {
         // Given
         val fromRemote = StorytellerBookApiModel(uuid = "book-3", title = "Dune", language = "en")
             .toDomain(serverId = "server-1", baseUrl = "http://example.com")
