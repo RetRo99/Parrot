@@ -1,0 +1,50 @@
+-- A small saved copy of catalogue pages you opened, for reading them offline.
+CREATE TABLE IF NOT EXISTS catalogue_documents (
+    source_id TEXT NOT NULL,
+    access_generation INTEGER NOT NULL,
+    request_url TEXT NOT NULL,
+    content_type TEXT,
+    etag TEXT,
+    last_modified TEXT,
+    stored_at INTEGER NOT NULL,
+    payload BLOB NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    PRIMARY KEY (source_id, access_generation, request_url)
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalogue_documents_stored
+ON catalogue_documents(stored_at);
+
+upsertCatalogueDocument:
+INSERT OR REPLACE INTO catalogue_documents(
+    source_id, access_generation, request_url, content_type, etag, last_modified,
+    stored_at, payload, size_bytes
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getCatalogueDocument:
+SELECT * FROM catalogue_documents
+WHERE source_id = ? AND access_generation = ? AND request_url = ?;
+
+catalogueDocumentsTotalSize:
+SELECT COALESCE(SUM(size_bytes), 0) FROM catalogue_documents;
+
+countCatalogueDocuments:
+SELECT COUNT(*) FROM catalogue_documents;
+
+getOldestCatalogueDocumentKeys:
+SELECT source_id, access_generation, request_url, size_bytes FROM catalogue_documents
+ORDER BY stored_at ASC, request_url ASC
+LIMIT ?;
+
+deleteCatalogueDocument:
+DELETE FROM catalogue_documents
+WHERE source_id = ? AND access_generation = ? AND request_url = ?;
+
+deleteCatalogueDocumentsForSource:
+DELETE FROM catalogue_documents WHERE source_id = ?;
+
+deleteCatalogueDocumentsOfOtherGenerations:
+DELETE FROM catalogue_documents WHERE source_id = ? AND access_generation != ?;
+
+deleteAllCatalogueDocuments:
+DELETE FROM catalogue_documents;

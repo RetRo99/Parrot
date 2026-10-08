@@ -5,6 +5,9 @@ import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.books.AuthorsDatabase
 import com.retro99.database.api.books.BooksDatabase
 import com.retro99.database.api.books.PositionDatabase
+import com.retro99.database.api.catalogue.CatalogueAcquisitionsDatabase
+import com.retro99.database.api.catalogue.CatalogueBookSourcesDatabase
+import com.retro99.database.api.catalogue.CatalogueDocumentsDatabase
 import com.retro99.database.api.cloudfiles.CloudFilesDatabase
 import com.retro99.database.api.favorites.FavoritesDatabase
 import com.retro99.database.api.links.BookLinksDatabase
@@ -22,6 +25,9 @@ import com.retro99.database.implementation.DatabaseManager
 import com.retro99.database.implementation.dao.saved.SavedItemsSqlDelightDao
 import com.retro99.database.implementation.dao.books.AuthorsDatabaseImpl
 import com.retro99.database.implementation.dao.books.AuthorsSqlDelightDao
+import com.retro99.database.implementation.dao.catalogue.CatalogueAcquisitionsSqlDelightDao
+import com.retro99.database.implementation.dao.catalogue.CatalogueBookSourcesSqlDelightDao
+import com.retro99.database.implementation.dao.catalogue.CatalogueDocumentsSqlDelightDao
 import com.retro99.database.implementation.dao.cloudfiles.CloudFilesDatabaseImpl
 import com.retro99.database.implementation.dao.cloudfiles.CloudFilesSqlDelightDao
 import com.retro99.database.implementation.dao.books.BooksDatabaseImpl
@@ -218,6 +224,28 @@ class DatabaseModule {
         cloudFilesSqlDelightDao: CloudFilesSqlDelightDao,
     ): CloudFilesDatabase {
         return CloudFilesDatabaseImpl(cloudFilesSqlDelightDao)
+    }
+
+    // Catalogue tables are not DataClearable: provenance of acquired books outlives sign-out.
+    @Single
+    internal fun provideCatalogueAcquisitionsDatabase(
+        databaseManager: DatabaseManager,
+    ): CatalogueAcquisitionsDatabase {
+        return CatalogueAcquisitionsSqlDelightDao { databaseManager.getDatabase() }
+    }
+
+    @Single
+    internal fun provideCatalogueBookSourcesDatabase(
+        databaseManager: DatabaseManager,
+    ): CatalogueBookSourcesDatabase {
+        return CatalogueBookSourcesSqlDelightDao { databaseManager.getDatabase() }
+    }
+
+    @Single
+    internal fun provideCatalogueDocumentsDatabase(
+        databaseManager: DatabaseManager,
+    ): CatalogueDocumentsDatabase {
+        return CatalogueDocumentsSqlDelightDao { databaseManager.getDatabase() }
     }
 
     @Single
