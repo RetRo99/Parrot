@@ -17,7 +17,8 @@ interface StagedBookImportManager {
      *
      * On success the staged file is gone: moved into the library, or deleted when the
      * library already had it. On failure it is left where it is, for the caller to retry
-     * or delete.
+     * or delete. A file whose book metadata cannot be read fails with [StagedBookNotReadable]
+     * as the error's throwable; any other failure is this device (storage, database).
      */
     suspend fun importStagedEpub(file: StagedBookFile): AppResult<StagedBookImportResult>
 
@@ -81,3 +82,6 @@ enum class StagedBookImportOutcome {
     /** The library already had these exact bytes; the file belongs to that book. */
     ExistingBook,
 }
+
+/** The staged file is there, but it is not a book the library can read. */
+class StagedBookNotReadable(message: String?) : Exception(message)

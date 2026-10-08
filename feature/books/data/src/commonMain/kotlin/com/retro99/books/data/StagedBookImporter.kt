@@ -3,6 +3,7 @@ package com.retro99.books.data
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.andThen
 import com.github.michaelbull.result.map
+import com.github.michaelbull.result.mapError
 import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.books.data.source.ImportedFileCandidate
@@ -12,6 +13,7 @@ import com.retro99.books.domain.StagedBookFile
 import com.retro99.books.domain.StagedBookImportManager
 import com.retro99.books.domain.StagedBookImportOutcome
 import com.retro99.books.domain.StagedBookImportResult
+import com.retro99.books.domain.StagedBookNotReadable
 import com.retro99.books.domain.model.BookType
 import com.retro99.database.api.library.DeviceFileEntity
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +35,7 @@ internal class StagedBookImporter(
 
     override suspend fun importStagedEpub(file: StagedBookFile): AppResult<StagedBookImportResult> =
         try {
-            importOrThrow(file)
+            import(file) { unreadable -> AppError.UnknownError(StagedBookNotReadable(unreadable.message)) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -46,15 +48,18 @@ internal class StagedBookImporter(
         libraryLocalSource.findBookWithDeviceFile(CONTENT_HASH_ALGORITHM, contentSha256)
 
     /** [importStagedEpub] for the file pickers, which report a thrown exception themselves. */
-    suspend fun importOrThrow(
+    suspend fun importOrThrow(file: StagedBookFile): AppResult<StagedBookImportResult> = import(file) { it }
+
+    private suspend fun import(
         file: StagedBookFile,
+        unreadable: (AppError) -> AppError,
     ): AppResult<StagedBookImportResult> = withContext(Dispatchers.IO) {
         val fileSize = fileSizeBytes(file.path)
         if (fileSize == 0L) {
             return@withContext Err(AppError.UnknownError(Throwable("File is empty")))
         }
 
-        metadataExtractor.extractMetadata(file.path).andThen { metadata ->
+        metadataExtractor.extractMetadata(file.path).mapError(unreadable).andThen { metadata ->
             val mediaType = if (metadata.hasMediaOverlays) {
                 BookType.READALOUD.value
             } else {

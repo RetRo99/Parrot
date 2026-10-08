@@ -9,12 +9,14 @@ import com.retro99.books.data.source.AddedLibraryFile
 import com.retro99.books.domain.BookFileOrigin
 import com.retro99.books.domain.BookFileProvenance
 import com.retro99.books.domain.StagedBookFile
+import com.retro99.books.domain.StagedBookNotReadable
 import com.retro99.books.domain.StagedBookImportOutcome
 import com.retro99.books.domain.StagedBookImportResult
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -151,10 +153,26 @@ class StagedBookImporterTest {
         // When
         val result = classUnderTest.importStagedEpub(StagedBookFile(path, BookFileOrigin.Import))
 
-        // Then
-        assertEquals(failure, result.getError())
+        // Then: the same message, marked as "this file is not a book the library can read"
+        val error = assertIs<AppError.UnknownError>(result.getError())
+        assertIs<StagedBookNotReadable>(error.throwable)
+        assertEquals("Failed to open EPUB", error.message)
         assertTrue(librarySource.candidates.isEmpty())
         assertTrue(TestFiles.exists(path))
+    }
+
+    @Test
+    fun `the file pickers still get the metadata reader's own error`() = runTest {
+        // Given
+        val path = stage("picked.epub", "plain text".encodeToByteArray())
+        val failure = AppError.UnknownError(Throwable("Failed to open EPUB"))
+        metadataExtractor.failure = failure
+
+        // When
+        val result = classUnderTest.importOrThrow(StagedBookFile(path, BookFileOrigin.Import))
+
+        // Then
+        assertEquals(failure, result.getError())
     }
 
     @Test
