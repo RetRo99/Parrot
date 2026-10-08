@@ -1770,6 +1770,17 @@
     <string name="catalogue_load_more" tools:ignore="MissingTranslation">Load more</string>
     <!-- §2 A1 Choose a file. %1$d is the file's number in catalogue order. -->
     <string name="catalogue_choose_file_title" tools:ignore="MissingTranslation">Choose a file</string>
+    <string name="catalogue_from" tools:ignore="MissingTranslation">From</string>
+    <string name="catalogue_rights" tools:ignore="MissingTranslation">Rights</string>
+    <string name="catalogue_other_files" tools:ignore="MissingTranslation">Other files (%1$d)</string>
+    <string name="catalogue_book_download" tools:ignore="MissingTranslation">Download · EPUB</string>
+    <string name="catalogue_book_download_size" tools:ignore="MissingTranslation">Download · EPUB · %1$s</string>
+    <string name="catalogue_download_notice" tools:ignore="MissingTranslation">Downloading %1$s</string>
+    <string name="catalogue_view" tools:ignore="MissingTranslation">View</string>
+    <string name="catalogue_announce_progress" tools:ignore="MissingTranslation">%1$s, %2$d% downloaded</string>
+    <string name="catalogue_a11y_book_download" tools:ignore="MissingTranslation">Download %1$s, EPUB</string>
+    <string name="catalogue_a11y_book_download_size" tools:ignore="MissingTranslation">Download %1$s, EPUB, %2$s</string>
+    <string name="catalogue_a11y_other_files" tools:ignore="MissingTranslation">Other files, %1$d, opens file choice</string>
     <string name="catalogue_choose_file_intro" tools:ignore="MissingTranslation">Names come from the catalogue. The first one is the best match for Parrot.</string>
     <string name="catalogue_file_fallback_label" tools:ignore="MissingTranslation">EPUB file %1$d</string>
     <string name="catalogue_file_size_unknown" tools:ignore="MissingTranslation">Size unknown</string>

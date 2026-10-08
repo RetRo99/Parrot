@@ -568,6 +568,10 @@ fun HomeNavigation(
                             sourceId = destination.sourceId,
                             publicationRef = destination.publicationRef,
                             onBack = { requestBack("toolbar_back") },
+                            onCatalogueRoot = { navigationState.replaceCurrent(HomeDestination.CatalogueBrowse(destination.sourceId)) },
+                            onDownloads = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueDownloads)) },
+                            onRead = { bookId -> intentDispatcher(HomeNavigationIntent.RequestOpenReader(com.retro99.base.server.LOCAL_SERVER_ID, bookId, BookType.EBOOK)) },
+                            onCatalogueSettings = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.ServerManagement)) },
                         )
                     }
 

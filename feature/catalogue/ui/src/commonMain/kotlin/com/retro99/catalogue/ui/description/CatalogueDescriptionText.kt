@@ -32,8 +32,9 @@ import com.retro99.catalogue.domain.CatalogueRichText.Marker
 fun CatalogueDescriptionText(
     description: CatalogueRichText,
     modifier: Modifier = Modifier,
+    textStyle: androidx.compose.ui.text.TextStyle = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 23.25.sp),
 ) {
-    val style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 23.25.sp)
+    val style = textStyle
     val color = Ember.colors.ink
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         description.blocks.forEach { block ->
