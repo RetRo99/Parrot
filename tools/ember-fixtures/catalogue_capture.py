@@ -6,6 +6,7 @@ without touching this script. Each capture goes to design/screens/catalogue-<vie
 with its UI hierarchy next to it.
 """
 import argparse
+import json
 from pathlib import Path
 import re
 import shlex
@@ -61,7 +62,7 @@ def focused():
     window = run("shell", "dumpsys", "window", capture=True).decode()
     current = next((line for line in window.splitlines() if "mCurrentFocus=" in line), "")
     app = next((line for line in window.splitlines() if "mFocusedApp=" in line), "")
-    assert package in current or ("Pop-up window" in current and package in app), "Fixture lost focus"
+    assert package in current or ("pop-up window" in current.casefold() and package in app), "Fixture lost focus"
 
 
 run("wait-for-device")
@@ -71,7 +72,9 @@ run("shell", "settings", "put", "secure", "immersive_mode_confirmations", "confi
 run("install", "--no-streaming", "-r", str(root / "tools/ember-fixtures/build/outputs/apk/debug/ember-fixtures-debug.apk"))
 for theme in args.themes:
     for view in args.views or fixtures:
-        expected = fixtures[view].encode().decode("unicode_escape")
+        # The fixture registry is UTF-8 Kotlin source; decode Kotlin/JSON-style
+        # escapes without round-tripping literal non-ASCII text through latin-1.
+        expected = json.loads(f'"{fixtures[view]}"')
         # Right after an install the system can still be on top ("Updating...") and may then
         # reopen the app without the fixture's extras. Each dump waits for idle, so there is
         # no fixed sleep; a fixture that is not on screen is launched again, three times at most.

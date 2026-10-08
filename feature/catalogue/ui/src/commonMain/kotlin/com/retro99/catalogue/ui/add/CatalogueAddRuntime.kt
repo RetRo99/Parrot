@@ -25,7 +25,7 @@ class RepositoryCatalogueAddressValidator(
     override suspend fun validate(address: String, account: OpdsAccountDetails?): CatalogueValidation {
         val result = validator.validate(address, account)
         return when (result) {
-            CatalogueConnectionResult.Accepted -> CatalogueValidation.Accepted
+            is CatalogueConnectionResult.Accepted -> CatalogueValidation.Accepted(result.title)
             CatalogueConnectionResult.WebPage -> CatalogueValidation.WebPage
             CatalogueConnectionResult.Unreachable -> CatalogueValidation.Unreachable
             CatalogueConnectionResult.NotCatalogue -> CatalogueValidation.NotCatalogue

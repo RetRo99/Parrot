@@ -1846,7 +1846,8 @@
     <string name="catalogue_add_checking" tools:ignore="MissingTranslation">Checking address…</string>
     <string name="catalogue_add_signing_in" tools:ignore="MissingTranslation">Signing in…</string>
     <string name="catalogue_downloads_count_accessibility" tools:ignore="MissingTranslation">Downloads, %1$d active or failed</string>
-    <string name="catalogue_add_error_wrong_credentials" tools:ignore="MissingTranslation">That username or password didn't work. Check the details and try again.</string>
+    <string name="catalogue_add_error_wrong_credentials" tools:ignore="MissingTranslation">Username or password is incorrect.</string>
+    <!-- TODO-design: no copy is specified for trying to add an address that is already saved. -->
     <string name="catalogue_add_error_duplicate" tools:ignore="MissingTranslation">This catalogue is already in Get books.</string>
     <string name="catalogue_add_error_save_failed" tools:ignore="MissingTranslation">Couldn't add this catalogue. Try again.</string>
     <!-- §3 Preset detail. %1$s is the preset's name -->
@@ -1916,14 +1917,14 @@
     <!-- §4 Remove dialog. %1$d is the number of books, %2$s the device name. The design gives the plural only; "one" follows it. -->
     <string name="catalogue_remove_title" tools:ignore="MissingTranslation">Remove %1$s?</string>
     <plurals name="catalogue_remove_body_count" tools:ignore="MissingTranslation">
-        <item quantity="one">It will no longer appear in Get books, and its account details are deleted from %2$s. The %1$d book you downloaded from it stays in your library.</item>
+        <item quantity="one">It will no longer appear in Get books, and its account details are deleted from %2$s. The book you downloaded from it stays in your library.</item>
         <item quantity="other">It will no longer appear in Get books, and its account details are deleted from %2$s. The %1$d books you downloaded from it stay in your library.</item>
     </plurals>
     <!-- %1$s is the device name -->
     <string name="catalogue_remove_body_none" tools:ignore="MissingTranslation">It will no longer appear in Get books, and its account details are deleted from %1$s. Books you downloaded from it stay in your library.</string>
     <string name="catalogue_remove_catalogue" tools:ignore="MissingTranslation">Remove catalogue</string>
     <!-- §5 Field errors on Add -->
-    <string name="catalogue_add_error_web_page" tools:ignore="MissingTranslation">This is a web page, not a catalogue. On that site, look for a link called "OPDS" and paste that address.</string>
+    <string name="catalogue_add_error_web_page" tools:ignore="MissingTranslation">This is a web page, not a catalogue. On that site, look for a link called “OPDS” and paste that address.</string>
     <string name="catalogue_add_error_unreachable" tools:ignore="MissingTranslation">Can't reach this address. Check it for typos, and that the catalogue is running and on the same network.</string>
     <string name="catalogue_add_error_invalid" tools:ignore="MissingTranslation">This address answered, but not with a book catalogue Parrot can read. Check that it's the OPDS address.</string>
     <string name="catalogue_add_error_sign_in_needed" tools:ignore="MissingTranslation">This catalogue needs an account. Enter your username and password to add it.</string>

@@ -27,7 +27,7 @@ interface CatalogueAddStore {
 }
 
 sealed interface CatalogueValidation {
-    data object Accepted : CatalogueValidation
+    data class Accepted(val title: String? = null) : CatalogueValidation
     data object WebPage : CatalogueValidation
     data object Unreachable : CatalogueValidation
     data object NotCatalogue : CatalogueValidation
@@ -99,6 +99,7 @@ class CatalogueAddFlow(
     private var generation = 0L
     private var activeJob: Job? = null
     private var validatedHttpWithoutAccount = false
+    private var validatedCatalogueName: String? = null
 
     fun updateAddress(value: String) = edit {
         validatedHttpWithoutAccount = false
@@ -110,13 +111,14 @@ class CatalogueAddFlow(
     fun updateUsername(value: String) = edit { copy(username = value, error = null) }
     fun updatePassword(value: String) = edit { copy(password = value, error = null) }
 
-    suspend fun submit(name: String = suggestedName(_state.value.address)) {
+    suspend fun submit(name: String? = null) {
         val before = _state.value
         val address = before.address.trim()
         if (!before.isEditable || address.isEmpty()) return
         val attempt = ++generation
         val job = currentCoroutineContext()[Job]
         activeJob = job
+        validatedCatalogueName = null
         _state.value = before.copy(address = address, phase = CatalogueAddPhase.Checking, error = null, dialog = null, focusAddress = false)
         try {
             if (address in store.existingAddresses()) {
@@ -149,16 +151,19 @@ class CatalogueAddFlow(
             if (attempt != generation) return
 
             when (answer) {
-                CatalogueValidation.Accepted -> when {
-                    plainHttp && before.needsAccount -> {
-                        validatedHttpWithoutAccount = true
-                        finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = CatalogueAddDialog.PasswordHttp) }
+                is CatalogueValidation.Accepted -> {
+                    validatedCatalogueName = name ?: answer.title.catalogueNameOrNull()
+                    when {
+                        plainHttp && before.needsAccount -> {
+                            validatedHttpWithoutAccount = true
+                            finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = CatalogueAddDialog.PasswordHttp) }
+                        }
+                        plainHttp -> {
+                            validatedHttpWithoutAccount = true
+                            finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = CatalogueAddDialog.HttpWarning) }
+                        }
+                        else -> persist(attempt, catalogueName(name, address), address, account)
                     }
-                    plainHttp -> {
-                        validatedHttpWithoutAccount = true
-                        finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = CatalogueAddDialog.HttpWarning) }
-                    }
-                    else -> persist(attempt, name, address, account)
                 }
                 CatalogueValidation.WebPage -> finish(attempt) {
                     copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.WebPage, focusAddress = true)
@@ -205,16 +210,16 @@ class CatalogueAddFlow(
         }
     }
 
-    suspend fun confirmHttp(name: String = suggestedName(_state.value.address)) {
+    suspend fun confirmHttp(name: String? = null) {
         if (_state.value.dialog != CatalogueAddDialog.HttpWarning || !validatedHttpWithoutAccount) return
-        persist(generation, name, _state.value.address, null)
+        persist(generation, catalogueName(name, _state.value.address), _state.value.address, null)
     }
 
-    suspend fun addWithoutAccount(name: String = suggestedName(_state.value.address)) {
+    suspend fun addWithoutAccount(name: String? = null) {
         val dialog = _state.value.dialog
         if (dialog != CatalogueAddDialog.PasswordHttp && dialog != CatalogueAddDialog.Unsupported) return
         if (dialog == CatalogueAddDialog.PasswordHttp && !validatedHttpWithoutAccount) return
-        persist(generation, name, _state.value.address, null)
+        persist(generation, catalogueName(name, _state.value.address), _state.value.address, null)
     }
 
     fun changeAddress() {
@@ -266,16 +271,30 @@ class CatalogueAddFlow(
         if (attempt == generation) _state.update(transform)
     }
 
-    private fun suggestedName(address: String): String = address.trim()
+    private fun catalogueName(override: String?, address: String): String =
+        (override.catalogueNameOrNull() ?: validatedCatalogueName.catalogueNameOrNull() ?: hostName(address))
+            .take(MAX_CATALOGUE_NAME_LENGTH)
+
+    private fun hostName(address: String): String = address.trim()
         .removeScheme()
         .substringBefore('/')
         .substringBefore('?')
+        .substringBefore('#')
+        .substringAfterLast('@')
+        .lowercase()
+        .removePrefix("www.")
         .ifBlank { "Book catalogue" }
+
+    private fun String?.catalogueNameOrNull(): String? = this?.trim()?.take(MAX_CATALOGUE_NAME_LENGTH)?.takeIf { it.isNotEmpty() }
 
     private fun String.removeScheme(): String = when {
         startsWith("https://", ignoreCase = true) -> drop("https://".length)
         startsWith("http://", ignoreCase = true) -> drop("http://".length)
         else -> this
+    }
+
+    private companion object {
+        const val MAX_CATALOGUE_NAME_LENGTH = 60
     }
 }
 

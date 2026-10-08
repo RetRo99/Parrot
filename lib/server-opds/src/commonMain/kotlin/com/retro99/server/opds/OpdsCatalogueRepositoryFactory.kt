@@ -62,7 +62,12 @@ class OpdsCatalogueRepositoryFactory(
         return try {
             val result = repository.getRoot()
             result.fold(
-                success = { CatalogueConnectionResult.Accepted },
+                success = { document ->
+                    val title = ((document as? CatalogueFeedDocument)?.metadata?.title?.translations
+                        ?.get("und") ?: (document as? CatalogueFeedDocument)?.metadata?.title?.translations?.values?.firstOrNull())
+                        ?.takeUnless { it.equals("Untitled catalogue", ignoreCase = true) }
+                    CatalogueConnectionResult.Accepted(title)
+                },
                 failure = { error ->
                 when (error) {
                     is AppError.ApiError -> when (error.message) {

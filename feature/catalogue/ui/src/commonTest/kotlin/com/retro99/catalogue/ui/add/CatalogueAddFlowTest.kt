@@ -73,16 +73,16 @@ class CatalogueAddFlowTest {
     @Test
     fun checking_and_signing_in_are_distinct_read_only_phases() = runTest {
         val checkingAnswer = CompletableDeferred<CatalogueValidation>()
-        val checking = Harness(CatalogueValidation.Accepted, validator = { _, _ -> checkingAnswer.await() })
+        val checking = Harness(CatalogueValidation.Accepted(), validator = { _, _ -> checkingAnswer.await() })
         val anonymousSubmit = async { checking.flow.submit() }
         runCurrent()
         assertEquals(CatalogueAddPhase.Checking, checking.flow.state.value.phase)
-        checkingAnswer.complete(CatalogueValidation.Accepted)
+        checkingAnswer.complete(CatalogueValidation.Accepted())
         anonymousSubmit.await()
 
         val signInAnswer = CompletableDeferred<CatalogueValidation>()
         val signingIn = Harness(
-            CatalogueValidation.Accepted,
+            CatalogueValidation.Accepted(),
             validator = { _, _ -> signInAnswer.await() },
         )
         signingIn.flow.updateNeedsAccount(true)
@@ -93,20 +93,20 @@ class CatalogueAddFlowTest {
         assertEquals(CatalogueAddPhase.SigningIn, signingIn.flow.state.value.phase)
         assertFalse(signingIn.flow.state.value.isEditable)
         assertEquals(listOf("signing-in"), signingIn.validatorPhases)
-        signInAnswer.complete(CatalogueValidation.Accepted)
+        signInAnswer.complete(CatalogueValidation.Accepted())
         accountSubmit.await()
     }
 
     @Test
     fun android_http_can_be_confirmed_but_ios_http_is_blocked_before_fetching() = runTest {
-        val android = Harness(CatalogueValidation.Accepted, allowHttp = true, address = "http://books.home.lan/opds/")
+        val android = Harness(CatalogueValidation.Accepted(), allowHttp = true, address = "http://books.home.lan/opds/")
         android.flow.submit()
         assertEquals(CatalogueAddDialog.HttpWarning, android.flow.state.value.dialog)
         assertTrue(android.store.added.isEmpty())
         android.flow.confirmHttp()
         assertEquals("http://books.home.lan/opds/", android.store.added.single().address)
 
-        val ios = Harness(CatalogueValidation.Accepted, allowHttp = false, address = "http://books.home.lan/opds/")
+        val ios = Harness(CatalogueValidation.Accepted(), allowHttp = false, address = "http://books.home.lan/opds/")
         ios.flow.submit()
         assertEquals(CatalogueAddDialog.HttpBlocked, ios.flow.state.value.dialog)
         assertTrue(ios.validatorPhases.isEmpty())
@@ -115,7 +115,7 @@ class CatalogueAddFlowTest {
 
     @Test
     fun http_password_is_never_sent_and_the_open_or_blocked_page_selects_the_matching_dialog() = runTest {
-        val public = Harness(CatalogueValidation.Accepted, allowHttp = true, address = "http://books.home.lan/opds/")
+        val public = Harness(CatalogueValidation.Accepted(), allowHttp = true, address = "http://books.home.lan/opds/")
         public.flow.updateNeedsAccount(true)
         public.flow.updateUsername("patron")
         public.flow.updatePassword("must-not-send")
@@ -138,7 +138,7 @@ class CatalogueAddFlowTest {
 
     @Test
     fun credentials_are_never_sent_to_non_http_addresses_and_whitespace_is_trimmed() = runTest {
-        val unsupported = Harness(CatalogueValidation.Accepted, address = "ftp://books.home.lan/opds/")
+        val unsupported = Harness(CatalogueValidation.Accepted(), address = "ftp://books.home.lan/opds/")
         unsupported.flow.updateNeedsAccount(true)
         unsupported.flow.updateUsername("patron")
         unsupported.flow.updatePassword("secret")
@@ -148,7 +148,7 @@ class CatalogueAddFlowTest {
         assertTrue(unsupported.validatorInputs.isEmpty())
         assertTrue(unsupported.store.added.isEmpty())
 
-        val spaced = Harness(CatalogueValidation.Accepted, address = "  https://books.home.lan/opds/  ")
+        val spaced = Harness(CatalogueValidation.Accepted(), address = "  https://books.home.lan/opds/  ")
         spaced.flow.submit()
         assertEquals("https://books.home.lan/opds/", spaced.validatorInputs.single().first)
         assertEquals("https://books.home.lan/opds/", spaced.store.added.single().address)
@@ -158,13 +158,13 @@ class CatalogueAddFlowTest {
     fun cancelling_a_request_prevents_a_late_success_from_adding_anything() = runTest {
         val lateAnswer = CompletableDeferred<CatalogueValidation>()
         val harness = Harness(
-            CatalogueValidation.Accepted,
+            CatalogueValidation.Accepted(),
             validator = { _, _ -> withContext(NonCancellable) { lateAnswer.await() } },
         )
         val pending = async { harness.flow.submit() }
         runCurrent()
         harness.flow.cancel()
-        lateAnswer.complete(CatalogueValidation.Accepted)
+        lateAnswer.complete(CatalogueValidation.Accepted())
         pending.join()
 
         assertTrue(harness.store.added.isEmpty())
@@ -182,7 +182,7 @@ class CatalogueAddFlowTest {
         assertEquals("", failed.flow.state.value.password)
         assertTrue(failed.store.added.isEmpty())
 
-        val accepted = Harness(CatalogueValidation.Accepted, address = PRESET_ADDRESS)
+        val accepted = Harness(CatalogueValidation.Accepted("ignored preset title"), address = PRESET_ADDRESS)
         accepted.flow.updateNeedsAccount(true)
         accepted.flow.updateUsername("patron@example.org")
         accepted.flow.updatePassword("")
@@ -193,16 +193,44 @@ class CatalogueAddFlowTest {
 
     @Test
     fun preset_without_an_account_is_added_after_the_first_page_succeeds() = runTest {
-        val harness = Harness(CatalogueValidation.Accepted, address = GUTENBERG_ADDRESS)
+        val harness = Harness(CatalogueValidation.Accepted("Ignored catalogue title"), address = GUTENBERG_ADDRESS)
         harness.flow.submit(name = "Project Gutenberg")
         assertEquals("Project Gutenberg", harness.store.added.single().name)
         assertNull(harness.store.added.single().account)
     }
 
     @Test
+    fun custom_catalogue_uses_trimmed_title_from_the_validated_first_page() = runTest {
+        val harness = Harness(CatalogueValidation.Accepted("  My Reading Room  "))
+
+        harness.flow.submit()
+
+        assertEquals("My Reading Room", harness.store.added.single().name)
+    }
+
+    @Test
+    fun custom_catalogue_without_a_title_falls_back_to_the_host() = runTest {
+        val harness = Harness(CatalogueValidation.Accepted("  "), address = "https://books.example/opds")
+
+        harness.flow.submit()
+
+        assertEquals("books.example", harness.store.added.single().name)
+    }
+
+    @Test
+    fun custom_catalogue_title_is_trimmed_and_capped_at_sixty_characters() = runTest {
+        val title = "  ${"A".repeat(80)}  "
+        val harness = Harness(CatalogueValidation.Accepted(title))
+
+        harness.flow.submit()
+
+        assertEquals("A".repeat(60), harness.store.added.single().name)
+    }
+
+    @Test
     fun duplicate_address_is_refused_exactly_and_editing_an_error_keeps_the_typed_address() = runTest {
         val address = "https://books.home.lan/opds/?key=secret"
-        val harness = Harness(CatalogueValidation.Accepted, address = address, existingAddresses = setOf(address))
+        val harness = Harness(CatalogueValidation.Accepted(), address = address, existingAddresses = setOf(address))
         harness.flow.submit()
         assertEquals(CatalogueAddError.DuplicateAddress, harness.flow.state.value.error)
         assertTrue(harness.validatorInputs.isEmpty())

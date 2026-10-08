@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -86,6 +87,7 @@ import com.retro99.catalogue.ui.add.CatalogueAddStore
 import com.retro99.catalogue.ui.add.CatalogueAddViewState
 import com.retro99.catalogue.ui.add.CatalogueAddressValidator
 import com.retro99.catalogue.ui.add.CatalogueHttpPolicy
+import com.retro99.catalogue.ui.add.catalogueDeviceName
 import com.retro99.translations.StringRes
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -278,6 +280,7 @@ fun CatalogueSourcesScreen(
 fun CatalogueStandaloneAddScreen(
     onBack: () -> Unit,
     onCatalogueAdded: (String) -> Unit,
+    onSelectOtherLibrary: () -> Unit = onBack,
     modifier: Modifier = Modifier,
     initialAddress: String = "",
     initialNeedsAccount: Boolean = false,
@@ -310,6 +313,7 @@ fun CatalogueStandaloneAddScreen(
             flow.cancel()
             onBack()
         },
+        onSelectOtherLibrary = onSelectOtherLibrary,
         modifier = modifier,
         scope = scope,
     )
@@ -319,7 +323,7 @@ fun CatalogueStandaloneAddScreen(
 }
 
 @Composable
-private fun CatalogueSourcesContent(
+fun CatalogueSourcesContent(
     viewState: CatalogueSourcesViewState,
     onBack: () -> Unit,
     onDownloads: () -> Unit,
@@ -494,7 +498,7 @@ private fun EmberDivider() {
 }
 
 @Composable
-private fun PresetDetailScreen(
+fun PresetDetailScreen(
     preset: CataloguePreset,
     isChecking: Boolean,
     error: CatalogueAddError?,
@@ -504,14 +508,18 @@ private fun PresetDetailScreen(
     modifier: Modifier,
 ) {
     Column(modifier.fillMaxSize().background(Ember.colors.bg)) {
-        EmberTopBar(title = stringResource(StringRes.catalogue_type_name), onBack = onBack)
+        EmberTopBar(title = "", onBack = onBack)
         Column(
             modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 22.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(8.dp))
             Box(Modifier.size(96.dp).clip(RoundedCornerShape(26.dp)).background(Ember.colors.navActive), contentAlignment = Alignment.Center) {
-                Text(preset.name.first().uppercase(), style = Ember.type.screenTitle.copy(fontSize = 48.sp), color = Ember.colors.navActiveContent)
+                Text(
+                    preset.host.firstOrNull()?.uppercase() ?: preset.name.first().uppercase(),
+                    style = Ember.type.screenTitle.copy(fontSize = 48.sp),
+                    color = Ember.colors.navActiveContent,
+                )
             }
             Text(preset.name, style = Ember.type.screenTitle.copy(fontSize = 34.sp, lineHeight = 42.sp), color = Ember.colors.ink)
             Text(
@@ -564,39 +572,46 @@ private fun PresetDetailScreen(
 }
 
 @Composable
-private fun CatalogueAddScreenContent(
+fun CatalogueAddScreenContent(
     state: CatalogueAddViewState,
     flow: CatalogueAddFlow,
     onBack: () -> Unit,
     modifier: Modifier,
     scope: kotlinx.coroutines.CoroutineScope,
+    onSelectOtherLibrary: () -> Unit = onBack,
+    requestErrorFocus: Boolean = true,
 ) {
     val addressFocusRequester = remember { FocusRequester() }
     LaunchedEffect(state.focusAddress) {
-        if (state.focusAddress) addressFocusRequester.requestFocus()
+        if (requestErrorFocus && state.focusAddress) addressFocusRequester.requestFocus()
     }
     Column(modifier.fillMaxSize().background(Ember.colors.bg).imePadding()) {
-        EmberTopBar(title = stringResource(StringRes.catalogue_add_library_title), onBack = onBack)
+        EmberTopBar(
+            title = stringResource(StringRes.catalogue_add_library_title),
+            onBack = onBack,
+        )
         Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Spacer(Modifier.height(8.dp))
             Text(stringResource(StringRes.catalogue_add_question), style = Ember.type.meta.copy(fontSize = 17.sp), color = Ember.colors.ink2)
-            CatalogueCard {
-                Row(Modifier.padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("◉", style = Ember.type.meta.copy(fontSize = 23.sp), color = Ember.colors.accent)
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(stringResource(StringRes.catalogue_type_name), style = Ember.type.meta.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink)
-                        Text("OPDS", style = Ember.type.meta.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink2)
-                        Text(stringResource(StringRes.catalogue_opds_card_description), style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 21.sp), color = Ember.colors.ink2)
-                    }
-                }
-            }
+            AddLibraryKindRow(
+                title = "Storyteller",
+                enabled = state.isEditable,
+                onClick = onSelectOtherLibrary,
+            )
+            AddLibraryKindRow(
+                title = "Audiobookshelf",
+                enabled = state.isEditable,
+                onClick = onSelectOtherLibrary,
+            )
+            SelectedCatalogueKindCard(enabled = state.isEditable)
             EmberTextField(
                 value = state.address,
                 onValueChange = flow::updateAddress,
                 label = stringResource(StringRes.catalogue_add_address_label),
+                labelStyle = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 helperText = stringResource(StringRes.catalogue_add_address_helper),
                 isError = state.error != null,
                 errorText = state.error?.let { addErrorMessage(it) },
@@ -607,7 +622,7 @@ private fun CatalogueAddScreenContent(
             val accountDescription = stringResource(StringRes.catalogue_needs_account)
             val accountToggleDescription = "$accountDescription, ${if (state.needsAccount) "on" else "off"}"
             Row(
-                modifier = Modifier.fillMaxWidth().clickable(role = Role.Switch) { flow.updateNeedsAccount(!state.needsAccount) }
+                modifier = Modifier.fillMaxWidth().clickable(enabled = state.isEditable, role = Role.Switch) { flow.updateNeedsAccount(!state.needsAccount) }
                     .semantics {
                         role = Role.Switch
                         toggleableState = if (state.needsAccount) androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off
@@ -627,6 +642,7 @@ private fun CatalogueAddScreenContent(
                         value = state.username,
                         onValueChange = flow::updateUsername,
                         label = stringResource(StringRes.catalogue_username),
+                        labelStyle = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
                         modifier = Modifier.weight(1f),
                         enabled = state.isEditable,
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false),
@@ -667,6 +683,47 @@ private fun CatalogueAddScreenContent(
 }
 
 @Composable
+private fun AddLibraryKindRow(title: String, enabled: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Ember.colors.surface)
+            .border(if (Ember.style.isEink) 2.dp else 1.dp, Ember.colors.line, RoundedCornerShape(14.dp))
+            .selectable(selected = false, enabled = enabled, role = Role.RadioButton, onClick = onClick)
+            .heightIn(min = 48.dp).padding(horizontal = 14.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(20.dp).border(if (Ember.style.isEink) 2.dp else 1.dp, Ember.colors.ink2, CircleShape))
+        Text(title, style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink)
+    }
+}
+
+@Composable
+private fun SelectedCatalogueKindCard(enabled: Boolean) {
+    val shape = RoundedCornerShape(20.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(shape)
+            .background(if (Ember.style.isEink) Ember.colors.surface else Ember.colors.navActive)
+            .border(if (Ember.style.isEink) 3.dp else 2.dp, Ember.colors.accent, shape)
+            .selectable(selected = true, enabled = enabled, role = Role.RadioButton, onClick = {})
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(22.dp).border(2.dp, Ember.colors.accent, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) { Box(Modifier.size(10.dp).clip(CircleShape).background(Ember.colors.accent)) }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(StringRes.catalogue_type_name), style = Ember.type.meta.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink)
+                Text("OPDS", style = Ember.type.meta.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink2)
+            }
+            Text(stringResource(StringRes.catalogue_opds_card_description), style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 21.sp), color = Ember.colors.ink2)
+        }
+    }
+}
+
+@Composable
 private fun CataloguePasswordField(
     value: String,
     onValueChange: (String) -> Unit,
@@ -682,7 +739,11 @@ private fun CataloguePasswordField(
         if (error && focusRequester != null) focusRequester.requestFocus()
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(stringResource(StringRes.catalogue_password), style = Ember.type.meta.copy(fontSize = 13.sp), color = Ember.colors.ink2)
+        Text(
+            stringResource(StringRes.catalogue_password),
+            style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+            color = Ember.colors.ink,
+        )
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -722,16 +783,18 @@ private fun CataloguePasswordField(
     }
 }
 
-@Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun CatalogueSignInSheet(
+@Composable
+fun CatalogueSignInSheet(
     preset: CataloguePreset,
     state: CatalogueAddViewState,
     flow: CatalogueAddFlow,
     onDismiss: () -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
+    deviceName: String = catalogueDeviceName(),
+    requestErrorFocus: Boolean = true,
 ) {
-    val passwordFocusRequester = remember { FocusRequester() }
+    val passwordFocusRequester = remember { FocusRequester() }.takeIf { requestErrorFocus }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Ember.colors.surface,
@@ -742,11 +805,12 @@ private fun CatalogueSignInSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(stringResource(StringRes.catalogue_sign_in_title, preset.name), style = Ember.type.screenTitle.copy(fontSize = 25.sp, lineHeight = 31.sp), color = Ember.colors.ink)
-            Text(stringResource(StringRes.catalogue_sign_in_body, "this device"), style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 22.sp), color = Ember.colors.ink2)
+            Text(stringResource(StringRes.catalogue_sign_in_body, deviceName), style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 22.sp), color = Ember.colors.ink2)
             EmberTextField(
                 value = state.username,
                 onValueChange = flow::updateUsername,
                 label = stringResource(StringRes.catalogue_username),
+                labelStyle = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 enabled = state.isEditable,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false),
             )
@@ -781,11 +845,12 @@ private fun CatalogueSignInSheet(
 }
 
 @Composable
-private fun CatalogueAddDialogs(
+fun CatalogueAddDialogs(
     state: CatalogueAddViewState,
     flow: CatalogueAddFlow,
     onDismiss: () -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
+    deviceName: String = catalogueDeviceName(),
 ) {
     val address = state.address
     val host = address.removePrefix("https://").removePrefix("http://").substringBefore('/').substringBefore('?').ifBlank { "this catalogue" }
@@ -795,14 +860,14 @@ private fun CatalogueAddDialogs(
             title = stringResource(StringRes.catalogue_http_title),
             body = androidx.compose.ui.text.AnnotatedString(stringResource(StringRes.catalogue_http_body)),
             actions = listOf(
-                EmberDialogAction(stringResource(StringRes.catalogue_cancel), onClick = onDismiss),
-                EmberDialogAction(stringResource(StringRes.catalogue_add_anyway), EmberDialogActionStyle.Main, onClick = { scope.launch { flow.confirmHttp() } }),
+                EmberDialogAction(stringResource(StringRes.catalogue_go_back), EmberDialogActionStyle.Main, onClick = onDismiss),
+                EmberDialogAction(stringResource(StringRes.catalogue_add_anyway), onClick = { scope.launch { flow.confirmHttp() } }),
             ),
         ) { DialogAddress(address) }
         CatalogueAddDialog.HttpBlocked -> EmberDialog(
             onDismissRequest = onDismiss,
             title = stringResource(StringRes.catalogue_http_blocked_title),
-            body = androidx.compose.ui.text.AnnotatedString(stringResource(StringRes.catalogue_http_blocked_body, "this device")),
+            body = androidx.compose.ui.text.AnnotatedString(stringResource(StringRes.catalogue_http_blocked_body, deviceName)),
             actions = listOf(EmberDialogAction(stringResource(StringRes.catalogue_ok), EmberDialogActionStyle.Main, onClick = flow::confirmDialogPrimary)),
         ) { DialogAddress(address) }
         CatalogueAddDialog.PasswordHttp -> EmberDialog(
@@ -839,7 +904,7 @@ private fun CatalogueAddDialogs(
             onDismissRequest = onDismiss,
             title = stringResource(StringRes.catalogue_unsupported_blocked_title),
             body = androidx.compose.ui.text.AnnotatedString(stringResource(StringRes.catalogue_unsupported_blocked_body)),
-            actions = listOf(EmberDialogAction(stringResource(StringRes.catalogue_ok), EmberDialogActionStyle.Main, onClick = flow::confirmDialogPrimary)),
+            actions = listOf(EmberDialogAction(stringResource(StringRes.catalogue_go_back), EmberDialogActionStyle.Main, onClick = flow::confirmDialogPrimary)),
         )
         null -> Unit
     }
@@ -847,12 +912,16 @@ private fun CatalogueAddDialogs(
 
 @Composable
 private fun DialogAddress(address: String) {
-    Text(address, style = Ember.type.meta.copy(fontSize = 14.sp), color = Ember.colors.ink, maxLines = 4, overflow = TextOverflow.Ellipsis)
+    Text(address, style = Ember.type.meta.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink, maxLines = 4, overflow = TextOverflow.Ellipsis)
 }
 
 @Composable
 private fun CatalogueAddErrorLine(error: CatalogueAddError) {
-    Text(addErrorMessage(error), style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 20.sp), color = Ember.colors.destructive)
+    Text(
+        addErrorMessage(error),
+        style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold),
+        color = Ember.colors.destructive,
+    )
 }
 
 @Composable
@@ -861,7 +930,7 @@ private fun addErrorMessage(error: CatalogueAddError): String = when (error) {
     CatalogueAddError.Unreachable -> stringResource(StringRes.catalogue_add_error_unreachable)
     CatalogueAddError.NotCatalogue -> stringResource(StringRes.catalogue_add_error_invalid)
     CatalogueAddError.SignInNeeded -> stringResource(StringRes.catalogue_add_error_sign_in_needed)
-    CatalogueAddError.WrongCredentials -> stringResource(StringRes.login_error_invalid_credentials)
+    CatalogueAddError.WrongCredentials -> stringResource(StringRes.catalogue_add_error_wrong_credentials)
     CatalogueAddError.DuplicateAddress -> stringResource(StringRes.catalogue_add_error_duplicate)
     CatalogueAddError.SaveFailed -> stringResource(StringRes.catalogue_add_error_save_failed)
 }

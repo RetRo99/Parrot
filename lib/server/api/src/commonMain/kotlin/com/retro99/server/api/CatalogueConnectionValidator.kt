@@ -6,7 +6,8 @@ fun interface CatalogueConnectionValidator {
 }
 
 sealed interface CatalogueConnectionResult {
-    data object Accepted : CatalogueConnectionResult
+    /** The feed title is from the same first page whose successful parse accepted the address. */
+    data class Accepted(val title: String? = null) : CatalogueConnectionResult
     data object WebPage : CatalogueConnectionResult
     data object Unreachable : CatalogueConnectionResult
     data object NotCatalogue : CatalogueConnectionResult
