@@ -95,3 +95,4 @@
 - Android host / iOS simulator: `lib/server/api` 42/42 and 42/42; `lib/server-opds` 52/52 and 52/52; `feature/catalogue/ui` 72/72 and 71/71; `feature/home/ui` 81/81 and 87/87; `composeApp` Android host 55/55 (iOS not run: known FirebaseCore link error).
 - `:tools:ember-fixtures:assembleDebug` passed; 44 captures taken with their hierarchy checks.
 - Not tried against a real catalogue inside the app.
+- `./gradlew :androidApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64 --max-workers=2` — both passed in one run, no heap retry needed.
