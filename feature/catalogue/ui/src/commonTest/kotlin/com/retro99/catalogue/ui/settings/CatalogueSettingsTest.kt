@@ -148,6 +148,7 @@ class CatalogueSettingsTest {
             if (dialog == CatalogueAddDialog.Unsupported) {
                 edit.addWithoutAccount()
                 assertEquals(listOf(source.baseUrl), gateway.addresses)
+                assertEquals(listOf(answer), gateway.addressValidations)
             }
         }
     }
@@ -161,6 +162,7 @@ class CatalogueSettingsTest {
             edit.updateAddress("https://other.example/opds/")
             edit.submit()
             assertEquals(listOf("https://other.example/opds/"), gateway.addresses)
+            assertEquals(listOf<CatalogueValidation>(CatalogueValidation.Accepted()), gateway.addressValidations)
             val http = controller.openAddressEditor()!!
             http.updateAddress("http://home.lan/opds")
             http.submit()
@@ -207,6 +209,84 @@ class CatalogueSettingsTest {
         }
     }
 
+    @Test fun own_address_commit_does_not_cancel_the_account_save_when_the_registry_emits() = runTest {
+        val gateway = FakeSettingsGateway(snapshot()).apply { emitAddressChanges = true }
+        val controller = CatalogueSettingsController("cat", gateway, validator(), true)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { controller.observe() }
+        val edit = controller.openAddressEditor()!!
+        edit.updateAddress("https://other.example/opds")
+        edit.updateNeedsAccount(true)
+        edit.updateUsername("new-account")
+        edit.updatePassword("new-password")
+        edit.submit()
+        assertEquals("cat", edit.state.value.addedSourceId)
+        assertEquals(listOf(OpdsAccountDetails("new-account", "new-password")), gateway.accounts)
+        assertFalse(controller.state.value.showAddress)
+    }
+
+    @Test fun address_duplicates_and_storage_failures_do_not_close_the_editor() = runTest {
+        val gateway = FakeSettingsGateway(snapshot()).apply { existing = setOf("https://other.example/opds") }
+        val controller = CatalogueSettingsController("cat", gateway, validator(), true)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { controller.observe() }
+        val edit = controller.openAddressEditor()!!
+        edit.updateAddress("https://other.example/opds")
+        edit.submit()
+        assertEquals(CatalogueAddError.DuplicateAddress, edit.state.value.error)
+        assertTrue(gateway.addresses.isEmpty())
+        gateway.fail = true
+        edit.updateAddress("https://new.example/opds")
+        edit.submit()
+        assertEquals(CatalogueAddError.SaveFailed, edit.state.value.error)
+        assertNull(edit.state.value.addedSourceId)
+    }
+
+    @Test fun edit_address_never_sends_a_password_over_http() = runTest {
+        val gateway = FakeSettingsGateway(snapshot())
+        var sent: OpdsAccountDetails? = null
+        var answer: CatalogueValidation = CatalogueValidation.Accepted()
+        val controller = CatalogueSettingsController("cat", gateway, CatalogueAddressValidator { _, account -> sent = account; answer }, true)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { controller.observe() }
+        val edit = controller.openAddressEditor()!!
+        edit.updateAddress("http://home.lan/opds")
+        edit.updateNeedsAccount(true)
+        edit.updateUsername("rok")
+        edit.updatePassword("secret")
+        edit.submit()
+        assertNull(sent)
+        assertEquals(CatalogueAddDialog.PasswordHttp, edit.state.value.dialog)
+        assertTrue(gateway.accounts.isEmpty())
+        edit.addWithoutAccount()
+        assertTrue(gateway.accounts.isEmpty())
+        answer = CatalogueValidation.NeedsBasic
+        val blocked = controller.openAddressEditor()!!
+        blocked.updateAddress("http://home.lan/private")
+        blocked.submit()
+        assertEquals(CatalogueAddDialog.PasswordHttpBlocked, blocked.state.value.dialog)
+    }
+
+    @Test fun failed_remove_count_does_not_offer_a_confirmation_with_a_guessed_count() = runTest {
+        val gateway = FakeSettingsGateway(snapshot()).apply { fail = true }
+        val controller = CatalogueSettingsController("cat", gateway, validator(), true)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { controller.observe() }
+        controller.askRemoveCatalogue()
+        assertNull(controller.state.value.dialog)
+        assertNull(controller.state.value.downloadedBooks)
+        assertTrue(controller.state.value.failed)
+        controller.confirmRemoveCatalogue()
+        assertEquals(0, gateway.removedCatalogues)
+    }
+
+    @Test fun remove_account_updates_the_open_account_group_without_rewriting_last_verified_access() = runTest {
+        val signedIn = snapshot().copy(status = CatalogueAccessStatus(ServerAccessState.SignedIn("rok")), accountName = "rok")
+        val gateway = FakeSettingsGateway(signedIn)
+        val controller = CatalogueSettingsController("cat", gateway, validator(), true)
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { controller.observe() }
+        controller.askRemoveAccount()
+        controller.confirmRemoveAccount()
+        assertNull(controller.state.value.source?.accountName)
+        assertEquals(ServerAccessState.SignedIn("rok"), controller.state.value.source?.status?.access)
+    }
+
     private fun snapshot() = CatalogueSettingsSource("profile", source, CatalogueAccessStatus(), null)
     private fun validator(result: CatalogueValidation = CatalogueValidation.Accepted()) = CatalogueAddressValidator { _, _ -> result }
 }
@@ -215,17 +295,28 @@ private class FakeSettingsGateway(initial: CatalogueSettingsSource) : CatalogueS
     val snapshot = MutableStateFlow<CatalogueSettingsSource?>(initial)
     val accounts = mutableListOf<OpdsAccountDetails>()
     val addresses = mutableListOf<String>()
+    val addressValidations = mutableListOf<CatalogueValidation>()
     val enabled = mutableListOf<Boolean>()
     var books = 0L
     var removedAccounts = 0
     var removedCatalogues = 0
+    var emitAddressChanges = false
+    var existing = emptySet<String>()
+    var fail = false
     override fun observeSource(sourceId: String) = snapshot
-    override suspend fun existingAddresses(profileId: String, sourceId: String) = emptySet<String>()
-    override suspend fun updateAddress(source: CatalogueSettingsSource, address: String, account: OpdsAccountDetails?) { addresses += address; account?.let { accounts += it } }
+    override suspend fun existingAddresses(profileId: String, sourceId: String) = existing
+    override suspend fun updateAddress(source: CatalogueSettingsSource, address: String, account: OpdsAccountDetails?, validation: CatalogueValidation) {
+        check(!fail)
+        addresses += address
+        addressValidations += validation
+        if (emitAddressChanges) snapshot.value = source.copy(config = source.config.copy(baseUrl = address))
+        kotlinx.coroutines.yield()
+        account?.let { accounts += it }
+    }
     override suspend fun saveAccount(source: CatalogueSettingsSource, account: OpdsAccountDetails) { accounts += account }
     override suspend fun removeAccount(source: CatalogueSettingsSource) { removedAccounts++ }
     override suspend fun setEnabled(source: CatalogueSettingsSource, enabled: Boolean) { this.enabled += enabled }
-    override suspend fun countBooks(source: CatalogueSettingsSource) = books
+    override suspend fun countBooks(source: CatalogueSettingsSource): Long { check(!fail); return books }
     override suspend fun removeCatalogue(source: CatalogueSettingsSource) { removedCatalogues++ }
     override suspend fun retry(source: CatalogueSettingsSource) = Unit
 }
