@@ -151,4 +151,13 @@ class AcquisitionClassifierTest {
         assertEquals(OpdsText(mapOf("en" to "Shop", "fr" to "Boutique")), book.seller)
         assertEquals(OpdsText("Library"), book.lender)
     }
+    @Test fun sample_alias_is_retained_for_entry_precedence_but_never_downloaded() {
+        assertEquals(OpdsAcquisitionAction.NotAvailable(OpdsUnavailableReason.SAMPLE_ONLY), classifier.classify(entry(listOf(link("sample")))).action)
+    }
+    @Test fun explicit_xml_seller_and_lender_keep_language_tags() {
+        val xml = """<entry xmlns="http://www.w3.org/2005/Atom" xmlns:p="urn:provider" xml:lang="en"><id>urn:book</id><title>Book</title><p:seller>Shop</p:seller><p:lender xml:lang="fr">Bibliothèque</p:lender><link rel="http://opds-spec.org/acquisition/buy" href="/buy" type="text/html"/></entry>"""
+        val book = ((com.retro99.opds.implementation.ParserFactory.opdsParser().parse(OpdsPayload("application/atom+xml", xml.encodeToByteArray()), "https://example.org/root") as OpdsParseResult.Document).document as OpdsPublicationDocument).publication
+        assertEquals(OpdsText("Shop", "en"), book.seller)
+        assertEquals(OpdsText("Bibliothèque", "fr"), book.lender)
+    }
 }

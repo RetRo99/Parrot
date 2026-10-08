@@ -56,7 +56,7 @@ data class OpdsLink(
             "http://opds-spec.org/acquisition/open-access",
             // OPDS 2 aliases, per §2.2 of the plan:
             "download",
-            "buy", "borrow", "preview", "subscribe",
+            "buy", "borrow", "preview", "sample", "subscribe",
             "http://opds-spec.org/acquisition/buy",
             "http://opds-spec.org/acquisition/borrow",
             "http://opds-spec.org/acquisition/sample",

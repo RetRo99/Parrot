@@ -14,7 +14,7 @@ import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.CancellationException
 import kotlin.time.Clock
 
-/** One isolated client per source. No auth/cookie/logging plugins or shared default headers. */
+/** One isolated client per source, owning its engine. No auth/cookie/logging plugins or shared default headers. */
 class KtorOpdsTransport(
     private val engine: HttpClientEngine,
     private val catalogueRoot: String,
@@ -40,7 +40,8 @@ class KtorOpdsTransport(
         val visited = mutableSetOf<String>()
         try {
             while (true) {
-                val invalid = validate(current, request.allowCleartext)
+                // Password-over-HTTP is more specific than the anonymous cleartext policy.
+                val invalid = validate(current, request.allowCleartext || redirects == 0 && request.credentials is OpdsCredentials.Basic)
                 if (invalid != null) return failure(invalid)
                 val url = Url(current)
                 current = url.toString().substringBefore('#')

@@ -74,6 +74,12 @@ class OpdsTransportTest {
         assertTrue(engine.requestHistory.isEmpty())
         transport.close()
     }
+    @Test fun password_over_http_has_distinct_result_even_without_cleartext_permission() = runTest {
+        val engine = MockEngine { fail("password over HTTP must never reach the engine") }
+        val transport = KtorOpdsTransport(engine, "http://home.lan/root")
+        assertEquals(OpdsTransportError.Code.PASSWORD_OVER_HTTP, failure(transport.fetch(request("http://home.lan/root"))).code)
+        transport.close()
+    }
     @Test fun basic_401_needs_sign_in_and_tracks_root_context() = runTest {
         val engine = MockEngine { respond("private auth body", HttpStatusCode.Unauthorized, headersOf(HttpHeaders.WWWAuthenticate, "Basic realm=\"private, realm\"")) }
         val transport = KtorOpdsTransport(engine, root)

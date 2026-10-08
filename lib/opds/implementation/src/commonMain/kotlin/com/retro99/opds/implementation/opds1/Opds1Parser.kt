@@ -427,6 +427,8 @@ private class EntryBodyVisitor(
         "summary" -> ScalarVisitor { text -> if (assembler.summary == null) assembler.summary = state.tagged(text) }
         "rights" -> ScalarVisitor { text -> if (assembler.rights == null) assembler.rights = state.tagged(text) }
         "publisher" -> ScalarVisitor { text -> if (assembler.publisher == null) assembler.publisher = state.tagged(text) }
+        "seller" -> ScalarVisitor { text -> if (assembler.seller == null) assembler.seller = state.tagged(text) }
+        "lender" -> ScalarVisitor { text -> if (assembler.lender == null) assembler.lender = state.tagged(text) }
         "published", "issued" -> ScalarVisitor { text -> if (assembler.published == null) assembler.published = text }
         "language" -> ScalarVisitor { text -> if (text.isNotBlank()) assembler.languages.add(text) }
         "identifier" -> IdentifierVisitor(assembler, attributes)
@@ -584,6 +586,8 @@ private class EntryAssembler(
     var content: OpdsContent? = null
     var rights: OpdsText? = null
     var publisher: OpdsText? = null
+    var seller: OpdsText? = null
+    var lender: OpdsText? = null
     var published: String? = null
     val languages: MutableList<String> = mutableListOf()
     val authors: MutableList<OpdsContributor> = mutableListOf()
@@ -633,6 +637,8 @@ private class EntryAssembler(
             // §11.7: the parser never fabricates edition labels; the
             // catalogue's own text stays in summary/title for the mapping.
             editionLabel = null,
+            seller = seller?.takeIf { it.isNotBlank() },
+            lender = lender?.takeIf { it.isNotBlank() },
         )
     }
 
