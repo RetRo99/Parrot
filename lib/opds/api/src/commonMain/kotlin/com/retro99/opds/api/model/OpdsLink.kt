@@ -36,6 +36,8 @@ data class OpdsLink(
 
     /** Bounded extension properties (OPDS2 `properties` / OPDS1 unknown attributes). */
     val extras: Map<String, String> = emptyMap(),
+    /** Retained declaring base, including inherited xml:base, especially for templates. */
+    val effectiveBaseUri: String? = null,
 ) {
     /** Standard + documented alias relations for acquisition (plan §2.2). */
     val acquisitionRelations: Set<String> get() = relations.filterToRelations()

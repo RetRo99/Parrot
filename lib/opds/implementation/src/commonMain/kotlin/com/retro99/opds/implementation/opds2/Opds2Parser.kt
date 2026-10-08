@@ -90,7 +90,7 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
             return OpdsLink(href, resolved, template, relations, types.parse(text(obj["type"])), localized(obj["title"]),
                 (obj["length"] as? JsonPrimitive)?.longOrNull,
                 price = if (priceValue != null && currency != null) OpdsPrice(priceValue, currency) else null,
-                indirectAcquisition = when (trees.size) { 0 -> null; 1 -> trees.single(); else -> OpdsIndirectAcquisition(null, trees) })
+                indirectAcquisition = when (trees.size) { 0 -> null; 1 -> trees.single(); else -> OpdsIndirectAcquisition(null, trees) }, effectiveBaseUri = base)
         }
         fun indirect(obj: JsonObject): OpdsIndirectAcquisition = OpdsIndirectAcquisition(types.parse(text(obj["type"])),
             values(obj["child"] ?: obj["children"]).map { indirect(it as? JsonObject ?: throw IllegalArgumentException()) })

@@ -659,12 +659,16 @@ attributes: Map<String, String>,
 state: ParseState,
 mediaTypeParser: SeparatedMediaTypeParser,
 ): OpdsLink {
+// Links are constructed during descend(), before the walker's base push.
+state.pushXmlBase(attributes["xml:base"])
+try {
 val href = attributes["href"].orEmpty()
 val relations = attributes["rel"].orEmpty().split(' ', '\t', '\n', '\r').filter { it.isNotEmpty() }
 return OpdsLink(
     rawHref = href,
     resolvedHref = state.resolve(href),
     isTemplate = href.contains('{'),
+    effectiveBaseUri = state.base(),
     relations = relations,
     mediaType = mediaTypeParser.parse(attributes["type"]),
     title = attributes["title"]?.takeIf { it.isNotBlank() }?.let { state.tagged(it, attributes) },
@@ -674,6 +678,9 @@ return OpdsLink(
         ?.let { boundedExtras(it) }
         ?: emptyMap(),
 )
+} finally {
+    state.popXmlBase()
+}
 }
 
 private fun attachFeedLink(link: OpdsLink, state: ParseState) {

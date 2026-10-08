@@ -2,24 +2,25 @@ package com.retro99.server.implementation
 
 import com.retro99.server.api.*
 import com.retro99.user.api.UserRegistry
+import com.retro99.preferences.api.*
 import kotlinx.coroutines.flow.*
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 @Single(binds = [CatalogueAccessProvider::class])
 class CatalogueAccessProviderImpl(
-    @Provided private val registry: ServerRegistry,
+    private val preferences: Preferences,
     @Provided private val users: UserRegistry,
     @Provided private val store: CatalogueAccessStore,
 ) : CatalogueAccessProvider {
-    override fun observeAll(): Flow<Map<String, CatalogueAccessStatus>> =
+    override fun observeSources(): Flow<List<CatalogueSourceStatus>> =
         users.observeActiveProfile().flatMapLatest { profile ->
-            if (profile == null) flowOf(emptyMap()) else combine(
-                registry.observeAllServers(), store.observe(profile.id),
+            if (profile == null) flowOf(emptyList()) else combine(
+                preferences.observeObject<List<ServerConfig>>(PreferencesKey.UserScoped(profile.id, PreferencesKey.CatalogueSources.name)), store.observe(profile.id),
             ) { sources, states ->
-                sources.filter { it.type.getCapabilities().supportsCatalogueBrowsing }.associate { source ->
+                sources.orEmpty().filter { it.type.getCapabilities().supportsCatalogueBrowsing }.map { source ->
                     val status = states[source.id] ?: CatalogueAccessStatus()
-                    source.id to if (source.enabled) status else status.copy(access = ServerAccessState.TurnedOff)
+                    CatalogueSourceStatus(source, if (source.enabled) status else status.copy(access = ServerAccessState.TurnedOff))
                 }
             }
         }

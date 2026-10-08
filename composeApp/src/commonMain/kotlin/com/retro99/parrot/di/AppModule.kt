@@ -30,6 +30,7 @@ import com.retro99.server.audiobookshelf.di.AudiobookshelfModule
 import com.retro99.server.local.di.LocalServerModule
 import com.retro99.server.parrotcloud.di.ParrotCloudModule
 import com.retro99.server.storyteller.di.StorytellerModule
+import com.retro99.server.opds.di.OpdsServerModule
 import com.retro99.settings.data.di.SettingsDataModule
 import com.retro99.settings.domain.di.SettingsDomainModule
 import com.retro99.settings.ui.di.SettingsUiModule
@@ -66,6 +67,7 @@ import org.koin.core.annotation.Module
         AudiobookshelfModule::class,
         LocalServerModule::class,
         ParrotCloudModule::class,
+        OpdsServerModule::class,
         // Feature modules
         AuthDomainModule::class,
         AuthDataModule::class,

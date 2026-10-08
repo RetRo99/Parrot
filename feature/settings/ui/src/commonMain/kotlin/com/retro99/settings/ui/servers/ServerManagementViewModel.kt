@@ -10,7 +10,6 @@ import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerType
 import com.retro99.server.api.CatalogueAccessProvider
-import com.retro99.server.api.CatalogueAccessStatus
 import com.retro99.server.api.getCapabilities
 import com.retro99.settings.ui.servers.model.ServerWithStatusUiModel
 import com.retro99.settings.ui.servers.model.toUiModel
@@ -33,6 +32,11 @@ class ServerManagementViewModel(
 ) : BaseViewModel<ServerManagementViewState, ServerManagementIntent>(ServerManagementViewState()) {
 
     init {
+        viewModelScope.launch {
+            catalogueAccessProvider.observeSources().collect { sources ->
+                updateState { it.copy(catalogueSources = sources.map { mapCatalogueSource(it.config, it.status) }) }
+            }
+        }
         observeServers()
     }
 
@@ -61,12 +65,6 @@ class ServerManagementViewModel(
     private fun observeServers(isRetry: Boolean = false) {
         // Catalogue state is not translated into ServerAuthState. Legacy cards remain
         // library-only; catalogue presentation/navigation is deliberately Phase 4.
-        viewModelScope.launch {
-            combine(serverRegistry.observeAllServers(), catalogueAccessProvider.observeAll()) { sources, states ->
-                sources.filter { it.type.getCapabilities().supportsCatalogueBrowsing }
-                    .map { mapCatalogueSource(it, states[it.id] ?: CatalogueAccessStatus()) }
-            }.collect { sources -> updateState { it.copy(catalogueSources = sources) } }
-        }
         val source = flow {
             combine(
                 serverRegistry.observeAllServers(),
