@@ -111,7 +111,9 @@ sealed interface OpdsDownloadResult {
  * search strings (plan §4 "Error/log categories are bounded").
  */
 data class OpdsTransportError(val code: Code, val status: Int? = null, val note: String? = null,
-    val retryAfterMillis: Long? = null, val isCatalogueRoot: Boolean = false) {
+    val retryAfterMillis: Long? = null, val isCatalogueRoot: Boolean = false,
+    /** For [Code.RESPONSE_TOO_LARGE] on a download: the Content-Length that was over the ceiling. */
+    val declaredLength: Long? = null) {
     enum class Code {
         UNREACHABLE,
         TIMEOUT,

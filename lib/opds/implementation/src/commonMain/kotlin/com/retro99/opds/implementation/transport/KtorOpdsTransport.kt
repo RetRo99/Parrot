@@ -69,7 +69,10 @@ class KtorOpdsTransport(
         run<OpdsDownloadResult>(request, streaming = true, wrap = { OpdsDownloadResult.Failure(it.error, it.crossOriginPrivateNetwork) }) { response, status, current, privateNetwork, failure ->
             fun failed(code: OpdsTransportError.Code): OpdsDownloadResult = failure(code, status).let { OpdsDownloadResult.Failure(it.error, it.crossOriginPrivateNetwork) }
             val declared = response.headers[HttpHeaders.ContentLength]?.toLongOrNull()?.takeIf { it >= 0 }
-            if (declared != null && declared > maxBytes) return@run failed(OpdsTransportError.Code.RESPONSE_TOO_LARGE)
+            if (declared != null && declared > maxBytes) {
+                val tooLarge = failure(OpdsTransportError.Code.RESPONSE_TOO_LARGE, status)
+                return@run OpdsDownloadResult.Failure(tooLarge.error.copy(declaredLength = declared), tooLarge.crossOriginPrivateNetwork)
+            }
             // A failing sink (disk full, file gone) is the caller's error, not a network one.
             var sinkFailure: Throwable? = null
             suspend fun toSink(block: suspend () -> Unit): Boolean = try { block(); true }

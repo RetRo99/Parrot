@@ -171,7 +171,8 @@ class OpdsCatalogueRepository(
             checkCurrent()
             when (result) {
                 is OpdsDownloadResult.Complete -> CatalogueDownloadOutcome.Complete(result.bytes, result.declaredLength)
-                is OpdsDownloadResult.Failure -> CatalogueDownloadOutcome.Failed(downloadFailure(result.error))
+                is OpdsDownloadResult.Failure ->
+                    CatalogueDownloadOutcome.Failed(downloadFailure(result.error), result.error.declaredLength)
                 is OpdsDownloadResult.SinkFailure -> CatalogueDownloadOutcome.SinkFailed(result.cause)
             }
         } finally { requests.update { it - job } }

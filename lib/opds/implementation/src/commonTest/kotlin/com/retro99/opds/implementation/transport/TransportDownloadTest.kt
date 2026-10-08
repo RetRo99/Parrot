@@ -82,7 +82,9 @@ class TransportDownloadTest {
         val engine = MockEngine { respond(ByteReadChannel(payload(10)), HttpStatusCode.OK, headersOf(HttpHeaders.ContentLength, "5000")) }
         val transport = KtorOpdsTransport(engine, root)
         val sink = RecordingSink()
-        assertEquals(OpdsTransportError.Code.RESPONSE_TOO_LARGE, code(transport.download(request(), sink, maxBytes = 4_999)))
+        val result = transport.download(request(), sink, maxBytes = 4_999)
+        assertEquals(OpdsTransportError.Code.RESPONSE_TOO_LARGE, code(result))
+        assertEquals(5_000L, (result as OpdsDownloadResult.Failure).error.declaredLength, "the size that was over the limit is reported")
         assertTrue(sink.starts.isEmpty())
         assertTrue(sink.chunks.isEmpty())
         transport.close()
@@ -92,7 +94,9 @@ class TransportDownloadTest {
         val engine = MockEngine { respond(ByteReadChannel(payload(200_000))) }
         val transport = KtorOpdsTransport(engine, root)
         val sink = RecordingSink()
-        assertEquals(OpdsTransportError.Code.RESPONSE_TOO_LARGE, code(transport.download(request(), sink, maxBytes = 100_000)))
+        val result = transport.download(request(), sink, maxBytes = 100_000)
+        assertEquals(OpdsTransportError.Code.RESPONSE_TOO_LARGE, code(result))
+        assertEquals(null, (result as OpdsDownloadResult.Failure).error.declaredLength, "no size was declared")
         assertTrue(sink.bytes.size <= 100_000, "nothing past the ceiling is written")
         transport.close()
     }

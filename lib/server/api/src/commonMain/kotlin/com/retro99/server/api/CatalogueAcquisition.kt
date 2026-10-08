@@ -25,7 +25,8 @@ interface CatalogueFileSink {
 
 sealed interface CatalogueDownloadOutcome {
     data class Complete(val bytes: Long, val declaredLength: Long?) : CatalogueDownloadOutcome
-    data class Failed(val kind: CatalogueDownloadFailure) : CatalogueDownloadOutcome
+    /** [declaredLength]: for [CatalogueDownloadFailure.TooLarge], the size the catalogue declared, when it did. */
+    data class Failed(val kind: CatalogueDownloadFailure, val declaredLength: Long? = null) : CatalogueDownloadOutcome
 
     /** The sink threw; [cause] is its own exception. */
     class SinkFailed(val cause: Throwable) : CatalogueDownloadOutcome

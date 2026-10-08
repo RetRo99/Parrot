@@ -130,7 +130,10 @@ class OpdsAcquisitionDownloadTest {
     @Test fun a_declared_size_over_the_ceiling_is_too_large() = runTest {
         val setup = setup { request -> if (request.url == ROOT) respondFeed() else respond(ByteReadChannel(BOOK), HttpStatusCode.OK, headersOf(HttpHeaders.ContentLength, (512L * 1024 * 1024 + 1).toString())) }
         val sink = Sink()
-        assertEquals(CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.TooLarge), setup.repository.download(locator(setup), sink))
+        assertEquals(
+            CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.TooLarge, declaredLength = 512L * 1024 * 1024 + 1),
+            setup.repository.download(locator(setup), sink),
+        )
         assertTrue(sink.starts.isEmpty())
         setup.repository.dispose()
     }
