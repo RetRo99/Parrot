@@ -37,6 +37,7 @@ class KtorOpdsTransport(
             OpdsFetchResult.Failure(OpdsTransportError(code, status, retryAfterMillis = retry, isCatalogueRoot = rootContext), privateNetwork)
         var current = request.url
         var redirects = 0
+        var leftOrigin = false
         val visited = mutableSetOf<String>()
         try {
             while (true) {
@@ -44,6 +45,7 @@ class KtorOpdsTransport(
                 val invalid = validate(current, request.allowCleartext || redirects == 0 && request.credentials is OpdsCredentials.Basic)
                 if (invalid != null) return failure(invalid)
                 val url = Url(current)
+                if (origin(url) != trustedOrigin) leftOrigin = true
                 current = url.toString().substringBefore('#')
                 if (request.credentials is OpdsCredentials.Basic && url.protocol.name == "http" && redirects == 0) return failure(OpdsTransportError.Code.PASSWORD_OVER_HTTP)
                 if (!visited.add(current)) return failure(OpdsTransportError.Code.REDIRECT_LOOP)
@@ -51,7 +53,7 @@ class KtorOpdsTransport(
                 log("opds.request")
                 val step = client.prepareGet(current) {
                     headers.append(HttpHeaders.Accept, request.acceptMediaTypes.joinToString(", "))
-                    if (redirects == 0 && origin(url) == trustedOrigin && url.protocol.name == "https" && request.credentials is OpdsCredentials.Basic) {
+                    if (!leftOrigin && origin(url) == trustedOrigin && url.protocol.name == "https" && request.credentials is OpdsCredentials.Basic) {
                         val credential = request.credentials as OpdsCredentials.Basic
                         headers.append(HttpHeaders.Authorization, "Basic ${Base64.Default.encode("${credential.username}:${credential.password}".encodeToByteArray())}")
                     }

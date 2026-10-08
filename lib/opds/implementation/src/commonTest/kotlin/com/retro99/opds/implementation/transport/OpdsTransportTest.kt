@@ -34,7 +34,7 @@ class OpdsTransportTest {
         assertTrue(engine.requestHistory.all { it.headers[HttpHeaders.Authorization] == null })
         transport.close()
     }
-    @Test fun credentials_are_absent_on_all_redirect_hops_including_return_to_origin() = runTest {
+    @Test fun credentials_are_not_reattached_after_return_to_origin() = runTest {
         var hop = 0
         val engine = MockEngine { when (hop++) {
             0 -> respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://cdn.example.org/next"))
@@ -139,7 +139,7 @@ class OpdsTransportTest {
         val error = failure(transport.fetch(request()))
         assertTrue(error.isCatalogueRoot)
         assertEquals(OpdsTransportError.Code.SIGN_IN_NEEDED, error.code)
-        assertNull(engine.requestHistory.last().headers[HttpHeaders.Authorization])
+        assertNotNull(engine.requestHistory.last().headers[HttpHeaders.Authorization])
         transport.close()
     }
     @Test fun redirects_without_location_fail_clearly() = runTest {
@@ -147,5 +147,28 @@ class OpdsTransportTest {
         val transport = KtorOpdsTransport(engine, root)
         assertEquals(OpdsTransportError.Code.REDIRECT_MISSING_LOCATION, failure(transport.fetch(request())).code)
         transport.close()
+    }
+    @Test fun same_origin_trailing_slash_redirect_keeps_credentials() = runTest {
+        val address = "https://catalogue.example.org/opds"
+        val engine = MockEngine { req ->
+            if (req.url.encodedPath == "/opds") respond("", HttpStatusCode.MovedPermanently, headersOf(HttpHeaders.Location, "/opds/"))
+            else respond("feed")
+        }
+        val transport = KtorOpdsTransport(engine, address)
+        assertEquals("$address/", (transport.fetch(request(address)) as OpdsFetchResult.Response).effectiveUrl)
+        assertEquals(2, engine.requestHistory.size)
+        assertTrue(engine.requestHistory.all { it.headers[HttpHeaders.Authorization] == "Basic cmVhZGVyOg==" })
+        transport.close()
+    }
+    @Test fun redirect_to_another_origin_drops_credentials() = runTest {
+        for (target in listOf("https://other.example.org/feed", "https://catalogue.example.org:8443/feed")) {
+            var hop = 0
+            val engine = MockEngine { if (hop++ == 0) respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, target)) else respond("feed") }
+            val transport = KtorOpdsTransport(engine, root)
+            assertIs<OpdsFetchResult.Response>(transport.fetch(request()))
+            assertNotNull(engine.requestHistory.first().headers[HttpHeaders.Authorization])
+            assertNull(engine.requestHistory.last().headers[HttpHeaders.Authorization])
+            transport.close()
+        }
     }
 }
