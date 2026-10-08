@@ -1,8 +1,8 @@
 # Contact form setup (not deployed)
 
 The static support form POSTs without JavaScript to a Cloudflare Pages Function.
-It sends plain-text messages through Resend from `support@parrotapp.dev` to
-`retar.rok@gmail.com`, with the visitor address as Reply-To. Recipient and subject
+It sends plain-text messages through Resend from `rok@parrotapp.dev` to
+`rok@parrotapp.dev`, with the visitor address as Reply-To. Recipient and subject
 are server-controlled. No automatic reply or attachments are sent.
 
 ## Cloudflare configuration, when launch is approved

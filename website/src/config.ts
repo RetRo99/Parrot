@@ -1,7 +1,7 @@
 // Replace these only when the owner supplies approved launch details.
 export const site = {
   domain: 'parrotapp.dev',
-  supportEmail: 'retar.rok@gmail.com',
+  supportEmail: 'rok@parrotapp.dev',
   legalName: 'Lunaria',
   address: '[ADDRESS]',
 };

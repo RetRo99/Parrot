@@ -79,7 +79,7 @@ Nothing in these terms limits the rights you have by law as a consumer. Beyond t
 
 ## 13. Law and disputes
 
-These terms are governed by the law of Slovenia. If you are a consumer, you keep the protection of the mandatory laws of the country where you live and can bring a claim in its courts. Write to us first at retar.rok@gmail.com; most problems are solved that way.
+These terms are governed by the law of Slovenia. If you are a consumer, you keep the protection of the mandatory laws of the country where you live and can bring a claim in its courts. Write to us first at rok@parrotapp.dev; most problems are solved that way.
 
 ## 14. Changes to these terms
 

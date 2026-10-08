@@ -25,7 +25,7 @@ test('Valid form sends plain text to fixed recipient, then redirects', async () 
   const result = await handleContact({ request: s.request({ message: '<script>example</script>' }), env: s.env }, s.send);
   assert.equal(result.status, 303);
   assert.equal(result.headers.get('location'), '/support/message-sent');
-  assert.deepEqual(s.payload().to, ['retar.rok@gmail.com']);
+  assert.deepEqual(s.payload().to, ['rok@parrotapp.dev']);
   assert.equal(s.payload().reply_to, 'reader@example.com');
   assert.equal(s.payload().html, undefined);
 });
@@ -100,7 +100,7 @@ test('Error email uses shared script-free link styling and bypasses email obfusc
   assert.match(response.headers.get('content-security-policy'), /style-src 'self'/);
   const html = await response.text();
   assert.match(html, /href="\/email-links\.css"/);
-  assert.match(html, /<!--email_off-->[\s\S]*href="mailto:retar\.rok@gmail\.com"[\s\S]*<!--\/email_off-->/);
+  assert.match(html, /<!--email_off-->[\s\S]*href="mailto:rok@parrotapp\.dev"[\s\S]*<!--\/email_off-->/);
   assert.doesNotMatch(html, /<script|email-protection/);
 });
 test('Real SQLite schema enforces quota, rotating buckets and expired-counter cleanup', async () => {

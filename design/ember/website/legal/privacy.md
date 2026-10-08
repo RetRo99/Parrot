@@ -17,7 +17,7 @@ What Parrot knows about you, why, and how to remove it. Written to be read.
 
 ## 1. Who we are
 
-Parrot is published under the brand Lunaria, based in Litija, Slovenia (“we”). Postal address: [ADDRESS]. We are the data controller for the personal data described here. Contact: retar.rok@gmail.com. [LEGAL REVIEW: Lunaria is a brand, not a registered business; legal operator identity remains deferred.]
+Parrot is published under the brand Lunaria, based in Litija, Slovenia (“we”). Postal address: [ADDRESS]. We are the data controller for the personal data described here. Contact: rok@parrotapp.dev. [LEGAL REVIEW: Lunaria is a brand, not a registered business; legal operator identity remains deferred.]
 
 ## 2. What stays between you and your own server
 
@@ -98,7 +98,7 @@ Some of these providers process data outside the European Economic Area. [CONFIR
 
 ## 9. Your rights
 
-You can ask us to show you your data, correct it, delete it, give you a copy, or stop or limit how we use it, and you can withdraw consent at any time. Write to retar.rok@gmail.com; we reply within one month.
+You can ask us to show you your data, correct it, delete it, give you a copy, or stop or limit how we use it, and you can withdraw consent at any time. Write to rok@parrotapp.dev; we reply within one month.
 
 You can also complain to the Information Commissioner of the Republic of Slovenia (ip-rs.si) or to the data protection authority where you live.
 
@@ -108,7 +108,7 @@ In the app: Settings → Parrot Cloud → Delete Parrot Cloud account… You wil
 
 One exception: records of file operations, kept to prevent abuse, stay for up to 180 days with your account details removed from them. Usage statistics and crash reports already sent are deleted on their own schedule. [CONFIRM]
 
-If you can’t use the app, email retar.rok@gmail.com from the address of your account and we will delete it for you.
+If you can’t use the app, email rok@parrotapp.dev from the address of your account and we will delete it for you.
 
 ## 11. Children
 

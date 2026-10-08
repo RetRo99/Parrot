@@ -139,13 +139,13 @@ owner email template is in `deepinfra-confirmation-request.md`.
 - Owner reports **Firebase BigQuery integration/export is not enabled**. No
   retention period for a BigQuery export should be invented or disclosed as
   active. Other exports, integrations and provider retention remain separate.
-- Contact/recipient inbox: `retar.rok@gmail.com` (owner supplied).
+- Contact/recipient inbox: `rok@parrotapp.dev` (owner supplied).
 - Website host selected and configured: Cloudflare Pages; public deployment has
   not succeeded yet.
 - Contact transport: Resend; owner dashboard shows domain verified and selected
   sending region Ireland (`eu-west-1`). This does not prove all processing stays
   in that region.
-- Email destination: Google Gmail. `support@parrotapp.dev` is a sending identity,
+- Email destination: Google Gmail. `rok@parrotapp.dev` is the sending identity,
   not a configured receiving inbox.
 - D1 binding configured by owner: `CONTACT_DB` → `parrot-contact`. Owner followed
   EU-jurisdiction setup; obtain dashboard confirmation before claiming residency.
@@ -285,7 +285,7 @@ For §14 hosting paragraph, replace the unknown host with Cloudflare, but retain
 checks for enabled edge features, actual access logging, retention, cookie behavior
 and transfer safeguards. Local browser checks do not establish production behavior.
 
-Use `retar.rok@gmail.com` for `[CONTACT EMAIL]` consistently after owner approval.
+Use `rok@parrotapp.dev` for `[CONTACT EMAIL]` consistently after owner approval.
 Keep public sending disabled until legal review and live configuration checks.
 
 ## What cannot be resolved from code

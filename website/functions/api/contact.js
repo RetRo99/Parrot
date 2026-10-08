@@ -1,6 +1,6 @@
 const MAX_BYTES = 20000;
-const RECIPIENT = 'retar.rok@gmail.com';
-const SENDER = 'Parrot Support <support@parrotapp.dev>';
+const RECIPIENT = 'rok@parrotapp.dev';
+const SENDER = 'Parrot Support <rok@parrotapp.dev>';
 const headers = {
   'Content-Type': 'text/html; charset=utf-8',
   'Cache-Control': 'no-store',

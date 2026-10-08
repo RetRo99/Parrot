@@ -90,7 +90,7 @@ try {
         assert.equal(await mail.evaluate(el => getComputedStyle(el).outlineStyle), 'solid');
         const label = await mail.innerText();
         if (label.includes('@')) {
-          assert.ok(label.includes('retar.rok@gmail.com'));
+          assert.ok(label.includes('rok@parrotapp.dev'));
           assert.ok(await mail.evaluate(el => {
             const style = getComputedStyle(el);
             const probe = document.createElement('span');
