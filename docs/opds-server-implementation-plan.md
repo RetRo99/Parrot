@@ -728,6 +728,18 @@ Their assertions and production behavior remain unchanged. Two Storyteller test
 method names had commas removed because Kotlin/Native rejects those names;
 their bodies and assertions are unchanged.
 
+Final verification: OPDS implementation 161/161, server API 19/19, server
+implementation 12/12, and Storyteller 35/35 pass on both Android host and iOS
+simulator. Base passes 13/13 Android and 11/11 iOS; books UI is 67/71 on each
+platform (the four failures above). Compose passes 15/15 Android; its iOS test
+binary cannot link because `FirebaseCore` is not found, so no current-run Compose
+iOS test result is claimed. Preferences API has no tests and assembles successfully.
+`:androidApp:assembleDebug` and
+`:composeApp:linkDebugFrameworkIosSimulatorArm64` both pass. The final native
+checks used two workers and an 8 GiB JVM heap after cancelling a heap-constrained
+verification attempt; no project memory settings were changed. The remaining
+Compose iOS test-link blocker was left for later at the owner's request.
+
 ### Phase 3 — durable acquisition and local-library integration
 
 - Add acquisition/provenance SQLDelight APIs, schemas/migrations/DAOs and cleanup.
