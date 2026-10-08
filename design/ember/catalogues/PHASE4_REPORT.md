@@ -71,3 +71,27 @@
 ### Run 2 follow-up
 
 - Final Android and iOS app build targets passed. The iOS link retry completed successfully; its memory override was command-local and did not change project configuration.
+
+## Phase 4 run 3 — catalogue browser — 2026-10-09
+
+**Status:** the `CatalogueBrowse` route now opens the real catalogue browser. The book page, Choose a file, row downloads, Downloads, Libraries and catalogue settings are still to come; tapping a book opens the placeholder book page.
+
+### What was built
+
+- `feature/catalogue/ui/.../browse`: `CatalogueBrowser` (all logic, no Compose), `CatalogueBrowseScreen`, `CatalogueBrowseViewModel`, `CatalogueBrowseGateway`, models. 43 tests for the logic and models were written before it.
+- Route references now carry a page (`CataloguePlace`) or a book (`CatalogueBookPlace`); they are forgotten when a catalogue is turned off, removed or moved, and all of them on a profile change.
+- `lib/server/api`: `localNetworkHostLeaving`. `lib/server-opds`: a page address stays valid in a later session of the same profile, catalogue and address (needed to reload a page after signing in); searches and file locations stay bound to their session.
+- `HomeNavigationStateHolder.replaceCurrent` for a page that turns out to be one book.
+- 21 fixtures (14 boards + 7 page-failure reasons), captured on `emulator-5554` only: Day and E-ink for all, Night for `browse` and `list`.
+
+### Behaviour worth knowing
+
+- **Page limit:** a list keeps at most 20 pages. Loading page 21 drops page 1 from memory; its request is remembered. Scrolling back near the top fetches the dropped page again (Day/Night by itself with a "Loading more…" row at the top, E-ink with a "Load earlier books" button) and then drops the page at the far end, which is reached again through the next link of the page before it. Filter chips, shelves and folders stay throughout.
+- **Late results:** every answer is checked against the list and first-load it was asked for; requests are cancelled when their list is replaced or the screen is left.
+- **Gutenberg:** its lists are entries without files and without an author element, so they are drawn as folder rows (title, author as the subtitle), not as book rows with covers. Opening one fetches its page, which the grouping rule turns into the book page.
+
+### Verification
+
+- Android host / iOS simulator: `lib/server/api` 42/42 and 42/42; `lib/server-opds` 52/52 and 52/52; `feature/catalogue/ui` 72/72 and 71/71; `feature/home/ui` 81/81 and 87/87; `composeApp` Android host 55/55 (iOS not run: known FirebaseCore link error).
+- `:tools:ember-fixtures:assembleDebug` passed; 44 captures taken with their hierarchy checks.
+- Not tried against a real catalogue inside the app.
