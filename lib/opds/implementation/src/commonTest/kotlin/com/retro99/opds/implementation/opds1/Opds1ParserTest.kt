@@ -3,6 +3,8 @@ package com.retro99.opds.implementation.opds1
 import com.retro99.opds.api.OpdsParseResult
 import com.retro99.opds.api.OpdsParser
 import com.retro99.opds.api.OpdsPayload
+import com.retro99.opds.api.model.OpdsBudgets
+import com.retro99.opds.api.model.OpdsRejection
 import com.retro99.opds.implementation.ParserFactory
 import com.retro99.opds.implementation.fixtures.Fixtures
 import com.retro99.opds.implementation.fixtures.readFixtureText
@@ -304,5 +306,174 @@ class Opds1ParserTest {
             com.retro99.opds.api.OpdsGroupingRule.decide(first, com.retro99.opds.api.OpdsGroupingRule.FetchedTarget.Unknown)
                 .rationale.contains("itself acquires"),
         )
+    }
+
+    // ---- missing optional fields, unknown extensions ---------------------------
+
+    @Test
+    fun entries_without_id_get_a_document_scoped_fallback_identity_with_warning() {
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Feed without entry ids</title>
+              <updated>2026-10-08T00:00:00Z</updated>
+              <entry><title>Book Alpha</title><summary>s1</summary></entry>
+              <entry><title>Book Beta</title><summary>s2</summary></entry>
+            </feed>
+        """.trimIndent()
+        val outcome = parser().parse(
+            OpdsPayload("application/atom+xml;profile=opds-catalog;kind=navigation", xml.encodeToByteArray()),
+            "https://x.dev",
+        )
+        val document = when (outcome) {
+            is OpdsParseResult.Document -> outcome.document as com.retro99.opds.api.model.OpdsFeedDocument
+            is OpdsParseResult.Rejected -> fail("$outcome")
+        }
+        val ids = document.publications.map { it.identity }.takeIf { it.isNotEmpty() }
+            ?: document.navigation.map { it.identity }
+        // Recoverable: the feed is accepted; identity goes to the documented
+        // deterministic document-scoped fallback with a MISSING_IDENTITY
+        // warning (plan §3.2; never a title/position/ISBN/download URL).
+        assertEquals(2, ids.size)
+        assertTrue(ids.all { it.kind == com.retro99.opds.api.model.OpdsIdentity.Kind.DOCUMENT_SCOPED_FALLBACK })
+        assertTrue(ids[0].raw != ids[1].raw)
+        assertTrue(ids[0].note != null)
+        assertTrue(document.warnings.any { it.code == com.retro99.opds.api.model.ParseWarning.Code.MISSING_IDENTITY })
+    }
+
+    @Test
+    fun unknown_extension_children_are_ignored_with_bounded_warnings() {
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom" xmlns:ext="urn:example:ext">
+              <id>urn:uuid:feed</id><title>Extension feed</title>
+              <updated>2026-10-08T00:00:00Z</updated>
+              <ext:custom>whatever</ext:custom>
+              <entry><id>urn:synthesis:ext:1</id><title>t</title><ext:thing>x</ext:thing></entry>
+            </feed>
+        """.trimIndent()
+        val outcome = parser().parse(
+            OpdsPayload("application/atom+xml;profile=opds-catalog;kind=navigation", xml.encodeToByteArray()),
+            "https://x.dev",
+        )
+        val document = when (outcome) {
+            is OpdsParseResult.Document -> outcome.document as com.retro99.opds.api.model.OpdsFeedDocument
+            is OpdsParseResult.Rejected -> fail("$outcome")
+        }
+        // The rest of the document parses normally.
+        assertEquals(1, document.navigation.size)
+        assertEquals("urn:synthesis:ext:1", document.navigation.single().identity.raw)
+        // Unknown extensions are bounded, recorded warnings — one per element,
+        // counted per recording path (plan §4 "unknown extension fields are
+        // ignored or retained within bounded containers").
+        assertTrue(
+            document.warnings.count { it.code == com.retro99.opds.api.model.ParseWarning.Code.UNKNOWN_EXTENSION_IGNORED } == 2,
+            document.warnings.toString(),
+        )
+    }
+
+    @Test
+    fun missing_feed_title_falls_back_without_rejection() {
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <entry><id>urn:synthesis:notitle:1</id><title>Only entry</title></entry>
+            </feed>
+        """.trimIndent()
+        val document = when (val outcome = parser().parse(
+            OpdsPayload("application/atom+xml;profile=opds-catalog;kind=navigation", xml.encodeToByteArray()),
+            "https://x.dev",
+        )) {
+            is OpdsParseResult.Document -> outcome.document as com.retro99.opds.api.model.OpdsFeedDocument
+            is OpdsParseResult.Rejected -> fail("$outcome")
+        }
+        assertEquals("Untitled catalogue", document.metadata.title) // model fallback, not a failure
+        assertEquals(1, document.navigation.size) // no acquisition links → navigation
+    }
+
+    // ---- budgets: bytes, nesting depth, item count (plan §4; OpdsBudgets) -----
+
+    @Test
+    fun oversized_feed_bytes_rejected() {
+        // Just over the 5 MiB budget: bytes boundary checked before walking.
+        val titleLength = OpdsBudgets.MAX_RESPONSE_BYTES.toInt() + 64
+        val xml = "<feed xmlns=\"http://www.w3.org/2005/Atom\"><title>${"x".repeat(titleLength)}</title></feed>"
+        val result = parser().parse(
+            OpdsPayload("application/atom+xml;profile=opds-catalog;kind=acquisition", xml.encodeToByteArray()),
+            "https://x.dev",
+        )
+        assertTrue(
+            result is OpdsParseResult.Rejected && result.rejection is OpdsRejection.TooLarge,
+            result.toString(),
+        )
+    }
+
+    @Test
+    fun nesting_deeper_than_budget_rejected() {
+        val depth = OpdsBudgets.MAX_NESTING_DEPTH + 1
+        val opens = buildString { repeat(depth) { append("<div>") } }
+        val closes = buildString { repeat(depth) { append("</div>") } }
+        val xml = "<feed xmlns=\"http://www.w3.org/2005/Atom\">" +
+            "<entry><title>t</title><content type=\"xhtml\"><div xmlns=\"http://www.w3.org/1999/xhtml\">$opens<p>deep</p>$closes</div></content></entry></feed>"
+        val outcome = parser().parse(
+            OpdsPayload("application/atom+xml;profile=opds-catalog;kind=acquisition", xml.encodeToByteArray()),
+            "https://x.dev",
+        )
+        assertTrue(
+            outcome is OpdsParseResult.Rejected && outcome.rejection is OpdsRejection.TooDeep,
+            outcome.toString(),
+        )
+    }
+
+    @Test
+    fun item_count_over_budget_rejected() {
+        val count = OpdsBudgets.MAX_ITEMS_PER_RESPONSE + 1
+        val xml = buildString {
+            append("<feed xmlns=\"http://www.w3.org/2005/Atom\"><title>big</title>")
+            repeat(count) { append("<entry><title>t$it</title></entry>") }
+            append("</feed>")
+        }
+        val outcome = parser().parse(
+            OpdsPayload("application/atom+xml;profile=opds-catalog;kind=acquisition", xml.encodeToByteArray()),
+            "https://x.dev",
+        )
+        assertTrue(
+            outcome is OpdsParseResult.Rejected && outcome.rejection is OpdsRejection.TooManyItems,
+            outcome.toString(),
+        )
+    }
+
+    // ---- document-type declarations are refused (REQUIRED Phase 1 work) -------
+
+    @Test
+    fun internal_dtd_document_is_rejected_at_DOCDECL_before_entities_expand() {
+        val outcome = parseFixture(Fixtures.DTD_BASELINE, mediaType = "application/xml")
+        assertTrue(
+            outcome is OpdsParseResult.Rejected && outcome.rejection is OpdsRejection.DocumentTypeDeclarationRejected,
+            outcome.toString(),
+        )
+    }
+
+    @Test
+    fun external_dtd_document_is_rejected_like_internal_one() {
+        val outcome = parseFixture(Fixtures.DTD_EXTERNAL, mediaType = "application/xml")
+        assertTrue(
+            outcome is OpdsParseResult.Rejected && outcome.rejection is OpdsRejection.DocumentTypeDeclarationRejected,
+            outcome.toString(),
+        )
+    }
+
+    @Test
+    fun deep_nested_entity_document_is_rejected_even_under_byte_budget() {
+        // The deep tree would expand to ~32 KB — well under the byte budget, so
+        // this documents the DOCDECL stop, not a size-limit stop.
+        val outcome = parseFixture(Fixtures.DTD_DEEP, mediaType = "application/xml")
+        assertTrue(
+            outcome is OpdsParseResult.Rejected && outcome.rejection is OpdsRejection.DocumentTypeDeclarationRejected,
+            outcome.toString(),
+        )
+    }
+
+    @Test
+    fun comment_before_declaration_is_rejected_cleanly() {
+        val outcome = parseFixture(Fixtures.COMMENT_BEFORE_DECLARATION, mediaType = "application/xml")
+        assertTrue(outcome is OpdsParseResult.Rejected, outcome.toString())
     }
 }
