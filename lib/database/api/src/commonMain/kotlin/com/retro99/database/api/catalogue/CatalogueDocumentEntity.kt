@@ -11,6 +11,8 @@ class CatalogueDocumentEntity(
     val storedAt: Long,
     val payload: ByteArray,
     val sizeBytes: Long = payload.size.toLong(),
+    /** Where the page was served from after redirects; null when that is [requestUrl]. */
+    val effectiveUrl: String? = null,
 ) {
     override fun toString(): String = "CatalogueDocumentEntity(redacted, $sizeBytes bytes)"
 }

@@ -1,0 +1,3 @@
+-- Saved catalogue pages: the address the page was finally served from, after redirects.
+-- Links in a saved page are relative to it, so a saved copy cannot be read without it.
+ALTER TABLE catalogue_documents ADD COLUMN effective_url TEXT;

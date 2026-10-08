@@ -286,6 +286,7 @@ internal class CatalogueDocumentsSqlDelightDao(
             stored_at = document.storedAt,
             payload = document.payload,
             size_bytes = document.sizeBytes,
+            effective_url = document.effectiveUrl,
         )
         Unit
     }
@@ -390,4 +391,5 @@ private fun Catalogue_documents.toEntity() = CatalogueDocumentEntity(
     storedAt = stored_at,
     payload = payload,
     sizeBytes = size_bytes,
+    effectiveUrl = effective_url,
 )

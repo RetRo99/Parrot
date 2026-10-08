@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS catalogue_documents (
     stored_at INTEGER NOT NULL,
     payload BLOB NOT NULL,
     size_bytes INTEGER NOT NULL,
+    -- Where the page was served from after redirects. NULL: the request address itself.
+    effective_url TEXT,
     PRIMARY KEY (source_id, access_generation, request_url)
 );
 
@@ -18,8 +20,8 @@ ON catalogue_documents(stored_at);
 upsertCatalogueDocument:
 INSERT OR REPLACE INTO catalogue_documents(
     source_id, access_generation, request_url, content_type, etag, last_modified,
-    stored_at, payload, size_bytes
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    stored_at, payload, size_bytes, effective_url
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getCatalogueDocument:
 SELECT * FROM catalogue_documents

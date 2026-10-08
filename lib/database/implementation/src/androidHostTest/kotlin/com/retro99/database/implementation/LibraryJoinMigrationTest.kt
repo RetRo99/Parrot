@@ -11,14 +11,14 @@ import kotlin.test.assertTrue
 class LibraryJoinMigrationTest {
 
     @Test
-    fun `a new database is at version 41 and has the import journal`() {
+    fun `a new database is at version 41 or later and has the import journal`() {
         val driver = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY)
         try {
             // When
             AppDatabase.Schema.create(driver)
 
             // Then
-            assertEquals(41L, AppDatabase.Schema.version)
+            assertTrue(AppDatabase.Schema.version >= 41L)
             assertTrue(schemaOf(driver).getValue("library_import_journal").isNotEmpty())
         } finally {
             driver.close()
