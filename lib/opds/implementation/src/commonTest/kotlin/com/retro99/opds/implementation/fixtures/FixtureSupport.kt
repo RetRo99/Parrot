@@ -5,7 +5,7 @@ package com.retro99.opds.implementation.fixtures
  * fixture tests.
  *
  * Loading strategy (from the Phase 0 spike; see
- * docs/opds-phase0-spikes.md and the tools/opds-phase0-spike README history):
+ * docs/opds-phase0-spikes.md):
  * - `src/commonTest/resources/opds/` is the authored source of truth;
  * - Gradle-built Kotlin/Native simulator tests run from an executable without
  *   a bundle, so common test resources are NOT readable there — the embedded

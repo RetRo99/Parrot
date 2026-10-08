@@ -3,9 +3,9 @@
 **Plan:** `docs/opds-server-implementation-plan.md` §7 Phase 0 (focused
 compatibility/security spikes), §10.0 recorded decisions, §11.7 design passes.
 **Date:** 2026-10-08. **Branch:** `opds/phase-0-spikes` (off
-`docs/opds-catalogue-plan`). **Spike harness:** `tools/opds-phase0-spike`
-(fixtures + verification tests; runs `testAndroidHostTest` +
-`iosSimulatorArm64Test`; run commands in the module `README.md`).
+`docs/opds-catalogue-plan`). **Spike harness:** retired after Phase 1.
+
+Fixtures now live in `lib/opds/implementation/src/commonTest/resources/opds` (with embedded iOS copies); ported protocol, search, transport and cache code lives in `lib/opds/implementation/src/commonMain/kotlin/com/retro99/opds/implementation`.
 
 §10.0 decisions are final and echoed here only where a spike verified their
 preconditions; nothing in this report reopens a recorded decision.
@@ -14,9 +14,9 @@ preconditions; nothing in this report reopens a recorded decision.
 
 ## 1. What ran
 
-- Android host tests: `:tools:opds-phase0-spike:testAndroidHostTest` (JVM,
+- Android host Phase 0 verification tests (JVM,
   xmlutil generic `KtXmlReader` via the default factory fallback).
-- iOS simulator tests: `:tools:opds-phase0-spike:iosSimulatorArm64Test`
+- iOS simulator Phase 0 verification tests
   (same shared-ish generic reader path).
 - Read-only live-provider checks (no credentials, no provider contact): Project
   Gutenberg pages/descriptor over HTTPS, Standard Ebooks `/feeds` page.
@@ -209,7 +209,7 @@ Phase 0's other bullets:
 
 | Plan §7 Phase 0 bullet | Status |
 | --- | --- |
-| Fixtures (synthetic/licensed) in test resources incl. Gutenberg nav→variants→acquisition shape | **Done** — 12 fixtures in `tools/opds-phase0-spike/src/commonTest/resources/opds` (inventory in module README), all synthetic; RFC vectors quoted with license note. |
+| Fixtures (synthetic/licensed) in test resources incl. Gutenberg nav→variants→acquisition shape | **Done** — 12 synthetic fixtures, now retained in `lib/opds/implementation/src/commonTest/resources/opds`; RFC vectors quoted with license notes in their ported tests. |
 | Validate xmlutil namespace/mixed-content/DTD behavior on Android and iOS | **Done and corrected** — matrix in §2 (the original run pinned a bogus conclusion; fixtures now start with the declaration and the DTD matrix above is the verified record); DTD rejection is demonstrated as a spike mitigation, not a library property. |
 | URI-template + URL resolution choice vs RFC tests | **Done** — §3 items 2–3 (vectors green on both). |
 | Confirm Gutenberg usage guidance / HTTPS search descriptor / OPDS2 access | Partial: guidance + descriptor verified; OPDS2 access **requires provider contact** → outstanding; preset withheld. |

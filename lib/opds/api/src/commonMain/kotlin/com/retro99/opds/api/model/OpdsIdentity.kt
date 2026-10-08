@@ -12,7 +12,7 @@ data class OpdsIdentity(
     val note: String? = null,
 ) {
     enum class Kind {
-        /** A feed-declared identity (`urn:uuid:…`, `urn:gutenberg:…`, OPDS2 self/../metadata.identifier). */
+        /** A feed-declared identity (`urn:uuid:…`, provider URN, OPDS2 self/../metadata.identifier). */
         NOMINAL,
 
         /** Derivable within one document; cannot promise cross-feed deduplication (plan §3.2). */
