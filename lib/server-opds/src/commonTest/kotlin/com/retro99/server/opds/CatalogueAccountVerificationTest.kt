@@ -10,6 +10,30 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
 class CatalogueAccountVerificationTest {
+    @Test fun temporary_details_verify_the_challenged_search_not_the_public_root() = runTest {
+        val preferences = TestPreferences()
+        val credentials = OpdsCredentialStoreImpl(preferences)
+        val checks = CatalogueAccessStoreImpl(preferences)
+        val requests = mutableListOf<String>()
+        val engine = MockEngine { request ->
+            requests += request.url.toString()
+            if (request.url.parameters["query"] != null && request.headers[HttpHeaders.Authorization] != "Basic cm9rOg==") {
+                respond("", HttpStatusCode.Unauthorized, headersOf(HttpHeaders.WWWAuthenticate, "Basic realm=\"books\""))
+            } else respond(OpdsCatalogueRepositoryTest.FEED, headers = headersOf(HttpHeaders.ContentType, "application/opds+json"))
+        }
+        val repository = OpdsCatalogueRepository("profile", OpdsCatalogueRepositoryTest.SOURCE, KtorOpdsTransport(engine, OpdsCatalogueRepositoryTest.ROOT), credentials, checks, { true })
+        val root = assertIs<CatalogueFeedDocument>(repository.getRoot().get())
+        val before = checks.get("profile", repository.serverId)
+        assertTrue(repository.checkSearchAccount(root, CatalogueQuery("book"), OpdsAccountDetails("rok", "wrong")).isErr)
+        assertTrue(repository.checkSearchAccount(root, CatalogueQuery("book"), OpdsAccountDetails("rok", "")).isOk)
+        assertTrue(requests.takeLast(2).all { "query=book" in it })
+        assertNull(credentials.get("profile", repository.serverId))
+        assertEquals(before, checks.get("profile", repository.serverId))
+        val search = assertNotNull(repository.discoverSearch(root).get())
+        assertTrue(repository.search(search, CatalogueQuery("book")).isErr)
+        repository.dispose()
+    }
+
     @Test fun temporary_details_verify_the_protected_page_without_saving_or_closing_the_live_session() = runTest {
         val preferences = TestPreferences()
         val credentials = OpdsCredentialStoreImpl(preferences)

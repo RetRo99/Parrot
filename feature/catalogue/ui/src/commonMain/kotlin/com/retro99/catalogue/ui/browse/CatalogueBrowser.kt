@@ -568,7 +568,10 @@ class CatalogueBrowser(
         list.jobs += scope.launch {
             val account = OpdsAccountDetails(name, password)
             val answer = try {
-                gateway.checkAccount(sourceId, (list.first as? PageRequest.Target)?.target, account)
+                val request = list.first
+                val document = base.header?.document
+                if (request is PageRequest.Search && document != null) gateway.checkSearchAccount(sourceId, document, CatalogueQuery(request.query), account)
+                else gateway.checkAccount(sourceId, (request as? PageRequest.Target)?.target, account)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {

@@ -797,4 +797,16 @@ class CatalogueBrowserTest {
         library.inLibrary = emptySet()
         h.browser.onReturn(); runCurrent(); assertFalse(h.loaded.books.first().inLibrary)
     }
+
+    @Test fun signing_in_to_a_search_verifies_the_search_not_the_public_root() = runTest {
+        val h = Harness(this)
+        runCurrent(); h.repo.answer("root", feed(search = true)); runCurrent()
+        h.browser.onSearchTextChange("diary"); h.browser.submitSearch(); runCurrent()
+        h.repo.answer("search:diary", failure(CatalogueErrorKind.SignInNeeded)); runCurrent()
+        h.browser.signIn("rok", "wrong"); runCurrent()
+        assertEquals("search:diary", h.repo.requested.last())
+        h.repo.answer("search:diary", failure(CatalogueErrorKind.SignInNeeded)); runCurrent()
+        assertTrue(h.gateway.savedAccounts.isEmpty())
+        assertTrue(h.state.signIn!!.wrongDetails)
+    }
 }

@@ -2,6 +2,7 @@ package com.retro99.server.opds
 
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.fold
 import com.retro99.base.result.*
 import com.retro99.opds.api.*
 import com.retro99.opds.api.model.OpdsRejection
@@ -91,11 +92,19 @@ class OpdsCatalogueRepository(
     }
 
     override suspend fun getRoot() = request { load(config.baseUrl, true) }
+    private fun verifying(account: OpdsAccountDetails) = OpdsCatalogueRepository(profileId, config, transport, credentials, access, isCurrent, now,
+        MemoryOpdsFeedCache(), accessGeneration, accountOverride = { account }, recordAccessUpdates = false)
     override suspend fun checkAccount(target: CatalogueTarget?, account: OpdsAccountDetails): AppResult<CatalogueDocument> = request {
-        val checking = OpdsCatalogueRepository(profileId, config, transport, credentials, access, isCurrent, now,
-            MemoryOpdsFeedCache(), accessGeneration, accountOverride = { account }, recordAccessUpdates = false)
+        val checking = verifying(account)
         // The temporary session owns no transport: closing it would close this live session.
         if (target == null) checking.getRoot() else checking.getDocument(target)
+    }
+    override suspend fun checkSearchAccount(document: CatalogueDocument, query: CatalogueQuery, account: OpdsAccountDetails): AppResult<CatalogueDocument> = request {
+        val checking = verifying(account)
+        checking.discoverSearch(document).fold(
+            success = { search -> search?.let { checking.search(it, query) } ?: Err(AppError.ApiError(400, "UnsupportedSearch")) },
+            failure = { Err(it) },
+        )
     }
     override suspend fun getDocument(target: CatalogueTarget) = request {
         val owned = target as? Target
@@ -146,7 +155,7 @@ class OpdsCatalogueRepository(
             val parsed = openSearch.readDescriptor(OpdsPayload(fetched.contentType, fetched.body), fetched.effectiveUrl)
             if (parsed is OpdsOpenSearchReader.OpdsDescriptorResult.NotADescriptor) return@request parseFailure(parsed.rejection)
             preferred = (parsed as OpdsOpenSearchReader.OpdsDescriptorResult.Descriptor).descriptor.preferred
-            access.recordSuccess(profileId, serverId, credentials.get(profileId, serverId)?.username, now())
+            if (recordAccessUpdates) access.recordSuccess(profileId, serverId, currentAccount()?.username, now())
             if (preferred != null && "no-store" !in fetched.cacheDirectives && fetched.headers["vary"].orEmpty().all { it.equals("accept", true) }) {
                 descriptors[url] = preferred
                 while (descriptors.size > 20) descriptors.remove(descriptors.keys.first())

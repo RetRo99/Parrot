@@ -155,6 +155,8 @@ internal class FakeGateway(val repository: FakeRepository = FakeRepository()) : 
     override suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails) { savedAccounts += details }
     override suspend fun checkAccount(sourceId: String, target: CatalogueTarget?, details: OpdsAccountDetails) =
         if (target == null) repository.getRoot() else repository.getDocument(target)
+    override suspend fun checkSearchAccount(sourceId: String, document: CatalogueDocument, query: CatalogueQuery, details: OpdsAccountDetails) =
+        repository.search(FakeSearch, query)
 }
 
 internal class FakeLibrary(var inLibrary: Set<String> = emptySet(), private val fails: Boolean = false) : CatalogueLibraryLookup {

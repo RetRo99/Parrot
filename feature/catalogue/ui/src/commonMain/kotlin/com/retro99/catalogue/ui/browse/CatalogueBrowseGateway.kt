@@ -8,6 +8,7 @@ import com.retro99.server.api.CatalogueSourceStatus
 import com.retro99.server.api.CatalogueAccountVerifier
 import com.retro99.server.api.CatalogueTarget
 import com.retro99.server.api.CatalogueDocument
+import com.retro99.server.api.CatalogueQuery
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.AppError
 import com.github.michaelbull.result.Err
@@ -45,6 +46,7 @@ interface CatalogueBrowseGateway {
     suspend fun repository(sourceId: String): ServerCatalogueRepository?
     suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails)
     suspend fun checkAccount(sourceId: String, target: CatalogueTarget?, details: OpdsAccountDetails): AppResult<CatalogueDocument>
+    suspend fun checkSearchAccount(sourceId: String, document: CatalogueDocument, query: CatalogueQuery, details: OpdsAccountDetails): AppResult<CatalogueDocument>
 }
 
 @Single(binds = [CatalogueBrowseGateway::class])
@@ -71,6 +73,10 @@ class RegistryCatalogueBrowseGateway(
 
     override suspend fun checkAccount(sourceId: String, target: CatalogueTarget?, details: OpdsAccountDetails): AppResult<CatalogueDocument> =
         (repository(sourceId) as? CatalogueAccountVerifier)?.checkAccount(target, details)
+            ?: Err(AppError.ApiError(400, "SignInUnsupported"))
+
+    override suspend fun checkSearchAccount(sourceId: String, document: CatalogueDocument, query: CatalogueQuery, details: OpdsAccountDetails): AppResult<CatalogueDocument> =
+        (repository(sourceId) as? CatalogueAccountVerifier)?.checkSearchAccount(document, query, details)
             ?: Err(AppError.ApiError(400, "SignInUnsupported"))
 
     /**
