@@ -871,6 +871,47 @@ without duplicates, cannot write into a different profile, and never needs a
 Parrot Cloud file record or hosted EPUB. Acquiring the same publication again
 after the provider regenerated its file does not silently add a second book.
 
+**Phase 3 status after the staged-import run (2026-10-08, branch
+`opds/phase3-acquisition`).** Done: the reusable staged import only. Not started:
+the acquisition queue, the database tables and migration, download code, the
+publication-key lookup, and the logout cleaner carried over from Phase 2.
+
+- `StagedBookImportManager` (books-domain) takes an EPUB already on local disk, a
+  `BookFileOrigin` and optional `BookFileProvenance`, and returns the library
+  book id, media type and `NewBook` / `ExistingBook`. `StagedBookImporter`
+  (books-data, common) implements it; both file pickers copy the picked file to
+  staging and delegate. The staged path sizes and hashes the file from disk in
+  8 KiB chunks and moves it. Android's picker still fills its staged copy with
+  `platformFile.readBytes()`, as before.
+- Contract: on success the staged file is consumed (moved, or deleted for an
+  exact-byte match). On failure it is left in place for the caller. The path
+  must end in `.epub`.
+- `LibraryLocalDataSource.addStagedFile` holds one mutex across duplicate lookup,
+  move and database write, and runs them uncancellable. A failed write moves the
+  file back to staging and deletes the cover. A process death between the move
+  and the commit still leaves an orphan file under a new UUID: there is no
+  journal yet, so the acquisition journal (§5.2 step 8) must cover it.
+- Finalizing the same staged file twice is idempotent only while the caller
+  still holds the candidate (hash known). `importStagedEpub` on a staged path
+  that has already been consumed fails with "File is empty"; the acquisition
+  record must store the returned library id before treating a job as retryable.
+- Origin rules: `ORIGIN_CATALOGUE_DOWNLOAD = "catalogue_download"`. A new book
+  from that origin is inserted through `insertBookWithoutSync` and gets no
+  metadata outbox entry. `backupAll` skips it (it only takes `import`).
+  `keepDeviceFilesAsImports` now converts `cloud_download` rows only.
+  Provenance is carried to `ImportedFileCandidate` and not stored anywhere yet.
+- Open for the next run: an explicit backup of a catalogue-origin file cannot
+  work yet. `enqueueUpload` refuses a book with no remote revision, nothing
+  writes the held-back outbox entry at backup time, and the backup banner and
+  sheet only list `localOrigin == "import"`. Positions, bookmarks and reading
+  sessions of an unsynced catalogue book still go to the outbox through their
+  own paths; only the `library_book` upsert is held back.
+- Found while pinning today's behavior: on iOS a file the Swift metadata bridge
+  cannot read is not rejected. `IosEpubMetadataExtractor` falls back to the
+  file name and returns success, so any non-empty file imports. Android rejects
+  it through Readium. Catalogue downloads need real validation on iOS (§5.2
+  step 6) before they reach the staged import.
+
 ### Phase 4 — complete browsing feature
 
 - Create `feature/catalogue/domain`, `data`, and `ui`; add source/browser/detail
