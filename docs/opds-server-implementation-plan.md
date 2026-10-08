@@ -1176,9 +1176,10 @@ No screen.
   descriptors do not pass through the cache. Validators are stored and every
   load revalidates. `41.sqm` (schema 41 to 42) adds `effective_url`, the
   address after redirects, because links in a saved page are relative to it.
-- **Offline results.** Only `OpdsTransportError.Code.UNREACHABLE` counts
-  (no connection, host not found, connection refused); a timeout, a TLS
-  failure and a server error do not. With a saved page the repository returns
+- **Offline results.** Only `OpdsTransportError.Code.UNREACHABLE` counts: any
+  network failure that is not a timeout or a TLS failure (no connection, host
+  not found, connection refused). A timeout, a TLS failure and a server error
+  do not. With a saved page the repository returns
   the document with `CatalogueFetchStatus.savedCopyAt` set to its stored time
   (`opds-offline`); without one the error is
   `CatalogueErrorKind.OfflineNoSavedCopy` (`opds-offlineNone`). The stored
@@ -1202,8 +1203,142 @@ No screen.
 | Never needs a Parrot Cloud file record or hosted EPUB | Met | The app-graph tests run with Parrot Cloud not configured; no `CloudBookFileEntity` is written. |
 | Same publication again after the provider changed its file | Met | `request()` answers `InLibrary` before any download; the user is told the book is already in the library. An explicit "get updated copy" is deferred (§10.0). One case does add a book: the book was kept but its file removed from this device, and the catalogue's file has changed since. That follows the rule that different bytes never overwrite. |
 
-**Verification of the clean-up run (2026-10-08).** See the run report for the
-per-module counts.
+**Run report of the clean-up run (2026-10-08).**
+
+```text
+--- REPORT ---
+Branch: opds/phase3-acquisition
+
+Commits this run (hash + subject, oldest first):
+6a71843a docs(opds): record that catalogue books sync like imports
+d803747e feat(books): sync a catalogue book's details like a picked file
+98f15ac3 feat(auth): sign out of everything the same way with or without a catalogue
+49724037 feat(database): clean up catalogue records when a book is deleted or merged
+5f73aef9 feat(catalogue): keep a book's source when a cancel lands as it is added, and clean up staging
+8c606fb8 feat(database): remember the address a saved catalogue page was served from
+51f4ab8c feat(server): keep a catalogue's access generation across restarts
+0c8aa1c1 feat(opds): save opened catalogue pages and show them when the catalogue cannot be reached
+0c4fba34 test(app): asking again after the catalogue changed its file adds no second book
+06df52f6 docs(opds): record the clean-up run and the Phase 3 gate
+dac70f6a test(catalogue): keep commas out of test names so they compile for iOS
+(plus the commit or commits that add and update this report in the plan)
+
+Test command(s) run:
+./gradlew :<module>:testAndroidHostTest ... --max-workers=2 --continue   (16 modules, list below)
+./gradlew :<module>:iosSimulatorArm64Test ... --max-workers=2 --continue (12 modules that have iOS tests that compile)
+./gradlew :lib:database:implementation:verifyCommonMainAppDatabaseMigration --rerun --max-workers=2
+./gradlew :androidApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64 --max-workers=2
+
+Per module: <module> Android host <passed>/<total>, iOS <passed>/<total>
+composeApp                    Android host 39/39,   iOS not run (known FirebaseCore link error)
+feature/auth/domain           Android host 8/8,     iOS 8/8
+feature/books/data            Android host 121/121, iOS 113/113
+feature/books/domain          Android host 60/60,   iOS not run (known: its iOS test sources do not compile; not touched this run)
+feature/catalogue/data        Android host 96/96,   iOS 94/94
+feature/catalogue/domain      Android host 11/11,   iOS 11/11 (not touched this run)
+feature/settings/data         Android host 1/1,     iOS 1/1 (not touched; it has a sign-out test)
+feature/sync/data             Android host 74/74,   iOS not run (known: its iOS test sources do not compile)
+lib/database/implementation   Android host 138/138, iOS has no tests
+lib/opds/implementation       Android host 178/178, iOS 178/178
+lib/server/api                Android host 19/19,   iOS 19/19
+lib/server/implementation     Android host 30/30,   iOS 30/30
+lib/server-opds               Android host 43/43,   iOS 43/43
+lib/server-parrot-cloud       Android host 62/62,   iOS 58/58
+lib/server-local              Android host 2/2,     iOS 2/2
+lib/user/implementation       Android host 6/6,     iOS 6/6
+lib/opds/api, lib/preferences/api, lib/database/api: no tests.
+feature/books/ui was not touched and not run (its four known failures are unchanged).
+
+Migration added (number) or "none", and verification result:
+41.sqm (schema version 41 to 42): one nullable column, catalogue_documents.effective_url.
+verifyCommonMainAppDatabaseMigration: passed, run with --rerun on the final schema.
+SavedPagesMigrationTest (3 tests) and MigrationChainTest pass.
+
+App build results (Android assemble, iOS framework):
+Not run yet when this was written; see the update below.
+
+Steps complete (0-4): 0, 1, 2, 3 and 4 are complete. Step 1 is complete as specified, but read the first known problem: the cleaner it now always calls removes nothing in the running app.
+
+Phase 3 gate met (yes/no) and why:
+Yes.
+- One usable local book: one library row, one device file with the served bytes, a cover, a provenance row and the same outbox entry an import gets (app-graph test). Not opened in the reader on a device.
+- Retries and restarts without duplicates: queue restart and crash-step tests, import-journal tests, and the new cancel-at-commit tests.
+- Cannot write into another profile: queue fencing tests; saved pages are read and written only for the open profile.
+- No Parrot Cloud file record or hosted EPUB: the app-graph tests run with Parrot Cloud not configured.
+- Same publication after the provider changed its file: request() answers "in your library" before any download, no file request is made and no second book is added (app-graph test). "Get updated copy" stays deferred.
+One case does add a second book, by the rule given for this run: the book was kept but its file was removed from this device, and the catalogue's file has changed since. Different bytes never overwrite.
+
+What clearAllData removes today for file-picker imports:
+In the running app: nothing at all, for imports or anything else. DatabaseCleanerImpl takes List<DataClearable>; the generated Koin module fills that with getAll<DataClearable>(), and no table is bound under that type (provideDataClearables returns a List, which Koin does not use for a List<T> parameter). The list is empty, so clearAllData() is a no-op. Pinned by a test in the app's own graph. This predates this run.
+As the code is written (if the eight tables were handed over): rows kept: library_books, device_files, saved items, reader settings, book links. Files kept: the book file and the cover. Rows removed: every reading position and remote position (including the import's own), favourites, reading sessions, session recaps, the whole sync outbox (including the import's unsent library_book upsert and any unsent position), sync checkpoints, the Parrot Cloud file mirror and transfers, and the whole server book cache (books, people, series, tags, collections, statuses, media files, readalouds, authors). Also pinned by a test.
+
+What sign-out now does for a profile with a server, an import and a catalogue book:
+1. Every non-local server gets clearCredentials. Storyteller: its credentials are cleared as before. A catalogue without account details: nothing. A catalogue with account details: every unfinished download (also one waiting for sign-in), its staged files and its saved pages are removed, then the details. All catalogues stay registered.
+2. databaseCleaner.clearAllData() is called, as for a profile without a catalogue. Today that removes nothing (see above), so the server's cached data is exactly as it is for an existing-only profile: still there. The test compares a profile with a catalogue against one without and they match.
+3. The import and the catalogue book end in the same condition as each other: library row, device file row, file and cover on disk, position and unsent changes all unchanged. If the cleaner is ever wired, both lose the same things, because it has no knowledge of a file's origin.
+4. Provenance rows, finished downloads and the import journal are untouched.
+
+Done this run:
+- Step 0: plan 10.0, 10.9 and 11.7 updated; catalogue books write the same library_book outbox entry as imports; insertBookWithoutSync removed everywhere; backupAll and the backup banner/sheet unchanged and still tested.
+- Step 1: the catalogue skip in logoutAll removed; CatalogueWorkController.forget added; sign-out of a catalogue with account details removes all its unfinished downloads and saved pages.
+- Step 2: book deleted, file removed but book kept, library merge, catalogue removed, profile deleted (staging folders), and the cancel-at-commit race closed in the queue. Each has tests; the first four and the race also in the app's own graph or with the cancel injected at the commit point.
+- Step 3: durable access generation; SavedPagesFeedCache over catalogue_documents behind OpdsFeedCache (25 MiB per profile, oldest first, no-store honored, validators kept, revalidation on every load); "saved copy" with stored time and "offline, no saved copy"; pages cleared on account change, sign-out with details, turn off, move and removal.
+- Step 4: gate checked, plan status and Phase 3 section updated.
+
+Not done or partly done, and why:
+- The cleaner wiring fault is not fixed, on purpose: fixing it would start deleting reading positions, history and unsent changes on sign-out for every user. That needs a product decision.
+- A process that dies in the same instant as a cancel lands on the library's commit (after the request row is deleted, before the provenance write) still leaves a book without provenance. The import journal does not carry provenance, so start-up cannot repair it. The in-process race is closed.
+- Nothing was run on a device or emulator; all checks are host and simulator tests.
+
+Tests skipped, ignored or weakened (file + name + reason), or "none":
+- lib/database/implementation LibraryJoinMigrationTest, "a new database is at version 41 or later and has the import journal": the exact-version check (== 41) became >= 41, because 41.sqm moved the schema to 42. The exact version is now asserted in SavedPagesMigrationTest.
+No test was skipped or ignored.
+
+Existing tests that had to change, and why:
+- LibraryOriginRulesTest (2 tests), InsertBookRowsTest (1), CatalogueDownloadToLibraryTest (1 assertion): they asserted "no outbox entry" for a catalogue book; the decision is reversed.
+- BookFileTransferEngineTest: one comment only.
+- CatalogueLogoutEntryPointTest: the cleaner is now called for a profile with a catalogue.
+- lib/server/implementation CatalogueLogoutTest: sign-out no longer cancels the work of a catalogue without account details.
+- CatalogueDownloadCancellationTest "removing account details...": it now saves details first, because removing details that were never saved does nothing.
+- CatalogueDaosTest: its library-book fixture now adds a device file, because "in library" requires one.
+- PositionOriginMigrationTest: LATEST constant 41 to 42.
+- OpdsProfileLifecycleTest: two new constructor arguments of the repository factory.
+- CatalogueAcquisitionStartupTest: its fake user registry now emits the profile list.
+- Test fakes: four lost insertBookWithoutSync; two staging fakes gained deleteFoldersExcept; the EPUB fixture moved to CatalogueTestEpub.
+
+Places the plan was ambiguous and what I chose:
+- Sign-out and catalogues without account details. Plan 10.0 said sign-out "cancels active acquisitions"; this run's brief said acquisition rows are not deleted except for a catalogue that had account details. I followed the brief: a catalogue without details is left alone, running downloads included. 10.0 is updated.
+- "Server's cached data is gone as before." It is not gone today (the cleaner is a no-op), so I tested "the same as a profile without a catalogue" and pinned the actual value.
+- Cancel landing at the commit: the book is kept and gets its provenance row; the request is gone. I did not undo the import, because the bytes may have matched a book that already existed.
+- "Device file removed, book kept": the lookup simply stops answering "in library" (the SQL requires a device file). There is no separate "in library, not on this device" answer yet.
+- "No duplicates" on merge: one row per catalogue, publication and file hash; the oldest is kept. Rows with different hashes are kept as separate acquisitions.
+- "Offline or host unreachable": only the transport's UNREACHABLE code (any network failure that is not a timeout or a TLS failure). A timeout does not show the saved copy.
+- The saved page needs the address it was served from after redirects, and the table had no column for it, so I used the one allowed migration.
+- The generation is bumped in the credential store (every save of different details, every removal), not in the registry, so no caller can change details without it.
+- Oldest-first eviction uses the stored time, which a successful revalidation refreshes.
+- Profile deletion has no hook in lib/user, so the staging folder is removed by watching the profile list; this also cleans folders left by a deletion while the app was closed.
+
+Files changed outside feature/catalogue, feature/books, feature/auth, lib/database, lib/server and lib/server-opds:
+- docs/opds-server-implementation-plan.md
+- composeApp/src/androidHostTest/.../di/: CatalogueCleanupRulesTest.kt (new), SignOutOfEverythingTest.kt (new), CatalogueTestEpub.kt (new), CatalogueDownloadCancellationTest.kt, CatalogueDownloadToLibraryTest.kt, RealAppGraph.kt (tests only)
+- lib/opds/api: OpdsFeedCache.kt (generation is a Long), OpdsFeedLoader.kt (SavedCopy result), model/OpdsBudgets.kt (saved-pages budget)
+- lib/opds/implementation: cache/CachedOpdsFeedLoader.kt, and its test FeedCacheTest.kt
+- lib/preferences/api: Preferences.kt (one key, CatalogueAccessGenerations)
+- lib/user/implementation: UserRegistryImpl.kt (that key added to the list cleared when a profile is deleted)
+- feature/sync/data LibraryBookSyncApplierTest.kt and lib/server-parrot-cloud ParrotTestLibraryBooksDatabase.kt (test fakes lost insertBookWithoutSync)
+
+Known problems I am leaving:
+1. clearAllData() removes nothing in the running app (wiring, predates this run). "Sign out of everything" therefore leaves reading positions, history, the outbox, sync checkpoints and the server book cache in place for every profile.
+2. If that wiring is fixed as written, sign-out deletes the reading position, favourite mark, reading history and unsent changes of file-picker imports (and now catalogue books) while keeping the books. That damages imports; not fixed here, as instructed.
+3. A catalogue book now syncs its details, so another device lists a book it has no file for, like an import that was never backed up. Provenance is not synced.
+4. Backup eligibility is unchanged in code, but its effect moved: a catalogue book can now get a remote revision, so enqueueUpload no longer refuses it for lacking one. Nothing in the UI offers it. Recorded in plan 11.7 as open.
+5. Crash in the cancel-at-commit instant can still leave a book without provenance (see "Not done").
+6. After sign-out a catalogue's stored status still says "signed in as <name>" until its next request. Existing behavior.
+7. UserRegistryImpl.deleteProfile carries a note that the database file is deleted elsewhere; I did not find where and did not check further.
+8. AppVisibilityReporter.productUsage still has a DI default value (reported last run, on main).
+9. Saved pages and the new SQL are covered on iOS only through fakes: lib/database/implementation has no iOS tests.
+--- END REPORT ---
+```
 
 ### Phase 4 — complete browsing feature
 
