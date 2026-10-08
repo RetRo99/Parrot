@@ -8,9 +8,27 @@ import kotlinx.serialization.json.*
 /** Shared JSON reader; URL expansion and acquisition policy are deliberately separate. */
 internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
     override fun parse(payload: OpdsPayload, effectiveResponseUrl: String): OpdsParseResult {
+        if (payload.bytes.size > OpdsBudgets.MAX_RESPONSE_BYTES) return OpdsParseResult.Rejected(OpdsRejection.TooLarge())
         return try {
-            val root = Json.parseToJsonElement(payload.asText()) as? JsonObject
+            val text = payload.asText()
+            JsonDepthGuard.rejection(text)?.let { return OpdsParseResult.Rejected(it) }
+            val root = Json.parseToJsonElement(text) as? JsonObject
                 ?: return OpdsParseResult.Rejected(OpdsRejection.Malformed())
+            fun countItems(obj: JsonObject): Int {
+                var count = 0
+                for (key in listOf("publications", "navigation")) {
+                    val value = obj[key] ?: continue
+                    count += (value as? JsonArray ?: throw IllegalArgumentException()).size
+                }
+                for (key in listOf("groups", "facets", "links", "images")) {
+                    if (key in obj && obj[key] !is JsonArray) throw IllegalArgumentException()
+                }
+                for (group in (obj["groups"] as? JsonArray).orEmpty()) {
+                    if (group is JsonObject) count += countItems(group)
+                }
+                return count
+            }
+            if (countItems(root) > OpdsBudgets.MAX_ITEMS_PER_RESPONSE) return OpdsParseResult.Rejected(OpdsRejection.TooManyItems())
             OpdsParseResult.Document(Reader(effectiveResponseUrl).document(root))
         } catch (_: IllegalArgumentException) {
             OpdsParseResult.Rejected(OpdsRejection.Malformed("invalid OPDS JSON structure"))
@@ -30,6 +48,16 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
             is JsonArray -> value
             else -> listOf(value)
         }
+        fun <T> items(value: JsonElement?, read: (JsonObject) -> T): List<T> {
+            if (value == null) return emptyList()
+            val array = value as? JsonArray ?: throw IllegalArgumentException()
+            return array.mapNotNull {
+                try { read(it as? JsonObject ?: throw IllegalArgumentException()) } catch (_: IllegalArgumentException) {
+                    warnings += ParseWarning(ParseWarning.Code.MALFORMED_ITEM_SKIPPED)
+                    null
+                }
+            }
+        }
         fun contributors(value: JsonElement?, role: String? = null): List<OpdsContributor> = values(value).mapNotNull {
             val obj = it as? JsonObject
             val name = text(obj?.get("name") ?: it) ?: return@mapNotNull null
@@ -48,14 +76,14 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
             val priceValue = (price?.get("value") as? JsonPrimitive)?.doubleOrNull
                 ?: (properties?.get("priceValue") as? JsonPrimitive)?.doubleOrNull
             val currency = text(price?.get("currency") ?: properties?.get("currency"))
-            val trees = values(properties?.get("indirectAcquisition")).map { indirect(it as JsonObject) }
+            val trees = values(properties?.get("indirectAcquisition")).map { indirect(it as? JsonObject ?: throw IllegalArgumentException()) }
             return OpdsLink(href, resolved, template, relations, types.parse(text(obj["type"])), text(obj["title"]),
                 (obj["length"] as? JsonPrimitive)?.longOrNull,
                 price = if (priceValue != null && currency != null) OpdsPrice(priceValue, currency) else null,
                 indirectAcquisition = when (trees.size) { 0 -> null; 1 -> trees.single(); else -> OpdsIndirectAcquisition(null, trees) })
         }
         fun indirect(obj: JsonObject): OpdsIndirectAcquisition = OpdsIndirectAcquisition(types.parse(text(obj["type"])),
-            values(obj["child"] ?: obj["children"]).map { indirect(it as JsonObject) })
+            values(obj["child"] ?: obj["children"]).map { indirect(it as? JsonObject ?: throw IllegalArgumentException()) })
         fun links(value: JsonElement?): List<OpdsLink> = values(value).mapNotNull {
             try { link(it as? JsonObject ?: throw IllegalArgumentException()) } catch (_: IllegalArgumentException) {
                 warnings += ParseWarning(ParseWarning.Code.MALFORMED_ITEM_SKIPPED)
@@ -70,7 +98,8 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
             val identifier = text(metadata["identifier"])
             val identity = when {
                 self != null -> OpdsIdentity(self, OpdsIdentity.Kind.NOMINAL)
-                identifier != null -> OpdsIdentity("$base#$identifier", OpdsIdentity.Kind.PROVIDER_SCOPED_FALLBACK)
+                identifier != null -> OpdsIdentity("${resolver.resolve(base, "/")}#$identifier", OpdsIdentity.Kind.PROVIDER_SCOPED_FALLBACK,
+                    "identifier scoped to response origin")
                 else -> {
                     warnings += ParseWarning(ParseWarning.Code.MISSING_IDENTITY)
                     OpdsIdentity.documentScoped("$base:${obj.toString().encodeToByteArray().fold(1) { h, b -> 31 * h + b }}")
@@ -85,9 +114,8 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
                 rights = text(metadata["rights"]), publisher = contributors(metadata["publisher"]).firstOrNull()?.name,
                 published = published, year = published?.take(4),
                 identifiers = identifier?.let { listOf(OpdsIdentifier(it)) }.orEmpty(),
-                images = values(obj["images"]).mapNotNull {
-                    val image = it as? JsonObject ?: return@mapNotNull null
-                    val href = text(image["href"]) ?: return@mapNotNull null
+                images = items(obj["images"]) { image ->
+                    val href = text(image["href"]) ?: throw IllegalArgumentException()
                     OpdsImage(resolver.resolve(base, href), types.parse(text(image["type"])),
                         (image["width"] as? JsonPrimitive)?.intOrNull, (image["height"] as? JsonPrimitive)?.intOrNull)
                 }, links = links, editionLabel = text(metadata["edition"]))
@@ -109,18 +137,21 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
             if (listOf("navigation", "publications", "groups", "facets").none { it in root }) {
                 return OpdsPublicationDocument(publication(root), self, base, warnings = warnings.toList())
             }
-            val groups = values(root["groups"]).map { raw ->
-                val group = raw as? JsonObject ?: throw IllegalArgumentException()
-                OpdsGroup(text((group["metadata"] as? JsonObject)?.get("title")).orEmpty(), links(group["links"]),
+            val groups = items(root["groups"]) { group ->
+                OpdsGroup(text((group["metadata"] as? JsonObject)?.get("title")) ?: throw IllegalArgumentException(), links(group["links"]),
                     publications(group["publications"]), navigation(group["navigation"]))
             }
-            val facets = values(root["facets"]).map { raw ->
-                val facet = raw as? JsonObject ?: throw IllegalArgumentException()
-                OpdsFacetGroup(text((facet["metadata"] as? JsonObject)?.get("name")), values(facet["links"]).map {
-                    val option = it as JsonObject
+            val facets = items(root["facets"]) { facet ->
+                val facetMetadata = facet["metadata"] as? JsonObject ?: throw IllegalArgumentException()
+                val options = items(facet["links"]) { option ->
                     val link = link(option)
-                    OpdsFacetOption(link.title, link, (option["active"] as? JsonPrimitive)?.booleanOrNull == true)
-                })
+                    val properties = option["properties"] as? JsonObject
+                    OpdsFacetOption(link.title, link, (properties?.get("active") as? JsonPrimitive)?.booleanOrNull
+                        ?: ((option["active"] as? JsonPrimitive)?.booleanOrNull == true),
+                        (properties?.get("numberOfItems") as? JsonPrimitive)?.longOrNull)
+                }
+                OpdsFacetGroup(text(facetMetadata["title"] ?: facetMetadata["name"]), options,
+                    options.firstOrNull { "all" in it.link.relations || "http://opds-spec.org/facet/all" in it.link.relations })
             }
             return OpdsFeedDocument(OpdsFeedMetadata(title, text(metadata["identifier"])?.let { OpdsIdentity(it, OpdsIdentity.Kind.NOMINAL) },
                 authors = contributors(metadata["attribution"] ?: metadata["author"]), language = text(metadata["language"]),
@@ -132,5 +163,26 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
                 self = self, up = links.filter { "up" in it.relations || "start" in it.relations },
                 effectiveResponseUrl = base, warnings = warnings.toList())
         }
+    }
+}
+
+/** Check structural depth before building a JSON tree, including unknown extensions. */
+internal object JsonDepthGuard {
+    fun rejection(text: String): OpdsRejection? {
+        var depth = 0
+        var quoted = false
+        var escaped = false
+        for (c in text) {
+            if (quoted) {
+                if (escaped) escaped = false
+                else if (c == '\\') escaped = true
+                else if (c == '"') quoted = false
+            } else when (c) {
+                '"' -> quoted = true
+                '{', '[' -> if (++depth > OpdsBudgets.MAX_NESTING_DEPTH) return OpdsRejection.TooDeep()
+                '}', ']' -> depth--
+            }
+        }
+        return null
     }
 }

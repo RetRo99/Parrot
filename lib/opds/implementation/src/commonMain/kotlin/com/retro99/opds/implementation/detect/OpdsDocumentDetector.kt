@@ -6,6 +6,9 @@ import com.retro99.opds.api.model.OpdsBudgets
 import com.retro99.opds.api.model.OpdsMediaType
 import com.retro99.opds.api.model.OpdsRejection
 import com.retro99.opds.implementation.mediatype.SeparatedMediaTypeParser
+import com.retro99.opds.implementation.opds2.JsonDepthGuard
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import nl.adaptivity.xmlutil.XmlReader
 import nl.adaptivity.xmlutil.xmlStreaming
 
@@ -108,7 +111,12 @@ class OpdsDocumentDetector(
 
     private fun jsonProbe(text: String): OpdsContentType {
         if (!text.startsWithCharacter('{')) return OpdsContentType.Rejected(OpdsRejection.NotACatalogue())
-        val keys = topJsonKeys(text)
+        JsonDepthGuard.rejection(text)?.let { return OpdsContentType.Rejected(it) }
+        val keys = try {
+            (Json.parseToJsonElement(text) as? JsonObject)?.keys ?: return OpdsContentType.NotACatalogue
+        } catch (_: IllegalArgumentException) {
+            return OpdsContentType.Rejected(OpdsRejection.Malformed("invalid JSON structure"))
+        }
         return when {
             "metadata" in keys && ("navigation" in keys || "publications" in keys || "groups" in keys) ->
                 OpdsContentType.FEED
@@ -120,33 +128,6 @@ class OpdsDocumentDetector(
         }
     }
 
-    /** Bounded one-pass top-level key collector without full JSON parsing. */
-    private fun topJsonKeys(text: String): Set<String> {
-        val keys = mutableSetOf<String>()
-        var depth = 0
-        var index = 0
-        var inString = false
-        while (index < text.length && depth <= OpdsBudgets.MAX_NESTING_DEPTH) {
-            val c = text[index]
-            when {
-                c == '"' -> inString = !inString
-                c == '}' && !inString -> depth--
-                c == '{' && !inString -> {
-                    if (depth == 0) {
-                        val keyStart = text.indexOf('"', index + 1)
-                        if (keyStart != -1) {
-                            val keyEnd = text.indexOf('"', keyStart + 1)
-                            if (keyEnd != -1) keys.add(text.substring(keyStart + 1, keyEnd))
-                        }
-                    }
-                    depth++
-                }
-                else -> {}
-            }
-            index++
-        }
-        return keys
-    }
 }
 
 private fun byDeclaredKind(mediaType: OpdsMediaType): OpdsContentType =

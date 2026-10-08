@@ -12,6 +12,72 @@ class Opds2ParserTest {
         OpdsPayload("application/opds+json", text.encodeToByteArray()), base)
     private fun fixture(name: String) = (parse(readFixtureText("opds/opds2/$name.json")) as OpdsParseResult.Document).document
 
+    @Test fun optional_unknown_fields_relations_and_facets() {
+        val feed = (parse("""{"metadata":{"title":"Minimal"},"unknown":{"nested":[1,2]},"publications":[
+            {"metadata":{"title":"Book","edition":"Revised"},"links":[{"href":"book.json","rel":["self","alternate"]}]},
+            {"metadata":{"title":"No identity"}}],"facets":[{"metadata":{"title":"Language"},"links":[
+            {"href":"?all","title":"All","rel":"all","properties":{"numberOfItems":12}},
+            {"href":"?en","title":"English","properties":{"numberOfItems":7,"active":true}}]}]}""") as OpdsParseResult.Document).document as OpdsFeedDocument
+        assertEquals("Revised", feed.publications.first().editionLabel)
+        assertEquals(listOf("self", "alternate"), feed.publications.first().links.single().relations)
+        assertEquals(emptyList(), feed.publications.last().authors)
+        assertNull(feed.publications.last().year)
+        assertEquals(0, feed.publications.last().acquisitionLinkCount)
+        assertEquals(OpdsIdentity.Kind.DOCUMENT_SCOPED_FALLBACK, feed.publications.last().identity.kind)
+        assertTrue(feed.warnings.any { it.code == ParseWarning.Code.MISSING_IDENTITY })
+        val facet = feed.facets.single()
+        assertEquals("Language", facet.name)
+        assertEquals(12L, facet.allOption?.count)
+        assertEquals(7L, facet.options.last().count)
+        assertTrue(facet.options.last().active)
+    }
+
+    @Test fun equivalent_versions_share_the_publication_model() {
+        val xml = """<entry xmlns="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/terms/">
+            <id>https://catalogue.example.org/book</id><title>Shared</title><author><name>Writer</name></author>
+            <dc:language>en</dc:language><dc:publisher>Press</dc:publisher><published>2026-01-01</published>
+            <rights>Rights</rights><link rel="self" href="/book"/><link rel="http://opds-spec.org/acquisition" href="/book.epub" type="application/epub+zip"/>
+            </entry>"""
+        val one = (ParserFactory.opdsParser().parse(OpdsPayload("application/atom+xml", xml.encodeToByteArray()), base) as OpdsParseResult.Document).document as OpdsPublicationDocument
+        val two = (parse("""{"metadata":{"title":"Shared","author":"Writer","language":"en","publisher":"Press","published":"2026-01-01","rights":"Rights"},"links":[{"rel":"self","href":"/book"},{"rel":"http://opds-spec.org/acquisition","href":"/book.epub","type":"application/epub+zip"}]}""") as OpdsParseResult.Document).document as OpdsPublicationDocument
+        assertEquals(one.publication.identity, two.publication.identity)
+        assertEquals(one.publication.title, two.publication.title)
+        assertEquals(one.publication.authors, two.publication.authors)
+        assertEquals(one.publication.languages, two.publication.languages)
+        assertEquals(one.publication.publisher, two.publication.publisher)
+        assertEquals(one.publication.published, two.publication.published)
+        assertEquals(one.publication.rights, two.publication.rights)
+        assertEquals(one.publication.links, two.publication.links)
+    }
+
+    @Test fun malformed_items_warn_but_root_fails() {
+        val feed = (parse("""{"metadata":{"title":"Feed"},"publications":[null,{"metadata":{}},{"metadata":{"title":"Good"}}],"groups":[null],"facets":[null]}""") as OpdsParseResult.Document).document as OpdsFeedDocument
+        assertEquals(1, feed.publications.size)
+        assertEquals(4, feed.warnings.count { it.code == ParseWarning.Code.MALFORMED_ITEM_SKIPPED })
+        assertIs<OpdsParseResult.Rejected>(parse("""{"metadata":{},"publications":[]}"""))
+        assertIs<OpdsParseResult.Rejected>(parse("""{"metadata":{"title":"Broken"}"""))
+        assertIs<OpdsParseResult.Rejected>(parse("""{"metadata":{"title":"Broken"},"publications":{}}"""))
+    }
+
+    @Test fun bytes_budget() {
+        val result = ParserFactory.opdsParser().parse(OpdsPayload("application/opds+json", ByteArray(OpdsBudgets.MAX_RESPONSE_BYTES.toInt() + 1)), base)
+        assertIs<OpdsRejection.TooLarge>((result as OpdsParseResult.Rejected).rejection)
+    }
+    @Test fun generic_json_uses_structure_not_first_key() {
+        val result = ParserFactory.opdsParser().parse(OpdsPayload("application/json", readFixtureText("opds/opds2/catalog.json").encodeToByteArray()), base)
+        assertIs<OpdsFeedDocument>((result as OpdsParseResult.Document).document)
+        assertIs<OpdsParseResult.Rejected>(parse("""{"error":"Not a catalogue"}"""))
+    }
+    @Test fun depth_budget_including_unknown_fields() {
+        val result = parse("""{"metadata":{"title":"Deep"},"publications":[],"unknown":${"[".repeat(65)}0${"]".repeat(65)}}""")
+        assertIs<OpdsRejection.TooDeep>((result as OpdsParseResult.Rejected).rejection)
+    }
+    @Test fun item_budget_includes_groups_and_navigation() {
+        val items = List(2000) { """{"href":"/item/$it","title":"Item"}""" }.joinToString(",")
+        val result = parse("""{"metadata":{"title":"Many"},"navigation":[$items],"groups":[{"metadata":{"title":"Group"},"publications":[{"metadata":{"title":"Extra"}}]}]}""")
+        assertIs<OpdsRejection.TooManyItems>((result as OpdsParseResult.Rejected).rejection)
+    }
+
     @Test fun landscape_standalone_publication() {
         val document = fixture("landscape") as OpdsPublicationDocument
         val book = document.publication
