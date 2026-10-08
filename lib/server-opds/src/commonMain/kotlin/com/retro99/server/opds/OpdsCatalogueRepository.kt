@@ -29,7 +29,7 @@ class OpdsCatalogueRepository(
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val cache: OpdsFeedCache = MemoryOpdsFeedCache(),
     private val accessGeneration: Long = 0,
-) : ServerCatalogueRepository, CatalogueAcquisitionRepository {
+) : ServerCatalogueRepository, CatalogueAcquisitionRepository, CatalogueImageRepository {
     override val serverId = config.id
     private val owner = Any()
     private class Target(val owner: Any, val url: String) : CatalogueTarget {
@@ -187,6 +187,40 @@ class OpdsCatalogueRepository(
         } finally { requests.update { it - job } }
     }
 
+    /**
+     * A cover or thumbnail, through this catalogue's transport: account details only on https
+     * hops on the catalogue's own origin, the redirect and address checks of a page, and a
+     * ceiling of its own. Like a file it does not hold the session lock and does not change the
+     * catalogue's status: pictures often live on another host.
+     */
+    override suspend fun loadImage(url: String): ByteArray? = coroutineScope {
+        val job = currentCoroutineContext().job
+        requests.update { it + job }
+        try {
+            checkCurrent()
+            var bytes = ByteArray(0)
+            var size = 0
+            val result = transport.download(networkRequest(url, false, IMAGE_ACCEPT_MEDIA_TYPES), object : OpdsDownloadSink {
+                override suspend fun start(declaredLength: Long?) {
+                    checkCurrent()
+                    bytes = ByteArray(declaredLength?.toInt() ?: IMAGE_FIRST_BUFFER_BYTES)
+                }
+                override suspend fun write(buffer: ByteArray, length: Int) {
+                    if (size + length > bytes.size) bytes = bytes.copyOf(maxOf(bytes.size * 2, size + length))
+                    buffer.copyInto(bytes, size, 0, length)
+                    size += length
+                }
+            }, CatalogueImageLimits.MAX_IMAGE_BYTES)
+            currentCoroutineContext().ensureActive()
+            checkCurrent()
+            when (result) {
+                is OpdsDownloadResult.Complete -> if (size == bytes.size) bytes else bytes.copyOf(size)
+                is OpdsDownloadResult.Failure -> null
+                is OpdsDownloadResult.SinkFailure -> throw result.cause
+            }
+        } finally { requests.update { it - job } }
+    }
+
     private fun publications(document: CatalogueDocument): List<CataloguePublication> = when (document) {
         is CataloguePublicationDocument -> listOf(document.publication)
         is CatalogueFeedDocument -> document.publications + document.groups.flatMap { it.publications }
@@ -237,3 +271,7 @@ class OpdsCatalogueRepository(
         mutex.withLock { cache.clearAll(); descriptors.clear() }
     }
 }
+
+/** Only the kinds [catalogueRasterImageType] accepts; what comes back is checked again by its bytes. */
+private val IMAGE_ACCEPT_MEDIA_TYPES = listOf("image/webp", "image/png", "image/jpeg", "image/gif")
+private const val IMAGE_FIRST_BUFFER_BYTES = 64 * 1024
