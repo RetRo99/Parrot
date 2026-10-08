@@ -100,12 +100,11 @@ class ServerRegistryImpl(
     private fun loadFromPreferences(userId: String) {
         // Load servers for this user
         val serversKey = PreferencesKey.UserScoped(userId, PreferencesKey.RegisteredServers.name)
-        val servers = preferences.getObject<List<ServerConfig>>(serversKey)
-        if (servers != null) {
-            _servers.value = servers.associateBy { it.id }
-        } else {
-            _servers.value = emptyMap()
-        }
+        val catalogueKey = PreferencesKey.UserScoped(userId, PreferencesKey.CatalogueSources.name)
+        val servers = preferences.getObject<List<ServerConfig>>(serversKey).orEmpty()
+            .filter { it.type != ServerType.Opds } +
+            preferences.getObject<List<ServerConfig>>(catalogueKey).orEmpty().filter { it.type == ServerType.Opds }
+        _servers.value = servers.associateBy { it.id }
 
         // Load credentials for this user
         val credentialsKey = PreferencesKey.UserScoped(userId, PreferencesKey.ServerCredentials.name)
@@ -145,6 +144,10 @@ class ServerRegistryImpl(
         type: ServerType,
         baseUrl: String,
     ): ServerConfig = mutex.withLock {
+        val previousType = _servers.value[id]?.type
+        check(previousType == null || (previousType == ServerType.Opds) == (type == ServerType.Opds)) {
+            "Cannot change between library server and catalogue source"
+        }
         val config = ServerConfig(
             id = id,
             name = name,
@@ -158,19 +161,39 @@ class ServerRegistryImpl(
             previousValue = previousServers,
             updatedValue = previousServers + (config.id to config),
             update = { _servers.value = it },
-            persist = ::persistServers,
+            persist = { persistServersFor(type) },
         )
 
         config
     }
 
     override suspend fun updateServer(config: ServerConfig) = mutex.withLock {
+        if (config.type == ServerType.Opds) {
+            check(_servers.value[config.id]?.type == ServerType.Opds) { "Catalogue source must already exist" }
+            persistStateMutation(
+                previousValue = _servers.value,
+                updatedValue = _servers.value + (config.id to config),
+                update = { _servers.value = it },
+                persist = ::persistCatalogueSources,
+            )
+            return@withLock
+        }
+        check(_servers.value[config.id]?.type != ServerType.Opds) { "Cannot change catalogue source type" }
         _servers.update { it + (config.id to config) }
         persistServers()
     }
 
     override suspend fun removeServer(serverId: String) = mutex.withLock {
         val server = _servers.value[serverId]
+        if (server?.type == ServerType.Opds) {
+            persistStateMutation(
+                previousValue = _servers.value,
+                updatedValue = _servers.value - serverId,
+                update = { _servers.value = it },
+                persist = ::persistCatalogueSources,
+            )
+            return@withLock
+        }
         authStateProviders.firstOrNull { provider -> provider.serverType == server?.type }
             ?.clearAuthentication(server ?: return@withLock)
         _servers.update { it - serverId }
@@ -309,9 +332,19 @@ class ServerRegistryImpl(
 
     private fun persistServers() {
         val userId = currentUserId ?: return
-        val serversList = _servers.value.values.toList()
+        val serversList = _servers.value.values.filter { it.type != ServerType.Opds }
         val key = PreferencesKey.UserScoped(userId, PreferencesKey.RegisteredServers.name)
         preferences.putObject(key, serversList)
+    }
+
+    private fun persistServersFor(type: ServerType) {
+        if (type == ServerType.Opds) persistCatalogueSources() else persistServers()
+    }
+
+    private fun persistCatalogueSources() {
+        val userId = currentUserId ?: return
+        val key = PreferencesKey.UserScoped(userId, PreferencesKey.CatalogueSources.name)
+        preferences.putObject(key, _servers.value.values.filter { it.type == ServerType.Opds })
     }
 
     private fun persistCredentials() {

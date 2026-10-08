@@ -500,6 +500,7 @@ fun HomeBadge(
         ServerType.Audiobookshelf -> colors.success
         ServerType.ParrotCloud -> colors.accent
         ServerType.Local -> colors.ink2
+        ServerType.Opds -> colors.ink2
     }
     val shape = CircleShape
     Row(

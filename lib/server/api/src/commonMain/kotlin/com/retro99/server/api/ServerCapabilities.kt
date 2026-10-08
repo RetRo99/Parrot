@@ -22,6 +22,16 @@ data class ServerCapabilities(
 )
 
 fun ServerType.getCapabilities(): ServerCapabilities = when (this) {
+    ServerType.Opds -> ServerCapabilities(
+        supportsEbooks = false,
+        supportsAudiobooks = false,
+        supportsReadAloud = false,
+        supportsReadingProgress = false,
+        supportsCollections = false,
+        supportsSeries = false,
+        supportsSearch = false,
+        supportsUserLibrary = false,
+    )
     ServerType.Storyteller -> ServerCapabilities(
         supportsEbooks = true,
         supportsAudiobooks = true,
