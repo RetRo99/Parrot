@@ -45,7 +45,7 @@ import com.retro99.books.ui.links.LinkPickerScreen
 import com.retro99.books.ui.links.LinkReviewScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.positions.PositionsScreen
-import com.retro99.catalogue.ui.CatalogueBrowseScreen
+import com.retro99.catalogue.ui.browse.CatalogueBrowseScreen
 import com.retro99.catalogue.ui.CatalogueDownloadsScreen
 import com.retro99.catalogue.ui.CataloguePublicationScreen
 import com.retro99.catalogue.ui.sources.CatalogueSourcesScreen
@@ -546,6 +546,20 @@ fun HomeNavigation(
                             sourceId = destination.sourceId,
                             targetRef = destination.targetRef,
                             onBack = { requestBack("toolbar_back") },
+                            onOpenPage = { reference ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueBrowse(destination.sourceId, reference)))
+                            },
+                            onOpenBook = { reference ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CataloguePublication(destination.sourceId, reference)))
+                            },
+                            // The page turned out to be one book: Back from the book skips it.
+                            onReplaceWithBook = { reference ->
+                                navigationState.replaceCurrent(HomeDestination.CataloguePublication(destination.sourceId, reference))
+                            },
+                            // Catalogue settings are not built yet; Libraries is where a catalogue is managed.
+                            onCatalogueSettings = {
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.ServerManagement))
+                            },
                         )
                     }
 
