@@ -1,41 +1,40 @@
 # Phase 4 catalogue add / Get books report
 
-**Branch:** `opds/phase4-screens`  
-**Baseline:** `b24b9b87`; add-flow test-first slice `81fc7b5c`  
-**Status:** implementation and final platform verification in progress
+**Branch:** `opds/phase4-screens`; **Implementation commit:** `0b7c17d8`
+**Status:** The Add/Get books slice is implemented and verified. This is not the full 84-board catalogue experience: Browse, book detail, and Downloads destinations remain placeholders.
 
-## Scope implemented
+## Implemented
 
-- Added a validated OPDS add flow with duplicate checks, cancellation, distinct checking/sign-in phases, HTTP confirmation/blocking, certificate and unsupported-auth dialogs, and account persistence only after validation succeeds.
-- Added transient repository validation using the production OPDS parser and transport without registering a source or persisting access status during validation.
-- Added Project Gutenberg and Standard Ebooks presets in `catalogue-presets.json`; the Standard Ebooks terms link is omitted because its terms URLs returned 404. Gutenberg's terms link and OPDS URL were verified.
-- Added Get books, preset detail, custom add, and preset sign-in UI. The Library Add action offers Get books and preserves file import; OPDS is available from the existing Add a library type picker without changing Storyteller or Audiobookshelf selection behavior.
-- Added active/failed download count to the Get books Downloads action and kept cover loading on the existing `CatalogueImageModel` path.
-- Added common tests for add validation/security/cancellation and preset parsing/display host.
+- Added a validated OPDS add flow with URL checks, duplicate protection, cancellation, HTTP policy, and certificate/authentication dialogs. Validation uses the production parser and transport without registering the catalogue or writing access status; credentials are saved only after successful validation.
+- Added Project Gutenberg and Standard Ebooks presets in `catalogue-presets.json`, plus Get books, preset detail/sign-in, and custom add screens.
+- Wired Library Add to Get books while preserving file import. Added OPDS to the existing Add a library type picker without changing Storyteller or Audiobookshelf flows.
+- Added active/failed download count to the Downloads action and retained cover handling through `CatalogueImageModel`.
+- Added tests for add validation, security/cancellation, and preset parsing/display-host behavior.
 
 ## Decisions
 
-- Project Gutenberg OPDS URL: `https://www.gutenberg.org/ebooks/search.opds/`.
-- Standard Ebooks OPDS URL: `https://standardebooks.org/feeds/opds`.
-- Standard Ebooks' `/terms` and `/terms-of-use` returned 404, so the preset does not label its collections policy as terms of use.
-- Cleartext HTTP is confirmable for anonymous catalogues on Android and blocked on iOS; credentials are never sent over HTTP or to non-HTTP(S) schemes.
+- Project Gutenberg OPDS: `https://www.gutenberg.org/ebooks/search.opds/`.
+- Standard Ebooks OPDS: `https://standardebooks.org/feeds/opds`.
+- Standard Ebooks `/terms` and `/terms-of-use` returned 404, so the preset has no terms link. Gutenberg's terms link and OPDS URL were verified.
+- Android can confirm anonymous cleartext HTTP; iOS blocks HTTP. Credentials are not sent over HTTP or to non-HTTP(S) schemes.
 
-## Verification so far
+## Verification
 
-- `:feature:catalogue:ui:testAndroidHostTest` — passed.
-- `:feature:login:ui:compileAndroidMain` — passed.
-- `:feature:home:ui:compileAndroidMain` — passed.
-- `:lib:server-opds:compileAndroidMain` — passed (reported up to date).
-- `:feature:books:ui:testAndroidHostTest` — 67 passed, 4 existing link-picker/review assertions failed (`LinkPickerViewModelTest` ×2, `LinkReviewViewModelTest` ×2; failures at lines 124 and 164).
+- `:feature:catalogue:ui:testAndroidHostTest` — passed (up-to-date on final run).
+- `:lib:server-opds:testAndroidHostTest` and `:lib:server-opds:iosSimulatorArm64Test` — passed (up-to-date on final run).
+- iOS simulator tests for Catalogue UI, Login UI, and Home UI — passed.
+- Android `:androidApp:assembleDebug` — passed.
+- iOS Simulator app build with `xcodebuild` — passed after `pod install --deployment` synchronized the local CocoaPods sandbox; locked dependency versions were unchanged.
 - `git diff --check` — passed.
-- Final iOS checks, application builds, and visual fixture capture are pending.
+- Books UI tests — 67/71 passed on Android and iOS; the same four unrelated link-picker/review assertions failed (`LinkPickerViewModelTest` ×2 and `LinkReviewViewModelTest` ×2; failures at lines 124 and 164).
 
-## Existing verification blockers
+## Fixtures and remaining scope
 
-- The previously recorded iOS Compose test-link failure involving `FirebaseCore` and iOS test-source compilation failures in `feature:books:domain` and `feature:sync:data` remain baseline issues to recheck where applicable.
-- `clearAllData()` previously did nothing on sign-out; this catalogue change does not address that unrelated behavior.
-- No Android ADB executable is available in this environment. A booted iOS simulator is available; visual capture is still to be attempted there.
+- `tools/ember-fixtures/catalogue_capture.py --list` currently returns only `descriptionText`, a description-block sample rather than a Phase 4 screen. The existing Day/E-ink sample captures are not Add/Get books fixtures; no new screen fixtures were produced. A booted iPhone simulator was available, but the current app state was an audiobook reader, not a catalogue screen.
+- Browse, book detail, Downloads, paging, and the rest of the 84 design boards are outside this implemented slice and remain follow-up work.
+- Android ADB is present in the SDK and one physical device is connected; the capture helper requires explicit `--allow-device` before installing its isolated fixture APK on a real device. No real-device fixture install was performed.
 
-## Final results
+## Unrelated known issues
 
-To be updated after the requested iOS/Android checks and any available fixture capture.
+- Previously recorded iOS test-source/link blockers in `feature:books:domain`, `feature:sync:data`, and a Compose test link involving `FirebaseCore` were not part of this final verification run.
+- The existing `clearAllData()` sign-out behavior is unchanged.
