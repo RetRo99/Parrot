@@ -1,6 +1,6 @@
 # Phase 4, run 6 — Libraries and catalogue settings
 
-Status before final app builds: touched-module tests and fixture APK passed. Final builds and refreshed captures will be recorded below after completion.
+Touched-module tests, all twenty fixture captures, Android debug assembly, and iOS simulator framework linking passed. This report was committed before starting the final app builds, then updated with their results.
 
 ```text
 --- REPORT ---
@@ -13,7 +13,10 @@ Commits this run (hash + subject, oldest first):
 8478e39d feat(catalogue): add profile-fenced settings and validated editors
 29acd2d9 feat(catalogue): render Ember library cards and settings dialogs
 edd95175 feat(settings): wire catalogue Libraries actions and safe settings routes
-Further fixture/report commits are recorded in git history and the final response.
+692d3c86 docs(opds): record Libraries run before final app builds
+abf3906e test(fixtures): add nine production-backed Libraries boards
+062c8d42 docs(design): capture Libraries boards on authorized Samsung
+The final report-update commit is recorded in git history and the final response.
 
 Test command(s) run:
 All Gradle commands used ANDROID_HOME="$HOME/Library/Android/sdk" and --max-workers=2.
@@ -28,11 +31,11 @@ Per module: translations Android host 0/0 (host-test target not configured), iOS
 Per module: tools/ember-fixtures Android host 0/0 (testDebugUnitTest NO-SOURCE), iOS n/a (Android-only module); debug APK assembled successfully.
 
 App build results (Android assemble, iOS framework):
-Pending. Required combined command will run after this report is committed: ./gradlew :androidApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64 --max-workers=2
+Android :androidApp:assembleDebug PASSED; iOS :composeApp:linkDebugFrameworkIosSimulatorArm64 PASSED. Combined command: ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :androidApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64 --max-workers=2 --continue — BUILD SUCCESSFUL in 2m 2s. No final-build lock/OOM retry was needed. The previously reported FirebaseCore link failure did not reproduce in this worktree.
 
 Fixtures added, and which were captured (view + themes, and on which emulator):
 Nine production-composable fixtures: servers, serversMore, serverPublic, serverAccount, serverOff, serverUnsupported, editAddress, removeCat, signOutAll.
-Initial Day/E-ink captures for all nine completed on explicitly authorized Samsung SM-S921B, serial RFCWC0SSVDM, isolated com.retro99.parrot.fixtures APK. Refreshed captures are in progress; Night servers/serverAccount are next (the two supplied Night boards).
+Refreshed Day/E-ink captures for all nine and Night servers/serverAccount completed on explicitly authorized Samsung SM-S921B, serial RFCWC0SSVDM, isolated com.retro99.parrot.fixtures APK. All twenty PNGs and their hierarchy XMLs are committed in design/screens/catalogue-<view>-<theme>.*. Inspected the first batch, fixed outlines/title/card typography together, then confirmed the final batch in a single contact sheet; no further polish loop. Manual Show/Hide interaction passed on serverAccount Night: the dummy key was exposed only after Show and absent from the accessibility hierarchy after Hide.
 Own emulator-5556 launch failed because the installed AVD was already in use. No emulator-5554 commands or installs. The Samsung's existing demo app/data were not replaced or cleared.
 
 Differences from the boards: found, fixed, and left (one line each):
@@ -43,13 +46,13 @@ Left: existing server card visuals intentionally untouched; shared Ember spacing
 Each catalogue status, its text and its button (one line each):
 Public: Ready · no account needed — Browse; Checked <time> only for checks younger than seven days.
 SignedIn: Signed in as <name> — Browse; same seven-day Checked rule.
-SignInNeeded: Sign-in needed / This catalogue now asks you to sign in. — Add account details.
+SignInNeeded: Sign-in needed / This catalogue now asks for your account. — Add account details.
 SignInUnsupported: Sign-in method not supported / This catalogue changed how you sign in. Parrot can't open it until that's supported. — Details; settings and Get books hide Browse.
-TurnedOff: Turned off / Browsing and downloads are paused. — Turn on; settings hide Browse.
-Latest connection error: Couldn't reach it · <time> / Check that the catalogue is running and you're on the same network. — Try again; retains time at any age. Authentication/off states win over connection errors; settings keep latest checked time at any age.
+TurnedOff: Turned off / Browsing and downloads are paused — Turn on; settings hide Browse.
+Latest connection error: Couldn't reach it · <time> / The catalogue didn't answer. It may be offline. — Try again; retains time at any age. Authentication/off states win over connection errors; settings keep latest checked time at any age.
 
 Did existing server cards or flows change (yes/no) and how I know:
-No existing server-card/detail/action code or existing tests changed: diff against deb13f8d confirms this, and unchanged settings tests pass on Android/iOS. Libraries' surrounding title/intro changed when catalogues are present and a new logout-all entry/dialog was added; existing per-server login/logout/edit/remove handlers remain unchanged.
+No existing server-card/detail/action code or existing tests changed: diff against deb13f8d confirms this, and unchanged settings tests pass on Android/iOS. The surrounding title became Libraries, the server-only intro is hidden when catalogues are present, and a new logout-all entry/dialog was added; existing per-server login/logout/edit/remove handlers remain unchanged.
 
 Strings marked TODO-design, with their text:
 catalogue_edit_address_origin_warning: Changing the host, port or scheme removes your saved account details. Downloaded books stay.
@@ -59,7 +62,7 @@ Done this run:
 Catalogue Libraries rows consume ServerManagementViewModel.catalogueSources; cards/settings/browser/Get books route to the correct destinations without persisting addresses/passwords in navigation. Settings support Show/Hide, validated address/account editors, wrong-password reset/focus, account-removal confirmation, enable/disable, distinct downloaded-book counts, and catalogue-removal confirmation. Account writes use CatalogueAccountEditor after validation, origin changes use Phase 2 registry clearing, and operations register profile-bound cancellation. Conditional sign-out detail uses the shared device-name helper and the existing LogoutUseCase. Added 15 catalogue logic tests, one settings visibility test, and three route tests; nine production-backed fixtures.
 
 Not done or partly done, and why:
-Final app builds and refreshed/Night captures pending at this pre-build checkpoint. No iOS UI screenshots or tablet/landscape manual verification; iOS simulator logic tests did run. Full real-catalogue network/device mutation walkthrough was not performed against the Samsung's demo data.
+No iOS UI screenshots or tablet/landscape manual verification; iOS simulator logic tests did run. Full real-catalogue network/device mutation walkthrough was not performed against the Samsung's demo data. Exact mock-pixel matching is not claimed; intentionally preserved server card visuals and remaining differences are listed above.
 
 Tests skipped, ignored or weakened (file + name + reason), or "none":
 None changed, ignored or weakened. translations:iosSimulatorArm64Test SKIPPED and fixtures:testDebugUnitTest NO-SOURCE because those modules have no test source; fixture module has no iOS target, translations has no Android host-test target.
@@ -74,6 +77,6 @@ Files changed outside feature/settings, feature/catalogue, feature/home, transla
 docs/opds-phase4-libraries-run-report.md (this required report).
 
 Known problems I am leaving:
-An address registry update can succeed before a subsequent credential/status persistence write fails; no cross-store transaction exists, so a save error can leave the validated address changed (downloaded books remain). Secure account-store changes made outside settings do not independently trigger CatalogueAccessProvider; settings immediately clears its account display on its own Remove action. Existing unrelated books UI failures, books-domain/sync-data iOS test compilation failures, FirebaseCore iOS framework link failure, and root sign-out clearAllData() no-op are outside this run; the new Libraries sign-out uses the working SettingsRepository.logout path instead of that root path.
+An address registry update can succeed before a subsequent credential/status persistence write fails; no cross-store transaction exists, so a save error can leave the validated address changed (downloaded books remain). Secure account-store changes made outside settings do not independently trigger CatalogueAccessProvider; settings immediately clears its account display on its own Remove action. Existing unrelated books UI failures, books-domain/sync-data iOS test compilation failures, and root sign-out clearAllData() no-op are outside this run; those unrelated test suites were not rerun. The new Libraries sign-out uses the working SettingsRepository.logout path instead of that root path. The earlier FirebaseCore framework-link problem did not reproduce: the final iOS framework build passed.
 --- END REPORT ---
 ```
