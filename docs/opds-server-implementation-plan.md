@@ -1,6 +1,8 @@
 # OPDS server support: research and implementation plan
 
-**Status:** Phase 1 protocol core complete and its gate met; Phase 2 not started.
+**Status:** Phase 1 protocol core complete and its gate met; Phase 2 test-first
+items 1–3 implemented (storage, exact addresses, capability guards). Items 4–7
+and all user-visible OPDS integration remain unimplemented.
 No user-visible OPDS application integration yet. Reviewed
 against the codebase on 2026-10-08: open gaps are in §10, the designer brief is
 in §11, and design passes 1–3 with the remaining open points are in §11.7.  
@@ -606,8 +608,9 @@ recorded result.
    download, unsupported, or open provider page.
 6. OpenSearch and RFC 6570 expansion from the RFC vectors, including explicit
    failure for unsupported expressions.
-7. Transport rules with MockEngine: no credentials cross-origin or on any
-   redirect hop, same host with different scheme/port, redirect limit, size and
+7. Transport rules with MockEngine: credentials only on same-origin HTTPS hops,
+   never reattached after leaving the configured origin; same host with different
+   scheme/port, redirect limit, size and
    nesting limits, DTD/entity rejection beyond what the library does (reject
    any document containing a DOCTYPE at the DOCDECL event; xmlutil expands
    internal entities by default).
@@ -665,6 +668,58 @@ sample downloading remains an open product decision and is not implemented.
 flows work; no factory is invoked for an unsupported repository type; an
 anonymous source never renders as "Signed out"; a build without OPDS support
 reading the new preferences keeps its existing servers.
+
+**Partial implementation (2026-10-08, `opds/phase2-server-type`):** test-first
+items 1–3 only. Catalogue configs use the user-scoped `CatalogueSources` key;
+`RegisteredServers` continues to contain only the existing library types.
+Catalogue add/update/remove use persistence rollback, `enabled` defaults to
+true, and OPDS resource addresses are stored verbatim. Books and reader routing
+is capability-guarded; the existing series filter remains. Bearer-network lookup
+by server ID returns null for OPDS. Global Coil auth excludes OPDS and suppresses
+bearer tokens on any origin shared with a catalogue, since it has no source
+identity. Existing-only profiles retain their prior routing behavior.
+
+No catalogue picker, screen, repository, access provider, credential store,
+sign-out or enable/disable lifecycle was added. The Phase 2 gate is not yet met.
+All-server consumer audit for the next run:
+
+- `CoilInitializer`: fixed as above; shared-origin authenticated library covers
+  will need source-aware loading once OPDS can be added through UI.
+- `AuthenticatedRepositoryProviderImpl`: filters both books lists, guards single
+  books/reader lookups before factories, and retains series capability filtering.
+- `LogoutUseCase`: attempts to clear bearer credentials for OPDS and then clears
+  all database data; catalogue logout/acquisition preservation remains item 6.
+- `SettingsDataRepository`: attempts to clear bearer credentials for every
+  non-Local source; no OPDS-specific account lifecycle yet.
+- `CheckAuthStateUseCase`: a configured OPDS source counts as a remote setup and
+  bypasses welcome, even without authentication; unchanged pending access work.
+- `ObserveHasAuthenticatedRemoteServersUseCase`: anonymous OPDS is absent from
+  the authenticated list; an artificially bearer-authenticated OPDS would count.
+- Storyteller/Audiobookshelf progress sync adapters: exact type filters exclude
+  OPDS before client creation; no changes needed.
+- `AuthorsRemoteDataSource` / `SeriesRemoteDataSource`: anonymous OPDS never
+  enters their authenticated list. If it does enter, guarded network lookup now
+  returns null instead of throwing or dispatching to a bearer client. Existing
+  endpoints and existing-type behavior were not changed.
+- `PositionsDataSource`: includes the source name in metadata; repository lookup
+  is guarded, so no OPDS book factory is called.
+- `BookDetailViewModel`: uses all servers only to label already-linked copies;
+  the current implementation does not observe all auth states (unlike §10.2's
+  earlier review). No OPDS copy or reader route is created.
+- `ServerManagementViewModel`: would list a programmatically registered OPDS
+  source as signed out and offer the existing sign-in/edit actions. Mapping and
+  address editing are deferred; no OPDS source can be added from the current UI.
+- `AppSettingsViewModel`: includes catalogue display names in its server-name
+  list; no networking or factory dispatch.
+- `ObserveSeriesBrowseUseCase`: includes its name in the lookup map, but only
+  Storyteller/Audiobookshelf IDs count as series sources.
+- `LocalServerInitializer` / `ParrotCloudServerRegistrar`: observe all servers
+  only to ensure their respective fixed IDs exist; unrelated OPDS IDs are ignored.
+
+Before exposing registration, also add `CatalogueSources` to
+`UserRegistryImpl.clearUserPreferences()`'s explicit profile-deletion key list;
+currently it leaves this isolated preference behind. Profile lifecycle cleanup
+was not expanded in this items 1–3 run.
 
 ### Phase 3 — durable acquisition and local-library integration
 
