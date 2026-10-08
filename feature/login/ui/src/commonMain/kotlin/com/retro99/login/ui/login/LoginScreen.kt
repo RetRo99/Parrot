@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -119,6 +118,8 @@ import resources.translations.login_server_unavailable
 import resources.translations.login_show_password
 import resources.translations.login_sign_in_button
 import resources.translations.login_signing_in
+import resources.translations.catalogue_type_name_with_protocol
+import resources.translations.catalogue_opds_card_description
 import resources.translations.login_type_audiobookshelf_description
 import resources.translations.login_type_storyteller_description
 import resources.translations.login_username_label
@@ -137,6 +138,7 @@ fun LoginScreen(
     onSignInSuccess: () -> Unit,
     onSignInAttemptStarted: (String, String, String) -> Unit = { _, _, _ -> },
     onSignInFailure: (String, String, String) -> Unit = { _, _, _ -> },
+    onCatalogueAddSelected: () -> Unit = {},
     onBackClick: () -> Unit,
     existingServerId: String? = null,
     isRetryOrigin: Boolean = false,
@@ -166,6 +168,7 @@ fun LoginScreen(
             isExistingServerLogin = existingServerId != null,
             intentDispatcher = intentDispatcher,
             onBackClick = onBackClick,
+            onCatalogueAddSelected = onCatalogueAddSelected,
             modifier = modifier,
         )
     }
@@ -180,6 +183,7 @@ private fun LoginScreenContent(
     isExistingServerLogin: Boolean,
     intentDispatcher: IntentDispatcher<LoginIntent>,
     onBackClick: () -> Unit,
+    onCatalogueAddSelected: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = Ember.colors
@@ -248,7 +252,11 @@ private fun LoginScreenContent(
                 enabled = !isExistingServerLogin && !viewState.isLoading,
                 onSelect = { serverType ->
                     intentDispatcher(LoginIntent.OnServerTypePickerOpened)
-                    intentDispatcher(LoginIntent.OnServerTypeSelected(serverType))
+                    if (serverType == ServerType.Opds) {
+                        onCatalogueAddSelected()
+                    } else {
+                        intentDispatcher(LoginIntent.OnServerTypeSelected(serverType))
+                    }
                 },
             )
 
@@ -506,12 +514,9 @@ private fun ServerTypeCards(
     enabled: Boolean,
     onSelect: (ServerType) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    Column(
+        modifier = Modifier.fillMaxWidth().selectableGroup(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ServerTypeCard(
             serverType = ServerType.Storyteller,
@@ -520,7 +525,7 @@ private fun ServerTypeCards(
             selected = selected == ServerType.Storyteller,
             enabled = enabled,
             onSelect = onSelect,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth(),
         )
         ServerTypeCard(
             serverType = ServerType.Audiobookshelf,
@@ -529,7 +534,17 @@ private fun ServerTypeCards(
             selected = selected == ServerType.Audiobookshelf,
             enabled = enabled,
             onSelect = onSelect,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        ServerTypeCard(
+            serverType = ServerType.Opds,
+            letter = "B",
+            title = stringResource(StringRes.catalogue_type_name_with_protocol),
+            description = stringResource(StringRes.catalogue_opds_card_description),
+            selected = false,
+            enabled = enabled,
+            onSelect = onSelect,
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
@@ -539,6 +554,7 @@ private fun ServerTypeCard(
     serverType: ServerType,
     letter: String,
     description: String,
+    title: String = serverType.displayName,
     selected: Boolean,
     enabled: Boolean,
     onSelect: (ServerType) -> Unit,
@@ -594,8 +610,8 @@ private fun ServerTypeCard(
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = serverType.displayName,
+                Text(
+                    text = title,
                 style = Ember.type.label.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
                 color = colors.ink,
             )

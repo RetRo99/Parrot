@@ -33,11 +33,14 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
+            implementation(compose.components.resources)
+            implementation(libs.serialization)
             implementation(projects.base)
             implementation(projects.baseUi)
             implementation(projects.translations)
             implementation(projects.feature.catalogue.domain)
             implementation(projects.lib.server.api)
+            implementation(projects.lib.user.api)
             implementation(projects.lib.analytics.api)
             implementation(libs.kotlin.result)
         }
@@ -51,4 +54,10 @@ kotlin {
             }
         }
     }
+}
+
+compose.resources {
+    publicResClass = true
+    generateResClass = always
+    packageOfResClass = "resources.catalogue.ui"
 }

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "project-gutenberg",
+    "name": "Project Gutenberg",
+    "address": "https://www.gutenberg.org/ebooks/search.opds/",
+    "description": "A volunteer-run library of older books, mostly ones whose US copyright has expired. Books come as EPUB files you can read in Parrot.",
+    "shortDescription": "Older books, mostly ones whose US copyright has expired.",
+    "accountLabel": "No account needed",
+    "needsAccount": false,
+    "termsUrl": "https://www.gutenberg.org/policy/terms_of_use.html"
+  },
+  {
+    "id": "standard-ebooks",
+    "name": "Standard Ebooks",
+    "address": "https://standardebooks.org/feeds/opds",
+    "description": "Carefully edited editions of classic books.",
+    "shortDescription": "Carefully edited editions of classic books.",
+    "accountLabel": "Patron account needed",
+    "needsAccount": true,
+    "termsUrl": null
+  }
+]

@@ -29,6 +29,8 @@ class OpdsCatalogueRepository(
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val cache: OpdsFeedCache = MemoryOpdsFeedCache(),
     private val accessGeneration: Long = 0,
+    private val accountOverride: (() -> OpdsAccountDetails?)? = null,
+    private val recordAccessUpdates: Boolean = true,
 ) : ServerCatalogueRepository, CatalogueAcquisitionRepository, CatalogueImageRepository {
     override val serverId = config.id
     private val owner = Any()
@@ -49,6 +51,9 @@ class OpdsCatalogueRepository(
     internal val isStopped: Boolean get() = stopped.value
     private val requests = MutableStateFlow<Set<Job>>(emptySet())
     private val descriptors = linkedMapOf<String, OpdsSearchTemplate>()
+
+    private fun currentAccount(): OpdsAccountDetails? =
+        if (accountOverride == null) credentials.get(profileId, serverId) else accountOverride.invoke()
 
     private fun checkCurrent() {
         if (stopped.value || !isCurrent()) throw CancellationException("Catalogue session invalidated")
@@ -71,7 +76,7 @@ class OpdsCatalogueRepository(
     }
 
     private fun networkRequest(url: String, root: Boolean, accept: List<String> = OPDS_ACCEPT_MEDIA_TYPES): OpdsRequest {
-        val details = credentials.get(profileId, serverId)
+        val details = currentAccount()
         return OpdsRequest(url, accept, details?.let { OpdsCredentials.Basic(it.username, it.password) } ?: OpdsCredentials.Anonymous,
             allowCleartext = config.baseUrl.startsWith("http://", ignoreCase = true), isCatalogueRoot = root)
     }
@@ -88,21 +93,24 @@ class OpdsCatalogueRepository(
         checkCurrent()
         return when (result) {
             is OpdsLoadResult.Document -> {
-                access.recordSuccess(profileId, serverId, credentials.get(profileId, serverId)?.username, now(), root)
+                if (recordAccessUpdates) access.recordSuccess(profileId, serverId, currentAccount()?.username, now(), root)
                 val document = mapper.map(result.document, CatalogueFetchStatus(now(), result.fromCache, result.crossOriginPrivateNetwork))
                 Ok(document)
             }
             is OpdsLoadResult.SavedCopy -> {
                 // Still a failed check: the status says the catalogue could not be reached.
-                access.recordFailure(profileId, serverId, CatalogueErrorKind.Unreachable, now(), false)
+                if (recordAccessUpdates) access.recordFailure(profileId, serverId, CatalogueErrorKind.Unreachable, now(), false)
                 Ok(mapper.map(result.document, CatalogueFetchStatus(now(), fromCache = true, crossOriginPrivateNetwork = false, savedCopyAt = result.storedAtMillis)))
             }
             is OpdsLoadResult.FetchFailure ->
                 if (result.error.code == OpdsTransportError.Code.UNREACHABLE) {
-                    access.recordFailure(profileId, serverId, CatalogueErrorKind.Unreachable, now(), false)
+                    if (recordAccessUpdates) access.recordFailure(profileId, serverId, CatalogueErrorKind.Unreachable, now(), false)
                     Err(AppError.ApiError(result.error.status ?: 400, CatalogueErrorKind.OfflineNoSavedCopy.name))
                 } else failure(result.error)
-            is OpdsLoadResult.ParseFailure -> parseFailure(result.rejection)
+            is OpdsLoadResult.ParseFailure -> parseFailure(
+                result.rejection,
+                isWebPage = result.responseContentType?.substringBefore(';')?.trim()?.equals("text/html", ignoreCase = true) == true,
+            )
             OpdsLoadResult.NotModifiedWithoutCache -> parseFailure(null)
         }
     }
@@ -237,10 +245,11 @@ class OpdsCatalogueRepository(
         else -> CatalogueDownloadFailure.Refused
     }
 
-    private suspend fun <T> parseFailure(rejection: OpdsRejection?): AppResult<T> {
+    private suspend fun <T> parseFailure(rejection: OpdsRejection?, isWebPage: Boolean = false): AppResult<T> {
         val kind = if (rejection is OpdsRejection.TooLarge) CatalogueErrorKind.TooLarge else CatalogueErrorKind.InvalidDocument
-        access.recordFailure(profileId, serverId, kind, now(), false)
-        return Err(AppError.ApiError(400, kind.name))
+        if (recordAccessUpdates) access.recordFailure(profileId, serverId, kind, now(), false)
+        val message = if (isWebPage) WEB_PAGE_VALIDATION_ERROR else if (rejection is OpdsRejection.NotACatalogue) NOT_CATALOGUE_VALIDATION_ERROR else kind.name
+        return Err(AppError.ApiError(400, message))
     }
     private suspend fun <T> failure(error: OpdsTransportError): AppResult<T> {
         val kind = when (error.code) {
@@ -256,8 +265,13 @@ class OpdsCatalogueRepository(
             OpdsTransportError.Code.RESPONSE_TOO_LARGE -> CatalogueErrorKind.TooLarge
             else -> CatalogueErrorKind.SecurityPolicy
         }
-        access.recordFailure(profileId, serverId, kind, now(), error.status == 401 && error.isCatalogueRoot)
-        return Err(AppError.ApiError(error.status ?: 400, kind.name))
+        if (recordAccessUpdates) access.recordFailure(profileId, serverId, kind, now(), error.status == 401 && error.isCatalogueRoot)
+        val message = if (!recordAccessUpdates && error.code == OpdsTransportError.Code.SIGN_IN_METHOD_UNSUPPORTED && error.isCatalogueRoot) {
+            UNSUPPORTED_ROOT_VALIDATION_ERROR
+        } else {
+            kind.name
+        }
+        return Err(AppError.ApiError(error.status ?: 400, message))
     }
 
     internal fun stop() {
@@ -271,6 +285,10 @@ class OpdsCatalogueRepository(
         mutex.withLock { cache.clearAll(); descriptors.clear() }
     }
 }
+
+private const val WEB_PAGE_VALIDATION_ERROR = "WebPage"
+private const val NOT_CATALOGUE_VALIDATION_ERROR = "NotCatalogue"
+private const val UNSUPPORTED_ROOT_VALIDATION_ERROR = "SignInUnsupportedRoot"
 
 /** Only the kinds [catalogueRasterImageType] accepts; what comes back is checked again by its bytes. */
 private val IMAGE_ACCEPT_MEDIA_TYPES = listOf("image/webp", "image/png", "image/jpeg", "image/gif")

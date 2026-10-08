@@ -137,6 +137,24 @@ class CatalogueAddFlowTest {
     }
 
     @Test
+    fun credentials_are_never_sent_to_non_http_addresses_and_whitespace_is_trimmed() = runTest {
+        val unsupported = Harness(CatalogueValidation.Accepted, address = "ftp://books.home.lan/opds/")
+        unsupported.flow.updateNeedsAccount(true)
+        unsupported.flow.updateUsername("patron")
+        unsupported.flow.updatePassword("secret")
+        unsupported.flow.submit()
+
+        assertEquals(CatalogueAddError.Unreachable, unsupported.flow.state.value.error)
+        assertTrue(unsupported.validatorInputs.isEmpty())
+        assertTrue(unsupported.store.added.isEmpty())
+
+        val spaced = Harness(CatalogueValidation.Accepted, address = "  https://books.home.lan/opds/  ")
+        spaced.flow.submit()
+        assertEquals("https://books.home.lan/opds/", spaced.validatorInputs.single().first)
+        assertEquals("https://books.home.lan/opds/", spaced.store.added.single().address)
+    }
+
+    @Test
     fun cancelling_a_request_prevents_a_late_success_from_adding_anything() = runTest {
         val lateAnswer = CompletableDeferred<CatalogueValidation>()
         val harness = Harness(

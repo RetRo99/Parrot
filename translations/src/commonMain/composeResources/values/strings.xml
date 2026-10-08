@@ -1223,6 +1223,7 @@
     <string name="books_dock_search" tools:ignore="MissingTranslation">Search your library</string>
     <string name="books_dock_add" tools:ignore="MissingTranslation">Add</string>
     <string name="books_dock_add_description" tools:ignore="MissingTranslation">Add books</string>
+    <string name="books_dock_get_books" tools:ignore="MissingTranslation">Get books</string>
     <string name="books_dock_close_search" tools:ignore="MissingTranslation">Close search</string>
     <string name="books_search_recent_title" tools:ignore="MissingTranslation">RECENT SEARCHES</string>
     <string name="books_search_recent_clear" tools:ignore="MissingTranslation">Clear</string>
@@ -1832,6 +1833,22 @@
     <string name="catalogue_sources_lead" tools:ignore="MissingTranslation">Browse book catalogues and download books straight into your library.</string>
     <string name="catalogue_sources_section_yours" tools:ignore="MissingTranslation">Your catalogues</string>
     <string name="catalogue_sources_section_add" tools:ignore="MissingTranslation">Add a catalogue</string>
+    <string name="catalogue_add_library_title" tools:ignore="MissingTranslation">Add a library</string>
+    <string name="catalogue_add_question" tools:ignore="MissingTranslation">What are you connecting?</string>
+    <string name="catalogue_add_address_label" tools:ignore="MissingTranslation">Catalogue address</string>
+    <string name="catalogue_opds_card_description" tools:ignore="MissingTranslation">Browse and download books from a catalogue address.</string>
+    <string name="catalogue_another_catalogue_description" tools:ignore="MissingTranslation">Calibre, Kavita, Komga or any OPDS address.</string>
+    <string name="catalogue_add_by_address" tools:ignore="MissingTranslation">Add by address</string>
+    <string name="catalogue_add_address_helper" tools:ignore="MissingTranslation">The catalogue’s OPDS address, often ending in /opds.</string>
+    <string name="catalogue_needs_account" tools:ignore="MissingTranslation">Needs an account</string>
+    <string name="catalogue_needs_account_helper" tools:ignore="MissingTranslation">Turn on only if the catalogue asks you to sign in.</string>
+    <string name="catalogue_no_account_needed" tools:ignore="MissingTranslation">No account needed</string>
+    <string name="catalogue_add_checking" tools:ignore="MissingTranslation">Checking address…</string>
+    <string name="catalogue_add_signing_in" tools:ignore="MissingTranslation">Signing in…</string>
+    <string name="catalogue_downloads_count_accessibility" tools:ignore="MissingTranslation">Downloads, %1$d active or failed</string>
+    <string name="catalogue_add_error_wrong_credentials" tools:ignore="MissingTranslation">That username or password didn't work. Check the details and try again.</string>
+    <string name="catalogue_add_error_duplicate" tools:ignore="MissingTranslation">This catalogue is already in Get books.</string>
+    <string name="catalogue_add_error_save_failed" tools:ignore="MissingTranslation">Couldn't add this catalogue. Try again.</string>
     <!-- §3 Preset detail. %1$s is the preset's name -->
     <string name="catalogue_address_label" tools:ignore="MissingTranslation">Address</string>
     <string name="catalogue_preset_terms_link" tools:ignore="MissingTranslation">%1$s's terms of use</string>

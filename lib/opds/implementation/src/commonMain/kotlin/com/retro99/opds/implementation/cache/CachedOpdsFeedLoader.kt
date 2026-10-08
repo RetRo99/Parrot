@@ -35,7 +35,7 @@ class CachedOpdsFeedLoader(
         } else parser.parse(payload, fetched.effectiveUrl)
         if (parsed is OpdsParseResult.Rejected) {
             cache.invalidate(key)
-            return OpdsLoadResult.ParseFailure(parsed.rejection)
+            return OpdsLoadResult.ParseFailure(parsed.rejection, fetched.contentType)
         }
         parsed as OpdsParseResult.Document
         val controls = if (fetched.cacheControl.isNotEmpty()) fetched.cacheControl else if (notModified) cached!!.cacheControl else emptyList()

@@ -15,6 +15,6 @@ sealed interface OpdsLoadResult {
      */
     data class SavedCopy(val document: OpdsDocument, val storedAtMillis: Long) : OpdsLoadResult
     data class FetchFailure(val error: OpdsTransportError, val crossOriginPrivateNetwork: Boolean = false) : OpdsLoadResult
-    data class ParseFailure(val rejection: OpdsRejection) : OpdsLoadResult
+    data class ParseFailure(val rejection: OpdsRejection, val responseContentType: String? = null) : OpdsLoadResult
     data object NotModifiedWithoutCache : OpdsLoadResult
 }

@@ -48,7 +48,7 @@ import com.retro99.books.ui.positions.PositionsScreen
 import com.retro99.catalogue.ui.CatalogueBrowseScreen
 import com.retro99.catalogue.ui.CatalogueDownloadsScreen
 import com.retro99.catalogue.ui.CataloguePublicationScreen
-import com.retro99.catalogue.ui.CatalogueSourcesScreen
+import com.retro99.catalogue.ui.sources.CatalogueSourcesScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
@@ -347,6 +347,9 @@ fun HomeNavigation(
                                 )
                             },
                             onSearchActiveChanged = { active -> isLibrarySearchActive = active },
+                            onNavigateToGetBooks = {
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSources))
+                            },
                             onNavigateToLinkReview = {
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(HomeDestination.LinkReview),
@@ -526,10 +529,16 @@ fun HomeNavigation(
                         LinkReviewScreen(onBack = { requestBack("toolbar_back") })
                     }
 
-                    // Book catalogues (OPDS), Phase 4 foundations: placeholder screens. Nothing
-                    // navigates to these routes yet.
                     entry<HomeDestination.CatalogueSources> {
-                        CatalogueSourcesScreen(onBack = { requestBack("toolbar_back") })
+                        CatalogueSourcesScreen(
+                            onBack = { requestBack("toolbar_back") },
+                            onBrowseCatalogue = { sourceId ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueBrowse(sourceId)))
+                            },
+                            onDownloads = {
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueDownloads))
+                            },
+                        )
                     }
 
                     entry<HomeDestination.CatalogueBrowse> { destination ->

@@ -16,6 +16,10 @@ fun interface CatalogueAddressValidator {
     suspend fun validate(address: String, account: OpdsAccountDetails?): CatalogueValidation
 }
 
+fun interface CatalogueAddCompletion {
+    fun onCatalogueAdded(sourceId: String)
+}
+
 /** The only persistence edge used by the add flow. Implementations save accounts via the editor. */
 interface CatalogueAddStore {
     suspend fun existingAddresses(): Set<String>
@@ -34,6 +38,8 @@ sealed interface CatalogueValidation {
 }
 
 enum class CatalogueAddPhase { Idle, Checking, SigningIn }
+
+class DuplicateCatalogueAddressException : IllegalStateException("Duplicate catalogue address")
 
 enum class CatalogueAddError {
     WebPage,
@@ -94,7 +100,10 @@ class CatalogueAddFlow(
     private var activeJob: Job? = null
     private var validatedHttpWithoutAccount = false
 
-    fun updateAddress(value: String) = edit { copy(address = value, error = null, focusAddress = false) }
+    fun updateAddress(value: String) = edit {
+        validatedHttpWithoutAccount = false
+        copy(address = value, error = null, focusAddress = false)
+    }
     fun updateNeedsAccount(value: Boolean) = edit {
         copy(needsAccount = value, error = null, password = if (value) password else "")
     }
@@ -103,25 +112,31 @@ class CatalogueAddFlow(
 
     suspend fun submit(name: String = suggestedName(_state.value.address)) {
         val before = _state.value
-        if (!before.isEditable || before.address.isEmpty()) return
+        val address = before.address.trim()
+        if (!before.isEditable || address.isEmpty()) return
         val attempt = ++generation
         val job = currentCoroutineContext()[Job]
         activeJob = job
-        _state.value = before.copy(phase = CatalogueAddPhase.Checking, error = null, dialog = null)
+        _state.value = before.copy(address = address, phase = CatalogueAddPhase.Checking, error = null, dialog = null, focusAddress = false)
         try {
-            if (before.address in store.existingAddresses()) {
-                finish(attempt) { copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.DuplicateAddress) }
+            if (address in store.existingAddresses()) {
+                finish(attempt) { copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.DuplicateAddress, focusAddress = true) }
                 return
             }
 
-            val plainHttp = before.address.startsWith("http://", ignoreCase = true)
+            val plainHttp = address.startsWith("http://", ignoreCase = true)
+            val secureHttps = address.startsWith("https://", ignoreCase = true)
+            if (!plainHttp && !secureHttps) {
+                finish(attempt) { copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.Unreachable, focusAddress = true) }
+                return
+            }
             if (plainHttp && !allowHttp) {
                 finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = CatalogueAddDialog.HttpBlocked) }
                 return
             }
 
             // Basic credentials are never passed to the validator for a cleartext address.
-            val account = if (before.needsAccount && !plainHttp) {
+            val account = if (before.needsAccount && secureHttps) {
                 OpdsAccountDetails(before.username, before.password)
             } else {
                 null
@@ -129,7 +144,7 @@ class CatalogueAddFlow(
             if (account != null) {
                 finish(attempt) { copy(phase = CatalogueAddPhase.SigningIn) }
             }
-            val answer = validator.validate(before.address, account)
+            val answer = validator.validate(address, account)
             currentCoroutineContext().ensureActive()
             if (attempt != generation) return
 
@@ -143,16 +158,16 @@ class CatalogueAddFlow(
                         validatedHttpWithoutAccount = true
                         finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = CatalogueAddDialog.HttpWarning) }
                     }
-                    else -> persist(attempt, name, before.address, account)
+                    else -> persist(attempt, name, address, account)
                 }
                 CatalogueValidation.WebPage -> finish(attempt) {
-                    copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.WebPage)
+                    copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.WebPage, focusAddress = true)
                 }
                 CatalogueValidation.Unreachable -> finish(attempt) {
-                    copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.Unreachable)
+                    copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.Unreachable, focusAddress = true)
                 }
                 CatalogueValidation.NotCatalogue -> finish(attempt) {
-                    copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.NotCatalogue)
+                    copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.NotCatalogue, focusAddress = true)
                 }
                 CatalogueValidation.NeedsBasic -> if (plainHttp) {
                     finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = CatalogueAddDialog.PasswordHttpBlocked) }
@@ -162,6 +177,7 @@ class CatalogueAddFlow(
                             phase = CatalogueAddPhase.Idle,
                             needsAccount = true,
                             error = CatalogueAddError.SignInNeeded,
+                            focusAddress = true,
                         )
                     }
                 }
@@ -175,13 +191,15 @@ class CatalogueAddFlow(
                     copy(phase = CatalogueAddPhase.Idle, dialog = CatalogueAddDialog.Certificate)
                 }
                 CatalogueValidation.InvalidCredentials -> finish(attempt) {
-                    copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.WrongCredentials, password = "")
+                    copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.WrongCredentials, password = "", focusAddress = false)
                 }
             }
         } catch (cancellation: CancellationException) {
             throw cancellation
+        } catch (_: DuplicateCatalogueAddressException) {
+            finish(attempt) { copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.DuplicateAddress) }
         } catch (_: Exception) {
-            finish(attempt) { copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.SaveFailed) }
+            finish(attempt) { copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.SaveFailed, focusAddress = true) }
         } finally {
             if (attempt == generation) activeJob = null
         }
@@ -201,7 +219,10 @@ class CatalogueAddFlow(
 
     fun changeAddress() {
         val dialog = _state.value.dialog
-        if (dialog != CatalogueAddDialog.PasswordHttpBlocked && dialog != CatalogueAddDialog.HttpBlocked) return
+        if (dialog != CatalogueAddDialog.PasswordHttp &&
+            dialog != CatalogueAddDialog.PasswordHttpBlocked &&
+            dialog != CatalogueAddDialog.HttpBlocked
+        ) return
         _state.update { it.copy(dialog = null, focusAddress = true) }
     }
 
@@ -230,8 +251,10 @@ class CatalogueAddFlow(
             finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = null, addedSourceId = sourceId, error = null) }
         } catch (cancellation: CancellationException) {
             throw cancellation
+        } catch (_: DuplicateCatalogueAddressException) {
+            finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = null, error = CatalogueAddError.DuplicateAddress, focusAddress = true) }
         } catch (_: Exception) {
-            finish(attempt) { copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.SaveFailed) }
+            finish(attempt) { copy(phase = CatalogueAddPhase.Idle, error = CatalogueAddError.SaveFailed, focusAddress = true) }
         }
     }
 
@@ -243,12 +266,17 @@ class CatalogueAddFlow(
         if (attempt == generation) _state.update(transform)
     }
 
-    private fun suggestedName(address: String): String = address
-        .removePrefix("https://")
-        .removePrefix("http://")
+    private fun suggestedName(address: String): String = address.trim()
+        .removeScheme()
         .substringBefore('/')
         .substringBefore('?')
         .ifBlank { "Book catalogue" }
+
+    private fun String.removeScheme(): String = when {
+        startsWith("https://", ignoreCase = true) -> drop("https://".length)
+        startsWith("http://", ignoreCase = true) -> drop("http://".length)
+        else -> this
+    }
 }
 
 /** Waiting, running, failed and interrupted rows remain actionable in Downloads. */
