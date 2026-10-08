@@ -1,0 +1,180 @@
+package com.retro99.opds.implementation.transport
+
+import com.retro99.opds.api.*
+import com.retro99.opds.api.model.OpdsBudgets
+import com.retro99.opds.implementation.url.Rfc3986ReferenceResolver
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.request.*
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.*
+import kotlin.io.encoding.Base64
+import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.CancellationException
+import kotlin.time.Clock
+
+/** One isolated client per source. No auth/cookie/logging plugins or shared default headers. */
+class KtorOpdsTransport(
+    engine: HttpClientEngine,
+    private val catalogueRoot: String,
+    private val nowMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    private val log: (String) -> Unit = {},
+) : OpdsTransport {
+    private val resolver = Rfc3986ReferenceResolver()
+    private val trustedOrigin = origin(Url(catalogueRoot))
+    private val client = HttpClient(engine) {
+        followRedirects = false
+        expectSuccess = false
+        install(HttpTimeout) { requestTimeoutMillis = 30_000; connectTimeoutMillis = 15_000; socketTimeoutMillis = 30_000 }
+    }
+    override fun close() = client.close()
+
+    override suspend fun fetch(request: OpdsRequest): OpdsFetchResult {
+        val rootContext = request.isCatalogueRoot ?: (request.url == catalogueRoot)
+        fun failure(code: OpdsTransportError.Code, status: Int? = null, retry: Long? = null) =
+            OpdsFetchResult.Failure(OpdsTransportError(code, status, retryAfterMillis = retry, isCatalogueRoot = rootContext))
+        var current = request.url
+        var redirects = 0
+        var privateNetwork = false
+        val visited = mutableSetOf<String>()
+        try {
+            while (true) {
+                val invalid = validate(current, request.allowCleartext)
+                if (invalid != null) return failure(invalid)
+                val url = Url(current)
+                current = url.toString().substringBefore('#')
+                if (request.credentials is OpdsCredentials.Basic && url.protocol.name == "http" && redirects == 0) return failure(OpdsTransportError.Code.PASSWORD_OVER_HTTP)
+                if (!visited.add(current)) return failure(OpdsTransportError.Code.REDIRECT_LOOP)
+                if (origin(url) != trustedOrigin && localAddress(url.host)) privateNetwork = true
+                log("opds.request")
+                val step = client.prepareGet(current) {
+                    headers.append(HttpHeaders.Accept, request.acceptMediaTypes.joinToString(", "))
+                    if (redirects == 0 && origin(url) == trustedOrigin && url.protocol.name == "https" && request.credentials is OpdsCredentials.Basic) {
+                        val credential = request.credentials as OpdsCredentials.Basic
+                        headers.append(HttpHeaders.Authorization, "Basic ${Base64.Default.encode("${credential.username}:${credential.password}".encodeToByteArray())}")
+                    }
+                    if (redirects == 0) request.cacheValidators.orEmpty().forEach { (name, value) ->
+                        if (name.equals(HttpHeaders.IfNoneMatch, true) || name.equals(HttpHeaders.IfModifiedSince, true)) headers.append(name, value)
+                    }
+                }.execute { response ->
+                    val status = response.status.value
+                    if (status in REDIRECT_STATUSES) {
+                        val location = response.headers[HttpHeaders.Location]
+                        if (location == null) Step.Done(failure(OpdsTransportError.Code.REDIRECT_MISSING_LOCATION, status)) else Step.Redirect(location)
+                    } else if (status >= 400) {
+                        val code = when (status) {
+                            401 -> if (hasBasic(response.headers.getAll(HttpHeaders.WWWAuthenticate).orEmpty())) OpdsTransportError.Code.SIGN_IN_NEEDED else OpdsTransportError.Code.SIGN_IN_METHOD_UNSUPPORTED
+                            403 -> OpdsTransportError.Code.FORBIDDEN
+                            404 -> OpdsTransportError.Code.NOT_FOUND
+                            429 -> OpdsTransportError.Code.RATE_LIMITED
+                            503 -> OpdsTransportError.Code.SERVICE_UNAVAILABLE
+                            in 400..499 -> OpdsTransportError.Code.CLIENT_ERROR
+                            else -> OpdsTransportError.Code.SERVER_ERROR
+                        }
+                        Step.Done(failure(code, status, if (status == 429 || status == 503) retryAfter(response.headers[HttpHeaders.RetryAfter]) else null))
+                    } else {
+                        if (response.headers[HttpHeaders.ContentLength]?.toLongOrNull()?.let { it > OpdsBudgets.MAX_RESPONSE_BYTES } == true) {
+                            Step.Done(failure(OpdsTransportError.Code.RESPONSE_TOO_LARGE, status))
+                        } else {
+                            val channel = response.bodyAsChannel()
+                            val chunks = mutableListOf<ByteArray>()
+                            val buffer = ByteArray(8192)
+                            var count = 0
+                            var exceeded = false
+                            while (true) {
+                                // One-byte overflow probe at the boundary; never retain excess bytes.
+                                val read = channel.readAvailable(buffer, 0, minOf(buffer.size, OpdsBudgets.MAX_RESPONSE_BYTES.toInt() - count + 1))
+                                if (read < 0) break
+                                if (read == 0) continue
+                                if (count.toLong() + read > OpdsBudgets.MAX_RESPONSE_BYTES) { exceeded = true; channel.cancel(null); break }
+                                chunks += buffer.copyOf(read)
+                                count += read
+                            }
+                            if (exceeded) Step.Done(failure(OpdsTransportError.Code.RESPONSE_TOO_LARGE, status)) else {
+                                val body = ByteArray(count)
+                                var offset = 0
+                                chunks.forEach { it.copyInto(body, offset); offset += it.size }
+                                Step.Done(OpdsFetchResult.Response(status, response.headers.entries().associate { it.key.lowercase() to it.value }, body, current, crossOriginPrivateNetwork = privateNetwork))
+                            }
+                        }
+                    }
+                }
+                when (step) {
+                    is Step.Done -> { log("opds.complete"); return step.result }
+                    is Step.Redirect -> {
+                        if (redirects >= OpdsBudgets.MAX_REDIRECTS) return failure(OpdsTransportError.Code.REDIRECT_LIMIT)
+                        val target = resolver.resolve(current, step.location)
+                        if (url.protocol.name == "https" && target.startsWith("http:", true)) return failure(OpdsTransportError.Code.REDIRECT_SCHEME_DOWNGRADE)
+                        current = target
+                        redirects++
+                        log("opds.redirect")
+                    }
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            log("opds.failure")
+            return failure(networkError(error))
+        }
+    }
+
+    private fun validate(value: String, allowHttp: Boolean): OpdsTransportError.Code? {
+        val scheme = value.substringBefore(':', "").lowercase()
+        if (scheme.isEmpty()) return OpdsTransportError.Code.MALFORMED_URL
+        if (scheme !in setOf("https", "http")) return OpdsTransportError.Code.UNSUPPORTED_SCHEME
+        if (!value.startsWith("$scheme://", true) || value.any { it.isWhitespace() || it.code < 32 }) return OpdsTransportError.Code.MALFORMED_URL
+        val authority = value.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#')
+        if ('@' in authority) return OpdsTransportError.Code.MALFORMED_URL
+        val url = try { Url(value) } catch (_: Exception) { return OpdsTransportError.Code.MALFORMED_URL }
+        if (url.host.isEmpty() || '%' in url.host || url.user != null || url.password != null) return OpdsTransportError.Code.MALFORMED_URL
+        if (scheme == "http" && !allowHttp) return OpdsTransportError.Code.CLEARTEXT_NOT_ALLOWED
+        return null
+    }
+
+    private fun origin(url: Url) = Triple(url.protocol.name.lowercase(), url.host.lowercase(), url.port)
+
+    private fun localAddress(host: String): Boolean {
+        val h = host.lowercase().removeSurrounding("[", "]").trimEnd('.')
+        if (h == "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".lan")) return true
+        if (':' in h) return h == "::1" || h == "::" || h.startsWith("fc") || h.startsWith("fd") || h.startsWith("fe80:") || h.startsWith("::ffff:") && localAddress(h.substringAfter("::ffff:"))
+        val octets = h.split('.').map { it.toIntOrNull() ?: return false }
+        if (octets.size != 4 || octets.any { it !in 0..255 }) return false
+        return octets[0] in setOf(0, 10, 127) || octets[0] == 172 && octets[1] in 16..31 || octets[0] == 192 && octets[1] == 168 || octets[0] == 169 && octets[1] == 254
+    }
+
+    private fun hasBasic(headers: List<String>): Boolean = headers.any { header ->
+        var quoted = false
+        var escaped = false
+        val outside = buildString { for (c in header) {
+            if (quoted) { if (escaped) escaped = false else if (c == '\\') escaped = true else if (c == '"') quoted = false; append(' ') }
+            else if (c == '"') { quoted = true; append(' ') } else append(c)
+        } }
+        Regex("(?:^|,)\\s*Basic(?:\\s+|$)", RegexOption.IGNORE_CASE).containsMatchIn(outside)
+    }
+
+    private fun retryAfter(value: String?): Long? {
+        if (value == null) return null
+        value.trim().toLongOrNull()?.let { return if (it in 0..Long.MAX_VALUE / 1000) it * 1000 else null }
+        return try { (value.fromHttpToGmtDate().timestamp - nowMillis()).coerceAtLeast(0) } catch (_: Exception) { null }
+    }
+
+    private fun networkError(error: Throwable): OpdsTransportError.Code {
+        var cause: Throwable? = error
+        repeat(8) {
+            val current = cause ?: return OpdsTransportError.Code.UNREACHABLE
+            val diagnostic = "${current::class.simpleName} ${current.message}".lowercase()
+            if ("timeout" in diagnostic || "timed out" in diagnostic || "nsurlerrordomain" in diagnostic && "-1001" in diagnostic) return OpdsTransportError.Code.TIMEOUT
+            if ("ssl" in diagnostic || "tls" in diagnostic || "certificate" in diagnostic || "nsurlerrordomain" in diagnostic && Regex("-120[0-6]").containsMatchIn(diagnostic)) return OpdsTransportError.Code.TLS_UNTRUSTED
+            cause = current.cause
+        }
+        return OpdsTransportError.Code.UNREACHABLE
+    }
+
+    private sealed interface Step {
+        data class Redirect(val location: String) : Step
+        data class Done(val result: OpdsFetchResult) : Step
+    }
+    private companion object { val REDIRECT_STATUSES = setOf(301, 302, 303, 307, 308) }
+}
