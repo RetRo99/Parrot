@@ -5,6 +5,8 @@ package com.retro99.database.api.catalogue
  *
  * [detailUrl] is where the publication is listed. It is kept only so the download link can be
  * looked up again, stays on this device and is cleared when the request completes.
+ * [expectedSizeBytes] is the size the catalogue declared; on a "too large" failure it is the
+ * size that was over the limit.
  */
 data class CatalogueAcquisitionEntity(
     val requestId: String,
@@ -29,6 +31,11 @@ data class CatalogueAcquisitionEntity(
     val updatedAt: Long,
     val completedAt: Long?,
     val attempts: Int,
+    /** The catalogue's rights text and `updated` value when the request was made, for provenance. */
+    val rightsText: String? = null,
+    val catalogueUpdated: String? = null,
+    /** For a storage failure: how many bytes had to be free, when that was known. */
+    val neededBytes: Long? = null,
 ) {
     override fun toString(): String = "CatalogueAcquisitionEntity($requestId, $state)"
 

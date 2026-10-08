@@ -1,0 +1,18 @@
+-- Joining catalogue downloads to the library: what the "too large" and "not enough space"
+-- messages need, what provenance records, a lookup by listing identity, and the journal that
+-- lets a half-done import be finished or undone after a crash.
+ALTER TABLE catalogue_acquisitions ADD COLUMN rights_text TEXT;
+ALTER TABLE catalogue_acquisitions ADD COLUMN catalogue_updated TEXT;
+ALTER TABLE catalogue_acquisitions ADD COLUMN needed_bytes INTEGER;
+
+CREATE INDEX IF NOT EXISTS idx_catalogue_book_sources_detail
+ON catalogue_book_sources(source_id, detail_identity);
+
+CREATE TABLE IF NOT EXISTS library_import_journal (
+    entry_id TEXT NOT NULL PRIMARY KEY,
+    library_book_id TEXT NOT NULL,
+    media_type TEXT NOT NULL,
+    library_path TEXT NOT NULL,
+    cover_path TEXT,
+    created_at INTEGER NOT NULL
+);

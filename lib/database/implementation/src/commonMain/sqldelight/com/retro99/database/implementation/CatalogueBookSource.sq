@@ -22,11 +22,31 @@ ON catalogue_book_sources(source_id, publication_key);
 CREATE INDEX IF NOT EXISTS idx_catalogue_book_sources_book
 ON catalogue_book_sources(library_book_id);
 
+CREATE INDEX IF NOT EXISTS idx_catalogue_book_sources_detail
+ON catalogue_book_sources(source_id, detail_identity);
+
 insertCatalogueBookSource:
 INSERT INTO catalogue_book_sources(
     id, library_book_id, source_id, catalogue_name, catalogue_origin, publication_key,
     detail_identity, selected_format, rights_text, catalogue_updated, content_hash, acquired_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- The id is the download request's id, so writing the same request's row again changes nothing.
+insertCatalogueBookSourceIfAbsent:
+INSERT OR IGNORE INTO catalogue_book_sources(
+    id, library_book_id, source_id, catalogue_name, catalogue_origin, publication_key,
+    detail_identity, selected_format, rights_text, catalogue_updated, content_hash, acquired_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- "In your library": a row counts only while its library book still exists. A listing entry
+-- and the edition downloaded from it can carry different identities, so both columns match.
+findCatalogueBooksInLibrary:
+SELECT s.publication_key, s.detail_identity, s.library_book_id
+FROM catalogue_book_sources s
+JOIN library_books b ON b.library_book_id = s.library_book_id AND b.deleted_at IS NULL
+WHERE s.source_id = :sourceId
+AND (s.publication_key IN :identities OR s.detail_identity IN :identities)
+ORDER BY s.acquired_at ASC, s.id ASC;
 
 getCatalogueBookSourcesForBook:
 SELECT * FROM catalogue_book_sources WHERE library_book_id = ? ORDER BY acquired_at ASC, id ASC;

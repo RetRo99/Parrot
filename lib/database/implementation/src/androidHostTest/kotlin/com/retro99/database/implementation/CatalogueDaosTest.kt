@@ -4,9 +4,12 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.retro99.database.api.catalogue.CatalogueAcquisitionEntity
 import com.retro99.database.api.catalogue.CatalogueBookSourceEntity
 import com.retro99.database.api.catalogue.CatalogueDocumentEntity
+import com.retro99.database.api.catalogue.CatalogueLibraryMatch
+import com.retro99.database.api.library.LibraryImportJournalEntry
 import com.retro99.database.implementation.dao.catalogue.CatalogueAcquisitionsSqlDelightDao
 import com.retro99.database.implementation.dao.catalogue.CatalogueBookSourcesSqlDelightDao
 import com.retro99.database.implementation.dao.catalogue.CatalogueDocumentsSqlDelightDao
+import com.retro99.database.implementation.dao.library.LibraryImportJournalSqlDelightDao
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -54,6 +57,9 @@ class CatalogueDaosTest {
             failureReason = "connection",
             completedAt = 99,
             attempts = 2,
+            rightsText = "Public domain in the USA.",
+            catalogueUpdated = "2026-10-01T00:00:00Z",
+            neededBytes = 2048,
         )
 
         // When
@@ -182,6 +188,87 @@ class CatalogueDaosTest {
     }
 
     @Test
+    fun `writing the same provenance row again changes nothing`() = runBlocking {
+        // Given
+        val first = source("request-1", book = "lib-1", sourceId = "source-1", publication = "urn:book:1", at = 1)
+        sources.insertIfAbsent(first)
+
+        // When
+        sources.insertIfAbsent(first.copy(libraryBookId = "lib-other", acquiredAt = 9))
+
+        // Then
+        assertEquals(listOf(first), sources.getForSource("source-1"))
+    }
+
+    @Test
+    fun `an acquired publication is found by its key or by the listing entry it came from`() = runBlocking {
+        // Given: the edition urn:edition:1 was downloaded from the listing entry urn:entry:p1
+        libraryBook("lib-1")
+        sources.insert(source("p1", book = "lib-1", sourceId = "source-1", publication = "urn:edition:1", at = 1))
+
+        // Then
+        val match = CatalogueLibraryMatch("urn:edition:1", "urn:entry:p1", "lib-1")
+        assertEquals(listOf(match), sources.findInLibrary("source-1", listOf("urn:edition:1")))
+        assertEquals(listOf(match), sources.findInLibrary("source-1", listOf("urn:entry:p1")))
+        assertEquals(listOf(match), sources.findInLibrary("source-1", listOf("urn:entry:p1", "urn:edition:1", "urn:x")))
+        assertEquals(emptyList(), sources.findInLibrary("source-1", listOf("urn:other")))
+        assertEquals(emptyList(), sources.findInLibrary("source-2", listOf("urn:edition:1")))
+        assertEquals(emptyList(), sources.findInLibrary("source-1", emptyList()))
+    }
+
+    @Test
+    fun `a publication whose library book is gone is not in the library`() = runBlocking {
+        // Given
+        libraryBook("lib-kept")
+        libraryBook("lib-removed", deletedAt = "2026-10-02T00:00:00Z")
+        sources.insert(source("p1", book = "lib-kept", sourceId = "source-1", publication = "urn:book:1", at = 1))
+        sources.insert(source("p2", book = "lib-removed", sourceId = "source-1", publication = "urn:book:2", at = 2))
+        sources.insert(source("p3", book = "lib-never", sourceId = "source-1", publication = "urn:book:3", at = 3))
+
+        // When
+        val found = sources.findInLibrary("source-1", listOf("urn:book:1", "urn:book:2", "urn:book:3"))
+
+        // Then
+        assertEquals(listOf("lib-kept"), found.map { it.libraryBookId })
+    }
+
+    @Test
+    fun `a whole page of entries is looked up at once`() = runBlocking {
+        // Given: more identities than fit one statement
+        libraryBook("lib-1")
+        sources.insert(source("p1", book = "lib-1", sourceId = "source-1", publication = "urn:book:900", at = 1))
+        val page = (1..1000).map { "urn:book:$it" }
+
+        // When
+        val found = sources.findInLibrary("source-1", page)
+
+        // Then
+        assertEquals(listOf("urn:book:900"), found.map { it.publicationKey })
+    }
+
+    @Test
+    fun `the import journal keeps an entry until it is cleared`() = runBlocking {
+        // Given
+        val journal = LibraryImportJournalSqlDelightDao { database }
+        val withCover = LibraryImportJournalEntry("e1", "lib-1", "ebook", "/library/lib-1_ebook.epub", "/covers/lib-1.png", 5)
+        val plain = LibraryImportJournalEntry("e2", "lib-2", "readaloud", "/library/lib-2_readaloud.epub", null, 6)
+
+        // When
+        journal.record(plain)
+        journal.record(withCover)
+        journal.record(withCover)
+
+        // Then
+        assertEquals(listOf(withCover, plain), journal.getAll())
+
+        // When
+        journal.clear("e1")
+
+        // Then
+        assertEquals(listOf(plain), journal.getAll())
+    }
+
+    @Test
     fun `provenance follows a merged book and goes with a deleted one`() = runBlocking {
         // Given
         sources.insert(source("p1", book = "lib-1", sourceId = "source-1", publication = "urn:book:1", at = 1))
@@ -246,6 +333,17 @@ class CatalogueDaosTest {
         // Then
         assertEquals(listOf("c"), documents.oldestKeys(10).map { it.requestUrl })
         assertEquals(3L, documents.totalSizeBytes())
+    }
+
+    private fun libraryBook(id: String, deletedAt: String? = null) {
+        driver.execute(
+            identifier = null,
+            sql = "INSERT INTO library_books(library_book_id, title, added_at, deleted_at) VALUES (?, 'Book', 'a', ?)",
+            parameters = 2,
+        ) {
+            bindString(0, id)
+            bindString(1, deletedAt)
+        }
     }
 
     private fun acquisition(

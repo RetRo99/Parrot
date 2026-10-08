@@ -6,6 +6,15 @@ import kotlinx.coroutines.flow.Flow
 interface CatalogueBookSourcesDatabase {
     suspend fun insert(source: CatalogueBookSourceEntity)
 
+    /** Does nothing when a row with this id exists, so it is safe to repeat. */
+    suspend fun insertIfAbsent(source: CatalogueBookSourceEntity)
+
+    /**
+     * Rows of [sourceId] whose publication key or detail identity is one of [identities] and
+     * whose library book still exists, oldest first.
+     */
+    suspend fun findInLibrary(sourceId: String, identities: Collection<String>): List<CatalogueLibraryMatch>
+
     suspend fun getForBook(libraryBookId: String): List<CatalogueBookSourceEntity>
 
     /** The "already in your library" lookup. */
@@ -25,3 +34,10 @@ interface CatalogueBookSourcesDatabase {
 
     suspend fun deleteAll()
 }
+
+/** One acquired publication that is still in the library. */
+data class CatalogueLibraryMatch(
+    val publicationKey: String,
+    val detailIdentity: String?,
+    val libraryBookId: String,
+)

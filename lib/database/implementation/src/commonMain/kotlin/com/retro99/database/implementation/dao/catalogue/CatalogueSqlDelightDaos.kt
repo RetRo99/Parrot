@@ -6,6 +6,7 @@ import com.retro99.database.api.catalogue.CatalogueAcquisitionEntity
 import com.retro99.database.api.catalogue.CatalogueAcquisitionsDatabase
 import com.retro99.database.api.catalogue.CatalogueBookSourceEntity
 import com.retro99.database.api.catalogue.CatalogueBookSourcesDatabase
+import com.retro99.database.api.catalogue.CatalogueLibraryMatch
 import com.retro99.database.api.catalogue.CatalogueDocumentEntity
 import com.retro99.database.api.catalogue.CatalogueDocumentKey
 import com.retro99.database.api.catalogue.CatalogueDocumentsDatabase
@@ -49,6 +50,9 @@ internal class CatalogueAcquisitionsSqlDelightDao(
             updated_at = acquisition.updatedAt,
             completed_at = acquisition.completedAt,
             attempts = acquisition.attempts.toLong(),
+            rights_text = acquisition.rightsText,
+            catalogue_updated = acquisition.catalogueUpdated,
+            needed_bytes = acquisition.neededBytes,
         )
         Unit
     }
@@ -67,6 +71,7 @@ internal class CatalogueAcquisitionsSqlDelightDao(
             updated_at = acquisition.updatedAt,
             completed_at = acquisition.completedAt,
             attempts = acquisition.attempts.toLong(),
+            needed_bytes = acquisition.neededBytes,
             request_id = acquisition.requestId,
         )
         Unit
@@ -188,6 +193,36 @@ internal class CatalogueBookSourcesSqlDelightDao(
         Unit
     }
 
+    override suspend fun insertIfAbsent(source: CatalogueBookSourceEntity) = withContext(Dispatchers.IO) {
+        queries.insertCatalogueBookSourceIfAbsent(
+            id = source.id,
+            library_book_id = source.libraryBookId,
+            source_id = source.sourceId,
+            catalogue_name = source.catalogueName,
+            catalogue_origin = source.catalogueOrigin,
+            publication_key = source.publicationKey,
+            detail_identity = source.detailIdentity,
+            selected_format = source.selectedFormat,
+            rights_text = source.rightsText,
+            catalogue_updated = source.catalogueUpdated,
+            content_hash = source.contentHash,
+            acquired_at = source.acquiredAt,
+        )
+        Unit
+    }
+
+    override suspend fun findInLibrary(
+        sourceId: String,
+        identities: Collection<String>,
+    ): List<CatalogueLibraryMatch> = withContext(Dispatchers.IO) {
+        // Each identity is bound twice; stay well under SQLite's limit on bound values.
+        identities.distinct().chunked(MAX_IDENTITIES_PER_QUERY).flatMap { chunk ->
+            queries.findCatalogueBooksInLibrary(sourceId, chunk).executeAsList().map { row ->
+                CatalogueLibraryMatch(row.publication_key, row.detail_identity, row.library_book_id)
+            }
+        }.distinct()
+    }
+
     override suspend fun getForBook(libraryBookId: String): List<CatalogueBookSourceEntity> =
         withContext(Dispatchers.IO) {
             queries.getCatalogueBookSourcesForBook(libraryBookId).executeAsList()
@@ -300,6 +335,8 @@ internal class CatalogueDocumentsSqlDelightDao(
     }
 }
 
+private const val MAX_IDENTITIES_PER_QUERY = 400
+
 private fun Catalogue_acquisitions.toEntity() = CatalogueAcquisitionEntity(
     requestId = request_id,
     sourceId = source_id,
@@ -323,6 +360,9 @@ private fun Catalogue_acquisitions.toEntity() = CatalogueAcquisitionEntity(
     updatedAt = updated_at,
     completedAt = completed_at,
     attempts = attempts.toInt(),
+    rightsText = rights_text,
+    catalogueUpdated = catalogue_updated,
+    neededBytes = needed_bytes,
 )
 
 private fun Catalogue_book_sources.toEntity() = CatalogueBookSourceEntity(

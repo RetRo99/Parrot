@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS catalogue_acquisitions (
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     completed_at INTEGER,
-    attempts INTEGER NOT NULL DEFAULT 0
+    attempts INTEGER NOT NULL DEFAULT 0,
+    rights_text TEXT,
+    catalogue_updated TEXT,
+    needed_bytes INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_catalogue_acquisitions_queue
@@ -37,8 +40,8 @@ INSERT INTO catalogue_acquisitions(
     request_id, source_id, publication_key, detail_identity, detail_url, representation_key,
     title, author, cover_reference, catalogue_name, state, queue_position, staging_path,
     expected_size_bytes, bytes_so_far, local_hash, library_book_id, failure_reason,
-    created_at, updated_at, completed_at, attempts
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    created_at, updated_at, completed_at, attempts, rights_text, catalogue_updated, needed_bytes
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 updateCatalogueAcquisition:
 UPDATE catalogue_acquisitions SET
@@ -53,7 +56,8 @@ UPDATE catalogue_acquisitions SET
     failure_reason = ?,
     updated_at = ?,
     completed_at = ?,
-    attempts = ?
+    attempts = ?,
+    needed_bytes = ?
 WHERE request_id = ?;
 
 updateCatalogueAcquisitionProgress:

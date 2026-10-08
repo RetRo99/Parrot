@@ -15,6 +15,7 @@ import com.retro99.database.api.links.LinkedCopyWritesDatabase
 import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBookMergeDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.database.api.library.LibraryImportJournalDatabase
 import com.retro99.database.api.reader.ReaderSettingsDatabase
 import com.retro99.database.api.saved.SavedItemsDatabase
 import com.retro99.database.api.recap.SessionRecapDatabase
@@ -39,6 +40,7 @@ import com.retro99.database.implementation.dao.links.LinkedCopyWritesDatabaseImp
 import com.retro99.database.implementation.dao.links.BookLinksSqlDelightDao
 import com.retro99.database.implementation.dao.library.LibraryBooksDatabaseImpl
 import com.retro99.database.implementation.dao.library.LibraryBooksSqlDelightDao
+import com.retro99.database.implementation.dao.library.LibraryImportJournalSqlDelightDao
 import com.retro99.database.implementation.dao.reader.ReaderSettingsDatabaseImpl
 import com.retro99.database.implementation.dao.reader.ReaderSettingsSqlDelightDao
 import com.retro99.database.implementation.dao.recap.SessionRecapSqlDelightDao
@@ -239,6 +241,14 @@ class DatabaseModule {
         databaseManager: DatabaseManager,
     ): CatalogueBookSourcesDatabase {
         return CatalogueBookSourcesSqlDelightDao { databaseManager.getDatabase() }
+    }
+
+    // Not DataClearable either: a half-done import must still be settled after sign-out.
+    @Single
+    internal fun provideLibraryImportJournalDatabase(
+        databaseManager: DatabaseManager,
+    ): LibraryImportJournalDatabase {
+        return LibraryImportJournalSqlDelightDao { databaseManager.getDatabase() }
     }
 
     @Single
