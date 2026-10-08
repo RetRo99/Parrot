@@ -345,3 +345,149 @@ mark { background: var(--welcome-highlight); color: var(--welcome-page-ink); }
   .connected { grid-column: 2; justify-self: start; }
   .server-description > span { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
 }
+
+/* Motion: CSS only. Movement stops for people who ask for reduced motion; the page cross-fade,
+   which is opacity alone, stays. Only transform, opacity and clip-path move, so nothing triggers layout. */
+:root {
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --ease-in-out: cubic-bezier(.77, 0, .175, 1);
+}
+
+/* Pages cross-fade into each other; no script involved. */
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .2s; animation-timing-function: var(--ease-out); }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Read-along loops through the page, one sentence per 2.2s slot, and the player's button pauses it.
+     Sentences switch without a fade so text contrast holds at every moment. Negative delays put
+     each sentence at its place in the 13.2s cycle from the first frame. */
+  .reader-page .read-step { animation: read-lit 13.2s step-end infinite; }
+  .reader-page .read-step:nth-child(2) { animation-delay: -11s; }
+  .reader-page .read-step:nth-child(3) { animation-delay: -8.8s; }
+  .reader-page .read-step:nth-child(4) { animation-delay: -6.6s; }
+  .reader-page .read-later:nth-child(1) { animation-delay: -4.4s; }
+  .reader-page .read-later:nth-child(2) { animation-delay: -2.2s; }
+  .progress-track span { transform-origin: left; animation: read-progress 13.2s linear infinite; }
+  .reader-illustration:has(.reader-pause:checked) :is(.read-step, .progress-track span) { animation-play-state: paused; }
+  .pause-symbol .reader-pause { display: block; }
+  .reader-player .pause-symbol { cursor: pointer; transition: transform .16s var(--ease-out); }
+  .pause-symbol:active { transform: scale(.97); }
+
+  /* The headline is read once too: the read-along highlight passes over each line and leaves. */
+  .hero h1 span::after { animation: headline-read 1.5s var(--ease-in-out) .2s; }
+  .hero h1 span + br + span::after { animation-delay: 1s; }
+
+  /* Feedback on the things that really are clickable. Hover only where there is a real pointer. */
+  a { transition: text-underline-offset .15s ease; }
+  .button { transition: transform .16s var(--ease-out), box-shadow .16s var(--ease-out); }
+  .button:active { transform: scale(.97); }
+  @media (hover: hover) and (pointer: fine) {
+    a:hover { text-underline-offset: .28em; }
+    .button:hover { transform: translateY(-1px); box-shadow: 0 6px 14px -8px var(--ink2); }
+    .button:hover:active { transform: scale(.97); box-shadow: none; }
+  }
+
+  /* Sections settle into place as they scroll into view. Position only, so nothing is ever hidden. */
+  @supports (animation-timeline: view()) {
+    .positions-illustration, .server-illustration, .server-row, .card, .cloud-block {
+      /* Longhands on purpose: the build's minifier folds animation-timeline into the animation
+         shorthand, which browsers reject. */
+      animation-name: rise-in;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 90%;
+    }
+    /* While an illustration is on screen it demonstrates itself once, so it reads as a demo
+       rather than a control. It replays on the next visit. */
+    .positions-illustration, .server-illustration, .cloud-block {
+      animation-name: rise-in, in-view;
+      animation-fill-mode: both, none;
+      animation-timeline: view(), view();
+      animation-range: entry 0% entry 90%, entry 75% exit 25%;
+    }
+    @container style(--in-view: 1) {
+      /* Positions, in three beats: a tap on the button; the eBook's place lights up as the source;
+         a copy of it travels down into the audiobook row and replaces the old place. Both places
+         then stay marked, so the finished card still shows that they match. */
+      .positions-illustration::after { animation: demo-touch 4.6s var(--ease-out) both; }
+      .illustration-action { animation: demo-press 4.6s var(--ease-out) both; }
+      .latest .position-content > strong::before { animation: demo-mark .3s var(--ease-out) 1.45s forwards; }
+      strong.position-swap::after { animation: demo-fly 1s var(--ease-in-out) 1.8s; }
+      strong.position-swap > :first-child { animation: demo-hide 2.5s step-end forwards; }
+      strong.position-swap > .position-after { animation: demo-show 2.8s step-end forwards; }
+      strong > .position-after::before { animation: demo-mark 2.8s step-end forwards; }
+      /* As in the app, the version that was just set becomes the latest one. */
+      .latest .position-label > strong { animation: demo-hide 2.8s step-end forwards; }
+      .position-label > .position-after { animation: demo-connect .3s var(--ease-out) 2.8s both; }
+      .position-swap > :first-child { animation: demo-roll-out .4s var(--ease-in-out) 2.8s forwards; }
+      .position-swap > .position-after { animation: demo-roll-in .4s var(--ease-in-out) 2.8s both; }
+      .illustration-action > :first-child, .illustration-action > .position-after { animation-delay: 3.3s; }
+      /* Where the browser can measure it, the copy lifts off from exactly where the eBook's place sits. */
+      @supports (anchor-name: --a) {
+        strong.position-swap::after { animation-name: demo-fly-exact; }
+      }
+      /* The servers connect one after another. */
+      .connected { animation: demo-connect .3s var(--ease-out) .4s both; }
+      .server-row:nth-child(2) .connected { animation-delay: .75s; }
+      .server-row:nth-child(3) .connected { animation-delay: 1.1s; }
+      /* Parrot Cloud's list ticks itself off. */
+      .check-list li::before { animation: demo-tick .3s var(--ease-out) .3s both; }
+      .check-list li:nth-child(2)::before { animation-delay: .45s; }
+      .check-list li:nth-child(3)::before { animation-delay: .6s; }
+    }
+    .server-row:nth-child(2), .card:nth-child(3n + 2) { animation-range: entry 20% entry 110%; }
+    .server-row:nth-child(3), .card:nth-child(3n) { animation-range: entry 40% entry 130%; }
+  }
+}
+@property --in-view { syntax: '<number>'; inherits: true; initial-value: 0; }
+@keyframes in-view { from, to { --in-view: 1; } }
+@keyframes demo-touch { 0%, 12% { opacity: 0; transform: translateY(26px); } 22%, 27% { opacity: 1; transform: none; } 31% { opacity: 1; transform: scale(.72); } 36% { opacity: 1; transform: none; } 46%, 100% { opacity: 0; transform: none; } }
+@keyframes demo-press { 0%, 27% { transform: none; } 31% { transform: scale(.97); } 37%, 100% { transform: none; } }
+@keyframes demo-mark { to { opacity: 1; } }
+@keyframes demo-fly { from { opacity: 0; transform: translateY(-140px); } 30%, 99% { opacity: 1; } to { opacity: 0; transform: none; } }
+@keyframes demo-fly-exact { from { opacity: 0; top: anchor(--position-source top); } 15%, 99% { opacity: 1; } to { opacity: 0; top: anchor(--position-target top); } }
+@keyframes demo-hide { to { visibility: hidden; } }
+@keyframes demo-show { to { visibility: visible; } }
+@keyframes demo-roll-out { to { transform: translateY(110%); visibility: hidden; } }
+@keyframes demo-roll-in { from { transform: translateY(-110%); visibility: hidden; } to { transform: none; visibility: visible; } }
+@keyframes demo-connect { from { visibility: hidden; transform: translateY(4px) scale(.94); } to { visibility: visible; transform: none; } }
+@keyframes demo-tick { from { opacity: 0; transform: scale(.9); } }
+@keyframes headline-read { 45%, 55% { clip-path: inset(0); } to { clip-path: inset(0 0 0 100%); } }
+@keyframes read-lit { 0% { background: var(--welcome-highlight); color: var(--welcome-page-ink); } 16.667%, 100% { background: transparent; color: inherit; } }
+@keyframes read-progress { from { transform: scaleX(.94); } }
+@keyframes rise-in { from { transform: translateY(28px) scale(.97); } }
+
+/* The player's button. At rest it is a picture of a pause button; the checkbox only exists while the loop runs. */
+.pause-symbol { position: relative; }
+.reader-pause { display: none; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.pause-symbol:has(:focus-visible) { outline: 3px solid var(--accent-text); outline-offset: 3px; }
+.play-glyph { display: none; width: 0; height: 0; margin-left: 4px; border-block: 8px solid transparent; border-left: 13px solid currentColor; }
+.pause-symbol:has(:checked) .pause-glyph { display: none; }
+.pause-symbol:has(:checked) .play-glyph { display: block; }
+/* Resting states for the animated pieces. With no animation running they are all invisible. */
+.hero h1 span { position: relative; isolation: isolate; }
+.hero h1 span::after { content: ''; position: absolute; inset: 2% -.1em -6%; z-index: -1; border-radius: .08em; background: var(--nav-active); clip-path: inset(0 100% 0 0); }
+/* The positions card is an illustration, not a control: both states share one cell so nothing shifts. */
+.positions-illustration { position: relative; }
+.positions-illustration, .server-illustration { cursor: default; }
+/* Clipped top and bottom so text rolls inside its own line; open at the sides for the marker. */
+.position-swap { display: grid; clip-path: inset(0 -8px); }
+.position-swap > * { grid-area: 1 / 1; justify-self: start; }
+.illustration-action > * { justify-self: center; }
+.position-after { visibility: hidden; }
+/* The travelling copy of the eBook's place. It rests, invisible, exactly where the audiobook's new place appears. */
+strong.position-swap { position: relative; clip-path: none; }
+strong.position-swap::after { content: attr(data-after); position: absolute; left: 0; top: 0; z-index: 1; margin: -1px -6px; padding: 1px 6px; border-radius: 6px; white-space: nowrap; background: color-mix(in srgb, var(--accent) 28%, var(--surface)); opacity: 0; pointer-events: none; }
+/* The marker that shows the two places match: one behind the eBook's place, one behind the audiobook's new one. */
+/* Anchors can only be measured from a shared ancestor, so there the copy is placed by the card itself. */
+.latest .position-content > strong { anchor-name: --position-source; }
+@supports (anchor-name: --a) {
+  strong.position-swap { position: static; anchor-name: --position-target; }
+  strong.position-swap::after { top: anchor(--position-target top); left: anchor(--position-target left); }
+}
+.latest .position-content > strong, strong > .position-after { position: relative; isolation: isolate; }
+.latest .position-content > strong::before, strong > .position-after::before { content: ''; position: absolute; inset: -1px -6px; z-index: -1; border-radius: 6px; background: color-mix(in srgb, var(--accent) 28%, transparent); opacity: 0; }
+.positions-illustration::after { content: ''; position: absolute; left: calc(50% - 22px); bottom: 28px; width: 44px; height: 44px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 22%, transparent); border: 2px solid color-mix(in srgb, var(--ink) 45%, transparent); opacity: 0; pointer-events: none; }
+.positions-intro { margin: 0 4px 16px; font-size: 16px; line-height: 1.4; color: var(--ink2); }
+.positions-intro strong { color: var(--ink); }

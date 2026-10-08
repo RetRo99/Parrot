@@ -68,7 +68,10 @@ try {
         assert.equal(await page.locator('.skip-link').evaluate(el => el === document.activeElement), true, 'Keyboard skip link is first');
         await page.locator('.skip-link').evaluate(el => el.blur());
         if (path === '/' && colorScheme === 'dark' && [390, 768, 1280].includes(width)) {
+          // Capture the settled layout: scroll-linked motion would leave off-screen sections mid-entry.
+          await page.emulateMedia({ reducedMotion: 'reduce' });
           await page.screenshot({ path: resolve(results, `landing-${width}-${colorScheme}.png`), fullPage: true });
+          await page.emulateMedia({ reducedMotion: null });
         }
         if (path === '/privacy') assert.equal(await page.locator('#recaps').count(), 1);
         if (path === '/terms') assert.equal(await page.locator('#your-books-and-notes').count(), 1);

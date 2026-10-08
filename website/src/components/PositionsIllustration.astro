@@ -1,19 +1,24 @@
 ---
 // Labels and values transcribed from the approved real Day/Night position captures.
 // HTML keeps those labels readable instead of scaling screenshot typography down.
+// `after`, `afterDetail` and the second button label are what the self-playing demo in site.css
+// swaps in. They follow the app's own after-state (design/screens/positions-demo-applied.png):
+// the updated version takes over the "Latest" badge, reads "Set from eBook · Just now" and the status says "Updated 1 version".
 const copies = [
   { label: 'eBook · On this phone', position: 'Chapter 8 · 62%', detail: 'Read on this phone · 5 min ago', latest: true },
-  { label: 'Audiobook · Storyteller', position: 'Chapter 7 · 4:12:08 · 43%', detail: 'Listened on Pixel Tablet · Yesterday', latest: false },
+  { label: 'Audiobook · Storyteller', position: 'Chapter 7 · 4:12:08 · 43%', detail: 'Listened on Pixel Tablet · Yesterday', latest: false, after: 'Chapter 8 · 62%', afterDetail: 'Set from eBook · Just now' },
 ];
 ---
 <figure class="positions-illustration" aria-label="Parrot reading positions, based on real app captures">
+  <!-- The app's own positions_intro string; the title matches the book in the hero phone. -->
+  <p class="positions-intro">Where you are in each version of <strong>The Lantern Ferry</strong>. Choose one to move the others to the same place.</p>
   {copies.map(copy => <div class:list={['position-copy', { latest: copy.latest }]}>
     <span class="position-radio" aria-hidden="true"></span>
     <div class="position-content">
-    <div class="position-label">{copy.label}{copy.latest && <strong>Latest</strong>}</div>
-    <strong>{copy.position}</strong><p>{copy.detail}</p>
+    <div class="position-label">{copy.label}{copy.latest && <strong>Latest</strong>}{copy.after && <strong class="position-after" aria-hidden="true">Latest</strong>}</div>
+    <strong class:list={{ 'position-swap': copy.after }} data-after={copy.after}><span>{copy.position}</span>{copy.after && <span class="position-after" aria-hidden="true">{copy.after}</span>}</strong><p class:list={{ 'position-swap': copy.afterDetail }}><span>{copy.detail}</span>{copy.afterDetail && <span class="position-after" aria-hidden="true">{copy.afterDetail}</span>}</p>
     {copy.latest && <p class="position-quote">“It was not mine to open,” he said at last.</p>}
     </div>
   </div>)}
-  <figcaption class="illustration-action">Use this position…</figcaption>
+  <figcaption class="illustration-action position-swap"><span>Use this position…</span><span class="position-after" aria-hidden="true">Updated 1 version</span></figcaption>
 </figure>
