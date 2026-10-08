@@ -364,3 +364,36 @@ line only when the last check was within 7 days; older → hide it for
 healthy states (Ready / Signed in). Error states keep their time because it
 explains the error ("Couldn't reach it · 3 weeks ago"). The settings header
 keeps "checked <time> ago" at any age.
+
+---------------------------------------------------------------------------
+## 10. "Can't be downloaded here" card (opds-blocked) — every reason
+
+Card on the book page, in place of the Download button (note style: note
+background, title 16 bold, body 14). <Provider> = the catalogue's name for
+the seller/lender if the entry gives one, otherwise the catalogue's name.
+"Open provider page" is a filled button inside the card **only when the
+entry has a web link for it**; with no link the card has no button.
+
+| Reason | Title | Body | Button |
+|---|---|---|---|
+| Sold | Can't be downloaded here | This book is sold on <Provider>'s site. Parrot can only add books that the catalogue lets you download. | Open provider page |
+| Subscription | Can't be downloaded here | This book is part of a subscription on <Provider>'s site. Parrot can only add books that the catalogue lets you download. | Open provider page |
+| Borrow | Can't be downloaded here | This book can be borrowed on <Provider>'s site, but not downloaded here. Parrot can only add books that the catalogue lets you download. | Open provider page |
+| Sample only | Only a sample is available | The catalogue offers only a sample of this book. | "Download sample · <size>" (filled) when the sample is a file Parrot can open, plus a text link "Open provider page" under it. No openable sample → body only + Open provider page (filled). |
+| Format | Can't be opened in Parrot | This book is only available as <format>, which Parrot can't open. | none |
+| Protected (DRM) | Can't be opened in Parrot | This book's file is protected (DRM), so Parrot can't open it. | none |
+
+- <format> names: "PDF", "MOBI", "a Kindle file (AZW3)", "an audiobook",
+  otherwise the catalogue's own type label; unknown → "This book is only
+  available in a format Parrot can't open."
+- Format and DRM never show Open provider page: the provider can't make the
+  file open in Parrot, and the link would suggest otherwise.
+- If an entry has several reasons, show the first in this order: sample
+  only (it's actionable), sold, subscription, borrow, DRM, format.
+- If at least one file can be downloaded, there is no card: the normal
+  Download button shows, and the other files appear in Choose a file as
+  "Can't be opened in Parrot".
+- E-ink: card with 2dp outline, black filled button.
+
+A11y: "Open <Provider> page, opens in browser"; "Download sample of
+<title>, <size>". The card title is a heading; the body is read after it.

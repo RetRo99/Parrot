@@ -1087,7 +1087,8 @@ add-server picker, server list, server detail, and errors.
 ### 11.7 Design passes 1–3 (received 2026-10-08)
 
 Source: `design/ember/catalogues/CATALOGUE_PROMPT.md` (one file covering all
-three passes; its §9 is pass 3) with 84 boards in
+three passes; its §9 is pass 3 and its §10 the "Can't be downloaded here"
+copy) with 84 boards in
 `design/ember/catalogues/screens/opds-<view>-<theme>.png`. That file holds the
 exact copy and accessibility labels; use them verbatim, do not paraphrase them
 in code. This section records the decisions and how they bind the
@@ -1187,6 +1188,15 @@ Day exists for every view; Night and E-ink for the main ones.
 - **Get updated copy (deferred, §10.0; designed but not built now):** a note under Read now when the catalogue changed the
   book; the existing copy keeps its progress and the new file is added next to
   it.
+- **"Can't be downloaded here" card** (prompt §10): shown only when no file
+  can be downloaded. Six reasons with fixed title/body: sold, subscription,
+  borrow, sample only, format, protected. "Open provider page" appears only
+  for sold, subscription, borrow, and sample, and only when the entry has a
+  web link; never for format or protected. With several reasons, show the
+  first of: sample only, sold, subscription, borrow, protected, format.
+  `<Provider>` is the entry's seller/lender name when given, otherwise the
+  catalogue name. Format names: PDF, MOBI, Kindle (AZW3), audiobook, else the
+  catalogue's type label.
 - **Rights:** the catalogue's rights text, then the app's own line "Check the
   law where you live before sharing.", shown only when the catalogue gives
   rights text.
@@ -1253,7 +1263,22 @@ Day exists for every view; Night and E-ink for the main ones.
    note before it ships (§2.3 limits still apply to Gutenberg).
 
 Decided: the offline boards ship on a small persisted cache, and "Get updated
-copy" (`detailUpdate`) is deferred.
+copy" (`detailUpdate`) is deferred. Item 4 below is a product decision.
+
+4. **"Download sample" (prompt §10).** The sample-only card offers "Download
+   sample · <size>" when the sample is an openable file. §5.1 says a sample is
+   never imported as the complete book, and nothing in the library design marks
+   a book as a sample. Recommended for the first release: no sample download;
+   show the body with "Open provider page" only. Shipping it later needs a
+   "Sample" marker in the library and book details, and a rule for what
+   happens when the full book is acquired.
+
+**Engineering notes from the "Can't be downloaded here" copy**
+
+- The classifier needs a separate `SUBSCRIPTION` reason (Phase 1 mapped
+  subscriptions to sold), the reason priority order above, the provider name
+  when the entry supplies one, and the media type of the unsupported file so
+  the UI can name the format.
 
 **Engineering notes from pass 3**
 
