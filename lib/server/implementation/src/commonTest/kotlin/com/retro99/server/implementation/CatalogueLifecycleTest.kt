@@ -55,6 +55,38 @@ class CatalogueLifecycleTest {
         assertNotNull(fixture.credentials.get("a", source.id))
     }
 
+    @Test fun saving_other_account_details_cancels_work_before_they_are_stored() = runTest {
+        val preferences = RegistryPreferences()
+        val credentials = OpdsCredentialStoreImpl(preferences)
+        val storedWhenCancelled = mutableListOf<OpdsAccountDetails?>()
+        val controller = object : CatalogueWorkController {
+            override suspend fun cancel(profileId: String, sourceId: String) { storedWhenCancelled += credentials.get(profileId, sourceId) }
+        }
+        val registry = ServerRegistryImpl(preferences, RegistryUser("a"), emptyList(), credentials, CatalogueAccessStoreImpl(preferences), listOf(controller))
+        val source = registry.addServerWithId("source", "Books", ServerType.Opds, "https://books.example/opds/")
+        credentials.save("a", source.id, OpdsAccountDetails("patron", ""))
+
+        registry.saveAccount(source.id, OpdsAccountDetails("patron", "new password"))
+
+        assertEquals(listOf<OpdsAccountDetails?>(OpdsAccountDetails("patron", "")), storedWhenCancelled)
+        assertEquals(OpdsAccountDetails("patron", "new password"), credentials.get("a", source.id))
+        assertEquals(source, registry.getServer(source.id))
+    }
+    @Test fun saving_the_account_details_already_stored_cancels_nothing() = runTest {
+        val fixture = Fixture()
+        val source = fixture.add()
+        fixture.registry.saveAccount(source.id, OpdsAccountDetails("patron", ""))
+        assertTrue(fixture.cancelled.isEmpty())
+    }
+    @Test fun account_details_are_only_saved_for_a_registered_catalogue() = runTest {
+        val fixture = Fixture()
+        val library = fixture.registry.addServerWithId("library", "Library", ServerType.Storyteller, "https://library.example")
+        assertFailsWith<IllegalStateException> { fixture.registry.saveAccount(library.id, OpdsAccountDetails("u", "p")) }
+        assertFailsWith<IllegalStateException> { fixture.registry.saveAccount("unknown", OpdsAccountDetails("u", "p")) }
+        assertNull(fixture.credentials.get("a", library.id))
+        assertTrue(fixture.cancelled.isEmpty())
+    }
+
     private class Fixture {
         val preferences = RegistryPreferences()
         val credentials = OpdsCredentialStoreImpl(preferences)
