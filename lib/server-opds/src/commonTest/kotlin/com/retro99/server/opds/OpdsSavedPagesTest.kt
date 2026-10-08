@@ -142,7 +142,7 @@ class OpdsSavedPagesTest {
         assertEquals(CatalogueErrorKind.OfflineNoSavedCopy.name, assertIs<AppError.ApiError>(error).message)
     }
 
-    @Test fun `removing account details, turning off and removing a catalogue clear its saved pages and no other catalogue's`() = runTest {
+    @Test fun `removing account details - turning off and removing a catalogue clear its saved pages and no other catalogue's`() = runTest {
         for (change in listOf<suspend (World, ServerConfig) -> Unit>(
             { world, source -> world.registry.clearCredentials(source.id) },
             { world, source -> world.registry.deactivateServer(source.id) },

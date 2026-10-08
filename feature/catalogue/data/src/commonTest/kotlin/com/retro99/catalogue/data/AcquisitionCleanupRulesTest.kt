@@ -72,7 +72,7 @@ class AcquisitionCleanupRulesTest {
     }
 
     @Test
-    fun `new account details keep a request that waits for sign-in, and removing the catalogue or its account does not`() = runTest {
+    fun `new account details keep a request that waits for sign-in and removing the catalogue or its account does not`() = runTest {
         // Given
         val harness = QueueHarness(backgroundScope)
         harness.source.failNext("book-1", CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.SignInNeeded))
@@ -95,7 +95,7 @@ class AcquisitionCleanupRulesTest {
     }
 
     @Test
-    fun `a book whose file was removed is downloaded again, goes back to the same book and gets no second record`() = runTest {
+    fun `a book whose file was removed is downloaded again - goes back to the same book and gets no second record`() = runTest {
         // Given a finished download whose file is no longer on this device
         val harness = QueueHarness(backgroundScope)
         harness.queue.request(bookRequest(1))

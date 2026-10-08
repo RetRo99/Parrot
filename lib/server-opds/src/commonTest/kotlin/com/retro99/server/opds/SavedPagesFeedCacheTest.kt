@@ -29,7 +29,7 @@ class SavedPagesFeedCacheTest {
         cacheControl = cacheControl,
     )
 
-    @Test fun `a saved page comes back with its bytes, validators, time and the address it was served from`() = runTest {
+    @Test fun `a saved page comes back with its bytes - validators - time and the address it was served from`() = runTest {
         // Given
         cache.store(key("http://books.example/opds"), page(3, at = 42, servedFrom = ROOT))
 

@@ -58,7 +58,7 @@ class CatalogueAcquisitionStartupTest {
     }
 
     @Test
-    fun `a deleted profile's staging folder is removed, and nothing is removed before the profiles are known`() = runTest {
+    fun `a deleted profile's staging folder is removed and nothing is removed before the profiles are known`() = runTest {
         // Given: two profiles with a staged file each, and a folder left by a profile deleted earlier
         val users = FakeUsers()
         val files = FakeStagingFiles(TestWorld())
