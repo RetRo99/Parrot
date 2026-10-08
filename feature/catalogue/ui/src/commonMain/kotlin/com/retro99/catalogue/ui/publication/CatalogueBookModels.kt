@@ -2,6 +2,7 @@ package com.retro99.catalogue.ui.publication
 
 import com.retro99.catalogue.domain.CatalogueAcquisition
 import com.retro99.catalogue.ui.browse.CatalogueSignInState
+import com.retro99.catalogue.ui.browse.CatalogueBrowseContent
 import com.retro99.catalogue.ui.browse.display
 import com.retro99.server.api.*
 
@@ -36,6 +37,7 @@ data class CatalogueBookState(
     val navigation: BookNavigation? = null,
     val closed: Boolean = false,
     val loadFailed: Boolean = false,
+    val loadContent: CatalogueBrowseContent? = null,
 ) {
     val files get() = groups.flatMap { it.files }
     val selectedFile get() = files.firstOrNull { it.ordinal == selectedOrdinal }

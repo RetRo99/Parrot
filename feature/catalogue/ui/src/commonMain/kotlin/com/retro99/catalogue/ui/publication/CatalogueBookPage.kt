@@ -1,6 +1,8 @@
 package com.retro99.catalogue.ui.publication
 
 import com.github.michaelbull.result.fold
+import com.github.michaelbull.result.Err
+import com.retro99.base.result.AppError
 import com.retro99.catalogue.domain.*
 import com.retro99.catalogue.ui.browse.*
 import com.retro99.catalogue.ui.navigation.CatalogueBookPlace
@@ -29,7 +31,10 @@ class CatalogueBookPage(
     private var started = false
     private val jobs = mutableListOf<Job>()
     private var requestJob: Job? = null
-    private val identities get() = publications.map { CatalogueEntryIdentity(it.publicationKey) }
+    private var libraryJob: Job? = null
+    private var loading = true
+    private var target = place?.listing
+    private val identities get() = (publications + place?.publications.orEmpty()).map { CatalogueEntryIdentity(it.publicationKey) }.distinct()
     private val acquisition get() = rows.lastOrNull { it.sourceId == sourceId && (it.publicationKey in identities.map { id -> id.publicationKey } || it.detailIdentity in identities.map { id -> id.publicationKey }) }
 
     init {
@@ -38,7 +43,7 @@ class CatalogueBookPage(
             jobs += scope.launch { gateway.observeSource(sourceId).collect { next ->
                 if (!active) return@collect
                 if (next == null || source?.let { it.profileId != next.profileId || it.address != next.address } == true) {
-                    cancel(); _state.value = CatalogueBookState(closed = true); return@collect
+                    this@CatalogueBookPage.cancel(); _state.value = CatalogueBookState(closed = true); return@collect
                 }
                 source = next
                 publish()
@@ -51,18 +56,46 @@ class CatalogueBookPage(
                     _state.value = _state.value.copy(signIn = CatalogueSignInState())
                 }
                 publish()
+                onReturn()
             } }
         }
     }
 
     private fun load() {
         requestJob?.cancel()
+        loading = true
+        _state.value = _state.value.copy(loadFailed = false, loadContent = null)
+        publish()
         requestJob = scope.launch {
-            repository = gateway.repository(sourceId)
-            val answer = repository?.getDocument(place!!.listing)
+            val answer = try {
+                repository = gateway.repository(sourceId)
+                val session = repository
+                if (session == null) Err(AppError.ApiError(400, CatalogueErrorKind.Unreachable.name)) else {
+                    var loaded = session.getDocument(target!!)
+                    // OPDS partial entries advertise a full standalone entry as an alternate.
+                    if (target == place!!.listing && publications.size == 1) {
+                        val full = publications.single().links.firstOrNull { link ->
+                            link.target != null && "alternate" in link.relations &&
+                                (link.mediaType?.subtype == "opds-publication+json" || link.mediaType?.parameters?.get("type") == "entry")
+                        }?.target
+                        if (loaded.isOk && full != null) { target = full; loaded = session.getDocument(full) }
+                    }
+                    loaded
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+              catch (_: Exception) { Err(AppError.ApiError(400, CatalogueErrorKind.Unreachable.name)) }
+            currentCoroutineContext().ensureActive()
             if (!active) return@launch
-            answer?.fold(success = { accept(it) }, failure = { error ->
-                _state.value = _state.value.copy(loadFailed = true, signIn = if (error.toLoadProblem() == CatalogueLoadProblem.SignInNeeded) CatalogueSignInState() else null)
+            loading = false
+            answer.fold(success = { accept(it) }, failure = { error ->
+                val problem = error.toLoadProblem()
+                val content = when (problem) {
+                    CatalogueLoadProblem.SignInNeeded -> CatalogueBrowseContent.SignInNeeded
+                    CatalogueLoadProblem.Offline -> CatalogueBrowseContent.OfflineNone
+                    CatalogueLoadProblem.RateLimited -> CatalogueBrowseContent.RateLimited
+                    is CatalogueLoadProblem.Failed -> CatalogueBrowseContent.Failed(problem.reason)
+                }
+                _state.value = _state.value.copy(loadFailed = true, loadContent = content, signIn = if (problem == CatalogueLoadProblem.SignInNeeded) CatalogueSignInState() else null)
                 publish()
             })
             refreshLibrary()
@@ -77,17 +110,25 @@ class CatalogueBookPage(
         }
         val matched = available.filter { it.publicationKey in place!!.publications.map { p -> p.publicationKey } }
         if (matched.isNotEmpty()) publications = matched
-        _state.value = _state.value.copy(loadFailed = false)
+        else if (loaded is CataloguePublicationDocument && publications.size == 1) publications = available
+        else { _state.value = _state.value.copy(loadFailed = true, loadContent = CatalogueBrowseContent.Failed(CataloguePageFailure.NotFound)); publish(); return }
+        _state.value = _state.value.copy(loadFailed = false, loadContent = null)
         publish()
     }
 
     /** Called on every return to this route; lookups are not kept across reader/library visits. */
     fun onReturn() {
-        if (active && place != null) jobs += scope.launch { refreshLibrary() }
+        if (active && place != null) {
+            libraryJob?.cancel()
+            libraryJob = scope.launch { refreshLibrary() }
+        }
     }
+
+    fun retryLoad() { if (active && place != null) load() }
 
     private suspend fun refreshLibrary() {
         val found = try { library.libraryDetailsFor(sourceId, identities) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { emptyMap() }
+        currentCoroutineContext().ensureActive()
         if (!active) return
         libraryBooks = found
         publish()
@@ -96,7 +137,7 @@ class CatalogueBookPage(
     fun openFiles() { if (active && _state.value.files.size > 1) _state.value = _state.value.copy(chooseFile = true) }
     fun closeFiles() { _state.value = _state.value.copy(chooseFile = false) }
     fun chooseFile(ordinal: Int) {
-        if (active && _state.value.files.any { it.ordinal == ordinal && it.openable }) _state.value = _state.value.copy(selectedOrdinal = ordinal)
+        if (active && _state.value.files.any { it.ordinal == ordinal && it.openable }) { _state.value = _state.value.copy(selectedOrdinal = ordinal); publish() }
     }
 
     fun download() {
@@ -107,7 +148,7 @@ class CatalogueBookPage(
             ?: return
         _state.value = _state.value.copy(chooseFile = false)
         requestJob = scope.launch {
-            val result = queue.request(CatalogueAcquisitionRequest(sourceId, locator.publicationKey, locator.representationKey, null, locator.documentUrl,
+             val result = queue.request(CatalogueAcquisitionRequest(sourceId, locator.publicationKey, locator.representationKey, place?.publications?.singleOrNull()?.publicationKey?.takeIf { it != locator.publicationKey }, locator.documentUrl,
                 file.publication.displayTitle(), file.publication.displayAuthor(), file.publication.images.firstOrNull()?.href, source?.name.orEmpty(), file.size,
                 file.publication.rights.display(), file.publication.updated))
             if (!active) return@launch
@@ -144,7 +185,10 @@ class CatalogueBookPage(
         _state.value = _state.value.copy(signIn = CatalogueSignInState(working = true))
         requestJob = scope.launch {
             val account = OpdsAccountDetails(username.trim(), password)
-            val result = gateway.checkAccount(sourceId, place!!.listing, account)
+            val result = try { gateway.checkAccount(sourceId, target, account) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { Err(AppError.ApiError(400, CatalogueErrorKind.Unreachable.name)) }
+            currentCoroutineContext().ensureActive()
             if (!active) return@launch
             result.fold(success = {
                 gateway.saveAccount(sourceId, account)
@@ -153,6 +197,9 @@ class CatalogueBookPage(
                 _state.value = _state.value.copy(signIn = null)
                 queue.signedIn(sourceId)
                 accept(it)
+                // The verified page belonged to an ephemeral session. Fetch it in the saved
+                // session before locating a new file; the verifier's places cannot locate it.
+                load()
             }, failure = { _state.value = _state.value.copy(signIn = CatalogueSignInState(wrongDetails = it.toLoadProblem() == CatalogueLoadProblem.SignInNeeded)) })
         }
     }
@@ -163,7 +210,7 @@ class CatalogueBookPage(
         val done = _state.value.action as? BookMainAction.Done ?: return
         _state.value = _state.value.copy(navigation = BookNavigation.Read(done.libraryBookId))
     }
-    fun cancel() { active = false; requestJob?.cancel(); jobs.forEach { it.cancel() } }
+    fun cancel() { active = false; requestJob?.cancel(); libraryJob?.cancel(); jobs.forEach { it.cancel() } }
 
     private fun publish() {
         if (!active) return
@@ -179,6 +226,7 @@ class CatalogueBookPage(
             row?.state == AcquisitionState.Downloading -> BookMainAction.Downloading(row.bytesSoFar, row.expectedSizeBytes?.takeIf { it > 0 })
             row?.state == AcquisitionState.Checking || row?.state == AcquisitionState.Adding -> BookMainAction.Adding
             row?.state is AcquisitionState.Failed || row?.state == AcquisitionState.Interrupted -> BookMainAction.Failed(row)
+            loading || _state.value.loadFailed -> null
             selected != null -> BookMainAction.Download(selected)
             else -> BookMainAction.Blocked(bookBlocked(publications)!!)
         }
