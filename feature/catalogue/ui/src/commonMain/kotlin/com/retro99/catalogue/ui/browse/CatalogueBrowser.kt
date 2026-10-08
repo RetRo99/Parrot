@@ -1,0 +1,680 @@
+package com.retro99.catalogue.ui.browse
+
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.fold
+import com.retro99.base.result.AppError
+import com.retro99.base.result.AppResult
+import com.retro99.catalogue.domain.CatalogueEntryIdentity
+import com.retro99.catalogue.domain.CatalogueLibraryLookup
+import com.retro99.catalogue.ui.navigation.CatalogueBookPlace
+import com.retro99.catalogue.ui.navigation.CataloguePlace
+import com.retro99.server.api.CatalogueDocument
+import com.retro99.server.api.CatalogueErrorKind
+import com.retro99.server.api.CatalogueFacetGroup
+import com.retro99.server.api.CatalogueFacetOption
+import com.retro99.server.api.CatalogueFeedDocument
+import com.retro99.server.api.CatalogueImageModel
+import com.retro99.server.api.CatalogueLink
+import com.retro99.server.api.CataloguePublication
+import com.retro99.server.api.CataloguePublicationDocument
+import com.retro99.server.api.CatalogueQuery
+import com.retro99.server.api.CatalogueTarget
+import com.retro99.server.api.OpdsAccountDetails
+import com.retro99.server.api.localNetworkHostLeaving
+import com.retro99.server.api.publicationKey
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+/**
+ * One page of a catalogue and everything the user can do on it: page through its books, search,
+ * filter, open an entry. [start] null is the catalogue's first page.
+ *
+ * Every answer is checked against the list it was asked for before it is shown, and requests are
+ * cancelled when their list is replaced: a search, filter, page or catalogue the user has
+ * already left never changes the screen.
+ *
+ * Not thread safe: call it from the dispatcher of [scope].
+ */
+class CatalogueBrowser(
+    private val sourceId: String,
+    private val start: CataloguePlace?,
+    private val gateway: CatalogueBrowseGateway,
+    private val library: CatalogueLibraryLookup,
+    private val scope: CoroutineScope,
+    private val maxPages: Int = MAX_LOADED_PAGES,
+) {
+    private sealed interface PageRequest {
+        data object Root : PageRequest
+        data class Target(val target: CatalogueTarget) : PageRequest
+        data class Search(val query: String) : PageRequest
+    }
+
+    private class BookEntry(val key: String, val publication: CataloguePublication, val listing: CatalogueTarget, val inLibrary: Boolean)
+    private class FolderEntry(val key: String, val entry: CataloguePublication, val link: CatalogueLink)
+    private class ShelfEntry(val key: String, val title: String, val seeAll: CatalogueLink?, val books: List<BookEntry>)
+
+    /** What the first page of a list gives besides its books. */
+    private class Header(
+        val document: CatalogueFeedDocument,
+        val shelves: List<ShelfEntry>,
+        val folders: List<FolderEntry>,
+        val sameBookCount: Int?,
+    )
+
+    private class Page(val number: Int, val request: PageRequest, val books: List<BookEntry>, val next: CatalogueLink?, val savedCopyAt: Long?)
+    private enum class Load { Idle, Loading, Failed }
+
+    private sealed interface Phase {
+        data object FirstLoad : Phase
+        data object Loaded : Phase
+        data object Empty : Phase
+        data class Problem(val problem: CatalogueLoadProblem) : Phase
+    }
+
+    /** A list of books: the page itself, the page under a filter, or the results of a search. */
+    private class BookList(val id: Int, val first: PageRequest, val query: String?, val opening: Boolean) {
+        /** Raised by every first load; an answer for an older one is dropped. */
+        var generation = 0
+        var phase: Phase = Phase.FirstLoad
+        var header: Header? = null
+        var pages: List<Page> = emptyList()
+
+        /** The pages dropped from the front at the page limit, oldest first, to ask for again. */
+        var earlier: List<PageRequest> = emptyList()
+        var more = Load.Idle
+        var earlierLoad = Load.Idle
+        var afterSignIn = false
+        val jobs = mutableListOf<Job>()
+
+        fun cancelRequests() {
+            jobs.forEach { it.cancel() }
+            jobs.clear()
+        }
+    }
+
+    private class FilterSheet(val groupIndex: Int, val searchText: String)
+    private class LocalNetworkQuestion(val host: String, val open: () -> Unit, val dontOpen: () -> Unit)
+
+    private var lists = 0
+    private var base = BookList(lists++, start?.let { PageRequest.Target(it.target) } ?: PageRequest.Root, query = null, opening = start != null)
+    private var search: BookList? = null
+    private val current: BookList get() = search ?: base
+
+    private var source: CatalogueBrowseSource? = null
+    private var started = false
+    private var closed = false
+    private var cancelled = false
+    private var autoLoad = true
+    private var pageTitle: String? = start?.title
+    private var searchText = ""
+    private var filterSheet: FilterSheet? = null
+    private var question: LocalNetworkQuestion? = null
+    private val agreedHosts = mutableSetOf<String>().apply { start?.localNetworkHost?.let(::add) }
+    private var signIn: CatalogueSignInState? = null
+    private var navigation: CatalogueBrowseNavigation? = null
+    private val sourceJob: Job
+
+    private val _state = MutableStateFlow(CatalogueBrowseState(title = start?.title))
+    val state: StateFlow<CatalogueBrowseState> = _state.asStateFlow()
+
+    init {
+        sourceJob = scope.launch { gateway.observeSource(sourceId).collect(::onSource) }
+    }
+
+    // --- the catalogue ------------------------------------------------------------------
+
+    private fun onSource(now: CatalogueBrowseSource?) {
+        if (closed || cancelled) return
+        val before = source
+        // Another profile or another address: nothing that was loaded belongs on screen.
+        if (now == null || before != null && (before.profileId != now.profileId || before.address != now.address)) return close()
+        source = now
+        publish()
+        if (!started) {
+            started = true
+            loadFirst(base)
+        }
+    }
+
+    /** The screen closes and shows nothing it had loaded. */
+    private fun close() {
+        closed = true
+        stopRequests()
+        base = BookList(lists++, base.first, query = null, opening = false)
+        search = null
+        searchText = ""
+        filterSheet = null
+        question = null
+        signIn = null
+        navigation = null
+        publish()
+    }
+
+    /** The screen was left: every request stops and no answer is shown any more. */
+    fun cancel() {
+        cancelled = true
+        sourceJob.cancel()
+        stopRequests()
+    }
+
+    private fun stopRequests() {
+        base.cancelRequests()
+        search?.cancelRequests()
+    }
+
+    private val open: Boolean get() = !closed && !cancelled
+
+    /** Still the list on screen (or under the search), and still the same first load of it. */
+    private fun BookList.isCurrent(generation: Int) = open && (this === base || this === search) && this.generation == generation
+
+    // --- loading ------------------------------------------------------------------------
+
+    private suspend fun fetch(request: PageRequest): AppResult<CatalogueDocument> = try {
+        val repository = gateway.repository(sourceId)
+        when {
+            repository == null -> Err(AppError.ApiError(400, CatalogueErrorKind.Unreachable.name))
+            request is PageRequest.Target -> repository.getDocument(request.target)
+            request is PageRequest.Search -> {
+                val page = base.header?.document
+                val offer = page?.let { repository.discoverSearch(it) }
+                offer?.fold(
+                    success = { found -> if (found == null) Err(AppError.ApiError(400, "UnsupportedSearch")) else repository.search(found, CatalogueQuery(request.query)) },
+                    failure = { Err(it) },
+                ) ?: Err(AppError.ApiError(400, "UnsupportedSearch"))
+            }
+            else -> repository.getRoot()
+        }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        // The session could not be made: the catalogue is going away, and the screen with it.
+        Err(AppError.ApiError(400, CatalogueErrorKind.Unreachable.name))
+    }
+
+    private fun loadFirst(list: BookList) {
+        list.cancelRequests()
+        val generation = ++list.generation
+        list.phase = Phase.FirstLoad
+        list.header = null
+        list.pages = emptyList()
+        list.earlier = emptyList()
+        list.more = Load.Idle
+        list.earlierLoad = Load.Idle
+        publish()
+        list.jobs += scope.launch {
+            val result = fetch(list.first)
+            if (!list.isCurrent(generation)) return@launch
+            result.fold(
+                success = { document -> showFirstPage(list, generation, document) },
+                failure = { error -> showProblem(list, error.toLoadProblem()) },
+            )
+        }
+    }
+
+    private fun showProblem(list: BookList, problem: CatalogueLoadProblem) {
+        list.phase = Phase.Problem(problem)
+        if (problem == CatalogueLoadProblem.SignInNeeded) {
+            signIn = CatalogueSignInState(wrongDetails = list.afterSignIn)
+        } else if (list === current) {
+            signIn = null
+        }
+        list.afterSignIn = false
+        publish()
+    }
+
+    private suspend fun showFirstPage(list: BookList, generation: Int, document: CatalogueDocument) {
+        // The transport followed a redirect to a device on the local network. Nothing of the
+        // answer is shown until the user agrees.
+        val redirectedTo = localHostOf(document)
+        if (redirectedTo != null) {
+            ask(
+                host = redirectedTo,
+                open = { scope.launch { if (list.isCurrent(generation)) showFirstPage(list, generation, document) }.also { list.jobs += it } },
+                dontOpen = { if (list === base) close() else clearSearch() },
+            )
+            return
+        }
+        list.afterSignIn = false
+        if (list === current) signIn = null
+        val feed = when (document) {
+            is CataloguePublicationDocument -> return replaceWithBook(document.context, listOf(document.publication))
+            is CatalogueFeedDocument -> document
+        }
+        val opening = if (list.opening) decideCatalogueOpening(start?.fromEntryWithoutFiles == true, feed) else CatalogueOpening.Page
+        if (opening == CatalogueOpening.OneBook) return replaceWithBook(feed.context, feed.publications)
+
+        val inLibrary = inLibrary(feed.publications + feed.groups.flatMap { it.publications })
+        if (!list.isCurrent(generation)) return
+        val shelves = feed.groups.withIndex().filter { it.value.publications.isNotEmpty() }.map { (index, group) ->
+            ShelfEntry(
+                key = "l${list.id}-s$index",
+                title = group.title.display().orEmpty(),
+                seeAll = group.links.firstOrNull { it.target != null },
+                books = group.publications.mapIndexed { book, publication -> publication.entry("l${list.id}-s$index-$book", feed.context, inLibrary) },
+            )
+        }
+        val folders = (feed.navigation + feed.groups.flatMap { it.navigation }).mapIndexedNotNull { index, entry ->
+            entry.pageLink()?.let { FolderEntry("l${list.id}-f$index", entry, it) }
+        }
+        list.header = Header(feed, shelves, folders, sameBookCount = feed.publications.size.takeIf { opening == CatalogueOpening.SameBookList })
+        list.pages = listOf(page(list, FIRST_PAGE, list.first, feed, inLibrary))
+        list.phase = if (shelves.isEmpty() && folders.isEmpty() && feed.publications.isEmpty()) Phase.Empty else Phase.Loaded
+        if (list === base && start != null && pageTitle == null) pageTitle = feed.metadata.title.display()?.takeIf(String::isNotBlank)
+        publish()
+    }
+
+    private fun replaceWithBook(listing: CatalogueTarget, publications: List<CataloguePublication>) {
+        navigation = CatalogueBrowseNavigation.ReplaceWithBook(CatalogueBookPlace(listing, publications))
+        publish()
+    }
+
+    private fun page(list: BookList, number: Int, request: PageRequest, feed: CatalogueFeedDocument, inLibrary: Set<String>) = Page(
+        number = number,
+        request = request,
+        books = feed.publications.mapIndexed { index, publication -> publication.entry("l${list.id}-p$number-$index", feed.context, inLibrary) },
+        next = feed.pagination.next?.takeIf { it.target != null },
+        savedCopyAt = feed.fetchStatus.savedCopyAt,
+    )
+
+    private fun CataloguePublication.entry(key: String, listing: CatalogueTarget, inLibrary: Set<String>) =
+        BookEntry(key, this, listing, publicationKey in inLibrary)
+
+    /** One question for the whole page. A lookup that fails only means no row says "In your library". */
+    private suspend fun inLibrary(publications: List<CataloguePublication>): Set<String> {
+        if (publications.isEmpty()) return emptySet()
+        return try {
+            library.libraryBooksFor(sourceId, publications.map { CatalogueEntryIdentity(it.publicationKey) }).keys.mapTo(mutableSetOf()) { it.publicationKey }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            emptySet()
+        }
+    }
+
+    // --- paging -------------------------------------------------------------------------
+
+    /** Day and Night load near the end by themselves; E-ink only when "Load more" is tapped. */
+    fun setAutoLoad(enabled: Boolean) {
+        if (autoLoad == enabled) return
+        autoLoad = enabled
+        publish()
+    }
+
+    /** The list was scrolled near its end. Loads the next page only where pages load by themselves. */
+    fun onNearEnd() {
+        if (autoLoad && current.more == Load.Idle) loadNext(current, asked = false)
+    }
+
+    /** The list was scrolled near its start; brings back a page dropped at the page limit. */
+    fun onNearStart() {
+        if (autoLoad && current.earlierLoad == Load.Idle) loadPrevious(current)
+    }
+
+    /** "Load more", and "Try again" on a next page that failed: the same next link is asked again. */
+    fun loadMore() = loadNext(current, asked = true)
+
+    /** The same for the pages before the first one that is still loaded. */
+    fun loadEarlier() = loadPrevious(current)
+
+    private fun loadNext(list: BookList, asked: Boolean) {
+        val last = list.pages.lastOrNull() ?: return
+        val link = last.next ?: return
+        val target = link.target ?: return
+        if (!open || list.phase != Phase.Loaded || list.more == Load.Loading) return
+        val host = unconfirmedLocalHost(link)
+        if (host != null) {
+            // Never by scrolling: the question is asked when the user taps.
+            if (asked) ask(host, open = { loadNext(list, asked = true) }, dontOpen = {})
+            return
+        }
+        val generation = list.generation
+        list.more = Load.Loading
+        publish()
+        list.jobs += scope.launch {
+            val feed = fetchPage(PageRequest.Target(target))
+            val inLibrary = feed?.let { inLibrary(it.publications) }.orEmpty()
+            if (!list.isCurrent(generation)) return@launch
+            if (feed == null || list.pages.lastOrNull() !== last) {
+                list.more = Load.Failed
+            } else {
+                list.more = Load.Idle
+                list.pages = list.pages + page(list, last.number + 1, PageRequest.Target(target), feed, inLibrary)
+                while (list.pages.size > maxPages) {
+                    list.earlier = list.earlier + list.pages.first().request
+                    list.pages = list.pages.drop(1)
+                }
+            }
+            publish()
+        }
+    }
+
+    private fun loadPrevious(list: BookList) {
+        val request = list.earlier.lastOrNull() ?: return
+        val first = list.pages.firstOrNull() ?: return
+        if (!open || list.phase != Phase.Loaded || list.earlierLoad == Load.Loading) return
+        val generation = list.generation
+        list.earlierLoad = Load.Loading
+        publish()
+        list.jobs += scope.launch {
+            val feed = fetchPage(request)
+            val inLibrary = feed?.let { inLibrary(it.publications) }.orEmpty()
+            if (!list.isCurrent(generation)) return@launch
+            if (feed == null || list.pages.firstOrNull() !== first) {
+                list.earlierLoad = Load.Failed
+            } else {
+                list.earlierLoad = Load.Idle
+                list.earlier = list.earlier.dropLast(1)
+                list.pages = listOf(page(list, first.number - 1, request, feed, inLibrary)) + list.pages
+                if (list.pages.size > maxPages) {
+                    // The far end goes; it is reached again through the next link of the page before it.
+                    list.pages = list.pages.take(maxPages)
+                    list.more = Load.Idle
+                }
+            }
+            publish()
+        }
+    }
+
+    /** A further page of a list. Whatever goes wrong, the list shows one inline row for it. */
+    private suspend fun fetchPage(request: PageRequest): CatalogueFeedDocument? = fetch(request).fold(
+        success = { document -> (document as? CatalogueFeedDocument)?.takeIf { localHostOf(it) == null } },
+        failure = { null },
+    )
+
+    // --- the message screens ------------------------------------------------------------
+
+    /** "Try again" on a page that did not open: the same page is asked for again. */
+    fun retry() {
+        if (open && current.phase is Phase.Problem) loadFirst(current)
+    }
+
+    // --- search -------------------------------------------------------------------------
+
+    fun onSearchTextChange(text: String) {
+        if (!open) return
+        searchText = text
+        publish()
+    }
+
+    fun submitSearch() {
+        val query = searchText.trim()
+        if (!open || query.isEmpty() || base.header?.document?.search == null) return
+        search?.cancelRequests()
+        filterSheet = null
+        val results = BookList(lists++, PageRequest.Search(query), query, opening = false)
+        search = results
+        loadFirst(results)
+    }
+
+    /** Leaves the search: the page is there again as it was, without asking for it. */
+    fun clearSearch() {
+        if (!open) return
+        search?.cancelRequests()
+        search = null
+        searchText = ""
+        filterSheet = null
+        if (base.phase != Phase.Problem(CatalogueLoadProblem.SignInNeeded)) signIn = null
+        publish()
+    }
+
+    // --- filters ------------------------------------------------------------------------
+
+    private fun BookList.facets(): List<CatalogueFacetGroup> = header?.document?.facets.orEmpty().filter { it.options.isNotEmpty() || it.allOption != null }
+
+    /** The catalogue's "all" option first, then its options in its order. */
+    private fun CatalogueFacetGroup.ordered(): List<CatalogueFacetOption> = listOfNotNull(allOption) + options.filter { it != allOption }
+
+    fun openFilter(groupIndex: Int) {
+        if (!open || groupIndex !in current.facets().indices) return
+        filterSheet = FilterSheet(groupIndex, "")
+        publish()
+    }
+
+    fun onFilterSearchChange(text: String) {
+        val sheet = filterSheet ?: return
+        filterSheet = FilterSheet(sheet.groupIndex, text)
+        publish()
+    }
+
+    fun closeFilter() {
+        filterSheet = null
+        publish()
+    }
+
+    /** Applies the option at once and closes the sheet. [optionIndex] counts all options, not the ones a search left. */
+    fun chooseFilter(optionIndex: Int) {
+        val sheet = filterSheet ?: return
+        val list = current
+        val option = list.facets().getOrNull(sheet.groupIndex)?.ordered()?.getOrNull(optionIndex)
+        filterSheet = null
+        publish()
+        val target = option?.link?.target
+        if (!open || option == null || option.active || target == null) return
+        follow(option.link) {
+            list.cancelRequests()
+            val filtered = BookList(lists++, PageRequest.Target(target), list.query, opening = false)
+            if (list === search) search = filtered else base = filtered
+            loadFirst(filtered)
+        }
+    }
+
+    // --- opening an entry ---------------------------------------------------------------
+
+    fun openBook(key: String) {
+        val list = current
+        val entry = (list.pages.flatMap { it.books } + list.header?.shelves.orEmpty().flatMap { it.books }).firstOrNull { it.key == key } ?: return
+        if (!open) return
+        navigation = CatalogueBrowseNavigation.OpenBook(CatalogueBookPlace(entry.listing, listOf(entry.publication)))
+        publish()
+    }
+
+    fun openFolder(key: String) {
+        val folder = current.header?.folders?.firstOrNull { it.key == key } ?: return
+        openPage(folder.link, folder.entry.displayTitle(), fromEntryWithoutFiles = true)
+    }
+
+    fun openSeeAll(shelfKey: String) {
+        val shelf = current.header?.shelves?.firstOrNull { it.key == shelfKey } ?: return
+        openPage(shelf.seeAll ?: return, shelf.title, fromEntryWithoutFiles = false)
+    }
+
+    private fun openPage(link: CatalogueLink, title: String, fromEntryWithoutFiles: Boolean) {
+        val target = link.target ?: return
+        if (!open) return
+        val host = source?.let { localNetworkHostLeaving(it.address, link.resolvedHref.orEmpty()) }
+        follow(link) {
+            navigation = CatalogueBrowseNavigation.OpenPage(CataloguePlace(target, title.takeIf(String::isNotBlank), fromEntryWithoutFiles, host))
+            publish()
+        }
+    }
+
+    fun navigationHandled() {
+        navigation = null
+        publish()
+    }
+
+    // --- links to the local network -----------------------------------------------------
+
+    private fun unconfirmedLocalHost(link: CatalogueLink): String? =
+        source?.let { localNetworkHostLeaving(it.address, link.resolvedHref.orEmpty()) }?.takeIf { it !in agreedHosts }
+
+    /** The local device an answer came from after a redirect, unless the user already agreed to open it. */
+    private fun localHostOf(document: CatalogueDocument): String? {
+        if (!document.fetchStatus.crossOriginPrivateNetwork) return null
+        val host = source?.let { localNetworkHostLeaving(it.address, document.responseUrl) }.orEmpty()
+        return host.takeIf { it !in agreedHosts }
+    }
+
+    /** Follows [link] at once, or after the user agreed when it leaves for the local network. */
+    private fun follow(link: CatalogueLink, action: () -> Unit) {
+        val host = unconfirmedLocalHost(link)
+        if (host == null) action() else ask(host, open = action, dontOpen = {})
+    }
+
+    private fun ask(host: String, open: () -> Unit, dontOpen: () -> Unit) {
+        question = LocalNetworkQuestion(host, open, dontOpen)
+        publish()
+    }
+
+    /** "Open". */
+    fun confirmLocalNetwork() {
+        val asked = question ?: return
+        question = null
+        agreedHosts += asked.host
+        publish()
+        if (open) asked.open()
+    }
+
+    /** "Don't open", the primary action. */
+    fun dismissLocalNetwork() {
+        val asked = question ?: return
+        question = null
+        publish()
+        if (open) asked.dontOpen()
+    }
+
+    // --- sign-in ------------------------------------------------------------------------
+
+    /** Saves the account details and asks for the page again. An empty password is allowed. */
+    fun signIn(username: String, password: String) {
+        val list = current
+        val name = username.trim()
+        if (!open || signIn == null || signIn?.working == true || name.isEmpty()) return
+        signIn = CatalogueSignInState(working = true)
+        publish()
+        list.cancelRequests()
+        val generation = ++list.generation
+        list.jobs += scope.launch {
+            val saved = try {
+                gateway.saveAccount(sourceId, OpdsAccountDetails(name, password))
+                true
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                false
+            }
+            if (!list.isCurrent(generation)) return@launch
+            if (saved) {
+                list.afterSignIn = true
+                loadFirst(list)
+                // The sheet stays, working, until the page answers.
+                signIn = CatalogueSignInState(working = true)
+                publish()
+            } else {
+                signIn = CatalogueSignInState()
+                publish()
+            }
+        }
+    }
+
+    /** The sheet was closed without signing in: there is nothing to show, so the screen closes. */
+    fun dismissSignIn() {
+        if (signIn == null) return
+        close()
+    }
+
+    // --- what the screen draws ----------------------------------------------------------
+
+    private fun publish() {
+        val list = current
+        _state.value = CatalogueBrowseState(
+            catalogueName = source?.name.orEmpty(),
+            title = pageTitle,
+            searchAvailable = base.header?.document?.search != null,
+            searchText = searchText,
+            searchQuery = search?.query,
+            listId = list.id,
+            content = content(list),
+            filterSheet = filterSheet?.let { sheet(list, it) },
+            localNetworkHost = question?.host,
+            signIn = signIn,
+            navigation = navigation,
+            closed = closed,
+        )
+    }
+
+    private fun content(list: BookList): CatalogueBrowseContent = when (val phase = list.phase) {
+        Phase.FirstLoad -> CatalogueBrowseContent.FirstLoad
+        Phase.Empty -> list.query?.let { CatalogueBrowseContent.NoResults(it) } ?: CatalogueBrowseContent.EmptyFolder
+        is Phase.Problem -> when (val problem = phase.problem) {
+            CatalogueLoadProblem.SignInNeeded -> CatalogueBrowseContent.SignInNeeded
+            CatalogueLoadProblem.Offline -> CatalogueBrowseContent.OfflineNone
+            CatalogueLoadProblem.RateLimited -> CatalogueBrowseContent.RateLimited
+            is CatalogueLoadProblem.Failed -> CatalogueBrowseContent.Failed(problem.reason)
+        }
+        Phase.Loaded -> {
+            val header = list.header
+            val books = list.pages.flatMap { it.books }
+            // In the list of one book's entries every row tells itself apart; elsewhere only siblings do.
+            val siblings = if (header?.sameBookCount != null) null else siblingKeys(books.map { it.publication })
+            val next = list.pages.lastOrNull()?.next
+            CatalogueBrowseContent.Loaded(
+                chips = list.facets().mapIndexed { index, group ->
+                    val value = group.options.firstOrNull { it.active } ?: group.allOption
+                    CatalogueFilterChip(index, group.name.display(), value?.title.display() ?: group.name.display().orEmpty())
+                },
+                shelves = header?.shelves.orEmpty().map { shelf ->
+                    val shelfSiblings = siblingKeys(shelf.books.map { it.publication })
+                    CatalogueShelf(shelf.key, shelf.title, shelf.seeAll != null, shelf.books.map { it.row(shelfSiblings) })
+                },
+                folders = header?.folders.orEmpty().map { folder ->
+                    CatalogueFolderRow(folder.key, folder.entry.displayTitle(), (folder.entry.summary.display() ?: folder.entry.content?.takeIf { it.format == com.retro99.server.api.CatalogueDescription.Format.Text }?.body.display())?.takeIf(String::isNotBlank))
+                },
+                books = books.map { it.row(siblings) },
+                sameBookCount = header?.sameBookCount,
+                earlier = paging(list.earlierLoad, there = list.earlier.isNotEmpty(), needsTap = false),
+                more = paging(list.more, there = next != null, needsTap = next != null && unconfirmedLocalHost(next) != null),
+                savedCopyAt = list.pages.mapNotNull { it.savedCopyAt }.minOrNull(),
+            )
+        }
+    }
+
+    private fun paging(load: Load, there: Boolean, needsTap: Boolean): CataloguePaging = when {
+        !there -> CataloguePaging.None
+        load == Load.Loading -> CataloguePaging.Loading
+        load == Load.Failed -> CataloguePaging.Failed
+        autoLoad && !needsTap -> CataloguePaging.Auto
+        else -> CataloguePaging.Button
+    }
+
+    /** @param siblings the same-book keys that get a telling line; null gives every row one */
+    private fun BookEntry.row(siblings: Set<String>?) = CatalogueBookRow(
+        key = key,
+        title = publication.displayTitle(),
+        author = publication.displayAuthor(),
+        cover = publication.images.firstOrNull()?.let { CatalogueImageModel(sourceId, it.href) },
+        inLibrary = inLibrary,
+        telling = publication.tellingLine().takeIf { siblings == null || publication.sameBookKey() in siblings },
+    )
+
+    private fun sheet(list: BookList, sheet: FilterSheet): CatalogueFilterSheet? {
+        val group = list.facets().getOrNull(sheet.groupIndex) ?: return null
+        val options = group.ordered()
+        val searchable = options.size > FILTER_SEARCH_ABOVE
+        val wanted = sheet.searchText.trim().takeIf { searchable }.orEmpty()
+        return CatalogueFilterSheet(
+            groupIndex = sheet.groupIndex,
+            group = group.name.display(),
+            optionCount = options.size,
+            searchable = searchable,
+            searchText = sheet.searchText,
+            options = options.mapIndexed { index, option -> CatalogueFilterOption(index, option.title.display().orEmpty(), option.count, option.active) }
+                .filter { it.title.contains(wanted, ignoreCase = true) },
+        )
+    }
+
+    companion object {
+        /** Plan §4: at most 20 parsed pages are kept for one list. */
+        const val MAX_LOADED_PAGES = 20
+
+        /** A filter with more options than this gets a search field. */
+        const val FILTER_SEARCH_ABOVE = 12
+        private const val FIRST_PAGE = 0
+    }
+}

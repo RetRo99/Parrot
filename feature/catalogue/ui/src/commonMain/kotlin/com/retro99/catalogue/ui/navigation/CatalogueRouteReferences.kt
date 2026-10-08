@@ -1,10 +1,36 @@
 package com.retro99.catalogue.ui.navigation
 
+import com.retro99.server.api.CataloguePublication
 import com.retro99.server.api.CatalogueTarget
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import org.koin.core.annotation.Single
+
+/**
+ * A page of a catalogue, as the browser opens it.
+ *
+ * @param title what the user tapped to get here; shown until the page gives its own title
+ * @param fromEntryWithoutFiles opened from a listing entry that had no file of its own: the
+ *   page may turn out to be that one book with its editions
+ * @param localNetworkHost the device on the local network the user agreed to open to get here
+ */
+data class CataloguePlace(
+    val target: CatalogueTarget,
+    val title: String? = null,
+    val fromEntryWithoutFiles: Boolean = false,
+    val localNetworkHost: String? = null,
+) {
+    override fun toString() = "CataloguePlace(redacted)"
+}
+
+/**
+ * A book in a catalogue: the page it is listed on and its entry there. Several entries when
+ * they are the editions of one book.
+ */
+data class CatalogueBookPlace(val listing: CatalogueTarget, val publications: List<CataloguePublication>) {
+    override fun toString() = "CatalogueBookPlace(redacted)"
+}
 
 /**
  * What a catalogue route carries in place of an address (plan §10.6).
@@ -26,7 +52,19 @@ class CatalogueRouteReferences {
     fun referenceTo(sourceId: String, target: CatalogueTarget): String = remember(sourceId, target)
 
     fun target(sourceId: String, reference: String): CatalogueTarget? =
-        state.value.entries[Key(sourceId, reference)] as? CatalogueTarget
+        state.value.entries[Key(sourceId, reference)].let { it as? CatalogueTarget ?: (it as? CataloguePlace)?.target }
+
+    /** A reference for a page with what the browser knows about how it was opened. */
+    fun referenceTo(sourceId: String, place: CataloguePlace): String = remember(sourceId, place)
+
+    fun place(sourceId: String, reference: String): CataloguePlace? =
+        state.value.entries[Key(sourceId, reference)].let { it as? CataloguePlace ?: (it as? CatalogueTarget)?.let(::CataloguePlace) }
+
+    /** A reference for a book's page. */
+    fun referenceTo(sourceId: String, book: CatalogueBookPlace): String = remember(sourceId, book)
+
+    fun book(sourceId: String, reference: String): CatalogueBookPlace? =
+        state.value.entries[Key(sourceId, reference)] as? CatalogueBookPlace
 
     /** Forgets every reference of [sourceId]: the catalogue was turned off, removed or changed. */
     fun forget(sourceId: String) = state.update { current -> current.copy(entries = current.entries.filterKeys { it.sourceId != sourceId }) }
