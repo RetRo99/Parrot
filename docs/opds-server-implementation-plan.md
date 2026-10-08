@@ -1,8 +1,8 @@
 # OPDS server support: research and implementation plan
 
 **Status:** Phase 1 protocol core complete and its gate met; Phase 2 test-first
-items 1–3 implemented (storage, exact addresses, capability guards). Items 4–7
-and all user-visible OPDS integration remain unimplemented.
+items 1–7 and catalogue plumbing implemented; Phase 2 gate met. Phase 3 not
+started. All user-visible OPDS integration remains unimplemented.
 No user-visible OPDS application integration yet. Reviewed
 against the codebase on 2026-10-08: open gaps are in §10, the designer brief is
 in §11, and design passes 1–3 with the remaining open points are in §11.7.  
@@ -679,9 +679,9 @@ by server ID returns null for OPDS. Global Coil auth excludes OPDS and suppresse
 bearer tokens on any origin shared with a catalogue, since it has no source
 identity. Existing-only profiles retain their prior routing behavior.
 
-No catalogue picker, screen, repository, access provider, credential store,
-sign-out or enable/disable lifecycle was added. The Phase 2 gate is not yet met.
-All-server consumer audit for the next run:
+At the end of that items 1–3 run, no catalogue picker, screen, repository, access
+provider, credential store, sign-out or enable/disable lifecycle had been added.
+The Phase 2 gate was not yet met. Historical all-server consumer audit:
 
 - `CoilInitializer`: fixed as above; shared-origin authenticated library covers
   will need source-aware loading once OPDS can be added through UI.
@@ -721,14 +721,104 @@ Before exposing registration, also add `CatalogueSources` to
 currently it leaves this isolated preference behind. Profile lifecycle cleanup
 was not expanded in this items 1–3 run.
 
-Verification found four existing Android host failures in
+**Items 4–7 and catalogue plumbing (2026-10-08, `opds/phase2-server-type`):**
+
+- Generic catalogue contracts retain the protocol model's metadata, topology,
+  language-tagged text, identity scope/warnings, artwork, media parameters,
+  extension properties, price, indirect acquisition and every acquisition choice.
+  Targets/search contexts are opaque, session-owned references. No XML/JSON or
+  OPDS implementation types occur in the generic API.
+- The composite factory follows `ServerSpecificFactory` /
+  `CompositeRepositoryFactory`. The catalogue provider selects registered,
+  enabled sources, not authenticated servers. Its observed source/status snapshot
+  is explicitly profile-scoped; synchronous registry getters/mutations also reload
+  the profile before accessing catalogue state.
+- `lib/server-opds` uses the Phase 1 parser, classifier, transport, search and
+  bounded in-memory cache, with no Storyteller dependency or authenticator call.
+  One shared cache bounds total retained payloads across sources; keys include
+  profile/source/access generation. Clearing a source conservatively clears the
+  shared payload cache too; other sources may subsequently refetch. Search
+  descriptors and targets are invalidated with their source session. Persisted
+  opened-document caching remains later-phase work, as requested for this run.
+- Link declaring bases now survive protocol normalization, including a link's own
+  `xml:base`; concrete resolution uses that base as well. This was needed to avoid
+  losing inherited bases in the generic adapter and search expansion.
+- `CatalogueAccessStatus` persists verified Public/SignedIn/SignInNeeded/
+  SignInUnsupported access, last successful request time, last error kind/time,
+  and whether the root itself answered 401. Enabled-state persistence supplies
+  TurnedOff as an overlay without erasing the last real check. Success retains the
+  historical last error; root success clears the root-401 flag. No polling or fake
+  Authenticated state is introduced.
+- `ServerManagementViewModel.catalogueSources` maps access state separately from
+  legacy auth-only `servers` cards. Public catalogues cannot map to Signed out or
+  offer the legacy Sign in again action. No screen consumes the new field yet;
+  catalogue rows are excluded from the old cards, and login intents for catalogue
+  types cannot navigate to the bearer login screen. No screen/picker/route was added.
+- Typed profile/source-scoped Basic account details live under `OpdsCredentials`
+  in SecureSettings, never in `ServerCredentials.accessToken` or
+  `ServerTokenProvider`. Empty passwords are accepted; account `toString()` is
+  redacted. Catalogue bearer sessions are rejected/ignored.
+- Address edits invalidate source work/cache/search. Scheme/host/effective-port
+  changes clear account details first; path/query-only changes retain them.
+  On a failed address write, work can remain cancelled and origin-changed account
+  details can remain cleared: this deliberately fails closed instead of restoring
+  a secret that might be retargeted. Re-registering an existing catalogue ID is
+  rejected; editing must use the explicit update operation.
+- Both logout-all entry points clear catalogue account details and cancel source
+  work, retaining sources. For profiles containing catalogues, the auth logout
+  entry point skips the legacy bulk cleaner because it deletes local reading
+  metadata/outbox rows too. Existing-only profiles keep their prior cleaner
+  behavior. There is no acquisition/book/file deletion in this lifecycle; Phase 3
+  must bind durable acquisition cancellation to the same work contracts.
+- A catalogue-only profile bypasses welcome as a configured setup (including a
+  temporarily disabled catalogue). The specifically named authenticated-remote
+  indicator remains false: anonymous access is not a library account/session.
+- Turn off persists `enabled=false`, excludes the source from the provider and
+  cancels work while keeping account details. Remove account retains the enabled
+  source and historical status until the next request yields Public/SignInNeeded.
+  Remove catalogue clears the source, account details, cache/search and persisted
+  status. Existing server deactivation still only clears its existing credentials.
+- A neutral `ProfileWorkRegistry` cancels catalogue work synchronously before
+  switching/deleting profile context, fencing late registrations even if flow
+  observers are delayed. Profile deletion also clears CatalogueSources,
+  OpdsCredentials and CatalogueAccessStatus. Old session references cannot make
+  requests or expose another profile's credentials/cached responses.
+- Device-backup audit: Android's manifest has `allowBackup=true`, but both its
+  `fullBackupContent` (Android 11 and lower) and `dataExtractionRules` (Android 12+
+  cloud backup and device transfer) already exclude `sharedpref/SecureSettings.xml`.
+  `PreferencesModule` creates exactly SecureSettings; Android encrypts it with
+  AndroidX Security, iOS uses Keychain. No backup exclusion had to be changed.
+  The Cloud/session implementation reads explicit cloud-session keys, not arbitrary
+  preferences; the sync modules do not depend on preferences or credential stores.
+  OpdsCredentials has only the secure-store and profile-cleanup consumers, and is
+  absent from portable/cloud payloads. It is not synced to Parrot Cloud.
+
+**Final verification and Phase 2 gate (2026-10-08, independent review at
+`ce24901c`): met.** The implementing run stopped before verifying; the results
+below were re-run afterwards. Android host and iOS simulator, passed/total on
+each: OPDS implementation 162/162, server API 19/19, server implementation
+26/26, server-opds 11/11, user implementation 6/6, auth domain 8/8, settings
+data 1/1, settings UI 19/19; composeApp 15/15 on Android host only (its iOS test
+binary still fails to link FirebaseCore, unchanged and unrelated).
+`:androidApp:assembleDebug` and `:composeApp:linkDebugFrameworkIosSimulatorArm64`
+both pass. No screen, picker, or route can reach OPDS.
+
+**Carry into Phase 3 (found in review):** `LogoutUseCase.logoutAll()` now skips
+`databaseCleaner.clearAllData()` entirely whenever the profile has a catalogue.
+That keeps catalogue data safe, but it also leaves a signed-out Storyteller or
+Audiobookshelf server's cached library and positions on the device, which
+existing-only profiles still clear. Phase 3 must replace the skip with a cleaner
+that clears library-server data as before and leaves catalogue acquisitions,
+provenance, and acquired books alone, with a test for a profile that has both.
+
+The items 1–3 verification found four existing Android host failures in
 `LinkPickerViewModelTest` and `LinkReviewViewModelTest`; the same four failures
 reproduce in an untouched worktree of `opds/phase1-protocol-core` (`20c89e78`).
 Their assertions and production behavior remain unchanged. Two Storyteller test
 method names had commas removed because Kotlin/Native rejects those names;
 their bodies and assertions are unchanged.
 
-Final verification: OPDS implementation 161/161, server API 19/19, server
+The items 1–3 final verification: OPDS implementation 161/161, server API 19/19, server
 implementation 12/12, and Storyteller 35/35 pass on both Android host and iOS
 simulator. Base passes 13/13 Android and 11/11 iOS; books UI is 67/71 on each
 platform (the four failures above). Compose passes 15/15 Android; its iOS test
@@ -1049,6 +1139,13 @@ that server's token.
 Specify a per-source image path (a dedicated loader or a custom fetcher keyed by
 server id that goes through the OPDS transport) and exclude OPDS sources from
 the global origin match. Verify bounded `data:` thumbnails through Coil.
+
+**Recorded Phase 2 limitation (do not fix in Phase 2):** `CoilInitializer` now
+suppresses bearer tokens for **any origin shared with a catalogue**, not just for
+the catalogue row. This prevents a bearer leak but breaks authenticated library
+server covers on the same scheme/host/port. Phase 4 **must replace this with
+source-aware cover loading before any screen can add a catalogue**. The current
+suppression is intentionally unchanged in this run.
 
 ### 10.8 Re-acquisition creates duplicate books
 
