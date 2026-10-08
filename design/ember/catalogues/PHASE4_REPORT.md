@@ -65,8 +65,9 @@
 - `:lib:server-opds:testAndroidHostTest` and `:lib:server-opds:iosSimulatorArm64Test` — 52/52 passed each.
 - `:base-ui:iosSimulatorArm64Test` — 7/7 passed. Unchanged Login UI tests — 45/45 passed on Android host and 45/45 on iOS Simulator.
 - `:tools:ember-fixtures:assembleDebug` — passed. Fixture capture checks passed for all 39 PNG/XML pairs. `git diff --check` — passed.
-- Pending after this report commit: `:androidApp:assembleDebug` and `:composeApp:linkDebugFrameworkIosSimulatorArm64`; results will be recorded in a follow-up report update.
+- `:androidApp:assembleDebug` — passed in the combined final-build run.
+- `:composeApp:linkDebugFrameworkIosSimulatorArm64` — passed on retry with an 8 GiB Gradle heap. The initial combined attempt reached the iOS link but ran out of the configured 4 GiB heap; no source changes were needed.
 
 ### Run 2 follow-up
 
-- Final app builds: pending.
+- Final Android and iOS app build targets passed. The iOS link retry completed successfully; its memory override was command-local and did not change project configuration.
