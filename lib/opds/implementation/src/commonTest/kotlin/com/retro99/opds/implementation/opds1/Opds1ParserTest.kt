@@ -476,4 +476,33 @@ class Opds1ParserTest {
         val outcome = parseFixture(Fixtures.COMMENT_BEFORE_DECLARATION, mediaType = "application/xml")
         assertTrue(outcome is OpdsParseResult.Rejected, outcome.toString())
     }
+
+    @Test
+    fun walker_DOCDECL_stop_is_reachable_and_stops_before_entity_text() {
+        // Defense in depth: the dispatcher's detector usually gates first;
+        // the walker's own DOCDECL stop is asserted by invoking the OPDS1
+        // parser directly. For DOCTYPEs the reader can decode (internal DTDs)
+        // the walker stops with the explicit document-type rejection; for
+        // DOCTYPEs the reader itself refuses (external SYSTEM entity,
+        // Phase 0 record) the reader's clean failure is an equivalent stop —
+        // either way no entity text is produced.
+        val direct = Opds1Parser(ParserFactory.urlResolver())
+        for (fixture in listOf(Fixtures.DTD_BASELINE, Fixtures.DTD_DEEP)) {
+            val outcome = direct.parse(
+                OpdsPayload("application/xml", readFixtureText(fixture).encodeToByteArray()),
+                "https://x.dev",
+            )
+            assertTrue(
+                outcome is OpdsParseResult.Rejected &&
+                    outcome.rejection is OpdsRejection.DocumentTypeDeclarationRejected,
+                "$fixture via walker: $outcome",
+            )
+        }
+        val external = direct.parse(
+            OpdsPayload("application/xml", readFixtureText(Fixtures.DTD_EXTERNAL).encodeToByteArray()),
+            "https://x.dev",
+        )
+        // Clean stop either way; never content.
+        assertTrue(external is OpdsParseResult.Rejected, external.toString())
+    }
 }
