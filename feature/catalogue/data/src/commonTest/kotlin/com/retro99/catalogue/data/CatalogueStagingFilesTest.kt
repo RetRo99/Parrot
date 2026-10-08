@@ -37,6 +37,27 @@ class CatalogueStagingFilesTest {
     }
 
     @Test
+    fun `the folders of profiles that are gone are removed with their files and the others stay`() = runTest {
+        // Given
+        val kept = files.newPartPath("profile-1")
+        val gone = files.newPartPath("profile-2")
+        listOf(kept, gone).forEach { path -> files.openForWriting(path).apply { write("abc".encodeToByteArray(), 3) }.close() }
+
+        // When
+        files.deleteFoldersExcept(setOf("profile-1", "profile-3"))
+
+        // Then
+        assertEquals(listOf(kept), files.list("profile-1"))
+        assertEquals(emptyList(), files.list("profile-2"))
+        assertEquals(0L, files.size(gone))
+
+        // And a new download for a profile whose folder was removed still works
+        val again = files.newPartPath("profile-2")
+        files.openForWriting(again).apply { write("abc".encodeToByteArray(), 3) }.close()
+        assertEquals(listOf(again), files.list("profile-2"))
+    }
+
+    @Test
     fun `bytes are written in chunks and the size and hash are read back from disk`() = runTest {
         // Given
         val path = files.newPartPath("profile-1")

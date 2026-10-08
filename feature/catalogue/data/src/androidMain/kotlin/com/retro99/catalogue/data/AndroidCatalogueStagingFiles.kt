@@ -76,6 +76,17 @@ internal class JvmCatalogueStagingFiles(
             .map { file -> file.absolutePath }
     }
 
+    override suspend fun deleteFoldersExcept(profileIds: Set<String>) {
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val kept = profileIds.map { profileId -> profileId.safeFileName() }.toSet()
+                root().listFiles().orEmpty()
+                    .filter { folder -> folder.isDirectory && folder.name !in kept }
+                    .forEach { folder -> folder.deleteRecursively() }
+            }
+        }
+    }
+
     private companion object {
         const val HASH_BUFFER_BYTES = 64 * 1024
     }

@@ -295,7 +295,7 @@ class SignOutOfEverythingTest {
         }
     }
 
-    private class TestPosition(
+    internal class TestPosition(
         override val bookUuid: String,
         override val libraryBookId: String?,
     ) : PositionEntity {

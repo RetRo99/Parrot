@@ -160,6 +160,9 @@ private class TempStagingFiles(private val root: File) : CatalogueStagingFiles {
     override suspend fun delete(path: String) { File(path).delete() }
     override suspend fun list(profileId: String): List<String> =
         File(root, profileId).listFiles().orEmpty().filter { it.isFile }.map { it.absolutePath }
+    override suspend fun deleteFoldersExcept(profileIds: Set<String>) {
+        root.listFiles().orEmpty().filter { it.isDirectory && it.name !in profileIds }.forEach { it.deleteRecursively() }
+    }
 }
 
 private class TempLibraryFiles(private val root: File) : BookFileTransferFileStore {

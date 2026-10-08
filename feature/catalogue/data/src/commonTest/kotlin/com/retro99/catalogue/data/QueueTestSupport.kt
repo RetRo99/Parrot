@@ -25,8 +25,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /** Shared between the fakes: which profile is open, and whether the database lock is held. */
 internal class TestWorld {
@@ -129,9 +131,13 @@ internal class FakeAcquisitionsDatabase(private val world: TestWorld) : Catalogu
 
     override suspend fun interruptRunning(updatedAt: Long): Int = error("The queue interrupts row by row")
 
+    /** Runs after a row is deleted: the instant a cancel has landed. */
+    var afterDelete: (String) -> Unit = {}
+
     override suspend fun delete(requestId: String) {
         writes++
         table().remove(requestId)
+        afterDelete(requestId)
     }
 
     override suspend fun deleteCompleted() {
@@ -215,6 +221,10 @@ internal class FakeStagingFiles(private val world: TestWorld) : CatalogueStaging
 
     override suspend fun list(profileId: String): List<String> =
         files.keys.filter { path -> path.startsWith("/staging/$profileId/") }
+
+    override suspend fun deleteFoldersExcept(profileIds: Set<String>) {
+        files.keys.removeAll { path -> path.removePrefix("/staging/").substringBefore('/') !in profileIds }
+    }
 }
 
 /** Provenance rows per profile. "In the library" is decided by [TestWorld.libraryBooks], like the real join. */
@@ -389,6 +399,12 @@ internal class FakeAdder(private val world: TestWorld, private val files: FakeSt
     /** The process stops after the book is in the library and before the queue hears of it. */
     var dieAfterAdding = false
 
+    /**
+     * Runs once the book is in the library and before the queue hears of it. The real import
+     * cannot be cancelled at that point, so this runs even when the request was.
+     */
+    var whileCommitting: (suspend () -> Unit)? = null
+
     override suspend fun add(profileId: String, book: StagedCatalogueBook): CatalogueBookAddResult {
         world.slowWork("add to library")
         calls += Call(profileId, book)
@@ -399,6 +415,7 @@ internal class FakeAdder(private val world: TestWorld, private val files: FakeSt
             // A real import consumes the staged file.
             files.delete(book.path)
             world.addToLibrary(profileId, book.contentHash, answer.libraryBookId)
+            whileCommitting?.let { step -> withContext(NonCancellable) { step() } }
         }
         if (dieAfterAdding) awaitCancellation()
         return answer

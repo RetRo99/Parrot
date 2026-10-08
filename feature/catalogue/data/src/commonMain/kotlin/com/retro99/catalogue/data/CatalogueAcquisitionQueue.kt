@@ -57,7 +57,8 @@ import kotlinx.coroutines.withContext
  *   finished in a fixed order, each step safe to repeat: the library book id is stored, the
  *   provenance row is written, then the request becomes done and loses its listing address
  *   and staging path. A request found half-way through that after a restart is finished, not
- *   downloaded again.
+ *   downloaded again. A cancel or a catalogue removal that lands after the library committed
+ *   the book does not undo it: the book stays and its provenance row is still written.
  */
 class CatalogueAcquisitionQueue internal constructor(
     private val session: ProfileDatabaseSession,
@@ -414,7 +415,12 @@ class CatalogueAcquisitionQueue internal constructor(
                 is CatalogueBookAddResult.Added -> {
                     // The adder consumed the file.
                     onDisk = null
-                    finishAdded(profileId, requestId, added.libraryBookId)
+                    // The book is in the library whatever happened to the request meanwhile, so
+                    // this is not stopped by a cancel: a book must not be left without the
+                    // record of where it came from.
+                    withContext(NonCancellable) {
+                        finishAdded(profileId, row.copy(localHash = staged.contentHash), added.libraryBookId)
+                    }
                 }
                 is CatalogueBookAddResult.Failed ->
                     fail(profileId, requestId, added.reason) { failed -> failed.copy(neededBytes = added.neededBytes) }
@@ -435,12 +441,15 @@ class CatalogueAcquisitionQueue internal constructor(
         }
     }
 
-    /** The book is in the library: finish the request. A request cancelled meanwhile has no row. */
-    private suspend fun finishAdded(profileId: String, requestId: String, libraryBookId: String) {
+    /**
+     * The book is in the library: finish the request. [asRequested] is the request as this
+     * worker knows it, for when its row is gone.
+     */
+    private suspend fun finishAdded(profileId: String, asRequested: CatalogueAcquisitionEntity, libraryBookId: String) {
         lock.withLock {
             if (loadedProfileId != profileId) throw ProfileClosed()
-            inProfile(profileId) { completeAdd(profileId, requestId, libraryBookId) }
-            progress.update { it - requestId }
+            inProfile(profileId) { completeAdd(profileId, asRequested.requestId, libraryBookId, asRequested) }
+            progress.update { it - asRequested.requestId }
             refresh(profileId)
         }
     }
@@ -451,15 +460,28 @@ class CatalogueAcquisitionQueue internal constructor(
      * names its book, which [recoverRunning] finishes by running this again: the id is the
      * same, the provenance row is keyed by the request, and "done" is written last.
      *
+     * A request that was cancelled, or whose catalogue was removed, in the instant the library
+     * committed the book has no row any more. The book is there all the same, so [gone], the
+     * request as its worker knew it, still gets its provenance row and nothing else is written.
+     *
      * @return the staging path the request still named, for the caller to delete
      */
-    private suspend fun completeAdd(profileId: String, requestId: String, libraryBookId: String): String? {
-        val row = database.get(requestId) ?: return null
-        if (row.acquisitionState() != AcquisitionState.Adding) return null
+    private suspend fun completeAdd(
+        profileId: String,
+        requestId: String,
+        libraryBookId: String,
+        gone: CatalogueAcquisitionEntity? = null,
+    ): String? {
         val time = now()
+        val row = database.get(requestId)
+        if (row == null) {
+            gone?.let { request -> recordSource(profileId, request, libraryBookId, time) }
+            return null
+        }
+        if (row.acquisitionState() != AcquisitionState.Adding) return null
         val withBook = row.copy(libraryBookId = libraryBookId, updatedAt = time)
         database.update(withBook)
-        sources.insertIfAbsent(row.toBookSource(libraryBookId, sourceAddress(profileId, row.sourceId), time))
+        recordSource(profileId, row, libraryBookId, time)
         database.update(
             withBook.withState(AcquisitionState.Done, time).copy(
                 completedAt = time,
@@ -468,6 +490,22 @@ class CatalogueAcquisitionQueue internal constructor(
             ),
         )
         return row.stagingPath
+    }
+
+    /**
+     * Must run inside [inProfile]. One row per book, publication and file: the same bytes
+     * downloaded again after the device file was removed go back to the same book and say
+     * nothing new about where it came from.
+     */
+    private suspend fun recordSource(profileId: String, row: CatalogueAcquisitionEntity, libraryBookId: String, time: Long) {
+        val source = row.toBookSource(libraryBookId, sourceAddress(profileId, row.sourceId), time)
+        val known = sources.getForBook(libraryBookId).any { existing ->
+            existing.id != source.id &&
+                existing.sourceId == source.sourceId &&
+                existing.publicationKey == source.publicationKey &&
+                existing.contentHash == source.contentHash
+        }
+        if (!known) sources.insertIfAbsent(source)
     }
 
     private suspend fun fail(

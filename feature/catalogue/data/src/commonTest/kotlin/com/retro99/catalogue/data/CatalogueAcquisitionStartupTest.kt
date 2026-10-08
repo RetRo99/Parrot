@@ -57,6 +57,33 @@ class CatalogueAcquisitionStartupTest {
         assertEquals(listOf("p1", "p2"), manager.restoredFor)
     }
 
+    @Test
+    fun `a deleted profile's staging folder is removed, and nothing is removed before the profiles are known`() = runTest {
+        // Given: two profiles with a staged file each, and a folder left by a profile deleted earlier
+        val users = FakeUsers()
+        val files = FakeStagingFiles(TestWorld())
+        val staged = listOf("p1", "p2", "long-gone").map { profileId ->
+            files.newPartPath(profileId).also { path -> files.openForWriting(path).close() }
+        }
+        removeStagingOfDeletedProfiles(files, users, backgroundScope)
+        runCurrent()
+        assertEquals(staged.toSet(), files.files.keys)
+
+        // When the profiles are loaded
+        users.all.value = listOf(profile("p1"), profile("p2"))
+        runCurrent()
+
+        // Then only the leftover folder is gone
+        assertEquals(staged.take(2).toSet(), files.files.keys)
+
+        // When a profile is deleted
+        users.all.value = listOf(profile("p1"))
+        runCurrent()
+
+        // Then
+        assertEquals(setOf(staged.first()), files.files.keys)
+    }
+
     private fun profile(id: String) = UserProfile(id = id, name = "Reader", createdAt = 0)
 
     private class RecordingManager(private val users: FakeUsers) : CatalogueAcquisitionManager {
@@ -88,7 +115,8 @@ class CatalogueAcquisitionStartupTest {
         override fun getActiveProfileId(): String? = active.value?.id
         override suspend fun getActiveProfile(): UserProfile? = active.value
         override fun isProfileActive() = active.value != null
-        override fun observeAllProfiles(): Flow<List<UserProfile>> = emptyFlow()
+        val all = MutableStateFlow<List<UserProfile>>(emptyList())
+        override fun observeAllProfiles(): Flow<List<UserProfile>> = all
         override suspend fun getAllProfiles() = error("unused")
         override suspend fun createProfile(id: String?, name: String, avatarId: Int?) = error("unused")
         override suspend fun updateProfile(profile: UserProfile) = error("unused")

@@ -136,6 +136,17 @@ internal class PosixCatalogueStagingFiles(
             .map { name -> "$directory/$name" }
     }
 
+    override suspend fun deleteFoldersExcept(profileIds: Set<String>) {
+        withContext(Dispatchers.IO) {
+            val kept = profileIds.map { profileId -> profileId.safeFileName() }.toSet()
+            val manager = NSFileManager.defaultManager
+            manager.contentsOfDirectoryAtPath(root, error = null).orEmpty()
+                .filterIsInstance<String>()
+                .filterNot { name -> name in kept }
+                .forEach { name -> manager.removeItemAtPath("$root/$name", error = null) }
+        }
+    }
+
     /** Whether the staging folder carries the "do not back up" mark. Null when it does not exist. */
     internal fun isExcludedFromBackup(): Boolean? = memScoped {
         val value = alloc<ObjCObjectVar<Any?>>()
