@@ -2,6 +2,7 @@ package com.retro99.opds.implementation.detect
 
 import com.retro99.opds.api.OpdsContentType
 import com.retro99.opds.api.OpdsPayload
+import com.retro99.opds.api.UnsupportedOpdsEncodingException
 import com.retro99.opds.api.model.OpdsBudgets
 import com.retro99.opds.api.model.OpdsMediaType
 import com.retro99.opds.api.model.OpdsRejection
@@ -29,6 +30,13 @@ class OpdsDocumentDetector(
     fun detectBody(payload: OpdsPayload): OpdsContentType {
         if (payload.bytes.size > OpdsBudgets.MAX_RESPONSE_BYTES) {
             return OpdsContentType.Rejected(OpdsRejection.TooLarge())
+        }
+        try {
+            payload.asText()
+        } catch (_: UnsupportedOpdsEncodingException) {
+            return OpdsContentType.Rejected(OpdsRejection.UnsupportedEncoding())
+        } catch (_: IllegalArgumentException) {
+            return OpdsContentType.Rejected(OpdsRejection.Malformed("invalid encoded text"))
         }
         val mediaType = mediaTypeParser.parse(payload.mediaTypeHeader)
         if (mediaType != null) {

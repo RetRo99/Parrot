@@ -31,4 +31,5 @@ sealed interface OpdsRejection {
     data class TooDeep(override val note: String? = null) : OpdsRejection
     data class TooManyItems(override val note: String? = null) : OpdsRejection
     data class UnresolvedBase(override val note: String? = null) : OpdsRejection
+    data class UnsupportedEncoding(override val note: String? = "unsupported encoding") : OpdsRejection
 }

@@ -4,6 +4,7 @@ import com.retro99.opds.api.OpdsParseResult
 import com.retro99.opds.api.OpdsParser
 import com.retro99.opds.api.OpdsPayload
 import com.retro99.opds.api.OpdsUrlResolver
+import com.retro99.opds.api.UnsupportedOpdsEncodingException
 import com.retro99.opds.api.model.OpdsBudgets
 import com.retro99.opds.api.model.OpdsContent
 import com.retro99.opds.api.model.OpdsContributor
@@ -56,6 +57,8 @@ internal class Opds1Parser(
         val state = ParseState(effectiveResponseUrl, resolver)
         try {
             Opds1XmlWalker(state).walk(xmlStreaming.newReader(payload.asText(), false), RootVisitor(state, mediaTypeParser))
+        } catch (_: UnsupportedOpdsEncodingException) {
+            return OpdsParseResult.Rejected(OpdsRejection.UnsupportedEncoding())
         } catch (structural: StructuralAbort) {
             return OpdsParseResult.Rejected(structural.rejection)
         } catch (parseError: Exception) {

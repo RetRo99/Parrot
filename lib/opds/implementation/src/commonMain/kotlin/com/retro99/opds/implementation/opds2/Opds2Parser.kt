@@ -30,6 +30,8 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
             }
             if (countItems(root) > OpdsBudgets.MAX_ITEMS_PER_RESPONSE) return OpdsParseResult.Rejected(OpdsRejection.TooManyItems())
             OpdsParseResult.Document(Reader(effectiveResponseUrl).document(root))
+        } catch (_: UnsupportedOpdsEncodingException) {
+            OpdsParseResult.Rejected(OpdsRejection.UnsupportedEncoding())
         } catch (_: IllegalArgumentException) {
             OpdsParseResult.Rejected(OpdsRejection.Malformed("invalid OPDS JSON structure"))
         }
