@@ -927,6 +927,70 @@ it. The Android picker entry point itself is not host-testable: FileKit's
 `PlatformFile` is Java 21 bytecode and host tests run on JDK 17, so Android is
 covered one level below it.
 
+**Phase 3 status after the acquisition-queue run (2026-10-08, branch
+`opds/phase3-acquisition`).** Done: the three tables and one migration, the
+acquisition state machine, the durable queue, streaming download, and the file
+check, up to "a checked, hashed EPUB is in staging". Not done: calling the
+staged importer, writing provenance rows, the publication-key lookup, any
+screen.
+
+- **Database.** `39.sqm` takes the schema from version 39 to 40 and creates
+  `catalogue_acquisitions`, `catalogue_book_sources` and `catalogue_documents`.
+  They are profile-scoped the way every table is: one database file per
+  profile. DAOs: `CatalogueAcquisitionsDatabase`, `CatalogueBookSourcesDatabase`,
+  `CatalogueDocumentsDatabase` (lib/database/api, package `catalogue`). None of
+  them is a `DataClearable`, so sign-out keeps provenance (§10.0). Timestamps in
+  these tables are epoch milliseconds.
+- **States.** `AcquisitionStateMachine` (feature/catalogue/domain) is the only
+  place a legal move is defined: Waiting, Downloading, Checking, Adding, Done,
+  Failed(reason), Interrupted, with reasons connection, too_large, storage,
+  invalid, protected, refused, sign_in. Cancel deletes the request from every
+  state except Done. Retry: connection, storage, refused. Dismiss: too_large,
+  invalid, protected. A sign_in failure goes back to Waiting through `SignedIn`.
+- **Queue.** `CatalogueAcquisitionQueue` (feature/catalogue/data) implements
+  `CatalogueAcquisitionManager` and `CatalogueWorkController`. Two run at once;
+  the order is the stored `queue_position`. A retried or restarted request goes
+  to the back. The first time a profile is touched in a process, rows left in
+  Downloading, Checking or Adding become Interrupted and their staging files
+  are deleted; Waiting rows stay and nothing starts until `request`, `retry`,
+  `startAgain`, `signedIn` or `start`. Nothing calls `restoreAfterRestart()` at
+  app start yet; the same recovery runs on first use.
+- **Fencing.** A worker keeps the profile id it started with. Every write is
+  `withProfile(thatProfile) { … }` and is refused when another profile is open.
+  The lock is held for the write only. On a profile switch or deletion
+  `ProfileWorkRegistry` calls the queue before the database closes; running
+  requests are stored as Interrupted. A source that is turned off, removed or
+  gets new account details cancels its unfinished requests, except one that is
+  Failed(sign_in), which is what the new details are for.
+- **Download.** `OpdsTransport.download` streams to a sink under the feed rules
+  for redirects, origin and credentials, with `OpdsBudgets.MAX_DOWNLOAD_BYTES`
+  (512 MiB). `CatalogueAcquisitionRepository` (lib/server/api, implemented by
+  `OpdsCatalogueRepository`) reloads the listing page outside the cache, finds
+  the file by publication key and representation key, then streams it. The
+  stored locator is the listing page address; the file link is never stored.
+  The representation key is the media type plus its place among files of that
+  type in catalogue order (`application/epub+zip#1`).
+- **Staging.** Android: `noBackupFilesDir/catalogue_staging/<profile>/`. iOS:
+  the temporary directory, same layout. Names are a random UUID plus
+  `.epub.part`, renamed to `.epub` once checked. Free space is checked before
+  the request, against the declared length, and every 4 MiB written; 16 MiB
+  must stay free.
+- **File check.** `EpubFileChecker` (lib/epub) runs in common code on both
+  targets, on the ZIP reader lib/epub already had. See the limits in
+  `EpubFileLimits`.
+- **Importer seam.** The queue calls `CatalogueBookAdder`. The app binding is
+  `DeferredCatalogueBookAdder`, which answers "not added yet", so a request
+  stops in Adding with `staging_path` and `local_hash` set. The next run
+  replaces that binding with one that calls `StagedBookImportManager` and
+  writes `catalogue_book_sources`.
+- **Found, not fixed.** The generated Koin module builds `ServerRegistryImpl`
+  with its default `catalogueWork = emptyList()` (and private credential and
+  access stores), because constructor parameters with defaults are skipped. In
+  the running app `cancelCatalogueWork` therefore reaches no controller: not
+  the Phase 2 repository factory and not this queue. The queue takes
+  `Lazy<CatalogueRepositoryProvider>` so that fixing the registry does not
+  create a dependency cycle.
+
 ### Phase 4 — complete browsing feature
 
 - Create `feature/catalogue/domain`, `data`, and `ui`; add source/browser/detail
