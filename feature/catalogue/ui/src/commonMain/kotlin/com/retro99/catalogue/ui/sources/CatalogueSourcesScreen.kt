@@ -724,7 +724,7 @@ private fun SelectedCatalogueKindCard(enabled: Boolean) {
 }
 
 @Composable
-private fun CataloguePasswordField(
+internal fun CataloguePasswordField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
