@@ -1610,12 +1610,40 @@ Specify a per-source image path (a dedicated loader or a custom fetcher keyed by
 server id that goes through the OPDS transport) and exclude OPDS sources from
 the global origin match. Verify bounded `data:` thumbnails through Coil.
 
-**Recorded Phase 2 limitation (do not fix in Phase 2):** `CoilInitializer` now
-suppresses bearer tokens for **any origin shared with a catalogue**, not just for
-the catalogue row. This prevents a bearer leak but breaks authenticated library
-server covers on the same scheme/host/port. Phase 4 **must replace this with
-source-aware cover loading before any screen can add a catalogue**. The current
-suppression is intentionally unchanged in this run.
+**Resolved in Phase 4 (branch `opds/phase4-screens`).** The Phase 2 limitation,
+where `CoilInitializer` suppressed bearer tokens for any origin shared with a
+catalogue and so broke a library server's covers on that address, is gone.
+
+- **Catalogue pictures** are requested with their own Coil model,
+  `CatalogueImageModel(sourceId, url)` (`lib/server/api`), never with a bare
+  address. `CatalogueImageFetcher` (`composeApp/.../initializer/CatalogueImages.kt`)
+  finds the catalogue by id among the open profile's turned-on catalogues and
+  asks its session (`CatalogueImageRepository.loadImage`, implemented by
+  `OpdsCatalogueRepository`) for the bytes. The request goes through the OPDS
+  transport, so the rules of a feed apply: Basic only on HTTPS hops on that
+  catalogue's configured origin and never again after leaving it, nothing
+  cross-origin, the same redirect and address checks, no cookies, and a 4 MiB
+  ceiling (`CatalogueImageLimits.MAX_IMAGE_BYTES`). A turned-off, removed or
+  other-profile catalogue id resolves to nothing and no request is made.
+- **Only raster bytes are handed to a decoder:** PNG, JPEG, GIF and WebP,
+  recognised by their first bytes, not by the catalogue's label. SVG and
+  everything else is refused. An inline `data:` picture must be base64, be
+  labelled as one of those four types, match its label, and decode to at most
+  256 KiB (`MAX_INLINE_IMAGE_BYTES`); it is never requested.
+- **Caching:** the bytes are not written to Coil's disk cache. The memory-cache
+  key carries the profile id, the catalogue id and the catalogue's access
+  generation, so a picture fetched with one account is not shown for another.
+- **Library server covers** are back to the pre-catalogue rule: the global
+  loader attaches the bearer token of the non-catalogue server whose scheme,
+  host and port match exactly. Catalogues are not candidates and no longer
+  suppress anything.
+
+Tests: `CatalogueCoverLoadingTest` (the app's real graph), `OpdsCatalogueImageTest`,
+`CatalogueImageBytesTest`, `CoverAuthCatalogueTest`.
+
+**Rule for Phase 4 screens:** a catalogue cover is always a
+`CatalogueImageModel`. Passing a catalogue's image address to Coil as a string
+would send it through the global loader, which is wrong on a shared address.
 
 ### 10.8 Re-acquisition creates duplicate books
 

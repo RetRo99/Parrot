@@ -4,6 +4,7 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import com.retro99.base.AppInitializer
+import com.retro99.server.api.CatalogueImageModel
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerTokenProvider
 import com.retro99.server.api.ServerType
@@ -36,34 +37,43 @@ class CoilInitializer(
     private val httpClient: HttpClient,
     private val serverRegistry: ServerRegistry,
     private val serverTokenProvider: ServerTokenProvider,
+    internal val catalogueImages: CatalogueImageSource,
 ) : AppInitializer {
 
     override fun initialize() {
-        val imageClient = HttpClient(httpClient.engine) {
-            install(HttpTimeout) {
-                connectTimeoutMillis = CONNECT_TIMEOUT_MS
-                requestTimeoutMillis = REQUEST_TIMEOUT_MS
-                socketTimeoutMillis = SOCKET_TIMEOUT_MS
-            }
-            install(ServerAuthPlugin) {
-                resolveTokenForUrl = ::resolveTokenForUrl
-            }
-        }
+        val imageClient = newImageClient()
 
         SingletonImageLoader.setSafe { context ->
             ImageLoader.Builder(context)
                 .components {
                     add(KtorNetworkFetcherFactory(imageClient))
+                    // Catalogue pictures: their own model type, their own path (plan §10.7).
+                    add(CatalogueImageKeyer(catalogueImages))
+                    add(CatalogueImageFetcher.Factory(catalogueImages))
                 }
                 .build()
         }
     }
 
+    /** The client behind every address-only image request: library server covers. */
+    internal fun newImageClient(): HttpClient = HttpClient(httpClient.engine) {
+        install(HttpTimeout) {
+            connectTimeoutMillis = CONNECT_TIMEOUT_MS
+            requestTimeoutMillis = REQUEST_TIMEOUT_MS
+            socketTimeoutMillis = SOCKET_TIMEOUT_MS
+        }
+        install(ServerAuthPlugin) {
+            resolveTokenForUrl = ::resolveTokenForUrl
+        }
+    }
+
+    /**
+     * The bearer token of the library server on exactly this scheme, host and port, if any.
+     * Catalogues are not candidates: their pictures are [CatalogueImageModel] requests and never
+     * come through this client, so one sharing a library server's address changes nothing here.
+     */
     internal suspend fun resolveTokenForUrl(url: Url): String? {
         val servers = serverRegistry.getAllServers()
-        // This global loader has no source identity. An OPDS origin must use the
-        // future per-source loader, even when a library server shares its origin.
-        if (servers.any { it.type == ServerType.Opds && isSameOrigin(it.baseUrl, url) }) return null
         val matchingServer = servers.firstOrNull { server ->
             server.type != ServerType.Opds && isSameOrigin(server.baseUrl, url)
         } ?: return null
