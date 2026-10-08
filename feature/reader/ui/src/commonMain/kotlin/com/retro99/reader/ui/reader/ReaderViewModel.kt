@@ -1751,6 +1751,13 @@ class ReaderViewModel(
                 if (useLocal) resolvePositionConflictUseCase.useLocal(conflict)
                 else resolvePositionConflictUseCase.useRemote(conflict)
             }.onSuccess {
+                if (useLocal) viewModelScope.launch {
+                    syncNowUseCase(SyncRequest(
+                        reason = SyncTriggerReason.READER_CHECKPOINT,
+                        scope = SyncScope.Books(setOf(bookUuid)),
+                        urgency = SyncUrgency.URGENT,
+                    ))
+                }
                 // Keep the prompt up while navigating so its locator callback cannot
                 // turn accepting a server snapshot into a fresh local reading write.
                 val restored = selected.toUiModel()

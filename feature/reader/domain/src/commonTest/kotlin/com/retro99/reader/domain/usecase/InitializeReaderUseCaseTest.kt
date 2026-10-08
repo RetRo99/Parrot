@@ -84,6 +84,7 @@ class InitializeReaderUseCaseTest {
             getReadingProgressWithConflictUseCase = GetReadingProgressWithConflictUseCase(
                 repositoryProvider = provider,
                 positionDatabase = UnusedPositionDatabase,
+                syncOutboxDatabase = com.retro99.reader.domain.fakes.FakeSyncOutboxDatabase(),
             ),
         )
     }

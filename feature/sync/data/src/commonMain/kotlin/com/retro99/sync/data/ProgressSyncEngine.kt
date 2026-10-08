@@ -201,6 +201,11 @@ class ProgressSyncEngine(
                 expectedLocalGeneration = entry.localGeneration,
             )
         }
+        // The pre-push refresh preserved the old server candidate while this write
+        // was dirty. Once the current generation is accepted it is no longer a conflict.
+        if (positionDatabase.getPositionByBookUuid(entry.entityId)?.localGeneration == entry.localGeneration) {
+            positionDatabase.deleteRemotePosition(entry.entityId)
+        }
         syncOutboxDatabase.delete(entry.mutationId)
     }
 

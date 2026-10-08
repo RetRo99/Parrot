@@ -11,6 +11,7 @@ import com.retro99.books.domain.model.BookWithProgressDomainModel
 import com.retro99.books.domain.model.toBookDomainModel
 import com.retro99.reader.domain.ReaderSettingsRepository
 import com.retro99.reader.domain.progress.RemotePositionStore
+import com.retro99.reader.domain.model.toPositionDomainModel
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.ServerBook
 import com.retro99.server.api.ServerPosition
@@ -35,6 +36,7 @@ class ObserveBookWithProgressUseCase(
     @Provided private val readerSettingsRepository: ReaderSettingsRepository,
     @Provided private val positionLocalSource: ServerPositionLocalSource,
     @Provided private val remotePositionStore: RemotePositionStore,
+    @Provided private val getReadingProgressWithConflictUseCase: GetReadingProgressWithConflictUseCase,
 ) {
     /**
      * Observes a book with its progress information.
@@ -84,7 +86,11 @@ class ObserveBookWithProgressUseCase(
         // Refresh the shared remote position store (once per emission) and read the remote
         // position back from it: the same value the library list shows for this book.
         remotePositionStore.refresh(serverId = serverId, bookUuid = bookUuid)
-        val remotePosition = remotePositionStore.get(bookUuid)
+        val remotePosition = remotePositionStore.get(bookUuid)?.takeUnless { remote ->
+            getReadingProgressWithConflictUseCase.hasDismissedRemote(
+                serverId, bookUuid, remote.toPositionDomainModel(),
+            )
+        }
         val remoteProgression = remotePosition?.totalProgression
         val displayPosition = if (localPosition?.totalProgression != null) localPosition else remotePosition
 

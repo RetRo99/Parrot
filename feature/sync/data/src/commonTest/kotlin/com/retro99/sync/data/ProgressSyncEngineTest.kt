@@ -73,6 +73,34 @@ class ProgressSyncEngineTest {
     }
 
     @Test
+    fun `accepting the current choice removes the pre-push conflict baseline`() = runTest {
+        val mutation = outboxEntry("choice", localGeneration = 7L)
+        val positions = RecordingPositionDatabase()
+        positions.upsertPosition(storedLinkedCopy(generation = 7L, origin = PositionEntity.ORIGIN_USER))
+        val engine = ProgressSyncEngine(RecordingOutboxDatabase(listOf(mutation)), positions, RecordingWrites())
+        engine.push(
+            listOf(mutation),
+            RecordingTransport(pushResults = listOf(ProgressPushResult.Accepted("choice", null))),
+            ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertEquals(listOf("book-1"), positions.deletedRemoteBookIds)
+    }
+
+    @Test
+    fun `accepting an older generation retains the newer reading conflict baseline`() = runTest {
+        val mutation = outboxEntry("old", localGeneration = 7L)
+        val positions = RecordingPositionDatabase()
+        positions.upsertPosition(storedLinkedCopy(generation = 8L))
+        val engine = ProgressSyncEngine(RecordingOutboxDatabase(listOf(mutation)), positions, RecordingWrites())
+        engine.push(
+            listOf(mutation),
+            RecordingTransport(pushResults = listOf(ProgressPushResult.Accepted("old", null))),
+            ProgressOutboxCodec { it.toProgressMutation() },
+        )
+        assertTrue(positions.deletedRemoteBookIds.isEmpty())
+    }
+
+    @Test
     fun `a superseded selection is not dispatched or sent`() = runTest {
         val outbox = RecordingOutboxDatabase(emptyList())
         var sent = false

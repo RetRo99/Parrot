@@ -4,6 +4,8 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.getOrElse
 import com.retro99.base.result.AppResult
 import com.retro99.database.api.books.PositionDatabase
+import com.retro99.database.api.sync.SyncOutboxDatabase
+import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.reader.domain.model.PositionDomainModel
 import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.reader.domain.model.conflictDecision
@@ -11,8 +13,11 @@ import com.retro99.reader.domain.model.toPositionDomainModel
 import com.retro99.reader.domain.model.isSameReadingPlaceAs
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.PositionOrigin
+import com.retro99.server.api.ServerPosition
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
 
@@ -29,6 +34,7 @@ import org.koin.core.annotation.Provided
 class GetReadingProgressWithConflictUseCase(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
     @Provided private val positionDatabase: PositionDatabase,
+    @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
 ) {
     /**
      * Gets the reading progress for a book with conflict detection.
@@ -60,9 +66,35 @@ class GetReadingProgressWithConflictUseCase(
             val localPosition = localDeferred.await().getOrElse { null }?.toPositionDomainModel()
             val remotePosition = remoteDeferred.await()
 
+            // A local choice is durable even before delivery. Only suppress the exact
+            // server candidate it rejected; new remote reading must still be offered.
+            if (localPosition != null && remotePosition != null &&
+                hasDismissedRemote(serverId, bookUuid, remotePosition)
+            ) {
+                return@coroutineScope Ok(ReadingProgressResult.Resolved(localPosition))
+            }
             Ok(resolvePositionConflict(localPosition, remotePosition))
         }
     }
+
+    internal suspend fun hasDismissedRemote(
+        serverId: String,
+        bookUuid: String,
+        remote: PositionDomainModel,
+    ): Boolean = syncOutboxDatabase.getPendingIncludingUnassigned(serverId).any { entry ->
+        if (entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION ||
+            entry.entityId != bookUuid || entry.state == SyncOutboxEntry.STATE_CONFLICT_PRESERVED
+        ) return@any false
+        val dismissed = runCatching {
+            val value = json.parseToJsonElement(entry.payload).jsonObject["dismissedRemotePosition"]
+                ?: return@any false
+            json.decodeFromJsonElement(ServerPosition.serializer(), value).toPositionDomainModel()
+        }.getOrNull() ?: return@any false
+        dismissed.serverId == serverId && dismissed.isSameReadingPlaceAs(remote) && dismissed.timestamp == remote.timestamp &&
+            dismissed.remoteRevision == remote.remoteRevision
+    }
+
+    private val json = Json { ignoreUnknownKeys = true }
 
     /**
      * Resolves positions after shared reconciliation has applied clean remote

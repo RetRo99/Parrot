@@ -96,6 +96,10 @@ class BookProgressConsistencyTest {
             readerSettingsRepository = FakeReaderSettings(),
             positionLocalSource = positions,
             remotePositionStore = store,
+            getReadingProgressWithConflictUseCase = GetReadingProgressWithConflictUseCase(
+                provider, com.retro99.reader.domain.fakes.FakePositionDatabase(),
+                com.retro99.reader.domain.fakes.FakeSyncOutboxDatabase(),
+            ),
         )
         return Fixture(list, detail)
     }

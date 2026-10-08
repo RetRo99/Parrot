@@ -5,9 +5,14 @@ import com.retro99.base.server.PARROT_CLOUD_SERVER_ID
 import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.reader.domain.fakes.FakePositionDatabase
+import com.retro99.reader.domain.fakes.FakeSyncOutboxDatabase
+import com.retro99.reader.domain.fakes.FakeReaderRepository
+import com.retro99.reader.domain.fakes.FakeRepositoryProvider
 import com.retro99.reader.domain.fakes.StoredPosition
 import com.retro99.reader.domain.model.ReadingProgressResult
 import com.retro99.reader.domain.model.toPositionDomainModel
+import com.retro99.reader.domain.model.toServerPosition
+import com.github.michaelbull.result.getOrElse
 import com.retro99.server.api.InstallationDeviceIdentity
 import com.retro99.server.api.SourceDeviceIdentity
 import kotlinx.coroutines.CancellationException
@@ -21,6 +26,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 
 class ResolvePositionConflictUseCaseTest {
     private val database = FakePositionDatabase()
@@ -63,6 +69,38 @@ class ResolvePositionConflictUseCaseTest {
         assertEquals(9L, database.local.value.getValue("book").remoteRevision)
         assertTrue(database.local.value.getValue("book").timestamp!! > 100L)
         assertTrue(database.remote.isEmpty())
+    }
+
+    @Test fun `local choice survives reopening against the old server snapshot until delivery`() = runTest {
+        val conflict = conflict()
+        assertTrue(resolver.useLocal(conflict).isOk)
+        val repository = FakeReaderRepository("storyteller")
+        repository.local["book"] = database.local.value.getValue("book")
+            .toPositionDomainModel("storyteller").toServerPosition()
+        repository.remote["book"] = conflict.remotePosition.toServerPosition()
+        val progress = GetReadingProgressWithConflictUseCase(
+            FakeRepositoryProvider(listOf(repository)), database, FakeSyncOutboxDatabase(database.mutations),
+        )
+        assertIs<ReadingProgressResult.Resolved>(progress("storyteller", "book").getOrElse { error("$it") })
+        // A shared refresh may preserve the same rejected candidate again.
+        database.upsertRemotePosition(remote)
+        assertIs<ReadingProgressResult.Resolved>(progress("storyteller", "book").getOrElse { error("$it") })
+        // New reading is not hidden by the earlier answer.
+        database.upsertRemotePosition(remote.copy(timestamp = 300L, totalProgression = 0.9))
+        assertIs<ReadingProgressResult.Conflict>(progress("storyteller", "book").getOrElse { error("$it") })
+    }
+
+    @Test fun `a rejected local choice allows the server conflict to be offered again`() = runTest {
+        val conflict = conflict()
+        assertTrue(resolver.useLocal(conflict).isOk)
+        database.mutations[0] = database.mutations[0].copy(state = SyncOutboxEntry.STATE_CONFLICT_PRESERVED)
+        database.upsertRemotePosition(remote)
+        val repository = FakeReaderRepository("storyteller")
+        repository.local["book"] = conflict.localPosition.toServerPosition()
+        val progress = GetReadingProgressWithConflictUseCase(
+            FakeRepositoryProvider(listOf(repository)), database, FakeSyncOutboxDatabase(database.mutations),
+        )
+        assertIs<ReadingProgressResult.Conflict>(progress("storyteller", "book").getOrElse { error("$it") })
     }
 
     @Test fun `remote choice is local only and preserves server reading time and attribution`() = runTest {

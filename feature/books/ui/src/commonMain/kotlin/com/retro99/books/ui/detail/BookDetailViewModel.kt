@@ -52,6 +52,11 @@ import com.retro99.server.api.ParrotCloudLibraryState
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.positionDeviceName
 import com.retro99.user.api.UserRegistry
+import com.retro99.sync.domain.SyncRequest
+import com.retro99.sync.domain.SyncScope
+import com.retro99.sync.domain.SyncTriggerReason
+import com.retro99.sync.domain.SyncUrgency
+import com.retro99.sync.domain.usecase.SyncNowUseCase
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.Job
@@ -90,6 +95,7 @@ class BookDetailViewModel(
     @Provided private val observeFavoriteUseCase: ObserveFavoriteUseCase,
     @Provided private val resolvePositionConflictUseCase: ResolvePositionConflictUseCase,
     @Provided private val getReadingProgressWithConflictUseCase: GetReadingProgressWithConflictUseCase,
+    @Provided private val syncNowUseCase: SyncNowUseCase,
     @Provided private val deleteBookFromDeviceUseCase: DeleteBookFromDeviceUseCase,
     @Provided private val removeFromParrotCloudUseCase: RemoveFromParrotCloudUseCase,
     @Provided private val bookFileTransferManager: BookFileTransferManager,
@@ -371,7 +377,6 @@ class BookDetailViewModel(
     }
 
     private fun resolveConflict(useLocal: Boolean) {
-        val conflict = viewState.value.positionConflict ?: return
         if (viewState.value.isResolvingConflict) return
         updateState {
             it.copy(
@@ -381,6 +386,18 @@ class BookDetailViewModel(
             )
         }
         viewModelScope.launch {
+            // Inline progress actions are shown without first opening the dialog.
+            val conflict = viewState.value.positionConflict ?: run {
+                val progress = getReadingProgressWithConflictUseCase(serverId, bookUuid)
+                    .getOrElse { error ->
+                        updateState { it.copy(isResolvingConflict = false, conflictResolutionError = error) }
+                        return@launch
+                    }
+                (progress as? ReadingProgressResult.Conflict) ?: run {
+                    updateState { it.copy(isResolvingConflict = false) }
+                    return@launch
+                }
+            }
             val pendingBookType = viewState.value.pendingOpenBookType
             val bookTitle = viewState.value.book?.title ?: ""
             analytics.trackUsageOperation(
@@ -394,6 +411,14 @@ class BookDetailViewModel(
             }
                 .onSuccess {
                     updateState { it.copy(positionConflict = null) }
+                    if (useLocal) viewModelScope.launch {
+                        syncNowUseCase(SyncRequest(
+                            reason = SyncTriggerReason.READER_CHECKPOINT,
+                            scope = SyncScope.Books(setOf(bookUuid)),
+                            urgency = SyncUrgency.URGENT,
+                        ))
+                        observeBookWithProgress()
+                    }
                     // Navigate to reader if user was trying to open a book
                     pendingBookType?.let { bookType ->
                         updateState { it.copy(pendingOpenBookType = null) }

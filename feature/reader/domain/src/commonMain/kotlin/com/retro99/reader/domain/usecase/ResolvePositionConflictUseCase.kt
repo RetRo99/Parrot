@@ -71,6 +71,7 @@ class ResolvePositionConflictUseCase(
                     ConflictPositionPayload(
                         bookUuid = local.bookUuid,
                         position = serverPosition,
+                        dismissedRemotePosition = remote.toServerPosition(),
                         sourceDevice = selected.sourceDeviceId?.let {
                             SourceDeviceIdentity(it, selected.deviceName)
                         } ?: installationDeviceIdentity.getOrCreate(),
@@ -105,6 +106,7 @@ private data class ConflictPositionPayload(
     val bookUuid: String,
     val position: ServerPosition,
     val sourceDevice: SourceDeviceIdentity?,
+    val dismissedRemotePosition: ServerPosition,
 )
 
 private class ChosenPosition(

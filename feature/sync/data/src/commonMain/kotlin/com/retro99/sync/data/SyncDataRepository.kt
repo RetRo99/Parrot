@@ -29,7 +29,6 @@ import com.retro99.database.api.sync.SyncCheckpointDatabase
 import kotlin.time.Clock
 import kotlin.time.TimeSource
 import org.koin.core.annotation.Provided
-import org.koin.core.annotation.Single
 
 /**
  * Application-facing synchronization coordinator.
@@ -38,7 +37,6 @@ import org.koin.core.annotation.Single
  * merged and run after the current pass without starting a competing network
  * drain. This keeps manual, lifecycle, and background triggers on one path.
  */
-@Single(binds = [SyncRepository::class])
 class SyncDataRepository(
     @Provided private val syncPass: SyncPass,
     @Provided private val executionContextProvider: SyncExecutionContextProvider,

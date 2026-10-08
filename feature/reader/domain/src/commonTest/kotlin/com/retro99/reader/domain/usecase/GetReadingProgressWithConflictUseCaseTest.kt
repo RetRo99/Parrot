@@ -2,6 +2,7 @@ package com.retro99.reader.domain.usecase
 
 import com.github.michaelbull.result.getOrElse
 import com.retro99.reader.domain.fakes.FakePositionDatabase
+import com.retro99.reader.domain.fakes.FakeSyncOutboxDatabase
 import com.retro99.reader.domain.fakes.FakeReaderRepository
 import com.retro99.reader.domain.fakes.FakeRepositoryProvider
 import com.retro99.reader.domain.fakes.StoredPosition
@@ -18,7 +19,8 @@ import kotlin.test.assertNull
 class GetReadingProgressWithConflictUseCaseTest {
     private val database = FakePositionDatabase()
     private val repository = FakeReaderRepository("server")
-    private val useCase = GetReadingProgressWithConflictUseCase(FakeRepositoryProvider(listOf(repository)), database)
+    private val outbox = FakeSyncOutboxDatabase(database.mutations)
+    private val useCase = GetReadingProgressWithConflictUseCase(FakeRepositoryProvider(listOf(repository)), database, outbox)
 
     private suspend fun progress() = useCase("server", "book").getOrElse { error("Unexpected failure: $it") }
     private fun local() = serverPosition("book", "server", totalProgression = 0.2, remoteRevision = 2L)
