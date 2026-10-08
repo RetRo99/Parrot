@@ -100,6 +100,12 @@ WHERE state IN ('downloading', 'checking', 'adding');
 deleteCatalogueAcquisition:
 DELETE FROM catalogue_acquisitions WHERE request_id = ?;
 
+deleteCompletedCatalogueAcquisitionsForBook:
+DELETE FROM catalogue_acquisitions WHERE state = 'done' AND library_book_id = ?;
+
+moveCatalogueAcquisitionsToBook:
+UPDATE catalogue_acquisitions SET library_book_id = ? WHERE library_book_id = ?;
+
 deleteCompletedCatalogueAcquisitions:
 DELETE FROM catalogue_acquisitions WHERE state = 'done';
 

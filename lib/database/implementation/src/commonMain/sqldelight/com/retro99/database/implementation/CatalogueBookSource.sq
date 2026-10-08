@@ -38,14 +38,17 @@ INSERT OR IGNORE INTO catalogue_book_sources(
     detail_identity, selected_format, rights_text, catalogue_updated, content_hash, acquired_at
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
--- "In your library": a row counts only while its library book still exists. A listing entry
--- and the edition downloaded from it can carry different identities, so both columns match.
+-- "In your library": a row counts only while its library book still exists and has a file on
+-- this device. A book kept without its file can be downloaded again: the same bytes go back
+-- to that book. A listing entry and the edition downloaded from it can carry different
+-- identities, so both columns match.
 findCatalogueBooksInLibrary:
 SELECT s.publication_key, s.detail_identity, s.library_book_id
 FROM catalogue_book_sources s
 JOIN library_books b ON b.library_book_id = s.library_book_id AND b.deleted_at IS NULL
 WHERE s.source_id = :sourceId
 AND (s.publication_key IN :identities OR s.detail_identity IN :identities)
+AND EXISTS (SELECT 1 FROM device_files f WHERE f.library_book_id = s.library_book_id)
 ORDER BY s.acquired_at ASC, s.id ASC;
 
 getCatalogueBookSourcesForBook:
@@ -67,6 +70,9 @@ SELECT COUNT(DISTINCT library_book_id) FROM catalogue_book_sources WHERE source_
 
 moveCatalogueBookSources:
 UPDATE catalogue_book_sources SET library_book_id = ? WHERE library_book_id = ?;
+
+deleteCatalogueBookSource:
+DELETE FROM catalogue_book_sources WHERE id = ?;
 
 deleteCatalogueBookSourcesForBook:
 DELETE FROM catalogue_book_sources WHERE library_book_id = ?;

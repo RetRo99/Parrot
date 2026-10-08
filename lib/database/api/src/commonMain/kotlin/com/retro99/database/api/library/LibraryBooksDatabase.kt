@@ -25,7 +25,8 @@ interface LibraryBooksDatabase {
 
     /**
      * Deletes the book's device files, its Parrot file mirror, its finished transfers,
-     * its unsent outbox mutations and its library row, in one transaction.
+     * its unsent outbox mutations, the record of which catalogue it came from with its
+     * finished catalogue downloads, and its library row, in one transaction.
      */
     suspend fun deleteBookFromDevice(libraryBookId: String)
 }

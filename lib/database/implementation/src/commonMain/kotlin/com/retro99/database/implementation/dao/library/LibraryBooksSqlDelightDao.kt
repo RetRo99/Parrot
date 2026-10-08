@@ -162,6 +162,17 @@ internal fun AppDatabase.mergeLibraryBookRows(fromId: String, intoId: String): L
         mergeLibraryCopyLinks(fromId, intoId)
         mergeLinkedCopyWrites(fromId, intoId)
 
+        // Where the book was acquired from follows it. Both books acquired from the same
+        // publication with the same bytes is one fact, so the older row stays.
+        catalogueBookSourceQueries.moveCatalogueBookSources(intoId, fromId)
+        val acquiredFrom = mutableSetOf<Triple<String, String, String>>()
+        catalogueBookSourceQueries.getCatalogueBookSourcesForBook(intoId).executeAsList().forEach { source ->
+            if (!acquiredFrom.add(Triple(source.source_id, source.publication_key, source.content_hash))) {
+                catalogueBookSourceQueries.deleteCatalogueBookSource(source.id)
+            }
+        }
+        catalogueAcquisitionQueries.moveCatalogueAcquisitionsToBook(intoId, fromId)
+
         // Book ids are UUIDs, so a quoted occurrence in a payload can only be the id.
         syncOutboxQueries.getAllMutations().executeAsList().forEach { mutation ->
             val quotedFrom = "\"$fromId\""
@@ -219,6 +230,10 @@ internal fun AppDatabase.deleteBookFromDeviceRows(libraryBookId: String) {
         cloudBookFileStateQueries.deleteCloudBookFileStatesForBook(libraryBookId)
         cloudFileTransferQueries.deleteTransfersForBook(libraryBookId)
         libraryBookQueries.deleteLibraryBook(libraryBookId)
+        // The book can be downloaded from its catalogue again; a download still running is
+        // not this book yet and is left alone.
+        catalogueBookSourceQueries.deleteCatalogueBookSourcesForBook(libraryBookId)
+        catalogueAcquisitionQueries.deleteCompletedCatalogueAcquisitionsForBook(libraryBookId)
         sessionRecapQueries.deleteForRemovedBook(libraryBookId)
         syncOutboxQueries.deletePendingMutationsForEntityAnyUser(
             entity_type = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,

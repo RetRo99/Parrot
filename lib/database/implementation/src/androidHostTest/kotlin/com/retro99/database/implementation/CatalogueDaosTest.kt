@@ -5,11 +5,15 @@ import com.retro99.database.api.catalogue.CatalogueAcquisitionEntity
 import com.retro99.database.api.catalogue.CatalogueBookSourceEntity
 import com.retro99.database.api.catalogue.CatalogueDocumentEntity
 import com.retro99.database.api.catalogue.CatalogueLibraryMatch
+import com.retro99.database.api.library.DeviceFileEntity
 import com.retro99.database.api.library.LibraryImportJournalEntry
 import com.retro99.database.implementation.dao.catalogue.CatalogueAcquisitionsSqlDelightDao
 import com.retro99.database.implementation.dao.catalogue.CatalogueBookSourcesSqlDelightDao
 import com.retro99.database.implementation.dao.catalogue.CatalogueDocumentsSqlDelightDao
 import com.retro99.database.implementation.dao.library.LibraryImportJournalSqlDelightDao
+import com.retro99.database.implementation.dao.library.deleteBookFromDeviceRows
+import com.retro99.database.implementation.dao.library.mergeLibraryBookRows
+import com.retro99.database.implementation.dao.library.upsertDeviceFileRow
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -233,6 +237,79 @@ class CatalogueDaosTest {
     }
 
     @Test
+    fun `a book whose file is not on this device is not in the library, so it can be downloaded again`() = runBlocking {
+        // Given
+        libraryBook("lib-here")
+        libraryBook("lib-elsewhere", onDevice = false)
+        sources.insert(source("p1", book = "lib-here", sourceId = "source-1", publication = "urn:book:1", at = 1))
+        sources.insert(source("p2", book = "lib-elsewhere", sourceId = "source-1", publication = "urn:book:2", at = 2))
+
+        // When
+        val found = sources.findInLibrary("source-1", listOf("urn:book:1", "urn:book:2"))
+
+        // Then
+        assertEquals(listOf("lib-here"), found.map { it.libraryBookId })
+
+        // And once its file is back, it is
+        database.upsertDeviceFileRow(deviceFile("lib-elsewhere"))
+        assertEquals(
+            listOf("lib-here", "lib-elsewhere"),
+            sources.findInLibrary("source-1", listOf("urn:book:1", "urn:book:2")).map { it.libraryBookId },
+        )
+    }
+
+    @Test
+    fun `a book removed from the library takes its provenance and its finished downloads with it`() = runBlocking {
+        // Given
+        libraryBook("lib-1")
+        libraryBook("lib-2")
+        sources.insert(source("p1", book = "lib-1", sourceId = "source-1", publication = "urn:book:1", at = 1))
+        sources.insert(source("p1b", book = "lib-1", sourceId = "source-2", publication = "urn:other:1", at = 2))
+        sources.insert(source("p2", book = "lib-2", sourceId = "source-1", publication = "urn:book:2", at = 3))
+        acquisitions.insert(acquisition("done-1", 1, CatalogueAcquisitionEntity.STATE_DONE).copy(libraryBookId = "lib-1", completedAt = 5))
+        acquisitions.insert(acquisition("done-2", 2, CatalogueAcquisitionEntity.STATE_DONE).copy(libraryBookId = "lib-2", completedAt = 6))
+        acquisitions.insert(acquisition("waiting", 3))
+
+        // When
+        database.deleteBookFromDeviceRows("lib-1")
+
+        // Then
+        assertEquals(emptyList(), sources.getForBook("lib-1"))
+        assertEquals(listOf("p2"), sources.getForBook("lib-2").map { it.id })
+        assertEquals(listOf("done-2", "waiting"), acquisitions.getAll().map { it.requestId })
+        assertEquals(emptyList(), sources.findInLibrary("source-1", listOf("urn:book:1")))
+    }
+
+    @Test
+    fun `merging two books moves provenance and finished downloads to the survivor without duplicates`() = runBlocking {
+        // Given: both books were acquired from the same publication with the same bytes, and the loser from one more
+        libraryBook("lib-from")
+        libraryBook("lib-into")
+        val same = source("into-row", book = "lib-into", sourceId = "source-1", publication = "urn:book:1", at = 1).copy(contentHash = "same")
+        sources.insert(same)
+        sources.insert(same.copy(id = "from-row", libraryBookId = "lib-from", acquiredAt = 2))
+        sources.insert(source("from-other", book = "lib-from", sourceId = "source-2", publication = "urn:book:9", at = 3))
+        sources.insert(same.copy(id = "from-newer-bytes", libraryBookId = "lib-from", contentHash = "regenerated", acquiredAt = 4))
+        acquisitions.insert(acquisition("done-from", 1, CatalogueAcquisitionEntity.STATE_DONE).copy(libraryBookId = "lib-from", completedAt = 5))
+        acquisitions.insert(acquisition("done-into", 2, CatalogueAcquisitionEntity.STATE_DONE).copy(libraryBookId = "lib-into", completedAt = 6))
+
+        // When
+        database.mergeLibraryBookRows(fromId = "lib-from", intoId = "lib-into")
+
+        // Then
+        assertEquals(emptyList(), sources.getForBook("lib-from"))
+        assertEquals(listOf("into-row", "from-other", "from-newer-bytes"), sources.getForBook("lib-into").map { it.id })
+        assertEquals(
+            listOf("done-from" to "lib-into", "done-into" to "lib-into"),
+            acquisitions.getAll().map { it.requestId to it.libraryBookId },
+        )
+        assertEquals(
+            listOf("lib-into"),
+            sources.findInLibrary("source-1", listOf("urn:book:1")).map { it.libraryBookId }.distinct(),
+        )
+    }
+
+    @Test
     fun `a whole page of entries is looked up at once`() = runBlocking {
         // Given: more identities than fit one statement
         libraryBook("lib-1")
@@ -335,7 +412,7 @@ class CatalogueDaosTest {
         assertEquals(3L, documents.totalSizeBytes())
     }
 
-    private fun libraryBook(id: String, deletedAt: String? = null) {
+    private fun libraryBook(id: String, deletedAt: String? = null, onDevice: Boolean = true) {
         driver.execute(
             identifier = null,
             sql = "INSERT INTO library_books(library_book_id, title, added_at, deleted_at) VALUES (?, 'Book', 'a', ?)",
@@ -344,7 +421,21 @@ class CatalogueDaosTest {
             bindString(0, id)
             bindString(1, deletedAt)
         }
+        if (onDevice) {
+            database.upsertDeviceFileRow(deviceFile(id))
+        }
     }
+
+    private fun deviceFile(bookId: String) = DeviceFileEntity(
+        libraryBookId = bookId,
+        mediaType = "ebook",
+        filePath = "/library/$bookId.epub",
+        fileSize = 1,
+        contentHash = "hash-$bookId",
+        contentHashAlgorithm = "sha-256-v1",
+        origin = DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD,
+        addedAt = "2026-10-08T00:00:00Z",
+    )
 
     private fun acquisition(
         id: String,
