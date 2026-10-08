@@ -262,4 +262,47 @@ class Opds1ParserTest {
         // The root's xml:base was popped correctly: nothing leaks below the entry.
         assertEquals(1, 1)
     }
+
+    // ---- calibre-newest.xml: direct-acquisition entries, colliding titles ----
+
+    @Test
+    fun calibre_feed_entries_are_publications_and_never_a_grouping_point() {
+        val document = parseFeed(
+            Fixtures.OPDS1_CALIBRE_NEWEST,
+            mediaType = "application/atom+xml;profile=opds-catalog;kind=acquisition",
+            effectiveResponseUrl = "https://calibre.example.org/opds/newest",
+        )
+        assertEquals("My Calibre Library", document.metadata.title)
+        assertEquals(2, document.publications.size)
+        assertEquals(0, document.navigation.size)
+
+        val first = document.publications[0]
+        val second = document.publications[1]
+        assertEquals("calibre:book:1", first.identity.raw)
+        assertEquals("calibre:book:2", second.identity.raw)
+        // Identical titles across different works (the design's negative case).
+        assertEquals(first.title, second.title)
+        assertEquals("Mara Write", first.authors.single().name)
+        assertEquals("Jon Marnet", second.authors.single().name)
+
+        // Both entries carry their own acquisition links and XHTML descriptions.
+        assertEquals(1, first.acquisitionLinkCount)
+        assertEquals(1, second.acquisitionLinkCount)
+        assertEquals("/opds/get/1.epub", first.acquisitionLinks.single().rawHref)
+        assertEquals("https://calibre.example.org/opds/get/1.epub", first.acquisitionLinks.single().resolvedHref)
+        assertEquals("application/epub+zip", first.acquisitionLinks.single().mediaType!!.mediaRange)
+        assertTrue(first.content!!.body.contains("<p>First book.</p>"))
+
+        // The decided grouping rule (Phase 0 §3 item 5): entries with their own
+        // acquisition links are books, NOT a grouping point — a list, whatever
+        // the titles do.
+        assertEquals(
+            com.retro99.opds.api.OpdsEditionDecision.ListOfBooks::class,
+            com.retro99.opds.api.OpdsGroupingRule.decide(first, com.retro99.opds.api.OpdsGroupingRule.FetchedTarget.Unknown)::class,
+        )
+        assertTrue(
+            com.retro99.opds.api.OpdsGroupingRule.decide(first, com.retro99.opds.api.OpdsGroupingRule.FetchedTarget.Unknown)
+                .rationale.contains("itself acquires"),
+        )
+    }
 }
