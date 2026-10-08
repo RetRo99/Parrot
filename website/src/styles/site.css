@@ -89,7 +89,15 @@ mark { background: var(--welcome-highlight); color: var(--welcome-page-ink); }
 .check-list li::before { content: '✓'; position: absolute; left: 0; top: 1px; background: var(--accent); color: var(--on-accent); border-radius: 50%; width: 22px; height: 22px; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
 .home-questions { display: grid; grid-template-columns: 300px 1fr; gap: 72px; margin-top: 96px; }
 .home-questions h2 { margin-bottom: 12px; }
-.question-list article { border-top: 1px solid var(--line); padding-block: 22px; }
+/* One question open at a time; native <details>, no script. */
+.question-list details { border-top: 1px solid var(--line); }
+.question-list summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding-block: 14px; cursor: pointer; list-style: none; }
+.question-list summary::-webkit-details-marker { display: none; }
+.question-list summary h3 { margin: 0; }
+.question-list summary::after { content: ''; flex: none; width: 9px; height: 9px; margin: 0 8px 4px; border-right: 2px solid var(--accent-text); border-bottom: 2px solid var(--accent-text); transform: rotate(45deg); }
+.question-list details[open] summary::after { margin-bottom: -4px; transform: rotate(-135deg); }
+.question-list summary:focus-visible { outline: 3px solid var(--accent-text); outline-offset: 3px; border-radius: 4px; }
+.question-list details p { padding-bottom: 22px; }
 .question-list p { color: var(--ink2); }
 .home-questions h3 { font-size: 20px; }
 .home-questions p { font-size: 18px; }
@@ -202,7 +210,6 @@ mark { background: var(--welcome-highlight); color: var(--welcome-page-ink); }
   .home-questions { grid-template-columns: 1fr; gap: 26px; margin-top: 56px; }
   .home-questions h3 { font-size: 18px; }
   .home-questions p { font-size: 17px; }
-  .question-list article { padding-block: 22px; }
   .site-footer { padding-block: 34px 42px; }
   .footer-inner { flex-direction: column; gap: 22px; }
   .site-footer .brand { font-size: 21px; margin-bottom: 14px; }
@@ -381,6 +388,7 @@ mark { background: var(--welcome-highlight); color: var(--welcome-page-ink); }
   /* Feedback on the things that really are clickable. Hover only where there is a real pointer. */
   a { transition: text-underline-offset .15s ease; }
   .button { transition: transform .16s var(--ease-out), box-shadow .16s var(--ease-out); }
+  .question-list summary::after { transition: transform .16s var(--ease-out); }
   .button:active { transform: scale(.97); }
   @media (hover: hover) and (pointer: fine) {
     a:hover { text-underline-offset: .28em; }
