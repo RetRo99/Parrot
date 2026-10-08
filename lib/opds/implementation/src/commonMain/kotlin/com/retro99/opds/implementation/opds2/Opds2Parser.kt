@@ -130,7 +130,9 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
                     val href = text(image["href"]) ?: throw IllegalArgumentException()
                     OpdsImage(resolver.resolve(base, href), types.parse(text(image["type"])),
                         (image["width"] as? JsonPrimitive)?.intOrNull, (image["height"] as? JsonPrimitive)?.intOrNull)
-                }, links = links, editionLabel = localized(metadata["edition"]))
+                }, links = links, editionLabel = localized(metadata["edition"]),
+                seller = contributors(metadata["seller"]).firstOrNull()?.name,
+                lender = contributors(metadata["lender"]).firstOrNull()?.name)
         }
         fun publications(value: JsonElement?): List<OpdsEntry> = items(value, ::publication)
         fun navigation(value: JsonElement?): List<OpdsEntry> = links(value).map {

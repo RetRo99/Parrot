@@ -34,6 +34,9 @@ data class OpdsEntry(
      * fallback ("EPUB file 1" / "Edition 1") is Phase 2 mapping.
      */
     val editionLabel: OpdsText? = null,
+    /** Explicit catalogue-provided seller/lender names; never inferred from publisher. */
+    val seller: OpdsText? = null,
+    val lender: OpdsText? = null,
 ) {
     val acquisitionLinks: List<OpdsLink> get() = links.filter { it.hasAcquisitionRelation() }
 
