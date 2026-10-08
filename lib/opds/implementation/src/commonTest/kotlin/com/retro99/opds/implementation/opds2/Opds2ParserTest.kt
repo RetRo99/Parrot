@@ -12,6 +12,26 @@ class Opds2ParserTest {
         OpdsPayload("application/opds+json", text.encodeToByteArray()), base)
     private fun fixture(name: String) = (parse(readFixtureText("opds/opds2/$name.json")) as OpdsParseResult.Document).document
 
+    @Test fun landscape_standalone_publication() {
+        val document = fixture("landscape") as OpdsPublicationDocument
+        val book = document.publication
+        assertEquals("Localized Landscape", book.title)
+        assertEquals(document.self?.resolvedHref, book.identity.raw)
+        assertEquals(listOf("Gray Script", "Emery Quill"), book.authors.map { it.name })
+        assertEquals(OpdsContributor("Hesta Vane", "http://catalogue.example.org/people/vane", "translator"), book.otherContributors.single())
+        assertEquals("Synth Press", book.publisher)
+        assertEquals("2026", book.year)
+        assertEquals("Synthetic rights text.", book.rights)
+        assertEquals(listOf(300, 900), book.images.map { it.width })
+        assertEquals(listOf(450, 1350), book.images.map { it.height })
+        val indirect = assertNotNull(book.links[1].indirectAcquisition)
+        assertEquals("text/html", indirect.mediaType?.mediaRange)
+        assertEquals("application/epub+zip", indirect.children.single().mediaType?.mediaRange)
+        assertEquals(OpdsPrice(12.5, "EUR"), book.links[2].price)
+        assertEquals(2, book.acquisitionLinkCount)
+        assertEquals("alternate", book.links.last().relations.single())
+    }
+
     @Test fun catalog_metadata_topology_and_contributors() {
         val feed = fixture("catalog") as OpdsFeedDocument
         assertEquals("Example Catalogue — Root", feed.metadata.title)
