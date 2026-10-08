@@ -1383,6 +1383,125 @@ agreed; layouts are not test-first):
 Gutenberg works without a custom parser and offline acquired books work after
 server removal. Unsupported transactions never masquerade as supported downloads.
 
+**Run report of the Phase 4 foundations run (2026-10-08, branch `opds/phase4-screens`).**
+
+Foundations only: no catalogue screen is reachable by a user after this run.
+
+```text
+--- REPORT ---
+Branch: opds/phase4-screens (off opds/phase3-acquisition at 036e8a62)
+
+Commits this run (hash + subject, oldest first):
+1876f118 feat(catalogue): recognise raster images and decode bounded inline ones
+dd667439 feat(opds): load catalogue pictures through the catalogue's own transport
+91b1c9cf feat(app): load catalogue pictures by catalogue, not by matching the address
+bc1aa860 feat(catalogue): mask keys in catalogue addresses, for settings, rows and logs
+a9b15051 feat(catalogue): sanitize catalogue descriptions into a small rich-text model
+fcb09403 feat(catalogue): add the catalogue UI module with description text and route references
+e5b4aa31 feat(translations): add the book catalogue copy from the design, verbatim
+e582cbab feat(home): add the four catalogue routes behind placeholder screens
+8e3a7b29 test(fixtures): add the catalogue fixture registry and its capture script
+(plus the docs commits that add and update this report)
+
+Test command(s) run:
+./gradlew :lib:server:api:testAndroidHostTest :lib:server-opds:testAndroidHostTest :feature:catalogue:domain:testAndroidHostTest :feature:catalogue:ui:testAndroidHostTest :feature:home:ui:testAndroidHostTest :composeApp:testAndroidHostTest --max-workers=2 --continue
+./gradlew :lib:server:api:iosSimulatorArm64Test :lib:server-opds:iosSimulatorArm64Test :feature:catalogue:domain:iosSimulatorArm64Test :feature:catalogue:ui:iosSimulatorArm64Test :feature:home:ui:iosSimulatorArm64Test :composeApp:iosSimulatorArm64Test --max-workers=2 --continue
+./gradlew :tools:ember-fixtures:assembleDebug --max-workers=2
+python3 tools/ember-fixtures/catalogue_capture.py --serial emulator-5554
+
+Per module:
+lib/server/api Android host 39/39, iOS 39/39
+lib/server-opds Android host 52/52, iOS 52/52
+feature/catalogue/domain Android host 31/31, iOS 31/31
+feature/catalogue/ui Android host 8/8, iOS pending (still running when this was written)
+feature/home/ui Android host 80/80, iOS 86/86
+composeApp Android host 54/54, iOS pending (still running when this was written)
+translations: no tests; compiled as part of the above
+tools/ember-fixtures: no tests; APK built and the capture run
+
+App build results (Android assemble, iOS framework): pending (not run yet when this was written)
+
+Steps complete (1–6): 1, 2, 3, 4, 5, 6
+
+How catalogue images are loaded now, and how library covers are:
+Catalogue pictures: a screen gives Coil a CatalogueImageModel(sourceId, url) (lib/server/api), never a bare address. CatalogueImageFetcher (composeApp/.../initializer/CatalogueImages.kt) looks the catalogue up by id through CatalogueRepositoryProvider, which only knows the open profile's turned-on catalogues, and calls CatalogueImageRepository.loadImage on its session (OpdsCatalogueRepository). That goes through KtorOpdsTransport: Basic only on HTTPS hops on the catalogue's configured origin and never again after a redirect leaves it, nothing cross-origin, the same redirect and address checks as a feed, no cookie or auth plugins, a 4 MiB ceiling. The bytes must start like a PNG, JPEG, GIF or WebP file or they are refused (SVG, HTML, anything else), whatever the label says. A data: picture is never requested: it must be base64, labelled as one of the four types, match its label and decode to at most 256 KiB. Nothing is written to Coil's disk cache; the memory-cache key carries profile id, catalogue id and the catalogue's access generation. A turned-off, removed, other-profile or non-catalogue id resolves to nothing and no request is made.
+Library covers: the global loader is back to the pre-catalogue rule. It attaches the bearer token of the non-catalogue server whose scheme, host and port match the URL exactly. The shared-origin suppression is removed. Plan 10.7 is updated to say the limitation is resolved.
+
+Is any catalogue screen reachable by a user (yes/no) and how I checked:
+No. git grep for HomeDestination.Catalogue and for the four screen names outside tests finds only the four entry<> registrations in HomeNavigation.kt and the analyticsScreenName() mapping; nothing constructs a catalogue destination, so no NavigateTo can carry one. No button, menu item or picker option was added. The only deep-link destination is still Reader. The login screen, server management and settings sources are untouched (git diff 036e8a62 --stat shows no file under feature/login, feature/settings or feature/books). I did not run the app and click through it.
+
+Device-name helper: found. InstallationDeviceIdentity.selfReferenceName() with positionDeviceName() in lib/server/api/.../PositionDeviceName.kt, platform labels in lib/server/implementation/.../source/PlatformSelfReferenceLabel.*.kt. It returns "This phone" / "This tablet" / "This iPhone", fallback "This device", and existing copy lower-cases the first letter by hand. I added inSentenceDeviceName() next to it (same file) that does that lower-casing: "this phone" / "this tablet" / "this iPhone" / "this device". Difference from the design: on an iPad the helper says "this tablet", not "this iPad". I did not change it because reading-position wording shares it.
+
+Design states with no copy in CATALOGUE_PROMPT.md:
+1. The Add catalogue screen itself: screen title, the address field's label and placeholder, the "Needs an account" switch, the primary button, and a "checking the address" state. Only its error lines and dialogs have copy.
+2. The inline error row for a failed next page ("shows an inline error row") and its retry button.
+3. A page that fails to load while online for a reason other than rate limiting: timeout, server error, forbidden, not found, a page that is too large or not a catalogue, a certificate failure after the catalogue was added.
+4. Downloads screen: its empty state. ("Downloads" as a title is only used as a name in the text; I added it.)
+5. Search field placeholder on the catalogue root; "See all" and shelf headings; the "Rights" label; book page labels (publisher, published, language, the description heading).
+6. Sign-in sheet: wrong username or password.
+7. Progress announcements "at 25% steps": no wording. Only the unknown-size "Downloading <title>" is given.
+8. Remove dialog with exactly one downloaded book: the design has "The <N> books ..." only. I added a singular form by the same sentence; please confirm it.
+9. The access pill of a preset that needs no account (only "Patron account needed" is given).
+10. How "<time> ago" and "<when>" are written, apart from "just now".
+11. "…your patron account." is given as a fragment; I wrote it out as "This catalogue now asks for your patron account."
+Not added on purpose: "Get updated copy" and "Download sample" (deferred), "Downloads start when you're back online." (only if auto-start ships) and "Resume" / "Resume downloading <title>" (only if true resume ships).
+
+How to run the fixture capture:
+./gradlew :tools:ember-fixtures:assembleDebug
+python3 tools/ember-fixtures/catalogue_capture.py --serial emulator-5554
+Output: design/screens/catalogue-<view>-<theme>.png (+ .xml hierarchy), Day and E-ink by default. --views a b limits it, --themes day eink night, --list prints the fixtures without a device, a real device needs --allow-device. To add a board: one fixture(view = "...", expect = "...") { ... } line in tools/ember-fixtures/src/main/kotlin/com/retro99/parrot/fixtures/CatalogueFixtures.kt; the script reads the list from that file. Proved with the fixture "descriptionText" on the local AVD Medium_Phone_API_37.0; both captures are committed. Documented in tools/ember-fixtures/README.md.
+
+Done this run:
+Step 1 source-aware cover loading with tests in the app's real graph (CatalogueCoverLoadingTest, 14 tests), OpdsCatalogueImageTest (9), CatalogueImageBytesTest (7); plan 10.7 updated.
+Step 2 maskAddress, addressHasKey, rowAddress, redactAddress in lib/server/api/.../CatalogueAddress.kt with table-driven tests (11 tests, about 80 cases, including the design's examples).
+Step 3 sanitizeCatalogueDescription and CatalogueRichText in feature/catalogue/domain (20 tests, hostile input included); CatalogueDescriptionText composable in feature/catalogue/ui. The app had no rich-text renderer: the library book page strips markup to plain text, and the only markup code is the EPUB text extractor, internal to lib/epub.
+Step 4 194 catalogue_ entries in strings.xml; a script check confirmed the fixed text of every entry occurs in CATALOGUE_PROMPT.md except the two noted (patron sentence, "..., off").
+Step 5 feature/catalogue/ui module (Koin module CatalogueUiModule included in AppModule), four routes with placeholder screens, analytics names, CatalogueRouteReferences for in-memory target references.
+Step 6 fixture registry, activity hook, capture script, README, one fixture captured.
+
+Not done or partly done, and why:
+1. Nothing calls CatalogueRouteReferences.forget() or clear() yet (catalogue turned off, profile change). No route is reachable, so nothing can hold a reference; the screens run must wire it.
+2. There is no reference type for a book yet: CataloguePublication(sourceId, publicationRef) is defined and validated, but what the reference resolves to is left to the book page run.
+3. No pixel-size limit on pictures. The ceilings are on bytes; Coil decodes to the size of the view.
+4. redactAddress exists and is tested but nothing logs through it yet. Catalogue code logs no addresses today.
+5. The Coil fetcher and keyer classes themselves have no test (they need a Coil context); the class they delegate to, CatalogueImageSource, is what the real-graph tests exercise.
+
+Tests skipped, ignored or weakened (file + name + reason), or "none": none
+
+Existing tests that had to change, and why:
+composeApp/src/commonTest/.../initializer/CoverAuthCatalogueTest.kt: shared_origin_never_receives_another_servers_token_in_either_registration_order asserted the Phase 2 suppression (no token on a shared origin). It is now a_library_server_keeps_its_token_when_a_catalogue_shares_its_origin_in_either_registration_order and expects the library server's token, which is what Step 1 asks for. Its CoilInitializer construction got the new constructor argument, with unused stubs. One test added there for other port and scheme.
+
+Places the plan or design was ambiguous and what I chose:
+1. "Looks like a key" for a path part: 20 or more characters that are all hexadecimal, or mix letters and digits inside one run (UUID, base64); also the path part right after one named apikey, token, key, auth or password. Words joined by dashes, with or without a year, are not masked. An odd slug like "chapter1-part2-section3-page4" would be masked; that errs on the safe side.
+2. Query names: the five in the design, ignoring case, "_" and "-", plus names ending in apikey, token or password (access_token, x-api-key).
+3. Row "add the port": the scheme's own port is shown when the address has none (books.home.lan:443/opds against books.home.lan:80/opds). An address with no readable host gives an empty row line.
+4. redactAddress is stricter than the masking: every query value, the user name and password, and the fragment go.
+5. A password written into the address (user:pass@host) is masked in settings too. The design does not mention it.
+6. Headings in a description become bold paragraphs. Two line breaks in a row end a paragraph. Nested lists are flattened into one list with an indent of at most 3. Forms, audio, video, SVG, MathML and frames are dropped with their content, like tables.
+7. A data: picture must be base64 and its label must match its bytes; percent-encoded data: pictures are refused.
+8. Image ceilings: 4 MiB fetched, 256 KiB inline. Description input: 100,000 characters. These are my numbers.
+9. Route arguments: letters, digits, "-" and "_", at most 64, enforced in the route's constructor, so saved state is checked as well.
+10. Catalogue routes keep the bottom bar and hide the continue-reading bubble, like the other secondary screens.
+11. The catalogue's own name CatalogueImage was taken by the feed model, so the Coil model is CatalogueImageModel.
+12. "<N> options" and "<N> files" are plurals with a singular form.
+
+Files changed outside feature/catalogue, composeApp, translations and tools/ember-fixtures:
+lib/server/api: CatalogueImages.kt, CatalogueAddress.kt (new), PositionDeviceName.kt (one function added), four new test files
+lib/server-opds: OpdsCatalogueRepository.kt (loadImage), OpdsCatalogueImageTest.kt (new)
+feature/home/ui: HomeDestination.kt, HomeNavigation.kt, ServerManagementExposureContext.kt (analyticsScreenName), build.gradle.kts, CatalogueDestinationTest.kt (new)
+settings.gradle.kts (the new module)
+docs/opds-server-implementation-plan.md (10.7 and this report)
+design/screens: catalogue-descriptionText-day/eink .png and .xml
+
+Known problems I am leaving:
+1. Rule for the screens run: a catalogue cover must be a CatalogueImageModel. A catalogue image address given to Coil as a plain string goes through the global loader and, on an address shared with a library server, would get that server's bearer token. Nothing enforces this at compile time.
+2. The iPad device name is "this tablet" (see above).
+3. The headless emulator showed a system "not responding" dialog on its first boot and the first capture attempts failed until it settled; the script now relaunches a fixture that is not on screen, up to three times. positions_capture.py and capture.py do not have that and are unchanged.
+4. A network adb device (10.41.65.3:5555) was attached during the run. I did not install anything on it.
+5. The four you listed are untouched: the failing tests in feature/books/ui, the composeApp iOS test link error, the iOS test sources of feature/books/domain and feature/sync/data, and clearAllData() on sign-out.
+--- END REPORT ---
+```
+
 ### Phase 5 — hardening and release
 
 - Load-test large/deep synthetic catalogues, throttling, image-heavy feeds, disk
