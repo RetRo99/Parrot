@@ -1221,7 +1221,8 @@ d803747e feat(books): sync a catalogue book's details like a picked file
 0c4fba34 test(app): asking again after the catalogue changed its file adds no second book
 06df52f6 docs(opds): record the clean-up run and the Phase 3 gate
 dac70f6a test(catalogue): keep commas out of test names so they compile for iOS
-(plus the commit or commits that add and update this report in the plan)
+fd186445 docs(opds): add the run report of the clean-up run
+(plus the commit that records the build results in this report)
 
 Test command(s) run:
 ./gradlew :<module>:testAndroidHostTest ... --max-workers=2 --continue   (16 modules, list below)
@@ -1255,7 +1256,7 @@ verifyCommonMainAppDatabaseMigration: passed, run with --rerun on the final sche
 SavedPagesMigrationTest (3 tests) and MigrationChainTest pass.
 
 App build results (Android assemble, iOS framework):
-Not run yet when this was written; see the update below.
+Both passed in one invocation with --max-workers=2 (BUILD SUCCESSFUL in 1m 52s; both tasks executed, not up to date).
 
 Steps complete (0-4): 0, 1, 2, 3 and 4 are complete. Step 1 is complete as specified, but read the first known problem: the cleaner it now always calls removes nothing in the running app.
 
