@@ -76,6 +76,22 @@ class AcquisitionClassifierTest {
     @Test fun client_cannot_open_epub() {
         assertEquals(OpdsAcquisitionAction.NotAvailable(OpdsUnavailableReason.UNSUPPORTED_FORMAT), classifier.classify(link("download"), OpdsClientCapabilities(emptySet())))
     }
+    @Test fun broader_reader_capabilities_do_not_enable_other_acquisition_handlers() {
+        assertEquals(OpdsAcquisitionAction.NotAvailable(OpdsUnavailableReason.UNSUPPORTED_FORMAT), classifier.classify(link("download", "application/pdf"), OpdsClientCapabilities(setOf("application/pdf", "application/epub+zip"))))
+    }
+    @Test fun fixture_choices_match_policy_without_changing_catalogue_order() {
+        val parser = com.retro99.opds.implementation.ParserFactory.opdsParser()
+        val xml = com.retro99.opds.implementation.fixtures.readFixtureText("opds/opds1/verses-acquisition.xml")
+        val feed = (parser.parse(OpdsPayload("application/atom+xml", xml.encodeToByteArray()), "https://example.org/root") as OpdsParseResult.Document).document as OpdsFeedDocument
+        val files = classifier.files(feed.publications.first().acquisitionLinks)
+        assertEquals(listOf(true, true, false), files.map { it.isOpenable })
+        assertEquals(listOf(true, false, false), files.map { it.isDefault })
+        val json = com.retro99.opds.implementation.fixtures.readFixtureText("opds/opds2/landscape.json")
+        val book = (parser.parse(OpdsPayload("application/opds-publication+json", json.encodeToByteArray()), "https://example.org/root") as OpdsParseResult.Document).document as OpdsPublicationDocument
+        val choices = classifier.files(book.publication.acquisitionLinks)
+        assertTrue(choices.none { it.isOpenable || it.isDefault })
+        assertEquals(listOf(OpdsUnavailableReason.UNSUPPORTED_FORMAT, OpdsUnavailableReason.SOLD), choices.map { (it.action as OpdsAcquisitionAction.OpenProviderPage).reason })
+    }
     @Test fun media_parameters_do_not_hide_protection() {
         unavailable(OpdsUnavailableReason.PROTECTED, "download", type = "application/epub+zip;profile=lcp")
     }

@@ -98,7 +98,10 @@ class OpenSearchReader(private val resolver: OpdsUrlResolver) : OpdsOpenSearchRe
     }
 
     override fun expand(template: OpdsSearchTemplate, query: String, parameters: Map<String, String>): String {
-        if (!template.inputEncoding.orEmpty().ifEmpty { "UTF-8" }.equals("UTF-8", true)) throw OpdsSearchError.Vanilla("unsupported search input encoding")
+        if (!template.inputEncoding.orEmpty().ifEmpty { "UTF-8" }.equals("UTF-8", true) ||
+            parameters["inputEncoding"]?.equals("UTF-8", true) == false) {
+            throw OpdsSearchError.Vanilla("unsupported search input encoding")
+        }
         val defaults = template.parameters.associate { it.name to it.defaultValue }
         val expanded = replaceParameters(template.template) { name, required ->
             if (name !in SUPPORTED_PARAMETERS) {
@@ -119,6 +122,7 @@ class OpenSearchReader(private val resolver: OpdsUrlResolver) : OpdsOpenSearchRe
             result += OpdsSearchTemplate.OpenSearchParameter(name, required, when (name) {
                 "startPage" -> page
                 "startIndex" -> index
+                "language" -> "*"
                 else -> null
             })
             ""

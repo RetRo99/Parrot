@@ -60,6 +60,27 @@ class OpenSearchTest {
             assertIs<OpdsOpenSearchReader.OpdsDescriptorResult.NotADescriptor>(read(xml))
         }
     }
+    @Test fun required_language_uses_opensearch_default_and_explicit_override() {
+        val preferred = preferred(descriptor("""<Url type="application/atom+xml" template="?term={searchTerms}&amp;language={language}"/>"""))
+        assertEquals("https://example.org/redirected/description.xml?term=river&language=%2A", reader.expand(preferred, "river"))
+        assertEquals("https://example.org/redirected/description.xml?term=river&language=en-GB", reader.expand(preferred, "river", mapOf("language" to "en-GB")))
+    }
+    @Test fun unsupported_input_encoding_cannot_claim_utf8_encoded_queries() {
+        val nonUtf8 = preferred(descriptor("""<InputEncoding>ISO-8859-1</InputEncoding><Url type="application/atom+xml" template="?term={searchTerms}&amp;encoding={inputEncoding}"/>"""))
+        assertFailsWith<OpdsSearchError.Vanilla> { reader.expand(nonUtf8, "café") }
+        val utf8 = preferred(descriptor("""<InputEncoding>UTF-8</InputEncoding><Url type="application/atom+xml" template="?term={searchTerms}&amp;encoding={inputEncoding}"/>"""))
+        assertFailsWith<OpdsSearchError.Vanilla> { reader.expand(utf8, "café", mapOf("inputEncoding" to "ISO-8859-1")) }
+    }
+    @Test fun utf8_is_preferred_among_advertised_input_encodings() {
+        val preferred = preferred(descriptor("""<InputEncoding>ISO-8859-1</InputEncoding><InputEncoding>UTF-8</InputEncoding><Url type="application/atom+xml" template="?term={searchTerms}"/>"""))
+        assertEquals("UTF-8", preferred.inputEncoding)
+        assertEquals("https://example.org/redirected/description.xml?term=%F0%9F%A6%9C", reader.expand(preferred, "🦜"))
+    }
+    @Test fun suggestions_and_foreign_namespace_urls_are_not_results() {
+        val result = (read(descriptor("""<Url rel="suggestions" type="application/atom+xml" template="/suggest/{searchTerms}"/><x:Url xmlns:x="urn:extension" type="application/opds+json" template="/foreign/{searchTerms}"/><Url type="application/atom+xml" template="/results/{searchTerms}"/>""")) as OpdsOpenSearchReader.OpdsDescriptorResult.Descriptor).descriptor
+        assertEquals("/results/{searchTerms}", result.preferred?.template)
+        assertTrue(result.alternatives.isEmpty())
+    }
     @Test fun opds2_catalog_search_expands_advertised_fields_before_resolution() {
         val feed = (ParserFactory.opdsParser().parse(OpdsPayload("application/opds+json", readFixtureText("opds/opds2/catalog.json").encodeToByteArray()), "https://example.org/redirected/root.json") as OpdsParseResult.Document).document as OpdsFeedDocument
         val offer = assertNotNull(feed.search)
