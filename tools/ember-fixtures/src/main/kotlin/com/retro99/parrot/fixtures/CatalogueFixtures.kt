@@ -96,6 +96,28 @@ val catalogueFixtures: List<CatalogueFixture> = listOf(
     fixture(view = "cert", expect = "Can't check this catalogue") { CatalogueAddBoard("cert") },
     fixture(view = "unsupported", expect = "Sign-in method not supported") { CatalogueAddBoard("unsupported") },
     fixture(view = "unsupportedBlocked", expect = "Can't add this catalogue yet") { CatalogueAddBoard("unsupportedBlocked") },
+    // The catalogue browser. The seven failed* fixtures are the "Couldn't open this page" reasons; they have no board.
+    fixture(view = "browse", expect = "Popular this week") { CatalogueBrowseBoard("browse") },
+    fixture(view = "browsePlain", expect = "Unsorted imports") { CatalogueBrowseBoard("browsePlain") },
+    fixture(view = "firstLoad", expect = "Opening Project Gutenberg…") { CatalogueBrowseBoard("firstLoad") },
+    fixture(view = "emptyFolder", expect = "Nothing here yet") { CatalogueBrowseBoard("emptyFolder") },
+    fixture(view = "limited", expect = "Too many requests") { CatalogueBrowseBoard("limited") },
+    fixture(view = "offline", expect = "Showing the copy saved 2 h ago") { CatalogueBrowseBoard("offline") },
+    fixture(view = "offlineNone", expect = "no saved copy to show") { CatalogueBrowseBoard("offlineNone") },
+    fixture(view = "localNet", expect = "Open a device on your network?") { CatalogueBrowseBoard("localNet") },
+    fixture(view = "list", expect = "The Count of Monte Cristo") { CatalogueBrowseBoard(if (Ember.style.isEink) "listEink" else "list") },
+    fixture(view = "listFailed", expect = "The ones above are still here.") { CatalogueBrowseBoard("listFailed") },
+    fixture(view = "search", expect = "in Project Gutenberg") { CatalogueBrowseBoard("search") },
+    fixture(view = "noResults", expect = "No books found for") { CatalogueBrowseBoard("noResults") },
+    fixture(view = "filter", expect = "54 options") { CatalogueBrowseBoard("filter") },
+    fixture(view = "editionsList", expect = "lists this book 3 times") { CatalogueBrowseBoard("editionsList") },
+    fixture(view = "failedTimedOut", expect = "took too long to answer") { CatalogueBrowseBoard("failedTimedOut") },
+    fixture(view = "failedCatalogueError", expect = "had a problem on its side") { CatalogueBrowseBoard("failedCatalogueError") },
+    fixture(view = "failedNotAllowed", expect = "allow access to this page") { CatalogueBrowseBoard("failedNotAllowed") },
+    fixture(view = "failedNotFound", expect = "This page no longer exists") { CatalogueBrowseBoard("failedNotFound") },
+    fixture(view = "failedTooLarge", expect = "This page is too large") { CatalogueBrowseBoard("failedTooLarge") },
+    fixture(view = "failedNotACatalogue", expect = "no longer returns a book catalogue") { CatalogueBrowseBoard("failedNotACatalogue") },
+    fixture(view = "failedCertificate", expect = "security certificate is no longer trusted") { CatalogueBrowseBoard("failedCertificate") },
 )
 
 @Composable
