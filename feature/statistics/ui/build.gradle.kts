@@ -57,6 +57,12 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.testJunit)
                 implementation(libs.kotlin.result)
+                implementation(libs.sqldelight.runtime)
+                implementation(libs.sqldelight.sqlite.driver)
+                implementation(projects.feature.statistics.data)
+                implementation(projects.lib.database.api)
+                implementation(projects.lib.database.implementation)
+                implementation(projects.lib.user.api)
             }
         }
     }

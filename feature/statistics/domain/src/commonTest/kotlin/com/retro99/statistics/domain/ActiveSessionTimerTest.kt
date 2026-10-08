@@ -6,6 +6,35 @@ import kotlin.test.assertNull
 
 class ActiveSessionTimerTest {
     @Test
+    fun foregroundAndBackgroundPlaybackTransitionsCountOnlyActiveIntervals() {
+        var elapsed = 0L
+        val timer = ActiveSessionTimer { elapsed }
+        timer.setActive(true) // Foreground reading.
+        elapsed = 1_000L
+        timer.setActive(false) // Background without playback.
+        elapsed = 20_000L
+        timer.setActive(true) // Notification starts background playback.
+        elapsed = 23_000L
+        timer.setActive(true) // Foreground again while still playing.
+        elapsed = 25_000L
+        timer.setActive(false) // Background and paused.
+        elapsed = 100_000L
+        assertEquals(6_000L, timer.finish())
+        assertNull(timer.finish())
+    }
+
+    @Test
+    fun backwardsClockSamplesCannotSubtractPreviouslyRecordedTime() {
+        var elapsed = 100L
+        val timer = ActiveSessionTimer { elapsed }
+        timer.setActive(true)
+        elapsed = 200L
+        timer.setActive(false)
+        timer.setActive(true)
+        elapsed = 50L
+        assertEquals(100L, timer.finish())
+    }
+    @Test
     fun pausesExcludeBackgroundTimeAndFinishingIsIdempotent() {
         var elapsed = 0L
         val timer = ActiveSessionTimer { elapsed }

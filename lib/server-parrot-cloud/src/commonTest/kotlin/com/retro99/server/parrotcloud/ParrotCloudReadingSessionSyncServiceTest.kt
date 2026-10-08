@@ -1,6 +1,10 @@
 package com.retro99.server.parrotcloud
 
 import com.retro99.database.api.sync.SyncOutboxEntry
+import com.retro99.database.api.sync.SyncCheckpointDatabase
+import com.retro99.database.api.sync.SyncCheckpoint
+import com.retro99.database.api.sync.SyncOutboxDatabase
+import kotlin.test.assertFailsWith
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -8,6 +12,67 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class ParrotCloudReadingSessionSyncServiceTest {
+    @Test
+    fun failedCheckpointReplaysIdenticalPayloadsWithoutChangingLocalStatistics() = runTest {
+        val sessions = listOf(session(1L, "a"), session(2L, "b"))
+        val database = RecordingReadingSessionDatabase(sessions = sessions)
+        val outbox = RecordingSyncOutboxDatabase()
+        val stored = InMemorySyncCheckpointDatabase()
+        var fail = true
+        val checkpoints = object : SyncCheckpointDatabase by stored {
+            override suspend fun saveCheckpoint(checkpoint: SyncCheckpoint) {
+                if (fail) throw IllegalStateException("checkpoint write failed")
+                stored.saveCheckpoint(checkpoint)
+            }
+        }
+        val service = ParrotCloudReadingSessionSyncService(database, outbox, checkpoints)
+        assertFailsWith<IllegalStateException> { service.enqueueNewSessions("account-1") }
+        val firstAttempt = outbox.enqueued.map { it.entityId to it.payload }
+        fail = false
+        service.enqueueNewSessions("account-1")
+        assertEquals(firstAttempt, outbox.enqueued.drop(2).map { it.entityId to it.payload })
+        assertEquals(sessions, database.getAllSessions())
+        assertEquals("2", stored.getCheckpoint("__reading_session_sweep__", "account-1")?.cursor)
+    }
+
+    @Test
+    fun partialEnqueueFailureDoesNotAdvanceCheckpointPastUnsavedSessions() = runTest {
+        val recorded = RecordingSyncOutboxDatabase()
+        var fail = true
+        val outbox = object : SyncOutboxDatabase by recorded {
+            override suspend fun enqueue(entry: SyncOutboxEntry) {
+                if (fail && recorded.enqueued.size == 1) throw IllegalStateException("outbox unavailable")
+                recorded.enqueue(entry)
+            }
+        }
+        val checkpoints = InMemorySyncCheckpointDatabase()
+        val service = ParrotCloudReadingSessionSyncService(
+            RecordingReadingSessionDatabase(listOf(session(1L, "a"), session(2L, "b"))), outbox, checkpoints,
+        )
+        assertFailsWith<IllegalStateException> { service.enqueueNewSessions("account-1") }
+        assertEquals(null, checkpoints.getCheckpoint("__reading_session_sweep__", "account-1"))
+        fail = false
+        service.enqueueNewSessions("account-1")
+        assertEquals(2, recorded.enqueued.map { it.entityId }.distinct().size)
+        assertEquals(recorded.enqueued[0].payload, recorded.enqueued[1].payload)
+        assertEquals("2", checkpoints.getCheckpoint("__reading_session_sweep__", "account-1")?.cursor)
+    }
+
+    @Test
+    fun accountSwitchBackfillsIndependentlyWithoutReuploadingTheOriginalAccount() = runTest {
+        val outbox = RecordingSyncOutboxDatabase()
+        val checkpoints = InMemorySyncCheckpointDatabase()
+        val service = ParrotCloudReadingSessionSyncService(
+            RecordingReadingSessionDatabase(listOf(session(1L, "a"))), outbox, checkpoints,
+        )
+        service.enqueueNewSessions("account-a")
+        service.enqueueNewSessions("account-b")
+        service.enqueueNewSessions("account-a")
+        assertEquals(listOf("account-a", "account-b"), outbox.enqueued.map { it.cloudUserId })
+        assertEquals(1, outbox.enqueued.map { it.entityId }.distinct().size)
+        assertEquals("1", checkpoints.getCheckpoint("__reading_session_sweep__", "account-a")?.cursor)
+        assertEquals("1", checkpoints.getCheckpoint("__reading_session_sweep__", "account-b")?.cursor)
+    }
     private val json = Json {
         ignoreUnknownKeys = true
     }

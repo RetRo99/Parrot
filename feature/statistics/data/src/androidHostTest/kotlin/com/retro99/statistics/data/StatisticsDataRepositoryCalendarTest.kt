@@ -134,7 +134,7 @@ class StatisticsDataRepositoryCalendarTest {
         val save = SaveReadingSessionUseCase(StatisticsDataRepository(source))
         tracker.setBook("audio-book", "Audiobook")
         tracker.setPlaying(true)
-        elapsed = 3_000L
+        elapsed = 30_000L
         tracker.setPlaying(false)
         elapsed = 99_000L
         tracker.finish()
@@ -148,7 +148,7 @@ class StatisticsDataRepositoryCalendarTest {
         assertEquals(pending, source.sessions)
         assertEquals(1, source.sessions.size)
         assertEquals(BookType.AUDIOBOOK, source.sessions.single().bookType)
-        assertEquals(3_000L, source.sessions.single().durationMs)
+        assertEquals(30_000L, source.sessions.single().durationMs)
     }
 
     @Test

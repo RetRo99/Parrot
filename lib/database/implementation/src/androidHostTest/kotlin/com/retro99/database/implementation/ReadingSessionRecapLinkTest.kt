@@ -24,6 +24,55 @@ import kotlin.test.assertTrue
 
 /** 33.sqm: statistics sessions point at the recap of the same reader session. */
 class ReadingSessionRecapLinkTest {
+    @Test
+    fun `full supported upgrade preserves statistics history and aggregate totals`() {
+        JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { migrated ->
+            executeScript(migrated, readResource("v28_schema.sql"))
+            for (index in 1..3) {
+                migrated.execute(null,
+                    "INSERT INTO reading_session(book_uuid, book_title, book_type, start_time, end_time, duration_ms, " +
+                        "pages_read, start_progression, end_progression, reading_speed_wpm) " +
+                        "VALUES ('book-$index', 'Title $index', 'ebook', ${index * 1000}, ${index * 1000 + 60000}, " +
+                        "60000, 5, 0.2, 0.4, 275)", 0)
+            }
+            AppDatabase.Schema.migrate(migrated, 28, AppDatabase.Schema.version)
+            val queries = AppDatabase(migrated).readingSessionQueries
+            val rows = queries.getAllSessions().executeAsList()
+            assertEquals(3, rows.size)
+            assertEquals(180_000L, queries.getTotalReadingTimeMs().executeAsOne())
+            assertEquals(listOf(3L, 2L, 1L), rows.map { it.id })
+            rows.forEach {
+                assertEquals("Title ${it.id}", it.book_title)
+                assertEquals(5L, it.pages_read)
+                assertEquals(0.2, it.start_progression)
+                assertEquals(0.4, it.end_progression)
+                assertEquals(275L, it.reading_speed_wpm)
+                assertNull(it.recap_session_id)
+            }
+        }
+    }
+
+    @Test
+    fun `upgrading a database with recap links keeps links and session metadata`() {
+        JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { migrated ->
+            executeScript(migrated, readResource("v28_schema.sql"))
+            AppDatabase.Schema.migrate(migrated, 28, 34)
+            migrated.execute(null,
+                "INSERT INTO reading_session(book_uuid, book_title, book_type, start_time, end_time, duration_ms, " +
+                    "reading_speed_wpm, recap_session_id) VALUES ('book', 'Book', 'ebook', 1000, 61000, 60000, 275, 'recap-1')", 0)
+            // Seed using the historical schema, not today's generated recap queries.
+            migrated.execute(null,
+                "INSERT INTO session_recap(session_id, server_id, book_uuid, status, created_at, updated_at) " +
+                    "VALUES ('recap-1', 'server', 'book', 'CAPTURING', 1, 1)", 0)
+            AppDatabase.Schema.migrate(migrated, 34, AppDatabase.Schema.version)
+            val upgraded = AppDatabase(migrated)
+            val row = upgraded.readingSessionQueries.getAllSessions().executeAsOne()
+            assertEquals("recap-1", row.recap_session_id)
+            assertEquals(60_000L, row.duration_ms)
+            assertEquals(275L, row.reading_speed_wpm)
+            assertNotNull(upgraded.sessionRecapQueries.getRecap("recap-1").executeAsOneOrNull())
+        }
+    }
 
     private lateinit var driver: JdbcSqliteDriver
     private lateinit var databaseManager: DatabaseManager

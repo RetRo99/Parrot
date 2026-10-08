@@ -6,6 +6,55 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class AudiobookSessionTrackerTest {
+    @Test
+    fun interruptionAtGraceBoundaryMergesButOneMillisecondLaterSplits() {
+        for (pause in listOf(10_000L, 10_001L)) {
+            now = 0L
+            saved.clear()
+            val tracker = tracker()
+            tracker.setBook("a", "A")
+            tracker.setPlaying(true)
+            now = 1_000L
+            tracker.setPlaying(false)
+            now += pause
+            tracker.setPlaying(true)
+            now += 2_000L
+            tracker.finish()
+            assertEquals(if (pause == 10_000L) listOf(3_000L) else listOf(1_000L, 2_000L), saved.map { it.durationMs })
+        }
+    }
+
+    @Test
+    fun bookChangeDuringPauseDoesNotCarryDurationOrMetadataToTheNextBook() {
+        val tracker = tracker()
+        tracker.setBook("a", "A")
+        tracker.setPlaying(true)
+        now = 1_000L
+        tracker.setPlaying(false)
+        now = 5_000L
+        tracker.setBook("b", "B")
+        tracker.setPlaying(true)
+        now = 7_000L
+        tracker.finish()
+        assertEquals(listOf("a", "b"), saved.map { it.bookUuid })
+        assertEquals(listOf("A", "B"), saved.map { it.bookTitle })
+        assertEquals(listOf(1_000L, 2_000L), saved.map { it.durationMs })
+        assertEquals(listOf(1_000L, 7_000L), saved.map { it.endTime })
+    }
+
+    @Test
+    fun teardownWhileInterruptedExcludesThePauseAndLateStopCallbacksDoNotDuplicateIt() {
+        val tracker = tracker()
+        tracker.setBook("a", "A")
+        tracker.setPlaying(true)
+        now = 3_000L
+        tracker.setPlaying(false)
+        now = 100_000L
+        repeat(4) { tracker.finish(); tracker.setPlaying(false) }
+        assertEquals(1, saved.size)
+        assertEquals(3_000L, saved.single().durationMs)
+        assertEquals(3_000L, saved.single().endTime)
+    }
     private var now = 0L
     private val saved = mutableListOf<ReadingSessionDomainModel>()
     private fun tracker() = AudiobookSessionTracker(

@@ -30,6 +30,7 @@ import com.retro99.statistics.ui.model.toSessionUiModel
 import com.retro99.statistics.ui.model.toUiModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -61,6 +62,9 @@ class StatisticsViewModel(
     private var statisticsLoadInProgress = false
     private var statisticsLoadFailed = false
     private var hasStatisticsLoadCompleted = false
+    // Totals and overview load independently; one success cannot clear the other's error.
+    private var statisticsLoadError: AppError? = null
+    private var overviewLoadError: AppError? = null
     private var activeDetailRequest: StatisticsDetailLoadRequest? = null
     private var detailLoadJob: Job? = null
 
@@ -150,7 +154,8 @@ class StatisticsViewModel(
             ),
         )
         analytics.logBreadcrumb(request.context(stage = "started", outcome = "started"))
-        updateState { it.copy(isLoading = true, error = null) }
+        statisticsLoadError = null
+        updateState { it.copy(isLoading = true, error = overviewLoadError) }
 
         viewModelScope.launch {
             val result = try {
@@ -165,11 +170,12 @@ class StatisticsViewModel(
             result.fold(
                 success = { statistics ->
                     statisticsLoadFailed = false
+                    statisticsLoadError = null
                     updateState {
                         it.copy(
                             statistics = statistics.toUiModel(),
                             isLoading = false,
-                            error = null,
+                            error = overviewLoadError,
                         )
                     }
                     analytics.logEvent(
@@ -184,6 +190,7 @@ class StatisticsViewModel(
                 },
                 failure = { error ->
                     statisticsLoadFailed = true
+                    statisticsLoadError = error
                     val reasonCode = error.statisticsReasonCode()
                     val context = request.context(
                         stage = "terminal",
@@ -280,6 +287,8 @@ class StatisticsViewModel(
     /** Loads the chart, totals and streaks for the selected range. Quiet on failure. */
     private fun loadOverview() {
         overviewJob?.cancel()
+        overviewLoadError = null
+        updateState { it.copy(error = statisticsLoadError) }
         val range = viewState.value.range
         overviewJob = viewModelScope.launch {
             val result = try {
@@ -289,12 +298,16 @@ class StatisticsViewModel(
             } catch (throwable: Throwable) {
                 Err(AppError.UnknownError(throwable))
             }
+            // Some database calls complete despite cancellation. Never publish an old range.
+            coroutineContext.ensureActive()
             result.fold(
                 success = { overview ->
-                    updateState { it.copy(overview = overview, selectedBucketIndex = null) }
+                    overviewLoadError = null
+                    updateState { it.copy(overview = overview, selectedBucketIndex = null, error = statisticsLoadError) }
                 },
                 failure = { error ->
-                    updateState { it.copy(error = error, isLoading = false) }
+                    overviewLoadError = error
+                    updateState { it.copy(error = statisticsLoadError ?: error, isLoading = statisticsLoadInProgress) }
                 },
             )
         }

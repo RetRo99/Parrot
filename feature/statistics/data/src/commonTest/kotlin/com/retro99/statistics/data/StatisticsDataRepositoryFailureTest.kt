@@ -20,6 +20,20 @@ import kotlin.test.assertIs
 class StatisticsDataRepositoryFailureTest {
 
     @Test
+    fun everyDashboardQueryFailureIsReportedInsteadOfPublishingPartialStatistics() = runTest {
+        val dashboardQueries = listOf(
+            Query.TOTAL_TIME, Query.RANGE_TIME, Query.SESSION_COUNT, Query.BOOK_COUNT,
+            Query.ALL_SESSIONS, Query.MOST_BOOKS, Query.BY_TYPE,
+        )
+        dashboardQueries.forEach { query ->
+            StatisticsDataRepository(FakeStatisticsLocalSource(failAt = query)).getReadingStatistics().first().fold(
+                success = { error("$query failure was hidden by partial statistics") },
+                failure = { assertIs<AppError.DatabaseError>(it, query.name) },
+            )
+        }
+    }
+
+    @Test
     fun aggregateQueryFailureIsPropagatedInsteadOfBecomingZeroStatistics() = runTest {
         val repository = StatisticsDataRepository(
             localSource = FakeStatisticsLocalSource(failAt = Query.TOTAL_TIME),
@@ -89,6 +103,11 @@ class StatisticsDataRepositoryFailureTest {
 
 internal enum class Query {
     TOTAL_TIME,
+    RANGE_TIME,
+    SESSION_COUNT,
+    BOOK_COUNT,
+    MOST_BOOKS,
+    BY_TYPE,
     READING_DAYS,
     ALL_SESSIONS,
 }
@@ -123,17 +142,17 @@ internal class FakeStatisticsLocalSource(
     override suspend fun getTotalReadingTimeMsInDateRange(
         startTime: Long,
         endTime: Long,
-    ): AppResult<Long> = Ok(0L)
+    ): AppResult<Long> = result(Query.RANGE_TIME, 0L)
 
     override suspend fun getSessionCountInDateRange(
         startTime: Long,
         endTime: Long,
-    ): AppResult<Long> = Ok(0L)
+    ): AppResult<Long> = result(Query.SESSION_COUNT, 0L)
 
     override suspend fun getDistinctBooksReadInDateRange(
         startTime: Long,
         endTime: Long,
-    ): AppResult<Long> = Ok(0L)
+    ): AppResult<Long> = result(Query.BOOK_COUNT, 0L)
 
     override suspend fun getDailyReadingTime(
         sinceTimestamp: Long,
@@ -142,13 +161,13 @@ internal class FakeStatisticsLocalSource(
     override suspend fun getReadingTimeByBookType(
         startTime: Long,
         endTime: Long,
-    ): AppResult<Map<String, Long>> = Ok(emptyMap())
+    ): AppResult<Map<String, Long>> = result(Query.BY_TYPE, emptyMap())
 
     override suspend fun getMostReadBooks(
         startTime: Long,
         endTime: Long,
         limit: Int,
-    ): AppResult<List<BookReadingStatsDomainModel>> = Ok(emptyList())
+    ): AppResult<List<BookReadingStatsDomainModel>> = result(Query.MOST_BOOKS, emptyList())
 
     override suspend fun getReadingDays(sinceTimestamp: Long): AppResult<List<Long>> =
         result(Query.READING_DAYS, emptyList())
