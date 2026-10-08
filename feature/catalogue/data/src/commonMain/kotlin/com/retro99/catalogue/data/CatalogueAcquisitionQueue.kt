@@ -224,11 +224,20 @@ class CatalogueAcquisitionQueue internal constructor(
     }
 
     /**
-     * The source was turned off or removed, or its account details changed. Its unfinished
+     * The source was turned off or moved, or it got new account details. Its unfinished
      * requests are cancelled. A request that is waiting for sign-in is kept: saving account
      * details is exactly what it waits for.
      */
-    override suspend fun cancel(profileId: String, sourceId: String) {
+    override suspend fun cancel(profileId: String, sourceId: String) = cancel(profileId, sourceId, keepWaitingForSignIn = true)
+
+    /**
+     * The source was removed, or its account details were. Every unfinished request goes: one
+     * that waits for sign-in has nothing left to wait for, and it names a book from a
+     * catalogue that may be private.
+     */
+    override suspend fun forget(profileId: String, sourceId: String) = cancel(profileId, sourceId, keepWaitingForSignIn = false)
+
+    private suspend fun cancel(profileId: String, sourceId: String, keepWaitingForSignIn: Boolean) {
         // Another profile's database is closed; its rows are dealt with when it opens again.
         if (activeProfileId() != profileId) return
         val stopped = mutableListOf<Job>()
@@ -239,7 +248,7 @@ class CatalogueAcquisitionQueue internal constructor(
                 inProfile(profileId) {
                     database.getBySource(sourceId).forEach { row ->
                         val state = row.acquisitionState() ?: return@forEach
-                        if (state == AcquisitionState.Failed(AcquisitionFailureReason.SignIn)) return@forEach
+                        if (keepWaitingForSignIn && state == AcquisitionState.Failed(AcquisitionFailureReason.SignIn)) return@forEach
                         if (AcquisitionStateMachine.transition(state, AcquisitionEvent.Cancel) != AcquisitionTransition.Removed) {
                             return@forEach
                         }

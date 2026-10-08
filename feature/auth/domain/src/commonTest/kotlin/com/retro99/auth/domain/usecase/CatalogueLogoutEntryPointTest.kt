@@ -7,12 +7,12 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
 class CatalogueLogoutEntryPointTest {
-    @Test fun catalogue_profile_logout_never_calls_destructive_database_cleaner() = runTest {
+    @Test fun catalogue_profile_logout_runs_the_same_cleaner_as_a_library_only_profile() = runTest {
         val registry = LogoutRegistry(listOf(source(ServerType.Opds), source(ServerType.Storyteller), source(ServerType.Local)))
         var deleted = false
         val cleaner = object : DatabaseCleaner { override suspend fun clearAllData() { deleted = true } }
         assertTrue(LogoutUseCase(registry, cleaner).logoutAll().isOk)
-        assertFalse(deleted, "Downloaded books must survive catalogue sign-out")
+        assertTrue(deleted, "A profile with a catalogue is signed out like any other")
         assertEquals(setOf("opds", "storyteller"), registry.cleared.toSet())
         assertEquals(3, registry.getAllServers().size)
     }

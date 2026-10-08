@@ -5,7 +5,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
 class CatalogueLogoutTest {
-    @Test fun logout_all_clears_catalogue_accounts_and_cancels_work_but_keeps_sources() = runTest {
+    @Test fun logout_all_clears_catalogue_accounts_and_their_work_but_keeps_sources() = runTest {
         val preferences = RegistryPreferences()
         val credentials = OpdsCredentialStoreImpl(preferences)
         val cancelled = mutableListOf<String>()
@@ -20,7 +20,8 @@ class CatalogueLogoutTest {
         registry.clearAllCredentials()
         assertNull(credentials.get("a", private.id))
         assertNotNull(credentials.get("b", private.id))
-        assertEquals(setOf("a:public", "a:private"), cancelled.toSet())
+        // A catalogue that never had account details has nothing private to lose.
+        assertEquals(listOf("a:private"), cancelled)
         assertEquals(setOf(public, private), registry.getAllServers().toSet())
         assertTrue(registry.getAuthenticatedServers().isEmpty())
     }

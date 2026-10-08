@@ -52,7 +52,9 @@ class CatalogueDownloadCancellationTest {
     }
 
     @Test
-    fun `removing account details cancels the running download`() = cancelsRunningDownload { koin, source ->
+    fun `removing account details cancels the download running with them`() = cancelsRunningDownload(
+        prepare = { koin, source -> koin.get<CatalogueAccountEditor>().saveAccount(source.id, OpdsAccountDetails("patron", "secret")) },
+    ) { koin, source ->
         koin.get<ServerRegistry>().clearCredentials(source.id)
     }
 
@@ -61,7 +63,10 @@ class CatalogueDownloadCancellationTest {
         koin.get<ServerRegistry>().updateServer(source.copy(baseUrl = "https://elsewhere.example/opds/"))
     }
 
-    private fun cancelsRunningDownload(change: suspend (Koin, ServerConfig) -> Unit) {
+    private fun cancelsRunningDownload(
+        prepare: suspend (Koin, ServerConfig) -> Unit = { _, _ -> },
+        change: suspend (Koin, ServerConfig) -> Unit,
+    ) {
         val fileRequested = CompletableDeferred<Unit>()
         val fileRequestStopped = CompletableDeferred<Unit>()
         val graph = RealAppGraph { request ->
@@ -83,6 +88,7 @@ class CatalogueDownloadCancellationTest {
                     users.createProfile("a", "A", null)
                     users.setActiveProfile("a")
                     val source = graph.koin.get<ServerRegistry>().addServerWithId("source", "Books", ServerType.Opds, ROOT)
+                    prepare(graph.koin, source)
                     val repository = graph.koin.get<CatalogueRepositoryProvider>().getRepository(source.id)
                     val document = assertIs<CatalogueFeedDocument>(assertNotNull(repository).getRoot().get())
                     val publication = document.publications.single()

@@ -211,7 +211,7 @@ class ServerRegistryImpl(
         val server = _servers.value[serverId]
         if (server?.type == ServerType.Opds) {
             val profileId = currentUserId ?: error("No active profile")
-            cancelCatalogueWork(profileId, serverId)
+            catalogueWork.forEach { it.forget(profileId, serverId) }
             persistStateMutation(
                 previousValue = _servers.value,
                 updatedValue = _servers.value - serverId,
@@ -340,8 +340,7 @@ class ServerRegistryImpl(
         val server = _servers.value[serverId]
         if (server?.type == ServerType.Opds) {
             val profileId = currentUserId ?: return@withLock
-            cancelCatalogueWork(profileId, serverId)
-            opdsCredentials.remove(profileId, serverId)
+            forgetCatalogueAccount(profileId, serverId)
             return@withLock
         }
         val provider = authStateProviders.firstOrNull { authProvider ->
@@ -369,10 +368,7 @@ class ServerRegistryImpl(
         val servers = _servers.value.values.toList()
         servers.forEach { server ->
             if (server.type == ServerType.Opds) {
-                currentUserId?.let { profileId ->
-                    cancelCatalogueWork(profileId, server.id)
-                    opdsCredentials.remove(profileId, server.id)
-                }
+                currentUserId?.let { profileId -> forgetCatalogueAccount(profileId, server.id) }
             }
             authStateProviders.firstOrNull { provider -> provider.serverType == server.type }
                 ?.clearAuthentication(server)
@@ -399,6 +395,16 @@ class ServerRegistryImpl(
 
     private suspend fun cancelCatalogueWork(profileId: String, sourceId: String) {
         catalogueWork.forEach { it.cancel(profileId, sourceId) }
+    }
+
+    /**
+     * Signing out of a catalogue. One that never had account details has nothing private to
+     * lose, so its downloads and saved pages are left alone.
+     */
+    private suspend fun forgetCatalogueAccount(profileId: String, sourceId: String) {
+        if (opdsCredentials.get(profileId, sourceId) == null) return
+        catalogueWork.forEach { it.forget(profileId, sourceId) }
+        opdsCredentials.remove(profileId, sourceId)
     }
 
     private fun sameOrigin(first: String, second: String): Boolean = try {

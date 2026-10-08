@@ -25,7 +25,8 @@ class LogoutUseCase(
     }
 
     /**
-     * Logout from all remote servers (excludes local server).
+     * Logout from all remote servers (excludes local server). A catalogue stays registered;
+     * one that had account details loses them, its unfinished downloads and its saved pages.
      */
     suspend fun logoutAll(): CompletableResult {
         // Get all servers and clear credentials only for non-local servers
@@ -36,10 +37,10 @@ class LogoutUseCase(
                 serverRegistry.clearCredentials(server.id)
             }
 
-        // The legacy cleaner also deletes local reading metadata/outbox records.
-        // Catalogue sign-out must not touch downloaded books or their metadata.
-        // Keep the pre-OPDS behavior for existing-only profiles.
-        if (servers.none { it.type == ServerType.Opds }) databaseCleaner.clearAllData()
+        // The same for every profile, with or without a catalogue. The cleaner does not know
+        // where a library book came from: a catalogue download and a picked file lose the
+        // same things. It leaves the catalogue tables and the import journal alone.
+        databaseCleaner.clearAllData()
         return Ok(Unit)
     }
 }
