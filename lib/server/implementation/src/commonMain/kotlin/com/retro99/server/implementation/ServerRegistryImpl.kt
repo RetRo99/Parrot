@@ -11,6 +11,10 @@ import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerCredentials
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerType
+import com.retro99.server.api.OpdsCredentialStore
+import com.retro99.server.api.CatalogueAccessStore
+import com.retro99.server.api.CatalogueWorkController
+import io.ktor.http.Url
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +42,9 @@ class ServerRegistryImpl(
     private val preferences: Preferences,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val authStateProviders: List<ServerAuthStateProvider>,
+    @Provided private val opdsCredentials: OpdsCredentialStore = OpdsCredentialStoreImpl(preferences),
+    @Provided private val catalogueAccess: CatalogueAccessStore = CatalogueAccessStoreImpl(preferences),
+    @Provided private val catalogueWork: List<CatalogueWorkController> = emptyList(),
 ) : ServerRegistry {
 
     private val logger = Logger.withTag("ServerRegistry")
@@ -169,7 +176,15 @@ class ServerRegistryImpl(
 
     override suspend fun updateServer(config: ServerConfig) = mutex.withLock {
         if (config.type == ServerType.Opds) {
-            check(_servers.value[config.id]?.type == ServerType.Opds) { "Catalogue source must already exist" }
+            val previous = _servers.value[config.id]
+            check(previous?.type == ServerType.Opds) { "Catalogue source must already exist" }
+            val profileId = currentUserId ?: error("No active profile")
+            if (previous.baseUrl != config.baseUrl) {
+                // Fail closed before publishing a retargeted address. Losing optional
+                // credentials on a failed config write is safer than sending them elsewhere.
+                cancelCatalogueWork(profileId, config.id)
+                if (!sameOrigin(previous.baseUrl, config.baseUrl)) opdsCredentials.remove(profileId, config.id)
+            }
             persistStateMutation(
                 previousValue = _servers.value,
                 updatedValue = _servers.value + (config.id to config),
@@ -286,6 +301,7 @@ class ServerRegistryImpl(
 
     override suspend fun saveCredentials(credentials: ServerCredentials) = mutex.withLock {
         val server = _servers.value[credentials.serverId]
+        check(server?.type != ServerType.Opds) { "Catalogue credentials must use OpdsCredentialStore" }
         check(authStateProviders.none { provider -> provider.serverType == server?.type }) {
             "Managed servers do not store ServerCredentials"
         }
@@ -329,6 +345,18 @@ class ServerRegistryImpl(
     }
 
     // ==================== Persistence ====================
+
+    private suspend fun cancelCatalogueWork(profileId: String, sourceId: String) {
+        catalogueWork.forEach { it.cancel(profileId, sourceId) }
+    }
+
+    private fun sameOrigin(first: String, second: String): Boolean = try {
+        val a = Url(first)
+        val b = Url(second)
+        a.protocol == b.protocol && a.host.equals(b.host, ignoreCase = true) && a.port == b.port
+    } catch (_: IllegalArgumentException) {
+        false
+    }
 
     private fun persistServers() {
         val userId = currentUserId ?: return
