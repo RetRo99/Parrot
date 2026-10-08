@@ -1,8 +1,10 @@
 # OPDS server support: research and implementation plan
 
 **Status:** Phase 1 protocol core complete and its gate met; Phase 2 test-first
-items 1–7 and catalogue plumbing implemented; Phase 2 gate met. Phase 3 not
-started. All user-visible OPDS integration remains unimplemented.
+items 1–7 and catalogue plumbing implemented; Phase 2 gate met. Phase 3 in
+progress: a download now ends as a library book with provenance; cleanup, sync
+hold-back and the Phase 3 gate are still open (see the Phase 3 status notes).
+All user-visible OPDS integration remains unimplemented.
 No user-visible OPDS application integration yet. Reviewed
 against the codebase on 2026-10-08: open gaps are in §10, the designer brief is
 in §11, and design passes 1–3 with the remaining open points are in §11.7.  
@@ -1004,6 +1006,84 @@ tests. `verifyCommonMainAppDatabaseMigration` passes, run uncached.
 both pass. The link was forced to run again on the final code. Running both
 targets with `--rerun-tasks` in one 4 GiB Gradle daemon runs the iOS link out of
 Java heap; built one after the other they pass.
+
+**Phase 3 status after the library-join run (2026-10-08, branch
+`opds/phase3-acquisition`).** Done: the Phase 2 wiring bug, adding a checked
+download to the library, the crash journal, the "in your library" lookup,
+restart recovery at app start, persistent iOS staging, and the sizes the design
+copy needs. No screen. Not done (next run): the sign-out cleaner, holding back
+positions and bookmarks for unsynced catalogue books, backup of catalogue
+books, library merge, book deletion and catalogue removal cleanup, the
+saved-pages cache, and the Phase 3 gate.
+
+- **Wiring bug (fixed).** The generated Koin module keeps a constructor
+  parameter's default value and does not inject it. `ServerRegistryImpl` ran
+  with private account and access stores and zero `CatalogueWorkController`s;
+  `UserRegistryImpl` (same Phase 2 commit) ran with a private
+  `ProfileWorkRegistry`, so a profile switch stopped no catalogue work either.
+  The four defaults are removed. `composeApp/src/androidHostTest/.../di/`
+  boots `ParrotKoinApp` itself (`RealAppGraph`) with only the Android-only
+  edges replaced (preferences, database file, network engine, staging and
+  library folders, the Readium metadata reader, Firebase, cloud configuration)
+  and checks instances and behavior there. **Rule: never give a DI-injected
+  parameter a default value.** A repo-wide scan found one more instance outside
+  this work, `AppVisibilityReporter.productUsage` (on main since a258e941);
+  it is not fixed here. `BookFileTransferEngine` and `SyncDataRepository` have
+  such defaults but are built by module functions that pass every argument.
+- **Account details.** `CatalogueAccountEditor.saveAccount` (lib/server/api,
+  implemented by the registry) is the way to save new details: it cancels the
+  source's work first. `OpdsCredentialStore.save` alone cancels nothing.
+  Removing details stays `ServerRegistry.clearCredentials`.
+- **Adding.** `LibraryCatalogueBookAdder` (feature/catalogue/data) calls
+  `StagedBookImportManager.importStagedEpub` with `CatalogueDownload` origin and
+  provenance. catalogue-data depends on books-domain; nothing in feature/books
+  depends on a catalogue or OPDS module. The importer is resolved lazily, for
+  the same cycle reason as the repository provider. A metadata failure comes
+  back as `StagedBookNotReadable` and becomes `invalid`; every other import
+  failure is `storage`.
+- **Order on success** (`CatalogueAcquisitionQueue.completeAdd`): library book
+  id on the row, `catalogue_book_sources` row, then Done with `detail_url` and
+  `staging_path` cleared. The provenance row's id is the request id and is
+  written with INSERT OR IGNORE, so repeating the sequence changes nothing.
+  `catalogue_origin` is scheme, host and port of the catalogue's registered
+  address (read from preferences, lock-free), or of the listing address when
+  the catalogue is no longer registered. `selected_format` is the media-type
+  part of the representation key. Rights text and the catalogue's `updated`
+  value are carried on the request and the acquisition row.
+- **Journal.** `library_import_journal` (40.sqm, schema 40 to 41) belongs to the
+  importer, so the file picker is covered too. `LibraryLocalDataSource`
+  records library path and cover path before the move and forgets them after
+  the rows are committed. An entry found later: with its device-file row it is
+  kept; without it the library file and cover are deleted. It is settled
+  before every import and through
+  `StagedBookImportManager.settleInterruptedImports`.
+- **Restart.** `CatalogueAcquisitionStartup` (an `AppInitializer`) calls
+  `restoreAfterRestart()` at app start and for every profile opened later.
+  Loading a profile: settle the library journal; finish each Adding row that
+  names its book or whose bytes the library has on this device
+  (`findBookOnDevice`); interrupt everything else that was running; turn rows
+  in an unknown state into Interrupted; delete staged files no row refers to.
+  The same recovery runs when a profile is closed, so an add that committed
+  during a switch ends Done.
+- **Already in the library.** `CatalogueBookSourcesDatabase.findInLibrary`
+  matches `publication_key` or `detail_identity` and joins `library_books`
+  where `deleted_at IS NULL`. `CatalogueLibraryLookup` (catalogue domain)
+  answers for one entry or a page. `request()` now returns
+  `CatalogueRequestOutcome`: `Queued`, or `InLibrary(libraryBookId)` with
+  nothing stored and nothing started, for any file of an acquired publication.
+- **Staging on iOS** is `Application Support/catalogue_staging/<profile>/`,
+  marked `NSURLIsExcludedFromBackupKey`. Files left in the old temporary
+  location are not migrated; the system clears them.
+- **Sizes.** `too_large` keeps the declared size in `expected_size_bytes`
+  (the transport now reports it); the limit is
+  `CatalogueAcquisitionLimits.MAX_FILE_BYTES`, checked equal to
+  `OpdsBudgets.MAX_DOWNLOAD_BYTES`. `storage` keeps `needed_bytes` (declared
+  size plus the 16 MiB margin) when the size was declared.
+- **Changed behavior to know about.** A request in Adding holds its download
+  slot until it is added (the "not added yet" result is gone). Cancelling a
+  request, or removing its catalogue, in the instant the library commits the
+  import can leave the book in the library with no request and no provenance
+  row.
 
 ### Phase 4 — complete browsing feature
 
