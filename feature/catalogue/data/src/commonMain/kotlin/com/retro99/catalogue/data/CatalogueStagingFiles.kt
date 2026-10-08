@@ -24,6 +24,9 @@ interface CatalogueStagingFiles {
     /** Deletes the file if it is there. Never throws. */
     suspend fun delete(path: String)
 
+    /** Every file in [profileId]'s staging folder, as absolute paths. Empty when it cannot be read. */
+    suspend fun list(profileId: String): List<String>
+
     companion object {
         const val PART_SUFFIX = ".epub.part"
         const val STAGED_SUFFIX = ".epub"

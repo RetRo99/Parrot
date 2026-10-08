@@ -70,6 +70,12 @@ internal class JvmCatalogueStagingFiles(
         withContext(Dispatchers.IO) { runCatching { File(path).delete() } }
     }
 
+    override suspend fun list(profileId: String): List<String> = withContext(Dispatchers.IO) {
+        File(root(), profileId.safeFileName()).listFiles().orEmpty()
+            .filter { file -> file.isFile }
+            .map { file -> file.absolutePath }
+    }
+
     private companion object {
         const val HASH_BUFFER_BYTES = 64 * 1024
     }

@@ -1,13 +1,19 @@
 package com.retro99.catalogue.data
 
 import com.retro99.catalogue.domain.AcquisitionState
+import com.retro99.catalogue.domain.CatalogueAcquisition
+import com.retro99.catalogue.domain.CatalogueAcquisitionManager
 import com.retro99.catalogue.domain.CatalogueAcquisitionRequest
+import com.retro99.catalogue.domain.CatalogueRequestOutcome
 import com.retro99.catalogue.domain.CatalogueBookAddResult
 import com.retro99.catalogue.domain.CatalogueBookAdder
 import com.retro99.catalogue.domain.StagedCatalogueBook
 import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.catalogue.CatalogueAcquisitionEntity
 import com.retro99.database.api.catalogue.CatalogueAcquisitionsDatabase
+import com.retro99.database.api.catalogue.CatalogueBookSourceEntity
+import com.retro99.database.api.catalogue.CatalogueBookSourcesDatabase
+import com.retro99.database.api.catalogue.CatalogueLibraryMatch
 import com.retro99.epub.api.EpubFileCheck
 import com.retro99.epub.api.EpubFileChecker
 import com.retro99.server.api.CatalogueAcquisitionLocator
@@ -16,6 +22,7 @@ import com.retro99.server.api.CatalogueFileSink
 import com.retro99.user.implementation.ProfileWorkRegistryImpl
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.sync.Mutex
@@ -26,6 +33,17 @@ internal class TestWorld {
     var activeProfile: String? = "p1"
     var databaseLocked = false
     var time = 1_000_000L
+
+    /** Books in each profile's library, by id. A book that is deleted is taken out of here. */
+    val libraryBooks = mutableMapOf<String, MutableSet<String>>()
+
+    /** Books that have a file on this device, by profile and then by the file's hash. */
+    val booksOnDevice = mutableMapOf<String, MutableMap<String, String>>()
+
+    fun addToLibrary(profileId: String, contentHash: String, libraryBookId: String) {
+        libraryBooks.getOrPut(profileId) { mutableSetOf() } += libraryBookId
+        booksOnDevice.getOrPut(profileId) { mutableMapOf() }[contentHash] = libraryBookId
+    }
 
     /** Filled when slow work runs while the database lock is held. Must stay empty. */
     val lockViolations = mutableListOf<String>()
@@ -194,6 +212,65 @@ internal class FakeStagingFiles(private val world: TestWorld) : CatalogueStaging
     override suspend fun delete(path: String) {
         files.remove(path)
     }
+
+    override suspend fun list(profileId: String): List<String> =
+        files.keys.filter { path -> path.startsWith("/staging/$profileId/") }
+}
+
+/** Provenance rows per profile. "In the library" is decided by [TestWorld.libraryBooks], like the real join. */
+internal class FakeBookSourcesDatabase(private val world: TestWorld) : CatalogueBookSourcesDatabase {
+    private val tables = mutableMapOf<String, MutableList<CatalogueBookSourceEntity>>()
+
+    /** The process stops right after a provenance row is written. */
+    var dieAfterInsert = false
+
+    /** Runs just before a row is written, to look at what else is stored at that moment. */
+    var beforeInsert: (CatalogueBookSourceEntity) -> Unit = {}
+
+    fun peek(profileId: String = "p1"): List<CatalogueBookSourceEntity> = tables[profileId].orEmpty().toList()
+
+    private fun table(): MutableList<CatalogueBookSourceEntity> {
+        check(world.databaseLocked) { "The database was used outside withProfile" }
+        return tables.getOrPut(checkNotNull(world.activeProfile)) { mutableListOf() }
+    }
+
+    override suspend fun insert(source: CatalogueBookSourceEntity) {
+        table() += source
+    }
+
+    override suspend fun insertIfAbsent(source: CatalogueBookSourceEntity) {
+        val table = table()
+        beforeInsert(source)
+        if (table.none { it.id == source.id }) table += source
+        if (dieAfterInsert) awaitCancellation()
+    }
+
+    override suspend fun findInLibrary(sourceId: String, identities: Collection<String>): List<CatalogueLibraryMatch> {
+        val books = world.libraryBooks[world.activeProfile].orEmpty()
+        return table()
+            .filter { row -> row.sourceId == sourceId && row.libraryBookId in books }
+            .filter { row -> row.publicationKey in identities || row.detailIdentity in identities }
+            .sortedBy { row -> row.acquiredAt }
+            .map { row -> CatalogueLibraryMatch(row.publicationKey, row.detailIdentity, row.libraryBookId) }
+    }
+
+    override suspend fun getForBook(libraryBookId: String) = table().filter { it.libraryBookId == libraryBookId }
+
+    override suspend fun getForPublication(sourceId: String, publicationKey: String) =
+        table().filter { it.sourceId == sourceId && it.publicationKey == publicationKey }
+
+    override suspend fun getForSource(sourceId: String) = table().filter { it.sourceId == sourceId }
+
+    override fun observeForSource(sourceId: String): Flow<List<CatalogueBookSourceEntity>> = flowOf(emptyList())
+
+    override suspend fun countBooksForSource(sourceId: String) =
+        table().filter { it.sourceId == sourceId }.distinctBy { it.libraryBookId }.size.toLong()
+
+    override suspend fun moveToBook(fromLibraryBookId: String, toLibraryBookId: String) = error("unused")
+
+    override suspend fun deleteForBook(libraryBookId: String) = error("unused")
+
+    override suspend fun deleteAll() = error("unused")
 }
 
 internal class FakeFileSource(private val world: TestWorld) : AcquisitionFileSource {
@@ -292,35 +369,66 @@ internal class FakeChecker(private val world: TestWorld) : EpubFileChecker {
     }
 }
 
+/**
+ * Stands in for the library import. A book it adds is in [TestWorld.libraryBooks] and on the
+ * device under the file's hash, which is all the queue can ask the real library either.
+ */
 internal class FakeAdder(private val world: TestWorld, private val files: FakeStagingFiles) : CatalogueBookAdder {
     class Call(val profileId: String, val book: StagedCatalogueBook)
 
     val calls = mutableListOf<Call>()
     var gate: CompletableDeferred<Unit>? = null
+    var settled = 0
 
-    /** Null leaves the book staged, which is what the app does in this phase. */
+    /** Null: the import never comes back, so the request stays "adding" with its file staged. */
     var result: ((StagedCatalogueBook) -> CatalogueBookAddResult)? = { book -> CatalogueBookAddResult.Added("lib-${book.publicationKey}") }
+
+    /** The process stops before the library touched anything. */
+    var dieBeforeAdding = false
+
+    /** The process stops after the book is in the library and before the queue hears of it. */
+    var dieAfterAdding = false
 
     override suspend fun add(profileId: String, book: StagedCatalogueBook): CatalogueBookAddResult {
         world.slowWork("add to library")
         calls += Call(profileId, book)
         gate?.await()
-        val answer = result?.invoke(book) ?: CatalogueBookAddResult.NotAddedYet
-        // A real import consumes the staged file.
-        if (answer is CatalogueBookAddResult.Added) files.delete(book.path)
+        if (dieBeforeAdding) awaitCancellation()
+        val answer = result?.invoke(book) ?: awaitCancellation()
+        if (answer is CatalogueBookAddResult.Added) {
+            // A real import consumes the staged file.
+            files.delete(book.path)
+            world.addToLibrary(profileId, book.contentHash, answer.libraryBookId)
+        }
+        if (dieAfterAdding) awaitCancellation()
         return answer
+    }
+
+    override suspend fun settleInterruptedAdds(profileId: String) {
+        world.slowWork("settle the library")
+        settled++
+    }
+
+    override suspend fun findAddedBook(profileId: String, contentHash: String): String? {
+        world.slowWork("look in the library")
+        return world.booksOnDevice[profileId]?.get(contentHash)
     }
 }
 
 /** A queue over fakes. [restart] gives a new queue over the same database and files. */
 internal class QueueHarness(private val scope: CoroutineScope, val world: TestWorld = TestWorld()) {
-    val session = FakeSession(world)
+    var session = FakeSession(world)
+        private set
     val database = FakeAcquisitionsDatabase(world)
+    val sources = FakeBookSourcesDatabase(world)
     val files = FakeStagingFiles(world)
     val source = FakeFileSource(world)
     val checker = FakeChecker(world)
     val adder = FakeAdder(world, files)
     val profileWork = ProfileWorkRegistryImpl()
+
+    /** The registered address of each catalogue. A removed catalogue has none. */
+    val sourceAddresses = mutableMapOf("source-1" to "https://books.example/opds/secret-key-in-path?token=1")
     private var ids = 0
     var queue = newQueue()
         private set
@@ -328,18 +436,28 @@ internal class QueueHarness(private val scope: CoroutineScope, val world: TestWo
     private fun newQueue() = CatalogueAcquisitionQueue(
         session = session,
         database = database,
+        sources = sources,
         activeProfileId = { world.activeProfile },
         profileWork = profileWork,
         worker = AcquisitionWorker(source, files, checker),
         files = files,
         adder = adder,
+        sourceAddress = { _, sourceId -> sourceAddresses[sourceId] },
         scope = scope,
         now = { world.time },
         newRequestId = { "request-${++ids}" },
     )
 
-    /** Parrot was closed and opened again: memory is gone, the database and files are not. */
+    /**
+     * Parrot was closed and opened again: memory is gone, the database and files are not.
+     * Whatever the old process was in the middle of stays where it stopped, locks included.
+     */
     fun restart(): CatalogueAcquisitionQueue {
+        world.databaseLocked = false
+        session = FakeSession(world)
+        adder.dieBeforeAdding = false
+        adder.dieAfterAdding = false
+        sources.dieAfterInsert = false
         queue = newQueue()
         return queue
     }
@@ -376,3 +494,7 @@ internal fun bookRequest(
     coverReference = "https://books.example/covers/$number.jpg",
     catalogueName = "Home shelf",
 )
+
+/** For tests that expect a stored request and not "already in your library". */
+internal suspend fun CatalogueAcquisitionManager.requestQueued(request: CatalogueAcquisitionRequest): CatalogueAcquisition =
+    (request(request) as CatalogueRequestOutcome.Queued).acquisition

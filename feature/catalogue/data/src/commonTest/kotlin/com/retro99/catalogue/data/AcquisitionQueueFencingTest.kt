@@ -24,7 +24,7 @@ class AcquisitionQueueFencingTest {
         // Given
         val harness = QueueHarness(backgroundScope)
         harness.source.holdAll()
-        (1..3).forEach { number -> harness.queue.request(bookRequest(number)) }
+        (1..3).forEach { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
 
         // When
@@ -53,7 +53,7 @@ class AcquisitionQueueFencingTest {
         // Given
         val harness = QueueHarness(backgroundScope)
         harness.source.holdAll()
-        (1..3).forEach { number -> harness.queue.request(bookRequest(number)) }
+        (1..3).forEach { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
         harness.switchProfile("p2")
 

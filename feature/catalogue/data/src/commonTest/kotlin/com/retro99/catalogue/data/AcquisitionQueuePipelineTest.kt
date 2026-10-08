@@ -130,7 +130,7 @@ class AcquisitionQueuePipelineTest {
         val harness = QueueHarness(backgroundScope)
         harness.adder.result = null
         harness.source.failNext("book-1", CatalogueDownloadOutcome.Complete(bytes = 3000, declaredLength = 9000))
-        val request = harness.queue.request(bookRequest(1))
+        val request = harness.queue.requestQueued(bookRequest(1))
         runCurrent()
         assertEquals(Failed(AcquisitionFailureReason.Connection), harness.state("book-1"))
         assertTrue(harness.files.files.isEmpty(), "the partial file is deleted")
@@ -340,7 +340,7 @@ class AcquisitionQueuePipelineTest {
         run {
             val harness = QueueHarness(backgroundScope)
             harness.source.holdAll()
-            val requests = (1..3).map { number -> harness.queue.request(bookRequest(number)) }
+            val requests = (1..3).map { number -> harness.queue.requestQueued(bookRequest(number)) }
             runCurrent()
             assertEquals(Waiting, harness.state("book-3"))
             assertTrue(harness.queue.cancel(requests[2].requestId))
@@ -354,7 +354,7 @@ class AcquisitionQueuePipelineTest {
         run {
             val harness = QueueHarness(backgroundScope)
             harness.checker.gate = CompletableDeferred()
-            val request = harness.queue.request(bookRequest(1))
+            val request = harness.queue.requestQueued(bookRequest(1))
             runCurrent()
             assertEquals(Checking, harness.state("book-1"))
             assertTrue(harness.queue.cancel(request.requestId))
@@ -366,7 +366,7 @@ class AcquisitionQueuePipelineTest {
         listOf(true, false).forEach { adderBusy ->
             val harness = QueueHarness(backgroundScope)
             if (adderBusy) harness.adder.gate = CompletableDeferred() else harness.adder.result = null
-            val request = harness.queue.request(bookRequest(1))
+            val request = harness.queue.requestQueued(bookRequest(1))
             runCurrent()
             assertEquals(Adding, harness.state("book-1"))
             assertTrue(harness.queue.cancel(request.requestId))
@@ -378,7 +378,7 @@ class AcquisitionQueuePipelineTest {
         run {
             val harness = QueueHarness(backgroundScope)
             harness.source.failNext("book-1", CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.SignInNeeded))
-            val request = harness.queue.request(bookRequest(1))
+            val request = harness.queue.requestQueued(bookRequest(1))
             runCurrent()
             assertTrue(harness.queue.cancel(request.requestId))
             assertTrue(harness.states().isEmpty())
@@ -387,7 +387,7 @@ class AcquisitionQueuePipelineTest {
         run {
             val harness = QueueHarness(backgroundScope)
             harness.source.holdAll()
-            val request = harness.queue.request(bookRequest(1))
+            val request = harness.queue.requestQueued(bookRequest(1))
             runCurrent()
             val restarted = harness.restart()
             restarted.restoreAfterRestart()
@@ -401,10 +401,10 @@ class AcquisitionQueuePipelineTest {
     fun `a finished request cannot be cancelled and a cancelled slot goes to the next in line`() = runTest {
         // Given
         val harness = QueueHarness(backgroundScope)
-        val done = harness.queue.request(bookRequest(1))
+        val done = harness.queue.requestQueued(bookRequest(1))
         runCurrent()
         harness.source.holdAll()
-        val running = (2..4).map { number -> harness.queue.request(bookRequest(number)) }
+        val running = (2..4).map { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
 
         // When
@@ -419,11 +419,13 @@ class AcquisitionQueuePipelineTest {
 
     @Test
     fun `after a restart every running state becomes interrupted and its file is removed`() = runTest {
-        // Given: one request downloading, one checking, one staged, one failed, one done, one waiting
+        // Given: one request being added, one checking, one failed, one done, one waiting
         val harness = QueueHarness(backgroundScope)
         harness.queue.request(bookRequest(5))
         runCurrent()
         harness.adder.result = null
+        // Other bytes than book 5, or the library would rightly say it already has this file.
+        harness.source.chunks["book-3"] = listOf(500)
         harness.queue.request(bookRequest(3))
         runCurrent()
         harness.source.failNext("book-4", CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.TooLarge))
@@ -431,19 +433,16 @@ class AcquisitionQueuePipelineTest {
         runCurrent()
         harness.checker.gate = CompletableDeferred()
         harness.queue.request(bookRequest(2))
-        runCurrent()
-        harness.source.hold("book-1")
-        harness.queue.request(bookRequest(1))
         harness.queue.request(bookRequest(6))
         runCurrent()
         assertEquals(
             mapOf(
                 "book-5" to Done, "book-3" to Adding, "book-4" to Failed(AcquisitionFailureReason.TooLarge),
-                "book-2" to Checking, "book-1" to Downloading, "book-6" to Waiting,
+                "book-2" to Checking, "book-6" to Waiting,
             ),
             harness.states(),
         )
-        assertEquals(3, harness.files.files.size)
+        assertEquals(2, harness.files.files.size)
         val callsBefore = harness.source.calls.size
 
         // When
@@ -454,7 +453,7 @@ class AcquisitionQueuePipelineTest {
         assertEquals(
             mapOf(
                 "book-5" to Done, "book-3" to Interrupted, "book-4" to Failed(AcquisitionFailureReason.TooLarge),
-                "book-2" to Interrupted, "book-1" to Interrupted, "book-6" to Waiting,
+                "book-2" to Interrupted, "book-6" to Waiting,
             ),
             harness.states(),
         )
@@ -462,6 +461,27 @@ class AcquisitionQueuePipelineTest {
         assertTrue(harness.database.peek("p1").none { it.stagingPath != null })
         assertNull(harness.row("book-3")!!.localHash)
         assertEquals(callsBefore, harness.source.calls.size)
+    }
+
+    @Test
+    fun `after a restart a request that was downloading is interrupted and its part file is removed`() = runTest {
+        // Given
+        val harness = QueueHarness(backgroundScope)
+        harness.source.hold("book-1")
+        harness.queue.request(bookRequest(1))
+        runCurrent()
+        assertEquals(Downloading, harness.state("book-1"))
+        assertEquals(1, harness.files.files.size)
+
+        // When
+        harness.restart().restoreAfterRestart()
+        runCurrent()
+
+        // Then
+        assertEquals(Interrupted, harness.state("book-1"))
+        assertTrue(harness.files.files.isEmpty())
+        assertNull(harness.row("book-1")!!.stagingPath)
+        assertEquals(1, harness.source.calls.size, "nothing starts by itself")
     }
 
     @Test
@@ -622,7 +642,7 @@ class AcquisitionQueuePipelineTest {
         harness.source.afterChunk = { _, index -> if (index == 0) throw CancellationException("Catalogue session invalidated") }
 
         // When
-        val request = harness.queue.request(bookRequest(1))
+        val request = harness.queue.requestQueued(bookRequest(1))
         runCurrent()
 
         // Then
@@ -646,7 +666,7 @@ class AcquisitionQueuePipelineTest {
         harness.source.afterChunk = { _, _ -> harness.world.time += 1_000 }
 
         // When
-        (1..3).forEach { number -> harness.queue.request(bookRequest(number)) }
+        (1..3).forEach { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
 
         // Then

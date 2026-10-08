@@ -15,6 +15,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,7 +33,7 @@ class AcquisitionQueueOrderTest {
         harness.source.holdAll()
 
         // When
-        (1..4).forEach { number -> harness.queue.request(bookRequest(number)) }
+        (1..4).forEach { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
 
         // Then
@@ -69,11 +70,11 @@ class AcquisitionQueueOrderTest {
         harness.source.holdAll()
 
         // When
-        val first = harness.queue.request(bookRequest(1))
-        val second = harness.queue.request(bookRequest(1))
+        val first = harness.queue.requestQueued(bookRequest(1))
+        val second = harness.queue.requestQueued(bookRequest(1))
         val together = listOf(
-            async { harness.queue.request(bookRequest(2)) },
-            async { harness.queue.request(bookRequest(2)) },
+            async { harness.queue.requestQueued(bookRequest(2)) },
+            async { harness.queue.requestQueued(bookRequest(2)) },
         ).awaitAll()
         runCurrent()
 
@@ -91,9 +92,9 @@ class AcquisitionQueueOrderTest {
         harness.source.holdAll()
 
         // When
-        val epub = harness.queue.request(bookRequest(1))
-        val secondFile = harness.queue.request(bookRequest(1, representationKey = "application/epub+zip#2"))
-        val elsewhere = harness.queue.request(bookRequest(1, sourceId = "source-2"))
+        val epub = harness.queue.requestQueued(bookRequest(1))
+        val secondFile = harness.queue.requestQueued(bookRequest(1, representationKey = "application/epub+zip#2"))
+        val elsewhere = harness.queue.requestQueued(bookRequest(1, sourceId = "source-2"))
 
         // Then
         assertEquals(3, setOf(epub.requestId, secondFile.requestId, elsewhere.requestId).size)
@@ -104,12 +105,12 @@ class AcquisitionQueueOrderTest {
         // Given
         val harness = QueueHarness(backgroundScope)
         harness.source.failNext("book-1", CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.Refused))
-        val first = harness.queue.request(bookRequest(1))
+        val first = harness.queue.requestQueued(bookRequest(1))
         runCurrent()
         assertEquals(Failed(AcquisitionFailureReason.Refused), harness.state("book-1"))
 
         // When
-        val again = harness.queue.request(bookRequest(1))
+        val again = harness.queue.requestQueued(bookRequest(1))
         runCurrent()
 
         // Then
@@ -119,15 +120,16 @@ class AcquisitionQueueOrderTest {
     }
 
     @Test
-    fun `a finished book can be requested again as a new request`() = runTest {
+    fun `a finished book that was removed from the library can be requested again as a new request`() = runTest {
         // Given
         val harness = QueueHarness(backgroundScope)
-        val first = harness.queue.request(bookRequest(1))
+        val first = harness.queue.requestQueued(bookRequest(1))
         runCurrent()
         assertEquals(Done, harness.state("book-1"))
+        harness.world.libraryBooks.getValue("p1").clear()
 
         // When
-        val again = harness.queue.request(bookRequest(1))
+        val again = harness.queue.requestQueued(bookRequest(1))
         runCurrent()
 
         // Then
@@ -140,7 +142,7 @@ class AcquisitionQueueOrderTest {
         // Given
         val harness = QueueHarness(backgroundScope)
         harness.source.holdAll()
-        (1..4).forEach { number -> harness.queue.request(bookRequest(number)) }
+        (1..4).forEach { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
         val positions = harness.database.peek("p1").map { it.publicationKey to it.queuePosition }
 
@@ -164,7 +166,7 @@ class AcquisitionQueueOrderTest {
         // Given
         val harness = QueueHarness(backgroundScope)
         harness.source.holdAll()
-        (1..5).forEach { number -> harness.queue.request(bookRequest(number)) }
+        (1..5).forEach { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
         val restarted = harness.restart()
         restarted.restoreAfterRestart()
@@ -188,7 +190,7 @@ class AcquisitionQueueOrderTest {
         // Given
         val harness = QueueHarness(backgroundScope)
         harness.source.holdAll()
-        (1..4).forEach { number -> harness.queue.request(bookRequest(number)) }
+        (1..4).forEach { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
         val restarted = harness.restart()
         restarted.restoreAfterRestart()
@@ -220,10 +222,10 @@ class AcquisitionQueueOrderTest {
         // Given
         val harness = QueueHarness(backgroundScope)
         harness.source.failNext("book-1", CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.Connection))
-        val failed = harness.queue.request(bookRequest(1))
+        val failed = harness.queue.requestQueued(bookRequest(1))
         runCurrent()
         harness.source.holdAll()
-        (2..4).forEach { number -> harness.queue.request(bookRequest(number)) }
+        (2..4).forEach { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
 
         // When
@@ -244,7 +246,7 @@ class AcquisitionQueueOrderTest {
             // Given
             val harness = QueueHarness(backgroundScope)
             harness.source.holdAll()
-            val request = harness.queue.request(bookRequest(index))
+            val request = harness.queue.requestQueued(bookRequest(index))
             runCurrent()
             harness.restart().restoreAfterRestart()
             harness.world.databaseLocked = true
@@ -271,7 +273,7 @@ class AcquisitionQueueOrderTest {
         harness.source.failNext("book-1", signIn)
         harness.source.failNext("book-2", signIn)
         harness.source.failNext("book-3", CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.Refused))
-        val first = harness.queue.request(bookRequest(1))
+        val first = harness.queue.requestQueued(bookRequest(1))
         harness.queue.request(bookRequest(2, sourceId = "source-2"))
         harness.queue.request(bookRequest(3))
         runCurrent()
@@ -288,16 +290,23 @@ class AcquisitionQueueOrderTest {
     }
 
     @Test
-    fun `requests checked and waiting to be added do not hold a download slot`() = runTest {
-        // Given
+    fun `a request that is being added keeps its slot until it is added`() = runTest {
+        // Given: the library import does not come back yet
         val harness = QueueHarness(backgroundScope)
-        harness.adder.result = null
+        harness.adder.gate = CompletableDeferred()
 
         // When
-        (1..3).forEach { number -> harness.queue.request(bookRequest(number)) }
+        (1..3).forEach { number -> harness.queue.requestQueued(bookRequest(number)) }
         runCurrent()
 
         // Then
-        assertEquals(mapOf<String, AcquisitionState?>("book-1" to Adding, "book-2" to Adding, "book-3" to Adding), harness.states())
+        assertEquals(mapOf<String, AcquisitionState?>("book-1" to Adding, "book-2" to Adding, "book-3" to Waiting), harness.states())
+
+        // When
+        harness.adder.gate!!.complete(Unit)
+        runCurrent()
+
+        // Then
+        assertEquals(mapOf<String, AcquisitionState?>("book-1" to Done, "book-2" to Done, "book-3" to Done), harness.states())
     }
 }

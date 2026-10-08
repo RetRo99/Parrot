@@ -127,4 +127,29 @@ class CatalogueStagingFilesTest {
         val free = assertNotNull(files.freeSpaceBytes())
         assertTrue(free > 0)
     }
+
+    @Test
+    fun `the files of one profile are listed and the other profile's are not`() = runTest {
+        // Given
+        val part = files.newPartPath("profile-1")
+        val staged = CatalogueStagingFiles.stagedPathFor(files.newPartPath("profile-1"))
+        val other = files.newPartPath("profile-2")
+        listOf(part, staged, other).forEach { path ->
+            files.openForWriting(path).apply {
+                write("x".encodeToByteArray(), 1)
+                close()
+            }
+        }
+
+        // Then
+        assertEquals(setOf(part, staged), files.list("profile-1").toSet())
+        assertEquals(listOf(other), files.list("profile-2"))
+        assertTrue(files.list("profile-never-used").isEmpty())
+
+        // When
+        files.delete(part)
+
+        // Then
+        assertEquals(listOf(staged), files.list("profile-1"))
+    }
 }

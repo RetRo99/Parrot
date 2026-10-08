@@ -30,7 +30,10 @@ kotlin {
             implementation(projects.lib.user.api)
             implementation(projects.lib.server.api)
             implementation(projects.lib.epub.api)
+            implementation(projects.lib.preferences.api)
             implementation(projects.feature.catalogue.domain)
+            // One way only: the library import knows nothing about catalogues.
+            implementation(projects.feature.books.domain)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

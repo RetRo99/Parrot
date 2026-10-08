@@ -12,7 +12,13 @@ import kotlinx.coroutines.CancellationException
 
 internal sealed interface DownloadStep {
     data class Downloaded(val bytes: Long, val declaredLength: Long?) : DownloadStep
-    data class Failed(val reason: AcquisitionFailureReason, val bytes: Long, val declaredLength: Long?) : DownloadStep
+    /** [neededBytes]: for a storage failure, the free space the download asked for, when known. */
+    data class Failed(
+        val reason: AcquisitionFailureReason,
+        val bytes: Long,
+        val declaredLength: Long?,
+        val neededBytes: Long? = null,
+    ) : DownloadStep
 }
 
 internal sealed interface CheckStep {
@@ -42,6 +48,14 @@ internal class AcquisitionWorker(
         var bytes = 0L
         var declared: Long? = null
         fun failed(reason: AcquisitionFailureReason) = DownloadStep.Failed(reason, bytes, declared)
+
+        // The whole file plus the margin, when the catalogue said how large the file is.
+        fun outOfSpace() = DownloadStep.Failed(
+            AcquisitionFailureReason.Storage,
+            bytes,
+            declared,
+            neededBytes = declared?.let { length -> length + MIN_FREE_BYTES },
+        )
 
         if (!hasRoomFor(MIN_FREE_BYTES)) return failed(AcquisitionFailureReason.Storage)
         val writer = try {
@@ -83,16 +97,22 @@ internal class AcquisitionWorker(
                 outcome.bytes != bytes || files.size(partPath) != bytes -> failed(AcquisitionFailureReason.Storage)
                 else -> DownloadStep.Downloaded(bytes, outcome.declaredLength)
             }
-            is CatalogueDownloadOutcome.Failed -> failed(
-                when (outcome.kind) {
-                    CatalogueDownloadFailure.SignInNeeded -> AcquisitionFailureReason.SignIn
-                    CatalogueDownloadFailure.Refused -> AcquisitionFailureReason.Refused
-                    CatalogueDownloadFailure.TooLarge -> AcquisitionFailureReason.TooLarge
-                    CatalogueDownloadFailure.Connection -> AcquisitionFailureReason.Connection
-                },
-            )
+            is CatalogueDownloadOutcome.Failed -> {
+                // A file refused for its declared size never reached the sink: this is the
+                // only place that size arrives.
+                if (outcome.kind == CatalogueDownloadFailure.TooLarge) declared = outcome.declaredLength ?: declared
+                failed(
+                    when (outcome.kind) {
+                        CatalogueDownloadFailure.SignInNeeded -> AcquisitionFailureReason.SignIn
+                        CatalogueDownloadFailure.Refused -> AcquisitionFailureReason.Refused
+                        CatalogueDownloadFailure.TooLarge -> AcquisitionFailureReason.TooLarge
+                        CatalogueDownloadFailure.Connection -> AcquisitionFailureReason.Connection
+                    },
+                )
+            }
             // The disk is full, or the staging file could not be written.
-            is CatalogueDownloadOutcome.SinkFailed -> failed(AcquisitionFailureReason.Storage)
+            is CatalogueDownloadOutcome.SinkFailed ->
+                if (outcome.cause is NotEnoughSpace) outOfSpace() else failed(AcquisitionFailureReason.Storage)
         }
     }
 

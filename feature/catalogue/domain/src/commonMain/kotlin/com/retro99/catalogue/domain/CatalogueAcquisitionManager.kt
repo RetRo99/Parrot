@@ -16,9 +16,11 @@ interface CatalogueAcquisitionManager {
 
     /**
      * Queues a download and starts the queue. Asking again for a file that has an unfinished
-     * request returns that request; nothing is queued twice.
+     * request returns that request; nothing is queued twice. A book already acquired from
+     * this catalogue and still in your library is answered with
+     * [CatalogueRequestOutcome.InLibrary]: nothing is queued and the queue is not started.
      */
-    suspend fun request(request: CatalogueAcquisitionRequest): CatalogueAcquisition
+    suspend fun request(request: CatalogueAcquisitionRequest): CatalogueRequestOutcome
 
     /** Deletes the request, its row and its partial file. False when it is finished or gone. */
     suspend fun cancel(requestId: String): Boolean
@@ -39,8 +41,10 @@ interface CatalogueAcquisitionManager {
     suspend fun start()
 
     /**
-     * Call once when Parrot starts. Marks whatever was downloading, checking or adding when
-     * it closed as interrupted and removes the partial files. Starts nothing.
+     * Call when Parrot starts and when a profile is opened. A request that was being added
+     * when Parrot closed is finished if its book reached the library; everything else that
+     * was downloading, checking or adding becomes interrupted. Staging files no request
+     * refers to are deleted. Starts nothing.
      */
     suspend fun restoreAfterRestart()
 

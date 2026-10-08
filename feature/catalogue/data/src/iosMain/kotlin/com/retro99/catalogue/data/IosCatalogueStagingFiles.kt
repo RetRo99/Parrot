@@ -2,6 +2,8 @@ package com.retro99.catalogue.data
 
 import com.retro99.base.file.safeFileName
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.ObjCObjectVar
+import kotlinx.cinterop.value
 import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
@@ -23,7 +25,11 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileSize
 import platform.Foundation.NSFileSystemFreeSize
 import platform.Foundation.NSNumber
-import platform.Foundation.NSTemporaryDirectory
+import platform.Foundation.NSApplicationSupportDirectory
+import platform.Foundation.NSSearchPathForDirectoriesInDomains
+import platform.Foundation.NSURL
+import platform.Foundation.NSURLIsExcludedFromBackupKey
+import platform.Foundation.NSUserDomainMask
 import platform.posix.fclose
 import platform.posix.fopen
 import platform.posix.fread
@@ -33,17 +39,24 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * Staging in the temporary directory, like other partial transfers: the system may clear it,
- * and a file that vanished simply means the download starts again.
+ * Staging under Application Support: unlike the temporary directory, the system does not clear
+ * it while Parrot is not running. The folder is marked as excluded from iCloud and device
+ * backup, and the queue deletes what it no longer needs.
  */
 @Single(binds = [CatalogueStagingFiles::class])
 class IosCatalogueStagingFiles : CatalogueStagingFiles by PosixCatalogueStagingFiles(
-    "${NSTemporaryDirectory()}${CatalogueStagingFiles.DIRECTORY}",
+    root = "${applicationSupportDirectory()}/${CatalogueStagingFiles.DIRECTORY}",
+    excludeFromBackup = true,
 )
+
+private fun applicationSupportDirectory(): String =
+    NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, true)
+        .firstOrNull() as? String ?: error("Could not find the Application Support directory")
 
 @OptIn(ExperimentalForeignApi::class)
 internal class PosixCatalogueStagingFiles(
     private val root: String,
+    private val excludeFromBackup: Boolean = false,
 ) : CatalogueStagingFiles {
 
     @OptIn(ExperimentalUuidApi::class)
@@ -116,6 +129,22 @@ internal class PosixCatalogueStagingFiles(
         withContext(Dispatchers.IO) { remove(path) }
     }
 
+    override suspend fun list(profileId: String): List<String> = withContext(Dispatchers.IO) {
+        val directory = "$root/${profileId.safeFileName()}"
+        NSFileManager.defaultManager.contentsOfDirectoryAtPath(directory, error = null).orEmpty()
+            .filterIsInstance<String>()
+            .map { name -> "$directory/$name" }
+    }
+
+    /** Whether the staging folder carries the "do not back up" mark. Null when it does not exist. */
+    internal fun isExcludedFromBackup(): Boolean? = memScoped {
+        val value = alloc<ObjCObjectVar<Any?>>()
+        if (!NSURL.fileURLWithPath(root).getResourceValue(value.ptr, forKey = NSURLIsExcludedFromBackupKey, error = null)) {
+            return null
+        }
+        (value.value as? NSNumber)?.boolValue
+    }
+
     private fun createDirectory(path: String) {
         NSFileManager.defaultManager.createDirectoryAtPath(
             path,
@@ -123,6 +152,11 @@ internal class PosixCatalogueStagingFiles(
             attributes = null,
             error = null,
         )
+        // The mark is on the folder, so it covers every file in it. Set each time: a restore
+        // or a system update can drop it.
+        if (excludeFromBackup) {
+            NSURL.fileURLWithPath(root).setResourceValue(NSNumber(bool = true), forKey = NSURLIsExcludedFromBackupKey, error = null)
+        }
     }
 
     private companion object {

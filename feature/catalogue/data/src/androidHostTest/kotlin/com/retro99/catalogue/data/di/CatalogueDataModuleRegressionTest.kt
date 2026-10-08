@@ -2,7 +2,11 @@ package com.retro99.catalogue.data.di
 
 import com.retro99.catalogue.data.CatalogueAcquisitionQueue
 import com.retro99.catalogue.data.CatalogueStagingFiles
+import com.retro99.books.domain.StagedBookImportManager
 import com.retro99.catalogue.domain.CatalogueAcquisitionManager
+import com.retro99.catalogue.domain.CatalogueLibraryLookup
+import com.retro99.database.api.catalogue.CatalogueBookSourcesDatabase
+import com.retro99.preferences.api.Preferences
 import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.catalogue.CatalogueAcquisitionsDatabase
 import com.retro99.epub.api.EpubFileChecker
@@ -23,6 +27,7 @@ import kotlin.test.assertSame
 /** Resolve the compiler-generated production module, not a hand-written test factory. */
 class CatalogueDataModuleRegressionTest {
     private var repositoryProvidersCreated = 0
+    private var importersCreated = 0
 
     @Test
     fun `the queue is one instance behind both of its contracts`() = withProductionModule { koin ->
@@ -41,6 +46,19 @@ class CatalogueDataModuleRegressionTest {
         assertEquals(0, repositoryProvidersCreated)
     }
 
+    @Test
+    fun `building the queue does not build the library import`() = withProductionModule { koin ->
+        // The library import reaches the server registry as well.
+        koin.get<CatalogueAcquisitionManager>()
+
+        assertEquals(0, importersCreated)
+    }
+
+    @Test
+    fun `the library lookup is offered to the screens`() = withProductionModule { koin ->
+        assertIs<CatalogueLibraryLookup>(koin.get<CatalogueLibraryLookup>())
+    }
+
     private fun withProductionModule(check: (Koin) -> Unit) {
         // The generated extension is emitted after source analysis, so load its JVM entry point.
         val production = Class.forName("com.retro99.catalogue.data.di.ComRetro99CatalogueDataDiCatalogueDataModuleModuleKt")
@@ -51,6 +69,12 @@ class CatalogueDataModuleRegressionTest {
             modules(production, module {
                 single<ProfileDatabaseSession> { stub() }
                 single<CatalogueAcquisitionsDatabase> { stub() }
+                single<CatalogueBookSourcesDatabase> { stub() }
+                single<Preferences> { stub() }
+                single<StagedBookImportManager> {
+                    importersCreated++
+                    stub()
+                }
                 single<UserRegistry> { stub() }
                 single<ProfileWorkRegistry> { stub() }
                 single<EpubFileChecker> { stub() }
