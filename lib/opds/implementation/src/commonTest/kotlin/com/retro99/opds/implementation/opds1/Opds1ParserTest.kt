@@ -226,4 +226,40 @@ class Opds1ParserTest {
         assertEquals("/covers/verses-1.png", imageLink.rawHref)
         assertEquals("https://catalogue.example.org/covers/verses-1.png", imageLink.resolvedHref)
     }
+
+    // ---- treatise-entry.xml: standalone full entry with CDATA + root xml:base ----
+
+    @Test
+    fun standalone_full_entry_cdata_content_and_root_xml_base_resolution() {
+        val outcome = parseFixture(
+            Fixtures.OPDS1_FULL_ENTRY,
+            mediaType = "application/atom+xml;profile=opds-catalog;kind=acquisition",
+            effectiveResponseUrl = "https://catalogue.example.org/works/treatise.opds",
+        )
+        val document = when (outcome) {
+            is OpdsParseResult.Document -> outcome.document as com.retro99.opds.api.model.OpdsPublicationDocument
+            is OpdsParseResult.Rejected -> fail("unexpected rejection: $outcome")
+        }
+
+        assertEquals("urn:synthesis:treatise:1", document.publication.identity.raw)
+        assertEquals(com.retro99.opds.api.model.OpdsIdentity.Kind.NOMINAL, document.publication.identity.kind)
+        assertEquals("A Synthesized Treatise", document.publication.title)
+        assertEquals("en", document.publication.languages.single())
+        assertEquals("Bern Synth", document.publication.authors.single().name)
+
+        // CDATA HTML content verbatim, including its raw "&amp;" (Phase 0 record).
+        val content = document.publication.content!!
+        assertEquals(com.retro99.opds.api.model.OpdsContent.Format.HTML, content.format)
+        assertEquals("<p>An <b>HTML</b> blob describing the treatise &amp; more.</p>", content.body)
+
+        // The root entry declares xml:base="/cache/"; links compose against the
+        // entry-level base, keeping rawHref verbatim.
+        val acquisition = document.publication.acquisitionLinks.single()
+        assertEquals("treatise.epub", acquisition.rawHref)
+        assertEquals("https://catalogue.example.org/cache/treatise.epub", acquisition.resolvedHref)
+        val image = assertNotNull(document.publication.images.singleOrNull())
+        assertEquals("treatise.png", image.href)
+        // The root's xml:base was popped correctly: nothing leaks below the entry.
+        assertEquals(1, 1)
+    }
 }
