@@ -3,6 +3,7 @@ package com.retro99.parrot.di
 import com.retro99.catalogue.domain.AcquisitionState
 import com.retro99.catalogue.domain.CatalogueAcquisitionManager
 import com.retro99.catalogue.domain.CatalogueAcquisitionRequest
+import com.retro99.catalogue.domain.CatalogueRequestOutcome
 import com.github.michaelbull.result.get
 import com.retro99.server.api.CatalogueAccountEditor
 import com.retro99.server.api.CatalogueAcquisitionRepository
@@ -90,7 +91,7 @@ class CatalogueDownloadCancellationTest {
                             .locate(document, publication, publication.acquisitionChoices.single()),
                     )
                     val queue = graph.koin.get<CatalogueAcquisitionManager>()
-                    queue.request(
+                    val outcome = queue.request(
                         CatalogueAcquisitionRequest(
                             sourceId = source.id,
                             publicationKey = locator.publicationKey,
@@ -103,6 +104,7 @@ class CatalogueDownloadCancellationTest {
                             catalogueName = "Books",
                         ),
                     )
+                    assertIs<CatalogueRequestOutcome.Queued>(outcome)
                     fileRequested.await()
                     assertEquals(listOf(AcquisitionState.Downloading), queue.observeAcquisitions().first().map { it.state })
 

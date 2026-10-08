@@ -132,6 +132,8 @@ kotlin {
                 implementation(libs.coroutines.test)
                 implementation(libs.sqldelight.sqlite.driver)
                 implementation(libs.ktor.client.mock)
+                // To check that the limit shown to the user is the one the transport enforces.
+                implementation(projects.lib.opds.api)
             }
         }
     }
