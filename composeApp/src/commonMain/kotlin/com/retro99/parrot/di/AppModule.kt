@@ -10,6 +10,7 @@ import com.retro99.books.domain.di.BooksDomainModule
 import com.retro99.books.ui.di.BooksUiModule
 import com.retro99.catalogue.data.di.CatalogueDataModule
 import com.retro99.catalogue.domain.di.CatalogueDomainModule
+import com.retro99.catalogue.ui.di.CatalogueUiModule
 import com.retro99.cloud.implementation.di.CloudModule
 import com.retro99.cloudaccount.data.di.CloudAccountDataModule
 import com.retro99.cloudaccount.domain.di.CloudAccountDomainModule
@@ -88,6 +89,7 @@ import org.koin.core.annotation.Module
         BooksUiModule::class,
         CatalogueDomainModule::class,
         CatalogueDataModule::class,
+        CatalogueUiModule::class,
         ReaderDomainModule::class,
         ReaderDataModule::class,
         ReaderUiModule::class,

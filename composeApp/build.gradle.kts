@@ -99,6 +99,7 @@ kotlin {
             implementation(projects.feature.sync.data)
             implementation(projects.feature.catalogue.domain)
             implementation(projects.feature.catalogue.data)
+            implementation(projects.feature.catalogue.ui)
             implementation(projects.feature.auth.domain)
             implementation(projects.feature.auth.data)
             implementation(projects.feature.login.ui)

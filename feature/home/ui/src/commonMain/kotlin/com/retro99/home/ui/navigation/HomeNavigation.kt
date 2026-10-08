@@ -45,6 +45,10 @@ import com.retro99.books.ui.links.LinkPickerScreen
 import com.retro99.books.ui.links.LinkReviewScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.positions.PositionsScreen
+import com.retro99.catalogue.ui.CatalogueBrowseScreen
+import com.retro99.catalogue.ui.CatalogueDownloadsScreen
+import com.retro99.catalogue.ui.CataloguePublicationScreen
+import com.retro99.catalogue.ui.CatalogueSourcesScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
@@ -520,6 +524,32 @@ fun HomeNavigation(
 
                     entry<HomeDestination.LinkReview> {
                         LinkReviewScreen(onBack = { requestBack("toolbar_back") })
+                    }
+
+                    // Book catalogues (OPDS), Phase 4 foundations: placeholder screens. Nothing
+                    // navigates to these routes yet.
+                    entry<HomeDestination.CatalogueSources> {
+                        CatalogueSourcesScreen(onBack = { requestBack("toolbar_back") })
+                    }
+
+                    entry<HomeDestination.CatalogueBrowse> { destination ->
+                        CatalogueBrowseScreen(
+                            sourceId = destination.sourceId,
+                            targetRef = destination.targetRef,
+                            onBack = { requestBack("toolbar_back") },
+                        )
+                    }
+
+                    entry<HomeDestination.CataloguePublication> { destination ->
+                        CataloguePublicationScreen(
+                            sourceId = destination.sourceId,
+                            publicationRef = destination.publicationRef,
+                            onBack = { requestBack("toolbar_back") },
+                        )
+                    }
+
+                    entry<HomeDestination.CatalogueDownloads> {
+                        CatalogueDownloadsScreen(onBack = { requestBack("toolbar_back") })
                     }
 
                     entry<HomeDestination.Positions> { destination ->
