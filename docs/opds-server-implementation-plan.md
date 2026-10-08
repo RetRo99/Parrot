@@ -1413,13 +1413,13 @@ Per module:
 lib/server/api Android host 39/39, iOS 39/39
 lib/server-opds Android host 52/52, iOS 52/52
 feature/catalogue/domain Android host 31/31, iOS 31/31
-feature/catalogue/ui Android host 8/8, iOS pending (still running when this was written)
+feature/catalogue/ui Android host 8/8, iOS 8/8 (re-run in independent review after the run stopped)
 feature/home/ui Android host 80/80, iOS 86/86
-composeApp Android host 54/54, iOS pending (still running when this was written)
+composeApp Android host 54/54, iOS not run (known FirebaseCore link error)
 translations: no tests; compiled as part of the above
 tools/ember-fixtures: no tests; APK built and the capture run
 
-App build results (Android assemble, iOS framework): pending (not run yet when this was written)
+App build results (Android assemble, iOS framework): both pass (run in independent review after the run stopped)
 
 Steps complete (1–6): 1, 2, 3, 4, 5, 6
 
