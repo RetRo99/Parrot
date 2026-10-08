@@ -4,7 +4,7 @@ import { site } from '../config';
 const requestHref = `mailto:${site.supportEmail}?subject=${encodeURIComponent('Parrot Cloud account deletion request')}`;
 const sections = ['In the app', 'Without the app', 'What deletion removes', 'What deletion does not remove'].map((text, index) => ({ text: `${index + 1}. ${text}`, id: text.toLowerCase().replaceAll(' ', '-') }));
 ---
-<LegalPage title="Delete your Parrot account" eyebrow="Parrot Cloud" lead="You can request deletion without reinstalling Parrot." sections={sections} description="Request deletion of your Parrot Cloud account and associated data, in the app or by email.">
+<LegalPage title="Delete your Parrot account" lead="You can request deletion without reinstalling Parrot." sections={sections} description="Request deletion of your Parrot Cloud account and associated data, in the app or by email.">
   <Fragment slot="title">Delete your account</Fragment>
   <div class="legal-prose numbered-prose">
     <section aria-labelledby="in-the-app"><h2 id="in-the-app">In the app</h2>

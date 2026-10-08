@@ -17,7 +17,7 @@ const questions = [
 ---
 <Page title="Support" description="Getting started with Parrot, common questions, and how to reach a person.">
   <div class="container document-page support-page">
-    <div class="page-heading"><p class="eyebrow">Support</p><h1>How can we help?</h1><p class="lead">Getting started, common questions, and how to reach a person.</p></div>
+    <div class="page-heading"><h1>How can we help?</h1><p class="lead">Getting started, common questions, and how to reach a person.</p></div>
     <section aria-labelledby="getting-started"><h2 id="getting-started">Getting started</h2><div class="getting-started-grid">{guides.map(([title, steps]) => <article class="card guide-card"><h3>{title}</h3><ol>{(steps as string[]).map(step => <li>{step}</li>)}</ol></article>)}</div></section>
     <div class="support-columns">
       <section aria-labelledby="common-questions"><h2 id="common-questions">Common questions</h2><div class="question-list">{questions.map(([title, text]) => <article><h3>{title}</h3><p>{text}</p></article>)}</div></section>

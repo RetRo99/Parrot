@@ -3,17 +3,16 @@ import Page from './Page.astro';
 interface Props {
   title: string;
   description: string;
-  eyebrow?: string;
   lead?: string;
   sections: { id: string; text: string }[];
 }
-const { title, description, eyebrow = 'Legal', lead, sections } = Astro.props;
+const { title, description, lead, sections } = Astro.props;
 const showContents = sections.length >= 4;
 ---
 <Page title={title} description={description}>
   <div class="container document-page legal-page">
     <div class="page-heading">
-      <p class="eyebrow">{eyebrow}</p><h1><slot name="title">{title}</slot></h1>
+      <h1><slot name="title">{title}</slot></h1>
       <div class="lead legal-lead"><slot name="lead">{lead && <p>{lead}</p>}</slot></div>
       <slot name="notices" />
     </div>

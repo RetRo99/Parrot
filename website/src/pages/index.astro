@@ -5,28 +5,31 @@ import ServerIllustration from '../components/ServerIllustration.astro';
 import PositionsIllustration from '../components/PositionsIllustration.astro';
 import { earlyAccessHref } from '../config';
 const features = [
-  ['Read-along', 'For ebooks that include synced narration, such as those made with Storyteller, each sentence lights up as it is read.'],
-  ['Voices on your device', 'No audiobook? On Android, a downloaded voice reads any ebook aloud, and the text is processed on the device.'],
-  ['Offline dictionary', 'Tap a word to see what it means. The English dictionary works offline, and your lookups never leave the device.'],
-  ['Highlights and notes', 'Four colours, notes in the margin, and one list of everything you marked. Export it as text or Markdown.'],
-  ['Reading statistics', 'See how long you read and listened, by day and by book, and look back at each session.'],
-  ['Made for e-ink', 'A black-and-white theme with no animation and clear outlines, for e-readers that run Android.'],
+  ['Read-along', 'For ebooks that include synced narration, such as those made with Storyteller, each sentence lights up as it is read.', 'is-featured'],
+  ['Voices on your device', 'No audiobook? On Android, a downloaded voice reads any ebook aloud, and the text is processed on the device.', ''],
+  ['Offline dictionary', 'Tap a word to see what it means. The English dictionary works offline, and your lookups never leave the device.', ''],
+  ['Highlights and notes', 'Four colours, notes in the margin, and one list of everything you marked. Export it as text or Markdown.', ''],
+  ['Reading statistics', 'See how long you read and listened, by day and by book, and look back at each session.', ''],
+  ['Made for e-ink', 'A black-and-white theme with no animation and clear outlines, for e-readers that run Android.', 'is-eink'],
 ];
 ---
 <Page description="Parrot is a reader for your own ebooks and audiobooks. Read it. Hear it. Never lose your place.">
-  <section class="container hero" aria-labelledby="hero-title">
-    <div class="hero-copy">
-      <p class="eyebrow">For Android phones, tablets and e-ink readers</p>
-      <h1 id="hero-title"><span>Read it. Hear it.</span><br /><span>Never lose your place.</span></h1>
-      <p class="hero-lead">Parrot is a reader for your own ebooks and audiobooks. It can highlight the text as the narrator reads, and it remembers where you are in every version of a book.</p>
-      <div class="hero-actions"><span class="coming-soon">Coming soon to Google Play</span><a href={earlyAccessHref}>Ask for early access →</a></div>
-      <p class="hero-note">Free to use with your own Storyteller or Audiobookshelf server. An iPhone version is in the works.</p>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="container hero-inner">
+      <div class="hero-copy">
+        <h1 id="hero-title"><span>Read it. Hear it.</span><br /><span>Never lose your place.</span></h1>
+        <p class="hero-lead">Parrot is a reader for your own ebooks and audiobooks. It can highlight the text as the narrator reads, and it remembers where you are in every version of a book.</p>
+        <div class="hero-actions"><a class="button button-large" href={earlyAccessHref}>Ask for early access</a><span class="coming-soon">Coming soon to Google Play</span></div>
+        <p class="hero-note">Free to use with your own Storyteller or Audiobookshelf server.</p>
+      </div>
+      <ReaderIllustration />
     </div>
-    <ReaderIllustration />
+    <div class="container works-layout">
+      <div class="works-inner"><span>Works with</span><strong>Storyteller</strong><strong>Audiobookshelf</strong><strong>Parrot Cloud</strong></div>
+      <p class="platforms">For Android phones, tablets and e-ink readers. An iPhone version is in the works.</p>
+    </div>
   </section>
-  <div class="works-strip"><div class="container works-inner"><span>Works with</span><strong>Storyteller</strong><strong>Audiobookshelf</strong><strong>Parrot Cloud</strong></div></div>
   <section class="container tour" aria-labelledby="tour-title">
-    <p class="eyebrow">The short version</p>
     <h2 id="tour-title">Parrot in 20 seconds</h2>
     <!-- A silent loop (the file has no audio track), with controls so it can be paused. The source only
          matches when motion is welcome, so nothing downloads for people who asked for less of it;
@@ -42,19 +45,19 @@ const features = [
   </section>
   <section class="container feature-rows" id="features" aria-label="Your books and reading positions">
     <div class="feature-row positions-row">
-      <div class="feature-copy"><p class="eyebrow">Ebook and audiobook together</p><h2>One place, in every version</h2><p>Read the ebook at home and listen to the audiobook on the way. Link the versions of a book and Parrot shows where you are in each one, and moves the others to the matching place when you ask.</p></div>
+      <div class="feature-copy"><h2>One place, in every version</h2><p>Read the ebook at home and listen to the audiobook on the way. Link the versions of a book and Parrot shows where you are in each one, and moves the others to the matching place when you ask.</p></div>
       <PositionsIllustration />
     </div>
     <div class="feature-row">
-      <div class="feature-copy"><p class="eyebrow">Your library</p><h2>Your books stay yours</h2><p>Connect the Storyteller or Audiobookshelf server you already run and your library appears. Download what you want and read offline. Your books go straight from your server to your device, never through us.</p></div>
+      <div class="feature-copy"><h2>Your books stay yours</h2><p>Connect the Storyteller or Audiobookshelf server you already run and your library appears. Download what you want and read offline. Your books go straight from your server to your device, never through us.</p></div>
       <ServerIllustration />
     </div>
   </section>
-  <section class="feature-band" aria-labelledby="reader-needs"><div class="container"><h2 id="reader-needs">Everything a reader needs</h2><div class="feature-cards">{features.map(([title, text]) => <article class="card"><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
+  <section class="feature-band" aria-labelledby="reader-needs"><div class="container"><h2 id="reader-needs">Everything a reader needs</h2><div class="feature-cards">{features.map(([title, text, variant]) => <article class:list={['feature', variant]}><h3>{title}</h3><p>{text}</p></article>)}</div></div></section>
   <div class="container lower-home">
     <section class="cloud-block" id="cloud" aria-labelledby="cloud-title">
-      <div><p class="eyebrow">Parrot Cloud · early access</p><h2 id="cloud-title">No server? We’ll keep<br class="desktop-break" /> your library.</h2><p>Add your own books to Parrot Cloud and they are on every device you sign in to, with your place, highlights and notes.</p><p class="small">By invitation while we finish it · free during early access</p></div>
-      <ul class="check-list"><li>Your own books, on every device you sign in to</li><li>Your place, highlights and notes follow you</li><li>A private library: nobody else can see it</li></ul>
+      <div><h2 id="cloud-title">No server? We’ll keep<br class="desktop-break" /> your library.</h2><p>Add your own books to Parrot Cloud and they are on every device you sign in to, with your place, highlights and notes.</p><a class="button button-paper" href={earlyAccessHref}>Ask for early access</a><p class="small">Parrot Cloud is in early access: by invitation while we finish it, and free for now.</p></div>
+      <ul class="check-list">{['Your own books, on every device you sign in to', 'Your place, highlights and notes follow you', 'A private library: nobody else can see it'].map(item => <li><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" /><path d="M7 12.5l3.4 3.4L17 9" /></svg><span>{item}</span></li>)}</ul>
     </section>
     <section class="home-questions" aria-labelledby="questions-title">
       <div><h2 id="questions-title">Questions</h2><a class="text-action" href="/support">All help and contact →</a></div>
