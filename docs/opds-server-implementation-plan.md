@@ -1896,8 +1896,11 @@ add-server picker, server list, server detail, and errors.
 ### 11.7 Design passes 1–3 (received 2026-10-08)
 
 Source: `design/ember/catalogues/CATALOGUE_PROMPT.md` (one file covering all
-three passes; its §9 is pass 3 and its §10 the "Can't be downloaded here"
-copy) with 84 boards in
+three passes; its §9 is pass 3, its §10 the "Can't be downloaded here" copy,
+and its §11 the copy reference restored and extended on 2026-10-08: add
+screen, failed pages, labels, checking state, page-load failures, empty
+Downloads, wrong sign-in, screen-reader announcements, plurals, preset access
+labels, time wording, tablet wording) with 84 boards in
 `design/ember/catalogues/screens/opds-<view>-<theme>.png`. That file holds the
 exact copy and accessibility labels; use them verbatim, do not paraphrase them
 in code. This section records the decisions and how they bind the

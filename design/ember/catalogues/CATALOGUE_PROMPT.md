@@ -333,8 +333,8 @@ If true resume ships later, switch to "Resume" / "Resume downloading
 ### B2 http on iPad
 Body: "On <this device>, Parrot can only use secure addresses that start
 with https://. Ask whoever runs the catalogue for an https:// address."
-using the device helper ("this iPhone" / "this iPad"). Fallback: "On this
-device, …". Title and button unchanged.
+using the shared device helper ("this phone" / "this tablet"; see §11.12).
+Fallback: "On this device, …". Title and button unchanged.
 
 ### B3 If iPhone allows http
 Confirmed: iPhone then uses the Android dialog unchanged (opds-http).
@@ -397,3 +397,133 @@ entry has a web link for it**; with no link the card has no button.
 
 A11y: "Open <Provider> page, opens in browser"; "Download sample of
 <title>, <size>". The card title is a heading; the body is read after it.
+
+---------------------------------------------------------------------------
+## 11. Copy reference (restored from pass 1 + additions)
+
+### 1. Add catalogue (opds-add)
+- Kind option: title "Book catalogue", tag "OPDS", subtitle "Browse and
+  download books from a catalogue address." A11y: "Book catalogue, OPDS,
+  browse and download books from a catalogue address", radio.
+- Field label "Catalogue address"; placeholder "https://"; helper "The
+  catalogue's OPDS address, often ending in /opds."
+- Switch "Needs an account", subtitle "Turn on only if the catalogue asks
+  you to sign in." A11y: "Needs an account, switch, on/off".
+- When on: "Username", "Password" (helper "Leave empty if this catalogue
+  has no password."). A11y for the eye button: "Show password" / "Hide
+  password".
+- Primary button "Add catalogue". A11y: "Add catalogue".
+
+### 2. Failed next page (opds-listFailed)
+"Couldn't load more books. The ones above are still here." (first sentence
+bold) + button "Try again". A11y: "Try loading more books again".
+
+### 3. Catalogue home and book page labels
+- Search field placeholder: "Search <catalogue>". A11y: "Search
+  <catalogue>", search field.
+- Shelf link: "See all". A11y: "See all, <shelf title>".
+- Section heading above folders: "Browse" (only when a shelf is shown).
+- Folder row a11y: "<folder name>, folder".
+- Book page meta labels: "From" (+ catalogue name), "Rights" (+ catalogue's
+  rights text), then our line "Check the law where you live before sharing."
+- "Other files (<N>)" where N = other files we list (openable or not).
+  A11y: "Other files, <N>, opens file choice".
+- Download button forms:
+  - book page, size known: "Download · EPUB · 1.2 MB"
+  - book page, size unknown: "Download · EPUB"
+  - Choose a file sheet: "Download · 1.2 MB" / "Download"
+  - A11y: "Download <title>, EPUB, <size>" (drop size if unknown).
+- "Read now". A11y: "Read <title>".
+- List footer (Day/Night): "Loading more…" — announced once as "Loading
+  more books".
+- List footer (E-ink, and Day/Night when auto-loading is off): "Load more".
+  A11y: "Load more books".
+- Get books "Downloads" button with count. A11y: "Downloads, <N> active or
+  failed" (no count when 0: "Downloads").
+
+### 4. Add catalogue while checking the address
+- Primary button changes to "Checking address…", disabled (keeps its
+  colour at 60% opacity in Day/Night; E-ink keeps the black fill and the
+  text changes only).
+- Address field and switch become read-only (no visual change except the
+  caret disappears); the kind radios are disabled.
+- No spinner on E-ink; Day/Night may show a small spinner left of the text.
+- If signing in is part of the check: second phase "Signing in…".
+- A11y: announce "Checking address" when it starts; on success move focus
+  to the new catalogue's screen; on error move focus to the field error.
+
+### 5. Page failed to load (online)
+One message screen under the page's normal top bar (same layout as
+opds-limited). Title always "Couldn't open this page"; body is the reason
+line; buttons per reason.
+
+| Reason | Body | Primary | Secondary (text link) |
+|---|---|---|---|
+| Timed out | <Catalogue> took too long to answer. | Try again | — |
+| Catalogue error (5xx) | <Catalogue> had a problem on its side. Try again in a few minutes. | Try again | — |
+| Not allowed (403) | <Catalogue> doesn't allow access to this page. | Go back | — |
+| Not found (404) | This page no longer exists in <Catalogue>. | Go back | — |
+| Page too large | This page is too large for Parrot to open. | Go back | — |
+| No longer a catalogue | This address no longer returns a book catalogue. It may have moved. | Go back | Catalogue settings |
+| Certificate no longer trusted | <Catalogue>'s security certificate is no longer trusted, so Parrot stopped loading it. | Go back | Catalogue settings |
+
+- On the catalogue's first page, "Go back" returns to Get books.
+- Rate limited keeps its own screen (opds-limited).
+- Sign-in needed keeps the sign-in sheet.
+- A11y: "Try loading this page again", "Go back", "Open <catalogue>
+  settings". The title is a heading and is announced when the screen
+  appears.
+
+### 6. Downloads, empty
+Message layout, no button: icon (download arrow), title "No downloads",
+body "Books you download from a catalogue appear here while they
+download. Finished books are in your Library."
+
+### 7. Sign-in sheet: wrong details
+Both fields get the error border; under Password, error colour, semibold:
+"Username or password is incorrect." (same string as server sign-in).
+Password field is cleared; focus moves to it. Button stays "Sign in";
+while working it reads "Signing in…" and is disabled.
+A11y: announce "Username or password is incorrect".
+
+### 8. Screen-reader announcements for downloads (polite)
+- 25 / 50 / 75%: "<title>, 25% downloaded" (50%, 75%). Only while that
+  book's row, book page or the Downloads screen is on screen.
+- Unknown size: once at start "Downloading <title>", nothing until done.
+- Waiting: "<title> will download next" (once, when queued).
+- Done: "<title> is in your library" (anywhere in the app, once).
+- Failed: "Couldn't download <title>. <reason>" (anywhere, once).
+- Cancelled: "Download of <title> cancelled" (only when the user cancelled
+  on that screen).
+
+### 9. Remove catalogue: exactly one book
+"…deleted from this phone. The book you downloaded from it stays in your
+library." Plurals: 0 → "Books you downloaded from it stay in your
+library." · 1 → "The book you downloaded from it stays in your library." ·
+2+ → "The <N> books you downloaded from it stay in your library."
+
+### 10. Preset access labels
+Confirmed: "No account needed". Others: "Account needed", or the preset's
+own wording such as "Patron account needed". A11y on the row: "<name>,
+<access label>".
+
+### 11. Times and dates
+Use the app's shared date helper (calendarDateLabel / date_yesterday).
+- < 1 min: "just now"
+- 1–59 min: "<n> min ago"
+- 1–23 h (same day or within 24 h): "<n> h ago"
+- yesterday (calendar): "yesterday"
+- 2–6 days: "<n> days ago"
+- 7+ days, this year: "on 12 Mar" (in "Checked …" lines: "Checked on 12
+  Mar"); other years: "on 12 Mar 2025"
+- "downloaded <when>": "downloaded just now", "downloaded 5 min ago",
+  "downloaded yesterday", "downloaded on 12 Mar" (opds-detailUpdate now
+  shows this form).
+- Libraries rows still hide "Checked …" after 7 days (§9 B7); settings
+  header shows any age using the forms above.
+
+### 12. iPad wording
+Confirmed: the shared helper's "this tablet" is fine. iPad http body: "On
+this tablet, Parrot can only use secure addresses that start with
+https://. Ask whoever runs the catalogue for an https:// address." Other
+"saved on this phone only" strings become "saved on this tablet only".
