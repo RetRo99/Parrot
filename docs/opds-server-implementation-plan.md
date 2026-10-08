@@ -912,6 +912,21 @@ publication-key lookup, and the logout cleaner carried over from Phase 2.
   it through Readium. Catalogue downloads need real validation on iOS (§5.2
   step 6) before they reach the staged import.
 
+**Verification of the staged-import run (2026-10-08).** Android host / iOS
+simulator, passed/total: books-data 112/112 and 104/104; database
+implementation 111/111 (it has no iOS tests); server-parrot-cloud 62/62 and
+58/58; server implementation 26/26 and 26/26; server-local 2/2 and 2/2;
+books-domain 60/60 and sync-data 74/74 on Android host only, because their iOS
+test sources do not compile: test names containing a comma in
+`ObserveLinkSuggestionsUseCaseTest`, `LibraryMutationSyncEngineTest` and
+`ProgressSyncEngineTest`, all unchanged by this run. books-ui is 67/71 on each
+platform (the four known link-screen failures). `:androidApp:assembleDebug` and
+`:composeApp:linkDebugFrameworkIosSimulatorArm64` both pass. The 20
+characterization tests written before the extraction are byte-identical after
+it. The Android picker entry point itself is not host-testable: FileKit's
+`PlatformFile` is Java 21 bytecode and host tests run on JDK 17, so Android is
+covered one level below it.
+
 ### Phase 4 — complete browsing feature
 
 - Create `feature/catalogue/domain`, `data`, and `ui`; add source/browser/detail
