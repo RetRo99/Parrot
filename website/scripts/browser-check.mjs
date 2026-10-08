@@ -9,7 +9,7 @@ import AxeBuilder from '@axe-core/playwright';
 const root = resolve(fileURLToPath(new URL('../dist/', import.meta.url)));
 const results = fileURLToPath(new URL('../test-results/', import.meta.url));
 await mkdir(results, { recursive: true });
-const mime = { '.html': 'text/html', '.css': 'text/css', '.webp': 'image/webp', '.ttf': 'font/ttf', '.png': 'image/png' };
+const mime = { '.html': 'text/html', '.css': 'text/css', '.webp': 'image/webp', '.ttf': 'font/ttf', '.png': 'image/png', '.jpg': 'image/jpeg', '.mp4': 'video/mp4', '.vtt': 'text/vtt' };
 const server = createServer(async (req, res) => {
   try {
     let path = resolve(root, `.${decodeURIComponent(new URL(req.url, 'http://localhost').pathname)}`);

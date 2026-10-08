@@ -500,3 +500,10 @@ strong.position-swap::after { content: attr(data-after); position: absolute; lef
 .positions-illustration::after { content: ''; position: absolute; left: calc(50% - 22px); bottom: 28px; width: 44px; height: 44px; border-radius: 50%; background: color-mix(in srgb, var(--ink) 22%, transparent); border: 2px solid color-mix(in srgb, var(--ink) 45%, transparent); opacity: 0; pointer-events: none; }
 .positions-intro { margin: 0 4px 16px; font-size: 16px; line-height: 1.4; color: var(--ink2); }
 .positions-intro strong { color: var(--ink); }
+
+/* The 20-second tour. */
+.tour { padding-top: var(--section-space); text-align: center; }
+.tour h2 { margin-bottom: 28px; }
+.tour-video { display: block; width: 100%; max-width: 920px; height: auto; aspect-ratio: 16 / 9; margin-inline: auto; border: 1px solid var(--line); border-radius: 24px; background: var(--nav); }
+.tour .small { max-width: 620px; margin: 16px auto 0; color: var(--ink2); }
+@media (max-width: 699px) { .tour-video { border-radius: 16px; } }

@@ -25,6 +25,17 @@ const features = [
     <ReaderIllustration />
   </section>
   <div class="works-strip"><div class="container works-inner"><span>Works with</span><strong>Storyteller</strong><strong>Audiobookshelf</strong><strong>Parrot Cloud</strong></div></div>
+  <section class="container tour" aria-labelledby="tour-title">
+    <p class="eyebrow">The short version</p>
+    <h2 id="tour-title">Parrot in 20 seconds</h2>
+    <!-- Plays only when asked: nothing is fetched until then, and it has music. -->
+    <video class="tour-video" controls playsinline preload="none" poster="/media/parrot-tour.jpg" width="1920" height="1080" aria-describedby="tour-note">
+      <source src="/media/parrot-tour.mp4" type="video/mp4" />
+      <track kind="captions" srclang="en" label="English" src="/media/parrot-tour.vtt" />
+      <a href="/media/parrot-tour.mp4">Watch the 20-second tour (MP4)</a>
+    </video>
+    <p class="small" id="tour-note">Read-along, moving your place between versions, and connecting your library. There is no speech, only music.</p>
+  </section>
   <section class="container feature-rows" id="features" aria-label="Your books and reading positions">
     <div class="feature-row positions-row">
       <div class="feature-copy"><p class="eyebrow">Ebook and audiobook together</p><h2>One place, in every version</h2><p>Read the ebook at home and listen to the audiobook on the way. Link the versions of a book and Parrot shows where you are in each one, and moves the others to the matching place when you ask.</p></div>
