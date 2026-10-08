@@ -389,6 +389,13 @@ mark { background: var(--welcome-highlight); color: var(--welcome-page-ink); }
   a { transition: text-underline-offset .15s ease; }
   .button { transition: transform .16s var(--ease-out), box-shadow .16s var(--ease-out); }
   .question-list summary::after { transition: transform .16s var(--ease-out); }
+  /* Answers open and close smoothly where the browser can animate to a natural height;
+     elsewhere they simply appear. */
+  @supports selector(::details-content) {
+    .question-list { interpolate-size: allow-keywords; }
+    .question-list details::details-content { block-size: 0; overflow: clip; opacity: 0; transition: block-size .28s var(--ease-out), opacity .2s ease, content-visibility .28s allow-discrete; }
+    .question-list details[open]::details-content { block-size: auto; opacity: 1; }
+  }
   .button:active { transform: scale(.97); }
   @media (hover: hover) and (pointer: fine) {
     a:hover { text-underline-offset: .28em; }
@@ -507,3 +514,8 @@ strong.position-swap::after { content: attr(data-after); position: absolute; lef
 .tour-video { display: block; width: 100%; max-width: 920px; height: auto; aspect-ratio: 16 / 9; margin-inline: auto; border: 1px solid var(--line); border-radius: 24px; background: var(--nav); }
 .tour .small { max-width: 620px; margin: 16px auto 0; color: var(--ink2); }
 @media (max-width: 699px) { .tour-video { border-radius: 16px; } }
+.tour-still { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .tour-auto { display: none; }
+  .tour-still { display: block; }
+}
