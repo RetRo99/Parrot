@@ -29,4 +29,15 @@ class OpdsEncodingTest {
             assertEquals("unsupported encoding", result.rejection.note)
         }
     }
+    @Test fun utf8_bom_keeps_xml_declaration_encoding() {
+        val bytes = byteArrayOf(0xef.toByte(), 0xbb.toByte(), 0xbf.toByte()) + feed("Shift_JIS").encodeToByteArray()
+        val result = ParserFactory.opdsParser().parse(OpdsPayload("application/atom+xml", bytes), "https://example.org/feed")
+        assertIs<OpdsParseResult.Rejected>(result)
+        assertEquals("unsupported encoding", result.rejection.note)
+    }
+    @Test fun invalid_utf8_is_not_silently_replaced() {
+        val result = ParserFactory.opdsParser().parse(OpdsPayload("application/atom+xml; charset=UTF-8", feed("UTF-8").map { it.code.toByte() }.toByteArray()), "https://example.org/feed")
+        assertIs<OpdsParseResult.Rejected>(result)
+        assertIs<OpdsRejection.Malformed>(result.rejection)
+    }
 }

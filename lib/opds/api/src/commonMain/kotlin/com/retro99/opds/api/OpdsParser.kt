@@ -16,11 +16,15 @@ data class OpdsPayload(
         val headerCharset = Regex("(?:^|;)\\s*charset\\s*=\\s*(?:\"([^\"]*)\"|([^;\\s]*))", RegexOption.IGNORE_CASE)
             .find(mediaTypeHeader.orEmpty())?.let { it.groups[1]?.value ?: it.groups[2]?.value }
         // XML declarations are ASCII-compatible in the supported encodings.
-        val prefix = bytes.take(1024).map { (it.toInt() and 255).toChar() }.joinToString("")
+        val prefix = bytes.take(1024).map { (it.toInt() and 255).toChar() }.joinToString("").removePrefix("\u00ef\u00bb\u00bf")
         val declaration = if (prefix.startsWith("<?xml")) prefix.substringBefore("?>") else ""
         val xmlCharset = Regex("encoding\\s*=\\s*['\"]([^'\"]+)['\"]").find(declaration)?.groupValues?.get(1)
         return when ((headerCharset ?: xmlCharset ?: "UTF-8").lowercase()) {
-            "utf-8", "utf8" -> bytes.decodeToString(throwOnInvalidSequence = true).removePrefix("\uFEFF")
+            "utf-8", "utf8" -> try {
+                bytes.decodeToString(throwOnInvalidSequence = true).removePrefix("\uFEFF")
+            } catch (_: Exception) {
+                throw IllegalArgumentException("invalid UTF-8 encoding")
+            }
             "iso-8859-1", "iso8859-1", "latin1", "latin-1" -> buildString(bytes.size) {
                 for (byte in bytes) append((byte.toInt() and 255).toChar())
             }

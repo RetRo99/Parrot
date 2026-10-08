@@ -78,6 +78,42 @@ class Opds2ParserTest {
         assertIs<OpdsRejection.TooManyItems>((result as OpdsParseResult.Rejected).rejection)
     }
 
+    @Test fun limits_accept_boundaries_and_ignore_braces_in_strings() {
+        val items = List(2000) { """{"href":"/item/$it"}""" }.joinToString(",")
+        assertIs<OpdsParseResult.Document>(parse("""{"metadata":{"title":"Many"},"navigation":[$items]}"""))
+        assertIs<OpdsParseResult.Document>(parse("""{"metadata":{"title":"Deep"},"publications":[],"unknown":${"[".repeat(63)}0${"]".repeat(63)}}"""))
+        assertIs<OpdsParseResult.Document>(parse("""{"metadata":{"title":"Escaped \\\" ${"{".repeat(100)}"},"publications":[]}"""))
+    }
+
+    @Test fun malformed_nested_sections_and_contributors_are_recoverable() {
+        val document = (parse("""{"metadata":{"title":"Feed"},"publications":[{"metadata":{"title":"Good","author":[null,123,{"name":"Writer"}]},"images":[null,{"href":"/image"}],"links":[{"href":"/good"},null]}],"groups":[{"metadata":{"title":"Bad"},"publications":{}},{"metadata":{"title":"Good group"},"publications":[]}]}""") as OpdsParseResult.Document).document as OpdsFeedDocument
+        assertEquals(1, document.publications.size)
+        assertEquals(listOf("Writer"), document.publications.single().authors.map { it.name })
+        assertEquals(1, document.publications.single().images.size)
+        assertEquals(listOf("Good group"), document.groups.map { it.title })
+        assertEquals(5, document.warnings.count { it.code == ParseWarning.Code.MALFORMED_ITEM_SKIPPED })
+    }
+
+    @Test fun identity_fallbacks_are_scoped_and_repeatable() {
+        val json = """{"metadata":{"title":"Feed"},"publications":[{"metadata":{"title":"Same"}},{"metadata":{"title":"Same"}},{"metadata":{"title":"Identifier","identifier":"urn:example:1"}}]}"""
+        val feed = (parse(json) as OpdsParseResult.Document).document as OpdsFeedDocument
+        assertNotEquals(feed.publications[0].identity, feed.publications[1].identity)
+        assertEquals(feed.publications.map { it.identity }, ((parse(json) as OpdsParseResult.Document).document as OpdsFeedDocument).publications.map { it.identity })
+        val other = (ParserFactory.opdsParser().parse(OpdsPayload("application/opds+json", json.encodeToByteArray()), "https://catalogue.example.org/other.json") as OpdsParseResult.Document).document as OpdsFeedDocument
+        assertEquals(feed.publications.last().identity, other.publications.last().identity)
+        assertNotEquals(feed.publications.first().identity, other.publications.first().identity)
+    }
+
+    @Test fun multiple_indirect_roots_and_standard_price_object() {
+        val publication = (parse("""{"metadata":{"title":"Purchase"},"links":[{"href":"/buy","rel":["buy","related"],"properties":{"price":{"value":9.5,"currency":"USD"},"indirectAcquisition":[{"type":"text/html","children":[{"type":"application/epub+zip"}]},{"type":"application/pdf"}]}}]}""") as OpdsParseResult.Document).document as OpdsPublicationDocument
+        val link = publication.publication.links.single()
+        assertEquals(OpdsPrice(9.5, "USD"), link.price)
+        val tree = assertNotNull(link.indirectAcquisition)
+        assertNull(tree.mediaType)
+        assertEquals(2, tree.children.size)
+        assertEquals("application/epub+zip", tree.children.first().children.single().mediaType?.mediaRange)
+    }
+
     @Test fun landscape_standalone_publication() {
         val document = fixture("landscape") as OpdsPublicationDocument
         val book = document.publication

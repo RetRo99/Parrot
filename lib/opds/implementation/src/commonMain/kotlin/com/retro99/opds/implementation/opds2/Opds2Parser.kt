@@ -14,14 +14,14 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
             JsonDepthGuard.rejection(text)?.let { return OpdsParseResult.Rejected(it) }
             val root = Json.parseToJsonElement(text) as? JsonObject
                 ?: return OpdsParseResult.Rejected(OpdsRejection.Malformed())
+            for (key in listOf("publications", "navigation", "groups", "facets", "links", "images")) {
+                if (key in root && root[key] !is JsonArray) throw IllegalArgumentException()
+            }
             fun countItems(obj: JsonObject): Int {
                 var count = 0
                 for (key in listOf("publications", "navigation")) {
                     val value = obj[key] ?: continue
-                    count += (value as? JsonArray ?: throw IllegalArgumentException()).size
-                }
-                for (key in listOf("groups", "facets", "links", "images")) {
-                    if (key in obj && obj[key] !is JsonArray) throw IllegalArgumentException()
+                    count += (value as? JsonArray)?.size ?: 0
                 }
                 for (group in (obj["groups"] as? JsonArray).orEmpty()) {
                     if (group is JsonObject) count += countItems(group)
@@ -40,6 +40,7 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
     private inner class Reader(val base: String) {
         val warnings = mutableListOf<ParseWarning>()
         val types = SeparatedMediaTypeParser()
+        val fallbackOccurrences = mutableMapOf<String, Int>()
         fun text(value: JsonElement?): String? = when (value) {
             is JsonPrimitive -> value.takeIf { it.isString }?.content
             is JsonObject -> text(value["und"]) ?: value.values.firstNotNullOfOrNull { text(it) }
@@ -62,7 +63,10 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
         }
         fun contributors(value: JsonElement?, role: String? = null): List<OpdsContributor> = values(value).mapNotNull {
             val obj = it as? JsonObject
-            val name = text(obj?.get("name") ?: it) ?: return@mapNotNull null
+            val name = text(obj?.get("name") ?: it) ?: run {
+                warnings += ParseWarning(ParseWarning.Code.MALFORMED_ITEM_SKIPPED)
+                return@mapNotNull null
+            }
             OpdsContributor(name, text(obj?.get("href")), text(obj?.get("role")) ?: role)
         }
         fun link(obj: JsonObject): OpdsLink {
@@ -86,12 +90,7 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
         }
         fun indirect(obj: JsonObject): OpdsIndirectAcquisition = OpdsIndirectAcquisition(types.parse(text(obj["type"])),
             values(obj["child"] ?: obj["children"]).map { indirect(it as? JsonObject ?: throw IllegalArgumentException()) })
-        fun links(value: JsonElement?): List<OpdsLink> = values(value).mapNotNull {
-            try { link(it as? JsonObject ?: throw IllegalArgumentException()) } catch (_: IllegalArgumentException) {
-                warnings += ParseWarning(ParseWarning.Code.MALFORMED_ITEM_SKIPPED)
-                null
-            }
-        }
+        fun links(value: JsonElement?): List<OpdsLink> = items(value, ::link)
         fun publication(obj: JsonObject): OpdsEntry {
             val metadata = obj["metadata"] as? JsonObject ?: throw IllegalArgumentException()
             val title = text(metadata["title"]) ?: throw IllegalArgumentException()
@@ -104,7 +103,14 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
                     "identifier scoped to response origin")
                 else -> {
                     warnings += ParseWarning(ParseWarning.Code.MISSING_IDENTITY)
-                    OpdsIdentity.documentScoped("$base:${obj.toString().encodeToByteArray().fold(1) { h, b -> 31 * h + b }}")
+                    // Content fingerprint plus occurrence disambiguates identical anonymous
+                    // records. This is only a document-local key, never a stable book ID.
+                    val fingerprint = obj.toString().encodeToByteArray().fold(-3750763034362895579L) { h, b ->
+                        (h xor (b.toLong() and 255)) * 1099511628211L
+                    }.toULong().toString(16)
+                    val occurrence = fallbackOccurrences[fingerprint] ?: 0
+                    fallbackOccurrences[fingerprint] = occurrence + 1
+                    OpdsIdentity.documentScoped("$base:$fingerprint:$occurrence", "no declared identity; document-local only")
                 }
             }
             val published = text(metadata["published"])
@@ -122,12 +128,7 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
                         (image["width"] as? JsonPrimitive)?.intOrNull, (image["height"] as? JsonPrimitive)?.intOrNull)
                 }, links = links, editionLabel = text(metadata["edition"]))
         }
-        fun publications(value: JsonElement?): List<OpdsEntry> = values(value).mapNotNull {
-            try { publication(it as? JsonObject ?: throw IllegalArgumentException()) } catch (_: IllegalArgumentException) {
-                warnings += ParseWarning(ParseWarning.Code.MALFORMED_ITEM_SKIPPED)
-                null
-            }
-        }
+        fun publications(value: JsonElement?): List<OpdsEntry> = items(value, ::publication)
         fun navigation(value: JsonElement?): List<OpdsEntry> = links(value).map {
             OpdsEntry(OpdsIdentity(it.resolvedHref ?: it.rawHref, OpdsIdentity.Kind.NOMINAL), it.title.orEmpty(), links = listOf(it))
         }
