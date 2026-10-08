@@ -14,5 +14,6 @@ data class DeviceFileEntity(
     companion object {
         const val ORIGIN_IMPORT = "import"
         const val ORIGIN_CLOUD_DOWNLOAD = "cloud_download"
+        const val ORIGIN_CATALOGUE_DOWNLOAD = "catalogue_download"
     }
 }

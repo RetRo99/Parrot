@@ -32,15 +32,15 @@ internal class LibraryLocalDataSource(
     @Provided private val fileStore: BookFileTransferFileStore,
 ) : LibraryLocalSource, DeviceLibraryRepository {
 
-    override suspend fun addImportedFile(file: ImportedFileCandidate): AppResult<String> {
+    override suspend fun addStagedFile(file: ImportedFileCandidate): AppResult<AddedLibraryFile> {
         // Whatever happens, the staged copy is gone afterwards: moved into the library,
         // or deleted.
         return databaseExecutor.executeDatabaseOperation {
             val matchId = findBookWithContent(file.contentHashAlgorithm, file.contentHash)
             if (matchId != null) {
-                attachToExistingBook(matchId, file)
+                AddedLibraryFile(attachToExistingBook(matchId, file), isNewBook = false)
             } else {
-                createBook(file)
+                AddedLibraryFile(createBook(file), isNewBook = true)
             }
         }.also { fileStore.delete(file.stagedPath) }
     }
@@ -156,7 +156,7 @@ internal class LibraryLocalDataSource(
             fileSize = fileSize,
             contentHash = contentHash,
             contentHashAlgorithm = contentHashAlgorithm,
-            origin = DeviceFileEntity.ORIGIN_IMPORT,
+            origin = origin,
             addedAt = now(),
         )
 
