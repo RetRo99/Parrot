@@ -61,9 +61,9 @@ try {
       assert.ok(footer.every(count => count > 1), `${route} has a footer orphan at ${width}`);
       const images = await page.locator('img').evaluateAll(images => images.map(img => ({ decorative: !!img.closest('.brand'), alt: img.getAttribute('alt') })));
       assert.ok(images.every(img => img.decorative ? img.alt === '' : !!img.alt?.trim()), `${route} image alt`);
-      assert.equal(await page.locator('.site-header .logo-dark').evaluate(img => img.getBoundingClientRect().width), 36);
-      assert.equal(await page.locator('.site-footer .logo-dark').evaluate(img => img.getBoundingClientRect().width), 28);
-      assert.ok(await page.locator('.site-header .logo-dark').isVisible());
+      assert.equal(await page.locator('.site-header .brand img').evaluate(img => img.getBoundingClientRect().width), 36);
+      assert.equal(await page.locator('.site-footer .brand img').evaluate(img => img.getBoundingClientRect().width), 28);
+      assert.ok(await page.locator('.site-header .brand img').isVisible());
       const toc = page.locator('.legal-toc');
       if (await toc.count()) assert.equal(await toc.isVisible(), width >= 1100);
       if (await page.locator('.legal-page').count()) {

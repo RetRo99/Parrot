@@ -237,7 +237,6 @@ mark { background: var(--welcome-highlight); color: var(--welcome-page-ink); }
 
 /* Three layout ranges: phone, tablet/narrow desktop, wide desktop. */
 :root { --section-space: 96px; }
-.logo-dark { display: none; }
 .brand img { flex: none; }
 .hero { min-height: 0; padding-block: var(--section-space); align-items: center; }
 .hero h1 { font-size: clamp(38px, 4.6vw, 64px); }
@@ -257,8 +256,6 @@ mark { background: var(--welcome-highlight); color: var(--welcome-page-ink); }
 .footer-inner { flex-wrap: wrap; }
 @media (prefers-color-scheme: dark) {
   .reader-illustration { outline: 1px solid var(--line); }
-  .logo-light { display: none; }
-  .logo-dark { display: block; }
 }
 @media (min-width: 700px) and (max-width: 1099px) {
   :root { --section-space: 72px; }
@@ -313,6 +310,10 @@ mark { background: var(--welcome-highlight); color: var(--welcome-page-ink); }
 /* UI refinement: compact marks, script-free links and consistent documents. */
 .site-header .brand img { width: 36px; height: 36px; border-radius: 0; }
 .site-footer .brand img { width: 28px; height: 28px; border-radius: 0; }
+/* Night keeps the app's own icon, on its white tile like the launcher icon. */
+@media (prefers-color-scheme: dark) {
+  .site-header .brand img, .site-footer .brand img { border-radius: 22%; }
+}
 .button { min-height: 48px; }
 .site-footer nav { display: grid; grid-template-columns: repeat(3, max-content); gap: 4px 24px; max-width: 100%; }
 .site-footer nav a { display: inline-flex; align-items: center; min-height: 48px; }

@@ -1,7 +1,6 @@
 ---
 import { Image } from 'astro:assets';
 import logo from '../assets/logo-crop.webp';
-import darkLogo from '../assets/logo-mark-dark.svg';
 import { earlyAccessHref, site } from '../config';
 import '../styles/tokens.css';
 import '../styles/site.css';
@@ -18,6 +17,8 @@ const pageTitle = title ? `${title} · Parrot` : 'Parrot · Read it. Hear it. Ke
     <meta name="description" content={description} />
     <meta name="color-scheme" content="light dark" />
     <title>{pageTitle}</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   </head>
   <body>
     <Fragment set:html="<!--email_off-->" />
@@ -25,8 +26,7 @@ const pageTitle = title ? `${title} · Parrot` : 'Parrot · Read it. Hear it. Ke
     <header class="site-header">
       <div class="container header-inner">
         <a class="brand" href="/" aria-label="Parrot home">
-          <Image class="logo-light" src={logo} alt="" width={72} height={72} format="webp" />
-          <img class="logo-dark" src={darkLogo.src} alt="" width="36" height="36" />
+          <Image src={logo} alt="" width={72} height={72} format="webp" />
           <span>Parrot</span>
         </a>
         <nav aria-label="Main navigation">
@@ -42,8 +42,7 @@ const pageTitle = title ? `${title} · Parrot` : 'Parrot · Read it. Hear it. Ke
       <div class="container footer-inner">
         <div>
           <a class="brand" href="/" aria-label="Parrot home">
-            <Image class="logo-light" src={logo} alt="" width={56} height={56} format="webp" />
-            <img class="logo-dark" src={darkLogo.src} alt="" width="28" height="28" />
+            <Image src={logo} alt="" width={56} height={56} format="webp" />
             <span>Parrot</span>
           </a>
           <p>© 2026 {site.legalName}, Slovenia</p>
