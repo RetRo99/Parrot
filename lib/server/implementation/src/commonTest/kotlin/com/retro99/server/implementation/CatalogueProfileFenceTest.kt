@@ -15,7 +15,7 @@ class CatalogueProfileFenceTest {
         }
         val preferences = RegistryPreferences()
         val accounts = OpdsCredentialStoreImpl(preferences)
-        val registry = ServerRegistryImpl(preferences, users, emptyList(), accounts)
+        val registry = ServerRegistryImpl(preferences, users, emptyList(), accounts, CatalogueAccessStoreImpl(preferences), emptyList())
         val a = registry.addServerWithId("same", "A", ServerType.Opds, "https://a.example/opds/")
         accounts.save("a", a.id, OpdsAccountDetails("a", "secret"))
         active = "b"

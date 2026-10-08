@@ -8,13 +8,13 @@ import kotlin.test.*
 
 class RepositoryCapabilityTest {
     @Test fun catalogue_network_lookup_does_not_dispatch_to_bearer_factory() = runTest {
-        val registry = ServerRegistryImpl(RegistryPreferences(), RegistryUser("profile-a"), emptyList())
+        val registry = registryWithOwnStores(RegistryPreferences(), RegistryUser("profile-a"))
         registry.addServerWithId("opds", "Catalogue", ServerType.Opds, "https://example.org/opds/")
         val clients = CompositeNetworkClientFactory(emptyList(), registry)
         assertNull(clients.createForServerId("opds"))
     }
     @Test fun catalogue_never_reaches_factories_even_when_reported_authenticated() = runTest {
-        val registry = ServerRegistryImpl(RegistryPreferences(), RegistryUser("profile-a"), emptyList())
+        val registry = registryWithOwnStores(RegistryPreferences(), RegistryUser("profile-a"))
         val types = listOf(ServerType.Local, ServerType.Storyteller, ServerType.Audiobookshelf, ServerType.ParrotCloud, ServerType.Opds)
         val servers = types.map { registry.addServerWithId(it.identifier, it.displayName, it, "https://example.org") }
         val authenticated = object : ServerRegistry by registry {

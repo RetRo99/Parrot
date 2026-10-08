@@ -128,6 +128,10 @@ kotlin {
         named("androidHostTest") {
             dependencies {
                 implementation(libs.kotlin.testJunit)
+                // The real-graph tests swap the database, the network and the clock for local ones.
+                implementation(libs.coroutines.test)
+                implementation(libs.sqldelight.sqlite.driver)
+                implementation(libs.ktor.client.mock)
             }
         }
     }

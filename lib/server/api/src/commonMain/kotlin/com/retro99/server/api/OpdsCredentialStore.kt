@@ -13,3 +13,12 @@ interface OpdsCredentialStore {
     suspend fun save(profileId: String, sourceId: String, details: OpdsAccountDetails)
     suspend fun remove(profileId: String, sourceId: String)
 }
+
+/**
+ * Saves new account details for a catalogue of the open profile. Use this, not the store:
+ * requests and downloads still running under the old details are stopped first. Removing
+ * details is [ServerRegistry.clearCredentials].
+ */
+interface CatalogueAccountEditor {
+    suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails)
+}

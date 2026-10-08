@@ -24,7 +24,9 @@ import kotlin.uuid.Uuid
 @Single(binds = [UserRegistry::class])
 class UserRegistryImpl(
     private val preferences: Preferences,
-    @Provided private val profileWork: ProfileWorkRegistry = ProfileWorkRegistryImpl(),
+    // No default value: the generated Koin module would keep it, and a profile switch would
+    // then stop work in a registry nothing else registers with.
+    @Provided private val profileWork: ProfileWorkRegistry,
 ) : UserRegistry {
 
     private val logger = Logger.withTag("UserRegistry")

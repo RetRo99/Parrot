@@ -9,7 +9,7 @@ import kotlin.test.*
 
 class CatalogueRepositoryProviderTest {
     @Test fun enabled_registered_public_sources_do_not_need_authentication_or_library_factories() = runTest {
-        val registry = ServerRegistryImpl(RegistryPreferences(), RegistryUser("a"), emptyList())
+        val registry = registryWithOwnStores(RegistryPreferences(), RegistryUser("a"))
         registry.addServerWithId("library", "Library", ServerType.Storyteller, "https://library.example")
         val public = registry.addServerWithId("public", "Books", ServerType.Opds, "https://books.example/opds/")
         val off = registry.addServerWithId("off", "Off", ServerType.Opds, "https://books.example/other/")

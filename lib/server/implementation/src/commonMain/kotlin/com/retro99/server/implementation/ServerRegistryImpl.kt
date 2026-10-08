@@ -12,6 +12,8 @@ import com.retro99.server.api.ServerCredentials
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerType
 import com.retro99.server.api.OpdsCredentialStore
+import com.retro99.server.api.OpdsAccountDetails
+import com.retro99.server.api.CatalogueAccountEditor
 import com.retro99.server.api.CatalogueAccessStore
 import com.retro99.server.api.CatalogueWorkController
 import io.ktor.http.Url
@@ -37,15 +39,17 @@ import org.koin.core.annotation.Single
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@Single(binds = [ServerRegistry::class])
+@Single(binds = [ServerRegistry::class, CatalogueAccountEditor::class])
 class ServerRegistryImpl(
     private val preferences: Preferences,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val authStateProviders: List<ServerAuthStateProvider>,
-    @Provided private val opdsCredentials: OpdsCredentialStore = OpdsCredentialStoreImpl(preferences),
-    @Provided private val catalogueAccess: CatalogueAccessStore = CatalogueAccessStoreImpl(preferences),
-    @Provided private val catalogueWork: List<CatalogueWorkController> = emptyList(),
-) : ServerRegistry {
+    // No default values on these: the generated Koin module leaves a parameter that has one
+    // alone, and the registry would then clear stores and cancel work nobody else uses.
+    @Provided private val opdsCredentials: OpdsCredentialStore,
+    @Provided private val catalogueAccess: CatalogueAccessStore,
+    @Provided private val catalogueWork: List<CatalogueWorkController>,
+) : ServerRegistry, CatalogueAccountEditor {
 
     private val logger = Logger.withTag("ServerRegistry")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -348,6 +352,16 @@ class ServerRegistryImpl(
         }
         _credentials.update { it - serverId }
         persistCredentials()
+    }
+
+    override suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails) = mutex.withLock {
+        ensureCurrentUser()
+        check(_servers.value[sourceId]?.type == ServerType.Opds) { "Account details belong to a catalogue source" }
+        val profileId = currentUserId ?: error("No active profile")
+        if (opdsCredentials.get(profileId, sourceId) == details) return@withLock
+        // Stop first: nothing started under the old details may finish under the new ones.
+        cancelCatalogueWork(profileId, sourceId)
+        opdsCredentials.save(profileId, sourceId, details)
     }
 
     override suspend fun clearAllCredentials() = mutex.withLock {

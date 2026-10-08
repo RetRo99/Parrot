@@ -36,7 +36,7 @@ class CatalogueLifecycleTest {
         assertNull(fixture.credentials.get("a", source.id))
         assertEquals(CatalogueAccessStatus(), fixture.status.get("a", source.id))
         assertEquals(listOf(source.id), fixture.cancelled)
-        assertTrue(ServerRegistryImpl(fixture.preferences, RegistryUser("a"), emptyList()).getAllServers().isEmpty())
+        assertTrue(registryWithOwnStores(fixture.preferences, RegistryUser("a")).getAllServers().isEmpty())
     }
     @Test fun existing_server_deactivation_still_only_clears_bearer_credentials() = runTest {
         val fixture = Fixture()

@@ -32,7 +32,7 @@ class ServerRegistryPersistenceTest {
         }
     }
     private fun registry(preferences: RegistryPreferences, profile: String = "profile-a") =
-        ServerRegistryImpl(preferences, RegistryUser(profile), emptyList())
+        registryWithOwnStores(preferences, RegistryUser(profile))
 
     @Test fun adding_catalogue_keeps_registered_servers_readable_by_old_decoder() = runTest {
         val preferences = RegistryPreferences()
@@ -113,3 +113,13 @@ internal class RegistryUser(private val profile: String) : UserRegistry {
     override suspend fun hasProfiles() = true
     override fun isProfileActive() = true
 }
+
+/** A registry for tests that do not look at catalogue account details, status or work. */
+internal fun registryWithOwnStores(preferences: Preferences, users: UserRegistry) = ServerRegistryImpl(
+    preferences,
+    users,
+    emptyList(),
+    OpdsCredentialStoreImpl(preferences),
+    CatalogueAccessStoreImpl(preferences),
+    emptyList(),
+)

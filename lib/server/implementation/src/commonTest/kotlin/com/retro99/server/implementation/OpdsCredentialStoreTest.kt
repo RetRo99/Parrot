@@ -41,7 +41,7 @@ class OpdsCredentialStoreTest {
     }
 
     @Test fun catalogue_password_cannot_be_saved_as_a_bearer_session() = runTest {
-        val registry = ServerRegistryImpl(RegistryPreferences(), RegistryUser("a"), emptyList())
+        val registry = registryWithOwnStores(RegistryPreferences(), RegistryUser("a"))
         registry.addServerWithId("source", "Books", ServerType.Opds, "https://books.example/opds/")
         assertFailsWith<IllegalStateException> {
             registry.saveCredentials(ServerCredentials("source", "password", "patron"))
