@@ -12,6 +12,6 @@ interface OpdsTemplateExpander {
     /** True when the string contains at least one expression. */
     fun isTemplate(text: String): Boolean
 
-    class OpdsTemplateException(template: String, at: Int, why: String) :
-        IllegalStateException("RFC 6570 template '$template' at offset $at: $why")
+    class OpdsTemplateException(at: Int, why: String) :
+        IllegalStateException("unsupported URI template at offset $at: $why")
 }
