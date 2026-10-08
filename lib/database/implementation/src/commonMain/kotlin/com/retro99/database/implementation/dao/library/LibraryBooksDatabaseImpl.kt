@@ -34,9 +34,6 @@ internal class LibraryBooksDatabaseImpl(
         outboxEntry: SyncOutboxEntry,
     ) = dao.insertImportedBook(book, file, outboxEntry)
 
-    override suspend fun insertBookWithoutSync(book: LibraryBookEntity, file: DeviceFileEntity) =
-        dao.insertBookWithoutSync(book, file)
-
     override suspend fun deleteBookFromDevice(libraryBookId: String) =
         dao.deleteBookFromDevice(libraryBookId)
 

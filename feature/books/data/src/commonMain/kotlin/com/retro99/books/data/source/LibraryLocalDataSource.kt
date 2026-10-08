@@ -250,20 +250,18 @@ internal class LibraryLocalDataSource(
                     metadataJson = LibraryBookMetadataJson.encode(isbn = file.metadata.isbn),
                 )
                 val deviceFile = file.toDeviceFile(libraryBookId, destination)
-                if (file.syncsMetadata) {
-                    libraryBooksDatabase.insertImportedBook(
-                        book = book,
-                        file = deviceFile,
-                        outboxEntry = SyncOutboxEntry.new(
-                            entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
-                            entityId = libraryBookId,
-                            operation = SyncOutboxEntry.OPERATION_UPSERT,
-                            payload = LibraryBookJsonCodec.encode(book, format = file.mediaType),
-                        ),
-                    )
-                } else {
-                    libraryBooksDatabase.insertBookWithoutSync(book, deviceFile)
-                }
+                // Every origin syncs the book's details the same way. Only the file differs:
+                // a catalogue download is never uploaded automatically.
+                libraryBooksDatabase.insertImportedBook(
+                    book = book,
+                    file = deviceFile,
+                    outboxEntry = SyncOutboxEntry.new(
+                        entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                        entityId = libraryBookId,
+                        operation = SyncOutboxEntry.OPERATION_UPSERT,
+                        payload = LibraryBookJsonCodec.encode(book, format = file.mediaType),
+                    ),
+                )
             } catch (exception: Exception) {
                 undoMove(moved, destination, file.stagedPath)
                 coverPath?.let { path -> deleteQuietly(path) }
@@ -297,13 +295,6 @@ internal class LibraryLocalDataSource(
         } catch (_: Exception) {
         }
     }
-
-    /**
-     * A catalogue download is not pushed to your other devices: they would list a book they
-     * have no file for. It syncs once you back the file up.
-     */
-    private val ImportedFileCandidate.syncsMetadata: Boolean
-        get() = origin != DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD
 
     private fun ImportedFileCandidate.toDeviceFile(libraryBookId: String, path: String) =
         DeviceFileEntity(

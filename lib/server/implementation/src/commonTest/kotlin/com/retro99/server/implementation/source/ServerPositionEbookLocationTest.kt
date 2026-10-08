@@ -150,7 +150,6 @@ private class NoLibraryBooks : LibraryBooksDatabase {
         outboxEntry: SyncOutboxEntry,
     ) = Unit
 
-    override suspend fun insertBookWithoutSync(book: LibraryBookEntity, file: DeviceFileEntity) = Unit
 
     override suspend fun deleteBookFromDevice(libraryBookId: String) = Unit
 }

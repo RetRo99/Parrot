@@ -6,6 +6,7 @@ import com.retro99.books.data.source.ImportedFileCandidate
 import com.retro99.books.data.source.LibraryLocalDataSource
 import com.retro99.books.domain.BookFileProvenance
 import com.retro99.database.api.library.DeviceFileEntity
+import com.retro99.database.api.sync.SyncOutboxEntry
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,7 +14,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** What the device-file origin decides: metadata sync and which copies count as imports. */
+/** What the device-file origin decides: which copies count as imports. Never metadata sync. */
 class LibraryOriginRulesTest {
 
     private val deviceFiles = FakeDeviceFilesDatabase()
@@ -41,7 +42,7 @@ class LibraryOriginRulesTest {
     }
 
     @Test
-    fun `a catalogue download becomes a book on this device and writes nothing to the outbox`() = runTest {
+    fun `a catalogue download writes its book to the metadata outbox like a picked file`() = runTest {
         // Given
         val file = stage("catalogue", DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD)
             .copy(provenance = BookFileProvenance(sourceId = "source-1", publicationKey = "urn:book:1"))
@@ -58,7 +59,10 @@ class LibraryOriginRulesTest {
         assertEquals("catalogue_download", deviceFile.origin)
         assertEquals(file.contentHash, deviceFile.contentHash)
         assertTrue(deviceFile.filePath in fileStore.files)
-        assertTrue(libraryBooks.outbox.isEmpty())
+        val entry = libraryBooks.outbox.single()
+        assertEquals(SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK, entry.entityType)
+        assertEquals(SyncOutboxEntry.OPERATION_UPSERT, entry.operation)
+        assertEquals(added.libraryBookId, entry.entityId)
     }
 
     @Test
@@ -81,7 +85,7 @@ class LibraryOriginRulesTest {
     }
 
     @Test
-    fun `picking bytes you already downloaded from a catalogue does not start syncing the book`() = runTest {
+    fun `picking bytes you already downloaded from a catalogue adds no second outbox entry`() = runTest {
         // Given
         val downloadedId = assertNotNull(
             classUnderTest.addStagedFile(stage("same", DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD)).get(),
@@ -95,7 +99,7 @@ class LibraryOriginRulesTest {
         // Then
         assertEquals(AddedLibraryFile(downloadedId, isNewBook = false), matched)
         assertEquals("catalogue_download", deviceFiles.files.value.single().origin)
-        assertTrue(libraryBooks.outbox.isEmpty())
+        assertEquals(listOf(downloadedId), libraryBooks.outbox.map { entry -> entry.entityId })
     }
 
     @Test

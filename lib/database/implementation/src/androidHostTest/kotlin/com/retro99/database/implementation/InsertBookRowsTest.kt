@@ -9,7 +9,6 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class InsertBookRowsTest {
 
@@ -51,12 +50,17 @@ class InsertBookRowsTest {
     }
 
     @Test
-    fun `a book inserted without sync is stored with its device file and no outbox entry`() {
+    fun `a catalogue download is stored with its device file and the same outbox upsert`() {
         // When
         database.insertBookRows(
             book = book(),
             file = deviceFile(DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD),
-            outboxEntry = null,
+            outboxEntry = SyncOutboxEntry.new(
+                entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                entityId = BOOK_ID,
+                operation = SyncOutboxEntry.OPERATION_UPSERT,
+                payload = "{}",
+            ),
         )
 
         // Then
@@ -64,7 +68,9 @@ class InsertBookRowsTest {
         val file = database.deviceFileQueries.getDeviceFile(BOOK_ID, "ebook").executeAsOne()
         assertEquals("catalogue_download", file.origin)
         assertEquals("/library/book.epub", file.file_path)
-        assertTrue(database.syncOutboxQueries.getAllMutations().executeAsList().isEmpty())
+        val mutation = database.syncOutboxQueries.getAllMutations().executeAsList().single()
+        assertEquals(SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK, mutation.entity_type)
+        assertEquals(BOOK_ID, mutation.entity_id)
     }
 
     private fun book() = LibraryBookEntity(

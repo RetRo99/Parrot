@@ -58,11 +58,6 @@ internal class FakeLibraryBooksDatabase(
         outbox += outboxEntry
     }
 
-    override suspend fun insertBookWithoutSync(book: LibraryBookEntity, file: DeviceFileEntity) {
-        upsertLibraryBook(book)
-        requireNotNull(deviceFiles) { "No device files database" }.upsertDeviceFile(file)
-    }
-
     override suspend fun deleteBookFromDevice(libraryBookId: String) {
         deletedFromDevice += libraryBookId
         deviceFiles?.files?.value = deviceFiles?.files?.value.orEmpty()

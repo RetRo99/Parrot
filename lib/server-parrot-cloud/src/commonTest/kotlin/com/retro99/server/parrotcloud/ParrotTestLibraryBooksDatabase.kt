@@ -35,9 +35,6 @@ internal class ParrotTestLibraryBooksDatabase(
         outboxEntry: SyncOutboxEntry,
     ) = error("Unused")
 
-    override suspend fun insertBookWithoutSync(book: LibraryBookEntity, file: DeviceFileEntity) =
-        error("Unused")
-
     override suspend fun deleteBookFromDevice(libraryBookId: String) {
         books.remove(libraryBookId)
     }

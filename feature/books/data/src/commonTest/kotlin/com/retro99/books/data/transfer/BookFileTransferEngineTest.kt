@@ -910,7 +910,7 @@ class BookFileTransferEngineTest {
         val engine = BookFileTransferEngine(
             cloudFilesDatabase = database,
             deviceFilesDatabase = FakeDeviceFilesDatabase(catalogueFile),
-            // No outbox entry was written at acquisition, so the book has no remote revision.
+            // Its details have not reached Parrot Cloud yet, so the book has no remote revision.
             libraryBooksDatabase = FakeLibraryBooksDatabase(testLibraryBook(LIBRARY_BOOK_ID, remoteRevision = null)),
             transports = listOf(
                 UploadPathTransport(payload = bytes, file = uploadedFile(contentHash, bytes.size.toLong())),

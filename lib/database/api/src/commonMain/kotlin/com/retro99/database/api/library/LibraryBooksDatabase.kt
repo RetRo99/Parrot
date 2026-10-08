@@ -24,12 +24,6 @@ interface LibraryBooksDatabase {
     )
 
     /**
-     * Inserts a new book and its first device file together, with no outbox entry: the
-     * book stays on this device and is not pushed to your other devices.
-     */
-    suspend fun insertBookWithoutSync(book: LibraryBookEntity, file: DeviceFileEntity)
-
-    /**
      * Deletes the book's device files, its Parrot file mirror, its finished transfers,
      * its unsent outbox mutations and its library row, in one transaction.
      */

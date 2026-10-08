@@ -14,6 +14,7 @@ import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.database.api.library.LibraryImportJournalDatabase
 import com.retro99.database.api.sync.SyncOutboxDatabase
+import com.retro99.database.api.sync.SyncOutboxEntry
 import com.retro99.server.api.CatalogueAcquisitionRepository
 import com.retro99.server.api.CatalogueFeedDocument
 import com.retro99.server.api.CatalogueRepositoryProvider
@@ -96,7 +97,7 @@ class CatalogueDownloadToLibraryTest {
                     assertEquals(AcquisitionState.Done, done.state)
                     val bookId = assertNotNull(done.libraryBookId)
 
-                    // And the library has one book with one file, from a catalogue, with no sync entry
+                    // And the library has one book with one file, from a catalogue, with the sync entry an import gets
                     val session = koin.get<ProfileDatabaseSession>()
                     session.withProfile("a") {
                         val book = assertNotNull(koin.get<LibraryBooksDatabase>().getLibraryBookById(bookId))
@@ -106,7 +107,9 @@ class CatalogueDownloadToLibraryTest {
                         assertEquals(done.localHash, file.contentHash)
                         assertTrue(File(file.filePath).readBytes().contentEquals(EPUB))
                         assertTrue(File(assertNotNull(book.coverPath)).exists())
-                        assertTrue(koin.get<SyncOutboxDatabase>().getPendingIncludingUnassigned("no-cloud-user").isEmpty(), "nothing is synced before a backup")
+                        val pending = koin.get<SyncOutboxDatabase>().getPendingIncludingUnassigned("no-cloud-user").single()
+                        assertEquals(SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK, pending.entityType)
+                        assertEquals(bookId, pending.entityId)
                         assertTrue(koin.get<LibraryImportJournalDatabase>().getAll().isEmpty())
 
                         // And one provenance row, naming the catalogue by origin only
