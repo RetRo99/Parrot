@@ -721,6 +721,13 @@ Before exposing registration, also add `CatalogueSources` to
 currently it leaves this isolated preference behind. Profile lifecycle cleanup
 was not expanded in this items 1–3 run.
 
+Verification found four existing Android host failures in
+`LinkPickerViewModelTest` and `LinkReviewViewModelTest`; the same four failures
+reproduce in an untouched worktree of `opds/phase1-protocol-core` (`20c89e78`).
+Their assertions and production behavior remain unchanged. Two Storyteller test
+method names had commas removed because Kotlin/Native rejects those names;
+their bodies and assertions are unchanged.
+
 ### Phase 3 — durable acquisition and local-library integration
 
 - Add acquisition/provenance SQLDelight APIs, schemas/migrations/DAOs and cleanup.
