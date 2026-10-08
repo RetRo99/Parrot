@@ -61,6 +61,7 @@ data class CataloguePublication(
     val acquisitionAction: CatalogueAcquisitionAction,
     val acquisitionProviderName: CatalogueText?,
     val unsupportedMediaType: CatalogueMediaType?,
+    val subjects: List<CatalogueText> = emptyList(),
 )
 data class CatalogueFeedMetadata(val title: CatalogueText, val identifier: CatalogueIdentity?, val updated: String?, val authors: List<CatalogueContributor>, val language: String?, val rights: CatalogueText?, val modified: String?)
 data class CataloguePagination(val first: CatalogueLink?, val next: CatalogueLink?, val previous: CatalogueLink?, val last: CatalogueLink?)

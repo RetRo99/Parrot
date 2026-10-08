@@ -24,6 +24,11 @@ interface CatalogueRepositoryProvider {
 /** Opaque implementation-owned references. They must not be put in navigation state or logs. */
 interface CatalogueTarget
 interface CatalogueSearch
+
+/** Checks the requested page using ephemeral details, without storing them or populating caches. */
+interface CatalogueAccountVerifier {
+    suspend fun checkAccount(target: CatalogueTarget?, account: OpdsAccountDetails): AppResult<CatalogueDocument>
+}
 data class CatalogueQuery(val text: String, val fields: Map<String, String> = emptyMap()) {
     override fun toString() = "CatalogueQuery(redacted)"
 }

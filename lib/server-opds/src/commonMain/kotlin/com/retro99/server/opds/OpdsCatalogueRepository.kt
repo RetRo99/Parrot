@@ -31,7 +31,7 @@ class OpdsCatalogueRepository(
     private val accessGeneration: Long = 0,
     private val accountOverride: (() -> OpdsAccountDetails?)? = null,
     private val recordAccessUpdates: Boolean = true,
-) : ServerCatalogueRepository, CatalogueAcquisitionRepository, CatalogueImageRepository {
+) : ServerCatalogueRepository, CatalogueAcquisitionRepository, CatalogueImageRepository, CatalogueAccountVerifier {
     override val serverId = config.id
     /**
      * Whose places these are: this profile's catalogue at this address. Equal across sessions,
@@ -91,6 +91,12 @@ class OpdsCatalogueRepository(
     }
 
     override suspend fun getRoot() = request { load(config.baseUrl, true) }
+    override suspend fun checkAccount(target: CatalogueTarget?, account: OpdsAccountDetails): AppResult<CatalogueDocument> = request {
+        val checking = OpdsCatalogueRepository(profileId, config, transport, credentials, access, isCurrent, now,
+            MemoryOpdsFeedCache(), accessGeneration, accountOverride = { account }, recordAccessUpdates = false)
+        // The temporary session owns no transport: closing it would close this live session.
+        if (target == null) checking.getRoot() else checking.getDocument(target)
+    }
     override suspend fun getDocument(target: CatalogueTarget) = request {
         val owned = target as? Target
         if (owned == null || owned.owner != owner) Err(AppError.ApiError(400, "ForeignCatalogueTarget")) else load(owned.url, false)

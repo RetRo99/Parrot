@@ -431,6 +431,11 @@ private class EntryBodyVisitor(
         "lender" -> ScalarVisitor { text -> if (assembler.lender == null) assembler.lender = state.tagged(text) }
         "published", "issued" -> ScalarVisitor { text -> if (assembler.published == null) assembler.published = text }
         "language" -> ScalarVisitor { text -> if (text.isNotBlank()) assembler.languages.add(text) }
+        "category" -> {
+            (attributes["label"]?.takeIf(String::isNotBlank) ?: attributes["term"]?.takeIf(String::isNotBlank))
+                ?.let { assembler.subjects.add(state.tagged(it)) }
+            null
+        }
         "identifier" -> IdentifierVisitor(assembler, attributes)
         "author" -> ContributorVisitor(assembler.authors, state)
         "contributor" -> ContributorVisitor(assembler.otherContributors, state)
@@ -590,6 +595,7 @@ private class EntryAssembler(
     var lender: OpdsText? = null
     var published: String? = null
     val languages: MutableList<String> = mutableListOf()
+    val subjects: MutableList<OpdsText> = mutableListOf()
     val authors: MutableList<OpdsContributor> = mutableListOf()
     val otherContributors: MutableList<OpdsContributor> = mutableListOf()
     val identifiers: MutableList<OpdsIdentifier> = mutableListOf()
@@ -639,6 +645,7 @@ private class EntryAssembler(
             editionLabel = null,
             seller = seller?.takeIf { it.isNotBlank() },
             lender = lender?.takeIf { it.isNotBlank() },
+            subjects = subjects,
         )
     }
 

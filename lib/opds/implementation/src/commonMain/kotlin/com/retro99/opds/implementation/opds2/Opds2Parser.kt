@@ -132,7 +132,10 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
                         (image["width"] as? JsonPrimitive)?.intOrNull, (image["height"] as? JsonPrimitive)?.intOrNull)
                 }, links = links, editionLabel = localized(metadata["edition"]),
                 seller = contributors(metadata["seller"]).firstOrNull()?.name,
-                lender = contributors(metadata["lender"]).firstOrNull()?.name)
+                lender = contributors(metadata["lender"]).firstOrNull()?.name,
+                subjects = values(metadata["subject"]).mapNotNull { subject ->
+                    localized((subject as? JsonObject)?.get("name") ?: subject.takeIf { it is JsonPrimitive })
+                })
         }
         fun publications(value: JsonElement?): List<OpdsEntry> = items(value, ::publication)
         fun navigation(value: JsonElement?): List<OpdsEntry> = links(value).map {

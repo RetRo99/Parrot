@@ -44,7 +44,7 @@ internal class OpdsCatalogueMapper(private val target: (String) -> CatalogueTarg
             identifiers.map { CatalogueIdentifier(it.raw, it.scheme) }, images.map { CatalogueImage(it.href, it.mediaType?.map(), it.width, it.height) },
             links.map { it.map(base) }, editionLabel?.map(), seller?.map(), lender?.map(),
             classifier.files(acquisitionLinks).map { CatalogueFileChoice(it.link.map(base), it.action.map(base), it.isOpenable, it.isDefault) },
-            acquisition.action.map(base), acquisition.providerName?.map(), acquisition.unsupportedMediaType?.map())
+            acquisition.action.map(base), acquisition.providerName?.map(), acquisition.unsupportedMediaType?.map(), subjects.map { it.map() })
     }
     private fun OpdsFacetOption.map(base: String) = CatalogueFacetOption(title?.map(), link.map(base), active, count)
     fun map(document: OpdsDocument, status: CatalogueFetchStatus): CatalogueDocument {

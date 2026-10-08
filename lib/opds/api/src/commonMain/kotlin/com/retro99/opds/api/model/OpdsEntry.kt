@@ -37,6 +37,7 @@ data class OpdsEntry(
     /** Explicit catalogue-provided seller/lender names; never inferred from publisher. */
     val seller: OpdsText? = null,
     val lender: OpdsText? = null,
+    val subjects: List<OpdsText> = emptyList(),
 ) {
     val acquisitionLinks: List<OpdsLink> get() = links.filter { it.hasAcquisitionRelation() }
 
