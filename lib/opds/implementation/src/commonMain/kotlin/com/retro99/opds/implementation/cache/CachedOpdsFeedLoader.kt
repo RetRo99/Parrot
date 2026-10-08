@@ -15,7 +15,7 @@ class CachedOpdsFeedLoader(
         require(key.url == request.url && key.representation == request.acceptMediaTypes.joinToString(", ") { it.trim().lowercase() }) { "cache key does not match request" }
         val cached = cache.load(key)
         val fetched = transport.fetch(request.copy(cacheValidators = cached?.validators ?: request.cacheValidators))
-        if (fetched is OpdsFetchResult.Failure) return OpdsLoadResult.FetchFailure(fetched.error)
+        if (fetched is OpdsFetchResult.Failure) return OpdsLoadResult.FetchFailure(fetched.error, fetched.crossOriginPrivateNetwork)
         fetched as OpdsFetchResult.Response
         val notModified = fetched.status == 304
         if (notModified && cached == null) return OpdsLoadResult.NotModifiedWithoutCache

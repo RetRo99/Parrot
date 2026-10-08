@@ -116,4 +116,30 @@ class OpdsTransportTest {
         assertNull(engineA.requestHistory.last().headers[HttpHeaders.Authorization])
         a.close(); b.close()
     }
+    @Test fun explicit_default_port_is_same_origin_and_validators_cannot_inject_headers() = runTest {
+        val engine = MockEngine { respond("feed") }
+        val transport = KtorOpdsTransport(engine, root)
+        transport.fetch(request("https://catalogue.example.org:443/root", OpdsCredentials.Anonymous).copy(cacheValidators = mapOf(HttpHeaders.IfNoneMatch to "\"v1\"", HttpHeaders.Authorization to "SECRET")))
+        assertNull(engine.requestHistory.last().headers[HttpHeaders.Authorization])
+        assertEquals("\"v1\"", engine.requestHistory.last().headers[HttpHeaders.IfNoneMatch])
+        transport.fetch(request("https://catalogue.example.org:443/root"))
+        assertNotNull(engine.requestHistory.last().headers[HttpHeaders.Authorization])
+        transport.close()
+    }
+    @Test fun redirected_root_401_retains_root_context_and_multiple_header_challenges() = runTest {
+        var hop = 0
+        val engine = MockEngine { if (hop++ == 0) respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "/moved")) else respond("", HttpStatusCode.Unauthorized, headersOf(HttpHeaders.WWWAuthenticate to listOf("Digest realm=\"private\"", "bAsIc realm=\"reader\""))) }
+        val transport = KtorOpdsTransport(engine, root)
+        val error = failure(transport.fetch(request()))
+        assertTrue(error.isCatalogueRoot)
+        assertEquals(OpdsTransportError.Code.SIGN_IN_NEEDED, error.code)
+        assertNull(engine.requestHistory.last().headers[HttpHeaders.Authorization])
+        transport.close()
+    }
+    @Test fun redirects_without_location_fail_clearly() = runTest {
+        val engine = MockEngine { respond("", HttpStatusCode.Found) }
+        val transport = KtorOpdsTransport(engine, root)
+        assertEquals(OpdsTransportError.Code.REDIRECT_MISSING_LOCATION, failure(transport.fetch(request())).code)
+        transport.close()
+    }
 }

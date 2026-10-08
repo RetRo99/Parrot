@@ -57,7 +57,7 @@ sealed interface OpdsFetchResult {
             .map { it.trim().substringBefore('=').lowercase() }.toSet()
     }
 
-    data class Failure(val error: OpdsTransportError) : OpdsFetchResult
+    data class Failure(val error: OpdsTransportError, val crossOriginPrivateNetwork: Boolean = false) : OpdsFetchResult
 }
 
 /**

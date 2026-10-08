@@ -64,6 +64,39 @@ class TransportSafetyTest {
         assertTrue((transport.fetch(request()) as OpdsFetchResult.Response).crossOriginPrivateNetwork)
         transport.close()
     }
+    @Test fun alternate_ipv6_loopback_linklocal_and_mapped_private_addresses_are_flagged() = runTest {
+        for (host in listOf("[0:0:0:0:0:0:0:1]", "[fe90::1]", "[::ffff:7f00:1]", "[::ffff:c0a8:101]")) {
+            val engine = MockEngine { respond("feed") }
+            val transport = KtorOpdsTransport(engine, root)
+            assertTrue((transport.fetch(request("https://$host/feed")) as OpdsFetchResult.Response).crossOriginPrivateNetwork, host)
+            transport.close()
+        }
+    }
+    @Test fun private_network_advisory_is_preserved_on_http_failure() = runTest {
+        val engine = MockEngine { respond("", HttpStatusCode.Forbidden) }
+        val transport = KtorOpdsTransport(engine, root)
+        assertTrue((transport.fetch(request("https://10.0.0.1/feed")) as OpdsFetchResult.Failure).crossOriginPrivateNetwork)
+        transport.close()
+    }
+    @Test fun cancellation_during_body_read_cancels_stream() = runTest {
+        val stream = ByteChannel()
+        val reading = CompletableDeferred<Unit>()
+        val observed = object : ByteReadChannel by stream {
+            override suspend fun awaitContent(min: Int): Boolean {
+                reading.complete(Unit)
+                return stream.awaitContent(min)
+            }
+        }
+        val engine = MockEngine { respond(observed) }
+        val transport = KtorOpdsTransport(engine, root)
+        val job = async { transport.fetch(request()) }
+        reading.await()
+        job.cancelAndJoin()
+        assertTrue(job.isCancelled)
+        // Ktor's statement cleanup cancels the unfinished response channel.
+        assertTrue(stream.isClosedForRead)
+        transport.close()
+    }
     @Test fun response_budget_is_enforced_without_content_length_and_stops_stream() = runTest {
         var written = 0L
         val channel = ByteChannel()

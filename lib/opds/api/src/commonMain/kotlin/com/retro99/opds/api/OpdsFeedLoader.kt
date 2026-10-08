@@ -9,7 +9,7 @@ interface OpdsFeedLoader {
 
 sealed interface OpdsLoadResult {
     data class Document(val document: OpdsDocument, val fromCache: Boolean, val crossOriginPrivateNetwork: Boolean = false) : OpdsLoadResult
-    data class FetchFailure(val error: OpdsTransportError) : OpdsLoadResult
+    data class FetchFailure(val error: OpdsTransportError, val crossOriginPrivateNetwork: Boolean = false) : OpdsLoadResult
     data class ParseFailure(val rejection: OpdsRejection) : OpdsLoadResult
     data object NotModifiedWithoutCache : OpdsLoadResult
 }

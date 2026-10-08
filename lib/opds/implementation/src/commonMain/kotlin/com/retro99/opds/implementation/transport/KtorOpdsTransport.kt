@@ -16,7 +16,7 @@ import kotlin.time.Clock
 
 /** One isolated client per source. No auth/cookie/logging plugins or shared default headers. */
 class KtorOpdsTransport(
-    engine: HttpClientEngine,
+    private val engine: HttpClientEngine,
     private val catalogueRoot: String,
     private val nowMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val log: (String) -> Unit = {},
@@ -28,15 +28,15 @@ class KtorOpdsTransport(
         expectSuccess = false
         install(HttpTimeout) { requestTimeoutMillis = 30_000; connectTimeoutMillis = 15_000; socketTimeoutMillis = 30_000 }
     }
-    override fun close() = client.close()
+    override fun close() { client.close(); engine.close() }
 
     override suspend fun fetch(request: OpdsRequest): OpdsFetchResult {
         val rootContext = request.isCatalogueRoot ?: (request.url == catalogueRoot)
+        var privateNetwork = false
         fun failure(code: OpdsTransportError.Code, status: Int? = null, retry: Long? = null) =
-            OpdsFetchResult.Failure(OpdsTransportError(code, status, retryAfterMillis = retry, isCatalogueRoot = rootContext))
+            OpdsFetchResult.Failure(OpdsTransportError(code, status, retryAfterMillis = retry, isCatalogueRoot = rootContext), privateNetwork)
         var current = request.url
         var redirects = 0
-        var privateNetwork = false
         val visited = mutableSetOf<String>()
         try {
             while (true) {
@@ -82,7 +82,7 @@ class KtorOpdsTransport(
                             val buffer = ByteArray(8192)
                             var count = 0
                             var exceeded = false
-                            while (true) {
+                            try { while (true) {
                                 // One-byte overflow probe at the boundary; never retain excess bytes.
                                 val read = channel.readAvailable(buffer, 0, minOf(buffer.size, OpdsBudgets.MAX_RESPONSE_BYTES.toInt() - count + 1))
                                 if (read < 0) break
@@ -90,7 +90,7 @@ class KtorOpdsTransport(
                                 if (count.toLong() + read > OpdsBudgets.MAX_RESPONSE_BYTES) { exceeded = true; channel.cancel(null); break }
                                 chunks += buffer.copyOf(read)
                                 count += read
-                            }
+                            } } finally { channel.cancel(null) }
                             if (exceeded) Step.Done(failure(OpdsTransportError.Code.RESPONSE_TOO_LARGE, status)) else {
                                 val body = ByteArray(count)
                                 var offset = 0
@@ -138,10 +138,36 @@ class KtorOpdsTransport(
     private fun localAddress(host: String): Boolean {
         val h = host.lowercase().removeSurrounding("[", "]").trimEnd('.')
         if (h == "localhost" || h.endsWith(".localhost") || h.endsWith(".local") || h.endsWith(".lan")) return true
-        if (':' in h) return h == "::1" || h == "::" || h.startsWith("fc") || h.startsWith("fd") || h.startsWith("fe80:") || h.startsWith("::ffff:") && localAddress(h.substringAfter("::ffff:"))
+        if (':' in h) {
+            val words = ipv6Words(h) ?: return false
+            if (words.take(7).all { it == 0 } && words.last() in 0..1) return true
+            if (words[0] and 0xfe00 == 0xfc00 || words[0] and 0xffc0 == 0xfe80) return true
+            if (words.take(5).all { it == 0 } && words[5] == 0xffff) {
+                return localAddress("${words[6] shr 8}.${words[6] and 255}.${words[7] shr 8}.${words[7] and 255}")
+            }
+            return false
+        }
         val octets = h.split('.').map { it.toIntOrNull() ?: return false }
         if (octets.size != 4 || octets.any { it !in 0..255 }) return false
         return octets[0] in setOf(0, 10, 127) || octets[0] == 172 && octets[1] in 16..31 || octets[0] == 192 && octets[1] == 168 || octets[0] == 169 && octets[1] == 254
+    }
+
+    private fun ipv6Words(address: String): List<Int>? {
+        var value = address
+        if ('.' in value) {
+            val octets = value.substringAfterLast(':').split('.').map { it.toIntOrNull() ?: return null }
+            if (octets.size != 4 || octets.any { it !in 0..255 }) return null
+            value = value.substringBeforeLast(':') + ":${((octets[0] shl 8) or octets[1]).toString(16)}:${((octets[2] shl 8) or octets[3]).toString(16)}"
+        }
+        fun words(part: String) = if (part.isEmpty()) emptyList() else part.split(':').map { it.toIntOrNull(16) ?: -1 }
+        val sections = value.split("::")
+        if (sections.size > 2) return null
+        val left = words(sections.first())
+        val right = if (sections.size == 2) words(sections.last()) else emptyList()
+        if ((left + right).any { it !in 0..0xffff }) return null
+        val zeros = 8 - left.size - right.size
+        if (sections.size == 1 && zeros != 0 || sections.size == 2 && zeros < 1) return null
+        return left + List(zeros) { 0 } + right
     }
 
     private fun hasBasic(headers: List<String>): Boolean = headers.any { header ->
