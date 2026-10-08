@@ -7,7 +7,7 @@ package com.retro99.opds.api
  *
  * Keys are sensitive-data-aware (plan §4: auth-sensitive keys include
  * profile, server/access generation, request URL, and representation);
- * entries honor `no-store` (the loader, not the cache, checks directives).
+ * entries honor `no-store` in both loader and cache.
  */
 interface OpdsFeedCache {
     suspend fun load(key: OpdsCacheKey): OpdsCacheEntry?
@@ -38,4 +38,6 @@ data class OpdsCacheEntry(
     val storedAtMillis: Long,
     /** The effective URL the cached body was fetched at (plan §4 base rule). */
     val effectiveUrl: String,
+    val cacheControl: List<String> = emptyList(),
+    val document: com.retro99.opds.api.model.OpdsDocument? = null,
 )

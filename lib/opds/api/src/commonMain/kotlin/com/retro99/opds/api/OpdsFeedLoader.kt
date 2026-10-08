@@ -1,0 +1,15 @@
+package com.retro99.opds.api
+
+import com.retro99.opds.api.model.OpdsDocument
+import com.retro99.opds.api.model.OpdsRejection
+
+interface OpdsFeedLoader {
+    suspend fun load(key: OpdsCacheKey, request: OpdsRequest): OpdsLoadResult
+}
+
+sealed interface OpdsLoadResult {
+    data class Document(val document: OpdsDocument, val fromCache: Boolean, val crossOriginPrivateNetwork: Boolean = false) : OpdsLoadResult
+    data class FetchFailure(val error: OpdsTransportError) : OpdsLoadResult
+    data class ParseFailure(val rejection: OpdsRejection) : OpdsLoadResult
+    data object NotModifiedWithoutCache : OpdsLoadResult
+}
