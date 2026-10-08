@@ -41,6 +41,7 @@ class AndroidLibraryImportDiskCharacterizationTest {
         cloudFilesDatabase = InMemoryCloudFilesDatabase(),
         databaseExecutor = DirectDatabaseExecutor,
         fileStore = AndroidBookFileTransferFileStore(context),
+        importJournal = FakeLibraryImportJournal(),
     )
 
     @AfterTest

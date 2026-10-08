@@ -20,6 +20,20 @@ interface StagedBookImportManager {
      * or delete.
      */
     suspend fun importStagedEpub(file: StagedBookFile): AppResult<StagedBookImportResult>
+
+    /**
+     * Settles imports that a closed or crashed Parrot left half-done, so the library never
+     * lists a book without its file and keeps no file without a book. Call it after a
+     * restart before asking [findBookOnDevice]; calling it again is harmless.
+     */
+    suspend fun settleInterruptedImports()
+
+    /**
+     * The library book that has a file on this device with exactly these bytes, or null.
+     *
+     * @param contentSha256 lower-case hex SHA-256 of the whole file
+     */
+    suspend fun findBookOnDevice(contentSha256: String): String?
 }
 
 /**

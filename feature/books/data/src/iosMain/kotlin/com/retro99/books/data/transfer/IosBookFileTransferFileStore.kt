@@ -95,8 +95,11 @@ class IosBookFileTransferFileStore : BookFileTransferFileStore {
         }
     }
 
+    override fun coverPath(libraryBookId: String): String =
+        "${documentsDirectory()}/imported_covers/${libraryBookId.safeFileName()}.png"
+
     override suspend fun writeCover(libraryBookId: String, bytes: ByteArray): String {
-        val path = "${documentsDirectory()}/imported_covers/${libraryBookId.safeFileName()}.png"
+        val path = coverPath(libraryBookId)
         ensureParent(path)
         val fileManager = NSFileManager.defaultManager
         if (!fileManager.createFileAtPath(path, contents = null, attributes = null) &&

@@ -32,6 +32,7 @@ class LibraryImportCharacterizationTest {
         cloudFilesDatabase = cloudFiles,
         databaseExecutor = DirectDatabaseExecutor,
         fileStore = fileStore,
+        importJournal = FakeLibraryImportJournal(),
     )
 
     @Test

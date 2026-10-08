@@ -32,6 +32,7 @@ class AndroidLibraryImportRetryDiskTest {
         cloudFilesDatabase = InMemoryCloudFilesDatabase(),
         databaseExecutor = DirectDatabaseExecutor,
         fileStore = AndroidBookFileTransferFileStore(TestContext(cacheDir, filesDir)),
+        importJournal = FakeLibraryImportJournal(),
     )
 
     @AfterTest

@@ -57,6 +57,7 @@ class IosFileImportCharacterizationTest {
             cloudFilesDatabase = InMemoryCloudFilesDatabase(),
             databaseExecutor = DirectDatabaseExecutor,
             fileStore = IosBookFileTransferFileStore(),
+            importJournal = FakeLibraryImportJournal(),
         ),
     )
 

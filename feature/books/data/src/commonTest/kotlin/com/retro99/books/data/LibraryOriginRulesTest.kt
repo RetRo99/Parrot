@@ -25,6 +25,7 @@ class LibraryOriginRulesTest {
         cloudFilesDatabase = InMemoryCloudFilesDatabase(),
         databaseExecutor = DirectDatabaseExecutor,
         fileStore = fileStore,
+        importJournal = FakeLibraryImportJournal(),
     )
 
     @Test

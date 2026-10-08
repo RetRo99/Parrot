@@ -45,6 +45,7 @@ class AndroidFileImportManagerTest {
             cloudFilesDatabase = InMemoryCloudFilesDatabase(),
             databaseExecutor = DirectDatabaseExecutor,
             fileStore = AndroidBookFileTransferFileStore(context),
+            importJournal = FakeLibraryImportJournal(),
         ),
         analytics = analytics,
     )

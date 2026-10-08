@@ -40,6 +40,7 @@ class LibraryImportRetryAndConcurrencyTest {
         cloudFilesDatabase = InMemoryCloudFilesDatabase(),
         databaseExecutor = DirectDatabaseExecutor,
         fileStore = fileStore,
+        importJournal = FakeLibraryImportJournal(),
     )
 
     @Test

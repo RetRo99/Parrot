@@ -8,6 +8,8 @@ import com.retro99.database.api.library.DeviceFileEntity
 import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.database.api.library.LibraryImportJournalDatabase
+import com.retro99.database.api.library.LibraryImportJournalEntry
 import com.retro99.database.api.sync.SyncOutboxEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -106,6 +108,21 @@ internal class FakeDeviceFilesDatabase(vararg initialFiles: DeviceFileEntity) : 
     }
 }
 
+internal class FakeLibraryImportJournal : LibraryImportJournalDatabase {
+    val entries = mutableListOf<LibraryImportJournalEntry>()
+
+    override suspend fun record(entry: LibraryImportJournalEntry) {
+        entries.removeAll { existing -> existing.entryId == entry.entryId }
+        entries += entry
+    }
+
+    override suspend fun getAll(): List<LibraryImportJournalEntry> = entries.toList()
+
+    override suspend fun clear(entryId: String) {
+        entries.removeAll { entry -> entry.entryId == entryId }
+    }
+}
+
 internal class InMemoryFileStore : BookFileTransferFileStore {
     val files = mutableMapOf<String, ByteArray>()
 
@@ -137,8 +154,10 @@ internal class InMemoryFileStore : BookFileTransferFileStore {
         files[destinationPath] = files.remove(stagingPath) ?: error("No staging file")
     }
 
+    override fun coverPath(libraryBookId: String) = "/covers/$libraryBookId.png"
+
     override suspend fun writeCover(libraryBookId: String, bytes: ByteArray): String {
-        val path = "/covers/$libraryBookId.png"
+        val path = coverPath(libraryBookId)
         files[path] = bytes
         return path
     }

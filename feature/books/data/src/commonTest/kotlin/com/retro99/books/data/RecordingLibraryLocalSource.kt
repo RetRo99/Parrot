@@ -21,6 +21,10 @@ internal class RecordingLibraryLocalSource(
         return result
     }
 
+    override suspend fun reconcileInterruptedImports() = Unit
+
+    override suspend fun findBookWithDeviceFile(algorithm: String, hash: String): String? = null
+
     override fun observeLibrary(): Flow<List<LibraryBookRecord>> = emptyFlow()
 
     override suspend fun getLibraryBook(libraryBookId: String): LibraryBookRecord? = null

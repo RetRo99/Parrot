@@ -57,8 +57,11 @@ class AndroidBookFileTransferFileStore(
         if (!source.delete()) error("Restored book was saved but its staging file could not be removed")
     }
 
+    override fun coverPath(libraryBookId: String): String =
+        File(coversDirectory, "${libraryBookId.safeFileName()}.png").absolutePath
+
     override suspend fun writeCover(libraryBookId: String, bytes: ByteArray): String {
-        val cover = File(coversDirectory, "${libraryBookId.safeFileName()}.png")
+        val cover = File(coverPath(libraryBookId))
         cover.writeBytes(bytes)
         return cover.absolutePath
     }

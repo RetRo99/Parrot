@@ -40,6 +40,11 @@ internal class StagedBookImporter(
             Err(AppError.UnknownError(e))
         }
 
+    override suspend fun settleInterruptedImports() = libraryLocalSource.reconcileInterruptedImports()
+
+    override suspend fun findBookOnDevice(contentSha256: String): String? =
+        libraryLocalSource.findBookWithDeviceFile(CONTENT_HASH_ALGORITHM, contentSha256)
+
     /** [importStagedEpub] for the file pickers, which report a thrown exception themselves. */
     suspend fun importOrThrow(
         file: StagedBookFile,

@@ -21,6 +21,15 @@ interface LibraryLocalSource {
     suspend fun addImportedFile(file: ImportedFileCandidate): AppResult<String> =
         addStagedFile(file).map { added -> added.libraryBookId }
 
+    /**
+     * Settles imports a dead process left half-done: an import whose rows were written is
+     * kept, any other has its library file and cover removed. Safe to call at any time.
+     */
+    suspend fun reconcileInterruptedImports()
+
+    /** The book that has a file on this device with exactly this content, if any. */
+    suspend fun findBookWithDeviceFile(algorithm: String, hash: String): String?
+
     fun observeLibrary(): Flow<List<LibraryBookRecord>>
 
     suspend fun getLibraryBook(libraryBookId: String): LibraryBookRecord?
