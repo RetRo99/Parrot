@@ -14,6 +14,9 @@ data class CatalogueEntryIdentity(
 
 /** Which catalogue entries are already books in your library ("In your library"). */
 interface CatalogueLibraryLookup {
+    /** Book-page status keeps the original acquisition time even after Downloads is purged. */
+    suspend fun libraryDetailsFor(sourceId: String, entries: Collection<CatalogueEntryIdentity>): Map<CatalogueEntryIdentity, CatalogueLibraryBook> =
+        libraryBooksFor(sourceId, entries).mapValues { CatalogueLibraryBook(it.value, null) }
     /** The library book acquired from [sourceId] for [entry], or null. */
     suspend fun libraryBookFor(sourceId: String, entry: CatalogueEntryIdentity): String? =
         libraryBooksFor(sourceId, listOf(entry))[entry]
@@ -27,3 +30,5 @@ interface CatalogueLibraryLookup {
         entries: Collection<CatalogueEntryIdentity>,
     ): Map<CatalogueEntryIdentity, String>
 }
+
+data class CatalogueLibraryBook(val libraryBookId: String, val acquiredAt: Long?)
