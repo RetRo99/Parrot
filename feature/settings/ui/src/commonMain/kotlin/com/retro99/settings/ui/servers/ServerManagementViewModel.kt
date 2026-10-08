@@ -5,6 +5,9 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 import com.retro99.base.ui.BaseViewModel
+import com.retro99.catalogue.ui.settings.CatalogueSettingsGateway
+import com.retro99.settings.domain.usecase.LogoutUseCase
+import kotlinx.coroutines.flow.first
 import com.retro99.server.api.ServerAuthState
 import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerRegistry
@@ -27,6 +30,8 @@ class ServerManagementViewModel(
     @Provided private val serverRegistry: ServerRegistry,
     @Provided private val analytics: Analytics,
     @Provided private val catalogueAccessProvider: CatalogueAccessProvider,
+    @Provided private val catalogueSettings: CatalogueSettingsGateway,
+    @Provided private val logoutAll: LogoutUseCase,
     @InjectedParam private val onNavigateToLogin: (String?, Boolean) -> Unit,
     @InjectedParam private val stopPlaybackForServer: (String, DiagnosticContext) -> Unit,
 ) : BaseViewModel<ServerManagementViewState, ServerManagementIntent>(ServerManagementViewState()) {
@@ -42,6 +47,9 @@ class ServerManagementViewModel(
 
     override fun onIntent(intent: ServerManagementIntent) {
         when (intent) {
+            ServerManagementIntent.OnSignOutEverything -> signOutEverything()
+            is ServerManagementIntent.OnTurnOnCatalogue -> catalogueAction(intent.sourceId, turnOn = true)
+            is ServerManagementIntent.OnRetryCatalogue -> catalogueAction(intent.sourceId, turnOn = false)
             is ServerManagementIntent.OnLoginClick ->
                 onLoginClick(intent.serverId, intent.serverType, intent.isRetry)
             is ServerManagementIntent.OnLogoutClick -> onLogoutClick(intent.serverId, intent.serverType)
@@ -144,6 +152,43 @@ class ServerManagementViewModel(
     }
 
     private var operationInProgress = false
+
+    private fun signOutEverything() {
+        if (operationInProgress) return
+        operationInProgress = true
+        updateState { it.copy(isOperationInProgress = true, catalogueOperationFailed = false) }
+        viewModelScope.launch {
+            try {
+                logoutAll()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                updateState { it.copy(catalogueOperationFailed = true) }
+            } finally {
+                operationInProgress = false
+                updateState { it.copy(isOperationInProgress = false) }
+            }
+        }
+    }
+
+    private fun catalogueAction(sourceId: String, turnOn: Boolean) {
+        if (operationInProgress) return
+        operationInProgress = true
+        updateState { it.copy(isOperationInProgress = true, catalogueOperationFailed = false) }
+        viewModelScope.launch {
+            try {
+                val source = catalogueSettings.observeSource(sourceId).first() ?: return@launch
+                if (turnOn) catalogueSettings.setEnabled(source, true) else catalogueSettings.retry(source)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                updateState { it.copy(catalogueOperationFailed = true) }
+            } finally {
+                operationInProgress = false
+                updateState { it.copy(isOperationInProgress = false) }
+            }
+        }
+    }
 
     private fun onLogoutClick(serverId: String, serverType: ServerType, isRetry: Boolean = false) {
         runMutation(

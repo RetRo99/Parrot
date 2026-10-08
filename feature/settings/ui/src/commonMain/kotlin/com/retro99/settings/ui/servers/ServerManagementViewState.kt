@@ -17,4 +17,7 @@ data class ServerManagementViewState(
     val serverListLoadFailed: Boolean = false,
     val isOperationInProgress: Boolean = false,
     val operationFailure: ServerManagementOperationFailure? = null,
-)
+    val catalogueOperationFailed: Boolean = false,
+) {
+    val hasCatalogueSignOutDetail: Boolean get() = catalogueSources.isNotEmpty()
+}

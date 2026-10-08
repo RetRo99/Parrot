@@ -49,6 +49,7 @@ import com.retro99.catalogue.ui.browse.CatalogueBrowseScreen
 import com.retro99.catalogue.ui.CatalogueDownloadsScreen
 import com.retro99.catalogue.ui.CataloguePublicationScreen
 import com.retro99.catalogue.ui.sources.CatalogueSourcesScreen
+import com.retro99.catalogue.ui.settings.CatalogueSettingsScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
@@ -538,6 +539,9 @@ fun HomeNavigation(
                             onDownloads = {
                                 intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueDownloads))
                             },
+                            onCatalogueSettings = { sourceId ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSettings(sourceId)))
+                            },
                         )
                     }
 
@@ -556,9 +560,8 @@ fun HomeNavigation(
                             onReplaceWithBook = { reference ->
                                 navigationState.replaceCurrent(HomeDestination.CataloguePublication(destination.sourceId, reference))
                             },
-                            // Catalogue settings are not built yet; Libraries is where a catalogue is managed.
                             onCatalogueSettings = {
-                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.ServerManagement))
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSettings(destination.sourceId)))
                             },
                         )
                     }
@@ -573,6 +576,15 @@ fun HomeNavigation(
 
                     entry<HomeDestination.CatalogueDownloads> {
                         CatalogueDownloadsScreen(onBack = { requestBack("toolbar_back") })
+                    }
+
+                    entry<HomeDestination.CatalogueSettings> { destination ->
+                        CatalogueSettingsScreen(
+                            sourceId = destination.sourceId,
+                            initiallyEditAccount = destination.editAccount,
+                            onBack = { requestBack("toolbar_back") },
+                            onBrowse = { sourceId -> intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueBrowse(sourceId))) },
+                        )
                     }
 
                     entry<HomeDestination.Positions> { destination ->
@@ -679,6 +691,8 @@ fun HomeNavigation(
 
                     entry<HomeDestination.ServerManagement> {
                         ServerManagementScreen(
+                            onBrowseCatalogue = { sourceId -> intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueBrowse(sourceId))) },
+                            onCatalogueSettings = { sourceId, editAccount -> intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSettings(sourceId, editAccount))) },
                             onNavigateToLogin = onNavigateToLogin,
                             failedLoginServerIds = failedExistingServerLoginIds,
                             onBack = { requestBack("toolbar_back") },

@@ -143,6 +143,12 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
     @Serializable
     data object CatalogueDownloads : HomeDestination
 
+    /** Only the catalogue id is restored, never its address or account details. */
+    @Serializable
+    data class CatalogueSettings(val sourceId: String, val editAccount: Boolean = false) : HomeDestination {
+        init { requireCatalogueRouteArgument(sourceId) }
+    }
+
     /**
      * Destinations where the floating continue-reading bubble must stay hidden:
      * settings-style screens (it would cover rows, toggles, and buttons) and the
@@ -164,6 +170,7 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
             this is CatalogueBrowse ||
             this is CataloguePublication ||
             this is CatalogueDownloads
+            || this is CatalogueSettings
 }
 
 /**

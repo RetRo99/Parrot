@@ -43,4 +43,5 @@ internal fun HomeDestination.analyticsScreenName(): String = when (this) {
     is HomeDestination.CatalogueBrowse -> "catalogue_browse"
     is HomeDestination.CataloguePublication -> "catalogue_publication"
     HomeDestination.CatalogueDownloads -> "catalogue_downloads"
+    is HomeDestination.CatalogueSettings -> "catalogue_settings"
 }
