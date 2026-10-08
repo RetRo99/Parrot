@@ -32,7 +32,8 @@ class FixtureActivity : ComponentActivity() {
         }
         val empty = intent.getBooleanExtra("empty", false)
         val positions = intent.getStringExtra("positions")
-        if (positions != null) {
+        val catalogue = intent.getStringExtra("catalogue")
+        if (positions != null || catalogue != null) {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
                 android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -41,6 +42,10 @@ class FixtureActivity : ComponentActivity() {
             ParrotTheme(mode) {
                 if (positions != null) {
                     PositionsFixture(positions)
+                    return@ParrotTheme
+                }
+                if (catalogue != null) {
+                    CatalogueFixtureScreen(catalogue)
                     return@ParrotTheme
                 }
                 var selected by rememberSaveable { mutableStateOf(intent.getStringExtra("series")) }
