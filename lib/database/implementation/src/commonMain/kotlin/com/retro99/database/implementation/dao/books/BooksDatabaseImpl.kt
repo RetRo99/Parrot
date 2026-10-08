@@ -261,6 +261,21 @@ internal class BooksDatabaseImpl(
         sqlDelightDao.deleteRemotePosition(bookUuid)
     }
 
+    override suspend fun applyRemotePositionIfClean(
+        position: PositionEntity,
+        expectedLocalGeneration: Long?,
+        remoteAccountId: String,
+        progressEntityIds: Set<String>,
+    ): Boolean = sqlDelightDao.applyRemotePositionIfClean(
+        position.toSqlDelightEntity(), expectedLocalGeneration, remoteAccountId, progressEntityIds,
+    )
+
+    override suspend fun deleteRemotePositionIfGeneration(
+        bookUuid: String,
+        expectedLocalGeneration: Long,
+        throughRemoteRevision: Long?,
+    ): Boolean = sqlDelightDao.deleteRemotePositionIfGeneration(bookUuid, expectedLocalGeneration, throughRemoteRevision)
+
     override suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity? {
         return sqlDelightDao.getPositionByBookUuid(bookUuid)
     }

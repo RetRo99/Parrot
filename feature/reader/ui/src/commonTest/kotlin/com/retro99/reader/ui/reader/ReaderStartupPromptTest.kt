@@ -1,6 +1,8 @@
 package com.retro99.reader.ui.reader
 
 import com.retro99.books.domain.model.BookHome
+import com.retro99.books.domain.model.BookType
+import com.retro99.base.result.AppError
 import com.retro99.books.domain.model.links.CopyKey
 import com.retro99.books.domain.model.links.CopySource
 import com.retro99.books.domain.model.links.LinkedCopy
@@ -21,6 +23,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class ReaderStartupPromptTest {
+
+    @Test
+    fun `failed linked Continue retains the prompt and current audio checkpoint`() {
+        val state = ReaderViewState(
+            bookType = BookType.READALOUD, bookUuid = "lib", linkedResumeOffer = offer(),
+            isResolvingConflict = true, currentAudioPositionMs = 3_000L,
+        )
+        val error = AppError.NotFoundError("save failed")
+
+        val failed = state.linkedResumeSaveFailed(error)
+
+        assertEquals(state.linkedResumeOffer, failed.linkedResumeOffer)
+        assertEquals(3_000L, failed.currentAudioPositionMs)
+        assertEquals(false, failed.isResolvingConflict)
+        assertEquals(error, failed.conflictResolutionError)
+    }
 
     private val conflict = PositionConflictUiModel(
         localPosition = position(0.1),

@@ -7,6 +7,7 @@ import androidx.compose.ui.text.AnnotatedString
 import com.retro99.base.ui.compose.EmberDialog
 import com.retro99.base.ui.compose.EmberDialogAction
 import com.retro99.base.ui.compose.EmberDialogActionStyle
+import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.relativeTimeText
 import com.retro99.books.domain.model.BookHome
 import com.retro99.books.ui.links.label
@@ -66,6 +67,8 @@ fun LinkedResumeDialog(
     onStay: () -> Unit,
     modifier: Modifier = Modifier,
     onCompareAll: (() -> Unit)? = null,
+    isResolving: Boolean = false,
+    error: String? = null,
 ) {
     val title = if (model.isApproximate) {
         stringResource(StringRes.resume_linked_title_approximate, model.percent)
@@ -89,28 +92,35 @@ fun LinkedResumeDialog(
         stringResource(StringRes.resume_linked_body, source, time)
     }
     EmberDialog(
-        onDismissRequest = onStay,
+        onDismissRequest = { if (!isResolving) onStay() },
         title = title,
         actions = listOfNotNull(
             EmberDialogAction(
                 label = stringResource(StringRes.resume_linked_continue),
                 style = EmberDialogActionStyle.Main,
+                enabled = !isResolving,
+                showProgress = isResolving,
                 onClick = onContinue,
             ),
             onCompareAll?.let { compare ->
                 EmberDialogAction(
                     label = stringResource(StringRes.resume_linked_compare),
                     style = EmberDialogActionStyle.Neutral,
+                    enabled = !isResolving,
                     onClick = compare,
                 )
             },
             EmberDialogAction(
                 label = stringResource(StringRes.resume_linked_stay),
                 style = EmberDialogActionStyle.Neutral,
+                enabled = !isResolving,
                 onClick = onStay,
             ),
         ),
         modifier = modifier,
         body = AnnotatedString(body),
+        content = {
+            error?.let { Text(text = it, style = Ember.type.meta, color = Ember.colors.error) }
+        },
     )
 }

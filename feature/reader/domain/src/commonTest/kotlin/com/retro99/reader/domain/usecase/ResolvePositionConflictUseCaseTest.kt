@@ -80,6 +80,7 @@ class ResolvePositionConflictUseCaseTest {
         repository.remote["book"] = conflict.remotePosition.toServerPosition()
         val progress = GetReadingProgressWithConflictUseCase(
             FakeRepositoryProvider(listOf(repository)), database, FakeSyncOutboxDatabase(database.mutations),
+            com.retro99.sync.domain.ProgressAccountResolver { it },
         )
         assertIs<ReadingProgressResult.Resolved>(progress("storyteller", "book").getOrElse { error("$it") })
         // A shared refresh may preserve the same rejected candidate again.
@@ -99,6 +100,7 @@ class ResolvePositionConflictUseCaseTest {
         repository.local["book"] = conflict.localPosition.toServerPosition()
         val progress = GetReadingProgressWithConflictUseCase(
             FakeRepositoryProvider(listOf(repository)), database, FakeSyncOutboxDatabase(database.mutations),
+            com.retro99.sync.domain.ProgressAccountResolver { it },
         )
         assertIs<ReadingProgressResult.Conflict>(progress("storyteller", "book").getOrElse { error("$it") })
     }

@@ -85,6 +85,7 @@ class InitializeReaderUseCaseTest {
                 repositoryProvider = provider,
                 positionDatabase = UnusedPositionDatabase,
                 syncOutboxDatabase = com.retro99.reader.domain.fakes.FakeSyncOutboxDatabase(),
+                progressAccountResolver = com.retro99.sync.domain.ProgressAccountResolver { it },
             ),
         )
     }

@@ -651,6 +651,49 @@ internal class BooksSqlDelightDao(
         }
     }
 
+    suspend fun applyRemotePositionIfClean(
+        position: PositionSqlDelightEntity,
+        expectedLocalGeneration: Long?,
+        remoteAccountId: String,
+        progressEntityIds: Set<String>,
+    ): Boolean = withContext(Dispatchers.IO) {
+        database.transactionWithResult {
+            val stored = positionQueries.getPositionByBookUuid(position.bookUuid).executeAsOneOrNull()
+            if (stored?.local_generation != expectedLocalGeneration) return@transactionWithResult false
+            val dirty = syncOutboxQueries.getPendingIncludingUnassigned(remoteAccountId).executeAsList().any {
+                it.entity_type == SyncOutboxEntry.ENTITY_TYPE_READING_POSITION && it.entity_id in progressEntityIds
+            }
+            if (dirty) return@transactionWithResult false
+            val revision = position.remoteRevision
+            if (revision != null) {
+                val baseline = positionQueries.getRemotePositionByBookUuid(position.bookUuid).executeAsOneOrNull()
+                if (stored?.remote_revision?.let { it > revision } == true || baseline?.remote_revision?.let { it > revision } == true) {
+                    return@transactionWithResult false
+                }
+            }
+            insertPosition(position.copy(localGeneration = (stored?.local_generation ?: -1L) + 1L))
+            positionQueries.deleteRemotePosition(position.bookUuid)
+            true
+        }
+    }
+
+    suspend fun deleteRemotePositionIfGeneration(
+        bookUuid: String,
+        expectedLocalGeneration: Long,
+        throughRemoteRevision: Long?,
+    ): Boolean = withContext(Dispatchers.IO) {
+        database.transactionWithResult {
+            val stored = positionQueries.getPositionByBookUuid(bookUuid).executeAsOneOrNull()
+            if (stored?.local_generation != expectedLocalGeneration) return@transactionWithResult false
+            if (throughRemoteRevision != null) {
+                val baseline = positionQueries.getRemotePositionByBookUuid(bookUuid).executeAsOneOrNull()
+                if (baseline?.remote_revision?.let { it > throughRemoteRevision } == true) return@transactionWithResult false
+            }
+            positionQueries.deleteRemotePosition(bookUuid)
+            true
+        }
+    }
+
     suspend fun updateRemoteRevision(
         bookUuid: String,
         remoteRevision: Long,
@@ -671,30 +714,40 @@ internal class BooksSqlDelightDao(
 
     suspend fun upsertRemotePosition(position: PositionSqlDelightEntity) {
         withContext(Dispatchers.IO) {
-            positionQueries.upsertRemotePosition(
-                book_uuid = position.bookUuid,
-                library_book_id = position.libraryBookId,
-                remote_revision = position.remoteRevision,
-                timestamp = position.timestamp,
-                created_at = position.createdAt,
-                updated_at = position.updatedAt,
-                locator_href = position.locatorHref,
-                locator_type = position.locatorType,
-                locator_title = position.locatorTitle,
-                locator_target = position.locatorTarget?.toLong(),
-                css_selector = position.cssSelector,
-                audio_timestamp_ms = position.audioTimestampMs,
-                chapter_index = position.chapterIndex?.toLong(),
-                progression = position.progression,
-                total_chapters = position.totalChapters?.toLong(),
-                total_duration_ms = position.totalDurationMs,
-                total_progression = position.totalProgression,
-                book_time_ms = position.bookTimeMs,
-                ebook_location_raw = position.ebookLocationRaw,
-                source_device_id = position.sourceDeviceId,
-                device_name = position.deviceName,
-                position = position.position?.toLong(),
-            )
+            database.transaction {
+                val revision = position.remoteRevision
+                if (revision != null) {
+                    val localRevision = positionQueries.getPositionByBookUuid(position.bookUuid).executeAsOneOrNull()?.remote_revision
+                    val baselineRevision = positionQueries.getRemotePositionByBookUuid(position.bookUuid).executeAsOneOrNull()?.remote_revision
+                    if (localRevision?.let { it > revision } == true || baselineRevision?.let { it > revision } == true) {
+                        return@transaction
+                    }
+                }
+                positionQueries.upsertRemotePosition(
+                    book_uuid = position.bookUuid,
+                    library_book_id = position.libraryBookId,
+                    remote_revision = position.remoteRevision,
+                    timestamp = position.timestamp,
+                    created_at = position.createdAt,
+                    updated_at = position.updatedAt,
+                    locator_href = position.locatorHref,
+                    locator_type = position.locatorType,
+                    locator_title = position.locatorTitle,
+                    locator_target = position.locatorTarget?.toLong(),
+                    css_selector = position.cssSelector,
+                    audio_timestamp_ms = position.audioTimestampMs,
+                    chapter_index = position.chapterIndex?.toLong(),
+                    progression = position.progression,
+                    total_chapters = position.totalChapters?.toLong(),
+                    total_duration_ms = position.totalDurationMs,
+                    total_progression = position.totalProgression,
+                    book_time_ms = position.bookTimeMs,
+                    ebook_location_raw = position.ebookLocationRaw,
+                    source_device_id = position.sourceDeviceId,
+                    device_name = position.deviceName,
+                    position = position.position?.toLong(),
+                )
+            }
         }
     }
 

@@ -43,6 +43,26 @@ import kotlin.test.assertTrue
 
 class StorytellerProgressSyncAdapterTest {
     @Test
+    fun `one sync sends the latest queued reading instead of an obsolete page`() = runTest {
+        val old = positionMutation("old-page", "storyteller-1").copy(
+            localGeneration = 1L, state = SyncOutboxEntry.STATE_DISPATCHED,
+        )
+        val payload = json.decodeFromString<OutboxPositionPayload>(old.payload)
+        val newest = old.copy(
+            mutationId = "current-page", localGeneration = 2L,
+            createdAt = "2026-09-22T10:02:00Z",
+            payload = json.encodeToString(payload.copy(position = payload.position.copy(timestamp = 200L, totalProgression = 0.75))),
+        )
+        val outbox = RecordingAdapterOutbox(listOf(old, newest))
+        val client = RecordingNetworkClient(getResult = Ok(StorytellerPositionApiModel(timestamp = 9L)))
+
+        createAdapter(outbox, RecordingAdapterPositions()).execute(client)
+
+        assertEquals(200L, (client.postBody as StorytellerPositionApiModel).timestamp)
+        assertTrue(outbox.remainingIds.isEmpty(), "Superseded reading must not remain queued to move the server backwards")
+    }
+
+    @Test
     fun acceptedPositionFetchesBeforePushAndDeletesOnlyItsMutation() = runTest {
         val mutation = positionMutation(
             mutationId = "storyteller-position",
@@ -363,6 +383,24 @@ private class RecordingAdapterOutbox(
 private class RecordingAdapterPositions : PositionDatabase {
     val localPositions = mutableListOf<PositionEntity>()
     val remotePositions = mutableListOf<PositionEntity>()
+
+    override suspend fun applyRemotePositionIfClean(
+        position: PositionEntity,
+        expectedLocalGeneration: Long?,
+        remoteAccountId: String,
+        progressEntityIds: Set<String>,
+    ): Boolean {
+        val stored = getPositionByBookUuid(position.bookUuid)
+        if (stored?.localGeneration != expectedLocalGeneration) return false
+        upsertPosition(object : PositionEntity by position {
+            override val localGeneration = (stored?.localGeneration ?: -1L) + 1L
+        })
+        deleteRemotePosition(position.bookUuid)
+        return true
+    }
+
+    override suspend fun deleteRemotePositionIfGeneration(bookUuid: String, expectedLocalGeneration: Long, throughRemoteRevision: Long?): Boolean =
+        getPositionByBookUuid(bookUuid)?.localGeneration == expectedLocalGeneration
 
     override suspend fun upsertPosition(position: PositionEntity) {
         localPositions += position

@@ -13,6 +13,7 @@ import com.retro99.sync.data.SyncExecutionContextProvider
 import com.retro99.sync.data.SyncOutboxPreflight
 import com.retro99.sync.data.SyncPass
 import com.retro99.sync.domain.SyncRepository
+import com.retro99.sync.domain.FileTransferStatusSource
 
 @Module
 @Configuration
@@ -26,6 +27,7 @@ class SyncDataModule {
         @Provided executionContextProvider: SyncExecutionContextProvider,
         @Provided syncOutboxPreflight: SyncOutboxPreflight,
         @Provided destinations: List<SyncDestination>,
+        @Provided fileTransferStatusSources: List<FileTransferStatusSource>,
         @Provided syncCheckpointDatabase: SyncCheckpointDatabase,
         @Provided analytics: Analytics,
     ): SyncDataRepository = SyncDataRepository(
@@ -33,6 +35,7 @@ class SyncDataModule {
         executionContextProvider = executionContextProvider,
         syncOutboxPreflight = syncOutboxPreflight,
         destinations = destinations,
+        fileTransferStatusSources = fileTransferStatusSources,
         syncCheckpointDatabase = syncCheckpointDatabase,
         analytics = analytics,
     )

@@ -124,11 +124,18 @@ class ProgressSyncEngine(
         }
 
         val stored = positionDatabase.getPositionByBookUuid(identity.localBookUuid)
+        val revision = remote.version?.toLongOrNull()
+        if (revision != null && stored?.remoteRevision?.let { it > revision } == true) {
+            return ProgressPullOutcome.PreservedLocalProgress
+        }
         // Guard 3: re-pulling the same server snapshot leaves the stored row alone, including
         // its origin and observation time.
         if (!hasPendingLocalProgress && stored != null && stored.isSameSnapshotAs(remote)) {
-            positionDatabase.deleteRemotePosition(identity.localBookUuid)
-            return ProgressPullOutcome.AppliedToLocal
+            if (positionDatabase.deleteRemotePositionIfGeneration(identity.localBookUuid, stored.localGeneration, revision)) {
+                return ProgressPullOutcome.AppliedToLocal
+            }
+            positionDatabase.upsertRemotePosition(remote.toPositionEntity(identity, pulledOrigin(remote, identity)))
+            return ProgressPullOutcome.PreservedLocalProgress
         }
         val remotePosition = remote.toPositionEntity(
             identity = identity,
@@ -139,11 +146,18 @@ class ProgressSyncEngine(
             positionDatabase.upsertRemotePosition(remotePosition)
             ProgressPullOutcome.PreservedLocalProgress
         } else {
-            positionDatabase.upsertPosition(remotePosition.copy(
-                localGeneration = (stored?.localGeneration ?: -1L) + 1L,
-            ))
-            positionDatabase.deleteRemotePosition(identity.localBookUuid)
-            ProgressPullOutcome.AppliedToLocal
+            val applied = positionDatabase.applyRemotePositionIfClean(
+                position = remotePosition,
+                expectedLocalGeneration = stored?.localGeneration,
+                remoteAccountId = accountId,
+                progressEntityIds = setOfNotNull(identity.localBookUuid, identity.libraryBookId, remote.remoteBookId),
+            )
+            if (applied) {
+                ProgressPullOutcome.AppliedToLocal
+            } else {
+                positionDatabase.upsertRemotePosition(remotePosition)
+                ProgressPullOutcome.PreservedLocalProgress
+            }
         }
     }
 
@@ -203,9 +217,7 @@ class ProgressSyncEngine(
         }
         // The pre-push refresh preserved the old server candidate while this write
         // was dirty. Once the current generation is accepted it is no longer a conflict.
-        if (positionDatabase.getPositionByBookUuid(entry.entityId)?.localGeneration == entry.localGeneration) {
-            positionDatabase.deleteRemotePosition(entry.entityId)
-        }
+        positionDatabase.deleteRemotePositionIfGeneration(entry.entityId, entry.localGeneration, version?.toLongOrNull())
         syncOutboxDatabase.delete(entry.mutationId)
     }
 
@@ -351,15 +363,23 @@ enum class ProgressPullOutcome {
 private fun PositionEntity.isSameSnapshotAs(remote: RemoteProgressSnapshot): Boolean {
     val snapshot = remote.snapshot
     val revision = remote.version?.toLongOrNull()
-    val sameWrite = (revision != null && revision == remoteRevision) ||
-        (snapshot.timestamp != null && snapshot.timestamp == timestamp)
+    // Revisions are authoritative when both snapshots carry one. Equal timestamps
+    // must not hide a newer cloud revision (and leave the next write on an old base).
+    val sameWrite = if (revision != null && remoteRevision != null) {
+        revision == remoteRevision
+    } else {
+        snapshot.timestamp != null && snapshot.timestamp == timestamp
+    }
     return sameWrite &&
         locatorHref == snapshot.locator?.href &&
         cssSelector == snapshot.locator?.cssSelector &&
         progression == snapshot.progression &&
         totalProgression == snapshot.totalProgression &&
         audioTimestampMs == snapshot.audioTimestampMs &&
-        bookTimeMs == snapshot.bookTimeMs
+        bookTimeMs == snapshot.bookTimeMs &&
+        chapterIndex == snapshot.chapterIndex &&
+        position == snapshot.position &&
+        ebookLocationRaw == snapshot.ebookLocationRaw
 }
 
 private fun RemoteProgressSnapshot.toPositionEntity(

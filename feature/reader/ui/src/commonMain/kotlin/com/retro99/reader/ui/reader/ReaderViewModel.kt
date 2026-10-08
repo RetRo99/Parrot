@@ -489,6 +489,7 @@ class ReaderViewModel(
             ReaderIntent.ContinueLinkedResume -> continueLinkedResume()
             ReaderIntent.StayLinkedResume -> stayLinkedResume()
             ReaderIntent.CompareLinkedPositions -> {
+                if (viewState.value.isResolvingConflict) return
                 // Comparing isn't an answer: nothing is recorded.
                 updateState { state -> state.copy(linkedResumeOffer = null) }
                 onComparePositions()
@@ -1832,20 +1833,27 @@ class ReaderViewModel(
 
     /** "Continue": move to the other copy's place, and save it as this copy's own. */
     private fun continueLinkedResume() {
+        if (viewState.value.isResolvingConflict) return
         val offer = viewState.value.linkedResumeOffer ?: return
         val position = offer.translated.position
+        updateState { it.copy(isResolvingConflict = true, conflictResolutionError = null) }
         viewModelScope.launch {
+            val result = analytics.trackUsageOperation(
+                UsageOperation.LinkedResume, UsageAction.Accept, "reader",
+                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
+            ) { resolveLinkedResumeUseCase.continueFrom(offer) }
+            result.onFailure { error ->
+                updateState { it.linkedResumeSaveFailed(error) }
+            }
+            if (result.isErr) return@launch
             updateState { state ->
                 state.copy(
+                    isResolvingConflict = false,
                     linkedResumeOffer = null,
                     currentAudioPositionMs = position.audioTimestampMs
                         ?: state.currentAudioPositionMs,
                 )
             }
-            analytics.trackUsageOperation(
-                UsageOperation.LinkedResume, UsageAction.Accept, "reader",
-                outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
-            ) { resolveLinkedResumeUseCase.continueFrom(offer) }
             if (position.locatorHref != null) {
                 bookController.goToPosition(position.toUiModel())
             } else {
@@ -1887,6 +1895,7 @@ class ReaderViewModel(
     }
 
     private fun stayLinkedResume() {
+        if (viewState.value.isResolvingConflict) return
         val offer = viewState.value.linkedResumeOffer ?: return
         updateState { state -> state.copy(linkedResumeOffer = null) }
         viewModelScope.launch {

@@ -1,6 +1,8 @@
 package com.retro99.books.ui.detail
 
 import com.retro99.books.domain.model.BookHome
+import com.retro99.books.domain.model.BookType
+import com.retro99.base.result.AppError
 import com.retro99.books.domain.model.links.CopyKey
 import com.retro99.books.domain.model.links.CopySource
 import com.retro99.books.domain.model.links.LinkedCopy
@@ -14,6 +16,22 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class BookDetailOpenPromptTest {
+
+    @Test
+    fun `failed linked Continue retains the prompt and pending open for retry`() {
+        val state = BookDetailViewState(
+            linkedResumeOffer = offer(), pendingOpenBookType = BookType.EBOOK, isResolvingConflict = true,
+        )
+        val error = AppError.NotFoundError("save failed")
+
+        val failed = state.linkedResumeSaveFailed(error)
+
+        assertEquals(state.linkedResumeOffer, failed.linkedResumeOffer)
+        assertEquals(BookType.EBOOK, failed.pendingOpenBookType)
+        assertEquals(false, failed.isResolvingConflict)
+        assertEquals(error, failed.conflictResolutionError)
+        assertEquals(BookDetailOpenPrompt.LinkedResume, bookDetailOpenPrompt(failed.linkedResumeOffer, false))
+    }
 
     @Test
     fun `a linked offer is asked instead of the same-copy conflict`() {

@@ -120,6 +120,8 @@ internal fun BookDetailDialogs(
         LaunchedEffect(offer.dismissalEntry) { dispatch(BookDetailIntent.OnPromptVisible(UsageOperation.LinkedResume)) }
         LinkedResumeDialog(
             model = offer.toUiModel(),
+            isResolving = state.isResolvingConflict,
+            error = state.conflictResolutionError?.let { stringResource(StringRes.position_conflict_error) },
             onContinue = { dispatch(BookDetailIntent.OnLinkedResumeContinueClicked) },
             onStay = { dispatch(BookDetailIntent.OnLinkedResumeStayClicked) },
             onCompareAll = { dispatch(BookDetailIntent.OnLinkedResumeCompareClicked) },

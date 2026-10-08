@@ -66,6 +66,7 @@ private fun PositionDomainModel.toServerPosition(): ServerPosition {
         totalDurationMs = totalDurationMs,
         totalProgression = totalProgression,
         bookTimeMs = bookTimeMs,
+        ebookLocationRaw = ebookLocationRaw,
         position = position,
         cssSelector = cssSelector,
         origin = origin,

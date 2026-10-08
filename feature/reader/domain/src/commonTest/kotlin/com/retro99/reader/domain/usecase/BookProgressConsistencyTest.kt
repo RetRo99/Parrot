@@ -99,6 +99,7 @@ class BookProgressConsistencyTest {
             getReadingProgressWithConflictUseCase = GetReadingProgressWithConflictUseCase(
                 provider, com.retro99.reader.domain.fakes.FakePositionDatabase(),
                 com.retro99.reader.domain.fakes.FakeSyncOutboxDatabase(),
+                com.retro99.sync.domain.ProgressAccountResolver { it },
             ),
         )
         return Fixture(list, detail)

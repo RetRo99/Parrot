@@ -20,7 +20,10 @@ class GetReadingProgressWithConflictUseCaseTest {
     private val database = FakePositionDatabase()
     private val repository = FakeReaderRepository("server")
     private val outbox = FakeSyncOutboxDatabase(database.mutations)
-    private val useCase = GetReadingProgressWithConflictUseCase(FakeRepositoryProvider(listOf(repository)), database, outbox)
+    private val useCase = GetReadingProgressWithConflictUseCase(
+        FakeRepositoryProvider(listOf(repository)), database, outbox,
+        com.retro99.sync.domain.ProgressAccountResolver { it },
+    )
 
     private suspend fun progress() = useCase("server", "book").getOrElse { error("Unexpected failure: $it") }
     private fun local() = serverPosition("book", "server", totalProgression = 0.2, remoteRevision = 2L)

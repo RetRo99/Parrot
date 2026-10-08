@@ -14,6 +14,7 @@ import com.retro99.reader.domain.model.isSameReadingPlaceAs
 import com.retro99.server.api.AuthenticatedRepositoryProvider
 import com.retro99.server.api.PositionOrigin
 import com.retro99.server.api.ServerPosition
+import com.retro99.sync.domain.ProgressAccountResolver
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
@@ -35,6 +36,7 @@ class GetReadingProgressWithConflictUseCase(
     @Provided private val repositoryProvider: AuthenticatedRepositoryProvider,
     @Provided private val positionDatabase: PositionDatabase,
     @Provided private val syncOutboxDatabase: SyncOutboxDatabase,
+    @Provided private val progressAccountResolver: ProgressAccountResolver,
 ) {
     /**
      * Gets the reading progress for a book with conflict detection.
@@ -81,7 +83,9 @@ class GetReadingProgressWithConflictUseCase(
         serverId: String,
         bookUuid: String,
         remote: PositionDomainModel,
-    ): Boolean = syncOutboxDatabase.getPendingIncludingUnassigned(serverId).any { entry ->
+    ): Boolean = syncOutboxDatabase.getPendingIncludingUnassigned(
+        progressAccountResolver.accountId(serverId) ?: "",
+    ).any { entry ->
         if (entry.entityType != SyncOutboxEntry.ENTITY_TYPE_READING_POSITION ||
             entry.entityId != bookUuid || entry.state == SyncOutboxEntry.STATE_CONFLICT_PRESERVED
         ) return@any false

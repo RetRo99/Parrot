@@ -320,6 +320,8 @@ private fun ReaderScreenContent(
             }
             LinkedResumeDialog(
                 model = offer.toUiModel(),
+                isResolving = viewState.isResolvingConflict,
+                error = viewState.conflictResolutionError?.toString(),
                 onContinue = { intentDispatcher(ReaderIntent.ContinueLinkedResume) },
                 onStay = { intentDispatcher(ReaderIntent.StayLinkedResume) },
                 onCompareAll = { intentDispatcher(ReaderIntent.CompareLinkedPositions) },

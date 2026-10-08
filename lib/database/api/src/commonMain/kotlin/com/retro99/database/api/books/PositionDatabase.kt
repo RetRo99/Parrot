@@ -41,6 +41,21 @@ interface PositionDatabase : DataClearable {
 
     suspend fun deleteRemotePosition(bookUuid: String)
 
+    /** Atomically checks the generation and pending writes before replacing clean reading. */
+    suspend fun applyRemotePositionIfClean(
+        position: PositionEntity,
+        expectedLocalGeneration: Long?,
+        remoteAccountId: String,
+        progressEntityIds: Set<String>,
+    ): Boolean = error("Atomic remote position application is not implemented")
+
+    /** Atomically protects newer reading and, when supplied, newer remote revisions. */
+    suspend fun deleteRemotePositionIfGeneration(
+        bookUuid: String,
+        expectedLocalGeneration: Long,
+        throughRemoteRevision: Long? = null,
+    ): Boolean = error("Atomic remote position deletion is not implemented")
+
     suspend fun getPositionByBookUuid(bookUuid: String): PositionEntity?
 
     suspend fun getPositionByLibraryBookId(libraryBookId: String): PositionEntity? {

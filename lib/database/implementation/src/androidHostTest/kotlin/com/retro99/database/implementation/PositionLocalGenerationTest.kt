@@ -212,6 +212,92 @@ class PositionLocalGenerationTest {
         }
     }
 
+    @Test
+    fun cleanRemoteApplicationChecksGenerationInsideTheTransaction() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 4L, totalProgression = 0.8))
+            assertFalse(booksDatabase.applyRemotePositionIfClean(
+                TestPosition(localGeneration = 0L, remoteRevision = 10L), 3L, "account", setOf("book-1"),
+            ))
+            assertEquals(0.8, booksDatabase.getPositionByBookUuid("book-1")?.totalProgression)
+            assertEquals(4L, booksDatabase.getPositionByBookUuid("book-1")?.localGeneration)
+        }
+    }
+
+    @Test
+    fun cleanRemoteApplicationChecksBoundAndUnboundWritesInsideTheTransaction() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            val outbox = AppDatabase(driver).syncOutboxQueries
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L))
+            listOf("account", null).forEachIndexed { index, account ->
+                outbox.deleteAllMutations()
+                outbox.enqueueMutation("write-$index", account, "reading_position", "book-1", "upsert", "{}", null, 3L, "pending", "now", 0L, null, null)
+                assertFalse(booksDatabase.applyRemotePositionIfClean(
+                    TestPosition(localGeneration = 0L, remoteRevision = 10L), 3L, "account", setOf("book-1"),
+                ))
+                assertEquals(3L, booksDatabase.getPositionByBookUuid("book-1")?.localGeneration)
+            }
+        }
+    }
+
+    @Test
+    fun anotherAccountsWriteDoesNotBlockCleanRemoteApplication() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L))
+            AppDatabase(driver).syncOutboxQueries.enqueueMutation("other", "account-b", "reading_position", "book-1", "upsert", "{}", null, 3L, "pending", "now", 0L, null, null)
+            assertTrue(booksDatabase.applyRemotePositionIfClean(
+                TestPosition(localGeneration = 0L, remoteRevision = 10L), 3L, "account-a", setOf("book-1"),
+            ))
+            assertEquals(4L, booksDatabase.getPositionByBookUuid("book-1")?.localGeneration)
+            assertEquals(10L, booksDatabase.getPositionByBookUuid("book-1")?.remoteRevision)
+        }
+    }
+
+    @Test
+    fun cleanRemoteApplicationCannotRollBackARevision() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L, remoteRevision = 10L))
+            assertFalse(booksDatabase.applyRemotePositionIfClean(
+                TestPosition(localGeneration = 0L, remoteRevision = 9L), 3L, "account", setOf("book-1"),
+            ))
+            assertEquals(10L, booksDatabase.getPositionByBookUuid("book-1")?.remoteRevision)
+        }
+    }
+
+    @Test
+    fun conflictDeletionIsConditionalOnTheCurrentGeneration() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 4L))
+            booksDatabase.upsertRemotePosition(TestPosition(localGeneration = 0L, remoteRevision = 12L))
+            assertFalse(booksDatabase.deleteRemotePositionIfGeneration("book-1", 3L))
+            assertEquals(12L, booksDatabase.getRemotePositionByBookUuid("book-1")?.remoteRevision)
+            assertTrue(booksDatabase.deleteRemotePositionIfGeneration("book-1", 4L))
+            assertNull(booksDatabase.getRemotePositionByBookUuid("book-1"))
+        }
+    }
+
+    @Test
+    fun preservedRemoteCandidatesCannotRollBackToAnOlderRevision() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.upsertRemotePosition(TestPosition(localGeneration = 0L, remoteRevision = 12L))
+            booksDatabase.upsertRemotePosition(TestPosition(localGeneration = 0L, remoteRevision = 11L))
+            assertEquals(12L, booksDatabase.getRemotePositionByBookUuid("book-1")?.remoteRevision)
+        }
+    }
+
+    @Test
+    fun cleanApplicationAndCleanupCannotDiscardAKnownNewerRemoteRevision() = runBlocking {
+        databaseManager.withProfile(UserRegistry.DEFAULT_USER_ID) {
+            booksDatabase.upsertPosition(TestPosition(localGeneration = 3L, remoteRevision = 9L))
+            booksDatabase.upsertRemotePosition(TestPosition(localGeneration = 0L, remoteRevision = 12L))
+            assertFalse(booksDatabase.applyRemotePositionIfClean(
+                TestPosition(localGeneration = 0L, remoteRevision = 10L), 3L, "account", setOf("book-1"),
+            ))
+            assertFalse(booksDatabase.deleteRemotePositionIfGeneration("book-1", 3L, throughRemoteRevision = 10L))
+            assertEquals(12L, booksDatabase.getRemotePositionByBookUuid("book-1")?.remoteRevision)
+        }
+    }
+
     private data class TestPosition(
         override val localGeneration: Long,
         override val bookUuid: String = "book-1",

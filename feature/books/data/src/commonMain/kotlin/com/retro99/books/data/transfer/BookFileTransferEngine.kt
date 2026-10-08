@@ -63,7 +63,6 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalUuidApi::class)
-@Single(binds = [BookFileTransferManager::class, FileTransferStatusSource::class])
 class BookFileTransferEngine(
     @Provided private val cloudFilesDatabase: CloudFilesDatabase,
     @Provided private val deviceFilesDatabase: DeviceFilesDatabase,

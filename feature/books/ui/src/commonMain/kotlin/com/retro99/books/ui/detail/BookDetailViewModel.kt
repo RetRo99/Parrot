@@ -291,6 +291,7 @@ class BookDetailViewModel(
             BookDetailIntent.OnLinkedResumeStayClicked -> answerLinkedResume(accept = false)
 
             BookDetailIntent.OnLinkedResumeCompareClicked -> {
+                if (viewState.value.isResolvingConflict) return
                 // Comparing isn't an answer: nothing is recorded, and the book doesn't open.
                 updateState { state ->
                     state.beginPositionComparison()
@@ -525,26 +526,31 @@ class BookDetailViewModel(
 
     /** "Continue" or "Stay here"; either way the reader opens without asking again. */
     private fun answerLinkedResume(accept: Boolean) {
+        if (viewState.value.isResolvingConflict) return
         val offer = viewState.value.linkedResumeOffer ?: return
         val bookType = viewState.value.pendingOpenBookType
-        updateState { state -> state.copy(linkedResumeOffer = null, pendingOpenBookType = null) }
+        updateState { state -> state.copy(isResolvingConflict = true, conflictResolutionError = null) }
         viewModelScope.launch {
             if (accept) {
-                analytics.trackUsageOperation(
+                val result = analytics.trackUsageOperation(
                     UsageOperation.LinkedResume, UsageAction.Accept, "book_detail",
                     outcome = { if (it.isOk) ProductOutcome.Succeeded else ProductOutcome.Failed },
-                ) { resolveLinkedResumeUseCase.continueFrom(offer) }.onFailure { error ->
+                ) { resolveLinkedResumeUseCase.continueFrom(offer) }
+                result.onFailure { error ->
+                    updateState { it.linkedResumeSaveFailed(error) }
                     error.log(
                         analytics,
                         "BookDetailViewModel: Failed to continue from another copy",
                     )
                 }
+                if (result.isErr) return@launch
             } else {
                 analytics.trackUsageOperation(
                     UsageOperation.LinkedResume, UsageAction.Decline, "book_detail",
                     outcome = { ProductOutcome.Succeeded },
                 ) { resolveLinkedResumeUseCase.stayHere(offer) }
             }
+            updateState { it.copy(isResolvingConflict = false, linkedResumeOffer = null, pendingOpenBookType = null) }
             bookType?.let { type ->
                 val bookTitle = viewState.value.book?.title ?: ""
                 navigateToReader(type, bookTitle, linkedResumeResolved = true)

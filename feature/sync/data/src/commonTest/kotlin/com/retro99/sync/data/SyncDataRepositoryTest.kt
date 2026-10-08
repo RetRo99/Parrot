@@ -580,7 +580,7 @@ class SyncDataRepositoryTest {
         assertEquals(listOf("account-a-pending"), selected.map { entry -> entry.mutationId })
         assertEquals(2, preflight.pendingCount("account-a"))
         assertEquals(listOf("account-a"), outbox.eligibleAccounts)
-        assertEquals(listOf("account-a"), outbox.pendingAccounts)
+        assertEquals(listOf("account-a", "account-a"), outbox.pendingAccounts)
         assertEquals(
             setOf("account-a-pending", "account-a-conflict", "account-b-pending"),
             outbox.eligibleEntries.map { entry -> entry.mutationId }.toSet(),
