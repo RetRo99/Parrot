@@ -8,7 +8,8 @@ package com.retro99.opds.api
  * parameters.
  */
 interface OpdsOpenSearchReader {
-    fun readDescriptor(payload: OpdsPayload): OpdsDescriptorResult
+    fun readDescriptor(payload: OpdsPayload, effectiveResponseUrl: String): OpdsDescriptorResult
+    fun expand(template: OpdsSearchTemplate, query: String, parameters: Map<String, String> = emptyMap()): String
 
     sealed interface OpdsDescriptorResult {
         data class Descriptor(val descriptor: OpdsSearchDescriptor) : OpdsDescriptorResult
@@ -30,6 +31,8 @@ data class OpdsSearchTemplate(
     /** OpenSearch parameter set observed in the template. */
     val parameters: List<OpenSearchParameter> = emptyList(),
     val inputEncoding: String? = null,
+    /** Effective descriptor URL plus inherited xml:base; the template is not yet resolved. */
+    val baseUrl: String,
 ) {
     data class OpenSearchParameter(
         val name: String,
@@ -40,8 +43,8 @@ data class OpdsSearchTemplate(
 
 /** OpenSearch expansion errors (§4: "explicit unsupported-required-parameter errors"). */
 sealed class OpdsSearchError(why: String) : IllegalStateException(why) {
-    class UnsupportedRequiredParameter(name: String, templateUrl: String?) :
-        OpdsSearchError("required parameter '$name' is not supported by this client (template: $templateUrl)")
+    class UnsupportedRequiredParameter(val parameterName: String) :
+        OpdsSearchError("unsupported required OpenSearch parameter")
 
     class Vanilla(massage: String) : OpdsSearchError(massage)
 }
