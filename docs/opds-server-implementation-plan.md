@@ -608,7 +608,9 @@ recorded result.
    failure for unsupported expressions.
 7. Transport rules with MockEngine: no credentials cross-origin or on any
    redirect hop, same host with different scheme/port, redirect limit, size and
-   nesting limits, DTD/entity rejection.
+   nesting limits, DTD/entity rejection beyond what the library does (reject
+   any document containing a DOCTYPE at the DOCDECL event; xmlutil expands
+   internal entities by default).
 
 **Gate:** equivalent protocol behavior on both platforms; no provider-specific
 logic required for synthetic/custom catalogues.

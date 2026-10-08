@@ -1,10 +1,15 @@
-<!-- Security spike: external entity resolution attempt. The external target is
-     intentionally absent inside the test bundle, so a parser that follows
-     external DTDs must fail loudly; a parser that disables external entities
-     must fail cleanly. Phase 1 policy: reject DOCTYPE before it matters. -->
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Security spike: external entity resolution attempt, with the XML
+     declaration first (the previous version of this fixture had the comment
+     before the declaration, which failedParsing for an unrelated reason and
+     produced a misleading pin — see docs/opds-phase0-spikes.md).
+
+     Recorded behavior (Phase 0): this throws XmlException
+     ("Unexpected content in document type declaration") at the DOCTYPE —
+     the parser does not implement external entities. No file access occurs.
+     Phase 1 policy: stop at the DOCDECL event before any of this matters. -->
 <!DOCTYPE entry [
-  <!ENTITY ex SYSTEM "opds/missing-external.ent">
+  <!ENTITY ex SYSTEM "file:///etc/hosts">
 ]>
 <entry>
   <id>urn:synthesis:dtd-external:1</id>

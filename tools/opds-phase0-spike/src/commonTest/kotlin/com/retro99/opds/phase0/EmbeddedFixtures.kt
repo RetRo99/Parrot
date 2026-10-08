@@ -17,30 +17,89 @@ package com.retro99.opds.phase0
  */
 internal object EmbeddedFixtures {
     val sources: Map<String, String> = mapOf(
-        "opds/dtd-baseline.xml" to """'<!-- Security spike: what does a compliant parser actually do with a small
-'     internal DTD entity tree? Records the baseline behavior that Phase 1's
-'     hardened parser will have to reject or bound. Value tree (bounded, 3 levels):
-'       a -> "A", b -> "a a", c -> "b b"  =>  "&c;" expands to "AAAA" only if
-'     entity resolution is enabled. Phase 1 policy: reject DTDs outright. -->
+        "opds/comment-before-declaration.xml" to """'<!-- Security spike: an XML comment BEFORE the declaration — the comment is
+'     the first thing in the file, the declaration the second, so this file is
+'     malformed for one reason only (document-order violation) and contains no
+'     DOCTYPE/_entities. Kept as a dedicated fixture so this recorded failure
+'     ("Unexpected START_DOCUMENT in state START_DOC") can never be confused
+'     with the DOCTYPE behavior tested by dtd-baseline.xml: a file with the
+'     leading comment and NO DTD fails identically.
+'
+'     Recorded behavior (Phase 0, both targets): a clean XmlException at line 6
+'     (the first thing after the displaced declaration). No content delivered. -->
 '<?xml version="1.0" encoding="utf-8"?>
+'<entry>
+'  <id>urn:synthesis:misplaced-comment:1</id>
+'  <title>Comment before declaration</title>
+'  <summary>This document is misordered no matter what features the parser has.</summary>
+'</entry>
+'""",
+        "opds/dtd-baseline.xml" to """'<?xml version="1.0" encoding="utf-8"?>
+'<!-- Security spike: what does this parser actually do with a small
+'     internal DTD entity tree? Recorded behavior (Phase 0): a DOCDECL event is
+'     delivered and internal entities ARE EXPANDED (expandEntities=true) or
+'     delivered as resolved ENTITY_REF events (expandEntities=false) — no
+'     built-in DTD rejection. Phase 1 policy: stop at the DOCDECL event.
+'
+'     Value tree (bounded, 4 levels): a -> "A", b -> "&a;&a;", c -> "&b;&b;",
+'     d -> "&c;&c;" ; so "&d;" is AAAAAAAA (8 A's) when entities are resolved. -->
 '<!DOCTYPE entry [
 '  <!ENTITY a "A">
 '  <!ENTITY b "&a;&a;">
 '  <!ENTITY c "&b;&b;">
+'  <!ENTITY d "&c;&c;">
 ']>
 '<entry>
 '  <id>urn:synthesis:dtd-baseline:1</id>
 '  <title>DTD baseline</title>
-'  <summary>value: &c;</summary>
+'  <summary>value: &d;</summary>
 '</entry>
 '""",
-        "opds/dtd-external.xml" to """'<!-- Security spike: external entity resolution attempt. The external target is
-'     intentionally absent inside the test bundle, so a parser that follows
-'     external DTDs must fail loudly; a parser that disables external entities
-'     must fail cleanly. Phase 1 policy: reject DOCTYPE before it matters. -->
-'<?xml version="1.0" encoding="utf-8"?>
+        "opds/dtd-deep.xml" to """'<?xml version="1.0" encoding="utf-8"?>
+'<!-- Security spike: deep nested internal entities, to record whether xmlutil
+'     has any built-in expansion limit (Phase 0 finding: none — see
+'     docs/opds-phase0-spikes.md).
+'
+'     Tree: e0 = "A", e_n = "&e{n-1};&e{n-1};" for n in 1..15, so "&e15;" is
+'     32,768 A's (~32 KB expansion) — deliberately under the plan's 5 MiB
+'     budget and harmless to execute. Phase 1 must bound this itself; recorded
+'     as REQUIRED work (plan §4 "Parsing", §7 Phase 1). -->
 '<!DOCTYPE entry [
-'  <!ENTITY ex SYSTEM "opds/missing-external.ent">
+'  <!ENTITY e0 "A">
+'  <!ENTITY e1 "&e0;&e0;">
+'  <!ENTITY e2 "&e1;&e1;">
+'  <!ENTITY e3 "&e2;&e2;">
+'  <!ENTITY e4 "&e3;&e3;">
+'  <!ENTITY e5 "&e4;&e4;">
+'  <!ENTITY e6 "&e5;&e5;">
+'  <!ENTITY e7 "&e6;&e6;">
+'  <!ENTITY e8 "&e7;&e7;">
+'  <!ENTITY e9 "&e8;&e8;">
+'  <!ENTITY e10 "&e9;&e9;">
+'  <!ENTITY e11 "&e10;&e10;">
+'  <!ENTITY e12 "&e11;&e11;">
+'  <!ENTITY e13 "&e12;&e12;">
+'  <!ENTITY e14 "&e13;&e13;">
+'  <!ENTITY e15 "&e14;&e14;">
+']>
+'<entry>
+'  <id>urn:synthesis:dtd-deep:1</id>
+'  <title>DTD deep nesting</title>
+'  <summary>value: &e15;</summary>
+'</entry>
+'""",
+        "opds/dtd-external.xml" to """'<?xml version="1.0" encoding="utf-8"?>
+'<!-- Security spike: external entity resolution attempt, with the XML
+'     declaration first (the previous version of this fixture had the comment
+'     before the declaration, which failedParsing for an unrelated reason and
+'     produced a misleading pin — see docs/opds-phase0-spikes.md).
+'
+'     Recorded behavior (Phase 0): this throws XmlException
+'     ("Unexpected content in document type declaration") at the DOCTYPE —
+'     the parser does not implement external entities. No file access occurs.
+'     Phase 1 policy: stop at the DOCDECL event before any of this matters. -->
+'<!DOCTYPE entry [
+'  <!ENTITY ex SYSTEM "file:///etc/hosts">
 ']>
 '<entry>
 '  <id>urn:synthesis:dtd-external:1</id>

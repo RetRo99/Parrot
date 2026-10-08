@@ -117,53 +117,171 @@ class XmlStreamingBehaviorTest {
     }
 
     @Test
-    fun `internal_DTD_entities_DTDbearing_documents_fail_cleanly_in_both_reader_modes_recorded`() {
+    fun `internal_DTD_entities_are_expanded_recorded_no_builtin_rejection`() {
         val notes = mutableListOf<String>()
         for (expandEntities in listOf(false, true)) {
             val summaryText = try {
-                walk(readFixtureText(Fixtures.DTD_BASELINE), expandEntities).roots()
+                walk(readFixtureText(Fixtures.DTD_BASELINE), expandEntities).deepElements()
                     .firstOrNull { it.localName == "summary" }?.textContent()
             } catch (error: Throwable) {
                 notes.add("expand=$expandEntities: parse threw ${error::class.simpleName}: ${error.message?.take(140)}")
                 null
             }
             println(
-                "${platformTag}: internal-entity (expand=$expandEntities) → text=${summaryText?.let { "'$it'" }}",
+                "${platformTag}: internal-entity (expand=$expandEntities) → text=${summaryText?.let { "'$it'" }} notes=$notes",
             )
-            // Recorded behavior (see docs/opds-phase0-spikes.md): the reader
-            // never reaches the body for a DOCTYPE-bearing document, in either
-            // expandEntities mode. Phase 1 will produce the user-facing
-            // "malformed catalogue" error for this case.
+            // Recorded behavior (docs/opds-phase0-spikes.md §2): the internal-DTD
+            // document is ACCEPTED in both modes; the &d; entity tree arrives
+            // resolved ("value: AAAAAAAA"), either expanded in place or as
+            // resolved ENTITY_REF events. xmlutil does NOT reject DTDs itself.
             assertEquals(
-                PinnedBehavior.internalEntityDocument,
+                PinnedBehavior.internalEntityContent(expandEntities),
                 summaryText,
-                "${platformTag}: recorded behavior changed; update the Phase 0 report note",
+                "${platformTag}: recorded behavior changed; update the Phase 0 report note (notes=$notes)",
             )
         }
-        assertTrue(notes.count { it.contains("XmlException") } == 2, "${platformTag}: expected both modes to fail cleanly, got notes=$notes")
     }
 
     @Test
-    fun `external_DTD_entities_never_silently_expand`() {
+    fun `internal_DTD_emits_DOCDECL_and_reaches_the_document_body`() {
+        // Both modes: the DOCDECL event IS delivered and the body IS parsed.
+        for (expandEntities in listOf(false, true)) {
+            val result = walk(readFixtureText(Fixtures.DTD_BASELINE), expandEntities)
+            assertEquals(
+                PinnedBehavior.dtdEventName,
+                result.sawDtdEventName,
+            )
+            val entry = result.roots().singleOrNull { it.localName == "entry" }
+                ?: fail("$platformTag (expand=$expandEntities): body not reached")
+            assertTrue(
+                entry.textContent().startsWith("urn:synthesis:dtd-baseline:1") &&
+                    entry.textContent().contains("value: "),
+                "$platformTag (expand=$expandEntities): body text parsed: '${entry.textContent().take(60)}…'",
+            )
+        }
+    }
+
+    @Test
+    fun `external_DTD_entities_are_rejected_at_the_declaration_recorded`() {
         val notes = mutableListOf<String>()
         for (expandEntities in listOf(false, true)) {
             val summaryText = try {
-                walk(readFixtureText(Fixtures.DTD_EXTERNAL), expandEntities).roots()
+                walk(readFixtureText(Fixtures.DTD_EXTERNAL), expandEntities).deepElements()
                     .firstOrNull { it.localName == "summary" }?.textContent()
             } catch (error: Throwable) {
                 notes.add("expand=$expandEntities: parse threw ${error::class.simpleName}: ${error.message?.take(140)}")
                 null
             }
             println(
-                "${platformTag}: external-entity (expand=$expandEntities) → text=${summaryText?.let { "'$it'" }}",
+                "${platformTag}: external-entity (expand=$expandEntities) → text=${summaryText?.let { "'$it'" }} notes=$notes",
             )
-            // The parser must never substitute content it did not receive in
-            // the document body: either parse fails cleanly or the summary is
-            // the literal document text without expansion.
+            // Recorded behavior (docs/opds-phase0-spikes.md §2): the reader has
+            // NO external-entity support: the parse fails with an XmlException
+            // naming the DOCTYPE problem ("Unexpected content in document type
+            // declaration") in both modes — no /etc/hosts content is ever
+            // read through the text stream.
+            assertEquals(
+                true,
+                summaryText == null,
+                "${platformTag}: external entity must fail cleanly in both modes (notes=$notes)",
+            )
             assertTrue(
-                notes.any { it.startsWith("expand=$expandEntities:") && it.contains("XmlException") },
-                "${platformTag}: expected a clean XmlException for the external-entity fixture, got notes=$notes",
+                notes.single { it.startsWith("expand=$expandEntities:") }
+                    .contains(PinnedBehavior.externalEntityFailureMessage),
+                "$platformTag: external-entity failure text; notes=$notes",
             )
+        }
+    }
+
+    @Test
+    fun `deep_nested_entities_have_no_builtin_expansion_limit_recorded`() {
+        // &e15; is 2^15 = 32,768 'A's (< the 5 MiB plan budget; fixture docstring).
+        val notes = mutableListOf<String>()
+        val summaries = mutableMapOf<Boolean, String?>()
+        for (expandEntities in listOf(false, true)) {
+            val summaryText = try {
+                walk(readFixtureText(Fixtures.DTD_DEEP), expandEntities).deepElements()
+                    .firstOrNull { it.localName == "summary" }?.textContent()
+            } catch (error: Throwable) {
+                notes.add("expand=$expandEntities: parse threw ${error::class.simpleName}: ${error.message?.take(140)}")
+                null
+            }
+            summaries[expandEntities] = summaryText
+            println(
+                "${platformTag}: deep-nesting (expand=$expandEntities) → summary=${summaryText?.length ?: -1} chars, notes=$notes",
+            )
+            // Recorded: the expansion completes with NO limit enforced by the
+            // library — the full expansion is buffered inside the reader.
+            // Growth is exponential in the entity tree; larger trees are
+            // unbounded without parser-side counters (Phase 1 REQUIRED).
+            assertEquals(
+                PinnedBehavior.deepEntityExpansionLength,
+                summaryText?.length,
+                "$platformTag (expand=$expandEntities): no built-in expansion limit",
+            )
+            assertEquals(
+                PinnedBehavior.deepEntityExpansionBody,
+                summaryText?.substringAfter("value: "),
+                "$platformTag (expand=$expandEntities): expansion is uniform 'A's",
+            )
+        }
+        // Mode-independent: with expandEntities=false the earlier Phase 0
+        // record claimed "resolved ENTITY_REF events"; assert parity for the
+        // deep fixture too.
+        assertEquals(summaries[false], summaries[true], "$platformTag: both modes expand to the same text")
+    }
+
+    @Test
+    fun `comment_before_declaration_is_malformed_independently_of_DTDs`() {
+        // Isolates the recorder: the original Phase 0 fixtures carried a
+        // comment before the declaration, so their "Unexpected START_DOCUMENT
+        // in state START_DOC" error had nothing to do with the DOCTYPE. Both
+        // failures must have distinct fixtures and distinct pins.
+        val notes = mutableListOf<String>()
+        for (expandEntities in listOf(false, true)) {
+            try {
+                walk(readFixtureText(Fixtures.COMMENT_BEFORE_DECLARATION), expandEntities)
+                fail("$platformTag (expand=$expandEntities): misordered document must not parse")
+            } catch (error: Throwable) {
+                notes.add("expand=$expandEntities: ${error.message}")
+            }
+        }
+        println("${platformTag}: comment-before-declaration → $notes")
+        assertTrue(notes.size == 2, "$platformTag: both modes must fail, notes=$notes")
+        assertEquals(
+            PinnedBehavior.commentFirstFailureMessage,
+            notes[0].substringAfter(": ", missingDelimiterValue = "").takeWhile { it != '\n' },
+            "$platformTag: recorded comment-first failure text changed",
+        )
+    }
+
+    @Test
+    fun `phase1_mitigation_stops_at_DOCDECL_before_any_entity_is_read`() {
+        for (expandEntities in listOf(false, true)) {
+            for (fixture in listOf(
+                Fixtures.DTD_BASELINE,
+                Fixtures.DTD_DEEP,
+                Fixtures.DTD_EXTERNAL,
+                Fixtures.COMMENT_BEFORE_DECLARATION,
+            )) {
+                val outcome = parseStoppingAtDocdecl(readFixtureText(fixture), expandEntities)
+                println(
+                    "${platformTag}: mitigation (fixture=$fixture expand=$expandEntities) → " +
+                        "stoppedAt=${outcome.stoppedAt} textSoFar=${outcome.textContent}",
+                )
+                assertEquals(
+                    PinnedBehavior.mitigationStop(fixture),
+                    outcome.stoppedAt,
+                    "$platformTag (expand=$expandEntities): mitigation stop point for $fixture",
+                )
+                // No entity text before the stop: processing aborts with a
+                // clear failure before any body text is read.
+                assertEquals(
+                    "",
+                    outcome.textContent,
+                    "$platformTag (expand=$expandEntities): no content may be read before the stop ($fixture)",
+                )
+            }
         }
     }
 
@@ -252,6 +370,11 @@ class XmlStreamingBehaviorTest {
         var sawDtdEventName: String? = null
 
         fun roots(): List<CollectorElement> = nodes.filterIsInstance<CollectorElement>()
+
+        /** All elements, in document order, including nested ones. */
+        fun deepElements(): List<CollectorElement> = roots().flatMap { root ->
+            listOf(root) + root.descendants().toList()
+        }
     }
 
     private fun walk(text: String, expandEntities: Boolean = false): WalkResult {
@@ -293,26 +416,102 @@ class XmlStreamingBehaviorTest {
         return result
     }
 
+    /**
+     * The Phase 1 mitigation, demonstrated: abort parsing as soon as a
+     * document-type declaration is observed — either at the DOCDECL event
+     * xmlutil delivers, or, when the declaration itself is unparsable by this
+     * reader (external `SYSTEM` entities), at the XmlException the reader
+     * throws while processing the DOCTYPE. Either way nothing from the body
+     * or any entity is read first; the caller surfaces a clear
+     * "this document is not an accepted catalogue (document-type declarations
+     * are not supported)" error.
+     */
+    private class DocdeclStop(val stoppedAt: String?, val textContent: String)
+
+    private fun parseStoppingAtDocdecl(text: String, expandEntities: Boolean): DocdeclStop {
+        val reader: XmlReader = xmlStreaming.newReader(text, expandEntities)
+        val textSoFar = mutableListOf<String>()
+        var stoppedAt: String? = null
+        while (reader.hasNext()) {
+            val typeName: String = try {
+                reader.next().name
+            } catch (thrown: Throwable) {
+                // A DOCTYPE the library cannot decode (e.g. an external
+                // SYSTEM entity) or a misordered document throws here,
+                // before the DOCDECL event would be delivered and before
+                // any body content: also an accepted mitigation stop.
+                return DocdeclStop(PinnedBehavior.thrownBeforeDeclaration, "")
+            }
+            when {
+                typeName in setOf("DTD", "DOCDECL") -> {
+                    stoppedAt = typeName
+                    return DocdeclStop(stoppedAt, textSoFar.joinToString(""))
+                }
+                typeName == "TEXT" || typeName == "CDSECT" || typeName == "ENTITY_REF" ->
+                    textSoFar.add(reader.text)
+            }
+        }
+        return DocdeclStop(stoppedAt, textSoFar.joinToString(""))
+    }
+
     private companion object {
         const val XML_NAMESPACE = "http://www.w3.org/XML/1998/namespace"
     }
 
     private object PinnedBehavior {
         /**
-         * Recorded 2026-10-08, xmlutil 1.0.2 generic reader (KtXmlReader;
-         * JVM host and iOS simulator both run the generic implementation):
+         * Pinned 2026-10-08 on the Android host (JVM, xmlutil 1.0.2 generic
+         * reader) and verified identical on the iOS simulator via
+         * `newReader(text, expandEntities)`. See docs/opds-phase0-spikes.md §2.
          *
-         * - A document containing a DOCTYPE never reaches its body: the reader
-         *   throws `nl.adaptivity.xmlutil.XmlException` ("Unexpected
-         *   START_DOCUMENT ..."), in both `expandEntities` modes. No entities
-         *   are expanded and no external resource is referenced.
-         * - Outside of a DTD, predefined entity references (`&amp;` etc.)
-         *   arrive as ENTITY_REF events whose `reader.text` already carries
-         *   the resolved character ("&"); CDATA arrives as CDSECT events.
-         * - `xml:base`/`xml:lang` surface as attributes with the
-         *   http://www.w3.org/XML/1998/namespace namespace.
-         * - Namespace prefixes (opensearch:/dc:/opds:) resolve to their URIs.
+         * Verified real behavior — superseding the original Phase 0 pin,
+         * which was an artifact of a malformed fixture (comment before
+         * declaration):
+         * - A well-formed document with an internal DTD is ACCEPTED: a
+         *   DOCDECL event is delivered and the body is parsed. Internal
+         *   entities ARE resolved: expandEntities=true expands to TEXT;
+         *   expandEntities=false delivers the same characters as a chain of
+         *   resolved ENTITY_REF events (container entities carry empty text,
+         *   leaf entities carry their characters).
+         * - An external entity (<!ENTITY x SYSTEM "file:///etc/hosts">) is
+         *   rejected by xmlutil's own DOCTYPE parser with
+         *   "Unexpected content in document type declaration" — before any
+         *   DOCDECL event or body content. No file access occurs.
+         * - There is NO built-in expansion limit: a 15-level nested entity
+         *   tree (32,768 chars) is fully resolved/buffered in both modes;
+         *   with expandEntities=false the cost manifests as a storm of
+         *   ENTITY_REF events (one per leaf). Phase 1 bounding is REQUIRED.
+         * - A comment placed before the declaration fails with
+         *   "Unexpected START_DOCUMENT in state START_DOC" regardless of any
+         *   DTD; dedicated fixture comment-before-declaration.xml keeps the
+         *   two failure causes apart.
          */
-        val internalEntityDocument: String? = null
+
+        /** Name of the document-type event the reader delivers before the body. */
+        val dtdEventName: String = "DOCDECL"
+
+        /** &d; resolution, per expandEntities mode (both resolve the same text). */
+        fun internalEntityContent(expandEntities: Boolean): String = "value: AAAAAAAA"
+
+        /** External entity: parse must fail with xmlutil's own message fragment. */
+        val externalEntityFailureMessage: String = "Unexpected content in document type declaration"
+
+        /** Sentinel for a preamble the reader rejects before any DOCDECL event. */
+        const val thrownBeforeDeclaration: String = "THROWN-BEFORE-DECL"
+
+        /** Deep entity tree: no library-side limit; full expansion delivered. */
+        val deepEntityExpansionLength: Int = 7 + 32768
+        val deepEntityExpansionBody: String = "A".repeat(32768)
+
+        /** Comment placed before the declaration fails like this. */
+        val commentFirstFailureMessage: String = "11:1 - Unexpected START_DOCUMENT in state START_DOC"
+
+        /** Recorded mitigation stop per fixture. */
+        fun mitigationStop(fixture: String): String = when (fixture) {
+            Fixtures.DTD_BASELINE, Fixtures.DTD_DEEP -> dtdEventName
+            Fixtures.DTD_EXTERNAL -> thrownBeforeDeclaration
+            Fixtures.COMMENT_BEFORE_DECLARATION -> thrownBeforeDeclaration // never reaches a DOCDECL
+            else -> error("unpinned fixture '$fixture'")
+        }
     }
 }

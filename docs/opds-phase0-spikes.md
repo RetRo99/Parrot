@@ -37,7 +37,8 @@ the on-device Android engine remains to be exercised during device QA.
 
 | Behavior | Recorded result (Android host + iOS simulator) |
 | --- | --- |
-| DTD documents | A DOCTYPE **never reaches the body**: the reader throws `XmlException` ("Unexpected START_DOCUMENT in state START_DOC") in **both** `expandEntities` modes on **both** targets. No entity expansion, no external-entity fetch, and behind it the DTD-expansion fixture (`opds/dtd-baseline.xml`) and the external-entity fixture (`opds/dtd-external.xml`) are therefore inert. The error text is cryptic; Phase 1 will map it to a user-facing "malformed catalogue" error and must keep rejecting DTDs (`SUPPORT_DTD` off where reachable) rather than repair the specimen text. |
+| DTD documents | **NOT rejected automatically — this is REQUIRED Phase 1 work.** A well-formed document with an internal DTD is **accepted**: a `DOCDECL` event is delivered and the body is parsed. Internal entities **are resolved**: `expandEntities=true` expands to `TEXT`; `expandEntities=false` delivers the same characters as a chain of resolved `ENTITY_REF` events (container entities carry empty text, leaf entities carry their characters). An external entity (`<!ENTITY x SYSTEM "file:///etc/hosts">`) **is** rejected by xmlutil's own DOCTYPE parser with `XmlException: "Unexpected content in document type declaration"` — before any DOCDECL event or body content; no file access occurs. There is **no built-in expansion limit**: a 15-level nested tree (32,768 chars) is fully resolved/buffered in both modes, and with `expandEntities=false` the cost appears as a storm of `ENTITY_REF` events (one per leaf). So entity-expansion attacks survive the library as-shipped, and the Phase 1 parser must stop at the DOCDECL event (mitigation demonstrated in the spike: abort before any entity text is read; where the reader cannot decode the DOCTYPE at all, its clean `XmlException` is itself the stop). |
+| Misordered documents | A comment before the declaration fails with `XmlException: "Unexpected START_DOCUMENT in state START_DOC"` regardless of any DTD; the dedicated fixture `comment-before-declaration.xml` keeps this failure cause separate from DOCTYPE handling (the original Phase 0 pin had conflated the two — corrected). |
 | Predefined entity references (`&amp;` …) | Delivered as `ENTITY_REF` events whose `reader.text` already carries the resolved character (`&`). Text reconstruction must concatenate `TEXT` + `CDSECT` + `ENTITY_REF` text or the document text loses `&`. |
 | CDATA | Delivered as `CDSECT` events (not "CDATA"); content is verbatim, including raw `&amp;`-looking text and inline HTML. |
 | Namespaces | Default namespaces and prefixes (`opensearch:`, `dc:`, `opds:`) resolve to their URIs on elements; attributes resolve with an empty namespace for plain attributes and the `xml:` attributes under `http://www.w3.org/XML/1998/namespace`. |
@@ -63,10 +64,14 @@ Test-side facts recorded for Phase 1:
 1. **Parser/base library** — shared xmlutil streaming parsing
    (`XmlStreaming`/`IXmlStreaming`) behind a small collector/validator layer;
    same behavior on both targets (tables above). No platform engine-specific
-   parser is used, so Android and iOS behave identically for the same bytes;
-   DTD rejection comes for free with the version pinned here (verified) but
-   Phase 1 still enforces it explicitly (feature-detectable, budget includes
-   unknown field ceilings).
+   parser is used, so Android and iOS behave identically for the same bytes.
+   The library does **not** reject DTDs or entity expansion for us — a
+   well-formed internal-DTD document is accepted, its internal entities are
+   expanded (or delivered resolved), and there is no built-in expansion
+   limit; only external `SYSTEM` entities are rejected by the library's own
+   DOCTYPE parser. Phase 1 therefore MUST implement DTD rejection itself —
+   stop at the DOCDECL event before any entity text is read (mitigation
+   demonstrated and green on both targets).
 2. **URL resolution** — hand-rolled RFC 3986 §5.2 resolver (the spike's
    `ReferenceResolver`) passes the RFC §5.4.1/§5.4.2 vectors plus the
    catalogue cases on both targets (`Rfc3986ResolutionTest`): relative links
@@ -204,8 +209,8 @@ Phase 0's other bullets:
 
 | Plan §7 Phase 0 bullet | Status |
 | --- | --- |
-| Fixtures (synthetic/licensed) in test resources incl. Gutenberg nav→variants→acquisition shape | **Done** — 10 fixtures in `tools/opds-phase0-spike/src/commonTest/resources/opds` (inventory in module README), all synthetic; RFC vectors quoted with license note. |
-| Validate xmlutil namespace/mixed-content/DTD behavior on Android and iOS | **Done** — matrix in §2, pinned tests green on both targets. |
+| Fixtures (synthetic/licensed) in test resources incl. Gutenberg nav→variants→acquisition shape | **Done** — 12 fixtures in `tools/opds-phase0-spike/src/commonTest/resources/opds` (inventory in module README), all synthetic; RFC vectors quoted with license note. |
+| Validate xmlutil namespace/mixed-content/DTD behavior on Android and iOS | **Done and corrected** — matrix in §2 (the original run pinned a bogus conclusion; fixtures now start with the declaration and the DTD matrix above is the verified record); DTD rejection is demonstrated as a spike mitigation, not a library property. |
 | URI-template + URL resolution choice vs RFC tests | **Done** — §3 items 2–3 (vectors green on both). |
 | Confirm Gutenberg usage guidance / HTTPS search descriptor / OPDS2 access | Partial: guidance + descriptor verified; OPDS2 access **requires provider contact** → outstanding; preset withheld. |
 | Budgets + Basic/HTTP policy with device QA | Budgets/policy recorded (§5); **device-QA validation outstanding**. |
@@ -239,7 +244,19 @@ core:
 ## 9. What Phase 1 inherits (test-first anchors)
 
 The fixture set (module README inventory), the recorded behavior matrix (§2),
-the RFC vectors (§3 items 2–3), and the transport rules demo (§3 item 4) — to be moved
-into `lib/opds/api`/`lib/opds/implementation` with the Phase 1 test-first
-order (URL resolution → media-type detection → OPDS1 → OPDS2 → acquisition
-classifier → OpenSearch/6570 → transport rules with MockEngine).
+the RFC vectors (§3 items 2–3), and the transport rules demo (§3 item 4) — to
+be moved into `lib/opds/api`/`lib/opds/implementation` with the Phase 1
+test-first order (URL resolution → media-type detection → OPDS1 → OPDS2 →
+acquisition classifier → OpenSearch/6570 → transport rules with MockEngine).
+
+Phase 1 requirement made explicit by the corrected §2 record: **reject any
+document containing a DOCTYPE, by stopping at the DOCDECL event before any
+entity text is read** — xmlutil does not do it for us (it accepts a
+well-formed internal DTD, resolves internal entities, and has no expansion
+limit; only external `SYSTEM` entities fail in the library itself). The spike
+method `parseStoppingAtDocdecl` (`XmlStreamingBehaviorTest`,
+`phase1_mitigation_stops_at_DOCDECL_before_any_entity_is_read`) is the
+demonstrated shape, green on both targets, and covers the three abort paths:
+DOCDECL delivered (internal DTD), reader-thrown DOCTYPE parse failure
+(external `SYSTEM`), and misordered/preamble garbage. Phase 1 re-asserts this
+against the moved fixtures.

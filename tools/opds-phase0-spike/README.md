@@ -53,6 +53,10 @@ format; the parity test will fail otherwise).
 
 | Fixture | Purpose |
 | --- | --- |
+| `opds/comment-before-declaration.xml` | A comment placed BEFORE the declaration: malformed for that single reason (no DTD). Isolates the "Unexpected START_DOCUMENT in state START_DOC" failure from the DOCTYPE tests below (the original Phase 0 fixtures had conflated the two causes; corrected 2026-10-08). |
+| `opds/dtd-baseline.xml` | Bounded internal DTD entity tree (`&d;` = 8×"A") — records xmlutil's real behavior: DOCDECL delivered, document accepted, entities resolved (expanded as TEXT, or as resolved ENTITY_REF events) in both `expandEntities` modes. NO library-side DTD rejection. Phase 1 must reject at the DOCDECL event. |
+| `opds/dtd-deep.xml` | 15-level nested entity tree (`&e15;` = 2^15 = 32,768 "A"s) — records the absence of any built-in expansion limit (and the ENTITY_REF event-storm with `expandEntities=false`). Phase 1 bounding is REQUIRED. |
+| `opds/dtd-external.xml` | External entity declaration (`SYSTEM "file:///etc/hosts"`) — recorded: xmlutil's own DOCTYPE parser throws `"Unexpected content in document type declaration"` before any DOCDECL event or body content; no file access occurs. Phase 1 stop-at-DOCDECL covers this via the clean reader exception. |
 | `opds/opds1/listing.xml` | OPDS1 navigation feed (Gutenberg-style two-step browsing: relative `subsection` links, `start`/`next`, OpenSearch link, data-URI thumbnail, inherited `xml:base`) |
 | `opds/opds1/verses-acquisition.xml` | OPDS1 acquisition feed: one work, two edition entries sharing one title; the first edition exposes **two** EPUB links |
 | `opds/opds1/treatise-entry.xml` | OPDS1 standalone full entry with CDATA HTML content and inherited `xml:base` |
@@ -61,5 +65,11 @@ format; the parity test will fail otherwise).
 | `opds/opds2/catalog.json` | OPDS2 feed: navigation, groups, facets, pagination, URI-template search link, contributor forms |
 | `opds/opds2/landscape.json` | OPDS2 publication: localized title, contributor object/array forms, responsive images, indirect acquisition, priced buy link |
 | `opds/error.html` | Non-catalogue body that document detection must reject |
-| `opds/dtd-baseline.xml` | Bounded internal DTD entity tree — records what parsers actually do |
-| `opds/dtd-external.xml` | External entity with an absent target — records external-entity behavior |
+
+Correction note: the first version of this fixture set pinned a wrong
+conclusion ("a DOCTYPE never reaches the body; DTD rejection comes for free")
+because `dtd-baseline.xml` and `dtd-external.xml` began with a comment before
+the `<?xml …?>` declaration and failed for that unrelated reason. The recorded
+behaviors above are from the corrected fixtures; see
+`docs/opds-phase0-spikes.md` §2 — DTD rejection is REQUIRED Phase 1 work,
+demonstrated by the stop-at-DOCDECL mitigation test.

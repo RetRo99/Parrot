@@ -29,4 +29,6 @@ internal object Fixtures {
     const val ERROR_HTML = "opds/error.html"
     const val DTD_BASELINE = "opds/dtd-baseline.xml"
     const val DTD_EXTERNAL = "opds/dtd-external.xml"
+    const val DTD_DEEP = "opds/dtd-deep.xml"
+    const val COMMENT_BEFORE_DECLARATION = "opds/comment-before-declaration.xml"
 }
