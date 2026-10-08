@@ -1085,6 +1085,21 @@ saved-pages cache, and the Phase 3 gate.
   import can leave the book in the library with no request and no provenance
   row.
 
+**Verification of the library-join run (2026-10-08).** Android host / iOS
+simulator, passed/total: catalogue data 89/89 and 87/87 (the 4 extra Android
+tests resolve the generated Koin module; iOS has 2 staging-location tests of
+its own); catalogue domain 11/11 and 11/11; books data 121/121 and 113/113;
+books domain 60/60 on Android host only (its iOS test sources do not compile,
+as before); database implementation 132/132 (no iOS tests); opds
+implementation 177/177 and 177/177; server-opds 25/25 and 25/25; server api
+19/19 and 19/19; server implementation 29/29 and 29/29; server-local 2/2 and
+2/2; user implementation 6/6 and 6/6; settings data 1/1 and 1/1; composeApp
+29/29 on Android host, 14 of them in the real app graph (its iOS test link
+error is the known FirebaseCore one). `verifyCommonMainAppDatabaseMigration`
+passes. `:androidApp:assembleDebug` and
+`:composeApp:linkDebugFrameworkIosSimulatorArm64` both pass, built in one
+invocation with `--max-workers=2`.
+
 ### Phase 4 — complete browsing feature
 
 - Create `feature/catalogue/domain`, `data`, and `ui`; add source/browser/detail
