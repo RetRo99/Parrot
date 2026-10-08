@@ -22,8 +22,7 @@ class ObserveHasAuthenticatedRemoteServersUseCase(
     operator fun invoke(): Flow<Boolean> {
         return serverRegistry.observeAuthenticatedServers()
             .map { servers ->
-                servers.any { it.type != ServerType.Local }
+                 servers.any { it.type != ServerType.Local && it.type != ServerType.Opds }
             }
     }
 }
-

@@ -36,8 +36,10 @@ class LogoutUseCase(
                 serverRegistry.clearCredentials(server.id)
             }
 
-        databaseCleaner.clearAllData()
+        // The legacy cleaner also deletes local reading metadata/outbox records.
+        // Catalogue sign-out must not touch downloaded books or their metadata.
+        // Keep the pre-OPDS behavior for existing-only profiles.
+        if (servers.none { it.type == ServerType.Opds }) databaseCleaner.clearAllData()
         return Ok(Unit)
     }
 }
-

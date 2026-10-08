@@ -5,6 +5,7 @@ import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.preferences.api.Preferences
 import com.retro99.preferences.api.PreferencesKey
 import com.retro99.server.api.ServerRegistry
+import com.retro99.server.api.ServerConfig
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Provided
 
@@ -21,8 +22,7 @@ class CheckAuthStateUseCase(
     suspend operator fun invoke(): Boolean {
         val hasSkippedLogin = preferences.getBoolean(PreferencesKey.SkippedLogin, defaultValue = false)
         val hasImportedBooks = libraryBooksDatabase.countLibraryBooksWithDeviceFiles() > 0
-        val hasConfiguredRemoteServer = serverRegistry.getAllServers()
-            .any { it.type != ServerType.Local }
+        val hasConfiguredRemoteServer = hasConfiguredRemoteSetup(serverRegistry.getAllServers())
         val hasAuthenticatedRemoteServer = serverRegistry.getAuthenticatedServers()
             .any { it.type != ServerType.Local }
 
@@ -34,6 +34,9 @@ class CheckAuthStateUseCase(
         )
     }
 }
+
+/** A public (or temporarily turned-off) catalogue is a configured setup, not a missing login. */
+internal fun hasConfiguredRemoteSetup(sources: List<ServerConfig>): Boolean = sources.any { it.type != ServerType.Local }
 
 internal fun shouldBypassWelcome(
     hasSkippedLogin: Boolean,

@@ -117,7 +117,7 @@ class ServerRegistryImpl(
         val credentialsKey = PreferencesKey.UserScoped(userId, PreferencesKey.ServerCredentials.name)
         val credentials = preferences.getObject<List<ServerCredentials>>(credentialsKey)
         if (credentials != null) {
-            _credentials.value = credentials.associateBy { it.serverId }
+            _credentials.value = credentials.filter { _servers.value[it.serverId]?.type != ServerType.Opds }.associateBy { it.serverId }
         } else {
             _credentials.value = emptyMap()
         }
@@ -241,7 +241,7 @@ class ServerRegistryImpl(
     override fun observeAuthState(serverId: String): Flow<ServerAuthState> {
         return _servers.map { servers -> servers[serverId] }
             .flatMapLatest { server ->
-                if (server == null) {
+                if (server == null || server.type == ServerType.Opds) {
                     flowOf(ServerAuthState.NotAuthenticated(serverId))
                 } else {
                     val provider = authStateProviders.firstOrNull { authProvider ->
@@ -265,6 +265,7 @@ class ServerRegistryImpl(
 
     override suspend fun isAuthenticated(serverId: String): Boolean {
         val server = _servers.value[serverId] ?: return false
+        if (server.type == ServerType.Opds) return false
         val provider = authStateProviders.firstOrNull { authProvider ->
             authProvider.serverType == server.type
         }
@@ -315,11 +316,18 @@ class ServerRegistryImpl(
     }
 
     override suspend fun getCredentials(serverId: String): ServerCredentials? {
+        if (_servers.value[serverId]?.type == ServerType.Opds) return null
         return _credentials.value[serverId]
     }
 
     override suspend fun clearCredentials(serverId: String) = mutex.withLock {
         val server = _servers.value[serverId]
+        if (server?.type == ServerType.Opds) {
+            val profileId = currentUserId ?: return@withLock
+            cancelCatalogueWork(profileId, serverId)
+            opdsCredentials.remove(profileId, serverId)
+            return@withLock
+        }
         val provider = authStateProviders.firstOrNull { authProvider ->
             authProvider.serverType == server?.type
         }
@@ -333,6 +341,12 @@ class ServerRegistryImpl(
     override suspend fun clearAllCredentials() = mutex.withLock {
         val servers = _servers.value.values.toList()
         servers.forEach { server ->
+            if (server.type == ServerType.Opds) {
+                currentUserId?.let { profileId ->
+                    cancelCatalogueWork(profileId, server.id)
+                    opdsCredentials.remove(profileId, server.id)
+                }
+            }
             authStateProviders.firstOrNull { provider -> provider.serverType == server.type }
                 ?.clearAuthentication(server)
         }
