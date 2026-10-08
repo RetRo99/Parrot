@@ -44,6 +44,7 @@ import kotlinx.coroutines.test.runTest
 import com.retro99.sync.domain.SyncPhase
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -832,6 +833,136 @@ class BookFileTransferEngineTest {
             listOf(LIBRARY_BOOK_ID),
             database.insertedTransfers.map { transfer -> transfer.libraryBookId },
         )
+    }
+
+    @Test
+    fun backupAllNeverUploadsCatalogueDownloads() = runTest {
+        val bytes = "catalogue download".encodeToByteArray()
+        val contentHash = sha256(bytes).toHexString()
+        val catalogueFile = uploadSource(
+            contentHash,
+            bytes.size.toLong(),
+            origin = DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD,
+        )
+        val database = FakeCloudFilesDatabase()
+        val transport = UploadPathTransport(payload = bytes, file = uploadedFile(contentHash, bytes.size.toLong()))
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(catalogueFile),
+            libraryBooksDatabase = FakeLibraryBooksDatabase(testLibraryBook(LIBRARY_BOOK_ID)),
+            transports = listOf(transport),
+            fileStore = InMemoryFileStore().apply { files[catalogueFile.filePath] = bytes },
+        )
+
+        val result = engine.backupAll(SERVER_ID, UploadRightsAttestation("now", "terms", "rights"))
+
+        assertEquals(BackupAllResult(queuedCount = 0, failedCount = 0), result)
+        assertTrue(database.insertedTransfers.isEmpty())
+        assertEquals(0, transport.reserveCalls)
+    }
+
+    @Test
+    fun explicitBackupOfACatalogueDownloadCarriesTheRightsAttestation() = runTest {
+        val bytes = "catalogue download".encodeToByteArray()
+        val contentHash = sha256(bytes).toHexString()
+        val catalogueFile = uploadSource(
+            contentHash,
+            bytes.size.toLong(),
+            origin = DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD,
+        )
+        val database = FakeCloudFilesDatabase()
+        val deviceFiles = FakeDeviceFilesDatabase(catalogueFile)
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            deviceFilesDatabase = deviceFiles,
+            libraryBooksDatabase = FakeLibraryBooksDatabase(testLibraryBook(LIBRARY_BOOK_ID)),
+            transports = listOf(
+                UploadPathTransport(payload = bytes, file = uploadedFile(contentHash, bytes.size.toLong())),
+            ),
+            fileStore = InMemoryFileStore().apply { files[catalogueFile.filePath] = bytes },
+        )
+
+        val transferId = engine.enqueueUpload(
+            SERVER_ID,
+            catalogueFile.libraryBookId,
+            catalogueFile.mediaType,
+            UploadRightsAttestation("now", "terms", "rights"),
+        )
+        database.completedTransfer.await()
+
+        val queued = database.insertedTransfers.single()
+        assertEquals(transferId, queued.transferId)
+        assertEquals("upload", queued.direction)
+        assertTrue("rights" in queued.rightsAttestation.orEmpty(), queued.rightsAttestation)
+        assertEquals("catalogue_download", deviceFiles.files.value.single().origin)
+    }
+
+    @Test
+    fun explicitBackupOfACatalogueDownloadIsRefusedUntilItsMetadataHasSynced() = runTest {
+        val bytes = "catalogue download".encodeToByteArray()
+        val contentHash = sha256(bytes).toHexString()
+        val catalogueFile = uploadSource(
+            contentHash,
+            bytes.size.toLong(),
+            origin = DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD,
+        )
+        val database = FakeCloudFilesDatabase()
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = database,
+            deviceFilesDatabase = FakeDeviceFilesDatabase(catalogueFile),
+            // No outbox entry was written at acquisition, so the book has no remote revision.
+            libraryBooksDatabase = FakeLibraryBooksDatabase(testLibraryBook(LIBRARY_BOOK_ID, remoteRevision = null)),
+            transports = listOf(
+                UploadPathTransport(payload = bytes, file = uploadedFile(contentHash, bytes.size.toLong())),
+            ),
+            fileStore = InMemoryFileStore().apply { files[catalogueFile.filePath] = bytes },
+        )
+
+        assertFailsWith<IllegalStateException> {
+            engine.enqueueUpload(
+                SERVER_ID,
+                catalogueFile.libraryBookId,
+                catalogueFile.mediaType,
+                UploadRightsAttestation("now", "terms", "rights"),
+            )
+        }
+        assertTrue(database.insertedTransfers.isEmpty())
+    }
+
+    @Test
+    fun invalidatingACloudFileKeepsACatalogueDownloadWithTheSameBytes() = runTest {
+        val fileState = CloudBookFileEntity(
+            libraryBookId = LIBRARY_BOOK_ID,
+            cloudBookFileId = "cloud-file",
+            mediaType = "ebook",
+            relativePath = "",
+            fileName = "book.epub",
+            status = "available",
+            sizeBytes = 512,
+            contentHash = "hash",
+            contentHashAlgorithm = "sha-256-v1",
+            remoteRevision = 1,
+            updatedAt = "before",
+        )
+        val catalogueFile = testDeviceFile(
+            libraryBookId = LIBRARY_BOOK_ID,
+            filePath = "/library/catalogue.epub",
+            origin = DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD,
+        )
+        val deviceFiles = FakeDeviceFilesDatabase(catalogueFile)
+        val fileStore = InMemoryFileStore().apply { files[catalogueFile.filePath] = byteArrayOf(1) }
+        val engine = BookFileTransferEngine(
+            cloudFilesDatabase = FakeCloudFilesDatabase(initialFileState = fileState),
+            deviceFilesDatabase = deviceFiles,
+            libraryBooksDatabase = FakeLibraryBooksDatabase(),
+            transports = emptyList(),
+            fileStore = fileStore,
+        )
+
+        engine.invalidateCloudFile("cloud-file")
+
+        assertEquals(listOf(catalogueFile), deviceFiles.files.value)
+        assertTrue(catalogueFile.filePath in fileStore.files)
     }
 
     @Test

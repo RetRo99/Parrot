@@ -60,13 +60,13 @@ internal class LibraryBooksSqlDelightDao(
         file: DeviceFileEntity,
         outboxEntry: SyncOutboxEntry,
     ) = withContext(Dispatchers.IO) {
-        val database = database
-        database.transaction {
-            database.upsertLibraryBookRow(book)
-            database.upsertDeviceFileRow(file)
-            database.syncOutboxQueries.enqueue(outboxEntry)
-        }
+        database.insertBookRows(book, file, outboxEntry)
     }
+
+    suspend fun insertBookWithoutSync(book: LibraryBookEntity, file: DeviceFileEntity) =
+        withContext(Dispatchers.IO) {
+            database.insertBookRows(book, file, outboxEntry = null)
+        }
 
     suspend fun deleteBookFromDevice(libraryBookId: String) = withContext(Dispatchers.IO) {
         database.deleteBookFromDeviceRows(libraryBookId)
@@ -202,6 +202,19 @@ internal fun AppDatabase.mergeLibraryBookRows(fromId: String, intoId: String): L
         }
         libraryBookQueries.deleteLibraryBook(fromId)
         redundantPaths
+    }
+}
+
+/** A new book and its first device file in one transaction, with its outbox upsert if any. */
+internal fun AppDatabase.insertBookRows(
+    book: LibraryBookEntity,
+    file: DeviceFileEntity,
+    outboxEntry: SyncOutboxEntry?,
+) {
+    transaction {
+        upsertLibraryBookRow(book)
+        upsertDeviceFileRow(file)
+        outboxEntry?.let { entry -> syncOutboxQueries.enqueue(entry) }
     }
 }
 

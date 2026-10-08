@@ -101,7 +101,13 @@ internal class LibraryLocalDataSource(
 
     override suspend fun keepDeviceFilesAsImports(libraryBookId: String): CompletableResult {
         return databaseExecutor.executeDatabaseOperation {
-            deviceFilesDatabase.setOriginForBook(libraryBookId, DeviceFileEntity.ORIGIN_IMPORT)
+            // Only copies that came from Parrot Cloud are at risk from its removal. A
+            // catalogue download keeps its origin, so it is never backed up automatically.
+            deviceFilesDatabase.getDeviceFiles(libraryBookId)
+                .filter { file -> file.origin == DeviceFileEntity.ORIGIN_CLOUD_DOWNLOAD }
+                .forEach { file ->
+                    deviceFilesDatabase.upsertDeviceFile(file.copy(origin = DeviceFileEntity.ORIGIN_IMPORT))
+                }
         }
     }
 
@@ -157,16 +163,21 @@ internal class LibraryLocalDataSource(
                 addedAt = now(),
                 metadataJson = LibraryBookMetadataJson.encode(isbn = file.metadata.isbn),
             )
-            libraryBooksDatabase.insertImportedBook(
-                book = book,
-                file = file.toDeviceFile(libraryBookId, destination),
-                outboxEntry = SyncOutboxEntry.new(
-                    entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
-                    entityId = libraryBookId,
-                    operation = SyncOutboxEntry.OPERATION_UPSERT,
-                    payload = LibraryBookJsonCodec.encode(book, format = file.mediaType),
-                ),
-            )
+            val deviceFile = file.toDeviceFile(libraryBookId, destination)
+            if (file.syncsMetadata) {
+                libraryBooksDatabase.insertImportedBook(
+                    book = book,
+                    file = deviceFile,
+                    outboxEntry = SyncOutboxEntry.new(
+                        entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                        entityId = libraryBookId,
+                        operation = SyncOutboxEntry.OPERATION_UPSERT,
+                        payload = LibraryBookJsonCodec.encode(book, format = file.mediaType),
+                    ),
+                )
+            } else {
+                libraryBooksDatabase.insertBookWithoutSync(book, deviceFile)
+            }
         } catch (exception: Exception) {
             undoMove(moved, destination, file.stagedPath)
             coverPath?.let { path -> deleteQuietly(path) }
@@ -199,6 +210,13 @@ internal class LibraryLocalDataSource(
         } catch (_: Exception) {
         }
     }
+
+    /**
+     * A catalogue download is not pushed to your other devices: they would list a book they
+     * have no file for. It syncs once you back the file up.
+     */
+    private val ImportedFileCandidate.syncsMetadata: Boolean
+        get() = origin != DeviceFileEntity.ORIGIN_CATALOGUE_DOWNLOAD
 
     private fun ImportedFileCandidate.toDeviceFile(libraryBookId: String, path: String) =
         DeviceFileEntity(
