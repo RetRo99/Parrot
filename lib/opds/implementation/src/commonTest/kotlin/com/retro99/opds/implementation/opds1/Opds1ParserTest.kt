@@ -9,6 +9,7 @@ import com.retro99.opds.implementation.fixtures.readFixtureText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -129,5 +130,100 @@ class Opds1ParserTest {
         )
         assertTrue(rawImage.href.startsWith("data:image/png;base64,iVBOR"), rawImage.href.take(40))
         assertEquals("image", rawImage.mediaType!!.mainType)
+    }
+
+    // ---- verses-acquisition.xml: two editions, several EPUB links, XHTML ----
+
+    @Test
+    fun acquisition_feed_entries_variants_format_counts_and_resolution() {
+        val document = parseFeed(
+            Fixtures.OPDS1_ACQUISITION,
+            mediaType = "application/atom+xml;profile=opds-catalog;kind=acquisition",
+            effectiveResponseUrl = "https://catalogue.example.org/works/verses",
+        )
+        assertEquals("A Synthesized Book of Verses", document.metadata.title)
+        assertEquals(2, document.publications.size)
+        assertEquals(0, document.navigation.size)
+
+        val edition1 = document.publications[0]
+        assertEquals("urn:synthesis:verses:edition:1", edition1.identity.raw)
+        assertEquals(com.retro99.opds.api.model.OpdsIdentity.Kind.NOMINAL, edition1.identity.kind)
+        assertEquals("A Synthesized Book of Verses", edition1.title)
+        assertEquals("en", edition1.languages.single())
+        assertEquals("Released under a catalogue-of-record setting. See the related link.", edition1.rights)
+        assertEquals("Adele Synthling", edition1.authors.single().name)
+
+        // All acquisition choices preserved, in catalogue order (plan §3.2/§5.1).
+        val acquisitions = edition1.acquisitionLinks
+        assertEquals(3, edition1.acquisitionLinkCount)
+        assertEquals(
+            listOf("/cache/verses-1.epub.noimages", "/cache/verses-1.epub.images", "/cache/verses-1.txt"),
+            acquisitions.map { it.rawHref },
+        )
+        // The EPUB-only subset drives the openable-file logic (2 of 3).
+        assertEquals(2, acquisitions.count { it.mediaType!!.mediaRange == "application/epub+zip" })
+        assertEquals("https://catalogue.example.org/cache/verses-1.epub.noimages", acquisitions[0].resolvedHref)
+        assertEquals("https://catalogue.example.org/cache/verses-1.epub.images", acquisitions[1].resolvedHref)
+        assertEquals("https://catalogue.example.org/cache/verses-1.epub.noimages", acquisitions[0].resolvedHref)
+        assertEquals("https://catalogue.example.org/cache/verses-1.epub.images", acquisitions[1].resolvedHref)
+
+        // The related (non-acquisition) link survives so the UI can offer the provider page.
+        val related = edition1.links.single { "related" in it.relations }
+        assertEquals("https://catalogue.example.org/work/verses/edition-1", related.resolvedHref)
+
+        // §11.7 telling-line fields.
+        assertNull(edition1.year) // no dc:issued/published in this fixture edition entry
+
+        val edition2 = document.publications[1]
+        assertEquals("urn:synthesis:verses:edition:2", edition2.identity.raw)
+        assertEquals("2026-09-30T00:00:00Z", edition2.updated)
+        assertEquals(2, edition2.acquisitionLinkCount)
+        assertEquals("/cache/verses-2.mobi", edition2.acquisitionLinks[1].rawHref)
+        assertEquals("application/x-mobipocket-ebook", edition2.acquisitionLinks[1].mediaType!!.mediaRange)
+        // Same title, different identity and content: editions, not duplicates.
+        assertEquals(edition1.title, edition2.title)
+    }
+
+    @Test
+    fun acquisition_feed_self_and_up_links_resolved() {
+        val document = parseFeed(
+            Fixtures.OPDS1_ACQUISITION,
+            mediaType = "application/atom+xml;profile=opds-catalog;kind=acquisition",
+            effectiveResponseUrl = "https://catalogue.example.org/works/verses",
+        )
+        assertEquals("/works/verses", document.self!!.rawHref)
+        assertEquals("https://catalogue.example.org/works/verses", document.self!!.resolvedHref)
+        assertEquals("/listing", document.up.single { "up" in it.relations }.rawHref)
+        assertEquals("https://catalogue.example.org/listing", document.up.single { "up" in it.relations }.resolvedHref)
+    }
+
+    @Test
+    fun acquisition_feed_xhtml_content_kept_with_format() {
+        val document = parseFeed(
+            Fixtures.OPDS1_ACQUISITION,
+            mediaType = "application/atom+xml;profile=opds-catalog;kind=acquisition",
+            effectiveResponseUrl = "https://catalogue.example.org/works/verses",
+        )
+        val content = document.publications[0].content!!
+        assertEquals(com.retro99.opds.api.model.OpdsContent.Format.XHTML, content.format)
+        assertTrue(content.body.contains("<p>Description with <em>inline</em> markup"), content.body)
+        // Entities are resolved at the reader level (Phase 0 record).
+        assertTrue(content.body.contains("an opaque & opaque entity."), content.body.take(200))
+    }
+
+    @Test
+    fun acquisition_feed_cover_images_surface_the_model_entry_and_link() {
+        val document = parseFeed(
+            Fixtures.OPDS1_ACQUISITION,
+            mediaType = "application/atom+xml;profile=opds-catalog;kind=acquisition",
+            effectiveResponseUrl = "https://catalogue.example.org/works/verses",
+        )
+        val edition1 = document.publications[0]
+        val image = assertNotNull(edition1.images.singleOrNull { it.href == "/covers/verses-1.png" })
+        assertEquals("image", image.mediaType!!.mainType)
+        // The artwork link also stays in the links list as an image relation.
+        val imageLink = edition1.links.single { "http://opds-spec.org/image" in it.relations }
+        assertEquals("/covers/verses-1.png", imageLink.rawHref)
+        assertEquals("https://catalogue.example.org/covers/verses-1.png", imageLink.resolvedHref)
     }
 }
