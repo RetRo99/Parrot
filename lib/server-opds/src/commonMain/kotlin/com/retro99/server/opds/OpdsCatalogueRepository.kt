@@ -27,6 +27,8 @@ class OpdsCatalogueRepository(
     private val access: CatalogueAccessStore,
     private val isCurrent: () -> Boolean,
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    private val cache: OpdsFeedCache = MemoryOpdsFeedCache(),
+    private val accessGeneration: Int = 0,
 ) : ServerCatalogueRepository {
     override val serverId = config.id
     private val owner = Any()
@@ -36,7 +38,6 @@ class OpdsCatalogueRepository(
     private class Search(val owner: Any, val expand: (CatalogueQuery) -> String) : CatalogueSearch {
         override fun toString() = "CatalogueSearch(redacted)"
     }
-    private val cache = MemoryOpdsFeedCache()
     private val loader = CachedOpdsFeedLoader(transport, ParserFactory.opdsParser(), cache, now)
     private val resolver = ParserFactory.urlResolver()
     private val openSearch = OpenSearchReader(resolver)
@@ -44,8 +45,8 @@ class OpdsCatalogueRepository(
     private val mapper = OpdsCatalogueMapper { Target(owner, it) }
     private val mutex = Mutex()
     private val stopped = MutableStateFlow(false)
+    internal val isStopped: Boolean get() = stopped.value
     private val requests = MutableStateFlow<Set<Job>>(emptySet())
-    private val documents = ArrayDeque<CatalogueDocument>()
     private val descriptors = linkedMapOf<String, OpdsSearchTemplate>()
 
     private fun checkCurrent() {
@@ -82,14 +83,12 @@ class OpdsCatalogueRepository(
 
     private suspend fun load(url: String, root: Boolean): AppResult<CatalogueDocument> {
         val request = networkRequest(url, root)
-        val result = loader.load(OpdsCacheKey(url, profileId, serverId, representation = request.acceptMediaTypes.joinToString(", ") { it.trim().lowercase() }), request)
+        val result = loader.load(OpdsCacheKey(url, profileId, serverId, accessGeneration, representation = request.acceptMediaTypes.joinToString(", ") { it.trim().lowercase() }), request)
         checkCurrent()
         return when (result) {
             is OpdsLoadResult.Document -> {
                 access.recordSuccess(profileId, serverId, credentials.get(profileId, serverId)?.username, now(), root)
                 val document = mapper.map(result.document, CatalogueFetchStatus(now(), result.fromCache, result.crossOriginPrivateNetwork))
-                documents.addLast(document)
-                while (documents.size > 20) documents.removeFirst()
                 Ok(document)
             }
             is OpdsLoadResult.FetchFailure -> failure(result.error)
@@ -99,7 +98,7 @@ class OpdsCatalogueRepository(
     }
 
     override suspend fun discoverSearch(document: CatalogueDocument): AppResult<CatalogueSearch?> = request {
-        if (documents.none { it === document }) return@request Err(AppError.ApiError(400, "ForeignCatalogueDocument"))
+        if ((document.context as? Target)?.owner !== owner) return@request Err(AppError.ApiError(400, "ForeignCatalogueDocument"))
         val offer = (document as? CatalogueFeedDocument)?.search ?: return@request Ok(null)
         if (offer.kind == CatalogueSearchOffer.Kind.UriTemplate) {
             return@request Ok(Search(owner) { query -> resolver.resolve(offer.link.effectiveBaseUri, templates.expand(offer.link.rawHref, query.fields + ("query" to query.text))) })
@@ -159,6 +158,6 @@ class OpdsCatalogueRepository(
     }
     suspend fun dispose() {
         stop()
-        mutex.withLock { cache.clearAll(); descriptors.clear(); documents.clear() }
+        mutex.withLock { cache.clearAll(); descriptors.clear() }
     }
 }

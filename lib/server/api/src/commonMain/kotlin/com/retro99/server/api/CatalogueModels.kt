@@ -72,6 +72,7 @@ data class CatalogueSearchOffer(val link: CatalogueLink, val kind: Kind) {
 }
 data class CatalogueFetchStatus(val checkedAt: Long, val fromCache: Boolean, val crossOriginPrivateNetwork: Boolean)
 sealed interface CatalogueDocument {
+    val context: CatalogueTarget
     val responseUrl: String
     val self: CatalogueLink?
     val referencedBy: CatalogueLink?
@@ -92,6 +93,7 @@ data class CatalogueFeedDocument(
     override val referencedBy: CatalogueLink?,
     override val warnings: List<CatalogueWarning>,
     override val fetchStatus: CatalogueFetchStatus,
+    override val context: CatalogueTarget,
 ) : CatalogueDocument
 data class CataloguePublicationDocument(
     val publication: CataloguePublication,
@@ -100,4 +102,5 @@ data class CataloguePublicationDocument(
     override val referencedBy: CatalogueLink?,
     override val warnings: List<CatalogueWarning>,
     override val fetchStatus: CatalogueFetchStatus,
+    override val context: CatalogueTarget,
 ) : CatalogueDocument

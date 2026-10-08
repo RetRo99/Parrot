@@ -15,6 +15,55 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
 class OpdsCatalogueRepositoryTest {
+    @Test fun uri_template_search_expands_before_resolution_and_foreign_targets_are_rejected() = runTest {
+        val preferences = TestPreferences()
+        val checks = CatalogueAccessStoreImpl(preferences)
+        val urls = mutableListOf<String>()
+        val engine = MockEngine { request ->
+            urls += request.url.toString()
+            respond(FEED, headers = headersOf(HttpHeaders.ContentType, "application/opds+json"))
+        }
+        val first = repository(KtorOpdsTransport(engine, ROOT), preferences, checks)
+        val feed = assertIs<CatalogueFeedDocument>(first.getRoot().get())
+        val search = assertNotNull(first.discoverSearch(feed).get())
+        assertTrue(first.search(search, CatalogueQuery("a & b")).isOk)
+        assertEquals("https://books.example/opds/?query=a%20%26%20b", urls.last())
+        val second = repository(object : OpdsTransport {
+            override suspend fun fetch(request: OpdsRequest): OpdsFetchResult = error("Foreign references must not fetch")
+            override fun close() {}
+        }, preferences, checks)
+        assertTrue(second.search(search, CatalogueQuery("secret")).isErr)
+        assertTrue(second.getDocument(feed.navigation.single().links.single().target!!).isErr)
+        first.dispose()
+        second.dispose()
+    }
+
+    @Test fun open_search_is_lazy_cached_and_disposed_with_the_source() = runTest {
+        val preferences = TestPreferences()
+        val checks = CatalogueAccessStoreImpl(preferences)
+        var descriptorRequests = 0
+        val urls = mutableListOf<String>()
+        val xml = """<feed xmlns="http://www.w3.org/2005/Atom"><id>urn:feed</id><title>Books</title><link rel="search" href="search.xml" type="application/opensearchdescription+xml"/></feed>"""
+        val descriptor = """<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/"><ShortName>Books</ShortName><Url type="application/atom+xml" template="find?q={searchTerms}"/></OpenSearchDescription>"""
+        val engine = MockEngine { request ->
+            urls += request.url.toString()
+            if (request.url.encodedPath.endsWith("search.xml")) {
+                descriptorRequests++
+                respond(descriptor, headers = headersOf(HttpHeaders.ContentType, "application/opensearchdescription+xml"))
+            } else respond(xml, headers = headersOf(HttpHeaders.ContentType, "application/atom+xml"))
+        }
+        val repository = repository(KtorOpdsTransport(engine, ROOT), preferences, checks)
+        val feed = assertIs<CatalogueFeedDocument>(repository.getRoot().get())
+        assertEquals(0, descriptorRequests)
+        val search = assertNotNull(repository.discoverSearch(feed).get())
+        assertNotNull(repository.discoverSearch(feed).get())
+        assertEquals(1, descriptorRequests)
+        assertTrue(repository.search(search, CatalogueQuery("a & b")).isOk)
+        assertEquals("https://books.example/opds/find?q=a%20%26%20b", urls.last())
+        repository.dispose()
+        assertFailsWith<CancellationException> { repository.search(search, CatalogueQuery("book")) }
+    }
+
     @Test fun anonymous_root_maps_metadata_navigation_publications_and_cache_revalidation() = runTest {
         val preferences = TestPreferences()
         val checks = CatalogueAccessStoreImpl(preferences)

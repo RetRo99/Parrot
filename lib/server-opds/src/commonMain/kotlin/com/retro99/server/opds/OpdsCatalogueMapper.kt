@@ -57,7 +57,7 @@ internal class OpdsCatalogueMapper(private val target: (String) -> CatalogueTarg
             ParseWarning.Code.MEDIA_TYPE_NOT_PARSED -> CatalogueWarning.Kind.InvalidMediaType
         }, it.elementPath) }
         return when (document) {
-            is OpdsPublicationDocument -> CataloguePublicationDocument(document.publication.map(base), base, document.self?.map(base), document.referencedBy?.map(base), warnings, status)
+            is OpdsPublicationDocument -> CataloguePublicationDocument(document.publication.map(base), base, document.self?.map(base), document.referencedBy?.map(base), warnings, status, target(base))
             is OpdsFeedDocument -> CatalogueFeedDocument(
                 document.metadata.let { CatalogueFeedMetadata(it.title.map(), it.identifier?.map(), it.updated, it.authors.map { it.map() }, it.language, it.rights?.map(), it.modified) },
                 document.navigation.map { it.map(base) }, document.publications.map { it.map(base) },
@@ -67,7 +67,7 @@ internal class OpdsCatalogueMapper(private val target: (String) -> CatalogueTarg
                 document.search?.let { CatalogueSearchOffer(it.link.map(base), when (it.kind) {
                     OpdsSearchOffer.Kind.URI_TEMPLATE -> CatalogueSearchOffer.Kind.UriTemplate
                     OpdsSearchOffer.Kind.OPEN_SEARCH_DESCRIPTOR -> CatalogueSearchOffer.Kind.Descriptor
-                }) }, document.up.map { it.map(base) }, base, document.self?.map(base), document.referencedBy?.map(base), warnings, status)
+                }) }, document.up.map { it.map(base) }, base, document.self?.map(base), document.referencedBy?.map(base), warnings, status, target(base))
         }
     }
 }
