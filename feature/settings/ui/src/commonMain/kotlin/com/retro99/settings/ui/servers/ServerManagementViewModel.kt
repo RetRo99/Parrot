@@ -9,6 +9,9 @@ import com.retro99.server.api.ServerAuthState
 import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerType
+import com.retro99.server.api.CatalogueAccessProvider
+import com.retro99.server.api.CatalogueAccessStatus
+import com.retro99.server.api.getCapabilities
 import com.retro99.settings.ui.servers.model.ServerWithStatusUiModel
 import com.retro99.settings.ui.servers.model.toUiModel
 import kotlinx.coroutines.CancellationException
@@ -24,6 +27,7 @@ import org.koin.core.annotation.Provided
 class ServerManagementViewModel(
     @Provided private val serverRegistry: ServerRegistry,
     @Provided private val analytics: Analytics,
+    @Provided private val catalogueAccessProvider: CatalogueAccessProvider,
     @InjectedParam private val onNavigateToLogin: (String?, Boolean) -> Unit,
     @InjectedParam private val stopPlaybackForServer: (String, DiagnosticContext) -> Unit,
 ) : BaseViewModel<ServerManagementViewState, ServerManagementIntent>(ServerManagementViewState()) {
@@ -55,13 +59,21 @@ class ServerManagementViewModel(
     }
 
     private fun observeServers(isRetry: Boolean = false) {
+        // Catalogue state is not translated into ServerAuthState. Legacy cards remain
+        // library-only; catalogue presentation/navigation is deliberately Phase 4.
+        viewModelScope.launch {
+            combine(serverRegistry.observeAllServers(), catalogueAccessProvider.observeAll()) { sources, states ->
+                sources.filter { it.type.getCapabilities().supportsCatalogueBrowsing }
+                    .map { mapCatalogueSource(it, states[it.id] ?: CatalogueAccessStatus()) }
+            }.collect { sources -> updateState { it.copy(catalogueSources = sources) } }
+        }
         val source = flow {
             combine(
                 serverRegistry.observeAllServers(),
                 serverRegistry.observeAllAuthStates(),
             ) { servers, authStates ->
                 servers
-                    .filter { server -> server.type != ServerType.Local }
+                    .filter { server -> server.type != ServerType.Local && !server.type.getCapabilities().supportsCatalogueBrowsing }
                     .map { server ->
                         ServerWithStatusUiModel(
                             server = server.toUiModel(),
