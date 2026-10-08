@@ -223,6 +223,7 @@ class UserRegistryImpl(
             PreferencesKey.RegisteredServers,
             PreferencesKey.CatalogueSources,
             PreferencesKey.OpdsCredentials,
+            PreferencesKey.CatalogueAccessGenerations,
             PreferencesKey.CatalogueAccessStatus,
             PreferencesKey.ServerCredentials,
             PreferencesKey.ReaderSettings,

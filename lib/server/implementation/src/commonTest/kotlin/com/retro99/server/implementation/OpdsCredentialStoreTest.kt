@@ -40,6 +40,37 @@ class OpdsCredentialStoreTest {
         assertNull(store.get("a", "source"))
     }
 
+    @Test fun access_generation_changes_with_every_account_change_survives_restart_and_is_never_reused() = runTest {
+        val preferences = RegistryPreferences()
+        val store = OpdsCredentialStoreImpl(preferences)
+        val seen = mutableListOf(store.accessGeneration("a", "source"))
+        suspend fun changed(change: suspend () -> Unit) {
+            change()
+            val generation = store.accessGeneration("a", "source")
+            assertFalse(generation in seen, "generation $generation was used before: $seen")
+            seen += generation
+        }
+        changed { store.save("a", "source", OpdsAccountDetails("patron", "one")) }
+        changed { store.save("a", "source", OpdsAccountDetails("patron", "two")) }
+        changed { store.remove("a", "source") }
+        changed { store.save("a", "source", OpdsAccountDetails("patron", "one")) }
+
+        // The same details again, or nothing to remove, is no change.
+        store.save("a", "source", OpdsAccountDetails("patron", "one"))
+        store.remove("a", "never-had-details")
+        assertEquals(seen.last(), store.accessGeneration("a", "source"))
+        assertEquals(0L, store.accessGeneration("a", "never-had-details"))
+
+        // Another source and another profile count on their own.
+        store.save("a", "other", OpdsAccountDetails("patron", ""))
+        store.save("b", "source", OpdsAccountDetails("patron", ""))
+        assertEquals(seen.last(), store.accessGeneration("a", "source"))
+        assertFalse(store.accessGeneration("a", "other") in seen)
+
+        // A restart reads the same number.
+        assertEquals(seen.last(), OpdsCredentialStoreImpl(preferences).accessGeneration("a", "source"))
+    }
+
     @Test fun catalogue_password_cannot_be_saved_as_a_bearer_session() = runTest {
         val registry = registryWithOwnStores(RegistryPreferences(), RegistryUser("a"))
         registry.addServerWithId("source", "Books", ServerType.Opds, "https://books.example/opds/")
