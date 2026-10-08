@@ -1,5 +1,7 @@
 package com.retro99.opds.api
 
+import com.retro99.opds.api.model.OpdsBudgets
+
 /**
  * Isolated OPDS HTTP transport (plan §4 "HTTP security and lifecycle").
  *
@@ -12,6 +14,19 @@ package com.retro99.opds.api
  */
 interface OpdsTransport {
     suspend fun fetch(request: OpdsRequest): OpdsFetchResult
+
+    /**
+     * Streams a file to [sink] without holding it in memory. Same redirect, origin and
+     * credential rules as [fetch]; its own ceiling, [maxBytes].
+     *
+     * A missing Content-Length is normal. A declared length that differs from the bytes
+     * received fails with [OpdsTransportError.Code.LENGTH_MISMATCH].
+     */
+    suspend fun download(
+        request: OpdsRequest,
+        sink: OpdsDownloadSink,
+        maxBytes: Long = OpdsBudgets.MAX_DOWNLOAD_BYTES,
+    ): OpdsDownloadResult
     fun close()
 }
 
@@ -60,6 +75,37 @@ sealed interface OpdsFetchResult {
     data class Failure(val error: OpdsTransportError, val crossOriginPrivateNetwork: Boolean = false) : OpdsFetchResult
 }
 
+/** Where downloaded bytes go. Throwing from either call stops the download. */
+interface OpdsDownloadSink {
+    /** Called once, after the final response's headers and before the first byte. */
+    suspend fun start(declaredLength: Long?) {}
+
+    /** The first [length] bytes of [buffer]. The buffer is reused, so copy what must be kept. */
+    suspend fun write(buffer: ByteArray, length: Int)
+}
+
+/** Accept header for a book file: EPUB first, anything else the server insists on after. */
+val OPDS_DOWNLOAD_ACCEPT_MEDIA_TYPES = listOf("application/epub+zip", "*/*;q=0.5")
+
+sealed interface OpdsDownloadResult {
+    data class Complete(
+        val status: Int,
+        val bytes: Long,
+        /** The Content-Length the server sent, when it sent one. */
+        val declaredLength: Long?,
+        val effectiveUrl: String,
+        val contentType: String?,
+        val crossOriginPrivateNetwork: Boolean = false,
+    ) : OpdsDownloadResult {
+        override fun toString() = "OpdsDownloadResult.Complete($status, $bytes bytes)"
+    }
+
+    data class Failure(val error: OpdsTransportError, val crossOriginPrivateNetwork: Boolean = false) : OpdsDownloadResult
+
+    /** The sink threw; [cause] is its exception, untouched. Bytes written so far are the caller's to delete. */
+    class SinkFailure(val cause: Throwable) : OpdsDownloadResult
+}
+
 /**
  * Hygiene-safe transport errors: no URLs, no credentials, never titles or
  * search strings (plan §4 "Error/log categories are bounded").
@@ -85,6 +131,7 @@ data class OpdsTransportError(val code: Code, val status: Int? = null, val note:
         REDIRECT_MISSING_LOCATION,
         REDIRECT_SCHEME_DOWNGRADE,
         RESPONSE_TOO_LARGE,
+        LENGTH_MISMATCH, // download only: fewer or more bytes than Content-Length declared
         UNSUPPORTED_SCHEME,
         MALFORMED_URL,
     }

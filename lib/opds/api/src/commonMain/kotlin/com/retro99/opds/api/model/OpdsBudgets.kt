@@ -8,6 +8,9 @@ object OpdsBudgets {
     /** Decoded feed/description response budget. */
     const val MAX_RESPONSE_BYTES: Long = 5L * 1024 * 1024 // 5 MiB
 
+    /** Ceiling for one downloaded book file. Separate from the feed budget above. */
+    const val MAX_DOWNLOAD_BYTES: Long = 512L * 1024 * 1024 // 512 MiB
+
     /** Maximum XML/JSON structural nesting depth. */
     const val MAX_NESTING_DEPTH: Int = 64
 

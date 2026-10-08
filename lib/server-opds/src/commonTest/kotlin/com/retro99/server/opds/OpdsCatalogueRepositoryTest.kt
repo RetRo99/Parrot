@@ -30,6 +30,7 @@ class OpdsCatalogueRepositoryTest {
         assertEquals("https://books.example/opds/?query=a%20%26%20b", urls.last())
         val second = repository(object : OpdsTransport {
             override suspend fun fetch(request: OpdsRequest): OpdsFetchResult = error("Foreign references must not fetch")
+            override suspend fun download(request: OpdsRequest, sink: OpdsDownloadSink, maxBytes: Long): OpdsDownloadResult = error("Foreign references must not fetch")
             override fun close() {}
         }, preferences, checks)
         assertTrue(second.search(search, CatalogueQuery("secret")).isErr)
@@ -139,6 +140,7 @@ class OpdsCatalogueRepositoryTest {
         val entered = CompletableDeferred<Unit>()
         val transport = object : OpdsTransport {
             override suspend fun fetch(request: OpdsRequest): OpdsFetchResult { entered.complete(Unit); awaitCancellation() }
+            override suspend fun download(request: OpdsRequest, sink: OpdsDownloadSink, maxBytes: Long): OpdsDownloadResult = awaitCancellation()
             override fun close() {}
         }
         val repository = repository(transport, preferences, checks)
