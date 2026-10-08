@@ -24,7 +24,7 @@ data class OpdsLink(
 
     val mediaType: OpdsMediaType? = null,
 
-    val title: String? = null,
+    val title: OpdsText? = null,
 
     /** Declared byte length, when provided. */
     val lengthBytes: Long? = null,
@@ -79,14 +79,14 @@ data class OpdsIndirectAcquisition(
 data class OpdsImage(val href: String, val mediaType: OpdsMediaType?, val width: Int? = null, val height: Int? = null)
 
 data class OpdsContributor(
-    val name: String,
+    val name: OpdsText,
     val href: String? = null,
     /** e.g. author/translator/editor (OPDS2 role, OPDS1 relayed edition labels are kept in entries). */
     val role: String? = null,
 )
 
 /** Description content with retained format (plan §4). */
-data class OpdsContent(val format: Format, val body: String) {
+data class OpdsContent(val format: Format, val body: OpdsText) {
     enum class Format { TEXT, HTML, XHTML }
 }
 

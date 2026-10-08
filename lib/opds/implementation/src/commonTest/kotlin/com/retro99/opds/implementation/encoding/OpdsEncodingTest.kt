@@ -9,7 +9,7 @@ class OpdsEncodingTest {
     private fun feed(encoding: String) = """<?xml version="1.0" encoding="$encoding"?><feed xmlns="http://www.w3.org/2005/Atom"><id>urn:test</id><title>Café</title></feed>"""
     private fun title(payload: OpdsPayload): String {
         val result = ParserFactory.opdsParser().parse(payload, "https://example.org/feed") as OpdsParseResult.Document
-        return (result.document as OpdsFeedDocument).metadata.title
+        return (result.document as OpdsFeedDocument).metadata.title.translations.getValue("und")
     }
     @Test fun utf8_header_and_declaration() {
         assertEquals("Café", title(OpdsPayload("application/atom+xml; charset=\"UTF-8\"", feed("UTF-8").encodeToByteArray())))

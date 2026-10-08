@@ -5,6 +5,7 @@ import com.retro99.opds.api.OpdsParser
 import com.retro99.opds.api.OpdsPayload
 import com.retro99.opds.api.model.OpdsBudgets
 import com.retro99.opds.api.model.OpdsRejection
+import com.retro99.opds.api.model.OpdsText
 import com.retro99.opds.implementation.ParserFactory
 import com.retro99.opds.implementation.fixtures.Fixtures
 import com.retro99.opds.implementation.fixtures.readFixtureText
@@ -21,6 +22,7 @@ import kotlin.test.fail
  * conventions come from docs/opds-phase0-spikes.md §2.
  */
 class Opds1ParserTest {
+    private fun assertEquals(expected: String, actual: OpdsText?) = kotlin.test.assertEquals(OpdsText(expected), actual)
 
     private fun parser(): OpdsParser = ParserFactory.opdsParser()
 
@@ -116,7 +118,7 @@ class Opds1ParserTest {
 
         // The entry that declares xml:base="/works/" composes its relative link
         // against the entry-level base, not the feed base.
-        val inherited = document.navigation.first { it.title == "A Synthesized Treatise" }
+        val inherited = document.navigation.first { it.title == OpdsText("A Synthesized Treatise") }
         val inheritedLink = inherited.links.single { "subsection" in it.relations }
         assertEquals("treatise", inheritedLink.rawHref)
         assertEquals("https://catalogue.example.org/works/treatise", inheritedLink.resolvedHref)
@@ -208,9 +210,9 @@ class Opds1ParserTest {
         )
         val content = document.publications[0].content!!
         assertEquals(com.retro99.opds.api.model.OpdsContent.Format.XHTML, content.format)
-        assertTrue(content.body.contains("<p>Description with <em>inline</em> markup"), content.body)
+        assertTrue(content.body.translations.getValue("und").contains("<p>Description with <em>inline</em> markup"), content.body.toString())
         // Entities are resolved at the reader level (Phase 0 record).
-        assertTrue(content.body.contains("an opaque & opaque entity."), content.body.take(200))
+        assertTrue(content.body.translations.getValue("und").contains("an opaque & opaque entity."), content.body.toString().take(200))
     }
 
     @Test
@@ -293,7 +295,7 @@ class Opds1ParserTest {
         assertEquals("/opds/get/1.epub", first.acquisitionLinks.single().rawHref)
         assertEquals("https://calibre.example.org/opds/get/1.epub", first.acquisitionLinks.single().resolvedHref)
         assertEquals("application/epub+zip", first.acquisitionLinks.single().mediaType!!.mediaRange)
-        assertTrue(first.content!!.body.contains("<p>First book.</p>"))
+        assertTrue(first.content!!.body.translations.getValue("und").contains("<p>First book.</p>"))
 
         // The decided grouping rule (Phase 0 §3 item 5): entries with their own
         // acquisition links are books, NOT a grouping point — a list, whatever

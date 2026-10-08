@@ -8,16 +8,16 @@ package com.retro99.opds.api.model
  */
 data class OpdsEntry(
     val identity: OpdsIdentity,
-    val title: String,
+    val title: OpdsText,
     val updated: String? = null,
 
     val authors: List<OpdsContributor> = emptyList(),
     val otherContributors: List<OpdsContributor> = emptyList(),
     val languages: List<String> = emptyList(),
-    val summary: String? = null,
+    val summary: OpdsText? = null,
     val content: OpdsContent? = null,
-    val rights: String? = null,
-    val publisher: String? = null,
+    val rights: OpdsText? = null,
+    val publisher: OpdsText? = null,
     val published: String? = null,
     /** Dublin Core issued (OPDS1) / metadata published year (OPDS2) text, for the design's telling line (§11.7). */
     val year: String? = null,
@@ -33,7 +33,7 @@ data class OpdsEntry(
      * labels, unclamped"). The parser never fabricates one; the composed UI
      * fallback ("EPUB file 1" / "Edition 1") is Phase 2 mapping.
      */
-    val editionLabel: String? = null,
+    val editionLabel: OpdsText? = null,
 ) {
     val acquisitionLinks: List<OpdsLink> get() = links.filter { it.hasAcquisitionRelation() }
 

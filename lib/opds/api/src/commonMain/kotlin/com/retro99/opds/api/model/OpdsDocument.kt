@@ -59,13 +59,13 @@ data class OpdsPublicationDocument(
 ) : OpdsDocument
 
 data class OpdsFeedMetadata(
-    val title: String,
+    val title: OpdsText,
     val identifier: OpdsIdentity?,
     val updated: String? = null,
     val authors: List<OpdsContributor> = emptyList(),
     val language: String? = null,
     /** The catalogue's rights line, shown verbatim in the design's Rights row. */
-    val rights: String? = null,
+    val rights: OpdsText? = null,
     /** The feed's Dublin-Core or OPDS2 `modified`/`updated` — provenance change signal (§10.0). */
     val modified: String? = null,
 )
@@ -81,7 +81,7 @@ data class OpdsPagination(
 }
 
 data class OpdsGroup(
-    val title: String,
+    val title: OpdsText,
     /** Links describing the group (its own self/reference navigation link). */
     val links: List<OpdsLink>,
     val publications: List<OpdsEntry>,
@@ -90,7 +90,7 @@ data class OpdsGroup(
 
 data class OpdsFacetGroup(
     /** The facet's display name (design requirement 8, §11.7). */
-    val name: String?,
+    val name: OpdsText?,
     /** Options in catalogue order. */
     val options: List<OpdsFacetOption>,
     /** The catalogue-declared "all" option when present. */
@@ -98,7 +98,7 @@ data class OpdsFacetGroup(
 )
 
 data class OpdsFacetOption(
-    val title: String?,
+    val title: OpdsText?,
     val link: OpdsLink,
     val active: Boolean = false,
     /** Category counts when the catalogue advertises them. */

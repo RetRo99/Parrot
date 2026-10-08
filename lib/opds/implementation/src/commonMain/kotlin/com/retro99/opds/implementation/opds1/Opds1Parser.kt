@@ -20,6 +20,7 @@ import com.retro99.opds.api.model.OpdsRejection
 import com.retro99.opds.api.model.OpdsSearchOffer
 import com.retro99.opds.api.model.OpdsIdentity
 import com.retro99.opds.api.model.ParseWarning
+import com.retro99.opds.api.model.OpdsText
 import com.retro99.opds.implementation.mediatype.SeparatedMediaTypeParser
 import nl.adaptivity.xmlutil.XmlReader
 import nl.adaptivity.xmlutil.xmlStreaming
@@ -83,10 +84,13 @@ private class ParseState(
     val entries: MutableList<OpdsEntry> = mutableListOf()
 
     // feed metadata
-    var feedTitle: String? = null
+    var feedTitle: OpdsText? = null
     var feedIdentity: String? = null
     var feedUpdated: String? = null
-    var feedRights: String? = null
+    var feedRights: OpdsText? = null
+    val languageStack = mutableListOf<String?>(null)
+    fun tagged(text: String, attributes: Map<String, String> = emptyMap()): OpdsText =
+        OpdsText(text, if ("xml:lang" in attributes) attributes["xml:lang"] else languageStack.last())
     val feedAuthors: MutableList<OpdsContributor> = mutableListOf()
 
     // feed topology, declared links only (plan §2.2)
@@ -161,7 +165,7 @@ private class ParseState(
         return OpdsParseResult.Document(
             OpdsFeedDocument(
                 metadata = OpdsFeedMetadata(
-                    title = feedTitle ?: "Untitled catalogue",
+                    title = feedTitle ?: OpdsText("Untitled catalogue"),
                     identifier = feedIdentity?.let { OpdsIdentity(it, OpdsIdentity.Kind.NOMINAL) },
                     updated = feedUpdated,
                     modified = feedUpdated,
@@ -259,6 +263,7 @@ private class Opds1XmlWalker(private val state: ParseState) {
                         skipDepth = 1
                     } else {
                         state.pushXmlBase(attributes["xml:base"])
+                        state.languageStack.add(if ("xml:lang" in attributes) attributes["xml:lang"] else state.languageStack.last())
                         visiting.addLast(current)
                         current = child
                     }
@@ -271,6 +276,7 @@ private class Opds1XmlWalker(private val state: ParseState) {
                     }
                     current.end(reader.localName.lowercase())
                     state.popXmlBase()
+                    state.languageStack.removeAt(state.languageStack.lastIndex)
                     val parent = visiting.removeLastOrNull()
                         ?: return // the root element is complete; the rest is trailing whitespace
                     current = parent
@@ -329,10 +335,10 @@ private class FeedBodyVisitor(
             EntryBodyVisitor(state, standalone = false, mediaTypeParser = mediaTypeParser)
         }
         "id" -> ScalarVisitor { text -> if (state.feedIdentity == null) state.feedIdentity = text }
-        "title" -> ScalarVisitor { text -> if (state.feedTitle == null) state.feedTitle = text }
+        "title" -> ScalarVisitor { text -> if (state.feedTitle == null) state.feedTitle = state.tagged(text) }
         "updated" -> ScalarVisitor { text -> if (state.feedUpdated == null) state.feedUpdated = text }
-        "rights" -> ScalarVisitor { text -> if (state.feedRights == null) state.feedRights = text }
-        "author" -> ContributorVisitor(state.feedAuthors)
+        "rights" -> ScalarVisitor { text -> if (state.feedRights == null) state.feedRights = state.tagged(text) }
+        "author" -> ContributorVisitor(state.feedAuthors, state)
         "link" -> FeedLinkVisitor(state, mediaTypeParser, attributes)
         else -> {
             // Bounded-unknown OPDS1 extensions (opensearch:, dc:, app: …):
@@ -416,17 +422,17 @@ private class EntryBodyVisitor(
 
     override fun descend(name: String, attributes: Map<String, String>): Visitor? = when (name) {
         "id" -> ScalarVisitor { text -> if (assembler.rawId == null) assembler.rawId = text }
-        "title" -> ScalarVisitor { text -> if (assembler.title.isBlank()) assembler.title = text }
+        "title" -> ScalarVisitor { text -> if (assembler.title.isBlank()) assembler.title = state.tagged(text) }
         "updated" -> ScalarVisitor { text -> if (assembler.updated == null) assembler.updated = text }
-        "summary" -> ScalarVisitor { text -> if (assembler.summary == null) assembler.summary = text }
-        "rights" -> ScalarVisitor { text -> if (assembler.rights == null) assembler.rights = text }
-        "publisher" -> ScalarVisitor { text -> if (assembler.publisher == null) assembler.publisher = text }
+        "summary" -> ScalarVisitor { text -> if (assembler.summary == null) assembler.summary = state.tagged(text) }
+        "rights" -> ScalarVisitor { text -> if (assembler.rights == null) assembler.rights = state.tagged(text) }
+        "publisher" -> ScalarVisitor { text -> if (assembler.publisher == null) assembler.publisher = state.tagged(text) }
         "published", "issued" -> ScalarVisitor { text -> if (assembler.published == null) assembler.published = text }
         "language" -> ScalarVisitor { text -> if (text.isNotBlank()) assembler.languages.add(text) }
         "identifier" -> IdentifierVisitor(assembler, attributes)
-        "author" -> ContributorVisitor(assembler.authors)
-        "contributor" -> ContributorVisitor(assembler.otherContributors)
-        "content" -> ContentVisitor(attributes, assembler)
+        "author" -> ContributorVisitor(assembler.authors, state)
+        "contributor" -> ContributorVisitor(assembler.otherContributors, state)
+        "content" -> ContentVisitor(attributes, assembler, state)
         "link" -> EntryLinkVisitor(assembler, state, mediaTypeParser, attributes)
         else -> {
             state.warn(ParseWarning.Code.UNKNOWN_EXTENSION_IGNORED, "entry/$name")
@@ -444,13 +450,14 @@ private class EntryBodyVisitor(
 /** Atom contributor: name (+ optional uri). */
 private class ContributorVisitor(
     private val sink: MutableCollection<OpdsContributor>,
+    private val state: ParseState,
 ) : Visitor {
-    private val name = StringBuilder()
+    private var localizedName = OpdsText("")
     private var uri: String? = null
     private var sawName = false
 
     override fun descend(name: String, attributes: Map<String, String>): Visitor? = when (name) {
-        "name" -> ScalarVisitor { text -> if (!sawName) { this@ContributorVisitor.name.clear(); this@ContributorVisitor.name.append(text); sawName = true } }
+        "name" -> ScalarVisitor { text -> if (!sawName) { localizedName = state.tagged(text); sawName = true } }
         "uri" -> ScalarVisitor { text -> uri = text }
         else -> null
     }
@@ -460,7 +467,7 @@ private class ContributorVisitor(
     override fun end(name: String) {
         if (name == "author" || name == "contributor") {
             if (name.isNotBlank() && sawName) {
-                sink.add(OpdsContributor(name = this.name.toString(), href = uri))
+                sink.add(OpdsContributor(name = localizedName, href = uri))
             }
         }
     }
@@ -497,7 +504,9 @@ private class IdentifierVisitor(
 private class ContentVisitor(
     attributes: Map<String, String>,
     private val assembler: EntryAssembler,
+    state: ParseState,
 ) : Visitor {
+    private val language = state.tagged("", attributes).translations.keys.single()
     private val format: OpdsContent.Format = when (attributes["type"]?.trim()?.lowercase().orEmpty()) {
         "xhtml", "application/xhtml+xml" -> OpdsContent.Format.XHTML
         "html", "text/html" -> OpdsContent.Format.HTML
@@ -520,7 +529,7 @@ private class ContentVisitor(
             recorded = true
             assembler.content = OpdsContent(
                 format = format,
-                body = if (format == OpdsContent.Format.TEXT) body.toString().trim() else body.toString(),
+                body = OpdsText(if (format == OpdsContent.Format.TEXT) body.toString().trim() else body.toString(), language),
             )
         }
     }
@@ -569,12 +578,12 @@ private class EntryAssembler(
     val entryIndex: Int,
 ) {
     var rawId: String? = null
-    var title: String = ""
+    var title: OpdsText = OpdsText("")
     var updated: String? = null
-    var summary: String? = null
+    var summary: OpdsText? = null
     var content: OpdsContent? = null
-    var rights: String? = null
-    var publisher: String? = null
+    var rights: OpdsText? = null
+    var publisher: OpdsText? = null
     var published: String? = null
     val languages: MutableList<String> = mutableListOf()
     val authors: MutableList<OpdsContributor> = mutableListOf()
@@ -611,10 +620,10 @@ private class EntryAssembler(
             authors = authors,
             otherContributors = otherContributors,
             languages = languages,
-            summary = summary?.ifBlank { null },
+            summary = summary?.takeIf { it.isNotBlank() },
             content = content?.takeIf { it.body.isNotBlank() },
-            rights = rights?.ifBlank { null },
-            publisher = publisher?.ifBlank { null },
+            rights = rights?.takeIf { it.isNotBlank() },
+            publisher = publisher?.takeIf { it.isNotBlank() },
             published = published,
             // §11.7 telling line: year text as the catalogue declares it.
             year = yearOf(published),
@@ -652,7 +661,7 @@ return OpdsLink(
     isTemplate = href.contains('{'),
     relations = relations,
     mediaType = mediaTypeParser.parse(attributes["type"]),
-    title = attributes["title"]?.takeIf { it.isNotBlank() },
+    title = attributes["title"]?.takeIf { it.isNotBlank() }?.let { state.tagged(it, attributes) },
     extras = attributes
         .filterKeys { it !in KNOWN_LINK_ATTRIBUTES && it != "xml:base" }
         .takeIf { it.isNotEmpty() }

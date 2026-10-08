@@ -43,7 +43,11 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
         val fallbackOccurrences = mutableMapOf<String, Int>()
         fun text(value: JsonElement?): String? = when (value) {
             is JsonPrimitive -> value.takeIf { it.isString }?.content
-            is JsonObject -> text(value["und"]) ?: value.values.firstNotNullOfOrNull { text(it) }
+            else -> null
+        }
+        fun localized(value: JsonElement?): OpdsText? = when (value) {
+            is JsonPrimitive -> text(value)?.let { OpdsText(it) }
+            is JsonObject -> OpdsText(value.mapValues { (_, translation) -> text(translation) ?: throw IllegalArgumentException() })
             else -> null
         }
         fun values(value: JsonElement?): List<JsonElement> = when (value) {
@@ -63,7 +67,7 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
         }
         fun contributors(value: JsonElement?, role: String? = null): List<OpdsContributor> = values(value).mapNotNull {
             val obj = it as? JsonObject
-            val name = text(obj?.get("name") ?: it) ?: run {
+            val name = localized(obj?.get("name") ?: it) ?: run {
                 warnings += ParseWarning(ParseWarning.Code.MALFORMED_ITEM_SKIPPED)
                 return@mapNotNull null
             }
@@ -83,7 +87,7 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
                 ?: (properties?.get("priceValue") as? JsonPrimitive)?.doubleOrNull
             val currency = text(price?.get("currency") ?: properties?.get("currency"))
             val trees = values(properties?.get("indirectAcquisition")).map { indirect(it as? JsonObject ?: throw IllegalArgumentException()) }
-            return OpdsLink(href, resolved, template, relations, types.parse(text(obj["type"])), text(obj["title"]),
+            return OpdsLink(href, resolved, template, relations, types.parse(text(obj["type"])), localized(obj["title"]),
                 (obj["length"] as? JsonPrimitive)?.longOrNull,
                 price = if (priceValue != null && currency != null) OpdsPrice(priceValue, currency) else null,
                 indirectAcquisition = when (trees.size) { 0 -> null; 1 -> trees.single(); else -> OpdsIndirectAcquisition(null, trees) })
@@ -93,7 +97,7 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
         fun links(value: JsonElement?): List<OpdsLink> = items(value, ::link)
         fun publication(obj: JsonObject): OpdsEntry {
             val metadata = obj["metadata"] as? JsonObject ?: throw IllegalArgumentException()
-            val title = text(metadata["title"]) ?: throw IllegalArgumentException()
+            val title = localized(metadata["title"]) ?: throw IllegalArgumentException()
             val links = links(obj["links"])
             val self = links.firstOrNull { "self" in it.relations }?.resolvedHref
             val identifier = text(metadata["identifier"])
@@ -118,30 +122,30 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
                 authors = contributors(metadata["author"]),
                 otherContributors = listOf("translator", "editor", "illustrator", "contributor", "narrator").flatMap { contributors(metadata[it], it) },
                 languages = values(metadata["language"]).mapNotNull { text(it) },
-                content = text(metadata["description"])?.let { OpdsContent(OpdsContent.Format.HTML, it) },
-                rights = text(metadata["rights"]), publisher = contributors(metadata["publisher"]).firstOrNull()?.name,
+                content = localized(metadata["description"])?.let { OpdsContent(OpdsContent.Format.HTML, it) },
+                rights = localized(metadata["rights"]), publisher = contributors(metadata["publisher"]).firstOrNull()?.name,
                 published = published, year = published?.take(4),
                 identifiers = identifier?.let { listOf(OpdsIdentifier(it)) }.orEmpty(),
                 images = items(obj["images"]) { image ->
                     val href = text(image["href"]) ?: throw IllegalArgumentException()
                     OpdsImage(resolver.resolve(base, href), types.parse(text(image["type"])),
                         (image["width"] as? JsonPrimitive)?.intOrNull, (image["height"] as? JsonPrimitive)?.intOrNull)
-                }, links = links, editionLabel = text(metadata["edition"]))
+                }, links = links, editionLabel = localized(metadata["edition"]))
         }
         fun publications(value: JsonElement?): List<OpdsEntry> = items(value, ::publication)
         fun navigation(value: JsonElement?): List<OpdsEntry> = links(value).map {
-            OpdsEntry(OpdsIdentity(it.resolvedHref ?: it.rawHref, OpdsIdentity.Kind.NOMINAL), it.title.orEmpty(), links = listOf(it))
+            OpdsEntry(OpdsIdentity(it.resolvedHref ?: it.rawHref, OpdsIdentity.Kind.NOMINAL), it.title ?: OpdsText(""), links = listOf(it))
         }
         fun document(root: JsonObject): OpdsDocument {
             val metadata = root["metadata"] as? JsonObject ?: throw IllegalArgumentException()
-            val title = text(metadata["title"]) ?: throw IllegalArgumentException()
+            val title = localized(metadata["title"]) ?: throw IllegalArgumentException()
             val links = links(root["links"])
             val self = links.firstOrNull { "self" in it.relations }
             if (listOf("navigation", "publications", "groups", "facets").none { it in root }) {
                 return OpdsPublicationDocument(publication(root), self, base, warnings = warnings.toList())
             }
             val groups = items(root["groups"]) { group ->
-                OpdsGroup(text((group["metadata"] as? JsonObject)?.get("title")) ?: throw IllegalArgumentException(), links(group["links"]),
+                OpdsGroup(localized((group["metadata"] as? JsonObject)?.get("title")) ?: throw IllegalArgumentException(), links(group["links"]),
                     publications(group["publications"]), navigation(group["navigation"]))
             }
             val facets = items(root["facets"]) { facet ->
@@ -153,12 +157,12 @@ internal class Opds2Parser(private val resolver: OpdsUrlResolver) : OpdsParser {
                         ?: ((option["active"] as? JsonPrimitive)?.booleanOrNull == true),
                         (properties?.get("numberOfItems") as? JsonPrimitive)?.longOrNull)
                 }
-                OpdsFacetGroup(text(facetMetadata["title"] ?: facetMetadata["name"]), options,
+                OpdsFacetGroup(localized(facetMetadata["title"] ?: facetMetadata["name"]), options,
                     options.firstOrNull { "all" in it.link.relations || "http://opds-spec.org/facet/all" in it.link.relations })
             }
             return OpdsFeedDocument(OpdsFeedMetadata(title, text(metadata["identifier"])?.let { OpdsIdentity(it, OpdsIdentity.Kind.NOMINAL) },
                 authors = contributors(metadata["attribution"] ?: metadata["author"]), language = text(metadata["language"]),
-                rights = text(metadata["rights"]), modified = text(metadata["modified"])),
+                rights = localized(metadata["rights"]), modified = text(metadata["modified"])),
                 navigation(root["navigation"]), publications(root["publications"]), groups, facets,
                 OpdsPagination(links.firstOrNull { "first" in it.relations }, links.firstOrNull { "next" in it.relations },
                     links.firstOrNull { "previous" in it.relations || "prev" in it.relations }, links.firstOrNull { "last" in it.relations }),

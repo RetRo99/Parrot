@@ -7,6 +7,7 @@ import com.retro99.opds.implementation.fixtures.readFixtureText
 import kotlin.test.*
 
 class Opds2ParserTest {
+    private fun assertEquals(expected: String, actual: OpdsText?) = kotlin.test.assertEquals(OpdsText(expected), actual)
     private val base = "https://catalogue.example.org/redirected/root.json"
     private fun parse(text: String): OpdsParseResult = ParserFactory.opdsParser().parse(
         OpdsPayload("application/opds+json", text.encodeToByteArray()), base)
@@ -88,9 +89,9 @@ class Opds2ParserTest {
     @Test fun malformed_nested_sections_and_contributors_are_recoverable() {
         val document = (parse("""{"metadata":{"title":"Feed"},"publications":[{"metadata":{"title":"Good","author":[null,123,{"name":"Writer"}]},"images":[null,{"href":"/image"}],"links":[{"href":"/good"},null]}],"groups":[{"metadata":{"title":"Bad"},"publications":{}},{"metadata":{"title":"Good group"},"publications":[]}]}""") as OpdsParseResult.Document).document as OpdsFeedDocument
         assertEquals(1, document.publications.size)
-        assertEquals(listOf("Writer"), document.publications.single().authors.map { it.name })
+        assertEquals(listOf(OpdsText("Writer")), document.publications.single().authors.map { it.name })
         assertEquals(1, document.publications.single().images.size)
-        assertEquals(listOf("Good group"), document.groups.map { it.title })
+        assertEquals(listOf(OpdsText("Good group")), document.groups.map { it.title })
         assertEquals(5, document.warnings.count { it.code == ParseWarning.Code.MALFORMED_ITEM_SKIPPED })
     }
 
@@ -117,10 +118,10 @@ class Opds2ParserTest {
     @Test fun landscape_standalone_publication() {
         val document = fixture("landscape") as OpdsPublicationDocument
         val book = document.publication
-        assertEquals("Localized Landscape", book.title)
+        assertEquals(OpdsText(mapOf("und" to "Localized Landscape", "de" to "Lokalisierte Landschaft")), book.title)
         assertEquals(document.self?.resolvedHref, book.identity.raw)
-        assertEquals(listOf("Gray Script", "Emery Quill"), book.authors.map { it.name })
-        assertEquals(OpdsContributor("Hesta Vane", "http://catalogue.example.org/people/vane", "translator"), book.otherContributors.single())
+        assertEquals(listOf("Gray Script", "Emery Quill").map { OpdsText(it) }, book.authors.map { it.name })
+        assertEquals(OpdsContributor(OpdsText("Hesta Vane"), "http://catalogue.example.org/people/vane", "translator"), book.otherContributors.single())
         assertEquals("Synth Press", book.publisher)
         assertEquals("2026", book.year)
         assertEquals("Synthetic rights text.", book.rights)
@@ -146,10 +147,10 @@ class Opds2ParserTest {
         assertEquals("https://catalogue.example.org/opds/2/new.json", feed.navigation.first().identity.raw)
         assertEquals("https://catalogue.example.org/opds/2/root.json?pag=2", feed.pagination.next?.resolvedHref)
         assertNull(feed.pagination.previous)
-        assertEquals(listOf("Visitors", "Residents"), feed.groups.map { it.title })
+        assertEquals(listOf("Visitors", "Residents").map { OpdsText(it) }, feed.groups.map { it.title })
         assertEquals("Kim Synth", feed.groups.last().publications.single().authors.single().name)
         assertEquals("Genre", feed.facets.single().name)
-        assertEquals(listOf("Fiction", "Essays"), feed.facets.single().options.map { it.title })
+        assertEquals(listOf("Fiction", "Essays").map { OpdsText(it) }, feed.facets.single().options.map { it.title })
         assertTrue(feed.facets.single().options.first().active)
         val search = assertNotNull(feed.search)
         assertEquals(OpdsSearchOffer.Kind.URI_TEMPLATE, search.kind)
@@ -158,7 +159,7 @@ class Opds2ParserTest {
         assertNull(search.link.resolvedHref)
         val book = feed.publications.single()
         assertEquals("https://catalogue.example.org/opds/2/publications/river.json", book.identity.raw)
-        assertEquals(listOf("Casey Script", "Emery Quill", "Gordon Manifold"), book.authors.map { it.name })
+        assertEquals(listOf("Casey Script", "Emery Quill", "Gordon Manifold").map { OpdsText(it) }, book.authors.map { it.name })
         assertEquals(listOf("en", "de"), book.languages)
         assertEquals("Synth Press", book.publisher)
         assertEquals("2026", book.year)
