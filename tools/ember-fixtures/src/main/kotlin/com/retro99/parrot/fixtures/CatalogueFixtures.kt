@@ -118,6 +118,15 @@ val catalogueFixtures: List<CatalogueFixture> = listOf(
     fixture(view = "failedTooLarge", expect = "This page is too large") { CatalogueBrowseBoard("failedTooLarge") },
     fixture(view = "failedNotACatalogue", expect = "no longer returns a book catalogue") { CatalogueBrowseBoard("failedNotACatalogue") },
     fixture(view = "failedCertificate", expect = "security certificate is no longer trusted") { CatalogueBrowseBoard("failedCertificate") },
+    fixture(view = "servers", expect = "Ready · no account needed") { CatalogueLibrariesBoard() },
+    fixture(view = "serversMore", expect = "Kavita at work") { CatalogueLibrariesBoard(more = true) },
+    fixture(view = "serverPublic", expect = "No account") { CatalogueSettingsBoard("serverPublic") },
+    fixture(view = "serverAccount", expect = "Saved on this phone only.") { CatalogueSettingsBoard("serverAccount") },
+    fixture(view = "serverOff", expect = "Books you downloaded stay in your library.") { CatalogueSettingsBoard("serverOff") },
+    fixture(view = "serverUnsupported", expect = "Can't be browsed right now") { CatalogueSettingsBoard("serverUnsupported") },
+    fixture(view = "editAddress", expect = "The full address, including any key it needs.") { CatalogueSettingsBoard("editAddress") },
+    fixture(view = "removeCat", expect = "Remove Home Calibre?") { CatalogueSettingsBoard("removeCat") },
+    fixture(view = "signOutAll", expect = "Sign out of everything?") { CatalogueLibrariesBoard(signOut = true) },
 )
 
 @Composable
