@@ -842,8 +842,8 @@ Compose iOS test-link blocker was left for later at the owner's request.
 - Audit local/cloud codecs, origin handling, file backup, library merge, device
   deletion, server removal, and profile deletion.
 - Add the publication-key lookup that prevents re-downloading a book already
-  acquired (§10.8), and hold back metadata sync for acquired books until file
-  backup (§10.0).
+  acquired (§10.8). Metadata sync is not held back for acquired books (§10.0,
+  reversed 2026-10-08).
 
 **Test-first order:**
 
@@ -1277,7 +1277,7 @@ alternative, this table wins.
 | §10.1 Downgrade safety | Catalogue sources are stored under their own preferences key, separate from `RegisteredServers`, so builds without OPDS never decode them. `ServerRegistry` merges both lists for callers. |
 | §10.3 Logout-all | Removes catalogue account details and cancels active acquisitions; keeps account-free catalogues, acquired books, and provenance. |
 | §10.5 Digest / protected Calibre over HTTP | Unsupported in the first release. Use the `unsupported` / `unsupportedBlocked` and `pwHttp` / `pwHttpBlocked` dialogs. |
-| §10.9 Acquired books on other devices | No metadata sync for a catalogue-acquired book until the user backs its file up. The finalization path must not write a metadata outbox entry for `ORIGIN_CATALOGUE_DOWNLOAD` before then. |
+| §10.9 Acquired books on other devices | **Reversed on 2026-10-08.** A catalogue-acquired book syncs its details and progress exactly like a file-picker import: finalization writes the same `library_book` outbox entry for `ORIGIN_CATALOGUE_DOWNLOAD` as for `ORIGIN_IMPORT`. Its file is still never uploaded automatically. Reason: holding the entry back required changing position, bookmark and highlight sync, and made catalogue books behave unlike imports. The earlier decision (no metadata sync until the file is backed up) no longer applies. |
 | §10.10 Feed cache | Keep a small persisted cache of documents the user opened (within the §4 budgets), enough for the offline boards. Full HTTP-semantics caching beyond validators and `no-store` is not required in the first release. |
 | §10.10 Auth documents | Ordinary `WWW-Authenticate` handling only; no auth-document discovery in the first release. Both OPDS parsers stay. |
 | "Get updated copy" | Deferred to a later release. Do not build `detailUpdate`; do not store a change signal beyond the catalogue's `updated` value in provenance. |
@@ -1391,6 +1391,16 @@ and syncs no provenance. A second device then shows a book it cannot open or
 re-fetch. Decide between: not syncing metadata for catalogue acquisitions until
 the user backs the file up, or syncing minimal provenance so the other device
 can offer "Download again from <source>".
+
+**Decided, then reversed (2026-10-08, product owner).** The first decision was
+to hold the metadata outbox entry back until the file was backed up. It is
+reversed: a catalogue book syncs its details and progress exactly like a
+file-picker import, and its file is still never uploaded automatically. The
+hold-back needed changes to position, bookmark and highlight sync (those write
+to the outbox through their own paths) and made catalogue books behave unlike
+imports. A second device therefore lists the book the way it lists an import
+whose file was never backed up. Provenance is still not synced. Whether a
+catalogue book's file can be backed up at all is open (§11.7 "Still open").
 
 ### 10.10 First-release scope
 
@@ -1683,6 +1693,14 @@ copy" (`detailUpdate`) is deferred. Item 4 below is a product decision.
    show the body with "Open provider page" only. Shipping it later needs a
    "Sample" marker in the library and book details, and a rule for what
    happens when the full book is acquired.
+
+5. **Backing up a catalogue book's file.** `backupAll` and the backup banner
+   and sheet leave catalogue-origin files out, and that is unchanged and
+   tested. Whether the user can back one up explicitly, and with what rights
+   wording, is not designed. Its details and progress now sync like an
+   import's (§10.0), so the book can have a remote revision and
+   `enqueueUpload` no longer refuses it for lacking one; nothing in the UI
+   offers it.
 
 **Engineering notes from the "Can't be downloaded here" copy**
 
