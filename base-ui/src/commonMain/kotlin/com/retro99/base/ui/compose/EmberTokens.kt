@@ -55,6 +55,9 @@ data class EmberColors(
     val highlights: EmberHighlights = EmberDayHighlights,
     /** Gentle selected-position fill and apply target tiles. */
     val surfaceSelected: Color = accent.copy(alpha = .06f).compositeOver(surface),
+    /** Generated catalogue covers use the same palette in Day and Night. */
+    val catalogueCovers: List<Color> = listOf(Color(0xFF8E3B20), Color(0xFF3D5948), Color(0xFF50446F), Color(0xFFAD892C)),
+    val catalogueCoverInk: Color = Color.White,
 )
 
 /**
@@ -220,6 +223,8 @@ val EmberEinkColors = EmberColors(
     welcomeCoverRed = Color.White,
     welcomeChip = Color.White,
     highlights = EmberEinkHighlights,
+    catalogueCovers = listOf(Color.White),
+    catalogueCoverInk = Color.Black,
 )
 
 val EmberNightStyle = EmberStyle(
