@@ -2026,4 +2026,35 @@
     <string name="catalogue_a11y_preset_terms_link" tools:ignore="MissingTranslation">%1$s's terms of use, opens in browser</string>
     <string name="catalogue_a11y_try_loading_again" tools:ignore="MissingTranslation">Try loading this page again</string>
     <string name="catalogue_a11y_open_provider_page" tools:ignore="MissingTranslation">Open %1$s page, opens in browser</string>
+    <!-- Catalogue browser (design prompt §11.2, §11.3, §11.5, §11.11) -->
+    <string name="catalogue_search_catalogue" tools:ignore="MissingTranslation">Search %1$s</string>
+    <string name="catalogue_see_all" tools:ignore="MissingTranslation">See all</string>
+    <string name="catalogue_a11y_see_all" tools:ignore="MissingTranslation">See all, %1$s</string>
+    <string name="catalogue_a11y_folder" tools:ignore="MissingTranslation">%1$s, folder</string>
+    <string name="catalogue_unknown_author" tools:ignore="MissingTranslation">Unknown author</string>
+    <string name="catalogue_list_failed_lead" tools:ignore="MissingTranslation">Couldn't load more books.</string>
+    <string name="catalogue_list_failed_rest" tools:ignore="MissingTranslation">The ones above are still here.</string>
+    <string name="catalogue_a11y_try_loading_more" tools:ignore="MissingTranslation">Try loading more books again</string>
+    <string name="catalogue_a11y_loading_more" tools:ignore="MissingTranslation">Loading more books</string>
+    <string name="catalogue_a11y_load_more" tools:ignore="MissingTranslation">Load more books</string>
+    <string name="catalogue_page_failed_title" tools:ignore="MissingTranslation">Couldn't open this page</string>
+    <string name="catalogue_page_failed_timed_out" tools:ignore="MissingTranslation">%1$s took too long to answer.</string>
+    <string name="catalogue_page_failed_catalogue_error" tools:ignore="MissingTranslation">%1$s had a problem on its side. Try again in a few minutes.</string>
+    <string name="catalogue_page_failed_not_allowed" tools:ignore="MissingTranslation">%1$s doesn't allow access to this page.</string>
+    <string name="catalogue_page_failed_not_found" tools:ignore="MissingTranslation">This page no longer exists in %1$s.</string>
+    <string name="catalogue_page_failed_too_large" tools:ignore="MissingTranslation">This page is too large for Parrot to open.</string>
+    <string name="catalogue_page_failed_not_a_catalogue" tools:ignore="MissingTranslation">This address no longer returns a book catalogue. It may have moved.</string>
+    <string name="catalogue_page_failed_certificate" tools:ignore="MissingTranslation">%1$s's security certificate is no longer trusted, so Parrot stopped loading it.</string>
+    <string name="catalogue_catalogue_settings" tools:ignore="MissingTranslation">Catalogue settings</string>
+    <string name="catalogue_a11y_open_settings" tools:ignore="MissingTranslation">Open %1$s settings</string>
+    <string name="catalogue_offline_banner_lead" tools:ignore="MissingTranslation">You're offline.</string>
+    <string name="catalogue_offline_banner_rest" tools:ignore="MissingTranslation">Showing the copy saved %1$s. Connect to the internet to download books.</string>
+    <string name="catalogue_time_minutes_ago" tools:ignore="MissingTranslation">%1$d min ago</string>
+    <string name="catalogue_time_hours_ago" tools:ignore="MissingTranslation">%1$d h ago</string>
+    <string name="catalogue_time_yesterday" tools:ignore="MissingTranslation">yesterday</string>
+    <string name="catalogue_time_days_ago" tools:ignore="MissingTranslation">%1$d days ago</string>
+    <string name="catalogue_time_on_date" tools:ignore="MissingTranslation">on %1$s</string>
+    <!-- TODO-design: no copy yet for the rows a long list shows once its earliest pages were dropped (20-page limit). -->
+    <string name="catalogue_load_earlier" tools:ignore="MissingTranslation">Load earlier books</string>
+    <string name="catalogue_list_failed_earlier_rest" tools:ignore="MissingTranslation">The ones below are still here.</string>
 </resources>
