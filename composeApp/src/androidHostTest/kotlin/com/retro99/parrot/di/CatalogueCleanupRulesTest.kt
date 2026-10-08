@@ -79,6 +79,26 @@ class CatalogueCleanupRulesTest {
     }
 
     @Test
+    fun `asking again after the catalogue changed its file says the book is in your library and adds no second book`() = inGraph { graph ->
+        // Given a downloaded book, and a catalogue that now serves other bytes for it
+        val koin = graph.koin
+        val source = koin.get<ServerRegistry>().addServerWithId("source", "Books", ServerType.Opds, ROOT)
+        val bookId = assertNotNull(download(koin, source).libraryBookId)
+        graph.changedFile = true
+
+        // When
+        val again = request(koin, source)
+
+        // Then
+        assertEquals(CatalogueRequestOutcome.InLibrary(bookId), again)
+        assertEquals(1, graph.fileRequests)
+        koin.get<ProfileDatabaseSession>().withProfile(PROFILE) {
+            assertEquals(1, koin.get<LibraryBooksDatabase>().countLibraryBooksWithDeviceFiles())
+            assertEquals(1, koin.get<CatalogueAcquisitionsDatabase>().getAll().size)
+        }
+    }
+
+    @Test
     fun `a book kept without its file is downloaded again into the same book and keeps its progress`() = inGraph { graph ->
         // Given a downloaded book that was read, and then lost its file on this device
         val koin = graph.koin
@@ -199,6 +219,14 @@ class CatalogueCleanupRulesTest {
 
     /** Requests one book of the catalogue and waits until the request stops moving. */
     private suspend fun download(koin: Koin, source: ServerConfig, book: Int = 0): CatalogueAcquisition {
+        val queue = koin.get<CatalogueAcquisitionManager>()
+        val queued = assertIs<CatalogueRequestOutcome.Queued>(request(koin, source, book)).acquisition
+        return queue.observeAcquisitions().first { all ->
+            all.first { it.requestId == queued.requestId }.state.let { it == AcquisitionState.Done || it is AcquisitionState.Failed }
+        }.first { it.requestId == queued.requestId }
+    }
+
+    private suspend fun request(koin: Koin, source: ServerConfig, book: Int = 0): CatalogueRequestOutcome {
         val repository = assertNotNull(koin.get<CatalogueRepositoryProvider>().getRepository(source.id))
         val document = assertIs<CatalogueFeedDocument>(repository.getRoot().get())
         val publication = document.publications[book]
@@ -206,25 +234,19 @@ class CatalogueCleanupRulesTest {
             assertIs<CatalogueAcquisitionRepository>(repository)
                 .locate(document, publication, publication.acquisitionChoices.single()),
         )
-        val queue = koin.get<CatalogueAcquisitionManager>()
-        val queued = assertIs<CatalogueRequestOutcome.Queued>(
-            queue.request(
-                CatalogueAcquisitionRequest(
-                    sourceId = source.id,
-                    publicationKey = locator.publicationKey,
-                    representationKey = locator.representationKey,
-                    detailIdentity = null,
-                    listingUrl = locator.documentUrl,
-                    title = "Book",
-                    author = null,
-                    coverReference = null,
-                    catalogueName = source.name,
-                ),
+        return koin.get<CatalogueAcquisitionManager>().request(
+            CatalogueAcquisitionRequest(
+                sourceId = source.id,
+                publicationKey = locator.publicationKey,
+                representationKey = locator.representationKey,
+                detailIdentity = null,
+                listingUrl = locator.documentUrl,
+                title = "Book",
+                author = null,
+                coverReference = null,
+                catalogueName = source.name,
             ),
-        ).acquisition
-        return queue.observeAcquisitions().first { all ->
-            all.first { it.requestId == queued.requestId }.state.let { it == AcquisitionState.Done || it is AcquisitionState.Failed }
-        }.first { it.requestId == queued.requestId }
+        )
     }
 
     private class Graph(val real: RealAppGraph, private val counters: Counters) {
@@ -237,12 +259,16 @@ class CatalogueCleanupRulesTest {
         var offline: Boolean
             get() = counters.offline
             set(value) { counters.offline = value }
+        var changedFile: Boolean
+            get() = counters.changedFile
+            set(value) { counters.changedFile = value }
     }
 
     private class Counters {
         @Volatile var fileRequests = 0
         @Volatile var refuseFiles = false
         @Volatile var offline = false
+        @Volatile var changedFile = false
     }
 
     private fun inGraph(test: suspend (Graph) -> Unit) {
@@ -257,7 +283,7 @@ class CatalogueCleanupRulesTest {
                     respond("", HttpStatusCode.Unauthorized, headersOf(HttpHeaders.WWWAuthenticate, "Basic realm=\"books\""))
                 else -> {
                     counters.fileRequests++
-                    respond(CatalogueTestEpub.BYTES, headers = headersOf(HttpHeaders.ContentType, "application/epub+zip"))
+                    respond(if (counters.changedFile) CatalogueTestEpub.BYTES + byteArrayOf(0) else CatalogueTestEpub.BYTES, headers = headersOf(HttpHeaders.ContentType, "application/epub+zip"))
                 }
             }
         }
