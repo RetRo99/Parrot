@@ -1,9 +1,10 @@
 # OPDS server support: research and implementation plan
 
 **Status:** Phase 1 protocol core complete and its gate met; Phase 2 test-first
-items 1–7 and catalogue plumbing implemented; Phase 2 gate met. Phase 3 in
-progress: a download now ends as a library book with provenance; cleanup, sync
-hold-back and the Phase 3 gate are still open (see the Phase 3 status notes).
+items 1–7 and catalogue plumbing implemented; Phase 2 gate met. Phase 3
+complete and its gate met (2026-10-08): durable acquisition into the library,
+clean-up rules, sign-out, and the saved-pages cache, all without a screen (see
+the Phase 3 status notes for what is left open).
 All user-visible OPDS integration remains unimplemented.
 No user-visible OPDS application integration yet. Reviewed
 against the codebase on 2026-10-08: open gaps are in §10, the designer brief is
@@ -1100,6 +1101,110 @@ passes. `:androidApp:assembleDebug` and
 `:composeApp:linkDebugFrameworkIosSimulatorArm64` both pass, built in one
 invocation with `--max-workers=2`.
 
+**Phase 3 status after the clean-up run (2026-10-08, branch
+`opds/phase3-acquisition`). Phase 3 is complete and its gate is met.** Done:
+the sync decision change, sign-out, the clean-up rules, the saved-pages cache.
+No screen.
+
+- **Decision change (§10.0, §10.9).** A catalogue book writes the same
+  `library_book` outbox entry as a picked file. `insertBookWithoutSync` is
+  removed. `backupAll`, the backup banner and the backup sheet still leave
+  catalogue-origin files out; whether such a file can be backed up is open
+  (§11.7 "Still open", item 5). Position, bookmark, highlight and
+  reading-session sync are untouched.
+- **What the cleaner does today.** `DatabaseCleanerImpl` is handed
+  `getAll<DataClearable>()` by the generated Koin module, and no table is bound
+  under that type (`provideDataClearables` returns a `List`, which Koin does
+  not use for a `List<T>` constructor parameter). In the running app
+  `clearAllData()` therefore removes **nothing**. This is the same class of
+  fault as the Phase 2 wiring bug, it predates this work, and it is **not
+  fixed here**: fixing it would start deleting data on sign-out, which is a
+  product decision. As written, the eight clearable tables would remove: the
+  server book cache with its people, series, tags, collections, statuses and
+  media files; **every** reading position and remote position, including
+  those of library books; favourites; authors; reading sessions; session
+  recaps; the whole sync outbox; sync checkpoints; and the Parrot Cloud file
+  mirror and transfers. They would keep `library_books`, `device_files`, the
+  files and covers on disk, saved items, reader settings and book links. So a
+  picked book would keep its row and file and lose its position, its
+  favourite mark, its reading history and its unsent changes. Both facts are
+  pinned by tests in `SignOutOfEverythingTest` (app graph).
+- **Sign out of everything.** `LogoutUseCase.logoutAll()` no longer skips the
+  cleaner when the profile has a catalogue. A catalogue book and a picked book
+  come out in the same condition as each other, with or without the wiring
+  fault, because the cleaner has no knowledge of a file's origin and the
+  catalogue tables and the import journal are not clearable. For a catalogue,
+  `ServerRegistry.clearCredentials` and `clearAllCredentials` now do nothing
+  when it has no account details; when it has, they call the new
+  `CatalogueWorkController.forget`, which removes every unfinished download
+  (also one waiting for sign-in) and the saved pages, and then the details.
+- **Clean-up rules.**
+  - *Book deleted* (`deleteBookFromDevice`): its provenance rows and finished
+    downloads go in the same transaction; it can be downloaded again.
+  - *File removed, book kept:* `findInLibrary` requires a device file, so the
+    lookup and `request()` no longer answer "in library". The same bytes go
+    back to the same book (`findLibraryBookBySourceHash`) and its position
+    stays; the provenance row is not written a second time. Different bytes
+    become a separate book, as for any import.
+  - *Merge:* provenance and downloads move to the surviving book; rows for
+    the same catalogue, publication and bytes collapse to the oldest.
+  - *Catalogue removed:* unfinished downloads, staged files, saved pages,
+    account details and status go. Books and provenance stay; provenance
+    carries the catalogue's name and origin and reads without the catalogue.
+  - *Profile deleted:* `CatalogueAcquisitionStartup` watches the profile
+    list and removes staging folders of profiles that no longer exist, also
+    ones left from a deletion while Parrot was closed. An empty list is
+    treated as "not loaded yet".
+  - *The race from the last run is closed.* After the library returns the
+    book, the queue finishes under `NonCancellable`, and a request whose row
+    is gone (cancelled, or its catalogue removed, in that instant) still gets
+    its provenance row from the worker's copy of the request. Tested by
+    cancelling, and by removing the catalogue, from inside the library's
+    commit. Left: a process that dies in that same instant, after the row was
+    deleted and before the provenance write, leaves the book without
+    provenance; the import journal does not carry provenance.
+- **Access generation.** `OpdsCredentialStore.accessGeneration` is stored per
+  profile (`CatalogueAccessGenerations`), changes on every save of different
+  details and every removal, and never repeats in a profile. The in-memory
+  counter in the repository factory is gone.
+- **Saved pages.** `SavedPagesFeedCache` (lib/server-opds) implements the
+  Phase 1 `OpdsFeedCache` over `catalogue_documents` and replaces the
+  in-memory cache in the app. Budget `OpdsBudgets.MAX_SAVED_PAGES_BYTES`
+  (25 MiB per profile database), oldest `stored_at` first. Never saved: a
+  `no-store` page, a page with a `Vary` other than `Accept` (the loader's
+  existing rule), a body over `MAX_RESPONSE_BYTES`. Downloads and search
+  descriptors do not pass through the cache. Validators are stored and every
+  load revalidates. `41.sqm` (schema 41 to 42) adds `effective_url`, the
+  address after redirects, because links in a saved page are relative to it.
+- **Offline results.** Only `OpdsTransportError.Code.UNREACHABLE` counts
+  (no connection, host not found, connection refused); a timeout, a TLS
+  failure and a server error do not. With a saved page the repository returns
+  the document with `CatalogueFetchStatus.savedCopyAt` set to its stored time
+  (`opds-offline`); without one the error is
+  `CatalogueErrorKind.OfflineNoSavedCopy` (`opds-offlineNone`). The stored
+  last check says `Unreachable` in both cases; `OfflineNoSavedCopy` is never
+  persisted.
+- **Who sees a saved page.** Rows are keyed by source, access generation and
+  request address, in the profile's own database, and are read and written
+  only while that profile is open. A change of account details, sign-out of
+  a catalogue with details, turning it off, moving it and removing it delete
+  that source's pages (`CatalogueWorkController.cancel` in the factory);
+  saving a page also drops the source's pages of other generations. A profile
+  switch ends the session and keeps the pages.
+
+**Phase 3 gate (checked 2026-10-08): met.**
+
+| Gate item | Result | Evidence |
+| --- | --- | --- |
+| One usable local book | Met | `CatalogueDownloadToLibraryTest`: one library row, one device file with the served bytes, cover, provenance, the import's outbox entry. Not opened in the reader on a device. |
+| Survives retries and restarts without duplicates | Met | Queue restart and crash-step tests (`AcquisitionAddToLibraryTest`, `AcquisitionQueuePipelineTest`), the import journal tests, and the cancel-at-commit tests added in this run. |
+| Cannot write into a different profile | Met | `AcquisitionQueueFencingTest`; saved pages: `SavedPagesFeedCacheTest`, `OpdsSavedPagesTest`. |
+| Never needs a Parrot Cloud file record or hosted EPUB | Met | The app-graph tests run with Parrot Cloud not configured; no `CloudBookFileEntity` is written. |
+| Same publication again after the provider changed its file | Met | `request()` answers `InLibrary` before any download; the user is told the book is already in the library. An explicit "get updated copy" is deferred (§10.0). One case does add a book: the book was kept but its file removed from this device, and the catalogue's file has changed since. That follows the rule that different bytes never overwrite. |
+
+**Verification of the clean-up run (2026-10-08).** See the run report for the
+per-module counts.
+
 ### Phase 4 — complete browsing feature
 
 - Create `feature/catalogue/domain`, `data`, and `ui`; add source/browser/detail
@@ -1275,7 +1380,7 @@ alternative, this table wins.
 | Item | Decision |
 | --- | --- |
 | §10.1 Downgrade safety | Catalogue sources are stored under their own preferences key, separate from `RegisteredServers`, so builds without OPDS never decode them. `ServerRegistry` merges both lists for callers. |
-| §10.3 Logout-all | Removes catalogue account details and cancels active acquisitions; keeps account-free catalogues, acquired books, and provenance. |
+| §10.3 Logout-all | Removes catalogue account details. A catalogue that had account details also loses its unfinished downloads and saved pages, because they may hold private content; a catalogue without account details is left alone, running downloads included. Catalogues stay registered; acquired books, provenance, finished downloads and the import journal stay. The database cleaner then runs as for any profile and treats a catalogue book exactly like a file-picker import (Phase 3 status, sign-out run). |
 | §10.5 Digest / protected Calibre over HTTP | Unsupported in the first release. Use the `unsupported` / `unsupportedBlocked` and `pwHttp` / `pwHttpBlocked` dialogs. |
 | §10.9 Acquired books on other devices | **Reversed on 2026-10-08.** A catalogue-acquired book syncs its details and progress exactly like a file-picker import: finalization writes the same `library_book` outbox entry for `ORIGIN_CATALOGUE_DOWNLOAD` as for `ORIGIN_IMPORT`. Its file is still never uploaded automatically. Reason: holding the entry back required changing position, bookmark and highlight sync, and made catalogue books behave unlike imports. The earlier decision (no metadata sync until the file is backed up) no longer applies. |
 | §10.10 Feed cache | Keep a small persisted cache of documents the user opened (within the §4 budgets), enough for the offline boards. Full HTTP-semantics caching beyond validators and `no-store` is not required in the first release. |
