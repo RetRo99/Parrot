@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Synthetic OPDS 1.x standalone full entry with a CDATA HTML description and an
+  inherited xml:base on the entry element. All content invented.
+-->
+<entry xmlns="http://www.w3.org/2005/Atom"
+       xmlns:opds="http://opds-spec.org"
+       xmlns:dc="http://purl.org/dc/elements/1.1/"
+       xml:base="/cache/">
+  <id>urn:synthesis:treatise:1</id>
+  <title>A Synthesized Treatise</title>
+  <updated>2026-10-06T00:00:00Z</updated>
+  <author>
+    <name>Bern Synth</name>
+  </author>
+  <dc:language>en</dc:language>
+  <summary>Standalone full entry.</summary>
+  <content type="html"><![CDATA[<p>An <b>HTML</b> blob describing the treatise &amp; more.</p>]]></content>
+
+  <link rel="http://opds-spec.org/acquisition" href="treatise.epub" type="application/epub+zip"/>
+  <link rel="http://opds-spec.org/image" href="treatise.png" type="image/png"/>
+</entry>

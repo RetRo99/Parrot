@@ -35,6 +35,11 @@ plugins {
 include(":androidApp")
 include(":tools:tts-bench")
 include(":tools:ember-fixtures")
+// Phase 0 spike harness for the OPDS plan (docs/opds-server-implementation-plan.md §7 Phase 0).
+// Contains only fixtures and exploratory verification tests; it is not an application module
+// and Phase 1 must not depend on its code. Fixture content moves to lib/opds/implementation
+// test resources when that module is created.
+include(":tools:opds-phase0-spike")
 include(":composeApp")
 include(":base")
 include(":base-ui")

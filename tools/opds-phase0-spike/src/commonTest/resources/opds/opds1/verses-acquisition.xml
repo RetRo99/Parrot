@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Synthetic OPDS 1.x acquisition feed for one work with two editions ("variants"),
+  modeled on the observed shape of https://www.gutenberg.org/ebooks/1342.opds
+  (research notes §2.3): two entries with the same work title, distinct atom ids,
+  multiple acquisition links (one entry exposes more than one EPUB link), XHTML
+  description, rights, language, related links. All content is invented.
+-->
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:opds="http://opds-spec.org"
+      xmlns:dc="http://purl.org/dc/elements/1.1/"
+      xmlns:thread="http://purl.org/syndication/thread/1.0">
+  <id>urn:uuid:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee</id>
+  <title>A Synthesized Book of Verses</title>
+  <updated>2026-10-08T00:00:00Z</updated>
+
+  <link rel="self" href="/works/verses" type="application/atom+xml;profile=opds-catalog;kind=acquisition"/>
+  <link rel="up" href="/listing" type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+
+  <entry>
+    <id>urn:synthesis:verses:edition:1</id>
+    <title>A Synthesized Book of Verses</title>
+    <updated>2026-10-05T00:00:00Z</updated>
+    <author>
+      <name>Adele Synthling</name>
+    </author>
+    <dc:language>en</dc:language>
+    <dc:rights>Released under a catalogue-of-record setting. See the related link.</dc:rights>
+    <summary>First edition.</summary>
+    <content type="xhtml">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <p>Description with <em>inline</em> markup and an opaque &amp; opaque entity.</p>
+      </div>
+    </content>
+
+    <link rel="self" href="/works/verses/edition-1" type="application/atom+xml;profile=opds-catalog;kind=acquisition;thread=update"/>
+    <link rel="http://opds-spec.org/acquisition" href="/cache/verses-1.epub.noimages" type="application/epub+zip"/>
+    <link rel="http://opds-spec.org/acquisition" href="/cache/verses-1.epub.images" type="application/epub+zip"/>
+    <link rel="http://opds-spec.org/acquisition" href="/cache/verses-1.txt" type="text/plain"/>
+    <link rel="related" href="https://catalogue.example.org/work/verses/edition-1" type="text/html"/>
+    <link rel="http://opds-spec.org/image" href="/covers/verses-1.png" type="image/png"/>
+  </entry>
+
+  <entry>
+    <id>urn:synthesis:verses:edition:2</id>
+    <title>A Synthesized Book of Verses</title>
+    <updated>2026-09-30T00:00:00Z</updated>
+    <author>
+      <name>Adele Synthling</name>
+    </author>
+    <dc:language>en</dc:language>
+    <dc:rights>Synthetic rights statement.</dc:rights>
+    <summary>Second edition, published later, with fewer formats.</summary>
+    <content type="text">Plain-text description for the second edition.</content>
+
+    <link rel="http://opds-spec.org/acquisition" href="/cache/verses-2.epub" type="application/epub+zip"/>
+    <link rel="http://opds-spec.org/acquisition" href="/cache/verses-2.mobi" type="application/x-mobipocket-ebook"/>
+    <link rel="http://opds-spec.org/image" href="/covers/verses-2.png" type="image/png"/>
+  </entry>
+</feed>

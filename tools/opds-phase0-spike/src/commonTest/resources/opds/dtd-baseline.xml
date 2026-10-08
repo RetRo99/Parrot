@@ -1,0 +1,16 @@
+<!-- Security spike: what does a compliant parser actually do with a small
+     internal DTD entity tree? Records the baseline behavior that Phase 1's
+     hardened parser will have to reject or bound. Value tree (bounded, 3 levels):
+       a -> "A", b -> "a a", c -> "b b"  =>  "&c;" expands to "AAAA" only if
+     entity resolution is enabled. Phase 1 policy: reject DTDs outright. -->
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE entry [
+  <!ENTITY a "A">
+  <!ENTITY b "&a;&a;">
+  <!ENTITY c "&b;&b;">
+]>
+<entry>
+  <id>urn:synthesis:dtd-baseline:1</id>
+  <title>DTD baseline</title>
+  <summary>value: &c;</summary>
+</entry>

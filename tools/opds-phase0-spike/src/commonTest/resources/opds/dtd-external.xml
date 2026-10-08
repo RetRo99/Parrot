@@ -1,0 +1,13 @@
+<!-- Security spike: external entity resolution attempt. The external target is
+     intentionally absent inside the test bundle, so a parser that follows
+     external DTDs must fail loudly; a parser that disables external entities
+     must fail cleanly. Phase 1 policy: reject DOCTYPE before it matters. -->
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE entry [
+  <!ENTITY ex SYSTEM "opds/missing-external.ent">
+]>
+<entry>
+  <id>urn:synthesis:dtd-external:1</id>
+  <title>DTD external</title>
+  <summary>You should not read this: &ex;</summary>
+</entry>
