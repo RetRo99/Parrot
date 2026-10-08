@@ -87,6 +87,8 @@ for theme in args.themes:
                 break
         assert "Unknown catalogue fixture" not in labels, f"The APK has no fixture {view!r}: rebuild it"
         assert expected in labels, f"Missing {expected!r} in {view} ({theme}). On screen: {labels.strip()[:300]!r}"
+        # A second idle barrier catches a frame still laying out the generated title cover.
+        xml, tree = hierarchy()
         focused()
         screenshot = run("exec-out", "screencap", "-p", capture=True)
         focused()

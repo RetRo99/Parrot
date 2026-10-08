@@ -62,6 +62,22 @@ class CatalogueFixture(val view: String, val expect: String, val content: @Compo
 private fun fixture(view: String, expect: String, content: @Composable () -> Unit) = CatalogueFixture(view, expect, content)
 
 val catalogueFixtures: List<CatalogueFixture> = listOf(
+    fixture(view = "detail", expect = "Other files (3)") { CatalogueBookBoard("detail") },
+    fixture(view = "detailWait", expect = "Two other books are downloading.") { CatalogueBookBoard("detailWait") },
+    fixture(view = "detailWaitOne", expect = "Another book is downloading.") { CatalogueBookBoard("detailWaitOne") },
+    fixture(view = "detailDl", expect = "0.5 of 1.2 MB") { CatalogueBookBoard("detailDl") },
+    fixture(view = "detailUnknown", expect = "1.4 MB so far") { CatalogueBookBoard("detailUnknown") },
+    fixture(view = "detailIos", expect = "Keep Parrot open until this finishes.") { CatalogueBookBoard("detailIos") },
+    fixture(view = "detailAdding", expect = "Checking the file and preparing it for reading.") { CatalogueBookBoard("detailAdding") },
+    fixture(view = "detailDone", expect = "downloaded just now") { CatalogueBookBoard("detailDone") },
+    fixture(view = "blocked", expect = "This book is sold on") { CatalogueBookBoard("blocked") },
+    fixture(view = "blockedSubscription", expect = "This book is part of a subscription") { CatalogueBookBoard("blockedSubscription") },
+    fixture(view = "blockedBorrow", expect = "This book can be borrowed") { CatalogueBookBoard("blockedBorrow") },
+    fixture(view = "blockedSample", expect = "The catalogue offers only a sample") { CatalogueBookBoard("blockedSample") },
+    fixture(view = "blockedFormat", expect = "This book is only available as PDF") { CatalogueBookBoard("blockedFormat") },
+    fixture(view = "blockedProtected", expect = "This book's file is protected (DRM)") { CatalogueBookBoard("blockedProtected") },
+    fixture(view = "editions", expect = "Names come from the catalogue.") { CatalogueBookBoard("editions") },
+    fixture(view = "editionsGrouped", expect = "This book has 2 editions in the catalogue.") { CatalogueBookBoard("editionsGrouped") },
     // Not a board: the description block of the book page, to prove the harness end to end.
     fixture(view = "descriptionText", expect = "Maps & notes") {
         FixturePage {
