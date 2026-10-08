@@ -37,7 +37,9 @@ class CatalogueDataModule {
         @Provided database: CatalogueAcquisitionsDatabase,
         @Provided users: UserRegistry,
         @Provided profileWork: ProfileWorkRegistry,
-        @Provided repositories: CatalogueRepositoryProvider,
+        // Lazy: the provider needs the server registry, and the registry is meant to be handed
+        // every CatalogueWorkController, this queue included.
+        @Provided repositories: Lazy<CatalogueRepositoryProvider>,
         @Provided checker: EpubFileChecker,
         files: CatalogueStagingFiles,
     ): CatalogueAcquisitionQueue {

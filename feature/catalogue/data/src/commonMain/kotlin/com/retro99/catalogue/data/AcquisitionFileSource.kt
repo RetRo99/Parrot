@@ -20,7 +20,7 @@ interface AcquisitionFileSource {
 
 /** Goes through the registered catalogue source, so its account details and rules apply. */
 internal class RegistryAcquisitionFileSource(
-    private val repositories: CatalogueRepositoryProvider,
+    private val repositories: Lazy<CatalogueRepositoryProvider>,
     private val activeProfileId: () -> String?,
 ) : AcquisitionFileSource {
     override suspend fun download(
@@ -32,7 +32,7 @@ internal class RegistryAcquisitionFileSource(
         // The provider hands out sessions of the open profile only.
         if (activeProfileId() != profileId) throw CancellationException("Profile is no longer open")
         val repository = try {
-            repositories.getRepository(sourceId) as? CatalogueAcquisitionRepository
+            repositories.value.getRepository(sourceId) as? CatalogueAcquisitionRepository
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: IllegalStateException) {
