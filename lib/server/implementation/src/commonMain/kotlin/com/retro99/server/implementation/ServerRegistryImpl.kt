@@ -129,8 +129,9 @@ class ServerRegistryImpl(
         return _servers.map { it.values.toList().sortedBy { server -> server.name } }
     }
 
-    override suspend fun getAllServers(): List<ServerConfig> {
-        return _servers.value.values.toList()
+    override suspend fun getAllServers(): List<ServerConfig> = mutex.withLock {
+        ensureCurrentUser()
+        _servers.value.values.toList()
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -151,7 +152,9 @@ class ServerRegistryImpl(
         type: ServerType,
         baseUrl: String,
     ): ServerConfig = mutex.withLock {
+        ensureCurrentUser()
         val previousType = _servers.value[id]?.type
+        check(type != ServerType.Opds || previousType == null) { "Catalogue source id already exists" }
         check(previousType == null || (previousType == ServerType.Opds) == (type == ServerType.Opds)) {
             "Cannot change between library server and catalogue source"
         }
@@ -175,15 +178,16 @@ class ServerRegistryImpl(
     }
 
     override suspend fun updateServer(config: ServerConfig) = mutex.withLock {
+        ensureCurrentUser()
         if (config.type == ServerType.Opds) {
             val previous = _servers.value[config.id]
             check(previous?.type == ServerType.Opds) { "Catalogue source must already exist" }
             val profileId = currentUserId ?: error("No active profile")
-            if (previous.baseUrl != config.baseUrl) {
+            if (previous.baseUrl != config.baseUrl || previous.enabled && !config.enabled) {
                 // Fail closed before publishing a retargeted address. Losing optional
                 // credentials on a failed config write is safer than sending them elsewhere.
                 cancelCatalogueWork(profileId, config.id)
-                if (!sameOrigin(previous.baseUrl, config.baseUrl)) opdsCredentials.remove(profileId, config.id)
+                if (previous.baseUrl != config.baseUrl && !sameOrigin(previous.baseUrl, config.baseUrl)) opdsCredentials.remove(profileId, config.id)
             }
             persistStateMutation(
                 previousValue = _servers.value,
@@ -199,14 +203,19 @@ class ServerRegistryImpl(
     }
 
     override suspend fun removeServer(serverId: String) = mutex.withLock {
+        ensureCurrentUser()
         val server = _servers.value[serverId]
         if (server?.type == ServerType.Opds) {
+            val profileId = currentUserId ?: error("No active profile")
+            cancelCatalogueWork(profileId, serverId)
             persistStateMutation(
                 previousValue = _servers.value,
                 updatedValue = _servers.value - serverId,
                 update = { _servers.value = it },
                 persist = ::persistCatalogueSources,
             )
+            opdsCredentials.remove(profileId, serverId)
+            catalogueAccess.remove(profileId, serverId)
             return@withLock
         }
         authStateProviders.firstOrNull { provider -> provider.serverType == server?.type }
@@ -218,8 +227,9 @@ class ServerRegistryImpl(
         persistCredentials()
     }
 
-    override suspend fun getServer(serverId: String): ServerConfig? {
-        return _servers.value[serverId]
+    override suspend fun getServer(serverId: String): ServerConfig? = mutex.withLock {
+        ensureCurrentUser()
+        _servers.value[serverId]
     }
 
     // ==================== Authentication State ====================
@@ -301,6 +311,7 @@ class ServerRegistryImpl(
     // ==================== Credentials Management ====================
 
     override suspend fun saveCredentials(credentials: ServerCredentials) = mutex.withLock {
+        ensureCurrentUser()
         val server = _servers.value[credentials.serverId]
         check(server?.type != ServerType.Opds) { "Catalogue credentials must use OpdsCredentialStore" }
         check(authStateProviders.none { provider -> provider.serverType == server?.type }) {
@@ -321,6 +332,7 @@ class ServerRegistryImpl(
     }
 
     override suspend fun clearCredentials(serverId: String) = mutex.withLock {
+        ensureCurrentUser()
         val server = _servers.value[serverId]
         if (server?.type == ServerType.Opds) {
             val profileId = currentUserId ?: return@withLock
@@ -339,6 +351,7 @@ class ServerRegistryImpl(
     }
 
     override suspend fun clearAllCredentials() = mutex.withLock {
+        ensureCurrentUser()
         val servers = _servers.value.values.toList()
         servers.forEach { server ->
             if (server.type == ServerType.Opds) {
@@ -355,10 +368,20 @@ class ServerRegistryImpl(
     }
 
     override suspend fun deactivateServer(serverId: String) {
+        val server = getServer(serverId)
+        if (server?.type == ServerType.Opds) {
+            updateServer(server.copy(enabled = false))
+            return
+        }
         clearCredentials(serverId)
     }
 
     // ==================== Persistence ====================
+
+    private fun ensureCurrentUser() {
+        val profileId = userRegistry.getActiveProfileId()
+        if (profileId != currentUserId) reloadForUserInternal(profileId)
+    }
 
     private suspend fun cancelCatalogueWork(profileId: String, sourceId: String) {
         catalogueWork.forEach { it.cancel(profileId, sourceId) }

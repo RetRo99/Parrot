@@ -1,9 +1,11 @@
 package com.retro99.server.opds
 
 import com.retro99.opds.implementation.transport.KtorOpdsTransport
+import com.retro99.opds.implementation.cache.MemoryOpdsFeedCache
 import com.retro99.preferences.api.*
 import com.retro99.server.api.*
 import com.retro99.user.api.UserRegistry
+import com.retro99.user.api.ProfileWorkRegistry
 import io.ktor.client.engine.HttpClientEngineFactory
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -17,23 +19,16 @@ class OpdsCatalogueRepositoryFactory(
     @Provided private val credentials: OpdsCredentialStore,
     @Provided private val access: CatalogueAccessStore,
     private val preferences: Preferences,
+    @Provided private val profileWork: ProfileWorkRegistry,
 ) : ServerCatalogueRepositoryFactory, CatalogueWorkController {
     override val serverType = ServerType.Opds
     private data class Key(val profileId: String, val sourceId: String)
     private data class Session(val repository: OpdsCatalogueRepository, val account: OpdsAccountDetails?)
     private val sessions = MutableStateFlow<Map<Key, Session>>(emptyMap())
+    // Shared capacity, not 20 pages per catalogue. Keys remain profile/source/access scoped.
+    private val cache = MemoryOpdsFeedCache()
+    private val generation = MutableStateFlow(0)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-    private var activeProfileId = users.getActiveProfileId()
-
-    init {
-        users.observeActiveProfile().map { it?.id }.distinctUntilChanged().onEach { profileId ->
-            if (profileId != activeProfileId) {
-                activeProfileId = profileId
-                val old = sessions.getAndUpdate { it.filterKeys { it.profileId == profileId } }
-                old.filterKeys { it.profileId != profileId }.values.forEach { it.repository.dispose() }
-            }
-        }.launchIn(scope)
-    }
 
     private fun registered(profileId: String, config: ServerConfig): Boolean =
         preferences.getObject<List<ServerConfig>>(PreferencesKey.UserScoped(profileId, PreferencesKey.CatalogueSources.name))
@@ -48,12 +43,23 @@ class OpdsCatalogueRepositoryFactory(
         while (true) {
             val current = sessions.value
             val previous = current[key]
-            if (previous?.repository?.config == serverConfig && previous.account == account) return previous.repository
+            if (previous?.repository?.config == serverConfig && previous.account == account && !previous.repository.isStopped) {
+                if (profileWork.register(profileId, key) { cancel(profileId, key.sourceId) }) return previous.repository
+                previous.repository.stop()
+                throw CancellationException("Catalogue profile invalidated")
+            }
+            previous?.repository?.stop()
             val repository = OpdsCatalogueRepository(profileId, serverConfig,
                 KtorOpdsTransport(engines.create(), serverConfig.baseUrl), credentials, access,
-                { users.getActiveProfileId() == profileId && registered(profileId, serverConfig) && credentials.get(profileId, serverConfig.id) == account })
+                { users.getActiveProfileId() == profileId && registered(profileId, serverConfig) && credentials.get(profileId, serverConfig.id) == account },
+                cache = cache, accessGeneration = generation.getAndUpdate { it + 1 })
             if (sessions.compareAndSet(current, current + (key to Session(repository, account)))) {
-                previous?.repository?.stop()
+                val sourceId = serverConfig.id
+                if (!profileWork.register(profileId, key) { cancel(profileId, sourceId) }) {
+                    sessions.update { if (it[key]?.repository === repository) it - key else it }
+                    repository.stop()
+                    throw CancellationException("Catalogue profile invalidated")
+                }
                 if (previous != null) scope.launch { previous.repository.dispose() }
                 return repository
             }
@@ -63,6 +69,7 @@ class OpdsCatalogueRepositoryFactory(
 
     override suspend fun cancel(profileId: String, sourceId: String) {
         val key = Key(profileId, sourceId)
+        profileWork.unregister(profileId, key)
         val previous = sessions.getAndUpdate { it - key }[key]
         previous?.repository?.dispose()
     }

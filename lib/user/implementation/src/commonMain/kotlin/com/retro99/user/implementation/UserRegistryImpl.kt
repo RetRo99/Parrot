@@ -7,6 +7,7 @@ import com.retro99.preferences.api.getObject
 import com.retro99.preferences.api.putObject
 import com.retro99.user.api.UserProfile
 import com.retro99.user.api.UserRegistry
+import com.retro99.user.api.ProfileWorkRegistry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.koin.core.annotation.Single
+import org.koin.core.annotation.Provided
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -22,6 +24,7 @@ import kotlin.uuid.Uuid
 @Single(binds = [UserRegistry::class])
 class UserRegistryImpl(
     private val preferences: Preferences,
+    @Provided private val profileWork: ProfileWorkRegistry = ProfileWorkRegistryImpl(),
 ) : UserRegistry {
 
     private val logger = Logger.withTag("UserRegistry")
@@ -46,6 +49,7 @@ class UserRegistryImpl(
 
         // Load active profile
         val activeId = preferences.getStringOrNull(PreferencesKey.ActiveProfileId)
+        activeId?.let { profileWork.activate(it) }
         _activeProfileId.value = activeId
         logger.d { "Loaded active profile state" }
     }
@@ -104,17 +108,21 @@ class UserRegistryImpl(
                 return@withLock
             }
 
+            profileWork.cancel(profileId)
+
             val activatedFallback = fallbackProfile.copy(
                 lastActiveAt = Clock.System.now().toEpochMilliseconds(),
             )
             _profiles.update { it + (activatedFallback.id to activatedFallback) }
             persistProfiles()
+            profileWork.activate(activatedFallback.id)
             _activeProfileId.value = activatedFallback.id
             persistActiveProfile()
             logger.d { "Activated a remaining profile before active-profile deletion" }
         }
 
         // Clear user-scoped preferences
+        profileWork.cancel(profileId)
         clearUserPreferences(profileId)
 
         // Remove profile from registry
@@ -153,6 +161,9 @@ class UserRegistryImpl(
             return@withLock
         }
 
+        _activeProfileId.value?.takeIf { it != profileId }?.let { profileWork.cancel(it) }
+        profileWork.activate(profileId)
+
         _activeProfileId.value = profileId
         persistActiveProfile()
 
@@ -167,6 +178,7 @@ class UserRegistryImpl(
     }
 
     override suspend fun clearActiveProfile() = mutex.withLock {
+        _activeProfileId.value?.let { profileWork.cancel(it) }
         _activeProfileId.value = null
         persistActiveProfile()
         logger.d { "Cleared active profile" }
@@ -207,6 +219,9 @@ class UserRegistryImpl(
         // List of keys that are stored per-user
         val userScopedKeys = listOf(
             PreferencesKey.RegisteredServers,
+            PreferencesKey.CatalogueSources,
+            PreferencesKey.OpdsCredentials,
+            PreferencesKey.CatalogueAccessStatus,
             PreferencesKey.ServerCredentials,
             PreferencesKey.ReaderSettings,
             PreferencesKey.ReaderCustomFonts,

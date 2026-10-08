@@ -9,7 +9,7 @@ import org.koin.core.annotation.Provided
 
 /**
  * Use case for observing whether there are any authenticated remote servers.
- * Local server is excluded since it doesn't require authentication.
+ * Local and catalogue sources are excluded: public access is valid setup, not authentication.
  */
 @Factory
 class ObserveHasAuthenticatedRemoteServersUseCase(
@@ -22,7 +22,7 @@ class ObserveHasAuthenticatedRemoteServersUseCase(
     operator fun invoke(): Flow<Boolean> {
         return serverRegistry.observeAuthenticatedServers()
             .map { servers ->
-                 servers.any { it.type != ServerType.Local && it.type != ServerType.Opds }
+                servers.any { it.type != ServerType.Local && it.type != ServerType.Opds }
             }
     }
 }

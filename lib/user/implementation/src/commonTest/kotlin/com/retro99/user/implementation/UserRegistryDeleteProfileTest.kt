@@ -18,6 +18,24 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class UserRegistryDeleteProfileTest {
+    @Test fun deleting_profile_removes_catalogue_sources_accounts_and_status_only_for_that_profile() = runTest {
+        val preferences = FakePreferences()
+        val registry = UserRegistryImpl(preferences)
+        registry.createProfile("a", "A", null)
+        registry.createProfile("b", "B", null)
+        registry.setActiveProfile("b")
+        val keys = listOf(PreferencesKey.CatalogueSources, PreferencesKey.OpdsCredentials, PreferencesKey.CatalogueAccessStatus)
+        keys.forEach { key ->
+            preferences.putString(PreferencesKey.UserScoped("a", key.name), "private-a")
+            preferences.putString(PreferencesKey.UserScoped("b", key.name), "private-b")
+        }
+        registry.deleteProfile("a")
+        keys.forEach { key ->
+            assertNull(preferences.getStringOrNull(PreferencesKey.UserScoped("a", key.name)))
+            assertEquals("private-b", preferences.getStringOrNull(PreferencesKey.UserScoped("b", key.name)))
+        }
+    }
+
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun deletingActiveProfileActivatesMostRecentlyUsedRemainingProfileFirst() = runTest {

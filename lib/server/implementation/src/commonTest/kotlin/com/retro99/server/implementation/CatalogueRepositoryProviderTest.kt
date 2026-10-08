@@ -3,6 +3,7 @@ package com.retro99.server.implementation
 import com.retro99.base.result.AppResult
 import com.retro99.server.api.*
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
@@ -24,7 +25,10 @@ class CatalogueRepositoryProviderTest {
                 return StubCatalogue(serverConfig.id)
             }
         }
-        val provider = CatalogueRepositoryProviderImpl(guarded, factory)
+        val sources = object : CatalogueAccessProvider {
+            override fun observeSources() = registry.observeAllServers().map { it.map { CatalogueSourceStatus(it, CatalogueAccessStatus()) } }
+        }
+        val provider = CatalogueRepositoryProviderImpl(guarded, factory, sources)
         assertEquals(listOf(public.id), provider.observeRepositories().first().map { it.serverId })
         assertEquals(listOf(public.id), provider.getRepositories().map { it.serverId })
         assertNull(provider.getRepository("library"))

@@ -33,6 +33,7 @@ kotlin {
             implementation(libs.coroutines.test)
             implementation(libs.ktor.client.mock)
             implementation(projects.lib.server.implementation)
+            implementation(projects.lib.user.implementation)
         }
         named("androidHostTest") { dependencies { implementation(libs.kotlin.testJunit) } }
     }

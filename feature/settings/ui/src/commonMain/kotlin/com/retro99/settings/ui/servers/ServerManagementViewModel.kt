@@ -50,7 +50,7 @@ class ServerManagementViewModel(
                 config.copy(name = intent.name.trim())
             }
             is ServerManagementIntent.OnChangeAddress -> updateServerConfig(intent.serverId) { config ->
-                config.copy(baseUrl = normalizeServerAddress(intent.baseUrl))
+                config.copy(baseUrl = if (config.type == ServerType.Opds) intent.baseUrl else normalizeServerAddress(intent.baseUrl))
             }
             ServerManagementIntent.RetryFailedOperation -> retryFailedOperation()
             ServerManagementIntent.DismissOperationFailure -> dismissOperationFailure()
@@ -120,6 +120,7 @@ class ServerManagementViewModel(
     }
 
     private fun onLoginClick(serverId: String, serverType: ServerType, isRetry: Boolean) {
+        if (serverType.getCapabilities().supportsCatalogueBrowsing) return
         analytics.logEvent(
             ServerManagementAnalyticsEvent.ServerLoginAttempted(
                 serverType = serverType.identifier,
