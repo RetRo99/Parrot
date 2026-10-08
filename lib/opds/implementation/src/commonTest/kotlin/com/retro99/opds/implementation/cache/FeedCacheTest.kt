@@ -92,6 +92,28 @@ class FeedCacheTest {
             transport.close()
         }
     }
+    @Test fun an_unreachable_catalogue_serves_the_saved_copy_with_its_time_and_no_other_failure_does() = runTest {
+        var answer: suspend MockRequestHandleScope.() -> io.ktor.client.request.HttpResponseData = { respond(body, headers = headersOf(HttpHeaders.ContentType, "application/opds+json")) }
+        val engine = MockEngine { answer() }
+        val transport = KtorOpdsTransport(engine, root)
+        val cache = MemoryOpdsFeedCache()
+        var now = 10L
+        val loader = CachedOpdsFeedLoader(transport, ParserFactory.opdsParser(), cache, nowMillis = { now })
+        val fresh = loader.load(key(), OpdsRequest(root)) as OpdsLoadResult.Document
+        now = 99
+        answer = { throw kotlinx.io.IOException("Unable to resolve host") }
+        val saved = assertIs<OpdsLoadResult.SavedCopy>(loader.load(key(), OpdsRequest(root)))
+        assertEquals(fresh.document, saved.document)
+        assertEquals(10L, saved.storedAtMillis)
+        assertEquals(10L, cache.load(key())?.storedAtMillis, "serving a saved copy does not make it newer")
+        val other = assertIs<OpdsLoadResult.FetchFailure>(loader.load(key("$root/never-opened"), OpdsRequest("$root/never-opened")))
+        assertEquals(OpdsTransportError.Code.UNREACHABLE, other.error.code)
+        answer = { respond("", HttpStatusCode.InternalServerError) }
+        assertEquals(OpdsTransportError.Code.SERVER_ERROR, assertIs<OpdsLoadResult.FetchFailure>(loader.load(key(), OpdsRequest(root))).error.code)
+        answer = { respond("", HttpStatusCode.Unauthorized, headersOf(HttpHeaders.WWWAuthenticate, "Basic realm=\"b\"")) }
+        assertEquals(OpdsTransportError.Code.SIGN_IN_NEEDED, assertIs<OpdsLoadResult.FetchFailure>(loader.load(key(), OpdsRequest(root))).error.code)
+        transport.close()
+    }
     @Test fun unexpected_304_is_not_an_empty_catalogue() = runTest {
         val engine = MockEngine { respond("", HttpStatusCode.NotModified) }
         val transport = KtorOpdsTransport(engine, root)

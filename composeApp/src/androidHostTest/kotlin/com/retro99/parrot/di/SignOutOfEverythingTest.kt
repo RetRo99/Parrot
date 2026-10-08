@@ -19,6 +19,7 @@ import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.books.PositionEntity
 import com.retro99.database.api.catalogue.CatalogueAcquisitionsDatabase
 import com.retro99.database.api.catalogue.CatalogueBookSourcesDatabase
+import com.retro99.database.api.catalogue.CatalogueDocumentsDatabase
 import com.retro99.database.api.favorites.FavoritesDatabase
 import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
@@ -171,7 +172,7 @@ class SignOutOfEverythingTest {
     }
 
     @Test
-    fun `signing out removes the unfinished downloads of a catalogue that had account details and keeps the others`() = inGraph(
+    fun `signing out removes the unfinished downloads and saved pages of a catalogue that had account details and keeps the others`() = inGraph(
         respond = { path ->
             when {
                 path.startsWith("/private/") && path.endsWith("/one") -> Answer.SignIn
@@ -189,6 +190,9 @@ class SignOutOfEverythingTest {
         assertEquals(AcquisitionState.Failed(AcquisitionFailureReason.SignIn), download(koin, private).state)
         val publicRequest = download(koin, public)
         assertEquals(AcquisitionState.Failed(AcquisitionFailureReason.Refused), publicRequest.state)
+        val session = koin.get<ProfileDatabaseSession>()
+        val pages = koin.get<CatalogueDocumentsDatabase>()
+        assertEquals(setOf("private", "public"), session.withProfile(PROFILE) { pages.oldestKeys(10) }.map { it.sourceId }.toSet())
 
         // When
         assertTrue(koin.get<LogoutUseCase>().logoutAll().isOk)
@@ -200,6 +204,7 @@ class SignOutOfEverythingTest {
             koin.get<CatalogueAcquisitionManager>().observeAcquisitions().first().map { it.requestId },
         )
         assertEquals(setOf("private", "public"), registry.getAllServers().filter { it.type == ServerType.Opds }.map(ServerConfig::id).toSet())
+        assertEquals(listOf("public"), session.withProfile(PROFILE) { pages.oldestKeys(10) }.map { it.sourceId })
     }
 
     private data class BookCondition(

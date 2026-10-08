@@ -17,6 +17,12 @@ sealed interface ServerAccessState {
 enum class CatalogueErrorKind {
     SignInNeeded, SignInUnsupported, Unreachable, Timeout, Tls, Forbidden,
     NotFound, RateLimited, ServerError, InvalidDocument, SecurityPolicy, TooLarge,
+
+    /**
+     * The catalogue could not be reached and no copy of the page is saved. A result only:
+     * the stored last check says [Unreachable], so older builds can still read it.
+     */
+    OfflineNoSavedCopy,
 }
 
 @Serializable

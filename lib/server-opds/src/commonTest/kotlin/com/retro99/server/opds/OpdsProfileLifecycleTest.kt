@@ -20,6 +20,7 @@ class OpdsProfileLifecycleTest {
         val preferences = TestPreferences()
         val profileWork = ProfileWorkRegistryImpl()
         val users = UserRegistryImpl(preferences, profileWork)
+        val documents = MemoryDocuments { users.getActiveProfileId() }
         users.createProfile("a", "A", null)
         users.setActiveProfile("a")
         val accounts = OpdsCredentialStoreImpl(preferences)
@@ -31,7 +32,7 @@ class OpdsProfileLifecycleTest {
                 else respond(OpdsCatalogueRepositoryTest.FEED, headers = headersOf(HttpHeaders.ContentType, "application/opds+json"))
             }
         }
-        val factory = OpdsCatalogueRepositoryFactory(engines, users, accounts, checks, preferences, profileWork)
+        val factory = OpdsCatalogueRepositoryFactory(engines, users, accounts, checks, preferences, profileWork, documents.session, documents)
         val registry = ServerRegistryImpl(preferences, users, emptyList(), accounts, checks, listOf(factory))
         val source = registry.addServerWithId("source", "Books", ServerType.Opds, OpdsCatalogueRepositoryTest.ROOT)
         accounts.save("a", source.id, OpdsAccountDetails("patron", ""))
@@ -66,6 +67,7 @@ class OpdsProfileLifecycleTest {
         actualUsers.createProfile("b", "B", null)
         actualUsers.setActiveProfile("a")
         val users = object : UserRegistry by actualUsers { override fun observeActiveProfile() = emptyFlow<com.retro99.user.api.UserProfile?>() }
+        val documents = MemoryDocuments { users.getActiveProfileId() }
         val source = OpdsCatalogueRepositoryTest.SOURCE
         preferences.putObject(PreferencesKey.UserScoped("a", PreferencesKey.CatalogueSources.name), listOf(source))
         val entered = CompletableDeferred<Unit>()
@@ -73,7 +75,7 @@ class OpdsProfileLifecycleTest {
             override fun create(block: MockEngineConfig.() -> Unit): HttpClientEngine = MockEngine { entered.complete(Unit); awaitCancellation() }
         }
         val checks = CatalogueAccessStoreImpl(preferences)
-        val factory = OpdsCatalogueRepositoryFactory(engines, users, OpdsCredentialStoreImpl(preferences), checks, preferences, profileWork)
+        val factory = OpdsCatalogueRepositoryFactory(engines, users, OpdsCredentialStoreImpl(preferences), checks, preferences, profileWork, documents.session, documents)
         val repository = factory.create(source)
         val request = launch { repository.getRoot() }
         entered.await()
@@ -87,6 +89,7 @@ class OpdsProfileLifecycleTest {
         val preferences = TestPreferences()
         val profileWork = ProfileWorkRegistryImpl()
         val users = UserRegistryImpl(preferences, profileWork)
+        val documents = MemoryDocuments { users.getActiveProfileId() }
         users.createProfile("a", "A", null)
         users.createProfile("b", "B", null)
         users.setActiveProfile("a")
@@ -104,7 +107,7 @@ class OpdsProfileLifecycleTest {
                 respond(OpdsCatalogueRepositoryTest.FEED, headers = headersOf(HttpHeaders.ContentType to listOf("application/opds+json"), HttpHeaders.ETag to listOf("private-a")))
             }
         }
-        val factory = OpdsCatalogueRepositoryFactory(engines, users, accounts, checks, preferences, profileWork)
+        val factory = OpdsCatalogueRepositoryFactory(engines, users, accounts, checks, preferences, profileWork, documents.session, documents)
         val a = factory.create(source)
         val feedA = assertIs<CatalogueFeedDocument>(a.getRoot().get())
         users.setActiveProfile("b")
@@ -125,12 +128,13 @@ class OpdsProfileLifecycleTest {
         val preferences = TestPreferences()
         val profileWork = ProfileWorkRegistryImpl()
         val users = UserRegistryImpl(preferences, profileWork)
+        val documents = MemoryDocuments { users.getActiveProfileId() }
         users.createProfile("a", "A", null)
         users.setActiveProfile("a")
         val engine = object : HttpClientEngineFactory<MockEngineConfig> {
             override fun create(block: MockEngineConfig.() -> Unit): HttpClientEngine = error("Must not create an engine")
         }
-        val factory = OpdsCatalogueRepositoryFactory(engine, users, OpdsCredentialStoreImpl(preferences), CatalogueAccessStoreImpl(preferences), preferences, profileWork)
+        val factory = OpdsCatalogueRepositoryFactory(engine, users, OpdsCredentialStoreImpl(preferences), CatalogueAccessStoreImpl(preferences), preferences, profileWork, documents.session, documents)
         val source = OpdsCatalogueRepositoryTest.SOURCE
         assertFailsWith<IllegalArgumentException> { factory.create(source.copy(type = ServerType.Local)) }
         assertFailsWith<IllegalArgumentException> { factory.create(source.copy(enabled = false)) }

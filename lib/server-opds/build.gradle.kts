@@ -21,6 +21,7 @@ kotlin {
             implementation(projects.lib.server.api)
             implementation(projects.lib.opds.api)
             implementation(projects.lib.opds.implementation)
+            implementation(projects.lib.database.api)
             implementation(projects.lib.preferences.api)
             implementation(projects.lib.user.api)
             implementation(libs.coroutines)

@@ -23,6 +23,9 @@ object OpdsBudgets {
     /** In-memory parsed-document cache entries per profile (§10.10 budgets). */
     const val MAX_CACHE_ENTRIES: Int = 20
 
+    /** Saved pages kept on disk per profile; the oldest go first. One page is at most [MAX_RESPONSE_BYTES]. */
+    const val MAX_SAVED_PAGES_BYTES: Long = 25L * 1024 * 1024 // 25 MiB
+
     /** In-memory parsed-document cache byte budget per profile (§10.10 budgets). */
     const val MAX_CACHE_BYTES: Long = 25L * 1024 * 1024 // 25 MiB
 }

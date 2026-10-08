@@ -70,7 +70,18 @@ data class CatalogueFacetGroup(val name: CatalogueText?, val options: List<Catal
 data class CatalogueSearchOffer(val link: CatalogueLink, val kind: Kind) {
     enum class Kind { UriTemplate, Descriptor }
 }
-data class CatalogueFetchStatus(val checkedAt: Long, val fromCache: Boolean, val crossOriginPrivateNetwork: Boolean)
+/**
+ * @param savedCopyAt set when the catalogue could not be reached and this is the copy saved
+ *   at that time ("saved copy"); null for a page that came from the catalogue just now
+ */
+data class CatalogueFetchStatus(
+    val checkedAt: Long,
+    val fromCache: Boolean,
+    val crossOriginPrivateNetwork: Boolean,
+    val savedCopyAt: Long? = null,
+) {
+    val isSavedCopy: Boolean get() = savedCopyAt != null
+}
 sealed interface CatalogueDocument {
     val context: CatalogueTarget
     val responseUrl: String

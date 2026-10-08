@@ -1,6 +1,8 @@
 package com.retro99.parrot.di
 
 import com.github.michaelbull.result.get
+import com.github.michaelbull.result.getError
+import com.retro99.base.result.AppError
 import com.retro99.catalogue.data.CatalogueAcquisitionStartup
 import com.retro99.catalogue.domain.AcquisitionFailureReason
 import com.retro99.catalogue.domain.AcquisitionState
@@ -14,12 +16,14 @@ import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.books.PositionDatabase
 import com.retro99.database.api.catalogue.CatalogueAcquisitionsDatabase
 import com.retro99.database.api.catalogue.CatalogueBookSourcesDatabase
+import com.retro99.database.api.catalogue.CatalogueDocumentsDatabase
 import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBooksDatabase
 import com.retro99.server.api.CatalogueAccessStore
 import com.retro99.server.api.CatalogueAccessStatus
 import com.retro99.server.api.CatalogueAccountEditor
 import com.retro99.server.api.CatalogueAcquisitionRepository
+import com.retro99.server.api.CatalogueErrorKind
 import com.retro99.server.api.CatalogueFeedDocument
 import com.retro99.server.api.CatalogueRepositoryProvider
 import com.retro99.server.api.OpdsAccountDetails
@@ -120,10 +124,14 @@ class CatalogueCleanupRulesTest {
         val unfinished = download(koin, source, book = 1)
         assertEquals(AcquisitionState.Failed(AcquisitionFailureReason.SignIn), unfinished.state)
 
+        val pages = koin.get<CatalogueDocumentsDatabase>()
+        assertEquals(1L, koin.get<ProfileDatabaseSession>().withProfile(PROFILE) { pages.count() })
+
         // When
         registry.removeServer(source.id)
 
         // Then everything that belonged to the catalogue is gone
+        assertEquals(0L, koin.get<ProfileDatabaseSession>().withProfile(PROFILE) { pages.count() })
         assertNull(registry.getServer(source.id))
         assertNull(koin.get<OpdsCredentialStore>().get(PROFILE, source.id))
         assertEquals(CatalogueAccessStatus(), koin.get<CatalogueAccessStore>().get(PROFILE, source.id))
@@ -140,6 +148,35 @@ class CatalogueCleanupRulesTest {
             assertEquals("https://books.example:443", provenance.catalogueOrigin)
             assertEquals(source.id, provenance.sourceId)
         }
+    }
+
+    @Test
+    fun `a page that was opened is shown as a saved copy when the catalogue cannot be reached`() = inGraph { graph ->
+        // Given a page opened online
+        val koin = graph.koin
+        val source = koin.get<ServerRegistry>().addServerWithId("source", "Books", ServerType.Opds, ROOT)
+        val provider = koin.get<CatalogueRepositoryProvider>()
+        val online = assertIs<CatalogueFeedDocument>(assertNotNull(provider.getRepository(source.id)).getRoot().get())
+        assertNull(online.fetchStatus.savedCopyAt)
+        val session = koin.get<ProfileDatabaseSession>()
+        val saved = session.withProfile(PROFILE) { koin.get<CatalogueDocumentsDatabase>().oldestKeys(10) }.single()
+        assertEquals(source.id, saved.sourceId)
+        assertEquals(ROOT, saved.requestUrl)
+        assertEquals(koin.get<OpdsCredentialStore>().accessGeneration(PROFILE, source.id), saved.accessGeneration)
+
+        // When
+        graph.offline = true
+        val offline = assertIs<CatalogueFeedDocument>(assertNotNull(provider.getRepository(source.id)).getRoot().get())
+
+        // Then
+        assertNotNull(offline.fetchStatus.savedCopyAt)
+        assertEquals(online.publications.map { it.title }, offline.publications.map { it.title })
+
+        // And once account details are saved, that copy is gone
+        koin.get<CatalogueAccountEditor>().saveAccount(source.id, OpdsAccountDetails("patron", "secret"))
+        assertEquals(0L, session.withProfile(PROFILE) { koin.get<CatalogueDocumentsDatabase>().count() })
+        val error = assertNotNull(provider.getRepository(source.id)).getRoot().getError()
+        assertEquals(CatalogueErrorKind.OfflineNoSavedCopy.name, assertIs<AppError.ApiError>(error).message)
     }
 
     @Test
@@ -197,11 +234,15 @@ class CatalogueCleanupRulesTest {
         var refuseFiles: Boolean
             get() = counters.refuseFiles
             set(value) { counters.refuseFiles = value }
+        var offline: Boolean
+            get() = counters.offline
+            set(value) { counters.offline = value }
     }
 
     private class Counters {
         @Volatile var fileRequests = 0
         @Volatile var refuseFiles = false
+        @Volatile var offline = false
     }
 
     private fun inGraph(test: suspend (Graph) -> Unit) {
@@ -209,6 +250,7 @@ class CatalogueCleanupRulesTest {
         val real = RealAppGraph { request ->
             val path = request.url.encodedPath
             when {
+                counters.offline -> throw java.io.IOException("Unable to resolve host")
                 !path.endsWith("/one") && !path.endsWith("/two") ->
                     respond(FEED, headers = headersOf(HttpHeaders.ContentType, "application/opds+json"))
                 counters.refuseFiles ->

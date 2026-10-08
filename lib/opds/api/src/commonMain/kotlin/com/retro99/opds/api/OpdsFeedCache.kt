@@ -1,9 +1,8 @@
 package com.retro99.opds.api
 
 /**
- * Bounded feed cache (plan §3.2/§4; §10.10: a small persisted cache of
- * documents the user opened ships later; Phase 1 provides the contracted
- * interface and the in-memory implementation).
+ * Bounded feed cache (plan §3.2/§4). Two implementations: in memory, and the small
+ * persisted cache of pages the user opened (§10.10), which is what the offline boards read.
  *
  * Keys are sensitive-data-aware (plan §4: auth-sensitive keys include
  * profile, server/access generation, request URL, and representation);
@@ -26,7 +25,7 @@ data class OpdsCacheKey(
     val profileId: String,
     val serverId: String,
     /** Access-state generation; changing credentials invalidates old entries (§3.4). */
-    val accessGeneration: Int = 0,
+    val accessGeneration: Long = 0,
     /** Representation discriminator: the exact accepted-media-type list, normalized. */
     val representation: String,
 )

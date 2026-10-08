@@ -28,7 +28,7 @@ class OpdsCatalogueRepository(
     private val isCurrent: () -> Boolean,
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val cache: OpdsFeedCache = MemoryOpdsFeedCache(),
-    private val accessGeneration: Int = 0,
+    private val accessGeneration: Long = 0,
 ) : ServerCatalogueRepository, CatalogueAcquisitionRepository {
     override val serverId = config.id
     private val owner = Any()
@@ -92,7 +92,16 @@ class OpdsCatalogueRepository(
                 val document = mapper.map(result.document, CatalogueFetchStatus(now(), result.fromCache, result.crossOriginPrivateNetwork))
                 Ok(document)
             }
-            is OpdsLoadResult.FetchFailure -> failure(result.error)
+            is OpdsLoadResult.SavedCopy -> {
+                // Still a failed check: the status says the catalogue could not be reached.
+                access.recordFailure(profileId, serverId, CatalogueErrorKind.Unreachable, now(), false)
+                Ok(mapper.map(result.document, CatalogueFetchStatus(now(), fromCache = true, crossOriginPrivateNetwork = false, savedCopyAt = result.storedAtMillis)))
+            }
+            is OpdsLoadResult.FetchFailure ->
+                if (result.error.code == OpdsTransportError.Code.UNREACHABLE) {
+                    access.recordFailure(profileId, serverId, CatalogueErrorKind.Unreachable, now(), false)
+                    Err(AppError.ApiError(result.error.status ?: 400, CatalogueErrorKind.OfflineNoSavedCopy.name))
+                } else failure(result.error)
             is OpdsLoadResult.ParseFailure -> parseFailure(result.rejection)
             OpdsLoadResult.NotModifiedWithoutCache -> parseFailure(null)
         }
@@ -224,6 +233,7 @@ class OpdsCatalogueRepository(
     }
     suspend fun dispose() {
         stop()
+        // A cache that keeps pages for offline reading ignores this; its pages go with the source.
         mutex.withLock { cache.clearAll(); descriptors.clear() }
     }
 }
