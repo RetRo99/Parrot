@@ -33,8 +33,17 @@ class OpdsCatalogueRepository(
     private val recordAccessUpdates: Boolean = true,
 ) : ServerCatalogueRepository, CatalogueAcquisitionRepository, CatalogueImageRepository {
     override val serverId = config.id
-    private val owner = Any()
-    private class Target(val owner: Any, val url: String) : CatalogueTarget {
+    /**
+     * Whose places these are: this profile's catalogue at this address. Equal across sessions,
+     * so a page can be asked for again after signing in replaced the session, and never equal
+     * for another profile, another catalogue or an address that was changed.
+     */
+    private data class Owner(val profileId: String, val sourceId: String, val address: String)
+    private val owner = Owner(profileId, config.id, config.baseUrl)
+
+    /** A search, and the page a file is located on, belong to the session that fetched them. */
+    private val session = Any()
+    private class Target(val owner: Any, val session: Any, val url: String) : CatalogueTarget {
         override fun toString() = "CatalogueTarget(redacted)"
     }
     private class Search(val owner: Any, val expand: (CatalogueQuery) -> String) : CatalogueSearch {
@@ -45,7 +54,7 @@ class OpdsCatalogueRepository(
     private val resolver = ParserFactory.urlResolver()
     private val openSearch = OpenSearchReader(resolver)
     private val templates = Rfc6570Expander()
-    private val mapper = OpdsCatalogueMapper { Target(owner, it) }
+    private val mapper = OpdsCatalogueMapper { Target(owner, session, it) }
     private val mutex = Mutex()
     private val stopped = MutableStateFlow(false)
     internal val isStopped: Boolean get() = stopped.value
@@ -84,7 +93,7 @@ class OpdsCatalogueRepository(
     override suspend fun getRoot() = request { load(config.baseUrl, true) }
     override suspend fun getDocument(target: CatalogueTarget) = request {
         val owned = target as? Target
-        if (owned == null || owned.owner !== owner) Err(AppError.ApiError(400, "ForeignCatalogueTarget")) else load(owned.url, false)
+        if (owned == null || owned.owner != owner) Err(AppError.ApiError(400, "ForeignCatalogueTarget")) else load(owned.url, false)
     }
 
     private suspend fun load(url: String, root: Boolean): AppResult<CatalogueDocument> {
@@ -116,10 +125,10 @@ class OpdsCatalogueRepository(
     }
 
     override suspend fun discoverSearch(document: CatalogueDocument): AppResult<CatalogueSearch?> = request {
-        if ((document.context as? Target)?.owner !== owner) return@request Err(AppError.ApiError(400, "ForeignCatalogueDocument"))
+        if ((document.context as? Target)?.owner != owner) return@request Err(AppError.ApiError(400, "ForeignCatalogueDocument"))
         val offer = (document as? CatalogueFeedDocument)?.search ?: return@request Ok(null)
         if (offer.kind == CatalogueSearchOffer.Kind.UriTemplate) {
-            return@request Ok(Search(owner) { query -> resolver.resolve(offer.link.effectiveBaseUri, templates.expand(offer.link.rawHref, query.fields + ("query" to query.text))) })
+            return@request Ok(Search(session) { query -> resolver.resolve(offer.link.effectiveBaseUri, templates.expand(offer.link.rawHref, query.fields + ("query" to query.text))) })
         }
         val url = offer.link.resolvedHref ?: return@request Err(AppError.ApiError(400, "InvalidSearchDescriptor"))
         var preferred = descriptors[url]
@@ -138,17 +147,18 @@ class OpdsCatalogueRepository(
             }
         }
         val template = preferred ?: return@request Err(AppError.ApiError(400, "UnsupportedSearch"))
-        Ok(Search(owner) { query -> openSearch.expand(template, query.text, query.fields) })
+        Ok(Search(session) { query -> openSearch.expand(template, query.text, query.fields) })
     }
 
     override suspend fun search(search: CatalogueSearch, query: CatalogueQuery) = request {
         val owned = search as? Search
-        if (owned == null || owned.owner !== owner) Err(AppError.ApiError(400, "ForeignCatalogueSearch")) else load(owned.expand(query), false)
+        if (owned == null || owned.owner !== session) Err(AppError.ApiError(400, "ForeignCatalogueSearch")) else load(owned.expand(query), false)
     }
 
     override fun locate(document: CatalogueDocument, publication: CataloguePublication, choice: CatalogueFileChoice): CatalogueAcquisitionLocator? {
         val context = document.context as? Target ?: return null
-        if (context.owner !== owner) return null
+        // A file is located on a page this session fetched itself.
+        if (context.session !== session) return null
         val download = choice.action as? CatalogueAcquisitionAction.Download ?: return null
         if (download.link.resolvedHref == null || publications(document).none { it === publication || it == publication }) return null
         val representation = publication.representationKeyOf(choice) ?: return null

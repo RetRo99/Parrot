@@ -34,9 +34,28 @@ class OpdsCatalogueRepositoryTest {
             override fun close() {}
         }, preferences, checks)
         assertTrue(second.search(search, CatalogueQuery("secret")).isErr)
-        assertTrue(second.getDocument(feed.navigation.single().links.single().target!!).isErr)
+        // A place in another catalogue, another profile's catalogue or a catalogue that has moved is refused.
+        val place = feed.navigation.single().links.single().target!!
+        val refusing = object : OpdsTransport {
+            override suspend fun fetch(request: OpdsRequest): OpdsFetchResult = error("Foreign references must not fetch")
+            override suspend fun download(request: OpdsRequest, sink: OpdsDownloadSink, maxBytes: Long): OpdsDownloadResult = error("Foreign references must not fetch")
+            override fun close() {}
+        }
+        val credentials = OpdsCredentialStoreImpl(preferences)
+        val others = listOf(
+            OpdsCatalogueRepository("a", SOURCE.copy(id = "other"), refusing, credentials, checks, { true }, { 10L }),
+            OpdsCatalogueRepository("b", SOURCE, refusing, credentials, checks, { true }, { 10L }),
+            OpdsCatalogueRepository("a", SOURCE.copy(baseUrl = "https://moved.example/opds/"), refusing, credentials, checks, { true }, { 10L }),
+        )
+        others.forEach { other -> assertTrue(other.getDocument(place).isErr) }
+        // The same catalogue in a later session (after signing in) opens the same place again.
+        val later = repository(KtorOpdsTransport(engine, ROOT), preferences, checks)
+        assertTrue(later.getDocument(place).isOk)
+        assertEquals("https://books.example/opds/child", urls.last())
         first.dispose()
         second.dispose()
+        later.dispose()
+        others.forEach { it.dispose() }
     }
 
     @Test fun open_search_is_lazy_cached_and_disposed_with_the_source() = runTest {
