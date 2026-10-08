@@ -991,6 +991,20 @@ screen.
   `Lazy<CatalogueRepositoryProvider>` so that fixing the registry does not
   create a dependency cycle.
 
+**Verification of the acquisition-queue run (2026-10-08).** Android host /
+iOS simulator, passed/total: database implementation 124/124 (it has no iOS
+tests); opds implementation 177/177 and 177/177; epub implementation 45/45 and
+30/30 (the 15 extra Android tests are host-only JDK fixtures); server api 19/19
+and 19/19; server implementation 26/26 and 26/26; server-opds 25/25 and 25/25;
+catalogue domain 11/11 and 11/11; catalogue data 56/56 and 54/54 (the 2 extra
+Android tests resolve the generated Koin module); composeApp 15/15 on Android
+host (its iOS test link error is the known FirebaseCore one). opds api has no
+tests. `verifyCommonMainAppDatabaseMigration` passes, run uncached.
+`:androidApp:assembleDebug` and `:composeApp:linkDebugFrameworkIosSimulatorArm64`
+both pass. The link was forced to run again on the final code. Running both
+targets with `--rerun-tasks` in one 4 GiB Gradle daemon runs the iOS link out of
+Java heap; built one after the other they pass.
+
 ### Phase 4 — complete browsing feature
 
 - Create `feature/catalogue/domain`, `data`, and `ui`; add source/browser/detail
