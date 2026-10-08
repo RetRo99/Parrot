@@ -18,7 +18,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
 
-/** One profile/source/access session. No bearer client, crawling, auth discovery or acquisitions. */
+/** One profile/source/access session. No bearer client, crawling or auth discovery. */
 class OpdsCatalogueRepository(
     private val profileId: String,
     internal val config: ServerConfig,
@@ -29,7 +29,7 @@ class OpdsCatalogueRepository(
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
     private val cache: OpdsFeedCache = MemoryOpdsFeedCache(),
     private val accessGeneration: Int = 0,
-) : ServerCatalogueRepository {
+) : ServerCatalogueRepository, CatalogueAcquisitionRepository {
     override val serverId = config.id
     private val owner = Any()
     private class Target(val owner: Any, val url: String) : CatalogueTarget {
@@ -38,7 +38,8 @@ class OpdsCatalogueRepository(
     private class Search(val owner: Any, val expand: (CatalogueQuery) -> String) : CatalogueSearch {
         override fun toString() = "CatalogueSearch(redacted)"
     }
-    private val loader = CachedOpdsFeedLoader(transport, ParserFactory.opdsParser(), cache, now)
+    private val parser = ParserFactory.opdsParser()
+    private val loader = CachedOpdsFeedLoader(transport, parser, cache, now)
     private val resolver = ParserFactory.urlResolver()
     private val openSearch = OpenSearchReader(resolver)
     private val templates = Rfc6570Expander()
@@ -126,6 +127,70 @@ class OpdsCatalogueRepository(
     override suspend fun search(search: CatalogueSearch, query: CatalogueQuery) = request {
         val owned = search as? Search
         if (owned == null || owned.owner !== owner) Err(AppError.ApiError(400, "ForeignCatalogueSearch")) else load(owned.expand(query), false)
+    }
+
+    override fun locate(document: CatalogueDocument, publication: CataloguePublication, choice: CatalogueFileChoice): CatalogueAcquisitionLocator? {
+        val context = document.context as? Target ?: return null
+        if (context.owner !== owner) return null
+        val download = choice.action as? CatalogueAcquisitionAction.Download ?: return null
+        if (download.link.resolvedHref == null || publications(document).none { it === publication || it == publication }) return null
+        val representation = publication.representationKeyOf(choice) ?: return null
+        return CatalogueAcquisitionLocator(context.url, publication.publicationKey, representation)
+    }
+
+    /**
+     * The listing is fetched fresh, outside the cache, so an expired or re-signed file link is
+     * never reused. The session lock is not held: browsing continues while a file streams.
+     * Catalogue status is recorded for the listing request only; the file may live on a CDN.
+     */
+    override suspend fun download(locator: CatalogueAcquisitionLocator, sink: CatalogueFileSink): CatalogueDownloadOutcome = coroutineScope {
+        val job = currentCoroutineContext().job
+        requests.update { it + job }
+        try {
+            checkCurrent()
+            val listing = transport.fetch(networkRequest(locator.documentUrl, false))
+            checkCurrent()
+            if (listing is OpdsFetchResult.Failure) {
+                failure<Unit>(listing.error)
+                return@coroutineScope CatalogueDownloadOutcome.Failed(downloadFailure(listing.error))
+            }
+            listing as OpdsFetchResult.Response
+            val parsed = try { parser.parse(OpdsPayload(listing.contentType, listing.body), listing.effectiveUrl) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+            val document = (parsed as? OpdsParseResult.Document)?.document?.let { mapper.map(it, CatalogueFetchStatus(now(), false, listing.crossOriginPrivateNetwork)) }
+                ?: return@coroutineScope CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.Refused)
+            access.recordSuccess(profileId, serverId, credentials.get(profileId, serverId)?.username, now())
+            val href = publications(document).firstOrNull { it.publicationKey == locator.publicationKey }
+                ?.choiceForRepresentation(locator.representationKey)
+                ?.let { (it.action as? CatalogueAcquisitionAction.Download)?.link?.resolvedHref }
+                ?: return@coroutineScope CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.Refused)
+            val result = transport.download(networkRequest(href, false, OPDS_DOWNLOAD_ACCEPT_MEDIA_TYPES), object : OpdsDownloadSink {
+                override suspend fun start(declaredLength: Long?) { checkCurrent(); sink.start(declaredLength) }
+                override suspend fun write(buffer: ByteArray, length: Int) = sink.write(buffer, length)
+            })
+            currentCoroutineContext().ensureActive()
+            checkCurrent()
+            when (result) {
+                is OpdsDownloadResult.Complete -> CatalogueDownloadOutcome.Complete(result.bytes, result.declaredLength)
+                is OpdsDownloadResult.Failure -> CatalogueDownloadOutcome.Failed(downloadFailure(result.error))
+                is OpdsDownloadResult.SinkFailure -> CatalogueDownloadOutcome.SinkFailed(result.cause)
+            }
+        } finally { requests.update { it - job } }
+    }
+
+    private fun publications(document: CatalogueDocument): List<CataloguePublication> = when (document) {
+        is CataloguePublicationDocument -> listOf(document.publication)
+        is CatalogueFeedDocument -> document.publications + document.groups.flatMap { it.publications }
+    }
+
+    private fun downloadFailure(error: OpdsTransportError): CatalogueDownloadFailure = when (error.code) {
+        OpdsTransportError.Code.SIGN_IN_NEEDED -> CatalogueDownloadFailure.SignInNeeded
+        OpdsTransportError.Code.RESPONSE_TOO_LARGE -> CatalogueDownloadFailure.TooLarge
+        OpdsTransportError.Code.UNREACHABLE, OpdsTransportError.Code.TIMEOUT, OpdsTransportError.Code.TLS_UNTRUSTED,
+        OpdsTransportError.Code.LENGTH_MISMATCH, OpdsTransportError.Code.RATE_LIMITED, OpdsTransportError.Code.SERVER_ERROR,
+        OpdsTransportError.Code.SERVICE_UNAVAILABLE, OpdsTransportError.Code.REDIRECT_LIMIT, OpdsTransportError.Code.REDIRECT_LOOP,
+        OpdsTransportError.Code.REDIRECT_MISSING_LOCATION -> CatalogueDownloadFailure.Connection
+        // 403, 404 and other 4xx, a sign-in method Parrot does not support, and links the transport will not follow.
+        else -> CatalogueDownloadFailure.Refused
     }
 
     private suspend fun <T> parseFailure(rejection: OpdsRejection?): AppResult<T> {
