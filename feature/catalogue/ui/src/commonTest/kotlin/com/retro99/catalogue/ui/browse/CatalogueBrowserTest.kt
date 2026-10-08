@@ -751,7 +751,7 @@ class CatalogueBrowserTest {
 
         h.browser.signIn(" rox ", "")
         runCurrent()
-        assertEquals(listOf(OpdsAccountDetails("rox", "")), h.gateway.savedAccounts)
+        assertTrue(h.gateway.savedAccounts.isEmpty())
         assertEquals(CatalogueSignInState(working = true), h.state.signIn)
         assertEquals(listOf("private", "private"), h.repo.requested)
 
@@ -759,6 +759,7 @@ class CatalogueBrowserTest {
         runCurrent()
         assertNull(h.state.signIn)
         assertEquals(listOf("Diary", "Letters"), h.titles)
+        assertEquals(listOf(OpdsAccountDetails("rox", "")), h.gateway.savedAccounts)
     }
 
     @Test fun wrong_details_keep_the_sheet_open_and_closing_it_leaves_the_page() = runTest {
@@ -772,13 +773,28 @@ class CatalogueBrowserTest {
         runCurrent()
         assertEquals(CatalogueSignInState(wrongDetails = true), h.state.signIn)
         assertEquals(CatalogueBrowseContent.SignInNeeded, h.state.content)
+        assertTrue(h.gateway.savedAccounts.isEmpty())
 
         h.browser.signIn("", "x")
         runCurrent()
-        assertEquals(1, h.gateway.savedAccounts.size)
+        assertEquals(0, h.gateway.savedAccounts.size)
 
         h.browser.dismissSignIn()
         assertNull(h.state.signIn)
         assertTrue(h.state.closed)
+    }
+
+    @Test fun returning_from_a_book_refreshes_library_rows_without_refetching_or_losing_the_list() = runTest {
+        val library = FakeLibrary()
+        val h = Harness(this, place("popular"), library = library)
+        runCurrent(); h.repo.answer("popular", feed("popular", books = books("Treasure Island", "Diary"))); runCurrent()
+        assertFalse(h.loaded.books.first().inLibrary)
+        library.inLibrary = setOf("id:Treasure Island")
+        h.browser.onReturn(); runCurrent()
+        assertTrue(h.loaded.books.first().inLibrary)
+        assertFalse(h.loaded.books.last().inLibrary)
+        assertEquals(listOf("popular"), h.repo.requested)
+        library.inLibrary = emptySet()
+        h.browser.onReturn(); runCurrent(); assertFalse(h.loaded.books.first().inLibrary)
     }
 }

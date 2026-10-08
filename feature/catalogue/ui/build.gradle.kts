@@ -33,6 +33,7 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
+            implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(compose.components.resources)
             implementation(libs.serialization)
             implementation(projects.base)

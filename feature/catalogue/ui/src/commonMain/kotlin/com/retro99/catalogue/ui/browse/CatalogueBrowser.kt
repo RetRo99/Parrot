@@ -55,7 +55,7 @@ class CatalogueBrowser(
         data class Search(val query: String) : PageRequest
     }
 
-    private class BookEntry(val key: String, val publication: CataloguePublication, val listing: CatalogueTarget, val inLibrary: Boolean)
+    private class BookEntry(val key: String, val publication: CataloguePublication, val listing: CatalogueTarget, var inLibrary: Boolean)
     private class FolderEntry(val key: String, val entry: CataloguePublication, val link: CatalogueLink)
     private class ShelfEntry(val key: String, val title: String, val seeAll: CatalogueLink?, val books: List<BookEntry>)
 
@@ -294,6 +294,21 @@ class CatalogueBrowser(
             throw cancelled
         } catch (_: Exception) {
             emptySet()
+        }
+    }
+
+    /** Rechecks only library membership on return; catalogue data and scroll stay untouched. */
+    fun onReturn() {
+        if (!open) return
+        listOfNotNull(base, search).forEach { list ->
+            val generation = list.generation
+            val entries = list.pages.flatMap { it.books } + list.header?.shelves.orEmpty().flatMap { it.books }
+            list.jobs += scope.launch {
+                val found = inLibrary(entries.map { it.publication })
+                if (!list.isCurrent(generation)) return@launch
+                entries.forEach { it.inLibrary = it.publication.publicationKey in found }
+                publish()
+            }
         }
     }
 
@@ -541,7 +556,7 @@ class CatalogueBrowser(
 
     // --- sign-in ------------------------------------------------------------------------
 
-    /** Saves the account details and asks for the page again. An empty password is allowed. */
+    /** Verifies the page with temporary details, then saves them. An empty password is allowed. */
     fun signIn(username: String, password: String) {
         val list = current
         val name = username.trim()
@@ -551,25 +566,23 @@ class CatalogueBrowser(
         list.cancelRequests()
         val generation = ++list.generation
         list.jobs += scope.launch {
-            val saved = try {
-                gateway.saveAccount(sourceId, OpdsAccountDetails(name, password))
-                true
+            val account = OpdsAccountDetails(name, password)
+            val answer = try {
+                gateway.checkAccount(sourceId, (list.first as? PageRequest.Target)?.target, account)
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                false
+                Err(AppError.ApiError(400, CatalogueErrorKind.Unreachable.name))
             }
             if (!list.isCurrent(generation)) return@launch
-            if (saved) {
+            answer.fold(success = { document ->
+                gateway.saveAccount(sourceId, account)
+                if (!list.isCurrent(generation)) return@fold
+                showFirstPage(list, generation, document)
+            }, failure = { error ->
                 list.afterSignIn = true
-                loadFirst(list)
-                // The sheet stays, working, until the page answers.
-                signIn = CatalogueSignInState(working = true)
-                publish()
-            } else {
-                signIn = CatalogueSignInState()
-                publish()
-            }
+                showProblem(list, error.toLoadProblem())
+            })
         }
     }
 

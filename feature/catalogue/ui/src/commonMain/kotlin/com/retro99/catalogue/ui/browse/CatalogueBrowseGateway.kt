@@ -5,6 +5,12 @@ import com.retro99.server.api.CatalogueAccessProvider
 import com.retro99.server.api.CatalogueAccountEditor
 import com.retro99.server.api.CatalogueRepositoryProvider
 import com.retro99.server.api.CatalogueSourceStatus
+import com.retro99.server.api.CatalogueAccountVerifier
+import com.retro99.server.api.CatalogueTarget
+import com.retro99.server.api.CatalogueDocument
+import com.retro99.base.result.AppResult
+import com.retro99.base.result.AppError
+import com.github.michaelbull.result.Err
 import com.retro99.server.api.OpdsAccountDetails
 import com.retro99.server.api.ServerAccessState
 import com.retro99.server.api.ServerCatalogueRepository
@@ -38,6 +44,7 @@ interface CatalogueBrowseGateway {
     /** The catalogue's session, or null when it cannot be browsed (any more). */
     suspend fun repository(sourceId: String): ServerCatalogueRepository?
     suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails)
+    suspend fun checkAccount(sourceId: String, target: CatalogueTarget?, details: OpdsAccountDetails): AppResult<CatalogueDocument>
 }
 
 @Single(binds = [CatalogueBrowseGateway::class])
@@ -61,6 +68,10 @@ class RegistryCatalogueBrowseGateway(
     override suspend fun repository(sourceId: String): ServerCatalogueRepository? = repositories.getRepository(sourceId)
 
     override suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails) = accountEditor.saveAccount(sourceId, details)
+
+    override suspend fun checkAccount(sourceId: String, target: CatalogueTarget?, details: OpdsAccountDetails): AppResult<CatalogueDocument> =
+        (repository(sourceId) as? CatalogueAccountVerifier)?.checkAccount(target, details)
+            ?: Err(AppError.ApiError(400, "SignInUnsupported"))
 
     /**
      * Route references are made only by browser screens, and every browser screen observes its

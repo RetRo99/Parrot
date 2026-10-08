@@ -31,6 +31,7 @@ import com.retro99.server.api.CatalogueTarget
 import com.retro99.server.api.CatalogueText
 import com.retro99.server.api.OpdsAccountDetails
 import com.retro99.server.api.ServerCatalogueRepository
+import com.retro99.server.api.representationKeyOf
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -118,7 +119,7 @@ internal fun failure(kind: CatalogueErrorKind): AppResult<CatalogueDocument> = E
  * request waits for its answer and takes it even after it was cancelled, so a late answer always
  * reaches the code under test.
  */
-internal class FakeRepository : ServerCatalogueRepository {
+internal class FakeRepository : ServerCatalogueRepository, com.retro99.server.api.CatalogueAcquisitionRepository {
     override val serverId = SOURCE
     private class Call(val key: String, val answer: CompletableDeferred<AppResult<CatalogueDocument>> = CompletableDeferred())
     private val calls = mutableListOf<Call>()
@@ -141,6 +142,9 @@ internal class FakeRepository : ServerCatalogueRepository {
     override suspend fun discoverSearch(document: CatalogueDocument): AppResult<CatalogueSearch?> =
         Ok(FakeSearch.takeIf { (document as? CatalogueFeedDocument)?.search != null })
     override suspend fun search(search: CatalogueSearch, query: CatalogueQuery) = ask("search:${query.text}")
+    override fun locate(document: CatalogueDocument, publication: CataloguePublication, choice: CatalogueFileChoice) =
+        publication.representationKeyOf(choice)?.let { com.retro99.server.api.CatalogueAcquisitionLocator(document.responseUrl, publication.identity.value, it) }
+    override suspend fun download(locator: com.retro99.server.api.CatalogueAcquisitionLocator, sink: com.retro99.server.api.CatalogueFileSink): com.retro99.server.api.CatalogueDownloadOutcome = error("not used")
 }
 
 internal class FakeGateway(val repository: FakeRepository = FakeRepository()) : CatalogueBrowseGateway {
@@ -149,9 +153,11 @@ internal class FakeGateway(val repository: FakeRepository = FakeRepository()) : 
     override fun observeSource(sourceId: String) = source
     override suspend fun repository(sourceId: String): ServerCatalogueRepository? = repository.takeIf { source.value != null }
     override suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails) { savedAccounts += details }
+    override suspend fun checkAccount(sourceId: String, target: CatalogueTarget?, details: OpdsAccountDetails) =
+        if (target == null) repository.getRoot() else repository.getDocument(target)
 }
 
-internal class FakeLibrary(private val inLibrary: Set<String> = emptySet(), private val fails: Boolean = false) : CatalogueLibraryLookup {
+internal class FakeLibrary(var inLibrary: Set<String> = emptySet(), private val fails: Boolean = false) : CatalogueLibraryLookup {
     val asked = mutableListOf<List<String>>()
     override suspend fun libraryBooksFor(sourceId: String, entries: Collection<CatalogueEntryIdentity>): Map<CatalogueEntryIdentity, String> {
         asked += entries.map { it.publicationKey }

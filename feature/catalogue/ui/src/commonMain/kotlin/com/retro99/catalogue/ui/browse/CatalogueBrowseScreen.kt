@@ -152,6 +152,7 @@ fun CatalogueBrowseScreen(
     val browser = viewModel.browser
     val state by browser.state.collectAsState()
     val isEink = Ember.style.isEink
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) { browser.onReturn() }
     LaunchedEffect(isEink) { browser.setAutoLoad(!isEink) }
     LaunchedEffect(state.closed) { if (state.closed) onBack() }
     LaunchedEffect(state.navigation) {
@@ -797,7 +798,7 @@ private fun Radio(selected: Boolean) {
 }
 
 @Composable
-private fun SignInSheet(catalogue: String, signIn: CatalogueSignInState, actions: CatalogueBrowseActions, deviceName: String) {
+internal fun SignInSheet(catalogue: String, signIn: CatalogueSignInState, actions: CatalogueBrowseActions, deviceName: String) {
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     // Wrong details: the password is cleared and gets the focus.
