@@ -169,6 +169,7 @@ fun CatalogueSourcesScreen(
     modifier: Modifier = Modifier,
     onBrowseCatalogue: (String) -> Unit = {},
     onDownloads: () -> Unit = {},
+    onCatalogueSettings: (String) -> Unit = {},
 ) {
     val viewModel: CatalogueSourcesViewModel = koinViewModel()
     val viewState by viewModel.state.collectAsState()
@@ -249,7 +250,10 @@ fun CatalogueSourcesScreen(
             viewState = viewState,
             onBack = onBack,
             onDownloads = onDownloads,
-            onCatalogueClick = { row -> onBrowseCatalogue(row.config.id) },
+            onCatalogueClick = { row ->
+                if (row.account == CatalogueAccountState.SignInUnsupported || !row.config.enabled) onCatalogueSettings(row.config.id)
+                else onBrowseCatalogue(row.config.id)
+            },
             onPresetClick = { selectedPreset = it },
             onAnotherClick = { addTarget = AddTarget(null) },
             modifier = modifier,
@@ -925,7 +929,7 @@ private fun CatalogueAddErrorLine(error: CatalogueAddError) {
 }
 
 @Composable
-private fun addErrorMessage(error: CatalogueAddError): String = when (error) {
+internal fun addErrorMessage(error: CatalogueAddError): String = when (error) {
     CatalogueAddError.WebPage -> stringResource(StringRes.catalogue_add_error_web_page)
     CatalogueAddError.Unreachable -> stringResource(StringRes.catalogue_add_error_unreachable)
     CatalogueAddError.NotCatalogue -> stringResource(StringRes.catalogue_add_error_invalid)
