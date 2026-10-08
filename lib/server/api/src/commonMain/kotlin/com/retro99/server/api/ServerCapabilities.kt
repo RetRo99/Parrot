@@ -19,6 +19,9 @@ data class ServerCapabilities(
     val supportsAutomaticSync: Boolean = false,
     val supportsOfflineMutationQueue: Boolean = false,
     val supportsCloudFileStatus: Boolean = false,
+    val supportsCatalogueBrowsing: Boolean = false,
+    val contributesToLibrary: Boolean = true,
+    val supportsReaderRepository: Boolean = true,
 )
 
 fun ServerType.getCapabilities(): ServerCapabilities = when (this) {
@@ -31,6 +34,9 @@ fun ServerType.getCapabilities(): ServerCapabilities = when (this) {
         supportsSeries = false,
         supportsSearch = false,
         supportsUserLibrary = false,
+        supportsCatalogueBrowsing = true,
+        contributesToLibrary = false,
+        supportsReaderRepository = false,
     )
     ServerType.Storyteller -> ServerCapabilities(
         supportsEbooks = true,

@@ -6,6 +6,7 @@ import coil3.network.ktor3.KtorNetworkFetcherFactory
 import com.retro99.base.AppInitializer
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerTokenProvider
+import com.retro99.server.api.ServerType
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.api.createClientPlugin
@@ -58,10 +59,13 @@ class CoilInitializer(
         }
     }
 
-    private suspend fun resolveTokenForUrl(url: Url): String? {
+    internal suspend fun resolveTokenForUrl(url: Url): String? {
         val servers = serverRegistry.getAllServers()
+        // This global loader has no source identity. An OPDS origin must use the
+        // future per-source loader, even when a library server shares its origin.
+        if (servers.any { it.type == ServerType.Opds && isSameOrigin(it.baseUrl, url) }) return null
         val matchingServer = servers.firstOrNull { server ->
-            isSameOrigin(server.baseUrl, url)
+            server.type != ServerType.Opds && isSameOrigin(server.baseUrl, url)
         } ?: return null
         return serverTokenProvider.getToken(matchingServer.id)
     }
