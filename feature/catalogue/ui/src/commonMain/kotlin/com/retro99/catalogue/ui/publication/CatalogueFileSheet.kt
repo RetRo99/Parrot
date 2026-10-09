@@ -65,8 +65,8 @@ private fun FileOption(file: BookFile, selected: Boolean, onSelect: () -> Unit) 
         .border(if (eink || selected) 2.dp else 1.dp, if (selected) Ember.colors.accent else Ember.colors.line, shape)
         .selectable(selected = selected, enabled = file.openable, role = Role.RadioButton, onClick = onSelect)
         .padding(horizontal = 16.dp, vertical = 12.dp).semantics { contentDescription = a11y }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.size(22.dp).alpha(if (file.openable) 1f else .4f).border(2.dp, if (selected) Ember.colors.accent else Ember.colors.ink2, CircleShape), contentAlignment = Alignment.Center) {
-            if (selected) Box(Modifier.size(if (eink) 14.dp else 10.dp).clip(CircleShape).background(Ember.colors.accent))
+        Box(Modifier.size(22.dp).alpha(if (file.openable) 1f else .4f).border(2.dp, if (eink) Ember.colors.ink else if (selected) Ember.colors.accent else Ember.colors.ink2, CircleShape), contentAlignment = Alignment.Center) {
+            if (selected) Box(Modifier.size(if (eink) 14.dp else 10.dp).clip(CircleShape).background(if (eink) Ember.colors.ink else Ember.colors.accent))
         }
         Column(Modifier.weight(1f)) {
             Text(title, style = Ember.type.meta.copy(fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink)

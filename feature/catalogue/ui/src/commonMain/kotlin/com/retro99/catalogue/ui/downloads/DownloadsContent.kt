@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.*
@@ -77,8 +78,9 @@ private fun DownloadCard(row: DownloadRow, onAction: () -> Unit, deviceName: Str
         else -> downloadFailureText(book, deviceName, limit)
     }
     val shape = RoundedCornerShape(18.dp)
-    Row(Modifier.fillMaxWidth().background(Ember.colors.surface, shape).border(Ember.style.border, Ember.colors.line, shape).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    val large = LocalDensity.current.fontScale > 1.3f
+    val card = Modifier.fillMaxWidth().background(Ember.colors.surface, shape).border(Ember.style.border, Ember.colors.line, shape).padding(14.dp)
+    val info: @Composable RowScope.() -> Unit = {
         CatalogueCover(book.coverReference?.let { CatalogueImageModel(book.sourceId, it) }, book.title, Modifier.size(40.dp, 58.dp), showTitle = false)
         Column(Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = "${book.title}, $status" }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(book.title, style = Ember.type.meta.copy(fontSize = 17.sp, lineHeight = 21.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -86,29 +88,36 @@ private fun DownloadCard(row: DownloadRow, onAction: () -> Unit, deviceName: Str
                 color = when { Ember.style.isEink -> Ember.colors.ink; failed -> Ember.colors.error; book.state == AcquisitionState.Done -> Ember.colors.success; else -> Ember.colors.ink2 })
             if (book.state == AcquisitionState.Downloading && total != null) EmberProgress(progress = (book.bytesSoFar.toFloat() / total).coerceIn(0f, 1f), modifier = Modifier.fillMaxWidth().padding(top = 3.dp), height = Ember.style.detailProgressHeight)
         }
-        row.action?.let { action ->
-            val text = stringResource(when (action) {
-                DownloadAction.Cancel -> StringRes.catalogue_cancel
-                DownloadAction.Retry -> StringRes.catalogue_retry
-                DownloadAction.Dismiss -> StringRes.catalogue_dismiss
-                DownloadAction.StartAgain -> StringRes.catalogue_start_again
-                DownloadAction.SignIn -> StringRes.catalogue_sign_in
-                DownloadAction.Open -> StringRes.catalogue_open
-            })
-            val label = stringResource(when (action) {
-                DownloadAction.Cancel -> StringRes.catalogue_a11y_cancel_download_of
-                DownloadAction.Retry -> StringRes.catalogue_a11y_retry
-                DownloadAction.Dismiss -> StringRes.catalogue_a11y_dismiss
-                DownloadAction.StartAgain -> StringRes.catalogue_a11y_start_again
-                DownloadAction.SignIn -> StringRes.catalogue_sign_in_title
-                DownloadAction.Open -> StringRes.catalogue_a11y_open
-            }, if (action == DownloadAction.SignIn) book.catalogueName else book.title)
-            Button(onClick = onAction, shape = CircleShape, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = label },
-                border = if (row.filled) null else BorderStroke(Ember.style.border, Ember.colors.line),
-                colors = ButtonDefaults.buttonColors(containerColor = if (row.filled) Ember.colors.accent else Ember.colors.surface, contentColor = if (row.filled) Ember.colors.onAccent else Ember.colors.ink),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)) {
-                Text(text, style = Ember.type.meta.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
-            }
+    }
+    val actionButton: @Composable () -> Unit = {
+    row.action?.let { action ->
+        val text = stringResource(when (action) {
+            DownloadAction.Cancel -> StringRes.catalogue_cancel
+            DownloadAction.Retry -> StringRes.catalogue_retry
+            DownloadAction.Dismiss -> StringRes.catalogue_dismiss
+            DownloadAction.StartAgain -> StringRes.catalogue_start_again
+            DownloadAction.SignIn -> StringRes.catalogue_sign_in
+            DownloadAction.Open -> StringRes.catalogue_open
+        })
+        val label = stringResource(when (action) {
+            DownloadAction.Cancel -> StringRes.catalogue_a11y_cancel_download_of
+            DownloadAction.Retry -> StringRes.catalogue_a11y_retry
+            DownloadAction.Dismiss -> StringRes.catalogue_a11y_dismiss
+            DownloadAction.StartAgain -> StringRes.catalogue_a11y_start_again
+            DownloadAction.SignIn -> StringRes.catalogue_sign_in_title
+            DownloadAction.Open -> StringRes.catalogue_a11y_open
+        }, if (action == DownloadAction.SignIn) book.catalogueName else book.title)
+        Button(onClick = onAction, shape = CircleShape, modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = label },
+            border = if (row.filled) null else BorderStroke(Ember.style.border, Ember.colors.line),
+            colors = ButtonDefaults.buttonColors(containerColor = if (row.filled) Ember.colors.accent else Ember.colors.surface, contentColor = if (row.filled) Ember.colors.onAccent else Ember.colors.ink),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)) {
+            Text(text, style = Ember.type.meta.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
         }
     }
+    }
+    // At large text the button goes under the text, so the title and status keep their width.
+    if (large) Column(card, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), content = info)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { actionButton() }
+    } else Row(card, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { info(); actionButton() }
 }

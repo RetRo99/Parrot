@@ -56,6 +56,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -347,10 +348,8 @@ fun CatalogueSourcesContent(
         stringResource(StringRes.catalogue_downloads_count_accessibility, viewState.activeOrFailedDownloads)
     }
     Column(modifier.fillMaxSize().background(Ember.colors.bg)) {
-        EmberTopBar(
-            title = stringResource(StringRes.catalogue_get_books),
-            onBack = onBack,
-            actions = {
+        val large = LocalDensity.current.fontScale > 1.3f
+        val downloadsButton: @Composable () -> Unit = {
                 Button(
                     onClick = onDownloads,
                     shape = CircleShape,
@@ -374,8 +373,14 @@ fun CatalogueSourcesContent(
                         }
                     }
                 }
-            },
+        }
+        // At large text the button goes under the title, so the title keeps its width.
+        EmberTopBar(
+            title = stringResource(StringRes.catalogue_get_books),
+            onBack = onBack,
+            actions = { if (!large) downloadsButton() },
         )
+        if (large) Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.End) { downloadsButton() }
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp),
         ) {
@@ -729,9 +734,9 @@ private fun SelectedCatalogueKindCard(enabled: Boolean) {
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box(
-            modifier = Modifier.size(22.dp).border(2.dp, Ember.colors.accent, CircleShape),
+            modifier = Modifier.size(22.dp).border(2.dp, if (Ember.style.isEink) Ember.colors.ink else Ember.colors.accent, CircleShape),
             contentAlignment = Alignment.Center,
-        ) { Box(Modifier.size(10.dp).clip(CircleShape).background(Ember.colors.accent)) }
+        ) { Box(Modifier.size(if (Ember.style.isEink) 14.dp else 10.dp).clip(CircleShape).background(if (Ember.style.isEink) Ember.colors.ink else Ember.colors.accent)) }
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(stringResource(StringRes.catalogue_type_name), style = Ember.type.meta.copy(fontSize = 18.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink)
