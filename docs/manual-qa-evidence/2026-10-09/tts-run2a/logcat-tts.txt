@@ -1,0 +1,224 @@
+10-09 18:47:25.700 D/čič   (16041): Analytics Event: feature_exposed | Parameters: {feature_name=local_import, screen=books_library, is_available=true}
+10-09 18:47:57.495 D/ForegroundServiceController(16041): ForegroundServiceController CREATED (new instance)
+10-09 18:47:58.010 D/čič   (16041): Analytics Event: feature_exposed | Parameters: {feature_name=bookmarks, screen=reader, is_available=true}
+10-09 18:47:58.011 D/čič   (16041): Analytics Event: feature_exposed | Parameters: {feature_name=tts, screen=reader, is_available=false}
+10-09 18:47:58.575 I/TextToSpeech(16041): Create TextToSpeech : caller process id[16041] / name[com.retro99.parrot] / target[null]
+10-09 18:47:58.595 I/TextToSpeech(16041): com.retro99.parrot is not allowed to bind to private engine.
+10-09 18:47:58.595 I/TextToSpeech(16041): getHighestRankedPublicEngineName = com.google.android.tts
+10-09 18:47:58.596 I/TextToSpeech(16041): Sucessfully bound to com.google.android.tts
+10-09 18:47:58.599 I/TextToSpeech(16041): Connected to TTS engine
+10-09 18:47:58.637 I/TextToSpeech(16041): Setting up the connection to TTS engine...
+10-09 18:47:58.731 D/čič   (16041): Analytics Event: feature_exposed | Parameters: {feature_name=tts, screen=reader, is_available=true}
+10-09 18:48:27.332 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=28834, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=28834, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:48:57.337 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30005, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30005, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:49:27.345 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30004, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:49:57.353 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30012, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30012, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:50:27.356 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30004, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:50:57.361 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30005, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30005, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:51:27.369 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30005, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30005, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:51:39.175 D/čič   (16041): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 18:51:39.175 D/čič   (16041): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=44e79027-e3ed-4b2c-8cb1-cbde8d987e72
+10-09 18:51:40.381 D/ForegroundServiceController(16041): ForegroundServiceController.startService() called
+10-09 18:51:40.381 D/ForegroundServiceController(16041): java.lang.Exception: stack trace
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.playback.ForegroundServiceController.startService(ForegroundServiceController.kt:39)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.ExoTtsEnginePlayerProvider.notificationPlayer(ExoTtsEnginePlayer.kt:164)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:415)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:408)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.startSentence(TtsReadAloudEngine.kt:381)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.access$startSentence(TtsReadAloudEngine.kt:39)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine$startSentence$1.invokeSuspend(TtsReadAloudEngine.kt:17)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at android.os.Handler.handleCallback(Handler.java:1070)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at android.os.Handler.dispatchMessage(Handler.java:125)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at android.os.Looper.dispatchMessage(Looper.java:358)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at android.os.Looper.loopOnce(Looper.java:288)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at android.os.Looper.loop(Looper.java:392)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at android.app.ActivityThread.main(ActivityThread.java:10346)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at java.lang.reflect.Method.invoke(Native Method)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:638)
+10-09 18:51:40.381 D/ForegroundServiceController(16041): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:972)
+10-09 18:51:40.383 D/ForegroundServiceController(16041): ForegroundServiceController.startService() SUCCESS
+10-09 18:51:40.458 I/MediaSessionImpl(16041): Init 62248d5 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-09 18:51:40.466 I/MediaSessionCompat(16041): Couldn't find a unique registered media button receiver in the given context.
+10-09 18:51:40.520 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:51:40.701 D/čič   (16041): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=1527}
+10-09 18:51:40.701 D/čič   (16041): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=44e79027-e3ed-4b2c-8cb1-cbde8d987e72
+10-09 18:51:40.702 D/čič   (16041): Analytics Event: playback_started
+10-09 18:51:40.866 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:51:40.990 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:51:41.149 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:51:41.237 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:51:48.127 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:51:54.711 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:51:56.123 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:51:57.373 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=11809, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=16667, foreground_duration_ms=28476, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:51:58.152 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:51:59.846 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:05.415 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:06.504 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:09.416 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:10.097 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:15.687 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:18.250 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:22.976 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:25.799 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:26.981 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:27.377 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30007, foreground_duration_ms=30007, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:52:28.430 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:31.019 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:33.401 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:35.620 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:40.959 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:45.323 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:47.182 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:55.442 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:52:57.384 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30002, foreground_duration_ms=30002, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:52:58.722 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:00.512 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:03.384 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:05.863 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:27.390 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=20370, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=9639, foreground_duration_ms=30009, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:53:35.722 D/čič   (16041): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 18:53:35.722 D/čič   (16041): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=77e2fe16-f789-4cac-bc14-09f6199d2211
+10-09 18:53:35.728 D/čič   (16041): Analytics Event: playback_started
+10-09 18:53:35.728 D/čič   (16041): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=7}
+10-09 18:53:35.728 D/čič   (16041): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=77e2fe16-f789-4cac-bc14-09f6199d2211
+10-09 18:53:38.031 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:41.445 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:43.237 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:46.991 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:48.067 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:54.196 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:53:57.396 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=8333, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=21638, foreground_duration_ms=29971, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:53:57.817 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:01.186 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:04.811 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:07.983 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:18.673 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:24.053 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:26.121 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:27.400 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30005, foreground_duration_ms=30005, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:54:31.025 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:33.123 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:36.005 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:43.406 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:43.406 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:54:43.466 D/čič   (16041): Analytics Event: playback_started
+10-09 18:54:57.405 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=45, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=29960, foreground_duration_ms=30005, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:55:00.392 D/čič123(16041): 	at com.retro99.reader.ui.playback.MediaPlaybackService.onDestroy(MediaPlaybackService.kt:423)
+10-09 18:55:00.396 I/MediaSessionImpl(16041): Release 62248d5 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-09 18:55:00.859 D/čič   (16041): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 18:55:00.859 D/čič   (16041): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=b3df6d3f-537a-44cb-b86a-36e321536930
+10-09 18:55:01.183 D/ForegroundServiceController(16041): ForegroundServiceController.startService() called
+10-09 18:55:01.183 D/ForegroundServiceController(16041): java.lang.Exception: stack trace
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.playback.ForegroundServiceController.startService(ForegroundServiceController.kt:39)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.ExoTtsEnginePlayerProvider.notificationPlayer(ExoTtsEnginePlayer.kt:164)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:415)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:408)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.startSentence(TtsReadAloudEngine.kt:381)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.access$startSentence(TtsReadAloudEngine.kt:39)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine$startSentence$1.invokeSuspend(TtsReadAloudEngine.kt:17)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at android.os.Handler.handleCallback(Handler.java:1070)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at android.os.Handler.dispatchMessage(Handler.java:125)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at android.os.Looper.dispatchMessage(Looper.java:358)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at android.os.Looper.loopOnce(Looper.java:288)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at android.os.Looper.loop(Looper.java:392)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at android.app.ActivityThread.main(ActivityThread.java:10346)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at java.lang.reflect.Method.invoke(Native Method)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:638)
+10-09 18:55:01.183 D/ForegroundServiceController(16041): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:972)
+10-09 18:55:01.186 D/ForegroundServiceController(16041): ForegroundServiceController.startService() SUCCESS
+10-09 18:55:01.197 I/MediaSessionImpl(16041): Init bf383e1 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-09 18:55:01.199 I/MediaSessionCompat(16041): Couldn't find a unique registered media button receiver in the given context.
+10-09 18:55:01.221 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:01.301 D/čič   (16041): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=442}
+10-09 18:55:01.301 D/čič   (16041): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=b3df6d3f-537a-44cb-b86a-36e321536930
+10-09 18:55:01.302 D/čič   (16041): Analytics Event: playback_started
+10-09 18:55:01.622 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:01.773 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:01.888 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:01.984 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:04.975 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:08.439 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:08.439 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:08.440 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:08.440 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:08.441 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:08.441 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:08.498 D/čič   (16041): Analytics Event: playback_started
+10-09 18:55:22.315 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:23.616 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:24.740 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:26.640 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:27.409 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=567, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=28996, foreground_duration_ms=29563, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:55:30.023 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:30.905 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:30.905 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:30.905 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:30.905 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:31.003 D/čič   (16041): Analytics Event: playback_started
+10-09 18:55:31.053 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:32.980 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:32.980 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:32.980 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:32.981 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:33.075 D/čič   (16041): Analytics Event: playback_started
+10-09 18:55:33.349 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:37.427 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:46.675 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:50.880 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:52.309 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:57.414 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=151, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=29853, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:55:58.275 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:58.275 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:58.275 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:58.276 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:58.276 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:58.276 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:55:58.331 D/čič   (16041): Analytics Event: playback_started
+10-09 18:56:07.776 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:11.817 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:14.901 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:27.418 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=8723, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=21282, foreground_duration_ms=30005, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:56:33.092 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:33.092 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:33.092 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:33.092 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:33.092 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:33.092 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:33.143 D/čič   (16041): Analytics Event: playback_started
+10-09 18:56:41.564 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:46.733 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:46.733 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:46.733 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:46.734 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:46.844 D/čič   (16041): Analytics Event: playback_started
+10-09 18:56:46.977 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:56.995 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:56:57.421 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=5822, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=24182, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:57:02.170 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:05.546 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:10.185 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:12.948 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:14.957 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:17.701 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:25.034 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:27.425 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30002, foreground_duration_ms=30002, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:57:39.249 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:43.417 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:49.801 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:57:57.433 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30009, foreground_duration_ms=30009, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:57:58.061 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:58:04.390 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:58:08.984 D/čič   (16041): Analytics Event: feature_exposed | Parameters: {feature_name=sleep_timer, screen=reader, is_available=true}
+10-09 18:58:15.280 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:58:26.833 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:58:27.437 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30004, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 18:58:28.044 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:58:29.762 W/TtsReadAloudEngine(16041): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 18:58:32.234 D/čič123(16041): 	at com.retro99.reader.ui.playback.MediaPlaybackService.onDestroy(MediaPlaybackService.kt:423)
+10-09 18:58:32.236 I/MediaSessionImpl(16041): Release bf383e1 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-09 18:58:57.447 D/čič   (16041): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=25313, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=4698, foreground_duration_ms=30011, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
