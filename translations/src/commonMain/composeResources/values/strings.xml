@@ -1900,6 +1900,14 @@
     <string name="catalogue_try_again" tools:ignore="MissingTranslation">Try again</string>
     <!-- §4 Catalogue settings -->
     <string name="catalogue_settings_header_checked" tools:ignore="MissingTranslation">Book catalogue · OPDS · checked %1$s ago</string>
+    <string name="catalogue_settings_header" tools:ignore="MissingTranslation">Book catalogue · OPDS</string>
+    <string name="catalogue_libraries_title" tools:ignore="MissingTranslation">Libraries</string>
+    <string name="catalogue_settings_header_time" tools:ignore="MissingTranslation">Book catalogue · OPDS · checked %1$s</string>
+    <string name="catalogue_checked_time" tools:ignore="MissingTranslation">Checked %1$s</string>
+    <string name="catalogue_error_time" tools:ignore="MissingTranslation">Couldn't reach it · %1$s</string>
+    <string name="catalogue_settings_group_address" tools:ignore="MissingTranslation">Address</string>
+    <!-- TODO-design: the editAddress board promises to keep account details on every change; Phase 2 clears them on origin changes. -->
+    <string name="catalogue_edit_address_origin_warning" tools:ignore="MissingTranslation">Changing the host, port or scheme removes your saved account details. Downloaded books stay.</string>
     <string name="catalogue_address_show" tools:ignore="MissingTranslation">Show</string>
     <string name="catalogue_address_hide" tools:ignore="MissingTranslation">Hide</string>
     <string name="catalogue_edit_address" tools:ignore="MissingTranslation">Edit address</string>
@@ -1964,6 +1972,10 @@
     <string name="catalogue_local_network_body" tools:ignore="MissingTranslation">This link leads away from %1$s to a device on your home network. Only open it if you expected that.</string>
     <string name="catalogue_local_network_dont_open" tools:ignore="MissingTranslation">Don't open</string>
     <string name="catalogue_sign_out_all_detail" tools:ignore="MissingTranslation">Book catalogues: account details are removed too. Catalogues that don't need an account stay, so you can keep browsing.</string>
+    <!-- TODO-design: this checkout has no logout-all dialog entry point; the board supplies its dialog, not an entry label. -->
+    <string name="catalogue_sign_out_everything" tools:ignore="MissingTranslation">Sign out of everything…</string>
+    <string name="catalogue_sign_out_everything_title" tools:ignore="MissingTranslation">Sign out of everything?</string>
+    <string name="catalogue_sign_out_everything_body" tools:ignore="MissingTranslation">You'll be signed out of every server on %1$s. Your downloaded books stay.</string>
     <string name="catalogue_rate_limited_title" tools:ignore="MissingTranslation">Too many requests</string>
     <string name="catalogue_rate_limited_body" tools:ignore="MissingTranslation">%1$s asked apps to slow down for a moment. Try again in about a minute.</string>
     <!-- §5 Sign-in sheet. Body: %1$s is the device name -->

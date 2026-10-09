@@ -69,6 +69,9 @@ import com.retro99.base.ui.IntentDispatcher
 import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberChevron
 import com.retro99.base.ui.compose.EmberCard
+import com.retro99.catalogue.ui.settings.CatalogueLibraryCard
+import com.retro99.catalogue.ui.settings.CatalogueLibraryAction
+import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerType
 import com.retro99.settings.ui.servers.model.ServerWithStatusUiModel
 import com.retro99.translations.StringRes
@@ -96,6 +99,8 @@ import resources.translations.servers_title
 import resources.translations.settings_server_list_load_failed
 import resources.translations.settings_server_operation_failed
 import resources.translations.settings_server_operation_retry
+import resources.translations.catalogue_sign_out_everything
+import resources.translations.catalogue_libraries_title
 
 @Composable
 fun ServerManagementScreen(
@@ -105,6 +110,8 @@ fun ServerManagementScreen(
     stopPlaybackForServer: (String, DiagnosticContext) -> Unit,
     failedLoginServerIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
+    onBrowseCatalogue: (String) -> Unit = {},
+    onCatalogueSettings: (String, Boolean) -> Unit = { _, _ -> },
     viewModel: ServerManagementViewModel = koinViewModel {
         parametersOf(onNavigateToLogin, stopPlaybackForServer)
     },
@@ -120,18 +127,22 @@ fun ServerManagementScreen(
             onBack = onBack,
             onOpenSyncAndBackup = onOpenSyncAndBackup,
             modifier = modifier,
+            onBrowseCatalogue = onBrowseCatalogue,
+            onCatalogueSettings = onCatalogueSettings,
         )
     }
 }
 
 @Composable
-private fun ServerManagementScreenContent(
+fun ServerManagementScreenContent(
     viewState: ServerManagementViewState,
     intentDispatcher: IntentDispatcher<ServerManagementIntent>,
     failedLoginServerIds: Set<String>,
     onBack: () -> Unit,
     onOpenSyncAndBackup: () -> Unit,
     modifier: Modifier = Modifier,
+    onBrowseCatalogue: (String) -> Unit = {},
+    onCatalogueSettings: (String, Boolean) -> Unit = { _, _ -> },
 ) {
     val colors = Ember.colors
     val snackbarHostState = remember { SnackbarHostState() }
@@ -139,6 +150,7 @@ private fun ServerManagementScreenContent(
     val retryLabel = stringResource(StringRes.settings_server_operation_retry)
     var detailServerId by rememberSaveable { mutableStateOf<String?>(null) }
     val detailServer = viewState.servers.firstOrNull { item -> item.server.id == detailServerId }
+    var signOutEverything by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewState.operationFailure) {
         if (viewState.operationFailure != null) {
@@ -189,6 +201,9 @@ private fun ServerManagementScreenContent(
                 onOpenDetails = { serverId -> detailServerId = serverId },
                 onOpenSyncAndBackup = onOpenSyncAndBackup,
                 onBack = onBack,
+                onBrowseCatalogue = onBrowseCatalogue,
+                onCatalogueSettings = onCatalogueSettings,
+                onSignOutEverything = { signOutEverything = true },
             )
         }
         SnackbarHost(
@@ -196,6 +211,11 @@ private fun ServerManagementScreenContent(
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+    if (signOutEverything) CatalogueSignOutEverythingDialog(
+        hasCatalogue = viewState.hasCatalogueSignOutDetail,
+        onConfirm = { signOutEverything = false; intentDispatcher(ServerManagementIntent.OnSignOutEverything) },
+        onDismiss = { signOutEverything = false },
+    )
 }
 
 @Composable
@@ -235,11 +255,14 @@ private fun ServerListContent(
     onOpenDetails: (String) -> Unit,
     onOpenSyncAndBackup: () -> Unit,
     onBack: () -> Unit,
+    onBrowseCatalogue: (String) -> Unit,
+    onCatalogueSettings: (String, Boolean) -> Unit,
+    onSignOutEverything: () -> Unit,
 ) {
     val colors = Ember.colors
     Column(modifier = Modifier.fillMaxSize()) {
         ServerScreenHeader(
-            title = stringResource(StringRes.servers_title),
+            title = stringResource(StringRes.catalogue_libraries_title),
             onBack = onBack,
         )
         when {
@@ -269,7 +292,7 @@ private fun ServerListContent(
                 }
             }
 
-            viewState.servers.isEmpty() -> EmptyServers(
+            viewState.servers.isEmpty() && viewState.catalogueSources.isEmpty() -> EmptyServers(
                 onAdd = { intentDispatcher(ServerManagementIntent.OnAddServerClick) },
             )
 
@@ -283,7 +306,7 @@ private fun ServerListContent(
                 ),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                item(key = "intro") {
+                if (viewState.catalogueSources.isEmpty()) item(key = "intro") {
                     Text(
                         text = stringResource(StringRes.servers_intro),
                         style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 20.sp),
@@ -313,10 +336,38 @@ private fun ServerListContent(
                         },
                     )
                 }
+                val allCatalogues = viewState.catalogueSources.map { item ->
+                    ServerConfig(item.server.id, item.server.name, item.server.type, item.server.baseUrl, 0, enabled = item.status.access != com.retro99.server.api.ServerAccessState.TurnedOff)
+                }
+                items(viewState.catalogueSources, key = { "catalogue-${it.server.id}" }) { catalogue ->
+                    val config = allCatalogues.first { it.id == catalogue.server.id }
+                    CatalogueLibraryCard(
+                        config = config,
+                        allSources = allCatalogues,
+                        status = catalogue.status,
+                        enabled = !viewState.isOperationInProgress,
+                        onDetails = { onCatalogueSettings(config.id, false) },
+                        onAction = { action -> when (action) {
+                            CatalogueLibraryAction.Browse -> onBrowseCatalogue(config.id)
+                            CatalogueLibraryAction.Account -> onCatalogueSettings(config.id, true)
+                            CatalogueLibraryAction.Details -> onCatalogueSettings(config.id, false)
+                            CatalogueLibraryAction.TurnOn -> intentDispatcher(ServerManagementIntent.OnTurnOnCatalogue(config.id))
+                            CatalogueLibraryAction.Retry -> intentDispatcher(ServerManagementIntent.OnRetryCatalogue(config.id))
+                        } },
+                    )
+                }
+                if (viewState.catalogueOperationFailed) item(key = "catalogue-error") {
+                    Text(stringResource(StringRes.settings_server_operation_failed), style = Ember.type.meta, color = colors.error)
+                }
                 item(key = "add") {
                     AddServerButton(
                         onClick = { intentDispatcher(ServerManagementIntent.OnAddServerClick) },
                     )
+                }
+                item(key = "sign-out-everything") {
+                    TextButton(onClick = onSignOutEverything, enabled = !viewState.isOperationInProgress, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(StringRes.catalogue_sign_out_everything), style = Ember.type.label, color = colors.accentText)
+                    }
                 }
             }
         }

@@ -39,6 +39,7 @@ dependencies {
     implementation(projects.feature.saved.ui)
     implementation(projects.feature.catalogue.domain)
     implementation(projects.feature.catalogue.ui)
+    implementation(projects.feature.settings.ui)
     implementation(projects.translations)
     implementation(projects.lib.dictionary)
     implementation(libs.sqldelight.android.driver)
