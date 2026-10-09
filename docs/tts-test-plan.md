@@ -86,6 +86,13 @@ failing F06 tests `4bc7cdc8`, fix `480a4773`; four failing F07 tests `af95f1f2`,
 no product code changed for it (`ac507841`); its test recorded a separate hazard, TTS-F25.
 Reader ui host tests 312/312.
 
+The device pass for run 2b could **not** be run: on the Samsung the reader's Listen button
+never opens the Listening sheet, which is the only place the voice and the speed can be
+changed, so no speed or voice change could be made on the phone. Evidence and the control
+experiment (the neighbouring Search button opens on the identical gesture) are in
+`docs/manual-qa-evidence/2026-10-09/tts-run2b/`. The phone was therefore left on whatever
+voice and rate the previous run set, not on a System voice at 1.0.
+
 ### Run 3: pure logic
 
 - `TtsAudioGeneratorTest`: a failed synthesis that wrote bytes leaves no cache entry (F03).
@@ -143,7 +150,10 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
 - Tap a word during narration, dismiss, tap another immediately.
 - Rotate the device and re-enter the reader while reading; count events per start.
 - Sleep timer expiry in foreground and with the screen locked.
-- The Listen button not opening the sheet (seen twice, not separated from tap timing).
+- The Listen button not opening the sheet: seen twice in the investigation and again
+  throughout run 2b's device attempt, where it was separated from tap timing (control row
+  verified visible, Search opens on the same gesture). Needs a human finger to confirm it
+  is not a synthetic-input artifact. Blocks every device check that needs the sheet.
 - Cold first Kokoro start timed against the 30 second start deadline (F15).
 
 ## Decisions for the owner
