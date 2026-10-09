@@ -26,5 +26,9 @@ internal suspend fun startAtFirstChapterWithText(
     startAtChapterStart: suspend () -> TtsPlaybackFailureReason?,
 ): TtsPlaybackFailureReason? {
     if (hasSentencesHere()) return startHere()
+    repeat(maxChapterMoves) {
+        if (!goToNextChapter()) return TtsPlaybackFailureReason.CONTENT_UNAVAILABLE
+        if (hasSentencesHere()) return startAtChapterStart()
+    }
     return TtsPlaybackFailureReason.CONTENT_UNAVAILABLE
 }
