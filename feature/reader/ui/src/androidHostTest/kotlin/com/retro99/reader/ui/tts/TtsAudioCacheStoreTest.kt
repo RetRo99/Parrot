@@ -104,6 +104,44 @@ class TtsAudioCacheStoreTest {
         assertTrue(newest.exists(), "the trim should stop once it is under the limit")
     }
 
+    /**
+     * TTS-F12: files touched a moment ago are the ones a live playlist holds, so the trim
+     * must leave them alone even when that keeps the cache over its limit.
+     */
+    @Test
+    fun `trim keeps files that were used in the last minute`() {
+        // Given four 100-byte files, every one touched within the last minute
+        val recent = (1..4).map { index ->
+            fileAged(name = "recent-$index.wav", sizeBytes = 100, ageMs = index * 10_000L)
+        }
+
+        // When
+        store.trim(maxBytes = 150L)
+
+        // Then
+        recent.forEach { file ->
+            assertTrue(file.exists(), "${file.name} was used a moment ago and must survive")
+        }
+    }
+
+    @Test
+    fun `trim still evicts files older than the keep window, oldest first`() {
+        // Given three old files and one just used, all 100 bytes
+        val oldest = fileAged(name = "old-3.wav", sizeBytes = 100, ageMs = 3 * DAY_MS)
+        val middle = fileAged(name = "old-2.wav", sizeBytes = 100, ageMs = 2 * DAY_MS)
+        val newerOld = fileAged(name = "old-1.wav", sizeBytes = 100, ageMs = DAY_MS)
+        val justUsed = fileAged(name = "just-used.wav", sizeBytes = 100, ageMs = 5_000L)
+
+        // When
+        store.trim(maxBytes = 250L)
+
+        // Then
+        assertFalse(oldest.exists(), "the oldest file should have been evicted")
+        assertFalse(middle.exists(), "the second-oldest file should have been evicted")
+        assertTrue(newerOld.exists(), "the trim should stop once it is under the limit")
+        assertTrue(justUsed.exists(), "a file used a moment ago must survive")
+    }
+
     @Test
     fun `durationMs reads the duration from a PCM WAV header`() {
         // Given a 44.1 kHz 16-bit mono WAV with one second of audio
