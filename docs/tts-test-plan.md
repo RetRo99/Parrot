@@ -112,7 +112,7 @@ voice and rate the previous run set, not on a System voice at 1.0.
 Done 2026-10-09. Five failing gap tests `32a23af4`, fix `b755094d`
 (`TtsReadAloudEngine.isSessionRunning`, the end-of-queue race in `onSentenceCompleted`,
 `resume()` on a player that has run out of audio); failing sanitizer test `12dd5dff`, fix
-`e4597018`. Reader ui host tests 317/317, analytics 39/39. No earlier test was edited.
+`e4597018`. Reader ui host tests 317/317, analytics 75/75. No earlier test was edited.
 
 ### Run 3: pure logic
 
