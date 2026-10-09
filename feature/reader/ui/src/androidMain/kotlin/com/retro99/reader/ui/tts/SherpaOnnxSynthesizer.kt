@@ -255,7 +255,7 @@ class SherpaOnnxSynthesizer(
 /** The speaker index a stored `kokoro:<n>` voice id names, for the native engine. */
 internal fun parseKokoroSpeakerId(voiceId: String?): Int {
     val raw = voiceId?.substringAfter(':', "")
-    return raw?.toIntOrNull()?.coerceAtLeast(0) ?: 0
+    return raw?.toIntOrNull()?.coerceIn(KOKORO_VOICES.indices) ?: 0
 }
 
 internal val KOKORO_VOICES: List<TtsVoice> = listOf(
