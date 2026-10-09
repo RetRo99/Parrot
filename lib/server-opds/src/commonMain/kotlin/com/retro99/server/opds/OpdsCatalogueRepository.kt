@@ -85,10 +85,14 @@ class OpdsCatalogueRepository(
         } finally { requests.update { it - job } }
     }
 
-    private fun networkRequest(url: String, root: Boolean, accept: List<String> = OPDS_ACCEPT_MEDIA_TYPES): OpdsRequest {
+    /**
+     * @param unasked a request the user was not asked about and cannot see the address of: a
+     *   picture, a search description, the file behind a link. See [OpdsRequest.refuseLocalNetworkFromPublic].
+     */
+    private fun networkRequest(url: String, root: Boolean, accept: List<String> = OPDS_ACCEPT_MEDIA_TYPES, unasked: Boolean = false): OpdsRequest {
         val details = currentAccount()
         return OpdsRequest(url, accept, details?.let { OpdsCredentials.Basic(it.username, it.password) } ?: OpdsCredentials.Anonymous,
-            allowCleartext = config.baseUrl.startsWith("http://", ignoreCase = true), isCatalogueRoot = root)
+            allowCleartext = config.baseUrl.startsWith("http://", ignoreCase = true), isCatalogueRoot = root, refuseLocalNetworkFromPublic = unasked)
     }
 
     override suspend fun getRoot() = request { load(config.baseUrl, true) }
@@ -157,7 +161,7 @@ class OpdsCatalogueRepository(
         val url = offer.link.resolvedHref ?: return@request Err(AppError.ApiError(400, "InvalidSearchDescriptor"))
         var preferred = descriptors[url]
         if (preferred == null) {
-            val fetched = transport.fetch(networkRequest(url, false, listOf("application/opensearchdescription+xml")))
+            val fetched = transport.fetch(networkRequest(url, false, listOf("application/opensearchdescription+xml"), unasked = true))
             checkCurrent()
             if (fetched is OpdsFetchResult.Failure) return@request failure(fetched.error)
             fetched as OpdsFetchResult.Response
@@ -222,7 +226,7 @@ class OpdsCatalogueRepository(
                 ?.choiceForRepresentation(locator.representationKey)
                 ?.let { (it.action as? CatalogueAcquisitionAction.Download)?.link?.resolvedHref }
                 ?: return@coroutineScope CatalogueDownloadOutcome.Failed(CatalogueDownloadFailure.Refused)
-            val result = transport.download(networkRequest(href, false, OPDS_DOWNLOAD_ACCEPT_MEDIA_TYPES), object : OpdsDownloadSink {
+            val result = transport.download(networkRequest(href, false, OPDS_DOWNLOAD_ACCEPT_MEDIA_TYPES, unasked = true), object : OpdsDownloadSink {
                 override suspend fun start(declaredLength: Long?) { checkCurrent(); sink.start(declaredLength) }
                 override suspend fun write(buffer: ByteArray, length: Int) = sink.write(buffer, length)
             })
@@ -241,7 +245,8 @@ class OpdsCatalogueRepository(
      * A cover or thumbnail, through this catalogue's transport: account details only on https
      * hops on the catalogue's own origin, the redirect and address checks of a page, and a
      * ceiling of its own. Like a file it does not hold the session lock and does not change the
-     * catalogue's status: pictures often live on another host.
+     * catalogue's status: pictures often live on another host. A catalogue that is not on the
+     * local network gets no picture from a device that is: the list would ask for it unseen.
      */
     override suspend fun loadImage(url: String): ByteArray? = coroutineScope {
         val job = currentCoroutineContext().job
@@ -250,7 +255,7 @@ class OpdsCatalogueRepository(
             checkCurrent()
             var bytes = ByteArray(0)
             var size = 0
-            val result = transport.download(networkRequest(url, false, IMAGE_ACCEPT_MEDIA_TYPES), object : OpdsDownloadSink {
+            val result = transport.download(networkRequest(url, false, IMAGE_ACCEPT_MEDIA_TYPES, unasked = true), object : OpdsDownloadSink {
                 override suspend fun start(declaredLength: Long?) {
                     checkCurrent()
                     bytes = ByteArray(declaredLength?.toInt() ?: IMAGE_FIRST_BUFFER_BYTES)

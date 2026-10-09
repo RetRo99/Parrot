@@ -26,6 +26,7 @@ class KtorOpdsTransport(
 ) : OpdsTransport {
     private val resolver = Rfc3986ReferenceResolver()
     private val trustedOrigin = origin(Url(catalogueRoot))
+    private val catalogueIsLocal = localAddress(Url(catalogueRoot).host)
     private val client = HttpClient(engine) {
         followRedirects = false
         expectSuccess = false
@@ -124,7 +125,10 @@ class KtorOpdsTransport(
                 current = url.toString().substringBefore('#')
                 if (request.credentials is OpdsCredentials.Basic && url.protocol.name == "http" && redirects == 0) return wrap(failure(OpdsTransportError.Code.PASSWORD_OVER_HTTP))
                 if (!visited.add(current)) return wrap(failure(OpdsTransportError.Code.REDIRECT_LOOP))
-                if (origin(url) != trustedOrigin && localAddress(url.host)) privateNetwork = true
+                if (origin(url) != trustedOrigin && localAddress(url.host)) {
+                    if (request.refuseLocalNetworkFromPublic && !catalogueIsLocal) return wrap(failure(OpdsTransportError.Code.LOCAL_NETWORK_NOT_ALLOWED))
+                    privateNetwork = true
+                }
                 log("opds.request")
                 val step: Step<R> = client.prepareGet(current) {
                     // A whole-request deadline would cut off a large file; the socket timeout still applies.

@@ -43,6 +43,13 @@ data class OpdsRequest(
     val cacheValidators: Map<String, String>? = null,
     /** Optional explicit root-fetch context; null means compare with the configured root URL. */
     val isCatalogueRoot: Boolean? = null,
+    /**
+     * For requests nobody was asked about (pictures, search descriptions, the file behind a
+     * link): a catalogue that is not on the local network may not send them to a device that
+     * is, directly or through a redirect. Fails with [OpdsTransportError.Code.LOCAL_NETWORK_NOT_ALLOWED]
+     * before that device is contacted.
+     */
+    val refuseLocalNetworkFromPublic: Boolean = false,
 )
 
 sealed interface OpdsCredentials {
@@ -136,5 +143,6 @@ data class OpdsTransportError(val code: Code, val status: Int? = null, val note:
         LENGTH_MISMATCH, // download only: fewer or more bytes than Content-Length declared
         UNSUPPORTED_SCHEME,
         MALFORMED_URL,
+        LOCAL_NETWORK_NOT_ALLOWED, // a public catalogue's unasked-for request to a local-network device
     }
 }

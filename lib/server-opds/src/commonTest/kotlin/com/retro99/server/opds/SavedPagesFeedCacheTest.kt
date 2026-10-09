@@ -12,6 +12,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class SavedPagesFeedCacheTest {
     private var activeProfile: String? = "a"
@@ -87,6 +88,45 @@ class SavedPagesFeedCacheTest {
         // And one page that needs the room of two takes it
         cache.store(key("$ROOT/4"), page(6, at = 5))
         assertEquals(listOf("$ROOT/3", "$ROOT/4"), documents.peek("a").map { it.requestUrl })
+    }
+
+    @Test fun `at the budget a page larger than the room that is left evicts the oldest pages until it fits - across batches`() = runTest {
+        // Given: a budget of 100 filled by 50 pages of 2 bytes, saved in order
+        val cache = SavedPagesFeedCache(documents.session, documents, maxBytes = 100, maxPageBytes = 90)
+        (1..50).forEach { number -> cache.store(key("$ROOT/$number", source = if (number % 2 == 0) "even" else "odd"), page(2, at = number.toLong())) }
+        assertEquals(100L, documents.peek("a").sumOf { it.sizeBytes })
+
+        // When: one page of 90 bytes; 45 of the 50 must go, more than one eviction batch
+        cache.store(key("$ROOT/big"), page(90, at = 51))
+
+        // Then: exactly the 45 oldest went, whichever catalogue they belonged to
+        val kept = documents.peek("a")
+        assertEquals((46..50).map { "$ROOT/$it" } + "$ROOT/big", kept.map { it.requestUrl })
+        assertEquals(100L, kept.sumOf { it.sizeBytes })
+        assertNotNull(cache.load(key("$ROOT/big")))
+        assertNull(cache.load(key("$ROOT/45", source = "odd")))
+    }
+
+    @Test fun `the budget holds after every one of many saves of pages of every size`() = runTest {
+        val cache = SavedPagesFeedCache(documents.session, documents, maxBytes = 1_000, maxPageBytes = 400)
+        var saved = 0
+        (1..600).forEach { step ->
+            val size = (step * 37) % 450 + 1 // 1..450: some over the page limit
+            cache.store(key("$ROOT/${step % 90}"), page(size, at = step.toLong()))
+            val pages = documents.peek("a")
+
+            assertTrue(pages.sumOf { it.sizeBytes } <= 1_000, "step $step: ${pages.sumOf { it.sizeBytes }} bytes")
+            if (size <= 400) {
+                saved++
+                assertEquals(step.toLong(), pages.last().storedAt, "step $step: the page just saved is kept")
+            } else {
+                assertTrue(pages.none { it.requestUrl == "$ROOT/${step % 90}" }, "step $step: a page over the page limit is not saved, nor its older copy kept")
+            }
+            // Oldest first: what is kept is always the most recently saved pages, with no gap.
+            val times = pages.map { it.storedAt }
+            assertEquals(times.sorted(), times)
+        }
+        assertTrue(saved > 500)
     }
 
     @Test fun `a page over the feed budget is never saved and takes its older copy with it`() = runTest {
