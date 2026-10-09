@@ -26,7 +26,9 @@ edca1916 fix(catalogue): an address with no host or an unclosed bracket is refus
 0fd911ef docs(opds): test coverage against the plan and the security review
 6a6e7159 docs(opds): README section, compatibility table, release checklist, plan status for Phase 5
 bf8e821a docs(opds): add the address and local-network tests to the coverage table
-(then: the iPhone compressed-download note, and this report)
+72c212b7 docs(opds): note the compressed-download check for iPhone
+bf35a07e docs(opds): Phase 5 run report, before the final app builds
+(then one more commit: this report with the app build results)
 
 Test command(s) run:
 Android host, all 23 modules that have host tests, from clean (--rerun-tasks):
@@ -65,7 +67,7 @@ composeApp host suite result: 57/57 passed
 
 Migration verification result: :lib:database:implementation:verifySqlDelightMigration and :verifyCommonMainAppDatabaseMigration passed
 
-App build results (Android assemble, iOS framework): PENDING, run after this report was first committed
+App build results (Android assemble, iOS framework): :androidApp:assembleDebug BUILD SUCCESSFUL; :composeApp:linkDebugFrameworkIosSimulatorArm64 BUILD SUCCESSFUL. Also :tools:ember-fixtures:compileDebugKotlin, which uses the catalogue strings: successful. Run on bf35a07e, after the last code change (edca1916).
 
 Steps complete (1-6): 1 yes, 2 yes, 3 yes, 4 yes, 5 yes, 6 yes
 
