@@ -22,6 +22,7 @@ class CatalogueBrowseViewModel(
     gateway: CatalogueBrowseGateway,
     @Provided library: CatalogueLibraryLookup,
     @Provided queue: com.retro99.catalogue.domain.CatalogueAcquisitionManager,
+    private val announcer: com.retro99.catalogue.ui.downloads.CatalogueDownloadAnnouncer,
     private val references: CatalogueRouteReferences,
     @InjectedParam private val sourceId: String,
     @InjectedParam targetRef: String,
@@ -33,6 +34,7 @@ class CatalogueBrowseViewModel(
         library = library,
         scope = viewModelScope,
         queue = queue,
+        onCancelled = announcer::cancelled,
     )
 
     /** First visible item and its offset, per list ([CatalogueBrowseState.listId]). */
@@ -41,5 +43,7 @@ class CatalogueBrowseViewModel(
     fun reference(place: CataloguePlace): String = references.referenceTo(sourceId, place)
     fun reference(book: CatalogueBookPlace): String = references.referenceTo(sourceId, book)
 
-    override fun onCleared() = browser.cancel()
+    fun visible(rowKeys: Set<String>) = announcer.visible(this, sourceId, browser.visiblePublicationKeys(rowKeys))
+    fun hidden() = announcer.hidden(this)
+    override fun onCleared() { hidden(); browser.cancel() }
 }

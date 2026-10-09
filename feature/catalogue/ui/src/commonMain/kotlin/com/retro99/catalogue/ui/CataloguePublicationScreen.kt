@@ -36,6 +36,7 @@ fun CataloguePublicationScreen(
     val viewModel: CatalogueBookViewModel = koinViewModel { parametersOf(sourceId, publicationRef) }
     val page = viewModel.page
     val state by page.state.collectAsState()
+    DisposableEffect(viewModel, state.book) { viewModel.visible(); onDispose { viewModel.hidden() } }
     val uri = LocalUriHandler.current
     val snackbar = remember { SnackbarHostState() }
     val message = stringResource(StringRes.catalogue_download_notice, state.book?.displayTitle().orEmpty())

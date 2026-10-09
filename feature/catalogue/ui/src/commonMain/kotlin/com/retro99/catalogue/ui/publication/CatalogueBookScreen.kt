@@ -146,9 +146,7 @@ private fun BookAction(state: CatalogueBookState, actions: CatalogueBookActions,
         }
         is BookMainAction.Downloading -> ActionCard {
             val progress = action.total?.let { (action.bytes.toFloat() / it).coerceIn(0f, 1f) }
-            val announcement = if (progress == null) stringResource(StringRes.catalogue_a11y_downloading, state.book?.displayTitle().orEmpty())
-                else stringResource(StringRes.catalogue_announce_progress, state.book?.displayTitle().orEmpty(), ((progress * 100).toInt() / 25 * 25).coerceAtMost(75))
-            Row(Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite; contentDescription = announcement }, horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { CardTitle(stringResource(StringRes.catalogue_state_downloading)) }
                 CardBody(if (action.total == null) stringResource(StringRes.catalogue_so_far, catalogueMegabytes(action.bytes)) else stringResource(StringRes.catalogue_progress_of_size, catalogueMegabytes(action.bytes).removeSuffix(" MB"), catalogueMegabytes(action.total)))
             }
@@ -166,7 +164,7 @@ private fun BookAction(state: CatalogueBookState, actions: CatalogueBookActions,
         }
         is BookMainAction.Done -> {
             Text(if (action.completedAt == null) stringResource(StringRes.catalogue_in_library) else stringResource(StringRes.catalogue_in_library_downloaded, timeAgoText(catalogueTimeAgo(action.completedAt, now))),
-                style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold), color = Ember.colors.success, modifier = Modifier.padding(bottom = 8.dp).semantics { liveRegion = LiveRegionMode.Polite })
+                style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold), color = Ember.colors.success, modifier = Modifier.padding(bottom = 8.dp))
             val readLabel = stringResource(StringRes.catalogue_a11y_read, state.book?.displayTitle().orEmpty())
             BookButton(stringResource(StringRes.catalogue_read_now), actions.onRead, modifier = Modifier.semantics { contentDescription = readLabel })
         }
@@ -184,7 +182,7 @@ private fun BookAction(state: CatalogueBookState, actions: CatalogueBookActions,
                 AcquisitionFailureReason.SignIn -> stringResource(StringRes.catalogue_failure_sign_in, state.catalogueName)
                 null -> stringResource(StringRes.catalogue_failure_interrupted)
             }
-            Text(text, style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.Bold), color = Ember.colors.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            Text(text, style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.Bold), color = Ember.colors.error)
             val label = stringResource(when {
                 row.state == AcquisitionState.Interrupted -> StringRes.catalogue_start_again
                 reason == AcquisitionFailureReason.SignIn -> StringRes.catalogue_sign_in

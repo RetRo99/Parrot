@@ -18,6 +18,7 @@ class CatalogueBookPage(
     private val library: CatalogueLibraryLookup,
     private val queue: CatalogueAcquisitionManager,
     private val scope: CoroutineScope,
+    private val onCancelled: (String) -> Unit = {},
 ) {
     private val _state = MutableStateFlow(CatalogueBookState())
     val state = _state.asStateFlow()
@@ -35,6 +36,7 @@ class CatalogueBookPage(
     private var loading = true
     private var target = place?.listing
     private val identities get() = ((publications + place?.publications.orEmpty()).map { CatalogueEntryIdentity(it.publicationKey) } + listOfNotNull(place?.listingIdentity?.let(::CatalogueEntryIdentity))).distinct()
+    val announcementKeys get() = identities.map { it.publicationKey }
     private val acquisition get() = rows.lastOrNull { it.sourceId == sourceId && (it.publicationKey in identities.map { id -> id.publicationKey } || it.detailIdentity in identities.map { id -> id.publicationKey }) }
 
     init {
@@ -163,7 +165,7 @@ class CatalogueBookPage(
     fun cancelDownload() {
         val row = acquisition ?: return
         if (!active || row.state !in listOf(AcquisitionState.Waiting, AcquisitionState.Downloading)) return
-        jobs += scope.launch { queue.cancel(row.requestId) }
+        jobs += scope.launch { if (queue.cancel(row.requestId)) onCancelled(row.title) }
     }
     fun failureAction() {
         val row = acquisition ?: return

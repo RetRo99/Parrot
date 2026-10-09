@@ -55,13 +55,13 @@ class DownloadsPageTest {
         }
     }
 
-    @Test fun finishedStayUntilLeaveOrExactly24HoursAndRunningRowsStay() = runTest {
+    @Test fun finishedStayUntilLeaveOrAfter24HoursAndRunningRowsStay() = runTest {
         val queue = TestDownloadQueue()
         val page = DownloadsPage(queue, FakeGateway(), MutableStateFlow("profile-1"), backgroundScope, { queue.now })
         runCurrent()
         queue.rows.value = listOf(downloadFixture(AcquisitionState.Done, "done", 100), downloadFixture(AcquisitionState.Downloading, "running")); runCurrent()
         assertEquals(2, page.state.value.rows.size)
-        queue.now = 100 + CatalogueAcquisitionLimits.FINISHED_RETENTION_MILLIS
+        queue.now = 101 + CatalogueAcquisitionLimits.FINISHED_RETENTION_MILLIS
         advanceTimeBy(queue.now); runCurrent()
         assertEquals(listOf("running"), page.state.value.rows.map { it.acquisition.requestId })
         queue.rows.value += downloadFixture(AcquisitionState.Done, "new", queue.now); runCurrent()
@@ -98,5 +98,13 @@ class DownloadsPageTest {
         page.leave(); runCurrent()
         assertTrue(page.state.value.closed)
         assertTrue(gateway.savedAccounts.isEmpty()); assertFalse(queue.actions.contains("purgeFinished")); assertFalse(queue.actions.any { it.startsWith("signedIn:") })
+    }
+
+    @Test fun leavingBeforeProfileFlowCatchesUpNeverPurgesTheNewProfile() = runTest {
+        val queue = TestDownloadQueue(); var currentProfile = "profile-1"
+        val page = DownloadsPage(queue, FakeGateway(), MutableStateFlow("profile-1"), backgroundScope, isProfileCurrent = { it == currentProfile })
+        runCurrent(); currentProfile = "other"
+        page.leave(); runCurrent()
+        assertFalse(queue.actions.contains("purgeFinished"))
     }
 }

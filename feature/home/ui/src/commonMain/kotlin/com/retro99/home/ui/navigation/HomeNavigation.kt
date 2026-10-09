@@ -82,6 +82,7 @@ fun HomeNavigation(
 ) {
     // Navigation state managed by Nav3's rememberNavBackStack for automatic persistence
     val navigationState = rememberHomeNavigationState()
+    com.retro99.catalogue.ui.downloads.CatalogueDownloadAnnouncements()
 
     // UI state from ViewModel (currently reading, bubble position)
     val uiState by viewModel.viewState.collectAsState()

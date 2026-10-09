@@ -10,7 +10,10 @@ import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
 
 @KoinViewModel
-class DownloadsViewModel(@Provided queue: CatalogueAcquisitionManager, gateway: CatalogueBrowseGateway, @Provided users: UserRegistry) : ViewModel() {
-    val page = DownloadsPage(queue, gateway, users.observeActiveProfile().map { it?.id }, viewModelScope)
-    override fun onCleared() { page.leave(); page.cancel() }
+class DownloadsViewModel(@Provided queue: CatalogueAcquisitionManager, gateway: CatalogueBrowseGateway, @Provided users: UserRegistry, private val announcer: CatalogueDownloadAnnouncer) : ViewModel() {
+    val page = DownloadsPage(queue, gateway, users.observeActiveProfile().map { it?.id }, viewModelScope, onCancelled = announcer::cancelled,
+        isProfileCurrent = { it == users.getActiveProfileId() })
+    fun visible() = announcer.visible(this, "", emptyList(), all = true)
+    fun hidden() = announcer.hidden(this)
+    override fun onCleared() { hidden(); page.leave(); page.cancel() }
 }

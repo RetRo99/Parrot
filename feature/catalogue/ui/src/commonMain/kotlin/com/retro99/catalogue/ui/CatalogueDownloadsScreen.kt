@@ -14,7 +14,7 @@ fun CatalogueDownloadsScreen(onBack: () -> Unit, modifier: Modifier = Modifier, 
     val viewModel: DownloadsViewModel = koinViewModel()
     val page = viewModel.page
     val state by page.state.collectAsState()
-    DisposableEffect(page) { page.enter(); onDispose { page.leave() } }
+    DisposableEffect(page) { page.enter(); viewModel.visible(); onDispose { viewModel.hidden(); page.leave() } }
     LaunchedEffect(state.closed) { if (state.closed) onBack() }
     LaunchedEffect(state.openBookId) { state.openBookId?.let { onRead(it); page.navigationHandled() } }
     if (state.closed) return

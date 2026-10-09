@@ -55,6 +55,7 @@ class CatalogueBrowser(
     private val scope: CoroutineScope,
     private val maxPages: Int = MAX_LOADED_PAGES,
     private val queue: CatalogueAcquisitionManager? = null,
+    private val onCancelled: (String) -> Unit = {},
 ) {
     private sealed interface PageRequest {
         data object Root : PageRequest
@@ -518,6 +519,7 @@ class CatalogueBrowser(
     }
 
     private fun allEntries() = listOfNotNull(base, search).flatMap { list -> list.pages.flatMap { it.books } + list.header?.shelves.orEmpty().flatMap { it.books } }
+    fun visiblePublicationKeys(rowKeys: Set<String>) = allEntries().filter { it.key in rowKeys }.map { it.publication.publicationKey }
     private fun acquisition(entry: BookEntry) = acquisitions.lastOrNull { it.publicationKey == entry.publication.publicationKey || it.detailIdentity == entry.publication.publicationKey }
 
     /** Only the tapped row's details are fetched. A queue owns the download after request(). */
@@ -547,7 +549,8 @@ class CatalogueBrowser(
                     val publications = if (entry.linked || document is CataloguePublicationDocument) available else available.filter { it.publicationKey == entry.publication.publicationKey }
                     val file = bookFileGroups(publications).flatMap { it.files }.firstOrNull { it.best }
                     val locator = file?.let { (repository as? com.retro99.server.api.CatalogueAcquisitionRepository)?.locate(document, it.publication, it.choice) }
-                    if (publications.size != 1 || file == null || locator == null) {
+                    val failedRequest = acquisition(entry)?.let { it.state is AcquisitionState.Failed || it.state == AcquisitionState.Interrupted } == true
+                    if (publications.size != 1 || file == null || locator == null || failedRequest) {
                         if (publications.isNotEmpty()) navigation = CatalogueBrowseNavigation.OpenBook(CatalogueBookPlace(document.context, publications, entry.publication.publicationKey.takeIf { entry.linked }))
                         else openBook(key)
                         return@fold
@@ -565,7 +568,7 @@ class CatalogueBrowser(
                 }, failure = { openBook(key) })
             } catch (cancelled: CancellationException) { throw cancelled }
               catch (_: Exception) { if (list.isCurrent(generation)) openBook(key) }
-            finally { preparing.remove(key); if (open) publish() }
+            finally { if (preparing[key] == currentCoroutineContext()[Job]) preparing.remove(key); if (open) publish() }
         }
         preparing[key] = job
         list.jobs += job
@@ -575,10 +578,10 @@ class CatalogueBrowser(
 
     fun cancelDownload(key: String) {
         if (!open) return
-        preparing.remove(key)?.let { it.cancel(); publish(); return }
+        preparing.remove(key)?.let { job -> job.cancel(); allEntries().firstOrNull { it.key == key }?.let { onCancelled(it.publication.displayTitle()) }; publish(); return }
         val entry = allEntries().firstOrNull { it.key == key } ?: return
         val row = acquisition(entry) ?: return
-        if (row.state == AcquisitionState.Waiting || row.state == AcquisitionState.Downloading) scope.launch { queue?.cancel(row.requestId) }
+        if (row.state == AcquisitionState.Waiting || row.state == AcquisitionState.Downloading) scope.launch { if (queue?.cancel(row.requestId) == true) onCancelled(row.title) }
     }
     fun noticeHandled() { downloadNotice = null; publish() }
 

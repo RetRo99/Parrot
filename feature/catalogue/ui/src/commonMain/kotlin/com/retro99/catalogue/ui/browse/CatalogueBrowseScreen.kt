@@ -201,6 +201,10 @@ fun CatalogueBrowseScreen(
             }
         }
     }
+    DisposableEffect(viewModel) { onDispose { viewModel.hidden() } }
+    LaunchedEffect(listState, state.content) {
+        androidx.compose.runtime.snapshotFlow { listState.layoutInfo.visibleItemsInfo.mapNotNull { it.key as? String }.toSet() }.collect(viewModel::visible)
+    }
     Box(modifier.fillMaxSize()) {
     CatalogueBrowseContentScreen(
         state = state,

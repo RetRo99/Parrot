@@ -24,11 +24,14 @@ class DownloadsPage(
     profiles: Flow<String?>,
     private val scope: CoroutineScope,
     private val now: () -> Long = ::nowMillis,
+    private val onCancelled: (String) -> Unit = {},
+    private val isProfileCurrent: (String) -> Boolean = { true },
 ) {
     private val mutable = MutableStateFlow(DownloadsState())
     val state = mutable.asStateFlow()
     private var profile: String? = null
     private var active = true
+    private val open get() = active && profile?.let(isProfileCurrent) == true
     private var left = false
     private var expiry: Job? = null
     private var accountJob: Job? = null
@@ -44,20 +47,21 @@ class DownloadsPage(
             } else profile = next
         } }
         jobs += scope.launch {
-            queue.purgeExpired()
+            if (open) queue.purgeExpired()
             queue.observeAcquisitions().collect { rows ->
-                if (!active) return@collect
+                if (!open) return@collect
                 mutable.value = mutable.value.copy(rows = downloadsRows(rows))
                 expiry?.cancel()
                 val deadline = rows.filter { it.state == AcquisitionState.Done }.mapNotNull { it.completedAt }
                     .minOrNull()?.plus(CatalogueAcquisitionLimits.FINISHED_RETENTION_MILLIS)
-                if (deadline != null) expiry = scope.launch { delay((deadline - now()).coerceAtLeast(1)); if (active) queue.purgeExpired() }
+                // The queue deletes rows strictly older than the cutoff, not equal to it.
+                if (deadline != null) expiry = scope.launch { delay((deadline - now()).coerceAtLeast(0) + 1); if (open) queue.purgeExpired() }
             }
         }
     }
 
     fun action(requestId: String) {
-        if (!active) return
+        if (!open) return
         val row = state.value.rows.firstOrNull { it.acquisition.requestId == requestId } ?: return
         when (row.action) {
             DownloadAction.Open -> {
@@ -77,7 +81,7 @@ class DownloadsPage(
             null -> Unit
             else -> jobs += scope.launch {
                 when (row.action) {
-                    DownloadAction.Cancel -> queue.cancel(requestId)
+                    DownloadAction.Cancel -> if (queue.cancel(requestId)) onCancelled(row.acquisition.title)
                     DownloadAction.Retry -> queue.retry(requestId)
                     DownloadAction.Dismiss -> queue.dismiss(requestId)
                     DownloadAction.StartAgain -> queue.startAgain(requestId)
@@ -89,18 +93,18 @@ class DownloadsPage(
 
     fun signIn(username: String, password: String) {
         val sourceId = state.value.signInSourceId ?: return
-        if (!active || state.value.signIn?.working == true || username.trim().isEmpty()) return
+        if (!open || state.value.signIn?.working == true || username.trim().isEmpty()) return
         mutable.value = mutable.value.copy(signIn = CatalogueSignInState(working = true))
         accountJob = scope.launch {
             val account = OpdsAccountDetails(username.trim(), password)
             try {
                 val result = gateway.checkAccount(sourceId, null, account)
                 currentCoroutineContext().ensureActive()
-                if (!active || state.value.signInSourceId != sourceId) return@launch
+                if (!open || state.value.signInSourceId != sourceId) return@launch
                 result.fold(success = {
                     gateway.saveAccount(sourceId, account)
                     currentCoroutineContext().ensureActive()
-                    if (!active) return@fold
+                    if (!open) return@fold
                     queue.signedIn(sourceId)
                     dismissSignIn()
                 }, failure = { mutable.value = mutable.value.copy(signIn = CatalogueSignInState(wrongDetails = it.toLoadProblem() == CatalogueLoadProblem.SignInNeeded)) })
@@ -117,10 +121,10 @@ class DownloadsPage(
     fun enter() { left = false }
 
     fun leave() {
-        if (!active || left || profile == null) return
+        if (!open || left) return
         left = true
         // Enter the queue's profile-fenced database operation before the owning VM is cleared.
-        scope.launch(NonCancellable, start = CoroutineStart.UNDISPATCHED) { queue.purgeFinished() }
+        scope.launch(NonCancellable, start = CoroutineStart.UNDISPATCHED) { runCatching { queue.purgeFinished() } }
     }
     fun cancel() { active = false; expiry?.cancel(); accountJob?.cancel(); sourceJob?.cancel(); jobs.forEach { it.cancel() } }
 }

@@ -1781,6 +1781,10 @@
     <string name="catalogue_download_notice" tools:ignore="MissingTranslation">Downloading %1$s</string>
     <string name="catalogue_view" tools:ignore="MissingTranslation">View</string>
     <string name="catalogue_announce_progress" tools:ignore="MissingTranslation">%1$s, %2$d% downloaded</string>
+    <string name="catalogue_announce_waiting" tools:ignore="MissingTranslation">%1$s will download next</string>
+    <string name="catalogue_announce_done" tools:ignore="MissingTranslation">%1$s is in your library</string>
+    <string name="catalogue_announce_failed" tools:ignore="MissingTranslation">Couldn't download %1$s. %2$s</string>
+    <string name="catalogue_announce_cancelled" tools:ignore="MissingTranslation">Download of %1$s cancelled</string>
     <string name="catalogue_a11y_book_download" tools:ignore="MissingTranslation">Download %1$s, EPUB</string>
     <string name="catalogue_a11y_book_download_size" tools:ignore="MissingTranslation">Download %1$s, EPUB, %2$s</string>
     <string name="catalogue_a11y_other_files" tools:ignore="MissingTranslation">Other files, %1$d, opens file choice</string>

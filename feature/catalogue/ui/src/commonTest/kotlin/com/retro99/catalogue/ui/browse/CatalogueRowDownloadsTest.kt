@@ -104,4 +104,31 @@ class CatalogueRowDownloadsTest {
             }
         }
     }
+
+    @Test fun partialEntryLoadsOnlyItsFullEntryAndDuplicateTapDoesNotFetchTwice() = runTest {
+        val partial = book("One").copy(links = listOf(link("full", relations = listOf("alternate")).copy(mediaType = CatalogueMediaType("application", "atom+xml", mapOf("type" to "entry")))))
+        val h = Harness(this, books = listOf(partial, book("Untapped"))); h.loaded(this)
+        val key = h.rows.first().key
+        h.browser.downloadBook(key); h.browser.downloadBook(key); runCurrent()
+        assertEquals(listOf("list", "full"), h.gateway.repository.requested)
+        h.gateway.repository.answer("full", bookDocument(partial, "full")); runCurrent()
+        assertEquals("$ORIGIN/full", h.queue.requests.single().listingUrl)
+    }
+
+    @Test fun profileChangeDropsLateRowDetailsWithoutStartingDownload() = runTest {
+        val h = Harness(this); h.loaded(this)
+        h.browser.downloadBook(h.rows.first().key); runCurrent()
+        h.gateway.source.value = h.gateway.source.value!!.copy(profileId = "other"); runCurrent()
+        h.gateway.repository.answer("list", feed("list", books = h.books)); runCurrent()
+        assertTrue(h.browser.state.value.closed); assertTrue(h.queue.requests.isEmpty())
+    }
+
+    @Test fun failedRequestOpensBookPageForItsRepairActionInsteadOfPretendingItStarted() = runTest {
+        val h = Harness(this); h.loaded(this)
+        h.queue.rows.value = listOf(downloadFixture(AcquisitionState.Failed(AcquisitionFailureReason.SignIn)).copy(sourceId = SOURCE, publicationKey = "id:One")); runCurrent()
+        h.browser.downloadBook(h.rows.first().key); runCurrent()
+        h.gateway.repository.answer("list", feed("list", books = h.books)); runCurrent()
+        assertIs<CatalogueBrowseNavigation.OpenBook>(h.browser.state.value.navigation)
+        assertTrue(h.queue.requests.isEmpty()); assertNull(h.browser.state.value.downloadNotice)
+    }
 }
