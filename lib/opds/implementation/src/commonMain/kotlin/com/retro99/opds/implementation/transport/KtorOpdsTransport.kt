@@ -83,17 +83,20 @@ class KtorOpdsTransport(
             val buffer = ByteArray(DOWNLOAD_BUFFER_BYTES)
             var count = 0L
             var exceeded = false
+            var overrun = false
             try { while (true) {
                 val read = channel.readAvailable(buffer, 0, buffer.size)
                 if (read < 0) break
                 if (read == 0) continue
                 if (count + read > maxBytes) { exceeded = true; break }
+                // More than was declared is not the file that was offered: stop, write none of it.
+                if (declared != null && count + read > declared) { overrun = true; break }
                 if (!toSink { sink.write(buffer, read) }) break
                 count += read
             } } finally { channel.cancel(null) }
             sinkFailure?.let { return@run OpdsDownloadResult.SinkFailure(it) }
             if (exceeded) return@run failed(OpdsTransportError.Code.RESPONSE_TOO_LARGE)
-            if (declared != null && count != declared) return@run failed(OpdsTransportError.Code.LENGTH_MISMATCH)
+            if (overrun || declared != null && count != declared) return@run failed(OpdsTransportError.Code.LENGTH_MISMATCH)
             OpdsDownloadResult.Complete(status, count, declared, current, response.headers[HttpHeaders.ContentType], privateNetwork)
         }
 
