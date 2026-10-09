@@ -1,14 +1,18 @@
 package com.retro99.reader.ui.tts
 
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 
 class SpeakWordCoordinatorTest {
 
@@ -132,6 +136,85 @@ class SpeakWordCoordinatorTest {
     }
 
     @Test
+    fun `a word spoken right after stop waits for the stopped word's cleanup`() = runTest {
+        val events = mutableListOf<String>()
+        val firstClip = CompletableDeferred<Unit>()
+        val secondSynthesis = CompletableDeferred<Unit>()
+        val secondClip = CompletableDeferred<Unit>()
+        val source = FakeWordAudioSource(events).apply {
+            gatesByText = mapOf("second" to secondSynthesis)
+        }
+        val player = FakeWordPlayer(events).apply {
+            gateQueue = ArrayDeque(listOf(firstClip, secondClip))
+        }
+        val narration = FakeInterruption(events, "narration", playing = true)
+        val coordinator = coordinator(source, player, listOf(narration))
+
+        coordinator.speak(word(text = "first"))
+        runCurrent()
+        assertEquals(SpeakWordState.Speaking, coordinator.state.value)
+        // Collected from here, so the first entry is the first word's Speaking, still current.
+        val states = collectStates(coordinator)
+
+        // The dismissal's stop and the next word's tap, with no dispatch in between.
+        coordinator.stop()
+        coordinator.speak(word(text = "second"))
+        advanceUntilIdle()
+        secondSynthesis.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(SpeakWordState.Speaking, coordinator.state.value)
+        secondClip.complete(Unit)
+        advanceUntilIdle()
+        // The state collector runs in backgroundScope, which advanceUntilIdle does not dispatch.
+        runCurrent()
+
+        assertEquals(
+            listOf(
+                "synthesize", "pause:narration", "play", "stop", "resume:narration",
+                "synthesize", "pause:narration", "play", "stop", "resume:narration",
+            ),
+            events,
+        )
+        assertEquals(2, player.played.size)
+        assertEquals(
+            listOf(SpeakWordState.Preparing("Voice"), SpeakWordState.Speaking, SpeakWordState.Idle),
+            states.drop(1),
+        )
+    }
+
+    @Test
+    fun `a word spoken right after stop waits when the stopped synthesis unwinds late`() = runTest {
+        val events = mutableListOf<String>()
+        val firstSynthesis = CompletableDeferred<Unit>()
+        val source = FakeWordAudioSource(events, dispatcher = StandardTestDispatcher(testScheduler)).apply {
+            gatesByText = mapOf("first" to firstSynthesis)
+        }
+        val player = FakeWordPlayer(events)
+        val narration = FakeInterruption(events, "narration", playing = true)
+        val coordinator = coordinator(source, player, listOf(narration))
+
+        coordinator.speak(word(text = "first"))
+        advanceUntilIdle()
+        assertEquals(SpeakWordState.Preparing("Voice"), coordinator.state.value)
+
+        coordinator.stop()
+        coordinator.speak(word(text = "second"))
+        advanceUntilIdle()
+
+        // The stopped word never played, so its cleanup must all land before the second word's.
+        assertEquals(
+            listOf(
+                "synthesize", "stop",
+                "synthesize", "pause:narration", "play", "stop", "resume:narration",
+            ),
+            events,
+        )
+        assertEquals(1, narration.pauses)
+        assertEquals(1, narration.resumes)
+        assertEquals(SpeakWordState.Idle, coordinator.state.value)
+    }
+
+    @Test
     fun `an unusable neural voice can never reach the download path`() = runTest {
         // The real resolver: the selected pack is not downloaded and terms are not accepted,
         // so it must hand back the system voice instead of the neural one.
@@ -210,6 +293,16 @@ class SpeakWordCoordinatorTest {
         return failures
     }
 
+    /** A conflating collector: it records the states a UI subscriber would actually see. */
+    private fun TestScope.collectStates(coordinator: SpeakWordCoordinator): List<SpeakWordState> {
+        val states = mutableListOf<SpeakWordState>()
+        backgroundScope.launch {
+            coordinator.state.collect { state -> states += state }
+        }
+        runCurrent()
+        return states
+    }
+
     private fun word(
         text: String = "word",
         voiceId: String = "en-us-local",
@@ -246,10 +339,19 @@ private class FakeClip : WordAudioClip
 private class FakeWordAudioSource(
     private val events: MutableList<String>? = null,
     private val unusableVoiceIds: Set<String> = emptySet(),
+    /**
+     * Models the real [TtsWordAudioSource], which synthesizes inside
+     * `withContext(Dispatchers.IO)`: cancelling a synthesis in flight then needs more than one
+     * dispatch to unwind, so the cancelled request's cleanup lands later than the cancel call.
+     */
+    private val dispatcher: CoroutineContext = EmptyCoroutineContext,
 ) : WordAudioSource {
 
     var result: WordAudioClip? = FakeClip()
     var gate: CompletableDeferred<Unit>? = null
+
+    /** Per-word gates, for a test that has to hold two requests at different points. */
+    var gatesByText: Map<String, CompletableDeferred<Unit>> = emptyMap()
 
     /** Simulates the synthesizer's global stop(); the word path must never reach it. */
     var globalStopCalls: Int = 0
@@ -263,14 +365,19 @@ private class FakeWordAudioSource(
         }
         events?.add("synthesize")
         requestedVoiceIds += voiceId
-        gate?.await()
-        return result
+        return withContext(dispatcher) {
+            (gatesByText[text] ?: gate)?.await()
+            result
+        }
     }
 }
 
 private class FakeWordPlayer(private val events: MutableList<String>? = null) : WordPlayer {
 
     var gate: CompletableDeferred<Unit>? = null
+
+    /** One gate per play call, for a test that holds two clips at once; null entries never gate. */
+    var gateQueue: ArrayDeque<CompletableDeferred<Unit>?>? = null
     val played = mutableListOf<WordAudioClip>()
     var stops: Int = 0
         private set
@@ -278,7 +385,8 @@ private class FakeWordPlayer(private val events: MutableList<String>? = null) : 
     override suspend fun play(clip: WordAudioClip) {
         events?.add("play")
         played += clip
-        gate?.await()
+        val queued = gateQueue
+        if (queued != null) queued.removeFirstOrNull()?.await() else gate?.await()
     }
 
     override fun stop() {
