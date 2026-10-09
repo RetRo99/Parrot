@@ -29,6 +29,38 @@ class ReaderTtsSentenceProgressTest {
         assertNull(recorded.sentenceNumbers.last())
     }
 
+    // Seen on the device in three runs: after "Stop listening" the last sentence stayed
+    // highlighted on the page, because nothing ever removed the decoration.
+    @Test
+    fun `a stop takes the sentence highlight off the page`() = runTest {
+        val recorded = Recorded()
+
+        recorded.progress.onCurrentSentence(sentence(index = 88))
+        recorded.progress.onCurrentSentence(null)
+
+        assertEquals(1, recorded.highlightClears)
+    }
+
+    @Test
+    fun `nothing is cleared before a sentence has been read`() = runTest {
+        val recorded = Recorded()
+
+        recorded.progress.onCurrentSentence(null)
+
+        assertEquals(0, recorded.highlightClears)
+    }
+
+    @Test
+    fun `a second stop does not clear the page again`() = runTest {
+        val recorded = Recorded()
+
+        recorded.progress.onCurrentSentence(sentence(index = 88))
+        recorded.progress.onCurrentSentence(null)
+        recorded.progress.onCurrentSentence(null)
+
+        assertEquals(1, recorded.highlightClears)
+    }
+
     private fun sentence(index: Int) = TtsSentence(
         index = index,
         elementId = "sentence-$index",
