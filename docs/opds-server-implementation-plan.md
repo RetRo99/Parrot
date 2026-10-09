@@ -1393,6 +1393,13 @@ Downloads/settings presentation and the full cross-platform Phase 4 gate are not
 claimed. See [the book-page report](opds-phase4-book-pages-report.md) for commands,
 counts, captures, build outcomes, and remaining differences.
 
+**Accessibility/e-ink/gate run (2026-10-09):** presets can carry a search address and no
+https catalogue searches over http; large-font, e-ink and visual fixes; local test catalogue
+(`tools/catalogue-test-server.py`); anonymous custom catalogue, Gutenberg search/download and
+remove-keeps-books verified on a Samsung. Gate: Android anonymous, Gutenberg and offline-after-removal
+met; Basic sign-in not run live and iOS not run on a device, so the full Phase 4 gate is **not
+fully met**. See [the final report](opds-phase4-final-report.md).
+
 **Run report of the Phase 4 foundations run (2026-10-08, branch `opds/phase4-screens`).**
 
 **Downloads/list-action run (2026-10-09):** queue-backed Downloads, separate
