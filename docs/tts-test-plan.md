@@ -196,13 +196,26 @@ characterization cases green `308cc34e`; failing test `73b2eda3` -> fix `0f9732a
 fix**, recorded in `55b6d3bc`, no product code and no change to the foreground service.
 Reader ui host tests 382/382, settings ui 20/20, composeApp 57/57. No earlier test was
 edited. The class uses real sockets and real time and takes about 33 seconds.
+Device pass on the Samsung SM-S921B, on the owner's instruction after the emulator
+would not boot: `docs/manual-qa-evidence/2026-10-09/tts-run4/`. All seven checks passed,
+including the interrupted download that run 3b could not induce — the network had to be
+cut 3.65 s after the tap, and the retry reported `Downloading kokoro <version> (2 files,
+5756982 bytes)` instead of 149 MB from zero. One thing for run 5a is recorded there: a
+book opened on its title page shows no voice packs at all, because `initTts` returns
+early when there is nothing readable and `ttsVoices` stays empty for that screen.
 
 F19 moved to run 5b: it lives in `ReaderViewModel`, which run 4 did not touch.
 
 ### Run 5a: what read-aloud offers and what it leaves behind — not started
 
 - Book opens on a page with no text, then moves to a text chapter: read-aloud becomes
-  available, and a play press never does nothing silently (F23).
+  available, and a play press never does nothing silently (F23). Seen on the phone in run
+  4: opened on its title page, the book offers **no voice packs at all** — the Voices
+  sheet's natural section is empty although the pack is installed — and paging forward to
+  text does not recover it, because `initTts` returns early on
+  `hasReadableContent() == false` (`ReaderViewModel.kt:1086-1088`) and `ttsVoices` stays
+  empty for the life of that screen
+  (`docs/manual-qa-evidence/2026-10-09/tts-run4/NOTES.md`).
 - No sentence position is shown while the count is zero; position is cleared when the
   engine stops (F24).
 - Chapter with no sentences: behaviour per product decision 2 (F14).
