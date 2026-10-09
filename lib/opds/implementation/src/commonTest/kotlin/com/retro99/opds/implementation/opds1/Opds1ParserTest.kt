@@ -223,7 +223,8 @@ class Opds1ParserTest {
             effectiveResponseUrl = "https://catalogue.example.org/works/verses",
         )
         val edition1 = document.publications[0]
-        val image = assertNotNull(edition1.images.singleOrNull { it.href == "/covers/verses-1.png" })
+        // The picture's address is the one to ask for, resolved like every other link.
+        val image = assertNotNull(edition1.images.singleOrNull { it.href == "https://catalogue.example.org/covers/verses-1.png" })
         assertEquals("image", image.mediaType!!.mainType)
         // The artwork link also stays in the links list as an image relation.
         val imageLink = edition1.links.single { "http://opds-spec.org/image" in it.relations }
@@ -262,7 +263,7 @@ class Opds1ParserTest {
         assertEquals("treatise.epub", acquisition.rawHref)
         assertEquals("https://catalogue.example.org/cache/treatise.epub", acquisition.resolvedHref)
         val image = assertNotNull(document.publication.images.singleOrNull())
-        assertEquals("treatise.png", image.href)
+        assertEquals("https://catalogue.example.org/cache/treatise.png", image.href)
         // The root's xml:base was popped correctly: nothing leaks below the entry.
         assertEquals(1, 1)
     }

@@ -610,7 +610,8 @@ private class EntryAssembler(
         val isThumbnail = link.relations.any { rel -> rel in THUMBNAIL_RELATIONS || rel.endsWith("/image-thumbnail") }
         val isCover = !isThumbnail && link.relations.any { rel -> rel in COVER_RELATIONS || rel.endsWith("/image") }
         if ((isCover || isThumbnail) && covers.size + thumbnails.size < IMAGE_BUDGET) {
-            (if (isCover) covers else thumbnails).add(OpdsImage(link.rawHref, link.mediaType))
+            // The address to ask for, like OPDS 2 gives. An inline `data:` picture has none and is kept as sent.
+            (if (isCover) covers else thumbnails).add(OpdsImage(link.resolvedHref ?: link.rawHref, link.mediaType))
         }
         if (links.size < LINK_BUDGET) {
             links.add(link)

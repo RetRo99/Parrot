@@ -33,7 +33,7 @@ class ImageRelationsTest {
             "x-stanza-cover-image",
             "x-stanza-cover-image-thumbnail",
         )) {
-            assertEquals(listOf("/p.jpg"), images(link(rel, "/p.jpg")), rel)
+            assertEquals(listOf("$SITE/p.jpg"), images(link(rel, "/p.jpg")), rel)
         }
     }
 
@@ -41,15 +41,37 @@ class ImageRelationsTest {
         val thumbnail = link("http://opds-spec.org/image/thumbnail", "/small.jpg")
         val cover = link("http://opds-spec.org/image", "/large.jpg")
 
-        assertEquals(listOf("/large.jpg", "/small.jpg"), images(thumbnail, cover))
-        assertEquals(listOf("/large.jpg", "/small.jpg"), images(cover, thumbnail))
+        assertEquals(listOf("$SITE/large.jpg", "$SITE/small.jpg"), images(thumbnail, cover))
+        assertEquals(listOf("$SITE/large.jpg", "$SITE/small.jpg"), images(cover, thumbnail))
     }
 
     @Test fun a_picture_relation_among_several_on_one_link_is_read() {
-        assertEquals(listOf("/p.jpg"), images(link("related http://opds-spec.org/image/thumbnail", "/p.jpg")))
+        assertEquals(listOf("$SITE/p.jpg"), images(link("related http://opds-spec.org/image/thumbnail", "/p.jpg")))
+    }
+
+    /**
+     * Found by the signed-in end-to-end test: the address was kept as written, so a cover linked
+     * as "/covers/1.png" or "cover.jpg" (Calibre and most self-hosted catalogues) could not be asked for.
+     */
+    @Test fun a_picture_address_is_resolved_against_the_page_and_an_inline_picture_is_kept_as_sent() {
+        val inline = "data:image/png;base64,iVBORw0KGgo="
+
+        assertEquals(
+            listOf("$SITE/covers/1.png", "$SITE/cover.jpg", "https://cdn.example.net/c.jpg", inline),
+            images(
+                link("http://opds-spec.org/image", "/covers/1.png"),
+                link("http://opds-spec.org/image", "cover.jpg"),
+                link("http://opds-spec.org/image", "https://cdn.example.net/c.jpg"),
+                link("http://opds-spec.org/image", inline),
+            ),
+        )
     }
 
     @Test fun links_that_are_not_pictures_are_not_pictures() {
         assertEquals(emptyList(), images(link("related", "/p.jpg"), link("http://opds-spec.org/acquisition/sample", "/s.jpg"), link("alternate", "/a.jpg")))
+    }
+
+    private companion object {
+        const val SITE = "https://catalogue.example.org"
     }
 }
