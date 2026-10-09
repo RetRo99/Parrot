@@ -14,17 +14,24 @@ e2999da9 feat(catalogue): model live book-page actions and file choices
 9c37a078 fix(catalogue): verify credentials against protected searches
 974ca16d fix(catalogue): load full entries and keep book actions current
 86b95e09 feat(catalogue): show live book pages and file choices
-Fixture/capture and report commits: pending below.
+200a6bff docs(catalogue): record book-page results before app builds
+c7b0e01a test(fixtures): add catalogue book states and grouped file sheets
+75753dc9 test(catalogue): capture book pages and title covers in Ember themes
+65f7730d fix(opds): preserve declared Atom acquisition file sizes
+76714148 test(catalogue): record real EPUB acquisition and reader evidence
+Plus the report-update commits.
 
 Test command(s):
 ./gradlew :base-ui:testAndroidHostTest :lib:opds:api:testAndroidHostTest :lib:opds:implementation:testAndroidHostTest :lib:server:api:testAndroidHostTest :lib:server-opds:testAndroidHostTest :feature:catalogue:domain:testAndroidHostTest :feature:catalogue:data:testAndroidHostTest :feature:catalogue:ui:testAndroidHostTest :feature:home:ui:testAndroidHostTest :tools:ember-fixtures:testDebugUnitTest :tools:ember-fixtures:assembleDebug :base-ui:iosSimulatorArm64Test :lib:opds:api:iosSimulatorArm64Test :lib:opds:implementation:iosSimulatorArm64Test :lib:server:api:iosSimulatorArm64Test :lib:server-opds:iosSimulatorArm64Test :feature:catalogue:domain:iosSimulatorArm64Test :feature:catalogue:data:iosSimulatorArm64Test :feature:catalogue:ui:iosSimulatorArm64Test :feature:home:ui:iosSimulatorArm64Test --max-workers=2 --continue -Pkotlin.daemon.jvmargs=-Xmx6g
 ./gradlew :feature:catalogue:ui:testAndroidHostTest :lib:server-opds:testAndroidHostTest --max-workers=2 -Pkotlin.daemon.jvmargs=-Xmx6g
+./gradlew :lib:opds:implementation:testAndroidHostTest --max-workers=2
+./gradlew :lib:opds:implementation:testAndroidHostTest :lib:opds:implementation:iosSimulatorArm64Test :lib:server-opds:testAndroidHostTest :lib:server-opds:iosSimulatorArm64Test :feature:catalogue:ui:testAndroidHostTest :feature:catalogue:ui:iosSimulatorArm64Test --max-workers=2 --continue -Pkotlin.daemon.jvmargs=-Xmx6g
 Test-first red runs and subsequent green runs are retained in the session's temporary logs; the final combined command passed.
 
 Per module (passed/total, Android host; iOS simulator):
 base-ui: 7/7; 7/7
 lib/opds/api: no tests on either target; compiled.
-lib/opds/implementation: 180/180; 180/180
+lib/opds/implementation: 181/181; 181/181
 lib/server/api: 42/42; 42/42
 lib/server-opds: 54/54; 54/54
 feature/catalogue/domain: 31/31; 31/31
@@ -35,21 +42,23 @@ translations: no tests; compiled for both targets.
 tools/ember-fixtures: unit-test task has no sources; APK assembled.
 Zero failed or skipped test cases in these results.
 
-App build results: pending final Android assemble and iOS framework build.
+App build results: ./gradlew :androidApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64 --max-workers=2 passed; no iOS OOM/retry. Refresh after the live-feed Atom-size fix is pending.
 
 Steps complete (1–4): 1 generated covers; 2 book-page presentation; 3 live actions and browser/sign-in fixes; 4 Choose a file.
 
 Fixtures captured:
 detail, detailWait, detailWaitOne, detailDl, detailUnknown, detailIos, detailAdding, detailDone, editions, editionsGrouped: Day, E-ink, Night.
-blocked (Sold), blockedSubscription, blockedBorrow, blockedSample, blockedFormat, blockedProtected: Day and E-ink; final Night captures in progress.
+blocked (Sold), blockedSubscription, blockedBorrow, blockedSample, blockedFormat, blockedProtected: Day, E-ink, Night (Night is extra where no board exists).
 Browser covers refreshed: browse, offline, localNet, list, listFailed, search, filter, editionsList: Day, E-ink, Night.
-PNG and UI hierarchy pairs are in design/screens/catalogue-<view>-<theme>.*. Only emulator-5554 was used; the connected physical phone was untouched.
+PNG and UI hierarchy pairs are in design/screens/catalogue-<view>-<theme>.*. Board captures used emulator-5554 only.
+After explicit user authorization, the same 16 book fixtures were additionally captured in all three themes on Samsung SM-S921B, serial RFCWC0SSVDM, in the demo package com.retro99.parrot.fixtures. Production phone app/data were not touched. Physical captures and interaction results are in the session's temporary catalogue-samsung-demo directory.
+Real-book Done, reader chapter, and browser-return evidence is committed as design/screens/catalogue-realBook-*.
 
 Boards not captured: detailUpdate deliberately deferred. No sample-download board/action. Other Phase 4 boards outside this book-page scope were not re-captured.
 
 Differences found/fixed/left:
 Fixed blank/placeholder missing-artwork covers with stable title covers, reduced generated-cover font size to avoid splitting Frankenstein, preserved subjects through both protocol parsers, and removed description clamping.
-Fixed sign-in saving before verification, challenged-search verification, stale library rows on return, late sign-in after profile switch, initial misleading Download actions, partial/full-entry loading, and library status after finished queue rows are purged.
+Fixed sign-in saving before verification, challenged-search verification, stale library rows on return, late sign-in after profile switch, initial misleading Download actions, partial/full-entry loading, library status after finished queue rows are purged, and ignored Atom file-length attributes discovered in the live Gutenberg feed.
 Left: emulator dimensions differ from boards, so wrapping and sheet height differ. Day sheet uses the existing EmberBottomSheet scrim, lighter than the board. Grouped sheet's underlying button truthfully shows the selected 4.8 MB file, rather than the board's unchanged 1.2 MB background.
 
 Each book-page state:
@@ -74,7 +83,8 @@ Format: Can't be opened in Parrot / This book is only available as <format>, whi
 Protected: Can't be opened in Parrot / This book's file is protected (DRM), so Parrot can't open it. / No button.
 Priority: sample, sold, subscription, borrow, protected, format. A complete openable EPUB suppresses the card. Provider name falls back to catalogue name.
 
-Real-book emulator result: pending final APK installation and download/reader check.
+Real-book emulator result: PASS on emulator-5554 using the built app. Added https://www.gutenberg.org/ebooks/120.opds as an anonymous catalogue, opened the complete no-images edition of Treasure Island, tapped Download, observed Downloading Treasure Island with View, then In your library with Read now. Read now opened the existing local reader, rendered the cover and chapter one (Page 1 of 10, 3%). Back retained the completed page/date; returning to the list refreshed its In your library status. No sample was downloaded. The other, illustrated edition was not acquired.
+Samsung demo interactions: PASS for disabled Kindle radios, unknown-size Download, long-label second-file Download · 0.4 MB, cross-edition Download · 0.6 MB, and exactly one Best. These are presentation/selection checks, not physical-device acquisition claims.
 
 TODO-design strings: none added; existing exact strings reused. No invented failed-download wording.
 
@@ -88,8 +98,8 @@ Existing tests changed: CatalogueBrowserTest sign-in assertions now require no s
 
 Ambiguities: full-entry alternates are followed on the book page, never while populating a list. No running downloads means no invented waiting-count sentence. Unsupported file size stays in accessibility text but its visual subtitle follows the board. One grouped default spans all editions. Existing Downloads and Libraries destinations are retained rather than expanded.
 
-Files outside allowed directories: required supporting changes in base-ui (Ember cover slot/tokens and host-test enablement), lib/opds/api and implementation (subjects/models/parsers/tests), lib/server/api and lib/server-opds (subjects and non-persisting account verification/tests), feature/home/ui (existing route callbacks). No website changes, no heap configuration change, no physical-device operations; .opencode/ remains untouched and untracked.
+Files outside allowed directories: required supporting changes in base-ui (Ember cover slot/tokens and host-test enablement), lib/opds/api and implementation (subjects, Atom lengths, models/parsers/tests), lib/server/api and lib/server-opds (subjects and non-persisting account verification/tests), feature/home/ui (existing route callbacks). No website changes or heap configuration change; .opencode/ remains untouched and untracked. Physical-device work was confined to the demo app after the user authorized the Samsung.
 
-Known problems: sign-out clearAllData() no-op and the previously identified unrelated test/link/compiler failures remain excluded. Initial emulator package-service failures required an emulator restart. Kotlin's default 3 GB daemon hit GC overhead during fixture compilation; test/fixture runs used CLI-only -Xmx6g. Final build outcomes will be recorded after execution.
+Known problems: sign-out clearAllData() no-op and the previously identified unrelated test/link/compiler failures remain excluded. Emulator disconnect/package-service failures required emulator restarts. Kotlin's default 3 GB daemon hit GC overhead during earlier fixture compilation; test/fixture runs used CLI-only -Xmx6g. Default-heap final app builds passed; refresh after the Atom-size fix is pending.
 --- END REPORT ---
 ```

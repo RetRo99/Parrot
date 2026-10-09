@@ -1383,6 +1383,16 @@ agreed; layouts are not test-first):
 Gutenberg works without a custom parser and offline acquired books work after
 server removal. Unsupported transactions never masquerade as supported downloads.
 
+**Book-page run (2026-10-09, `opds/phase4-screens`):** generated title covers,
+live publication pages, blocked cards, file/edition selection, verified sign-in
+and browser library refresh are implemented. Android-host and iOS-simulator
+module tests pass; a complete Gutenberg EPUB was acquired and read on the Android
+emulator. The Samsung demo app also passed fixture and file-selection checks after
+explicit user authorization. Updated-copy and sample acquisition remain deferred;
+Downloads/settings presentation and the full cross-platform Phase 4 gate are not
+claimed. See [the book-page report](opds-phase4-book-pages-report.md) for commands,
+counts, captures, build outcomes, and remaining differences.
+
 **Run report of the Phase 4 foundations run (2026-10-08, branch `opds/phase4-screens`).**
 
 Foundations only: no catalogue screen is reachable by a user after this run.
