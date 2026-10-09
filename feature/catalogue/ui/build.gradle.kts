@@ -17,6 +17,9 @@ kotlin {
         minSdk = libs.versions.minSdk.get().toInt()
 
         withHostTest {}
+        androidResources {
+            enable = true
+        }
     }
 
     iosArm64()
