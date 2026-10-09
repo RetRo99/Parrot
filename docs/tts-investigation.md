@@ -429,6 +429,7 @@ effect on a user, not on the code.
 - **Confidence:** medium — the mechanism is clear; the user-visible wording was not checked on device.
 - **Severity for a user:** silent failure / a confusing dead end.
 - **How a test could catch it:** `AndroidTtsControllerTest` with a fake `BookController` returning no sentences: assert one `Failed(CONTENT_UNAVAILABLE)` and no engine start; manual: open an image-only chapter and press play.
+- **Fixed:** `28cbf817` (run 5a) — the start decision is the top-level `internal startAtFirstChapterWithText(...)`, which walks forward to the first chapter with text and starts at its first sentence, reusing the chapter hand-off's move; only when nothing from there to the end of the book has text does it report one `CONTENT_UNAVAILABLE`, with today's "Couldn't start narration" and no new screen text. The walk is bounded by the spine length and by the end of the book, and only suspends, so a stop cancels it. `AndroidTtsController.startPlayback` now owns that decision for the controls, the sentence tap and the chapter hand-off alike; `BookController.readingOrderHrefs()` names the next chapter. Tests committed failing in `dece253e` (`actual value is not null expected null, but was:<CONTENT_UNAVAILABLE>`, `expected:<3> but was:<0>`); "a chapter that has text starts in place" passed before the fix.
 
 ### TTS-F15 — The first Kokoro start must load the model inside the 30 s start deadline
 
@@ -615,6 +616,7 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Confidence:** high — observed, and the mechanism is a plain early return.
 - **Severity for a user:** silent failure — read-aloud appears present but is inert for the whole session.
 - **How a test could catch it:** ViewModel unit test with a fake `BookController` whose `hasReadableContent()` returns false on the first locator and true after a chapter change: assert that TTS becomes available (or that the play control reports a failure instead of doing nothing). Manual: the trigger above.
+- **Fixed:** `d031cd37` (run 5a) — the decision moved out of `initTts` into `ReaderTtsSetup` (`e68472f2`, no behaviour change) and then stopped depending on the first page: the voice list, the selected voice, the controller the play button drives and all four collectors are set up for every ebook, whatever page it opens on. Availability alone still waits, and it waits for the first chapter with text instead of giving up on the first page, so paging forward switches read-aloud and double-tap on without reopening the book; a book with no text anywhere never claims availability. The collectors start once, before that wait, so availability turning on later cannot start a second one (the `isObservingTtsPlaybackOperations` guard covers only the operations collector, TTS-F11). Tests committed failing in `d868078b` (`expected:<[TtsVoice(id=system-en, ...)]> but was:<null>`, `read-aloud should be available`); the recorded-narration case (`keepNarrationActive`) was pinned green first and still passes unedited.
 
 ### TTS-F24 — The sheet shows "Sentence 1 of 0" before the chapter's sentences load
 
@@ -626,6 +628,7 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Confidence:** high.
 - **Severity for a user:** cosmetic — but it is what masked TTS-F06 from the UI.
 - **How a test could catch it:** a Compose/unit test over the sheet's `AudioSheetUi` mapping asserting no position is rendered while `sentenceCount == 0`.
+- **Fixed:** `e417e365` (run 5a) — the mapping is the top-level `internal ttsSentencePosition(sentenceNumber, sentenceCount)`, which answers null while the count is zero or no sentence is being read; the sheet then leaves the line out entirely and the card shows the voice alone, both with existing strings. The state field changed with it: `ttsSentenceIndex` (zero, meaning both "sentence one" and "none") is now `ttsSentenceNumber`, null when nothing is being read, reported by `ReaderTtsSentenceProgress` on a null sentence too — so the stale "Sentence 89 of 97" after a stop is gone with it. Tests committed failing in `d5d2e635` (`actual value is not null expected null, but was:<TtsSentencePosition(number=1, count=0)>`, `expected:<2> but was:<1>`).
 
 ## 3c. Finding found while testing
 

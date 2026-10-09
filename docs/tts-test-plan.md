@@ -25,7 +25,7 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | 3a | The sentence audio cache: a testable store, failed synthesis, the trim, the word clip, the Kokoro voice number | F03, F12, F17, F21 | Opus | done |
 | 3b | The rest of the small pure-logic gaps, plus the sentence chunker cases | F08, F09, F13, F18 | Sonnet | done |
 | 4 | Voice pack download and delete | F04, F05, F20 | Opus | done |
-| 5a | Read-aloud stopping and the highlight it leaves | F23, F24, F14 | Opus | not started |
+| 5a | Read-aloud stopping and the highlight it leaves | F23, F24, F14 | Opus | done |
 | 5b | Two readers, the pending voice, logout, the chapter mismatch | QA-0049, QA-0100, F10, F11, F19, F25 | Opus | not started |
 | 6 | Manual device pass and new cases in `manual-qa-test-plan.md` | all | Sonnet, with the owner's phone | |
 
@@ -206,7 +206,7 @@ early when there is nothing readable and `ttsVoices` stays empty for that screen
 
 F19 moved to run 5b: it lives in `ReaderViewModel`, which run 4 did not touch.
 
-### Run 5a: what read-aloud offers and what it leaves behind — not started
+### Run 5a: what read-aloud offers and what it leaves behind — done
 
 - Book opens on a page with no text, then moves to a text chapter: read-aloud becomes
   available, and a play press never does nothing silently (F23). Seen on the phone in run
@@ -221,6 +221,24 @@ F19 moved to run 5b: it lives in `ReaderViewModel`, which run 4 did not touch.
 - Chapter with no sentences: behaviour per product decision 2 (F14).
 - After Stop listening, the last sentence's highlight stays on the page (seen in run 2a,
   not yet a finding).
+
+Done 2026-10-10. Step one was a seam: the setup decision moved out of `initTts` into
+`ReaderTtsSetup` beside the ViewModel with one green characterization test (`e68472f2`),
+no behaviour change. Then failing tests `d868078b` -> fix `d031cd37` (F23); failing tests
+`dece253e` -> fix `28cbf817` (F14); failing tests `d5d2e635` -> fix `e417e365` (F24);
+failing tests `08d31cc3` -> fix `0f85e37e` (the highlight left after Stop listening — the
+cause was a missing call, not the page script, so it is fixed rather than filed as
+TTS-F28: nothing ever cleared the read-aloud decoration group that
+`AndroidBookController.applyHighlightWithPageTurn` writes). Two cases passed before any
+fix and no product code changed for them: "a chapter that has text starts in place"
+(F14) and "nothing is cleared before a sentence has been read". Reader ui Android host
+tests 403/403, reader ui iOS 304/304, settings ui 20/20, composeApp 57/57. No earlier
+test was edited. Two decisions are recorded as decision 2 below.
+
+The skip rule lives in `startAtFirstChapterWithText` (`navigator/TtsChapterSkip.kt`), a
+pure suspend function the controller hands its four moves to, following run 2b's approach
+with `TtsPlaybackAttempts`: the attempt bookkeeping that gives "one attempt, one outcome"
+is already tested there, so these tests cover only the walk.
 
 ### Run 5b: two readers, the pending voice, logout, the chapter mismatch — not started
 
@@ -271,8 +289,14 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
 
 1. F06: after a speed or voice change while paused, resume on the same sentence.
    Recommended: yes.
-2. F14: a chapter with nothing to read. Recommended: move on to the next chapter with
-   text; show a message only if the book has none.
+2. F14/F23: a chapter with nothing to read. **Decided by the owner, 2026-10-10, and done
+   in run 5a (`d031cd37`, `28cbf817`):** whether a book can be read aloud does not depend
+   on the page it opens on — the voice list and the selected voice are loaded for every
+   ebook with text anywhere, whatever the first page is. Pressing play on a page or
+   chapter with nothing to read moves on to the next chapter that has text and starts
+   there; only when no later chapter has text is one failure reported, with a message the
+   app already has ("Couldn't start narration"). A play press never does nothing silently.
+   No new screen text and no new buttons.
 3. F05: failed download leftovers. **Decided by the owner, 2026-10-09, and done in run 4
    (`03b20ffd`):** partial files of the manifest's current version are kept so a retry
    resumes; partial files and incomplete version folders of any other version are
