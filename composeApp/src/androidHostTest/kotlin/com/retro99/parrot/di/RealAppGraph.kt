@@ -43,6 +43,8 @@ import java.util.UUID
  * the internet). Nothing between those edges is hand-built.
  */
 internal class RealAppGraph(
+    /** While true, moving a file into the library fails the way a full disk does. */
+    private val libraryIsFull: () -> Boolean = { false },
     private val respond: suspend MockRequestHandleScope.(HttpRequestData) -> HttpResponseData = { error("No network in this test") },
 ) : AutoCloseable {
     val stagingRoot: File = Files.createTempDirectory("real-graph-staging").toFile()
@@ -91,7 +93,7 @@ internal class RealAppGraph(
                     }
                 }
                 // The library's files and its EPUB reader (Readium) are Android-only too.
-                single<BookFileTransferFileStore> { TempLibraryFiles(libraryRoot) }
+                single<BookFileTransferFileStore> { TempLibraryFiles(libraryRoot, libraryIsFull) }
                 single<EpubMetadataExtractor> {
                     object : EpubMetadataExtractor {
                         override suspend fun extractMetadata(filePath: String): AppResult<EpubMetadata> =
@@ -165,7 +167,7 @@ private class TempStagingFiles(private val root: File) : CatalogueStagingFiles {
     }
 }
 
-private class TempLibraryFiles(private val root: File) : BookFileTransferFileStore {
+private class TempLibraryFiles(private val root: File, private val isFull: () -> Boolean) : BookFileTransferFileStore {
     override fun stagingPath(transferId: String) = File(root, "staging/$transferId.part").absolutePath
     override fun libraryFilePath(libraryBookId: String, mediaType: String) =
         File(root, "library/${libraryBookId}_$mediaType.epub").absolutePath
@@ -176,11 +178,13 @@ private class TempLibraryFiles(private val root: File) : BookFileTransferFileSto
     override suspend fun truncate(path: String) { File(path).apply { parentFile.mkdirs() }.writeBytes(byteArrayOf()) }
     override suspend fun write(path: String, offset: Long, bytes: ByteArray) = error("No cloud transfers in this test")
     override suspend fun moveToImportedStore(stagingPath: String, destinationPath: String) {
+        if (isFull()) throw java.io.IOException("No space left on device")
         val destination = File(destinationPath).apply { parentFile.mkdirs() }
         check(File(stagingPath).renameTo(destination)) { "Could not move the file into the library" }
     }
     override fun coverPath(libraryBookId: String) = File(root, "covers/$libraryBookId.png").absolutePath
     override suspend fun writeCover(libraryBookId: String, bytes: ByteArray): String {
+        if (isFull()) throw java.io.IOException("No space left on device")
         val cover = File(coverPath(libraryBookId)).apply { parentFile.mkdirs() }
         cover.writeBytes(bytes)
         return cover.absolutePath
