@@ -2,6 +2,7 @@ package com.retro99.reader.ui.tts
 
 import java.io.File
 import java.io.IOException
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.yield
 
 /**
@@ -180,6 +181,9 @@ internal class FakeSentenceAudioSource(private val directory: File) : TtsSentenc
     /** Texts whose synthesis reports cancellation. */
     val cancelledTexts = mutableSetOf<String>()
 
+    /** Texts whose synthesis never completes, as a wedged engine never does. */
+    val neverCompletingTexts = mutableSetOf<String>()
+
     val requestedTexts = mutableListOf<String>()
 
     /** Every request with the settings it was made with, in order. */
@@ -203,6 +207,7 @@ internal class FakeSentenceAudioSource(private val directory: File) : TtsSentenc
         requestedTexts += text
         requests += SynthesisRequest(text = text, voiceId = voiceId, rate = rate, pitch = pitch)
         yield()
+        if (text in neverCompletingTexts) awaitCancellation()
         if (text in throwingTexts) throw IOException("synthesis failed for \"$text\"")
         if (text in failingTexts) {
             return TtsSynthesisResult(status = TtsSynthesisStatus.ERROR, error = "no audio")

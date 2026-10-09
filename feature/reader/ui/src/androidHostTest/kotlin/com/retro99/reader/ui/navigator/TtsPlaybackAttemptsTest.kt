@@ -26,6 +26,7 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -166,7 +167,7 @@ class TtsPlaybackAttemptsTest {
         val session = pausedOnSentenceThree()
         session.setRate(1.5f)
         runCurrent()
-        session.outcomes.clear()
+        session.clearRecorded()
 
         session.togglePlayback()
         runCurrent()
@@ -190,6 +191,101 @@ class TtsPlaybackAttemptsTest {
         assertTrue(player.commands.isEmpty(), "player commands: ${player.commands}")
     }
 
+    // ---- TTS-F07: a setting changed while narration plays ----
+
+    @Test
+    fun `a speed change while playing is one tracked operation`() = runTest {
+        val session = startedSession(fromIndex = 0)
+        session.clearRecorded()
+
+        session.setRate(1.5f)
+        assertTrue(
+            session.attempts.isStartPending.value,
+            "the restart is not pending while it runs",
+        )
+
+        runCurrent()
+        startedPlaying()
+        runCurrent()
+
+        assertEquals(
+            listOf("attempted:settings_change", "succeeded:settings_change"),
+            session.outcomes,
+        )
+        assertEquals(false, session.attempts.isStartPending.value)
+        assertTrue(uncaught.isEmpty())
+    }
+
+    @Test
+    fun `a voice change while playing whose synthesis fails reports one failure`() = runTest {
+        val session = startedSession(fromIndex = 0)
+        session.clearRecorded()
+
+        // The new voice cannot synthesise anything: its pack is gone, or it errors.
+        audioSource.failingTexts += sentences.map { sentence -> sentence.text }
+        session.selectVoice(OTHER_VOICE_ID)
+        runCurrent()
+
+        assertEquals(
+            listOf("attempted:settings_change", "failed:synthesis_failed:settings_change"),
+            session.outcomes,
+        )
+        assertTrue(uncaught.isEmpty(), "escaped the scope: $uncaught")
+    }
+
+    @Test
+    fun `two speed changes in quick succession give each attempt one terminal outcome`() = runTest {
+        val session = startedSession(fromIndex = 0)
+        session.clearRecorded()
+
+        session.setRate(1.2f)
+        session.setRate(1.5f)
+        runCurrent()
+        startedPlaying()
+        runCurrent()
+
+        val terminalsPerAttempt = session.operations
+            .filter { operation -> operation !is TtsPlaybackOperation.Attempted }
+            .groupingBy { operation -> operation.correlationId }
+            .eachCount()
+        assertTrue(
+            terminalsPerAttempt.isNotEmpty() && terminalsPerAttempt.values.all { it == 1 },
+            "terminal outcomes per attempt: $terminalsPerAttempt, outcomes ${session.outcomes}",
+        )
+        assertEquals(
+            listOf(
+                "attempted:settings_change",
+                "cancelled:operation_cancelled:settings_change",
+                "attempted:settings_change",
+                "succeeded:settings_change",
+            ),
+            session.outcomes,
+        )
+        assertTrue(uncaught.isEmpty())
+    }
+
+    @Test
+    fun `the start deadline fires for a restart that never becomes active`() = runTest {
+        val session = startedSession(fromIndex = 0)
+        session.clearRecorded()
+        audioSource.neverCompletingTexts += sentences[0].text
+
+        session.setRate(1.5f)
+        // The player stops the old audio for the new setting and reports it.
+        player.reportPlaying(false)
+        runCurrent()
+        assertTrue(session.attempts.isStartPending.value)
+
+        advanceTimeBy(START_TIMEOUT_MS + 1)
+
+        assertEquals(
+            listOf("attempted:settings_change", "failed:start_timeout:settings_change"),
+            session.outcomes,
+        )
+        assertEquals(false, session.attempts.isStartPending.value)
+        assertTrue(uncaught.isEmpty())
+    }
+
     // ---- fixture ----
 
     /**
@@ -202,6 +298,12 @@ class TtsPlaybackAttemptsTest {
     ) {
         /** Every playback operation the attempts reported, in order. */
         val outcomes = mutableListOf<String>()
+        val operations = mutableListOf<TtsPlaybackOperation>()
+
+        fun clearRecorded() {
+            outcomes.clear()
+            operations.clear()
+        }
 
         /** The settings the user has chosen, as the controller's own fields hold them. */
         private var chosenVoiceId: String? = VOICE_ID
@@ -304,7 +406,7 @@ class TtsPlaybackAttemptsTest {
         session.togglePlayback()
         runCurrent()
         assertEquals(false, session.engine.isPlaying.value, "did not pause")
-        session.outcomes.clear()
+        session.clearRecorded()
         return session
     }
 
@@ -333,6 +435,7 @@ class TtsPlaybackAttemptsTest {
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             session.attempts.operations.collect { operation ->
                 session.outcomes += operation.describe()
+                session.operations += operation
             }
         }
         return session
