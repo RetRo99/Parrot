@@ -1,14 +1,15 @@
 # OPDS server support: research and implementation plan
 
-**Status:** Phase 1 protocol core complete and its gate met; Phase 2 test-first
-items 1–7 and catalogue plumbing implemented; Phase 2 gate met. Phase 3
-complete and its gate met (2026-10-08): durable acquisition into the library,
-clean-up rules, sign-out, and the saved-pages cache, all without a screen (see
-the Phase 3 status notes for what is left open).
-All user-visible OPDS integration remains unimplemented.
-No user-visible OPDS application integration yet. Reviewed
-against the codebase on 2026-10-08: open gaps are in §10, the designer brief is
-in §11, and design passes 1–3 with the remaining open points are in §11.7.  
+**Status (2026-10-09):** Phases 1 to 4 are built and their gates recorded below.
+Phase 5 (hardening) is done as far as it can be without a device: the test plan
+(§8) is mapped line by line in `opds-test-coverage.md`, the security read-through
+is in `opds-security-review.md`, what has really been tried is in
+`opds-compatibility.md`, and what a person must still do before release is in
+`opds-release-checklist.md`. **Not done, and blocking a release:** any run on an
+iPhone, any catalogue with a password on a device, any Calibre, Kavita, Komga or
+Standard Ebooks run, and the open product decisions in the checklist. Open gaps
+from the 2026-10-08 code review are in §10, the designer brief is in §11, and
+design passes 1–3 with the remaining open points are in §11.7.  
 **Research date:** 2026-10-08.  
 **Platforms:** Android and iOS, with shared Kotlin Multiplatform behavior.
 
@@ -1542,6 +1543,33 @@ Known problems I am leaving:
 **Test-first order:** none new. Every defect found in hardening or provider QA
 gets a failing regression test, with a reduced fixture where the cause is feed
 content, before its fix.
+
+**Phase 5 status (2026-10-09, `opds/phase4-screens`): done except what needs a
+device or a decision.** No emulator or device was used in this run.
+
+- *Load tests.* Added for every item in the list above; see
+  `opds-test-coverage.md` §5. They found and fixed: endless paging on a looping
+  or self-pointing "next" link; a download that sent more than it declared being
+  written in full; OPDS 1 thumbnails and relative cover addresses not being read.
+- *Security.* `opds-security-review.md`. Fixed: unasked requests from a
+  catalogue on the internet to devices on the local network (pictures, search
+  descriptions, files); an address with no host being asked as `localhost`; a
+  preset's search address staying attached after a move to another server.
+  Reported and not fixed: the iPhone keychain's backup behaviour, and catalogue
+  tables being part of the profile database that Android backs up.
+- *Signed-in use.* One end-to-end test in the app's real graph,
+  `CatalogueSignedInEndToEndTest`. It is the only automated cover for a
+  catalogue with a password, and it runs for Android only (the composeApp iOS
+  tests do not link).
+- *Analytics and diagnostics.* Catalogue code sends no analytics event and logs
+  no address, so there was nothing to make source-safe. `redactAddress()` is
+  tested and has no caller.
+- *Limits documentation.* README, "Book catalogues (OPDS)".
+- *Compatibility matrix.* `opds-compatibility.md`. Only Project Gutenberg and
+  the local test catalogue have been tried, on Android.
+- *Left:* everything in `opds-release-checklist.md`, including the recheck of
+  provider endpoints and terms on the release date. OPDS 1 facets are not
+  implemented.
 
 Follow-ups, not hidden first-release promises: Digest auth, modern OAuth/PKCE,
 OPDS lending/holds/availability extensions, LCP/other DRM, PDF/comics, audiobook
