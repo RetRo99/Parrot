@@ -46,5 +46,11 @@ kotlin {
                 implementation(libs.kotlin.testJunit)
             }
         }
+
+        // The catalogue's own engine factory: the Darwin session it builds must keep nothing in
+        // the system HTTP cache. See transport/CatalogueHttpEngines.ios.kt.
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+        }
     }
 }

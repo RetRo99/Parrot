@@ -1,6 +1,7 @@
 package com.retro99.server.opds
 
 import com.retro99.opds.implementation.transport.KtorOpdsTransport
+import com.retro99.opds.implementation.transport.catalogueHttpEngines
 import com.github.michaelbull.result.fold
 import com.retro99.database.api.ProfileDatabaseSession
 import com.retro99.database.api.catalogue.CatalogueDocumentsDatabase
@@ -28,6 +29,13 @@ class OpdsCatalogueRepositoryFactory(
     @Provided documents: CatalogueDocumentsDatabase,
 ) : ServerCatalogueRepositoryFactory, CatalogueWorkController, CatalogueConnectionValidator {
     override val serverType = ServerType.Opds
+    /**
+     * Every catalogue client is built from here — feed pages, pictures, downloaded files, and the
+     * check made when a catalogue is added — so whatever a platform has to do to keep catalogue
+     * traffic out of its own HTTP cache is done once, for all of them, and for nothing else.
+     */
+    private val catalogueEngines = catalogueHttpEngines(engines)
+
     private data class Key(val profileId: String, val sourceId: String)
     private data class Session(val repository: OpdsCatalogueRepository, val account: OpdsAccountDetails?)
     private val sessions = MutableStateFlow<Map<Key, Session>>(emptyMap())
@@ -51,7 +59,7 @@ class OpdsCatalogueRepositoryFactory(
         // An address the transport cannot even take apart (a port that is not a number, an
         // unclosed bracket) is not a catalogue. It must not escape as an exception: the
         // exception's message would carry the address into whatever reports it.
-        val engine = engines.create()
+        val engine = catalogueEngines.create()
         val transport = try {
             KtorOpdsTransport(engine, address)
         } catch (cancelled: CancellationException) {
@@ -128,7 +136,7 @@ class OpdsCatalogueRepositoryFactory(
             }
             previous?.repository?.stop()
             val repository = OpdsCatalogueRepository(profileId, serverConfig,
-                KtorOpdsTransport(engines.create(), serverConfig.baseUrl), credentials, access,
+                KtorOpdsTransport(catalogueEngines.create(), serverConfig.baseUrl), credentials, access,
                 { users.getActiveProfileId() == profileId && registered(profileId, serverConfig) && credentials.get(profileId, serverConfig.id) == account },
                 now = { now() },
                 // Read after the details above: if they change in between, the session is no

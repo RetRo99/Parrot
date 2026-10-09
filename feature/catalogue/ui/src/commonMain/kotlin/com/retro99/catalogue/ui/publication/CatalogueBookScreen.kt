@@ -126,7 +126,7 @@ private fun MetaLine(label: String, value: String) {
 private fun BookAction(state: CatalogueBookState, actions: CatalogueBookActions, now: Long, ios: Boolean) {
     when (val action = state.action) {
         is BookMainAction.Download -> {
-            val size = action.file.size?.let(::catalogueMegabytes)
+            val size = action.file.size?.let(::catalogueSize)
             val label = stringResource(if (size == null) StringRes.catalogue_book_download else StringRes.catalogue_book_download_size, size.orEmpty())
             val downloadLabel = stringResource(if (size == null) StringRes.catalogue_a11y_book_download else StringRes.catalogue_a11y_book_download_size, state.book?.displayTitle().orEmpty(), size.orEmpty())
             BookButton(label, actions.onDownload, icon = true, modifier = Modifier.semantics { contentDescription = downloadLabel })
@@ -148,7 +148,7 @@ private fun BookAction(state: CatalogueBookState, actions: CatalogueBookActions,
             val progress = action.total?.let { (action.bytes.toFloat() / it).coerceIn(0f, 1f) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) { CardTitle(stringResource(StringRes.catalogue_state_downloading)) }
-                CardBody(if (action.total == null) stringResource(StringRes.catalogue_so_far, catalogueMegabytes(action.bytes)) else stringResource(StringRes.catalogue_progress_of_size, catalogueMegabytes(action.bytes).removeSuffix(" MB"), catalogueMegabytes(action.total)))
+                CardBody(if (action.total == null) stringResource(StringRes.catalogue_so_far, catalogueSize(action.bytes)) else stringResource(StringRes.catalogue_progress_of_size, catalogueSizeSoFar(action.bytes, action.total), catalogueSize(action.total)))
             }
             if (progress != null) EmberProgress(progress = progress, modifier = Modifier.fillMaxWidth().padding(top = 12.dp), height = Ember.style.detailProgressHeight)
             Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -174,8 +174,8 @@ private fun BookAction(state: CatalogueBookState, actions: CatalogueBookActions,
             val reason = row.state.failureReason
             val text = when (reason) {
                 AcquisitionFailureReason.Connection -> stringResource(StringRes.catalogue_failure_connection)
-                AcquisitionFailureReason.TooLarge -> stringResource(StringRes.catalogue_failure_too_large, row.expectedSizeBytes?.let(::catalogueMegabytes) ?: unknown, catalogueMegabytes(CatalogueAcquisitionLimits.MAX_FILE_BYTES))
-                AcquisitionFailureReason.Storage -> stringResource(StringRes.catalogue_failure_storage, com.retro99.catalogue.ui.add.catalogueDeviceName(), row.neededBytes?.let(::catalogueMegabytes) ?: unknown)
+                AcquisitionFailureReason.TooLarge -> stringResource(StringRes.catalogue_failure_too_large, row.expectedSizeBytes?.let(::catalogueSize) ?: unknown, catalogueSize(CatalogueAcquisitionLimits.MAX_FILE_BYTES))
+                AcquisitionFailureReason.Storage -> stringResource(StringRes.catalogue_failure_storage, com.retro99.catalogue.ui.add.catalogueDeviceName(), row.neededBytes?.let(::catalogueSize) ?: unknown)
                 AcquisitionFailureReason.Invalid -> stringResource(StringRes.catalogue_failure_invalid)
                 AcquisitionFailureReason.Protected -> stringResource(StringRes.catalogue_failure_protected)
                 AcquisitionFailureReason.Refused -> stringResource(StringRes.catalogue_failure_refused, state.catalogueName)

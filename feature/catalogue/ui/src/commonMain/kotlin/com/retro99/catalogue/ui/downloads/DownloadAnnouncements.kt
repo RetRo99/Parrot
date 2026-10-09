@@ -3,7 +3,7 @@ package com.retro99.catalogue.ui.downloads
 import androidx.compose.runtime.*
 import com.retro99.catalogue.domain.*
 import com.retro99.catalogue.ui.add.catalogueDeviceName
-import com.retro99.catalogue.ui.publication.catalogueMegabytes
+import com.retro99.catalogue.ui.publication.catalogueSize
 import com.retro99.translations.StringRes
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.*
@@ -105,11 +105,11 @@ fun CatalogueDownloadAnnouncements() {
                 is DownloadAnnouncement.Failed -> {
                     val row = event.row
                     val unknown = getString(StringRes.catalogue_file_size_unknown)
-                    val size = row.expectedSizeBytes?.let(::catalogueMegabytes) ?: unknown
+                    val size = row.expectedSizeBytes?.let(::catalogueSize) ?: unknown
                     val reason = when (row.state.failureReason) {
                         AcquisitionFailureReason.Connection -> getString(StringRes.catalogue_failure_connection).substringAfter(" · ")
-                        AcquisitionFailureReason.TooLarge -> getString(StringRes.catalogue_failure_too_large, size, catalogueMegabytes(CatalogueAcquisitionLimits.MAX_FILE_BYTES))
-                        AcquisitionFailureReason.Storage -> getString(StringRes.catalogue_failure_storage, deviceName, row.neededBytes?.let(::catalogueMegabytes) ?: unknown)
+                        AcquisitionFailureReason.TooLarge -> getString(StringRes.catalogue_failure_too_large, size, catalogueSize(CatalogueAcquisitionLimits.MAX_FILE_BYTES))
+                        AcquisitionFailureReason.Storage -> getString(StringRes.catalogue_failure_storage, deviceName, row.neededBytes?.let(::catalogueSize) ?: unknown)
                         AcquisitionFailureReason.Invalid -> getString(StringRes.catalogue_failure_invalid)
                         AcquisitionFailureReason.Protected -> getString(StringRes.catalogue_failure_protected)
                         AcquisitionFailureReason.Refused -> getString(StringRes.catalogue_failure_refused, row.catalogueName)
