@@ -98,6 +98,20 @@ class CatalogueBrowser(
         var more = Load.Idle
         var earlierLoad = Load.Idle
         var afterSignIn = false
+
+        /**
+         * The addresses each page of this list was asked at and answered from, by page number.
+         * A "next" link back to one of them, or to its own page, is not followed: the list ends.
+         */
+        val addresses = mutableMapOf<Int, Set<String>>()
+
+        /** Next pages in a row that brought no books. Past the limit the next one waits for a tap. */
+        var emptyRun = 0
+
+        fun loopsBack(pageNumber: Int, next: CatalogueLink): Boolean {
+            val address = next.resolvedHref ?: return false
+            return addresses.any { (number, seen) -> number <= pageNumber && address in seen }
+        }
         val jobs = mutableListOf<Job>()
 
         fun cancelRequests() {
@@ -228,6 +242,8 @@ class CatalogueBrowser(
         list.earlier = emptyList()
         list.more = Load.Idle
         list.earlierLoad = Load.Idle
+        list.addresses.clear()
+        list.emptyRun = 0
         publish()
         list.jobs += scope.launch {
             val result = fetch(list.first)
@@ -297,13 +313,18 @@ class CatalogueBrowser(
         publish()
     }
 
-    private fun page(list: BookList, number: Int, request: PageRequest, feed: CatalogueFeedDocument, inLibrary: Set<String>) = Page(
+    private fun page(list: BookList, number: Int, request: PageRequest, feed: CatalogueFeedDocument, inLibrary: Set<String>, followed: CatalogueLink? = null): Page {
+        list.addresses[number] = list.addresses[number].orEmpty() + setOfNotNull(followed?.resolvedHref, feed.responseUrl)
+        return pageOf(list, number, request, feed, inLibrary, next = feed.pagination.next?.takeIf { it.target != null && !list.loopsBack(number, it) })
+    }
+
+    private fun pageOf(list: BookList, number: Int, request: PageRequest, feed: CatalogueFeedDocument, inLibrary: Set<String>, next: CatalogueLink?) = Page(
         number = number,
         request = request,
         books = (feed.publications + linkedBookEntries(source?.listEntriesAreBooks == true, feed, list.query != null)).mapIndexed { index, publication ->
             publication.entry("l${list.id}-p$number-$index", feed.context, inLibrary, linked = publication in feed.navigation)
         },
-        next = feed.pagination.next?.takeIf { it.target != null },
+        next = next,
         savedCopyAt = feed.fetchStatus.savedCopyAt,
     )
 
@@ -348,7 +369,7 @@ class CatalogueBrowser(
 
     /** The list was scrolled near its end. Loads the next page only where pages load by themselves. */
     fun onNearEnd() {
-        if (autoLoad && current.more == Load.Idle) loadNext(current, asked = false)
+        if (autoLoad && current.more == Load.Idle && current.emptyRun < MAX_EMPTY_PAGES_IN_A_ROW) loadNext(current, asked = false)
     }
 
     /** The list was scrolled near its start; brings back a page dropped at the page limit. */
@@ -384,7 +405,9 @@ class CatalogueBrowser(
                 list.more = Load.Failed
             } else {
                 list.more = Load.Idle
-                list.pages = list.pages + page(list, last.number + 1, PageRequest.Target(target), feed, inLibrary)
+                val added = page(list, last.number + 1, PageRequest.Target(target), feed, inLibrary, followed = link)
+                list.emptyRun = if (added.books.isEmpty()) list.emptyRun + 1 else 0
+                list.pages = list.pages + added
                 while (list.pages.size > maxPages) {
                     list.earlier = list.earlier + list.pages.first().request
                     list.pages = list.pages.drop(1)
@@ -414,6 +437,7 @@ class CatalogueBrowser(
                 if (list.pages.size > maxPages) {
                     // The far end goes; it is reached again through the next link of the page before it.
                     list.pages = list.pages.take(maxPages)
+                    list.addresses.keys.removeAll { number -> number > list.pages.last().number }
                     list.more = Load.Idle
                 }
             }
@@ -742,7 +766,7 @@ class CatalogueBrowser(
                 books = books.map { it.row(siblings) },
                 sameBookCount = header?.sameBookCount,
                 earlier = paging(list.earlierLoad, there = list.earlier.isNotEmpty(), needsTap = false),
-                more = paging(list.more, there = next != null, needsTap = next != null && unconfirmedLocalHost(next) != null),
+                more = paging(list.more, there = next != null, needsTap = next != null && (unconfirmedLocalHost(next) != null || list.emptyRun >= MAX_EMPTY_PAGES_IN_A_ROW)),
                 savedCopyAt = list.pages.mapNotNull { it.savedCopyAt }.minOrNull(),
             )
         }
@@ -797,5 +821,11 @@ class CatalogueBrowser(
         /** A filter with more options than this gets a search field. */
         const val FILTER_SEARCH_ABOVE = 12
         private const val FIRST_PAGE = 0
+
+        /**
+         * A catalogue can answer every "next" link with one more page that has no books. After
+         * this many in a row the list stops loading by itself and offers "Load more".
+         */
+        const val MAX_EMPTY_PAGES_IN_A_ROW = 3
     }
 }
