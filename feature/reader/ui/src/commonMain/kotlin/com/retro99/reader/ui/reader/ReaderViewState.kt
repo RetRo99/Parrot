@@ -97,8 +97,9 @@ data class ReaderViewState(
     val isListening: Boolean = false,
     // Source the user chose while a book has both; null means the book's default source.
     val activeSource: ListenSource? = null,
-    // Zero-based index and total of the sentence being read by the device voice.
-    val ttsSentenceIndex: Int = 0,
+    // The sentence the device voice is reading, counted from one; null when it is reading
+    // none. Total of the chapter loaded for it, zero before any sentences are loaded.
+    val ttsSentenceNumber: Int? = null,
     val ttsSentenceCount: Int = 0,
     val isListenSheetVisible: Boolean = false,
     val isBookSearchVisible: Boolean = false,

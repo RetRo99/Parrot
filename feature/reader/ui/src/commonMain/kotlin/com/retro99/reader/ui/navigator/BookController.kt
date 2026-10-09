@@ -121,6 +121,9 @@ interface BookController : AutoCloseable {
         sentenceDurationMs: Long,
     )
 
+    /** Removes the sentence highlight [applyHighlightWithPageTurn] drew, if any. */
+    suspend fun clearSentenceHighlight() = Unit
+
     /**
      * Checks the visibility of a sentence element on the current page.
      * Used for pre-emptive page turn logic during TTS playback.

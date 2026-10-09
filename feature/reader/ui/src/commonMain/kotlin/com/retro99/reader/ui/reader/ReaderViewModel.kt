@@ -1613,13 +1613,17 @@ class ReaderViewModel(
     }
 
     private fun observeTtsSentenceProgress() {
+        val progress = ReaderTtsSentenceProgress(
+            showSentenceNumber = { number ->
+                updateState { state -> state.copy(ttsSentenceNumber = number) }
+            },
+            clearSentenceHighlight = { bookController.clearSentenceHighlight() },
+        )
         ttsController.currentSentence
             .onEach { sentence ->
                 ttsCurrentElementId = sentence?.elementId ?: ttsCurrentElementId
                 if (sentence != null) ttsCurrentSentence = sentence
-                if (sentence != null) {
-                    updateState { state -> state.copy(ttsSentenceIndex = sentence.index) }
-                }
+                progress.onCurrentSentence(sentence)
             }
             .launchIn(viewModelScope)
         ttsController.sentenceCount

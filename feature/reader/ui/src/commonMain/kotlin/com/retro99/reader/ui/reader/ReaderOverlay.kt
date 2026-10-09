@@ -355,25 +355,31 @@ internal fun ReaderOverlayContent(
         )
         val voiceName = selectedVoice?.name?.substringBefore('(')?.trim()
             ?: stringResource(StringRes.reader_overlay_voice)
-        val sentenceNumber = (viewState.ttsSentenceIndex + 1).coerceAtLeast(1)
+        val sentencePosition = ttsSentencePosition(
+            sentenceNumber = viewState.ttsSentenceNumber,
+            sentenceCount = viewState.ttsSentenceCount,
+        )
         val speed = formatSpeed(if (isNarration) settings.playbackSpeed else settings.ttsRate)
         val positionText = formatAudioTime(viewState.currentAudioPositionMs)
         val totalText = formatAudioTime(viewState.totalDurationMs ?: 0L)
-        val subtitle = if (isNarration) {
-            stringResource(StringRes.reader_overlay_narration_progress, positionText, totalText, speed)
-        } else {
-            stringResource(
+        val deviceVoiceLabel = stringResource(StringRes.reader_overlay_mini_device_voice, voiceName)
+        val subtitle = when {
+            isNarration ->
+                stringResource(StringRes.reader_overlay_narration_progress, positionText, totalText, speed)
+            // The voice alone until there is a position to name (TTS-F24).
+            sentencePosition == null -> deviceVoiceLabel
+            else -> stringResource(
                 StringRes.reader_overlay_device_voice_progress,
                 voiceName,
-                sentenceNumber,
-                viewState.ttsSentenceCount,
+                sentencePosition.number,
+                sentencePosition.count,
             )
         }
         val progress = if (isNarration) {
             val total = viewState.totalDurationMs ?: 0L
             if (total > 0L) viewState.currentAudioPositionMs.toFloat() / total else 0f
-        } else if (viewState.ttsSentenceCount > 0) {
-            sentenceNumber.toFloat() / viewState.ttsSentenceCount
+        } else if (sentencePosition != null) {
+            sentencePosition.number.toFloat() / sentencePosition.count
         } else {
             0f
         }
@@ -381,15 +387,19 @@ internal fun ReaderOverlayContent(
             isNarration = isNarration,
             title = chapterTitle,
             subtitle = subtitle,
-            stripLabel = if (isNarration) {
-                "$positionText / $totalText"
-            } else {
-                stringResource(StringRes.reader_audio_sentence_of, sentenceNumber, viewState.ttsSentenceCount)
+            stripLabel = when {
+                isNarration -> "$positionText / $totalText"
+                sentencePosition == null -> voiceName
+                else -> stringResource(
+                    StringRes.reader_audio_sentence_of,
+                    sentencePosition.number,
+                    sentencePosition.count,
+                )
             },
             miniLabel = if (isNarration) {
                 stringResource(StringRes.reader_overlay_mini_narration, positionText, totalText)
             } else {
-                stringResource(StringRes.reader_overlay_mini_device_voice, voiceName)
+                deviceVoiceLabel
             },
             progress = progress,
             isPlaying = viewState.isPlaying,
@@ -731,8 +741,10 @@ internal fun ReaderOverlayContent(
                 isLoading = viewState.isNarrationLoading,
                 positionMs = viewState.currentAudioPositionMs,
                 totalMs = viewState.totalDurationMs,
-                sentenceNumber = (viewState.ttsSentenceIndex + 1).coerceAtLeast(1),
-                sentenceCount = viewState.ttsSentenceCount,
+                sentencePosition = ttsSentencePosition(
+                    sentenceNumber = viewState.ttsSentenceNumber,
+                    sentenceCount = viewState.ttsSentenceCount,
+                ),
                 speed = settings.playbackSpeed,
                 rate = settings.ttsRate,
                 pitch = settings.ttsPitch,

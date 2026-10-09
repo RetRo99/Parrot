@@ -130,8 +130,8 @@ internal data class AudioSheetUi(
     val isLoading: Boolean,
     val positionMs: Long,
     val totalMs: Long?,
-    val sentenceNumber: Int,
-    val sentenceCount: Int,
+    /** Null while read-aloud has no position to show (TTS-F24). */
+    val sentencePosition: TtsSentencePosition?,
     val speed: Float,
     val rate: Float,
     val pitch: Float,
@@ -148,7 +148,12 @@ internal data class AudioSheetUi(
         get() = if (isNarration) {
             ((totalMs ?: 0L) - positionMs).coerceAtLeast(0L)
         } else {
-            val remainingSentences = (sentenceCount - sentenceNumber).coerceAtLeast(0)
+            val position = sentencePosition
+            val remainingSentences = if (position == null) {
+                0
+            } else {
+                (position.count - position.number).coerceAtLeast(0)
+            }
             (remainingSentences * ESTIMATED_SENTENCE_MS / rate.coerceAtLeast(MIN_TTS_VALUE)).toLong()
         }
 }
@@ -397,23 +402,27 @@ private fun DeviceVoiceBody(ui: AudioSheetUi, hasNarration: Boolean, actions: Au
         )
         Spacer(Modifier.height(12.dp))
     }
-    val progress = if (ui.sentenceCount > 0) ui.sentenceNumber.toFloat() / ui.sentenceCount else 0f
+    val position = ui.sentencePosition
+    val progress = if (position != null) position.number.toFloat() / position.count else 0f
     ReadOnlyProgress(progress, ui.isEink)
     Spacer(Modifier.height(6.dp))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(
-            stringResource(StringRes.reader_audio_sentence_of, ui.sentenceNumber, ui.sentenceCount),
-            color = colors.ink2,
-            fontSize = 13.sp,
-        )
-        Text(
-            stringResource(
-                StringRes.reader_audio_about_left,
-                (ui.remainingInChapterMs / MS_PER_MINUTE).toInt().coerceAtLeast(1),
-            ),
-            color = colors.ink2,
-            fontSize = 13.sp,
-        )
+    // No line at all until there is a position to put in it (TTS-F24).
+    if (position != null) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(
+                stringResource(StringRes.reader_audio_sentence_of, position.number, position.count),
+                color = colors.ink2,
+                fontSize = 13.sp,
+            )
+            Text(
+                stringResource(
+                    StringRes.reader_audio_about_left,
+                    (ui.remainingInChapterMs / MS_PER_MINUTE).toInt().coerceAtLeast(1),
+                ),
+                color = colors.ink2,
+                fontSize = 13.sp,
+            )
+        }
     }
     Spacer(Modifier.height(12.dp))
     Transport(

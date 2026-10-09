@@ -655,6 +655,15 @@ class AndroidBookController internal constructor() : BookController {
         }
     }
 
+    override suspend fun clearSentenceHighlight() {
+        cancelPendingPageTurn()
+        currentHighlightedLocator = null
+        withNavigatorOrNull { nav ->
+            val decorableNavigator = nav as? DecorableNavigator ?: return@withNavigatorOrNull
+            decorableNavigator.applyDecorations(emptyList(), READALOUD_DECORATION_GROUP)
+        }
+    }
+
     /**
      * Checks the visibility of a sentence element on the current page using JavaScript.
      *
