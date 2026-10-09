@@ -89,7 +89,13 @@ internal class TtsAudioCacheStore(
         var total = files.sumOf { file -> file.length() }
         if (total <= maxBytes) return
 
-        val oldestFirst = files.sortedBy { file -> file.lastModified() }
+        // TTS-F12: a file touched a moment ago is one a live playlist is about to play, and
+        // deleting it stops narration with a player error. Going over the limit for a while
+        // is the cheaper outcome, so recently used audio is never evicted.
+        val keepAfterMs = now() - RECENTLY_USED_WINDOW_MS
+        val oldestFirst = files
+            .filter { file -> file.lastModified() < keepAfterMs }
+            .sortedBy { file -> file.lastModified() }
         for (file in oldestFirst) {
             if (total <= maxBytes) break
             val size = file.length()
@@ -111,5 +117,8 @@ internal class TtsAudioCacheStore(
         const val MAX_CACHE_BYTES = 128L * 1024L * 1024L
         const val WAV_HEADER_BYTES = 44
         const val STORES_PER_TRIM = 10
+
+        /** How recently a file must have been used to be safe from eviction. */
+        const val RECENTLY_USED_WINDOW_MS = 10L * 60L * 1000L
     }
 }
