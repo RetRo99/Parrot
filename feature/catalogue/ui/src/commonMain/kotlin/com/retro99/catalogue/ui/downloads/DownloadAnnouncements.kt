@@ -99,7 +99,7 @@ fun CatalogueDownloadAnnouncements() {
             val text = when (event) {
                 is DownloadAnnouncement.Progress -> getString(StringRes.catalogue_announce_progress, event.title, event.percent)
                 is DownloadAnnouncement.Waiting -> getString(StringRes.catalogue_announce_waiting, event.title)
-                is DownloadAnnouncement.Downloading -> getString(StringRes.catalogue_a11y_downloading, event.title)
+                is DownloadAnnouncement.Downloading -> getString(StringRes.catalogue_download_notice, event.title)
                 is DownloadAnnouncement.Done -> getString(StringRes.catalogue_announce_done, event.title)
                 is DownloadAnnouncement.Cancelled -> getString(StringRes.catalogue_announce_cancelled, event.title)
                 is DownloadAnnouncement.Failed -> {

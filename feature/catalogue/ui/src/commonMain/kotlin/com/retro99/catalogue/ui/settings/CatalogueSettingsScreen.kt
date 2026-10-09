@@ -119,7 +119,7 @@ fun CatalogueSettingsContent(
                 Column(Modifier.weight(1f)) {
                     CatalogueStatusLine(catalogueLibraryStatus(status, now), now)
                     val checked = catalogueSettingsCheckedAt(status)
-                    val header = if (checked == null) stringResource(StringRes.catalogue_settings_header)
+                    val header = if (checked == null) stringResource(StringRes.catalogue_type_name_with_protocol)
                         else stringResource(StringRes.catalogue_settings_header_time, timeAgoText(catalogueTimeAgo(checked, now)))
                     Text(header, style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 19.sp), color = Ember.colors.ink2)
                 }
@@ -138,7 +138,7 @@ fun CatalogueSettingsContent(
                 CatalogueMessageBox(stringResource(StringRes.catalogue_unsupported_note_title), stringResource(StringRes.catalogue_unsupported_note_body), Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
             }
             if (state.failed) Text(stringResource(StringRes.settings_server_operation_failed), style = Ember.type.meta, color = Ember.colors.error, modifier = Modifier.padding(24.dp))
-            EmberSectionHeader(stringResource(StringRes.catalogue_settings_group_address))
+            EmberSectionHeader(stringResource(StringRes.catalogue_address_label))
             CatalogueGroupCard {
                 Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                     // A zero-width break opportunity at every boundary, including long keys and ports.

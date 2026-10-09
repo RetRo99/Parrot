@@ -813,7 +813,7 @@ private fun FilterSheet(sheet: CatalogueFilterSheet, actions: CatalogueBrowseAct
             if (sheet.searchable) {
                 SearchField(
                     text = sheet.searchText,
-                    placeholder = stringResource(StringRes.catalogue_filter_search, group.lowercase()),
+                    placeholder = stringResource(StringRes.catalogue_search_catalogue, group.lowercase()),
                     onTextChange = actions.onFilterSearchChange,
                     onSubmit = {},
                     modifier = Modifier.padding(bottom = 8.dp),

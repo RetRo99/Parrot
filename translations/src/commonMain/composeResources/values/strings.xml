@@ -1801,10 +1801,7 @@
     <string name="catalogue_edition_fallback_label" tools:ignore="MissingTranslation">Edition %1$d</string>
     <!-- §2 A4 Rights: our own line, only under the catalogue's rights text -->
     <string name="catalogue_rights_law_note" tools:ignore="MissingTranslation">Check the law where you live before sharing.</string>
-    <!-- §2 A7 Offline, with a saved copy. %1$s is how long ago, "2 hours" -->
-    <string name="catalogue_offline_saved_copy" tools:ignore="MissingTranslation">You're offline. Showing the copy saved %1$s ago. Connect to the internet to download books.</string>
     <!-- §2 A8 Presets -->
-    <string name="catalogue_preset_patron_account_needed" tools:ignore="MissingTranslation">Patron account needed</string>
     <string name="catalogue_another_catalogue" tools:ignore="MissingTranslation">Another catalogue</string>
     <!-- §3 Download states, shared by list rows, the book page and Downloads -->
     <string name="catalogue_state_getting_ready" tools:ignore="MissingTranslation">Getting ready…</string>
@@ -1812,7 +1809,6 @@
     <string name="catalogue_waiting_two_others" tools:ignore="MissingTranslation">Two other books are downloading. This one starts next.</string>
     <string name="catalogue_waiting_one_other" tools:ignore="MissingTranslation">Another book is downloading. This one starts next.</string>
     <string name="catalogue_state_downloading" tools:ignore="MissingTranslation">Downloading…</string>
-    <string name="catalogue_progress_percent" tools:ignore="MissingTranslation">%1$d%</string>
     <!-- %1$s is the amount so far without its unit, %2$s the full size: "0.5 of 1.2 MB" -->
     <string name="catalogue_progress_of_size" tools:ignore="MissingTranslation">%1$s of %2$s</string>
     <!-- %1$s is a size, "1.4 MB" -->
@@ -1844,7 +1840,6 @@
         <item quantity="one">%1$d option</item>
         <item quantity="other">%1$d options</item>
     </plurals>
-    <string name="catalogue_filter_search" tools:ignore="MissingTranslation">Search %1$s</string>
     <!-- §3 Get books -->
     <string name="catalogue_sources_lead_empty" tools:ignore="MissingTranslation">Add a book catalogue to browse it and download books straight into your library.</string>
     <string name="catalogue_sources_section_start" tools:ignore="MissingTranslation">Start with one of these</string>
@@ -1892,7 +1887,6 @@
     <string name="catalogue_sign_in" tools:ignore="MissingTranslation">Sign in</string>
     <!-- §4 Libraries rows. %1$s in "ago" lines is how long, "3 weeks" -->
     <string name="catalogue_status_public" tools:ignore="MissingTranslation">Ready · no account needed</string>
-    <string name="catalogue_status_checked" tools:ignore="MissingTranslation">Checked %1$s ago</string>
     <string name="catalogue_status_signed_in" tools:ignore="MissingTranslation">Signed in as %1$s</string>
     <string name="catalogue_status_sign_in_needed_title" tools:ignore="MissingTranslation">Sign-in needed</string>
     <string name="catalogue_status_sign_in_needed_body" tools:ignore="MissingTranslation">This catalogue now asks for your account.</string>
@@ -1904,17 +1898,13 @@
     <string name="catalogue_status_off_title" tools:ignore="MissingTranslation">Turned off</string>
     <string name="catalogue_status_off_body" tools:ignore="MissingTranslation">Browsing and downloads are paused</string>
     <string name="catalogue_turn_on" tools:ignore="MissingTranslation">Turn on</string>
-    <string name="catalogue_status_error_title" tools:ignore="MissingTranslation">Couldn't reach it · %1$s ago</string>
     <string name="catalogue_status_error_body" tools:ignore="MissingTranslation">The catalogue didn't answer. It may be offline.</string>
     <string name="catalogue_try_again" tools:ignore="MissingTranslation">Try again</string>
     <!-- §4 Catalogue settings -->
-    <string name="catalogue_settings_header_checked" tools:ignore="MissingTranslation">Book catalogue · OPDS · checked %1$s ago</string>
-    <string name="catalogue_settings_header" tools:ignore="MissingTranslation">Book catalogue · OPDS</string>
     <string name="catalogue_libraries_title" tools:ignore="MissingTranslation">Libraries</string>
     <string name="catalogue_settings_header_time" tools:ignore="MissingTranslation">Book catalogue · OPDS · checked %1$s</string>
     <string name="catalogue_checked_time" tools:ignore="MissingTranslation">Checked %1$s</string>
     <string name="catalogue_error_time" tools:ignore="MissingTranslation">Couldn't reach it · %1$s</string>
-    <string name="catalogue_settings_group_address" tools:ignore="MissingTranslation">Address</string>
     <!-- TODO-design: the editAddress board promises to keep account details on every change; Phase 2 clears them on origin changes. -->
     <string name="catalogue_edit_address_origin_warning" tools:ignore="MissingTranslation">Changing the host, port or scheme removes your saved account details. Downloaded books stay.</string>
     <string name="catalogue_address_show" tools:ignore="MissingTranslation">Show</string>
@@ -2026,10 +2016,7 @@
     <!-- §9 A3: %2$s is the telling line -->
     <string name="catalogue_a11y_download_telling" tools:ignore="MissingTranslation">Download %1$s, %2$s</string>
     <string name="catalogue_a11y_cancel_download_of" tools:ignore="MissingTranslation">Cancel download of %1$s</string>
-    <!-- Row: title, author (or telling line), status -->
-    <string name="catalogue_a11y_row" tools:ignore="MissingTranslation">%1$s, %2$s, %3$s</string>
     <!-- Announced once when the size is unknown -->
-    <string name="catalogue_a11y_downloading" tools:ignore="MissingTranslation">Downloading %1$s</string>
     <string name="catalogue_a11y_cancel_download" tools:ignore="MissingTranslation">Cancel download</string>
     <string name="catalogue_a11y_read" tools:ignore="MissingTranslation">Read %1$s</string>
     <!-- File option: label, size -->
@@ -2051,11 +2038,7 @@
     <string name="catalogue_a11y_details" tools:ignore="MissingTranslation">Details for %1$s</string>
     <string name="catalogue_a11y_address_show" tools:ignore="MissingTranslation">Show full address</string>
     <string name="catalogue_a11y_address_hide" tools:ignore="MissingTranslation">Hide key in address</string>
-    <string name="catalogue_a11y_use_this_catalogue_on" tools:ignore="MissingTranslation">Use this catalogue, on</string>
-    <string name="catalogue_a11y_use_this_catalogue_off" tools:ignore="MissingTranslation">Use this catalogue, off</string>
     <!-- Preset row: name, note -->
-    <string name="catalogue_a11y_preset_row" tools:ignore="MissingTranslation">%1$s, %2$s</string>
-    <string name="catalogue_a11y_preset_terms_link" tools:ignore="MissingTranslation">%1$s's terms of use, opens in browser</string>
     <string name="catalogue_a11y_try_loading_again" tools:ignore="MissingTranslation">Try loading this page again</string>
     <string name="catalogue_a11y_open_provider_page" tools:ignore="MissingTranslation">Open %1$s page, opens in browser</string>
     <!-- Catalogue browser (design prompt §11.2, §11.3, §11.5, §11.11) -->
