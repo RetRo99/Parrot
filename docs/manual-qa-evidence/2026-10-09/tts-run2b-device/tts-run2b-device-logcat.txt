@@ -1,0 +1,924 @@
+10-09 20:21:18.528 D/čič   (19820): Analytics Event: library_discovery_selected | Parameters: {discovery_route=library, discovery_destination=book}
+10-09 20:21:18.593 D/čič   (19820): Analytics Event: book_detail_viewed | Parameters: {source=direct}
+10-09 20:21:18.654 D/čič   (19820): Received 1 repositories
+10-09 20:21:18.654 D/čič   (19820): Getting books from repo: local
+10-09 20:21:18.658 D/čič   (19820): Repo local returned 5 books
+10-09 20:21:18.658 D/čič   (19820): Combined 5 total books from 1 sources
+10-09 20:21:36.977 D/čič   (19820): Analytics Event: read_button_clicked | Parameters: {book_type=ebook}
+10-09 20:21:37.115 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=28}
+10-09 20:21:37.244 D/čič   (19820): Analytics Event: book_opened | Parameters: {book_type=EBOOK}
+10-09 20:21:37.751 D/čič   (19820): Received 1 repositories
+10-09 20:21:37.751 D/čič   (19820): Getting books from repo: local
+10-09 20:21:37.761 D/čič   (19820): Analytics Event: feature_exposed | Parameters: {feature_name=bookmarks, screen=reader, is_available=true}
+10-09 20:21:37.761 D/čič   (19820): Analytics Event: feature_exposed | Parameters: {feature_name=tts, screen=reader, is_available=false}
+10-09 20:21:37.873 D/čič   (19820): Repo local returned 5 books
+10-09 20:21:37.873 D/čič   (19820): Combined 5 total books from 1 sources
+10-09 20:21:38.253 D/čič   (19820): Analytics Event: reader_open_completed | Parameters: {media_type=ebook, entry_point=local, outcome=succeeded, duration_ms=1167, is_retry=false}
+10-09 20:21:38.322 I/TextToSpeech(19820): Create TextToSpeech : caller process id[19820] / name[com.retro99.parrot] / target[null]
+10-09 20:21:38.344 I/TextToSpeech(19820): com.retro99.parrot is not allowed to bind to private engine.
+10-09 20:21:38.345 I/TextToSpeech(19820): getHighestRankedPublicEngineName = com.google.android.tts
+10-09 20:21:38.346 I/TextToSpeech(19820): Sucessfully bound to com.google.android.tts
+10-09 20:21:38.350 I/TextToSpeech(19820): Connected to TTS engine
+10-09 20:21:38.404 I/TextToSpeech(19820): Setting up the connection to TTS engine...
+10-09 20:21:38.504 D/čič   (19820): Analytics Event: feature_exposed | Parameters: {feature_name=tts, screen=reader, is_available=true}
+10-09 20:22:07.100 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=28842, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=28842, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:22:37.117 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30020, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30020, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:22:37.250 D/čič   (19820): Analytics Event: current_book_target_save_attempted | Parameters: {screen=reader, action=save_current_book_target, operation=current_book_target_save, stage=started, outcome=started, entry_point=reading_duration_threshold, book_type=ebook, is_retry=false}
+10-09 20:22:37.251 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=started outcome=started media_type=ebook correlation_id=53450c5e-1884-4f76-80aa-17014949763c
+10-09 20:22:37.293 D/čič   (19820): Analytics Event: current_book_target_save_completed | Parameters: {screen=reader, action=save_current_book_target, operation=current_book_target_save, stage=terminal, outcome=succeeded, entry_point=reading_duration_threshold, book_type=ebook, is_retry=false}
+10-09 20:22:37.293 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=terminal outcome=succeeded media_type=ebook correlation_id=53450c5e-1884-4f76-80aa-17014949763c
+10-09 20:23:07.121 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30004, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:23:20.893 D/čič   (19820): Analytics Event: feature_exposed | Parameters: {feature_name=sleep_timer, screen=reader, is_available=true}
+10-09 20:23:37.129 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30008, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30008, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:24:07.144 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30006, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30006, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:24:37.156 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30021, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30021, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:25:07.161 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30005, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30005, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:25:37.163 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30003, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30003, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:26:07.170 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30003, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30003, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:26:32.744 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:26:32.745 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=ff8fca13-2bee-4bd3-80dc-27ed75b34b89
+10-09 20:26:33.072 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:26:33.978 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:415)
+10-09 20:26:33.978 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:408)
+10-09 20:26:33.978 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.startSentence(TtsReadAloudEngine.kt:381)
+10-09 20:26:33.978 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.access$startSentence(TtsReadAloudEngine.kt:39)
+10-09 20:26:33.978 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine$startSentence$1.invokeSuspend(TtsReadAloudEngine.kt:17)
+10-09 20:26:33.995 D/čič123(19820): onCreate() called
+10-09 20:26:34.059 D/čič123(19820): ExoPlayer created: true
+10-09 20:26:34.137 D/čič123(19820): MediaLibrarySession created: true
+10-09 20:26:34.148 D/čič123(19820): Configuring buttons for media notification controller
+10-09 20:26:34.152 D/čič123(19820): Session added to service
+10-09 20:26:34.152 D/čič123(19820): MediaNotificationProvider set
+10-09 20:26:34.152 D/čič123(19820): Calling controller.onServiceCreated()
+10-09 20:26:34.160 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:26:34.171 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:26:34.177 D/čič123(19820): onCreate() completed
+10-09 20:26:34.178 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:26:34.287 D/čič   (19820): Analytics Event: reader_position_save_attempted | Parameters: {screen=reader, action=save_reading_position, operation=reader_position_save, stage=started, outcome=started, media_type=ebook, entry_point=position_change, is_retry=false}
+10-09 20:26:34.287 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=position_change action=save_reading_position operation=reader_position_save stage=started outcome=started media_type=ebook
+10-09 20:26:34.336 D/čič   (19820): Analytics Event: reader_position_save_succeeded | Parameters: {screen=reader, action=save_reading_position, operation=reader_position_save, stage=terminal, outcome=succeeded, media_type=ebook, entry_point=position_change, is_retry=false}
+10-09 20:26:34.337 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=position_change action=save_reading_position operation=reader_position_save stage=terminal outcome=succeeded media_type=ebook
+10-09 20:26:34.345 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:26:34.346 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:26:34.348 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=1605}
+10-09 20:26:34.348 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=ff8fca13-2bee-4bd3-80dc-27ed75b34b89
+10-09 20:26:34.349 D/čič   (19820): Analytics Event: playback_started
+10-09 20:26:34.633 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:26:34.835 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:26:35.189 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:26:35.230 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:26:35.235 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:26:35.236 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:26:35.277 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:26:35.547 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:26:35.685 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:26:37.195 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=25579, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=2845, foreground_duration_ms=28424, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:26:37.195 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=2845, buffering_duration_ms=1605, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:26:37.347 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=7}
+10-09 20:26:44.820 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:26:45.076 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:26:56.729 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:26:56.936 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:00.357 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:00.522 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:00.935 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:01.134 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:01.935 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:02.054 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:06.043 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:06.236 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:07.199 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30002, foreground_duration_ms=30002, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:27:07.200 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30002, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:27:08.308 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:08.486 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:08.998 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:27:09.000 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:27:23.929 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.1}
+10-09 20:27:37.214 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=28213, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=1804, foreground_duration_ms=30017, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:27:37.214 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=1804, buffering_duration_ms=0, interruption_count_bucket=one, end_reason=checkpoint}
+10-09 20:27:54.822 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:27:54.822 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=d8eb9bf7-d808-4043-9eeb-bf44a6a22761
+10-09 20:27:54.824 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:27:54.836 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:55.052 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:55.057 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:55.061 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:27:55.123 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:27:55.124 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:27:55.126 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=306}
+10-09 20:27:55.126 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=d8eb9bf7-d808-4043-9eeb-bf44a6a22761
+10-09 20:27:55.127 D/čič   (19820): Analytics Event: playback_started
+10-09 20:27:55.194 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:55.195 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:55.272 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:55.308 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:55.410 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:55.411 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:55.554 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:57.198 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:57.413 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:58.605 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:58.790 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:27:59.176 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:27:59.363 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:00.925 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:01.091 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:02.907 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:03.072 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:05.695 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:05.873 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:07.217 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=17608, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=12087, foreground_duration_ms=29695, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:28:07.218 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=12087, buffering_duration_ms=306, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:28:07.995 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:08.240 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:09.846 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:10.097 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:11.494 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:11.857 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:13.466 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:13.667 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:15.542 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:15.813 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:18.798 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=10}
+10-09 20:28:19.326 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:19.573 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:23.934 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:28:24.128 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:28:30.678 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:28:30.680 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:28:37.219 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=6538, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=23466, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:28:37.219 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=23466, buffering_duration_ms=0, interruption_count_bucket=one, end_reason=checkpoint}
+10-09 20:28:53.216 D/čič   (19820): Analytics Event: tts_voice_settings_opened
+10-09 20:29:07.223 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30002, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30002, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:29:24.934 D/čič   (19820): Analytics Event: tts_voice_selected | Parameters: {is_neural=false}
+10-09 20:29:37.224 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30004, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:29:53.020 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:29:53.021 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=3cf48363-2cc8-4587-aa10-cfaf248ff0bf
+10-09 20:29:53.022 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:29:53.037 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:29:53.847 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:29:53.854 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:29:53.855 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:29:53.906 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:29:53.907 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:29:53.908 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=889}
+10-09 20:29:53.909 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=3cf48363-2cc8-4587-aa10-cfaf248ff0bf
+10-09 20:29:53.909 D/čič   (19820): Analytics Event: playback_started
+10-09 20:29:54.000 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:29:54.033 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:29:54.202 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:29:54.202 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:29:54.392 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:29:54.424 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:29:54.548 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:02.786 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:02.908 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:04.868 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:05.027 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:07.226 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=15796, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=13316, foreground_duration_ms=29112, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:30:07.227 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=13316, buffering_duration_ms=889, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:30:09.137 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:09.358 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:13.326 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:13.543 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:15.976 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:16.478 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:17.160 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:17.507 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:19.030 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:19.243 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:22.548 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:22.814 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:25.272 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:25.397 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:37.230 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30004, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:30:37.230 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30004, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:30:39.412 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:39.727 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:45.778 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=13}
+10-09 20:30:48.481 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:48.736 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:52.355 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:52.526 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:57.985 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:58.087 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:30:58.982 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:30:59.175 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:06.084 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:06.224 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:07.233 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30001, foreground_duration_ms=30001, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:31:07.234 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30001, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:31:11.109 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:11.296 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:13.547 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:13.825 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:14.079 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:14.525 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:16.801 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:17.008 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:18.327 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:18.554 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:21.185 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:21.385 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:24.528 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.2}
+10-09 20:31:24.530 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:31:24.530 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=d1657584-0906-44b2-92cd-0a9c5efa801f
+10-09 20:31:24.532 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:31:24.533 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:31:24.540 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:31:24.540 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:24.845 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:24.851 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:24.855 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:31:24.907 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:31:24.909 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:31:24.910 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=381}
+10-09 20:31:24.911 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=d1657584-0906-44b2-92cd-0a9c5efa801f
+10-09 20:31:24.911 D/čič   (19820): Analytics Event: playback_started
+10-09 20:31:25.294 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:25.295 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:25.435 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:25.463 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:25.602 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:25.632 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:25.774 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:30.979 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:31.291 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:37.237 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=29625, foreground_duration_ms=29625, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:31:37.238 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=29625, buffering_duration_ms=382, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:31:43.248 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:43.393 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:45.398 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:45.535 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:48.641 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=9}
+10-09 20:31:48.708 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:49.229 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:51.747 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.3}
+10-09 20:31:51.748 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:31:51.749 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=1edb9e34-a283-4b41-bd5a-bf2dc5f22401
+10-09 20:31:51.750 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:31:51.752 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:31:51.761 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:31:51.762 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:51.797 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.4}
+10-09 20:31:51.798 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=cancelled, is_retry=false, media_type=ebook, duration_ms=51, tts_reason_code=operation_cancelled}
+10-09 20:31:51.798 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=terminal outcome=cancelled reason_code=operation_cancelled media_type=ebook correlation_id=1edb9e34-a283-4b41-bd5a-bf2dc5f22401
+10-09 20:31:51.799 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:31:51.799 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=970c299f-7903-4127-a538-2413b845aebb
+10-09 20:31:51.804 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:51.833 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.5}
+10-09 20:31:51.834 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=cancelled, is_retry=false, media_type=ebook, duration_ms=35, tts_reason_code=operation_cancelled}
+10-09 20:31:51.834 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=terminal outcome=cancelled reason_code=operation_cancelled media_type=ebook correlation_id=970c299f-7903-4127-a538-2413b845aebb
+10-09 20:31:51.835 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:31:51.835 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=a0473e8f-e747-4066-a441-87c4f93b8738
+10-09 20:31:51.838 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:52.121 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:52.128 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:52.132 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:31:52.185 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:31:52.186 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:31:52.187 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=353}
+10-09 20:31:52.188 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=a0473e8f-e747-4066-a441-87c4f93b8738
+10-09 20:31:52.188 D/čič   (19820): Analytics Event: playback_started
+10-09 20:31:52.393 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:52.431 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:52.496 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:52.530 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:52.597 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:52.631 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:53.023 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:31:54.998 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:31:55.141 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:00.870 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:00.983 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:01.755 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:01.905 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:02.881 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:03.123 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:07.241 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=29560, foreground_duration_ms=29560, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:32:07.242 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=29560, buffering_duration_ms=441, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:32:14.763 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:15.019 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:16.140 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:16.309 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:16.984 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:17.228 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:18.272 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:18.398 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:22.498 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:22.821 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:26.403 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:26.632 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:28.475 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:28.623 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:33.519 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:33.790 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:34.451 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:34.769 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:36.739 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=9}
+10-09 20:32:37.243 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30004, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:32:37.243 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30004, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:32:40.352 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:40.554 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:44.408 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:44.685 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:46.047 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:46.310 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:51.188 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:51.446 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:57.859 I/TtsRouter(19820): synthesize voice=en-GB-language engine=SYSTEM
+10-09 20:32:58.197 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:32:58.248 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:32:58.249 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:33:00.347 D/čič   (19820): Analytics Event: tts_voice_settings_opened
+10-09 20:33:07.249 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=8996, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=21007, foreground_duration_ms=30003, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:33:07.250 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=21007, buffering_duration_ms=0, interruption_count_bucket=one, end_reason=checkpoint}
+10-09 20:33:13.931 D/čič   (19820): Analytics Event: tts_voice_selected | Parameters: {is_neural=true}
+10-09 20:33:14.007 D/čič   (19820): Analytics Event: tts_model_prepared | Parameters: {is_success=true, duration_ms=2}
+10-09 20:33:16.140 I/SherpaOnnxTts(19820): Kokoro loaded: sampleRate=24000 speakers=11
+10-09 20:33:37.251 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30005, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30005, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:33:44.357 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:33:44.357 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=92833237-16a2-4d46-bcff-2e6d80fea973
+10-09 20:33:44.359 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:33:44.364 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:33:44.364 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=95
+10-09 20:33:46.977 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2612ms, samples=77986, file=156016 bytes
+10-09 20:33:46.988 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:33:46.992 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:33:46.993 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=151
+10-09 20:33:46.996 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:33:47.040 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:33:47.041 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:33:47.043 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=2686}
+10-09 20:33:47.043 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=92833237-16a2-4d46-bcff-2e6d80fea973
+10-09 20:33:47.044 D/čič   (19820): Analytics Event: playback_started
+10-09 20:33:50.398 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:33:50.406 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:33:50.408 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:33:50.869 I/SherpaOnnxTts(19820): Kokoro synthesize done in 3876ms, samples=121264, file=242572 bytes
+10-09 20:33:50.881 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:33:50.885 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:33:50.890 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:33:50.890 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=128
+10-09 20:33:50.926 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:33:50.927 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:33:50.934 D/čič   (19820): Analytics Event: playback_started
+10-09 20:33:54.230 I/SherpaOnnxTts(19820): Kokoro synthesize done in 3340ms, samples=100948, file=201940 bytes
+10-09 20:33:54.231 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:33:54.231 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=137
+10-09 20:33:54.232 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:33:58.045 I/SherpaOnnxTts(19820): Kokoro synthesize done in 3813ms, samples=109976, file=219996 bytes
+10-09 20:33:58.045 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:33:58.045 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:33:58.052 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=191
+10-09 20:34:03.170 I/SherpaOnnxTts(19820): Kokoro synthesize done in 5118ms, samples=143774, file=287592 bytes
+10-09 20:34:03.170 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:03.171 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=36
+10-09 20:34:03.171 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:04.686 I/SherpaOnnxTts(19820): Kokoro synthesize done in 1515ms, samples=29683, file=59410 bytes
+10-09 20:34:04.686 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:04.687 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:04.687 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=216
+10-09 20:34:04.969 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=2}
+10-09 20:34:07.251 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=7149, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=19677, foreground_duration_ms=26826, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:34:07.251 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=19677, buffering_duration_ms=3174, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:34:11.919 I/SherpaOnnxTts(19820): Kokoro synthesize done in 7232ms, samples=184619, file=369282 bytes
+10-09 20:34:11.920 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:11.920 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=73
+10-09 20:34:11.921 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:14.526 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2606ms, samples=63214, file=126472 bytes
+10-09 20:34:14.526 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:14.526 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=120
+10-09 20:34:14.527 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:18.466 I/SherpaOnnxTts(19820): Kokoro synthesize done in 3940ms, samples=100160, file=200364 bytes
+10-09 20:34:18.466 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:18.466 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=20
+10-09 20:34:18.467 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:19.555 I/SherpaOnnxTts(19820): Kokoro synthesize done in 1089ms, samples=17572, file=35188 bytes
+10-09 20:34:19.556 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:19.556 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=233
+10-09 20:34:19.557 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:26.437 I/SherpaOnnxTts(19820): Kokoro synthesize done in 6881ms, samples=180444, file=360932 bytes
+10-09 20:34:26.438 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:26.438 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=240
+10-09 20:34:26.443 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:33.848 I/SherpaOnnxTts(19820): Kokoro synthesize done in 7409ms, samples=188786, file=377616 bytes
+10-09 20:34:33.848 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:33.848 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=239
+10-09 20:34:33.849 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:37.252 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30002, foreground_duration_ms=30002, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:34:37.252 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30002, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:34:38.034 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=5}
+10-09 20:34:41.999 I/SherpaOnnxTts(19820): Kokoro synthesize done in 8151ms, samples=192155, file=384354 bytes
+10-09 20:34:42.000 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:42.000 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=280
+10-09 20:34:42.000 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:46.996 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:34:46.997 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:34:51.102 I/SherpaOnnxTts(19820): Kokoro synthesize done in 9102ms, samples=216149, file=432342 bytes
+10-09 20:34:51.103 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:51.103 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=157
+10-09 20:34:51.103 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:34:56.849 I/SherpaOnnxTts(19820): Kokoro synthesize done in 5746ms, samples=125361, file=250766 bytes
+10-09 20:34:56.849 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:34:56.850 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=201
+10-09 20:34:56.850 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:35:02.194 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.4}
+10-09 20:35:04.261 I/SherpaOnnxTts(19820): Kokoro synthesize done in 7411ms, samples=159624, file=319292 bytes
+10-09 20:35:04.262 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:35:04.262 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.5 chars=42
+10-09 20:35:04.263 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:35:06.493 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2231ms, samples=39167, file=78378 bytes
+10-09 20:35:06.495 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:35:07.254 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=20256, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=9745, foreground_duration_ms=30001, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:35:07.254 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=9745, buffering_duration_ms=0, interruption_count_bucket=one, end_reason=checkpoint}
+10-09 20:35:16.959 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:35:16.959 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=da13a834-331d-43a1-bd18-7cc3e8d79073
+10-09 20:35:16.960 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:35:16.964 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:35:16.964 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=239
+10-09 20:35:25.599 I/SherpaOnnxTts(19820): Kokoro synthesize done in 8635ms, samples=200194, file=400432 bytes
+10-09 20:35:25.606 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:35:25.614 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:35:25.614 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=280
+10-09 20:35:25.615 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:35:25.664 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:35:25.665 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:35:25.669 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=8711}
+10-09 20:35:25.670 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=da13a834-331d-43a1-bd18-7cc3e8d79073
+10-09 20:35:25.671 D/čič   (19820): Analytics Event: playback_started
+10-09 20:35:34.143 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:35:34.149 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:35:34.150 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:35:35.914 I/SherpaOnnxTts(19820): Kokoro synthesize done in 10300ms, samples=224640, file=449324 bytes
+10-09 20:35:35.928 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:35:35.933 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:35:35.937 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:35:35.937 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=157
+10-09 20:35:35.991 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:35:35.992 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:35:35.994 D/čič   (19820): Analytics Event: playback_started
+10-09 20:35:37.256 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=9760, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=9739, foreground_duration_ms=19499, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:35:37.256 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=9739, buffering_duration_ms=10503, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:35:43.078 I/SherpaOnnxTts(19820): Kokoro synthesize done in 7139ms, samples=129646, file=259336 bytes
+10-09 20:35:43.078 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:35:43.079 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=201
+10-09 20:35:43.079 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:35:50.790 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:35:50.796 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:35:50.797 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:35:50.851 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.3}
+10-09 20:35:52.067 I/SherpaOnnxTts(19820): Kokoro synthesize done in 8988ms, samples=167337, file=334718 bytes
+10-09 20:35:52.085 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:35:52.090 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:35:52.095 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:35:52.095 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=42
+10-09 20:35:52.160 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:35:52.162 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:35:52.163 D/čič   (19820): Analytics Event: playback_started
+10-09 20:35:54.671 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2576ms, samples=40583, file=81210 bytes
+10-09 20:35:54.672 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:35:54.672 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=200
+10-09 20:35:54.673 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:35:59.500 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=4}
+10-09 20:36:00.858 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:36:00.863 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:36:00.865 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:36:03.156 I/SherpaOnnxTts(19820): Kokoro synthesize done in 8484ms, samples=158079, file=316202 bytes
+10-09 20:36:03.168 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:36:03.173 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:36:03.177 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:36:03.177 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=8
+10-09 20:36:03.234 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:36:03.235 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:36:03.236 D/čič   (19820): Analytics Event: playback_started
+10-09 20:36:04.497 I/SherpaOnnxTts(19820): Kokoro synthesize done in 1320ms, samples=12682, file=25408 bytes
+10-09 20:36:04.497 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:36:04.498 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=52
+10-09 20:36:04.498 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:36:07.207 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2709ms, samples=43361, file=86766 bytes
+10-09 20:36:07.207 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:36:07.208 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=35
+10-09 20:36:07.208 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:36:07.257 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=120, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=26261, foreground_duration_ms=26381, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:36:07.257 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=26261, buffering_duration_ms=3621, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:36:09.438 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2230ms, samples=33078, file=66200 bytes
+10-09 20:36:09.439 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:36:09.439 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=87
+10-09 20:36:09.439 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:36:13.609 I/SherpaOnnxTts(19820): Kokoro synthesize done in 4170ms, samples=71914, file=143872 bytes
+10-09 20:36:13.610 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:36:13.611 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=39
+10-09 20:36:13.611 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:36:13.616 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:36:13.618 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:36:13.620 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:36:16.187 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2576ms, samples=40181, file=80406 bytes
+10-09 20:36:16.188 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:36:16.188 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=169
+10-09 20:36:16.188 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:36:23.584 I/SherpaOnnxTts(19820): Kokoro synthesize done in 7396ms, samples=143561, file=287166 bytes
+10-09 20:36:23.585 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:36:23.585 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.4 chars=234
+10-09 20:36:23.589 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:36:33.227 I/SherpaOnnxTts(19820): Kokoro synthesize done in 9641ms, samples=177500, file=355044 bytes
+10-09 20:36:33.228 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:36:37.258 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=23637, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=6363, foreground_duration_ms=30000, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:36:37.259 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=6363, buffering_duration_ms=0, interruption_count_bucket=one, end_reason=checkpoint}
+10-09 20:37:07.265 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30004, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:37:37.267 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30005, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30005, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:38:07.270 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30003, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30003, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:38:12.800 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:38:12.801 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=86a929a4-882b-4839-8568-83a38eaed63a
+10-09 20:38:37.273 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=5529, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=5529, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:38:37.273 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=0, buffering_duration_ms=24474, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:38:42.813 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:38:42.826 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=failed, is_retry=false, media_type=ebook, duration_ms=30029, tts_reason_code=start_timeout}
+10-09 20:38:42.826 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=1, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=1, background_duration_ms=0, end_reason=error, content_access=on_device}
+10-09 20:38:42.826 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=0, buffering_duration_ms=5553, interruption_count_bucket=zero, end_reason=error}
+10-09 20:38:42.833 E/čič   (19820): Exception occurred with message: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=terminal outcome=failed reason_code=start_timeout media_type=ebook correlation_id=86a929a4-882b-4839-8568-83a38eaed63a
+10-09 20:38:42.833 E/čič   (19820): com.retro99.analytics.implementation.SanitizedDiagnosticException: Handled failure (IllegalStateException)
+10-09 20:38:42.833 E/čič   (19820): 	at com.retro99.reader.ui.navigator.TtsPlaybackAttempts.lifecycle$lambda$0(TtsPlaybackAttempts.kt:64)
+10-09 20:38:42.833 E/čič   (19820): 	at com.retro99.reader.ui.navigator.TtsPlaybackAttempts$$ExternalSyntheticLambda0.invoke(D8$$SyntheticClass:0)
+10-09 20:38:42.833 E/čič   (19820): 	at com.retro99.reader.ui.navigator.TtsPlaybackOperationLifecycle$armStartupTimeout$job$1.invokeSuspend(TtsPlaybackOperationLifecycle.kt:52)
+10-09 20:38:42.833 E/čič   (19820): 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+10-09 20:38:42.833 E/čič   (19820): 	at kotlinx.coroutines.DispatchedTaskKt.resume(DispatchedTask.kt:233)
+10-09 20:38:42.833 E/čič   (19820): 	at kotlinx.coroutines.DispatchedTaskKt.dispatch(DispatchedTask.kt:152)
+10-09 20:38:42.833 E/čič   (19820): 	at kotlinx.coroutines.CancellableContinuationImpl.dispatchResume(CancellableContinuationImpl.kt:470)
+10-09 20:38:42.833 E/čič   (19820): 	at kotlinx.coroutines.CancellableContinuationImpl.resumeImpl$kotlinx_coroutines_core(CancellableContinuationImpl.kt:504)
+10-09 20:38:42.833 E/čič   (19820): 	at kotlinx.coroutines.CancellableContinuationImpl.resumeImpl$kotlinx_coroutines_core$default(CancellableContinuationImpl.kt:493)
+10-09 20:38:42.833 E/čič   (19820): 	at kotlinx.coroutines.CancellableContinuationImpl.resumeUndispatched(CancellableContinuationImpl.kt:596)
+10-09 20:38:42.833 E/čič   (19820): 	at kotlinx.coroutines.android.HandlerContext.scheduleResumeAfterDelay$lambda$0(HandlerDispatcher.kt:141)
+10-09 20:38:42.833 E/čič   (19820): 	at kotlinx.coroutines.android.HandlerContext$$ExternalSyntheticLambda1.run(D8$$SyntheticClass:0)
+10-09 20:38:42.833 E/čič   (19820): 	at android.os.Handler.handleCallback(Handler.java:1070)
+10-09 20:38:42.833 E/čič   (19820): 	at android.os.Handler.dispatchMessage(Handler.java:125)
+10-09 20:38:42.833 E/čič   (19820): 	at android.os.Looper.dispatchMessage(Looper.java:358)
+10-09 20:38:42.833 E/čič   (19820): 	at android.os.Looper.loopOnce(Looper.java:288)
+10-09 20:38:42.833 E/čič   (19820): 	at android.os.Looper.loop(Looper.java:392)
+10-09 20:38:42.833 E/čič   (19820): 	at android.app.ActivityThread.main(ActivityThread.java:10346)
+10-09 20:38:42.833 E/čič   (19820): 	at java.lang.reflect.Method.invoke(Native Method)
+10-09 20:38:42.833 E/čič   (19820): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:638)
+10-09 20:38:42.833 E/čič   (19820): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:972)
+10-09 20:38:42.867 D/čič123(19820): onDestroy() called
+10-09 20:38:42.867 D/čič123(19820): java.lang.Exception: stack trace
+10-09 20:38:42.867 D/čič123(19820): 	at com.retro99.reader.ui.playback.MediaPlaybackService.onDestroy(MediaPlaybackService.kt:423)
+10-09 20:38:42.867 D/čič123(19820): 	at android.app.ActivityThread.handleStopService(ActivityThread.java:6483)
+10-09 20:38:42.867 D/čič123(19820): 	at android.app.ActivityThread.-$$Nest$mhandleStopService(ActivityThread.java:0)
+10-09 20:38:42.867 D/čič123(19820): 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:3125)
+10-09 20:38:42.867 D/čič123(19820): 	at android.os.Handler.dispatchMessage(Handler.java:132)
+10-09 20:38:42.867 D/čič123(19820): 	at android.os.Looper.dispatchMessage(Looper.java:358)
+10-09 20:38:42.867 D/čič123(19820): 	at android.os.Looper.loopOnce(Looper.java:288)
+10-09 20:38:42.867 D/čič123(19820): 	at android.os.Looper.loop(Looper.java:392)
+10-09 20:38:42.867 D/čič123(19820): 	at android.app.ActivityThread.main(ActivityThread.java:10346)
+10-09 20:38:42.867 D/čič123(19820): 	at java.lang.reflect.Method.invoke(Native Method)
+10-09 20:38:42.867 D/čič123(19820): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:638)
+10-09 20:38:42.867 D/čič123(19820): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:972)
+10-09 20:39:07.280 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=24450, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=24450, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:39:37.282 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30006, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30006, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:39:46.783 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=true, media_type=ebook}
+10-09 20:39:46.783 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=2c76a25a-70c5-4d6c-9343-cee0b6fcddb2
+10-09 20:39:46.931 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:39:46.932 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.3 chars=42
+10-09 20:39:48.929 I/SherpaOnnxTts(19820): Kokoro synthesize done in 1997ms, samples=48165, file=96374 bytes
+10-09 20:39:48.941 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:415)
+10-09 20:39:48.941 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:408)
+10-09 20:39:48.941 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.startSentence(TtsReadAloudEngine.kt:381)
+10-09 20:39:48.941 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.access$startSentence(TtsReadAloudEngine.kt:39)
+10-09 20:39:48.941 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine$startSentence$1.invokeSuspend(TtsReadAloudEngine.kt:17)
+10-09 20:39:48.950 D/čič123(19820): onCreate() called
+10-09 20:39:48.954 D/čič123(19820): ExoPlayer created: true
+10-09 20:39:48.978 D/čič123(19820): MediaLibrarySession created: true
+10-09 20:39:48.980 D/čič123(19820): Configuring buttons for media notification controller
+10-09 20:39:48.982 D/čič123(19820): Session added to service
+10-09 20:39:48.982 D/čič123(19820): MediaNotificationProvider set
+10-09 20:39:48.983 D/čič123(19820): Calling controller.onServiceCreated()
+10-09 20:39:48.989 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:39:48.993 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:39:48.997 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:39:48.997 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.3 chars=200
+10-09 20:39:48.998 D/čič123(19820): onCreate() completed
+10-09 20:39:49.129 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:39:49.130 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:39:49.132 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=true, media_type=ebook, duration_ms=2349}
+10-09 20:39:49.132 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=2c76a25a-70c5-4d6c-9343-cee0b6fcddb2
+10-09 20:39:49.134 D/čič   (19820): Analytics Event: playback_started
+10-09 20:39:51.282 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:39:51.286 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:39:51.287 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:39:55.214 I/SherpaOnnxTts(19820): Kokoro synthesize done in 6217ms, samples=191993, file=384030 bytes
+10-09 20:39:55.219 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:39:55.223 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:39:55.226 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:39:55.226 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.3 chars=8
+10-09 20:39:55.267 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:39:55.268 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:39:55.269 D/čič   (19820): Analytics Event: playback_started
+10-09 20:39:56.183 I/SherpaOnnxTts(19820): Kokoro synthesize done in 957ms, samples=15186, file=30416 bytes
+10-09 20:39:56.183 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:39:56.183 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.3 chars=52
+10-09 20:39:56.184 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:39:58.256 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2073ms, samples=54292, file=108628 bytes
+10-09 20:39:58.256 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:39:58.256 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.3 chars=35
+10-09 20:39:58.257 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:39:59.910 I/SherpaOnnxTts(19820): Kokoro synthesize done in 1653ms, samples=39377, file=78798 bytes
+10-09 20:39:59.911 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:39:59.911 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:39:59.912 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.3 chars=87
+10-09 20:40:03.805 I/SherpaOnnxTts(19820): Kokoro synthesize done in 3893ms, samples=91171, file=182386 bytes
+10-09 20:40:03.806 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:40:03.806 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.3 chars=39
+10-09 20:40:03.806 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:40:06.655 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2849ms, samples=48339, file=96722 bytes
+10-09 20:40:06.656 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:40:06.656 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.3 chars=169
+10-09 20:40:06.657 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:40:06.989 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.2}
+10-09 20:40:06.991 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:40:06.992 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=11a0bfe7-7aca-4913-8434-f3385f7faeef
+10-09 20:40:06.994 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:40:06.996 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:40:07.001 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:40:07.286 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=9543, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=13871, foreground_duration_ms=23414, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:40:07.286 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=13871, buffering_duration_ms=6589, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:40:15.067 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:40:15.068 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=35
+10-09 20:40:17.861 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2793ms, samples=42855, file=85754 bytes
+10-09 20:40:17.873 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:40:17.880 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:40:17.880 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=87
+10-09 20:40:17.885 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:40:17.932 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:40:17.933 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:40:17.935 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=10945}
+10-09 20:40:17.936 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=11a0bfe7-7aca-4913-8434-f3385f7faeef
+10-09 20:40:17.937 D/čič   (19820): Analytics Event: playback_started
+10-09 20:40:19.833 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:40:19.837 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:40:19.838 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:40:23.390 I/SherpaOnnxTts(19820): Kokoro synthesize done in 5510ms, samples=96065, file=192174 bytes
+10-09 20:40:23.398 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:40:23.403 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:40:23.407 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:40:23.407 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=39
+10-09 20:40:23.459 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:40:23.460 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:40:23.462 D/čič   (19820): Analytics Event: playback_started
+10-09 20:40:26.576 I/SherpaOnnxTts(19820): Kokoro synthesize done in 3169ms, samples=51095, file=102234 bytes
+10-09 20:40:26.577 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:40:26.577 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:40:26.578 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=169
+10-09 20:40:29.687 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:40:29.692 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:40:29.693 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:40:35.926 I/SherpaOnnxTts(19820): Kokoro synthesize done in 9348ms, samples=182881, file=365806 bytes
+10-09 20:40:35.941 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:40:35.946 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:40:35.950 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:40:35.950 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=234
+10-09 20:40:36.006 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:40:36.008 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:40:36.010 D/čič   (19820): Analytics Event: playback_started
+10-09 20:40:37.287 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=111, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=9405, foreground_duration_ms=9516, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:40:37.288 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=9405, buffering_duration_ms=20486, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:40:43.742 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:40:43.748 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:40:43.750 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:40:48.547 I/SherpaOnnxTts(19820): Kokoro synthesize done in 12597ms, samples=237361, file=474766 bytes
+10-09 20:40:48.560 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:40:48.566 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:40:48.570 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:40:48.570 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=222
+10-09 20:40:48.624 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:40:48.625 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:40:48.627 D/čič   (19820): Analytics Event: playback_started
+10-09 20:40:58.628 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:40:58.632 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:40:58.633 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:41:01.152 I/SherpaOnnxTts(19820): Kokoro synthesize done in 12582ms, samples=239325, file=478694 bytes
+10-09 20:41:01.163 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:01.168 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:41:01.172 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:01.172 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=62
+10-09 20:41:01.240 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:41:01.241 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:41:01.243 D/čič   (19820): Analytics Event: playback_started
+10-09 20:41:04.374 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=3}
+10-09 20:41:05.398 I/SherpaOnnxTts(19820): Kokoro synthesize done in 4226ms, samples=75630, file=151304 bytes
+10-09 20:41:05.400 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:07.291 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=127, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=22511, foreground_duration_ms=22638, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:41:07.291 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=22511, buffering_duration_ms=7363, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:41:14.434 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:41:14.445 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:41:14.454 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:41:14.457 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:41:14.503 D/čič123(19820): onDestroy() called
+10-09 20:41:14.503 D/čič123(19820): java.lang.Exception: stack trace
+10-09 20:41:14.503 D/čič123(19820): 	at com.retro99.reader.ui.playback.MediaPlaybackService.onDestroy(MediaPlaybackService.kt:423)
+10-09 20:41:14.503 D/čič123(19820): 	at android.app.ActivityThread.handleStopService(ActivityThread.java:6483)
+10-09 20:41:14.503 D/čič123(19820): 	at android.app.ActivityThread.-$$Nest$mhandleStopService(ActivityThread.java:0)
+10-09 20:41:14.503 D/čič123(19820): 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:3125)
+10-09 20:41:14.503 D/čič123(19820): 	at android.os.Handler.dispatchMessage(Handler.java:132)
+10-09 20:41:14.503 D/čič123(19820): 	at android.os.Looper.dispatchMessage(Looper.java:358)
+10-09 20:41:14.503 D/čič123(19820): 	at android.os.Looper.loopOnce(Looper.java:288)
+10-09 20:41:14.503 D/čič123(19820): 	at android.os.Looper.loop(Looper.java:392)
+10-09 20:41:14.503 D/čič123(19820): 	at android.app.ActivityThread.main(ActivityThread.java:10346)
+10-09 20:41:14.503 D/čič123(19820): 	at java.lang.reflect.Method.invoke(Native Method)
+10-09 20:41:14.503 D/čič123(19820): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:638)
+10-09 20:41:14.503 D/čič123(19820): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:972)
+10-09 20:41:14.983 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:41:14.983 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=e5b96557-04db-482f-b65e-5441f236eca7
+10-09 20:41:15.035 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:15.035 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=36
+10-09 20:41:16.727 I/SherpaOnnxTts(19820): Kokoro synthesize done in 1692ms, samples=19808, file=39660 bytes
+10-09 20:41:16.731 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:415)
+10-09 20:41:16.731 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:408)
+10-09 20:41:16.731 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.startSentence(TtsReadAloudEngine.kt:381)
+10-09 20:41:16.731 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.access$startSentence(TtsReadAloudEngine.kt:39)
+10-09 20:41:16.731 D/ForegroundServiceController(19820): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine$startSentence$1.invokeSuspend(TtsReadAloudEngine.kt:17)
+10-09 20:41:16.739 D/čič123(19820): onCreate() called
+10-09 20:41:16.741 D/čič123(19820): ExoPlayer created: true
+10-09 20:41:16.756 D/čič123(19820): MediaLibrarySession created: true
+10-09 20:41:16.757 D/čič123(19820): Configuring buttons for media notification controller
+10-09 20:41:16.759 D/čič123(19820): Session added to service
+10-09 20:41:16.759 D/čič123(19820): MediaNotificationProvider set
+10-09 20:41:16.759 D/čič123(19820): Calling controller.onServiceCreated()
+10-09 20:41:16.768 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:16.773 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:41:16.781 D/čič123(19820): onCreate() completed
+10-09 20:41:16.782 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:16.782 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=176
+10-09 20:41:16.913 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:41:16.915 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:41:16.917 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=1934}
+10-09 20:41:16.918 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=e5b96557-04db-482f-b65e-5441f236eca7
+10-09 20:41:16.919 D/čič   (19820): Analytics Event: playback_started
+10-09 20:41:17.771 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:41:17.775 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:41:17.776 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:41:19.381 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=9}
+10-09 20:41:26.171 I/SherpaOnnxTts(19820): Kokoro synthesize done in 9389ms, samples=184867, file=369778 bytes
+10-09 20:41:26.185 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:26.190 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:41:26.195 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:26.195 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=14
+10-09 20:41:26.255 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:41:26.256 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:41:26.257 D/čič   (19820): Analytics Event: playback_started
+10-09 20:41:27.534 D/čič   (19820): Analytics Event: tts_voice_settings_opened
+10-09 20:41:27.794 I/SherpaOnnxTts(19820): Kokoro synthesize done in 1599ms, samples=16356, file=32756 bytes
+10-09 20:41:27.794 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:27.794 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=21
+10-09 20:41:27.802 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:29.888 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2093ms, samples=25367, file=50778 bytes
+10-09 20:41:29.889 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:29.889 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:29.889 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=55
+10-09 20:41:33.755 I/SherpaOnnxTts(19820): Kokoro synthesize done in 3866ms, samples=66157, file=132358 bytes
+10-09 20:41:33.755 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:33.756 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=185
+10-09 20:41:33.756 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:37.292 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=601, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=19048, foreground_duration_ms=19649, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:41:37.292 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=19048, buffering_duration_ms=10354, interruption_count_bucket=one, end_reason=checkpoint}
+10-09 20:41:38.558 D/čič123(19820): SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-09 20:41:38.562 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:41:38.563 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:41:44.567 I/SherpaOnnxTts(19820): Kokoro synthesize done in 10811ms, samples=199909, file=399862 bytes
+10-09 20:41:44.575 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:44.578 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:41:44.581 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:44.581 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=27
+10-09 20:41:44.622 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:41:44.623 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:41:44.624 D/čič   (19820): Analytics Event: playback_started
+10-09 20:41:46.220 I/SherpaOnnxTts(19820): Kokoro synthesize done in 1639ms, samples=28652, file=57348 bytes
+10-09 20:41:46.220 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:46.220 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=29
+10-09 20:41:46.229 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:48.765 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2544ms, samples=36249, file=72542 bytes
+10-09 20:41:48.766 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:48.767 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=19
+10-09 20:41:48.767 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:50.824 I/SherpaOnnxTts(19820): Kokoro synthesize done in 2057ms, samples=24587, file=49218 bytes
+10-09 20:41:50.825 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:50.825 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=89
+10-09 20:41:50.826 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:56.654 I/SherpaOnnxTts(19820): Kokoro synthesize done in 5828ms, samples=95395, file=190834 bytes
+10-09 20:41:56.654 I/TtsRouter(19820): synthesize voice=kokoro:0 engine=KOKORO
+10-09 20:41:56.655 I/SherpaOnnxTts(19820): Kokoro synthesize start: sid=0 speed=1.2 chars=36
+10-09 20:41:56.655 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:41:59.101 D/čič   (19820): Analytics Event: tts_voice_selected | Parameters: {is_neural=false}
+10-09 20:41:59.102 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:41:59.102 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=4d91d20c-8c66-4053-a2bd-d910550a482e
+10-09 20:41:59.104 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:41:59.106 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:41:59.109 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:41:59.762 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:00.558 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:00.569 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:00.570 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:42:00.659 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:42:00.661 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:42:00.663 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=1562}
+10-09 20:42:00.664 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=4d91d20c-8c66-4053-a2bd-d910550a482e
+10-09 20:42:00.665 D/čič   (19820): Analytics Event: playback_started
+10-09 20:42:00.834 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:00.895 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:01.414 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:01.480 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:01.626 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:01.690 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:02.266 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:06.282 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:06.478 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:07.295 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=41, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=22376, foreground_duration_ms=22417, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:42:07.296 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=22376, buffering_duration_ms=7585, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:42:08.257 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:08.759 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:09.530 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=10}
+10-09 20:42:15.482 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.1}
+10-09 20:42:15.483 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:42:15.484 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=d18f7a34-f4fc-4ae0-9be4-e8c27769cde2
+10-09 20:42:15.486 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:42:15.487 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:42:15.490 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:42:15.501 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:16.148 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:16.157 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:16.158 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:42:16.236 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:42:16.237 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:42:16.239 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=757}
+10-09 20:42:16.240 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=d18f7a34-f4fc-4ae0-9be4-e8c27769cde2
+10-09 20:42:16.241 D/čič   (19820): Analytics Event: playback_started
+10-09 20:42:16.367 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:16.425 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:16.565 D/čič   (19820): Analytics Event: tts_rate_changed | Parameters: {rate=1.0}
+10-09 20:42:16.567 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 20:42:16.567 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=61980496-233d-44f3-929b-6167bb65fad8
+10-09 20:42:16.570 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:42:16.572 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:42:16.576 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:42:16.577 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:17.612 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:17.622 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:17.623 D/čič123(19820): SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-09 20:42:17.695 D/čič123(19820): SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-09 20:42:17.697 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-09 20:42:17.699 D/čič   (19820): Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=1133}
+10-09 20:42:17.700 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=61980496-233d-44f3-929b-6167bb65fad8
+10-09 20:42:17.701 D/čič   (19820): Analytics Event: playback_started
+10-09 20:42:17.834 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:17.894 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:18.559 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:18.622 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:18.776 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:18.854 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:19.190 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:28.584 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:28.769 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:30.692 I/TtsRouter(19820): synthesize voice=null engine=SYSTEM
+10-09 20:42:30.904 W/TtsReadAloudEngine(19820): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 20:42:37.298 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=2, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=28111, foreground_duration_ms=28113, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-09 20:42:37.299 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=28111, buffering_duration_ms=1891, interruption_count_bucket=zero, end_reason=checkpoint}
+10-09 20:42:38.166 D/čič123(19820): SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-09 20:42:38.168 D/čič   (19820): Analytics Event: playback_paused
+10-09 20:43:01.404 D/čič123(19820): SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-09 20:43:01.459 D/čič123(19820): onDestroy() called
+10-09 20:43:01.459 D/čič123(19820): java.lang.Exception: stack trace
+10-09 20:43:01.459 D/čič123(19820): 	at com.retro99.reader.ui.playback.MediaPlaybackService.onDestroy(MediaPlaybackService.kt:423)
+10-09 20:43:01.459 D/čič123(19820): 	at android.app.ActivityThread.handleStopService(ActivityThread.java:6483)
+10-09 20:43:01.459 D/čič123(19820): 	at android.app.ActivityThread.-$$Nest$mhandleStopService(ActivityThread.java:0)
+10-09 20:43:01.459 D/čič123(19820): 	at android.app.ActivityThread$H.handleMessage(ActivityThread.java:3125)
+10-09 20:43:01.459 D/čič123(19820): 	at android.os.Handler.dispatchMessage(Handler.java:132)
+10-09 20:43:01.459 D/čič123(19820): 	at android.os.Looper.dispatchMessage(Looper.java:358)
+10-09 20:43:01.459 D/čič123(19820): 	at android.os.Looper.loopOnce(Looper.java:288)
+10-09 20:43:01.459 D/čič123(19820): 	at android.os.Looper.loop(Looper.java:392)
+10-09 20:43:01.459 D/čič123(19820): 	at android.app.ActivityThread.main(ActivityThread.java:10346)
+10-09 20:43:01.459 D/čič123(19820): 	at java.lang.reflect.Method.invoke(Native Method)
+10-09 20:43:01.459 D/čič123(19820): 	at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:638)
+10-09 20:43:01.459 D/čič123(19820): 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:972)
+10-09 20:43:04.529 D/čič   (19820): Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=26361, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=871, foreground_duration_ms=27232, background_duration_ms=0, end_reason=closed, content_access=on_device}
+10-09 20:43:04.529 D/čič   (19820): Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=871, buffering_duration_ms=0, interruption_count_bucket=one, end_reason=closed}
+10-09 20:43:04.536 D/čič   (19820): Analytics Event: reader_position_save_attempted | Parameters: {screen=reader, action=save_reading_position, operation=reader_position_save, stage=started, outcome=started, media_type=ebook, entry_point=reader_close, is_retry=false}
+10-09 20:43:04.536 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reader_close action=save_reading_position operation=reader_position_save stage=started outcome=started media_type=ebook
+10-09 20:43:04.539 D/čič   (19820): Analytics Event: navigation_back_attempted | Parameters: {screen=reader, source_screen=reader, destination_screen=book_detail, entry_point=system_back, action=back, outcome=started}
+10-09 20:43:04.539 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader destination_screen=book_detail entry_point=system_back action=back operation=navigation_back stage=navigation outcome=started correlation_id=51cb9be5-a8a2-465d-bddb-da5469493b62
+10-09 20:43:04.544 D/čič   (19820): Analytics Event: navigation_back | Parameters: {screen=reader, source_screen=reader, destination_screen=book_detail, entry_point=system_back, action=back, outcome=succeeded}
+10-09 20:43:04.544 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader destination_screen=book_detail entry_point=system_back action=back operation=navigation_back stage=terminal outcome=succeeded correlation_id=51cb9be5-a8a2-465d-bddb-da5469493b62
+10-09 20:43:04.649 D/čič   (19820): Analytics Event: reader_position_save_succeeded | Parameters: {screen=reader, action=save_reading_position, operation=reader_position_save, stage=terminal, outcome=succeeded, media_type=ebook, entry_point=reader_close, is_retry=false}
+10-09 20:43:04.650 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reader_close action=save_reading_position operation=reader_position_save stage=terminal outcome=succeeded media_type=ebook
+10-09 20:43:04.650 D/čič   (19820): Analytics Event: sleep_timer_cancelled
+10-09 20:43:04.651 D/čič   (19820): Analytics Event: book_closed | Parameters: {reading_duration_ms=1287288, progress_percent=33}
+10-09 20:43:04.673 D/čič   (19820): Received 1 repositories
+10-09 20:43:04.673 D/čič   (19820): Getting books from repo: local
+10-09 20:43:04.686 D/čič   (19820): Repo local returned 5 books
+10-09 20:43:04.686 D/čič   (19820): Combined 5 total books from 1 sources
+10-09 20:43:04.698 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=27}
+10-09 20:43:07.774 D/čič   (19820): Analytics Event: navigation_back_attempted | Parameters: {screen=book_detail, source_screen=book_detail, destination_screen=books, entry_point=system_back, action=back, outcome=started}
+10-09 20:43:07.775 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=book_detail source_screen=book_detail destination_screen=books entry_point=system_back action=back operation=navigation_back stage=navigation outcome=started correlation_id=c90d0a74-c8ef-4ecf-a7a7-35fa3b590506
+10-09 20:43:07.776 D/čič   (19820): Analytics Event: navigation_back | Parameters: {screen=book_detail, source_screen=book_detail, destination_screen=books, entry_point=system_back, action=back, outcome=succeeded}
+10-09 20:43:07.777 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=book_detail source_screen=book_detail destination_screen=books entry_point=system_back action=back operation=navigation_back stage=terminal outcome=succeeded correlation_id=c90d0a74-c8ef-4ecf-a7a7-35fa3b590506
+10-09 20:43:07.924 D/čič   (19820): Analytics Event: feature_exposed | Parameters: {feature_name=local_import, screen=books_library, is_available=true}
+10-09 20:43:25.648 D/čič   (19820): Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-09 20:43:26.328 D/čič   (19820): Analytics Event: sync_run_completed | Parameters: {duration_ms=1}

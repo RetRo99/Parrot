@@ -322,6 +322,7 @@ effect on a user, not on the code.
 - **Severity for a user:** stuck state / wrong position.
 - **How a test could catch it:** unit test on `AndroidTtsController` (new `AndroidTtsControllerTest`, androidHostTest, fake engine) asserting `setRate` while not playing records the rate without calling `engine.stop()`; manual: the trigger above, checking which sentence is highlighted after resuming.
 - **Fixed:** `480a4773` (run 2b) — the paused change keeps the position instead of stopping the engine, and the next play press restarts that same sentence from its start through `engine.playFrom`, so the audio made with the old setting is re-synthesised rather than resumed; the press reports `resume`. Tests committed failing in `4bc7cdc8` (`TtsPlaybackAttemptsTest`, six cases), seam in `381f6340`.
+- **Device check 2026-10-09:** passed — paused on 69 and 82 with a System voice and on 137 with Kokoro, the sentence held across a speed and a voice change each time, and every play press restarted that same sentence reporting `resume` (`docs/manual-qa-evidence/2026-10-09/tts-run2b-device/`).
 
 ### TTS-F07 — A speed or voice change during playback restarts synthesis outside the attempt machinery
 
@@ -334,6 +335,7 @@ effect on a user, not on the code.
 - **Severity for a user:** silent failure; analytics only in the success case.
 - **How a test could catch it:** `AndroidTtsControllerTest` — change the rate while the fake engine reports playing and assert an `Attempted` plus one terminal outcome on `playbackOperations`.
 - **Fixed:** `6e919edb` (run 2b) — the restart is a tracked operation reporting the new `TtsPlaybackAction.SETTINGS_CHANGE`: one `Attempted`, exactly one terminal outcome, `isPlaybackStartPending` set while it runs, the 30 s deadline armed before synthesis, and the engine given this attempt's correlation id. A second change supersedes the restart in flight (`Cancelled`), so one attempt never gets two terminal outcomes. Tests committed failing in `af95f1f2` (four cases).
+- **Device check 2026-10-09:** passed — one attempted and one terminal outcome per restart with a System voice and with Kokoro, three quick changes gave three attempts with two `cancelled` and one `succeeded` and narration kept playing; one gap, the `tts_playback_operation` event carries no `tts_action` for this action, only the breadcrumb's `entry_point=settings_change` (`docs/manual-qa-evidence/2026-10-09/tts-run2b-device/`).
 
 ### TTS-F08 — `stopWord()` immediately followed by `speakWord()` can resume narration under the new word
 

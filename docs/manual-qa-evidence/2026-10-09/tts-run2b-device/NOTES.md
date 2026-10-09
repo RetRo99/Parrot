@@ -168,3 +168,68 @@ One attempted, one terminal outcome, one correlation id, breadcrumbs
 `entry_point=settings_change` — the same shape as the System-voice case, just ten seconds
 slower because Kokoro has to synthesise first. `tts_action` is absent from the event here
 too.
+
+### Step 5 — the phone left tidy
+
+Voices → On this phone → Default → **System voice** ("Follows your phone's text-to-speech
+settings"), Rate stepped back to **1×**, Pitch Normal. Paused, then **Stop listening**, then
+out of the reader to the **Library** screen: `onIsPlayingChanged isPlaying=false` is the last
+playback line of the run and the library shows no now-playing card.
+`F1-final-sheet-system-voice-rate-1.png` is the sheet in that state before it was closed;
+`F2-left-on-the-library-screen.png` is the screen it was left on (cropped to the header,
+because the library list cannot be shown without book titles).
+
+While putting the rate back, the two Rate − presses landed during playback and produced one
+more clean `settings_change` pair each (20:42:16.239 and 20:42:17.699, both `succeeded`), and
+the chapter had rolled over to the next one (sentence 12 of 141), which is why the final
+screenshot shows a different chapter from the checks above.
+
+## Summary
+
+- Step 1 passed: the Listen button is not broken. **Run 2b's blocker was tap timing.**
+- Step 2 passed: TTS-F06 is fixed on the device, for a speed change and for a voice change.
+- Step 3 passed: TTS-F07 is fixed on the device, single and triple change.
+- Step 4 passed: both the same with Kokoro (F07 needed the tap placed inside a playing
+  window, see 4b).
+- Step 5 done: System voice, Rate 1×, narration stopped, app on the library screen.
+- One `failed` outcome in the run, in 4b: a Kokoro resume that never started and hit the
+  30 s `start_timeout`; the next press recovered it. No crash anywhere.
+
+## Differences from "Expected", recorded and not investigated
+
+1. `tts_playback_operation` carries **no `tts_action`** for the settings-change restart,
+   where `controls` and `resume` starts both carry one. The action is in the breadcrumb
+   (`entry_point=settings_change`) instead.
+2. `TtsRouter: synthesize` prints `voice=` and `engine=` but **no rate**, so "the new rate
+   in the log" is only readable from `tts_rate_changed` and, for Kokoro, from
+   `SherpaOnnxTts … speed=`.
+3. With Kokoro, a speed change can land in a 1–2 s gap where the engine reports
+   `isPlaying=false` between sentences; it then takes the paused path and emits no
+   operation pair. After one such change, queued clips kept the **old** speed and
+   narration **stopped silently** at sentence 145 of 151, and the next play press timed out
+   at 30 s before a later press recovered. Not investigated, not filed.
+
+## Not in this run
+
+No product code and no test was touched. "Sentence 1 of 0" (TTS-F24), the highlight left
+after stop, Supertonic (terms untouched, never accepted), and any other device were all out
+of scope. Two other devices were attached throughout and never addressed; every adb call
+carried `-s RFCWC0SSVDM`.
+
+## Files
+
+- `B1-short-tap-too-early-no-card.png` — the ~300 ms tap, run 2b's symptom reproduced.
+- `B2-short-tap-card-appears.png` — the same tap after a 0.9 s settle: the compact card.
+- `B3-sheet-open-system-voice-rate-1.png` — the sheet, opened from the card.
+- `B4-long-press-opens-sheet.png` — the sheet, opened by the long press.
+- `C1-f06-paused-sentence-69-rate-1.png`, `C2-f06-rate-1.1-still-sentence-69.png`,
+  `C3-f06-paused-sentence-82-before-voice-change.png` — step 2.
+- `D1-f07-still-playing-after-three-quick-changes.png` — step 3b.
+- `E1-kokoro-heart-playing-after-speed-change.png` — step 4c.
+- `F1-final-sheet-system-voice-rate-1.png`, `F2-left-on-the-library-screen.png` — step 5.
+- `tts-run2b-device-logcat.txt` — pid 19820 only, TTS/analytics/breadcrumb lines, book
+  titles and authors removed (the three library-dump lines, which list every title in the
+  library, were dropped whole).
+
+Screenshots are cropped to drop the reader header, which carries the book title and author;
+the page text is a public-domain Gutenberg edition.

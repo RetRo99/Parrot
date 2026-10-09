@@ -150,10 +150,14 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
 - Tap a word during narration, dismiss, tap another immediately.
 - Rotate the device and re-enter the reader while reading; count events per start.
 - Sleep timer expiry in foreground and with the screen locked.
-- The Listen button not opening the sheet: seen twice in the investigation and again
-  throughout run 2b's device attempt, where it was separated from tap timing (control row
-  verified visible, Search opens on the same gesture). Needs a human finger to confirm it
-  is not a synthetic-input artifact. Blocks every device check that needs the sheet.
+- The Listen button opening the sheet: **settled on the device, 2026-10-09, no longer a
+  blocker.** All three routes work on the Samsung — a short tap shows the compact
+  now-playing card and starts no audio, a second short tap dismisses it, a long press
+  (`input swipe X Y X Y 800`) opens the full Listening sheet first try, and a tap on the
+  card opens it too. The earlier "Listen does nothing" was a synthetic-input artefact after
+  all: the control row takes about 0.9 s to finish expanding, and a tap sent ~300 ms after
+  the reveal (run 2b's timing) lands before the button has its hitbox and is swallowed.
+  Reveal, wait ~0.9 s, then act. Still worth one human-finger pass, but nothing is blocked.
 - Cold first Kokoro start timed against the 30 second start deadline (F15).
 
 ## Decisions for the owner
