@@ -6,6 +6,7 @@ import com.retro99.analytics.api.ReaderAnalyticsEvent
 import com.retro99.reader.ui.di.ReaderScope
 import com.retro99.reader.ui.navigator.TtsPlaybackOperation
 import org.koin.core.annotation.Scope
+import org.koin.core.annotation.Scoped
 
 /**
  * The outcomes of a playback attempt that have already been reported.
@@ -19,6 +20,7 @@ import org.koin.core.annotation.Scope
  * Reader screens live on the main thread, so this is not synchronised.
  */
 @Scope(ReaderScope::class)
+@Scoped
 class TtsPlaybackOperationReports {
 
     private val reported = ArrayDeque<String>()
