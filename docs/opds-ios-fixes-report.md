@@ -216,6 +216,32 @@ question of what a user should see — a catalogue that is listed but cannot be 
 is hidden, or one the app offers to re-add over https — is the product decision, not this one
 line.
 
+## Verification
+
+Tests of every module touched, on both hosts, all passing and none skipped:
+
+| Module | Android host | iOS simulator |
+|---|---|---|
+| `lib/opds/implementation` | 215/215 | 217/217 |
+| `lib/server-opds` | 79/79 | 79/79 |
+| `feature/catalogue/ui` | 141/141 | 139/139 |
+
+The iOS count is two higher in `lib/opds/implementation` because the two new tests are
+iOS-only; the Android count is two higher in `feature/catalogue/ui` because of its
+`androidHostTest`-only tests.
+
+```bash
+./gradlew --max-workers=2 :androidApp:assembleDebug \
+  :composeApp:linkDebugFrameworkIosSimulatorArm64
+cd iosApp && xcodebuild -workspace iosApp.xcworkspace -scheme iosApp -configuration Debug \
+  -destination 'platform=iOS Simulator,id=45F57B43-B65F-4F73-AAED-034D5B3DA463' \
+  -derivedDataPath /tmp/parrot-dd build
+```
+
+All three succeeded. `-Pkotlin.daemon.jvmargs=-Xmx6g` was passed on the command line and was not
+needed: nothing ran out of memory, and no project configuration was changed. No existing test had
+to be changed, and no test was skipped, ignored or weakened.
+
 ## Known problems left behind
 
 - Four failing tests in `feature/books/ui`, the `composeApp` iOS test link error (FirebaseCore),
