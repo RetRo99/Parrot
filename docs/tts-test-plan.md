@@ -109,10 +109,18 @@ voice and rate the previous run set, not on a System voice at 1.0.
 - `tts_action=settings_change` survives the analytics allow-list, attempted and terminal
   (F27).
 
+- The gap is not a "preparing" state, so the play/pause button is not disabled through it
+  (F26, cause (0), found on the phone after the first fix).
+
 Done 2026-10-09. Five failing gap tests `32a23af4`, fix `b755094d`
 (`TtsReadAloudEngine.isSessionRunning`, the end-of-queue race in `onSentenceCompleted`,
 `resume()` on a player that has run out of audio); failing sanitizer test `12dd5dff`, fix
-`e4597018`. Reader ui host tests 317/317, analytics 75/75. No earlier test was edited.
+`e4597018`; a sixth failing gap test `805fef76` and fix `99ad689e` after the device pass
+showed the mid-gap pause could not be pressed at all. Reader ui host tests 318/318,
+analytics 75/75. No earlier test was edited. Device pass on the Samsung SM-S921B:
+`docs/manual-qa-evidence/2026-10-09/tts-run2c/` — mid-gap speed change, mid-gap pause,
+chapter read to its end after a mid-gap change, and the double-tap of case 160, all passed;
+no `failed` outcome in the run.
 
 ### Run 3: pure logic
 
@@ -158,6 +166,11 @@ Needs the manifest address to be injectable; tests run against a local server.
 - Logout while reading: behaviour per product decision 4 (QA-0049).
 - After Stop listening, the last sentence's highlight stays on the page (seen in run 2a, not yet a finding).
 - A player "ended" callback arriving after a stop starts nothing (F25, found in run 2b).
+- The chapter on screen and the chapter being narrated can be different ones: the sentence
+  highlight then navigates across the spine boundary, the locator href changes, and the
+  locator collector stops narration mid-chapter with no event. Seen in run 2b's step 5 and
+  again in run 2c (21:19:51, `docs/manual-qa-evidence/2026-10-09/tts-run2c/NOTES.md`
+  §"Recorded, not investigated"). Not filed as a finding yet.
 
 ### Run 6: manual device pass
 
@@ -180,7 +193,9 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
   the reveal (run 2b's timing) lands before the button has its hitbox and is swallowed.
   Reveal, wait ~0.9 s, then act. Still worth one human-finger pass, but nothing is blocked.
 - Cold first Kokoro start timed against the 30 second start deadline (F15).
-- Double-tap a sentence to start, and to jump while playing (manual QA case 160).
+- Double-tap a sentence to start, and to jump while playing (manual QA case 160). **Done
+  in run 2c on the Samsung, 2026-10-09: both passed, one try each**
+  (`docs/manual-qa-evidence/2026-10-09/tts-run2c/`). Still worth a human-finger pass.
 
 ## Decisions for the owner
 
