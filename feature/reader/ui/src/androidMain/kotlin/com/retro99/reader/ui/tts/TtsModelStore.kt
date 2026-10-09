@@ -3,7 +3,11 @@ package com.retro99.reader.ui.tts
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.ReaderAnalyticsEvent
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -14,6 +18,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.zip.ZipInputStream
 
 /** Opens a connection for an address; production applies the host-trust rules. */
@@ -42,7 +47,19 @@ internal class TtsModelStore(
     private val hardLink: TtsHardLink,
     private val logInfo: (String) -> Unit,
     private val logWarning: (String, Throwable?) -> Unit,
+    private val manifestFetchTimeoutMs: Long = MANIFEST_FETCH_TIMEOUT_MS,
 ) {
+
+    /**
+     * Manifest fetches live here rather than in the caller's job: the fetch itself is a
+     * blocking read, so the only way to release the caller on the deadline is to let the
+     * read finish on its own thread while nobody is waiting for it.
+     */
+    private val manifestFetchScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val manifestFetchLock = Any()
+
+    private var manifestFetchInFlight: ManifestFetch? = null
 
     fun isKokoroModelDownloaded(): Boolean =
         activeModelFiles(KOKORO_MODEL_ID, ::kokoroModelFiles, ::isComplete) != null
@@ -81,12 +98,42 @@ internal class TtsModelStore(
                 Long.MAX_VALUE
             }
             if (cacheAgeMs >= MANIFEST_REFRESH_INTERVAL_MS) {
-                withTimeoutOrNull(MANIFEST_FETCH_TIMEOUT_MS) {
-                    fetchManifest()
-                }
+                fetchManifestWithinDeadline()
             }
         }
     }
+
+    /**
+     * Waits at most [manifestFetchTimeoutMs] for a manifest, then gives up on it and
+     * leaves the caller with the cached one. A fetch that was given up on finishes on
+     * [manifestFetchScope] but is marked abandoned, so its answer is never written to the
+     * cache behind the caller's back; one fetch at a time serves every waiter.
+     */
+    private suspend fun fetchManifestWithinDeadline(): TtsModelManifest? {
+        val fetch = synchronized(manifestFetchLock) {
+            manifestFetchInFlight?.takeIf { pending -> pending.deferred.isActive }
+                ?: newManifestFetch().also { started -> manifestFetchInFlight = started }
+        }
+        val manifest = withTimeoutOrNull(manifestFetchTimeoutMs) { fetch.deferred.await() }
+        if (manifest == null) {
+            fetch.abandoned.set(true)
+            logWarning("Manifest fetch gave up after ${manifestFetchTimeoutMs}ms", null)
+        }
+        return manifest
+    }
+
+    private fun newManifestFetch(): ManifestFetch {
+        val abandoned = AtomicBoolean(false)
+        return ManifestFetch(
+            deferred = manifestFetchScope.async { fetchManifest(isAbandoned = abandoned::get) },
+            abandoned = abandoned,
+        )
+    }
+
+    private class ManifestFetch(
+        val deferred: Deferred<TtsModelManifest?>,
+        val abandoned: AtomicBoolean,
+    )
 
     suspend fun ensureKokoroModel(
         onProgress: ((TtsPreparationProgress) -> Unit)? = null,
@@ -577,9 +624,20 @@ internal class TtsModelStore(
         return null
     }
 
-    private fun fetchManifest(): TtsModelManifest? {
+    /**
+     * The manifest is a few kilobytes, so it gets its own short connect and read timeouts
+     * instead of the large model files' thirty and sixty seconds: a host that cannot
+     * deliver it promptly is of no use to the voice list, which falls back to the cache.
+     *
+     * [isAbandoned] is set once the caller has stopped waiting; from then on the answer is
+     * dropped rather than written over a cache the caller is already reading.
+     */
+    private fun fetchManifest(isAbandoned: () -> Boolean = { false }): TtsModelManifest? {
         val connection = try {
-            openConnection(manifestUrl) {}
+            openConnection(manifestUrl) {
+                connectTimeout = MANIFEST_CONNECT_TIMEOUT_MS
+                readTimeout = MANIFEST_READ_TIMEOUT_MS
+            }
         } catch (error: IOException) {
             logWarning("Manifest fetch failed", error)
             return cachedManifest()
@@ -593,6 +651,10 @@ internal class TtsModelStore(
             val manifest = TtsModelManifest.parse(body)
             if (manifest == null) {
                 logWarning("Manifest could not be parsed", null)
+                return cachedManifest()
+            }
+            if (isAbandoned()) {
+                logWarning("Manifest arrived after the deadline, dropping it", null)
                 return cachedManifest()
             }
             manifestInMemory = manifest
@@ -717,6 +779,8 @@ internal class TtsModelStore(
         const val MAX_DOWNLOAD_ATTEMPTS = 3
         private const val RETRY_BACKOFF_MS = 1_500L
         const val MANIFEST_FETCH_TIMEOUT_MS = 5_000L
+        private const val MANIFEST_CONNECT_TIMEOUT_MS = 10_000
+        private const val MANIFEST_READ_TIMEOUT_MS = 10_000
         private const val MANIFEST_REFRESH_INTERVAL_MS = 24L * 60L * 60L * 1000L
         private const val BUFFER_SIZE = 1 shl 16
         private const val DISK_MARGIN_BYTES = 64L * 1024L * 1024L

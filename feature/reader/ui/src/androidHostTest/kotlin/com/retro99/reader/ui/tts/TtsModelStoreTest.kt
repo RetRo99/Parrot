@@ -243,6 +243,26 @@ class TtsModelStoreTest {
         assertEquals(VERSION_2, store.cachedManifest()?.model(MODEL_ID)?.version)
     }
 
+    @Test
+    fun `an answer that arrives after the deadline does not replace the cached manifest`() =
+        runTest {
+            // Given a host that answers later than the caller is willing to wait
+            seedStaleCachedManifest(VERSION_1)
+            publishVersion(VERSION_2, modelBytes = MODEL_V2)
+            server.manifestDelayMs = 1_500L
+            val store = newStore(manifestFetchTimeoutMs = 400L)
+
+            // When
+            store.refreshManifestIfStale()
+            val versionOnReturn = store.cachedManifest()?.model(MODEL_ID)?.version
+
+            // Then the caller keeps the cached manifest, and the late answer is dropped
+            assertEquals(VERSION_1, versionOnReturn)
+            Thread.sleep(2_500L)
+            assertEquals(VERSION_1, store.cachedManifest()?.model(MODEL_ID)?.version)
+            assertEquals(VERSION_1, newStore().cachedManifest()?.model(MODEL_ID)?.version)
+        }
+
     // endregion
 
     // region harness
@@ -273,6 +293,7 @@ class TtsModelStoreTest {
 
     private fun newStore(
         manifestUrl: String = server.manifestAddress,
+        manifestFetchTimeoutMs: Long = TtsModelStore.MANIFEST_FETCH_TIMEOUT_MS,
     ): TtsModelStore = TtsModelStore(
         rootDirectory = root,
         manifestUrl = manifestUrl,
@@ -285,6 +306,7 @@ class TtsModelStoreTest {
         },
         logInfo = {},
         logWarning = { _, _ -> },
+        manifestFetchTimeoutMs = manifestFetchTimeoutMs,
     )
 
     /**
