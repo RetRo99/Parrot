@@ -64,7 +64,7 @@ Modules, for finding a class:
 | Never extension-only acceptance | opds `AcquisitionClassifierTest › missing_type_is_not_inferred_from_extension`; epub `EpubFileCheckDiskTest › a staged file is checked by its bytes and not by its name` | Covered |
 | DTD, XXE, entity expansion | opds `Opds1ParserTest › internal_dtd_document_is_rejected_at_DOCDECL_before_entities_expand`, `…external_dtd_document_is_rejected_like_internal_one`, `…deep_nested_entity_document_is_rejected_even_under_byte_budget`, `…walker_DOCDECL_stop_is_reachable…`; `OpdsMediaTypeParserTest › doctype_is_rejected_at_detection_before_any_content_is_read` | Covered |
 | Nesting and size limits | opds `FeedLimitsStressTest` (8 tests: each limit at the limit and one past it, both formats, all limits at once) | Added in Phase 5. Before, only "over the limit" was tested, and only for some formats. |
-| Unsafe links | opds `TransportSafetyTest › unsafe_targets_are_rejected_before_engine_access`, `…redirect_targets_get_the_same_safety_checks`; `TransportFailureStressTest › account_details_written_into_a_link_are_refused_before_any_request` | Covered |
+| Unsafe links | opds `TransportSafetyTest › unsafe_targets_are_rejected_before_engine_access`, `…redirect_targets_get_the_same_safety_checks`; `TransportFailureStressTest › account_details_written_into_a_link_are_refused_before_any_request`, `…an_address_with_no_host_or_an_unclosed_bracket_is_refused…`; server-opds `CatalogueAddressValidationTest`, `CatalogueUnaskedLocalNetworkTest` (5) | Covered; the last three added in Phase 5 with fixes |
 | Bounded data images | server-api `CatalogueImageBytesTest` (7 tests); server-opds `CatalogueInlineThumbnailStressTest` (5 tests); opds `FeedLimitsStressTest › thousands_of_inline_thumbnails…` | Covered; the stress cases added in Phase 5 |
 
 ## 2. HTTP, adapter and registry tests (§8)
@@ -199,3 +199,7 @@ Each was fixed in this run, with the test that found it:
    until the next page was opened (app `CatalogueSignedInEndToEndTest`, step 12).
 7. A preset's search address and "list entries are books" hint stayed attached after its
    address was changed to another server (server-impl `CataloguePresetHintsTest`).
+8. An address with no host (`https://`) was asked as `https://localhost/`, and one with an
+   unclosed bracket was read past it (opds `TransportFailureStressTest ›
+   an_address_with_no_host_or_an_unclosed_bracket_is_refused…`, server-opds
+   `CatalogueAddressValidationTest`).
