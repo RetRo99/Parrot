@@ -11,6 +11,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
@@ -18,6 +20,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.zip.ZipInputStream
 
@@ -75,6 +78,9 @@ internal class TtsModelStore(
 
     private val manifestFetchLock = Any()
 
+    /** One install at a time per pack, and no clean-up while one holds its pack. */
+    private val installLocks = ConcurrentHashMap<String, Mutex>()
+
     private var manifestFetchInFlight: ManifestFetch? = null
 
     fun isKokoroModelDownloaded(): Boolean =
@@ -116,8 +122,79 @@ internal class TtsModelStore(
             if (cacheAgeMs >= MANIFEST_REFRESH_INTERVAL_MS) {
                 fetchManifestWithinDeadline()
             }
+            cleanUpLeftovers()
         }
     }
+
+    /**
+     * Clears what abandoned downloads left behind, for every pack whose install is not
+     * running: a version directory that is neither the active one, nor a complete one the
+     * update logic keeps, nor the version the manifest is on, is removed whole; the
+     * current version keeps its partial files so a retry resumes, unless nothing has been
+     * written to them for [PARTIAL_RETENTION_MS].
+     *
+     * An install holds its pack's lock for its whole run, so this can never delete under
+     * one; a pack whose lock is taken is skipped and swept the next time.
+     */
+    private fun cleanUpLeftovers() {
+        val manifest = cachedManifest()
+        packs.forEach { pack ->
+            val lock = installLock(pack.modelId)
+            if (!lock.tryLock()) {
+                logInfo("Not clearing ${pack.modelId} leftovers: an install is running")
+                return@forEach
+            }
+            try {
+                cleanUpLeftovers(
+                    modelId = pack.modelId,
+                    currentVersion = manifest?.trustedModel(pack.modelId)?.version,
+                    isVersionComplete = pack.isVersionComplete,
+                )
+            } finally {
+                lock.unlock()
+            }
+        }
+    }
+
+    /** See [cleanUpLeftovers]; the caller must hold [modelId]'s install lock. */
+    private fun cleanUpLeftovers(
+        modelId: String,
+        currentVersion: String?,
+        isVersionComplete: (File) -> Boolean,
+    ) {
+        val root = trustedModelRoot(modelId) ?: return
+        val activeVersion = activeVersion(modelId)
+        root.listFiles()?.forEach { child ->
+            if (!child.isDirectory || !child.name.isSafeVersionName()) return@forEach
+            when {
+                // The active version and a complete one the update logic keeps: never touched.
+                child.name == activeVersion || isVersionComplete(child) -> Unit
+
+                child.name == currentVersion -> deleteForgottenPartials(child)
+
+                else -> if (!child.deleteRecursivelyNoFollow()) {
+                    logWarning("Could not clear $modelId leftovers in ${child.name}", null)
+                } else {
+                    logInfo("Cleared $modelId leftovers in ${child.name}")
+                }
+            }
+        }
+    }
+
+    /** Drops partial files of the current version that nothing has written to for a week. */
+    private fun deleteForgottenPartials(versionDir: File) {
+        versionDir.walkTopDown()
+            .filter { child -> child.isFile && child.name.endsWith(PARTIAL_SUFFIX) }
+            .filter { partial -> now() - partial.lastModified() > PARTIAL_RETENTION_MS }
+            .forEach { partial ->
+                if (partial.delete()) {
+                    logInfo("Cleared the forgotten partial ${partial.name}")
+                }
+            }
+    }
+
+    private fun installLock(modelId: String): Mutex =
+        installLocks.getOrPut(modelId) { Mutex() }
 
     /**
      * Waits at most [manifestFetchTimeoutMs] for a manifest, then gives up on it and
@@ -237,22 +314,31 @@ internal class TtsModelStore(
                     return@withContext activeFiles
                 }
 
-                val previousVersion = activeVersion(modelId)
-                if (!installVersion(entry, modelId, onProgress)) {
-                    return@withContext null
+                // One install at a time per pack, and no clean-up or delete in the middle
+                // of it: both would be working on the directory being written.
+                installLock(modelId).withLock {
+                    cleanUpLeftovers(
+                        modelId = modelId,
+                        currentVersion = entry.version,
+                        isVersionComplete = { dir -> isComplete(files(dir)) },
+                    )
+                    val previousVersion = activeVersion(modelId)
+                    if (!installVersion(entry, modelId, onProgress)) {
+                        return@withContext null
+                    }
+                    // Only move .active to a version the engine can load, so a bad
+                    // manifest never replaces a working model.
+                    val modelFiles = files(versionDir(modelId, entry.version))
+                    if (!isComplete(modelFiles)) {
+                        throw IOException("Installed $modelId ${entry.version} is incomplete")
+                    }
+                    writeActiveVersion(modelId, entry.version)
+                    deleteOutdatedVersions(
+                        modelId = modelId,
+                        keepVersions = listOfNotNull(previousVersion, entry.version),
+                    )
+                    modelFiles
                 }
-                // Only move .active to a version the engine can load, so a bad
-                // manifest never replaces a working model.
-                val modelFiles = files(versionDir(modelId, entry.version))
-                if (!isComplete(modelFiles)) {
-                    throw IOException("Installed $modelId ${entry.version} is incomplete")
-                }
-                writeActiveVersion(modelId, entry.version)
-                deleteOutdatedVersions(
-                    modelId = modelId,
-                    keepVersions = listOfNotNull(previousVersion, entry.version),
-                )
-                modelFiles
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
@@ -797,6 +883,8 @@ internal class TtsModelStore(
         const val MANIFEST_FETCH_TIMEOUT_MS = 5_000L
         private const val MANIFEST_CONNECT_TIMEOUT_MS = 10_000
         private const val MANIFEST_READ_TIMEOUT_MS = 10_000
+        private const val PARTIAL_SUFFIX = ".part"
+        private const val PARTIAL_RETENTION_MS = 7L * 24L * 60L * 60L * 1_000L
         private const val MANIFEST_REFRESH_INTERVAL_MS = 24L * 60L * 60L * 1000L
         private const val BUFFER_SIZE = 1 shl 16
         private const val DISK_MARGIN_BYTES = 64L * 1024L * 1024L
