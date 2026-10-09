@@ -76,7 +76,13 @@ fun bookBlocked(publications: List<CataloguePublication>): BookBlocked? {
 }
 
 /** Decimal MB, one decimal place, as in the catalogue boards. */
-fun catalogueMegabytes(bytes: Long): String {
+fun catalogueSize(bytes: Long): String {
     val tenths = ((bytes.coerceAtLeast(0) + 50_000) / 100_000)
     return "${tenths / 10}.${tenths % 10} MB"
 }
+
+/**
+ * The "so far" half of "0.0 of 24.8 MB". Only the total carries the unit, so this half is
+ * written in whatever unit [total] is in.
+ */
+fun catalogueSizeSoFar(bytes: Long, total: Long): String = catalogueSize(bytes).removeSuffix(" MB")

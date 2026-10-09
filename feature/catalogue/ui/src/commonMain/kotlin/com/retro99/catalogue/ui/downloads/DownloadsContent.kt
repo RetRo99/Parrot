@@ -23,7 +23,8 @@ import com.retro99.base.ui.compose.*
 import com.retro99.catalogue.domain.*
 import com.retro99.catalogue.ui.add.catalogueDeviceName
 import com.retro99.catalogue.ui.cover.CatalogueCover
-import com.retro99.catalogue.ui.publication.catalogueMegabytes
+import com.retro99.catalogue.ui.publication.catalogueSize
+import com.retro99.catalogue.ui.publication.catalogueSizeSoFar
 import com.retro99.server.api.CatalogueImageModel
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
@@ -35,8 +36,8 @@ fun downloadFailureText(row: CatalogueAcquisition, deviceName: String = catalogu
     val unknown = stringResource(StringRes.catalogue_file_size_unknown)
     return when (row.state.failureReason) {
         AcquisitionFailureReason.Connection -> stringResource(StringRes.catalogue_failure_connection)
-        AcquisitionFailureReason.TooLarge -> stringResource(StringRes.catalogue_failure_too_large, row.expectedSizeBytes?.let(::failureMegabytes) ?: unknown, failureMegabytes(limit))
-        AcquisitionFailureReason.Storage -> stringResource(StringRes.catalogue_failure_storage, deviceName, row.neededBytes?.let(::failureMegabytes) ?: unknown)
+        AcquisitionFailureReason.TooLarge -> stringResource(StringRes.catalogue_failure_too_large, row.expectedSizeBytes?.let(::failureSize) ?: unknown, failureSize(limit))
+        AcquisitionFailureReason.Storage -> stringResource(StringRes.catalogue_failure_storage, deviceName, row.neededBytes?.let(::failureSize) ?: unknown)
         AcquisitionFailureReason.Invalid -> stringResource(StringRes.catalogue_failure_invalid)
         AcquisitionFailureReason.Protected -> stringResource(StringRes.catalogue_failure_protected)
         AcquisitionFailureReason.Refused -> stringResource(StringRes.catalogue_failure_refused, row.catalogueName)
@@ -45,7 +46,8 @@ fun downloadFailureText(row: CatalogueAcquisition, deviceName: String = catalogu
     }
 }
 
-private fun failureMegabytes(bytes: Long) = catalogueMegabytes(bytes).replace(".0 MB", " MB")
+/** A failure line reads "20 MB", not "20.0 MB": the exact size is not the point there. */
+private fun failureSize(bytes: Long) = catalogueSize(bytes).replace(".0 MB", " MB")
 
 @Composable
 fun CatalogueDownloadsContent(rows: List<DownloadRow>, onBack: () -> Unit = {}, onAction: (String) -> Unit = {}, modifier: Modifier = Modifier,
@@ -71,8 +73,8 @@ private fun DownloadCard(row: DownloadRow, onAction: () -> Unit, deviceName: Str
     val total = book.expectedSizeBytes?.takeIf { it > 0 }
     val status = when (book.state) {
         AcquisitionState.Waiting -> stringResource(StringRes.catalogue_state_waiting)
-        AcquisitionState.Downloading -> if (total == null) stringResource(StringRes.catalogue_downloading_so_far, catalogueMegabytes(book.bytesSoFar))
-            else stringResource(StringRes.catalogue_progress_of_size, catalogueMegabytes(book.bytesSoFar).removeSuffix(" MB"), catalogueMegabytes(total))
+        AcquisitionState.Downloading -> if (total == null) stringResource(StringRes.catalogue_downloading_so_far, catalogueSize(book.bytesSoFar))
+            else stringResource(StringRes.catalogue_progress_of_size, catalogueSizeSoFar(book.bytesSoFar, total), catalogueSize(total))
         AcquisitionState.Checking, AcquisitionState.Adding -> stringResource(StringRes.catalogue_state_adding)
         AcquisitionState.Done -> stringResource(StringRes.catalogue_in_library)
         else -> downloadFailureText(book, deviceName, limit)

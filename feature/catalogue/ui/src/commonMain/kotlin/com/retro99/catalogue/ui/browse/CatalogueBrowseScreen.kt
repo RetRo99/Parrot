@@ -106,7 +106,7 @@ import com.retro99.base.ui.compose.EmberTopBar
 import com.retro99.catalogue.ui.add.catalogueDeviceName
 import com.retro99.catalogue.ui.cover.CatalogueCover
 import com.retro99.catalogue.ui.downloads.ListDownloadState
-import com.retro99.catalogue.ui.publication.catalogueMegabytes
+import com.retro99.catalogue.ui.publication.catalogueSize
 import com.retro99.base.ui.compose.EmberProgress
 import com.retro99.catalogue.ui.sources.CataloguePasswordField
 import com.retro99.translations.PluralRes
@@ -698,7 +698,7 @@ private fun BookRow(book: CatalogueBookRow, actions: CatalogueBrowseActions) {
         ListDownloadState.Adding -> stringResource(StringRes.catalogue_state_adding)
         ListDownloadState.InLibrary -> inLibrary
         is ListDownloadState.Downloading -> download.total?.takeIf { it > 0 }?.let { "${(download.bytes * 100 / it).coerceIn(0, 100)}%" }
-            ?: stringResource(StringRes.catalogue_downloading_so_far, catalogueMegabytes(download.bytes))
+            ?: stringResource(StringRes.catalogue_downloading_so_far, catalogueSize(download.bytes))
     }
     val label = listOfNotNull(book.title, author, telling, status?.removePrefix("✓")?.trim()).joinToString(", ")
     Column(Modifier.fillMaxWidth().padding(horizontal = Side)) {

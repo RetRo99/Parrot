@@ -29,7 +29,7 @@ fun CatalogueFileSheet(state: CatalogueBookState, actions: CatalogueBookActions)
     val grouped = state.groups.size > 1
     EmberBottomSheet(onDismiss = actions.onCloseFiles, footer = {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(top = 14.dp, bottom = 20.dp)) {
-            val size = state.selectedFile?.size?.let(::catalogueMegabytes)
+            val size = state.selectedFile?.size?.let(::catalogueSize)
             BookButton(if (size == null) stringResource(StringRes.catalogue_download) else stringResource(StringRes.catalogue_download_with_size, size), actions.onDownload, enabled = state.selectedFile?.openable == true)
         }
     }) {
@@ -54,7 +54,7 @@ fun CatalogueFileSheet(state: CatalogueBookState, actions: CatalogueBookActions)
 private fun FileOption(file: BookFile, selected: Boolean, onSelect: () -> Unit) {
     val eink = Ember.style.isEink
     val title = file.label ?: stringResource(StringRes.catalogue_file_fallback_label, file.ordinal)
-    val size = file.size?.let(::catalogueMegabytes) ?: stringResource(StringRes.catalogue_file_size_unknown)
+    val size = file.size?.let(::catalogueSize) ?: stringResource(StringRes.catalogue_file_size_unknown)
     val a11y = stringResource(when {
         !file.openable -> StringRes.catalogue_a11y_file_option_unavailable
         file.best -> StringRes.catalogue_a11y_file_option_best
