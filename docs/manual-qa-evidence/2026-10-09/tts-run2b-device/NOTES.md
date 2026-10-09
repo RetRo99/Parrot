@@ -38,3 +38,12 @@ One line per check, written as the run went.
 - **Voice and rate when the sheet first opened: System voice, "On this phone", Rate 1×,
   Pitch Normal.** The sheet also says "This book has no narration — reading with your
   device voice."
+- **Second short tap on Listen → the card goes away** (yes): the dump after it has no
+  "Voice · sentence 1 of 0" node and the button is labelled *Listen* again, not *Audio*.
+- **Long press on Listen → the full Listening sheet opens, first try, one try needed.**
+  `input swipe 664 2080 664 2080 800` after a reveal + 0.9 s settle —
+  `B4-long-press-opens-sheet.png`. So all three routes in the code work on the phone; only
+  the timing of the synthetic tap was ever wrong.
+- Sheet control centres used for the rest of the run (from the dump, sheet fully open):
+  Play/Pause (540, 1110) · Rate − (189, 1643) · Rate + (398, 1643) · Change voice
+  (915, 1337) · Close (954, 639) · Stop listening (188, 2206).
