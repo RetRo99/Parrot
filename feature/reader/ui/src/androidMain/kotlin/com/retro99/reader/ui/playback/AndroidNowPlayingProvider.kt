@@ -16,6 +16,7 @@ import org.koin.core.annotation.Single
 @Single(binds = [NowPlayingProvider::class])
 class AndroidNowPlayingProvider(
     private val mediaPlaybackController: MediaPlaybackController,
+    private val readAloud: ReadAloudPlayback,
 ) : NowPlayingProvider {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
