@@ -18,7 +18,7 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 
 | Run | What | Findings | Model | Status |
 | --- | --- | --- | --- | --- |
-| 1 | Neural voice crash: callback shape, host guard test, device check | F22 | Opus | next |
+| 1 | Neural voice crash: callback shape, host guard test, device check | F22 | Opus | done |
 | 2 | Read-aloud engine test harness; failures after start; restart on settings change | F01, F02, F06, F07, F16, QA-0095 | Opus | |
 | 3 | Small pure-logic gaps | F03, F08, F09, F12, F13, F17, F18, F21 | Sonnet | |
 | 4 | Voice pack download and delete | F04, F05, F19, F20 | Opus | |
@@ -40,6 +40,11 @@ Kokoro check. Run 2 is second because the harness it builds is reused by runs 3 
 - Device: Kokoro preview and Kokoro read-aloud both produce audio; stop during
   synthesis cancels within a second and the app stays alive.
 - Supertonic on device needs the owner to accept the model terms first.
+
+Done 2026-10-09. The guard test was committed failing (`2cc762a4`), the fix is
+`098a8592`, and a narrow R8 keep rule for the callback is `b2887d29`. Device pass on the
+Samsung SM-S921B: `docs/manual-qa-evidence/2026-10-09/tts-f22-fix/`. Supertonic was not
+run on the device, as planned; it is covered by the shared host test only.
 
 ### Run 2: engine (new `TtsReadAloudEngineTest`, `AndroidTtsControllerTest`)
 

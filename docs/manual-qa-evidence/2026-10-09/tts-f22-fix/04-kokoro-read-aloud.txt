@@ -1,0 +1,74 @@
+10-09 17:51:25.301 26487 26550 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:25.302 26487 26550 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=20
+10-09 17:51:26.370 26487 26550 I SherpaOnnxTts: Kokoro synthesize done in 1067ms, samples=23716, file=47476 bytes
+10-09 17:51:26.513 26487 26550 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:26.514 26487 26550 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=61
+10-09 17:51:28.887 26487 26550 I SherpaOnnxTts: Kokoro synthesize done in 2373ms, samples=67267, file=134578 bytes
+10-09 17:51:28.900 26487 26550 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:28.900 26487 26550 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=8
+10-09 17:51:29.658 26487 26550 I SherpaOnnxTts: Kokoro synthesize done in 758ms, samples=13849, file=27742 bytes
+10-09 17:51:29.659 26487 26549 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:29.659 26487 26549 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=22
+10-09 17:51:30.869 26487 26549 I SherpaOnnxTts: Kokoro synthesize done in 1210ms, samples=30048, file=60140 bytes
+10-09 17:51:30.870 26487 26549 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:30.870 26487 26549 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=36
+10-09 17:51:32.338 26487 26549 I SherpaOnnxTts: Kokoro synthesize done in 1468ms, samples=36164, file=72372 bytes
+10-09 17:51:32.338 26487 26550 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:32.338 26487 26550 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=12
+10-09 17:51:33.283 26487 26550 I SherpaOnnxTts: Kokoro synthesize done in 945ms, samples=19509, file=39062 bytes
+10-09 17:51:33.283 26487 26550 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:33.283 26487 26550 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=153
+10-09 17:51:39.841 26487 26550 I SherpaOnnxTts: Kokoro synthesize done in 6558ms, samples=188151, file=376346 bytes
+10-09 17:51:39.855 26487 26550 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:39.855 26487 26550 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=13
+10-09 17:51:40.779 26487 26550 I SherpaOnnxTts: Kokoro synthesize done in 924ms, samples=16288, file=32620 bytes
+10-09 17:51:40.780 26487 26556 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:40.780 26487 26556 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=14
+10-09 17:51:41.829 26487 26556 I SherpaOnnxTts: Kokoro synthesize done in 1049ms, samples=17284, file=34612 bytes
+10-09 17:51:41.830 26487 26550 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:41.830 26487 26550 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=83
+10-09 17:51:45.310 26487 26550 I SherpaOnnxTts: Kokoro synthesize done in 3480ms, samples=82084, file=164212 bytes
+10-09 17:51:45.311 26487 28871 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:45.311 26487 28871 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=107
+10-09 17:51:50.034 26487 28871 I SherpaOnnxTts: Kokoro synthesize done in 4723ms, samples=109470, file=218984 bytes
+10-09 17:51:50.035 26487 26550 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:50.035 26487 26550 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=47
+10-09 17:51:52.743 26487 26550 I SherpaOnnxTts: Kokoro synthesize done in 2708ms, samples=55546, file=111136 bytes
+10-09 17:51:52.744 26487 26556 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:52.744 26487 26556 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=151
+10-09 17:51:59.206 26487 26556 I SherpaOnnxTts: Kokoro synthesize done in 6462ms, samples=166500, file=333044 bytes
+10-09 17:51:59.207 26487 26550 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:51:59.207 26487 26550 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=40
+10-09 17:52:01.304 26487 26550 I SherpaOnnxTts: Kokoro synthesize done in 2096ms, samples=48587, file=97218 bytes
+10-09 17:52:01.304 26487 26552 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:01.304 26487 26552 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=72
+10-09 17:52:04.614 26487 26552 I SherpaOnnxTts: Kokoro synthesize done in 3309ms, samples=77092, file=154228 bytes
+10-09 17:52:04.614 26487 26552 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:04.614 26487 26552 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=43
+10-09 17:52:07.120 26487 26552 I SherpaOnnxTts: Kokoro synthesize done in 2505ms, samples=52128, file=104300 bytes
+10-09 17:52:07.120 26487 26552 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:07.120 26487 26552 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=86
+10-09 17:52:11.235 26487 26552 I SherpaOnnxTts: Kokoro synthesize done in 4115ms, samples=92755, file=185554 bytes
+10-09 17:52:11.236 26487 26552 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:11.236 26487 26552 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=149
+10-09 17:52:18.201 26487 26552 I SherpaOnnxTts: Kokoro synthesize done in 6965ms, samples=175382, file=350808 bytes
+10-09 17:52:18.227 26487 26552 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:18.227 26487 26552 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=16
+10-09 17:52:19.529 26487 26552 I SherpaOnnxTts: Kokoro synthesize done in 1302ms, samples=20753, file=41550 bytes
+10-09 17:52:19.529 26487 26552 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:19.530 26487 26552 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=16
+10-09 17:52:20.763 26487 26552 I SherpaOnnxTts: Kokoro synthesize done in 1233ms, samples=21044, file=42132 bytes
+10-09 17:52:20.764 26487 26552 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:20.764 26487 26552 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=101
+10-09 17:52:25.264 26487 26552 I SherpaOnnxTts: Kokoro synthesize done in 4500ms, samples=98746, file=197536 bytes
+10-09 17:52:25.264 26487 26558 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:25.264 26487 26558 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=92
+10-09 17:52:30.095 26487 26558 I SherpaOnnxTts: Kokoro synthesize done in 4830ms, samples=99832, file=199708 bytes
+10-09 17:52:30.096 26487 26535 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:30.096 26487 26535 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=126
+10-09 17:52:36.514 26487 26535 I SherpaOnnxTts: Kokoro synthesize done in 6417ms, samples=134076, file=268196 bytes
+10-09 17:52:36.532 26487 26535 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:36.532 26487 26535 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=24
+10-09 17:52:38.332 26487 26535 I SherpaOnnxTts: Kokoro synthesize done in 1800ms, samples=26919, file=53882 bytes
+10-09 17:52:38.333 26487 26535 I TtsRouter: synthesize voice=kokoro:1 engine=KOKORO
+10-09 17:52:38.334 26487 26535 I SherpaOnnxTts: Kokoro synthesize start: sid=1 speed=1.2 chars=165
