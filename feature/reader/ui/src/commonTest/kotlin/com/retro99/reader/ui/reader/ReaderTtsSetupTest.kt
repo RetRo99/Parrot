@@ -1,6 +1,7 @@
 package com.retro99.reader.ui.reader
 
 import com.retro99.reader.ui.model.LocatorState
+import com.retro99.reader.ui.navigator.FinishedTtsSentence
 import com.retro99.reader.ui.navigator.TtsController
 import com.retro99.reader.ui.navigator.TtsPlaybackOperation
 import com.retro99.reader.ui.navigator.TtsPreviewState
@@ -15,9 +16,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -41,6 +45,120 @@ class ReaderTtsSetupTest {
         assertEquals(listOf(KOKORO_VOICE.id), recorded.preparedVoiceIds)
         assertEquals(0, recorded.savedVoiceIds.size)
     }
+
+    @Test
+    fun `a book with recorded narration keeps it and still offers the device voice`() = runTest {
+        val controller = FakeTtsController(hasText = true)
+        val recorded = RecordedSetup()
+        val setup = setup(controller, recorded, savedVoiceId = KOKORO_VOICE.id)
+
+        setup.run(keepNarrationActive = true)
+
+        assertFalse(recorded.didTakeOverNarration, "narration must keep the play button")
+        assertEquals(0, recorded.sentencePlaybackEnables)
+        assertEquals(listOf(SYSTEM_VOICE, KOKORO_VOICE), recorded.voices)
+        assertEquals(KOKORO_VOICE.id, recorded.selectedVoiceId)
+        assertTrue(recorded.isReadAloudAvailable, "read-aloud should be available")
+        assertEquals(1, recorded.collectorStarts)
+        // The device voice is offered, so its pack is loaded ahead of the first tap.
+        assertEquals(listOf(KOKORO_VOICE.id), recorded.preparedVoiceIds)
+    }
+
+    // TTS-F23: most Project Gutenberg books open on a cover or a title page.
+
+    @Test
+    fun `a first page with no text still offers the voices and the saved one`() = runTest {
+        val controller = FakeTtsController(hasText = false)
+        val recorded = RecordedSetup()
+        val setup = setup(controller, recorded, savedVoiceId = KOKORO_VOICE.id)
+
+        backgroundScope.launch { setup.run(keepNarrationActive = false) }
+        runCurrent()
+
+        assertEquals(listOf(SYSTEM_VOICE, KOKORO_VOICE), recorded.voices)
+        assertEquals(KOKORO_VOICE.id, recorded.selectedVoiceId)
+        assertEquals(listOf<String?>(KOKORO_VOICE.id), controller.selectedVoiceIds.toList())
+        assertTrue(recorded.didTakeOverNarration, "a play press must reach read-aloud")
+    }
+
+    @Test
+    fun `a locator move into text makes read-aloud available without reopening`() = runTest {
+        val controller = FakeTtsController(hasText = false)
+        val recorded = RecordedSetup()
+        val locators = MutableStateFlow(locatorAt(FIRST_HREF))
+        val setup = setup(controller, recorded, savedVoiceId = null, locators = locators)
+
+        backgroundScope.launch { setup.run(keepNarrationActive = false) }
+        runCurrent()
+        assertFalse(recorded.isReadAloudAvailable, "the title page is not read-aloud's answer")
+
+        controller.hasText = true
+        locators.value = locatorAt("chapter-1.xhtml")
+        runCurrent()
+
+        assertTrue(recorded.isReadAloudAvailable, "read-aloud should be available")
+        assertEquals(1, recorded.sentencePlaybackEnables)
+        assertEquals(1, recorded.collectorStarts)
+    }
+
+    @Test
+    fun `a book with no text anywhere never becomes available and collects once`() = runTest {
+        val controller = FakeTtsController(hasText = false)
+        val recorded = RecordedSetup()
+        val locators = MutableStateFlow(locatorAt(FIRST_HREF))
+        val setup = setup(controller, recorded, savedVoiceId = null, locators = locators)
+
+        backgroundScope.launch { setup.run(keepNarrationActive = false) }
+        runCurrent()
+        locators.value = locatorAt("plate-1.xhtml")
+        runCurrent()
+        locators.value = locatorAt("plate-2.xhtml")
+        runCurrent()
+
+        assertFalse(recorded.isReadAloudAvailable, "no page of this book can be read aloud")
+        assertEquals(0, recorded.sentencePlaybackEnables)
+        assertEquals(1, recorded.collectorStarts)
+    }
+
+    @Test
+    fun `availability turning on late gives one callback per finished sentence`() = runTest {
+        val controller = FakeTtsController(hasText = false)
+        val finished = mutableListOf<FinishedTtsSentence>()
+        val recorded = RecordedSetup(
+            // Stands in for the ViewModel's collectors: the recap capture is fed from here.
+            onStartCollectors = {
+                backgroundScope.launch {
+                    controller.finishedSentences.collect { sentence -> finished += sentence }
+                }
+            },
+        )
+        val locators = MutableStateFlow(locatorAt(FIRST_HREF))
+        val setup = setup(controller, recorded, savedVoiceId = null, locators = locators)
+
+        backgroundScope.launch { setup.run(keepNarrationActive = false) }
+        runCurrent()
+        controller.hasText = true
+        locators.value = locatorAt("chapter-1.xhtml")
+        runCurrent()
+        controller.hasText = false
+        locators.value = locatorAt("plate-1.xhtml")
+        runCurrent()
+        controller.hasText = true
+        locators.value = locatorAt("chapter-2.xhtml")
+        runCurrent()
+
+        controller.finishedSentences.emit(finishedSentence(0))
+        controller.finishedSentences.emit(finishedSentence(1))
+        runCurrent()
+
+        assertEquals(1, recorded.collectorStarts)
+        assertEquals(listOf(0, 1), finished.map { it.sentence.index })
+    }
+
+    private fun finishedSentence(index: Int) = FinishedTtsSentence(
+        chapterHref = "chapter-1.xhtml",
+        sentence = TtsSentence(index = index, elementId = "sentence-$index", text = "Text."),
+    )
 
     private fun setup(
         controller: FakeTtsController,
@@ -82,7 +200,7 @@ internal fun locatorAt(href: String) = LocatorState(
     fragments = null,
 )
 
-internal class RecordedSetup {
+internal class RecordedSetup(private val onStartCollectors: () -> Unit = {}) {
     var voices: List<TtsVoice>? = null
         private set
     var selectedVoiceId: String? = null
@@ -104,7 +222,10 @@ internal class RecordedSetup {
             voices = offered
             selectedVoiceId = selected
         },
-        startCollectors = { collectorStarts++ },
+        startCollectors = {
+            collectorStarts++
+            onStartCollectors()
+        },
         markReadAloudAvailable = { isReadAloudAvailable = true },
         saveSelectedVoice = { readVoiceId, selected ->
             savedVoiceIds += readVoiceId to selected
@@ -133,6 +254,9 @@ internal class FakeTtsController(
     override val isPlaybackStartPending: Flow<Boolean> = flowOf(false)
     override val chapterCompleted: Flow<String> = emptyFlow()
     override val currentSentence = MutableStateFlow<TtsSentence?>(null)
+    override val finishedSentences = MutableSharedFlow<FinishedTtsSentence>(
+        extraBufferCapacity = 8,
+    )
     override val previewState: Flow<TtsPreviewState> = flowOf(TtsPreviewState.IDLE)
     override val voicePreparationState: Flow<TtsVoicePreparationState> =
         flowOf(TtsVoicePreparationState.Idle)
