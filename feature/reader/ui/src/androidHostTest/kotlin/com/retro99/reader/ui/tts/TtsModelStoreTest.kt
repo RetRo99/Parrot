@@ -400,7 +400,49 @@ class TtsModelStoreTest {
 
     // endregion
 
+    // region TTS-F20: deleting a pack while it downloads
+
+    @Test
+    fun `deleting a pack while it downloads ends not installed with nothing running`() = runTest {
+        // Given an install of the pack, served slowly
+        publishVersion(VERSION_1, modelBytes = MODEL_V1)
+        server.throttle(VERSION_1, MODEL_NAME, millisPerBlock = 700L)
+        val store = newStore()
+        val transferStarted = CountDownLatch(1)
+        val install = CoroutineScope(Dispatchers.IO).async {
+            store.ensureModel(MODEL_ID, ::testFiles, ::isComplete, { update ->
+                val downloaded = (update as? TtsPreparationProgress.Downloading)?.downloadedBytes
+                if (downloaded != null && downloaded > 0L) transferStarted.countDown()
+            }, false)
+        }
+        assertTrue(transferStarted.await(20, TimeUnit.SECONDS), "the transfer never started")
+
+        // When the same pack is deleted mid-download
+        assertTrue(install.isActive, "the install was already over, the case proves nothing")
+        val deleted = store.deleteModel(MODEL_ID) { emptyList() }
+        val installOutcome = runCatching { install.await() }
+
+        // Then the pack is cleanly not installed and the install did not report success
+        assertTrue(deleted)
+        assertNull(
+            installOutcome.getOrNull(),
+            "the install reported success after the pack was deleted",
+        )
+        assertNull(store.activeVersion(MODEL_ID))
+        assertNull(store.activeModelFiles(MODEL_ID, ::testFiles, ::isComplete))
+        assertEquals(emptyList<String>(), filesLeftUnderModelRoot())
+    }
+
+    // endregion
+
     // region harness
+
+    private fun filesLeftUnderModelRoot(): List<String> =
+        modelRoot().walkTopDown()
+            .filter { child -> child.isFile }
+            .map { child -> child.toRelativeString(modelRoot()) }
+            .sorted()
+            .toList()
 
     private fun writeCompleteVersion(version: String) {
         val dir = versionDir(version).apply { mkdirs() }
