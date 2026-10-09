@@ -2,6 +2,7 @@ package com.retro99.catalogue.ui.browse
 
 import com.retro99.catalogue.ui.navigation.CatalogueRouteReferences
 import com.retro99.server.api.CatalogueAccessProvider
+import com.retro99.server.api.CatalogueAccessStore
 import com.retro99.server.api.CatalogueAccountEditor
 import com.retro99.server.api.CatalogueRepositoryProvider
 import com.retro99.server.api.CatalogueSourceStatus
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
+import kotlin.time.Clock
 
 /** The catalogue a browser screen shows, while it can be browsed. */
 data class CatalogueBrowseSource(val profileId: String, val name: String, val address: String, val listEntriesAreBooks: Boolean = false) {
@@ -56,6 +58,7 @@ class RegistryCatalogueBrowseGateway(
     @Provided private val repositories: CatalogueRepositoryProvider,
     @Provided private val accountEditor: CatalogueAccountEditor,
     private val references: CatalogueRouteReferences,
+    @Provided private val status: CatalogueAccessStore,
 ) : CatalogueBrowseGateway {
     private val watching = MutableStateFlow(false)
 
@@ -69,7 +72,17 @@ class RegistryCatalogueBrowseGateway(
 
     override suspend fun repository(sourceId: String): ServerCatalogueRepository? = repositories.getRepository(sourceId)
 
-    override suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails) = accountEditor.saveAccount(sourceId, details)
+    /**
+     * Callers save only details the catalogue has just accepted, so the status says so at once.
+     * Otherwise Libraries would go on showing "Sign in needed" until the next page is opened.
+     */
+    override suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails) {
+        val profileId = users.getActiveProfileId()
+        accountEditor.saveAccount(sourceId, details)
+        if (profileId != null && users.getActiveProfileId() == profileId) {
+            status.recordSuccess(profileId, sourceId, details.username, Clock.System.now().toEpochMilliseconds())
+        }
+    }
 
     override suspend fun checkAccount(sourceId: String, target: CatalogueTarget?, details: OpdsAccountDetails): AppResult<CatalogueDocument> =
         (repository(sourceId) as? CatalogueAccountVerifier)?.checkAccount(target, details)
