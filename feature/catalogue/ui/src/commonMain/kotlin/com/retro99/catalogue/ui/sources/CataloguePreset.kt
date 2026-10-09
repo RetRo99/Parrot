@@ -19,6 +19,8 @@ data class CataloguePreset(
     val needsAccount: Boolean,
     val termsUrl: String?,
     val listEntriesAreBooks: Boolean = false,
+    /** Used instead of the search address the catalogue advertises. HTTPS only. */
+    val searchTemplate: String? = null,
 ) {
     val host: String get() = catalogueDisplayHost(address)
 }
@@ -46,6 +48,8 @@ fun parseCataloguePresets(json: String): List<CataloguePreset> {
         fun required(key: String) = requireNotNull(entry[key]?.jsonPrimitive?.contentOrNull) { "Missing preset field: $key" }
         val address = required("address")
         val termsUrl = entry["termsUrl"]?.jsonPrimitive?.contentOrNull
+        val searchTemplate = entry["searchTemplate"]?.jsonPrimitive?.contentOrNull
+        require(searchTemplate == null || searchTemplate.startsWith("https://", ignoreCase = true)) { "Preset search addresses must use HTTPS" }
         require(address.startsWith("https://", ignoreCase = true)) { "Preset addresses must use HTTPS" }
         require(termsUrl == null || termsUrl.startsWith("https://", ignoreCase = true)) { "Preset links must use HTTPS" }
         CataloguePreset(
@@ -58,6 +62,7 @@ fun parseCataloguePresets(json: String): List<CataloguePreset> {
             needsAccount = requireNotNull(entry["needsAccount"]?.jsonPrimitive?.boolean) { "Missing preset field: needsAccount" },
             termsUrl = termsUrl,
             listEntriesAreBooks = entry["listEntriesAreBooks"]?.jsonPrimitive?.boolean ?: false,
+            searchTemplate = searchTemplate,
         )
     }
     require(presets.map { it.id }.distinct().size == presets.size) { "Preset ids must be unique" }

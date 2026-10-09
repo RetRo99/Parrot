@@ -24,7 +24,7 @@ fun interface CatalogueAddCompletion {
 interface CatalogueAddStore {
     suspend fun existingAddresses(): Set<String>
     suspend fun addValidated(name: String, address: String, account: OpdsAccountDetails?): String
-    suspend fun addPresetValidated(name: String, address: String, account: OpdsAccountDetails?, listEntriesAreBooks: Boolean): String = addValidated(name, address, account)
+    suspend fun addPresetValidated(name: String, address: String, account: OpdsAccountDetails?, listEntriesAreBooks: Boolean, searchTemplate: String?): String = addValidated(name, address, account)
 }
 
 sealed interface CatalogueValidation {
@@ -88,6 +88,7 @@ class CatalogueAddFlow(
     needsAccount: Boolean = false,
     username: String = "",
     private val listEntriesAreBooks: Boolean = false,
+    private val searchTemplate: String? = null,
 ) {
     private val _state = MutableStateFlow(
         CatalogueAddViewState(
@@ -253,7 +254,7 @@ class CatalogueAddFlow(
     private suspend fun persist(attempt: Long, name: String, address: String, account: OpdsAccountDetails?) {
         if (attempt != generation) return
         try {
-            val sourceId = if (listEntriesAreBooks) store.addPresetValidated(name, address, account, true) else store.addValidated(name, address, account)
+            val sourceId = if (listEntriesAreBooks || searchTemplate != null) store.addPresetValidated(name, address, account, listEntriesAreBooks, searchTemplate) else store.addValidated(name, address, account)
             currentCoroutineContext().ensureActive()
             finish(attempt) { copy(phase = CatalogueAddPhase.Idle, dialog = null, addedSourceId = sourceId, error = null) }
         } catch (cancellation: CancellationException) {

@@ -139,11 +139,20 @@ class OpdsCatalogueRepository(
         }
     }
 
+    /**
+     * The catalogue's own search address replaces whatever it advertises. Otherwise the advertised
+     * one is used, unless it would send an https catalogue's queries over plain http: that one is
+     * never used, and the catalogue simply offers no search.
+     */
     override suspend fun discoverSearch(document: CatalogueDocument): AppResult<CatalogueSearch?> = request {
         if ((document.context as? Target)?.owner != owner) return@request Err(AppError.ApiError(400, "ForeignCatalogueDocument"))
         val offer = (document as? CatalogueFeedDocument)?.search ?: return@request Ok(null)
+        config.searchTemplate?.let { override ->
+            val template = OpdsSearchTemplate(null, override, inputEncoding = "UTF-8", baseUrl = config.baseUrl)
+            return@request Ok(allowed(Search(session) { query -> openSearch.expand(template, query.text, query.fields) }))
+        }
         if (offer.kind == CatalogueSearchOffer.Kind.UriTemplate) {
-            return@request Ok(Search(session) { query -> resolver.resolve(offer.link.effectiveBaseUri, templates.expand(offer.link.rawHref, query.fields + ("query" to query.text))) })
+            return@request Ok(allowed(Search(session) { query -> resolver.resolve(offer.link.effectiveBaseUri, templates.expand(offer.link.rawHref, query.fields + ("query" to query.text))) }))
         }
         val url = offer.link.resolvedHref ?: return@request Err(AppError.ApiError(400, "InvalidSearchDescriptor"))
         var preferred = descriptors[url]
@@ -162,7 +171,15 @@ class OpdsCatalogueRepository(
             }
         }
         val template = preferred ?: return@request Err(AppError.ApiError(400, "UnsupportedSearch"))
-        Ok(Search(session) { query -> openSearch.expand(template, query.text, query.fields) })
+        Ok(allowed(Search(session) { query -> openSearch.expand(template, query.text, query.fields) }))
+    }
+
+    /** Null when an https catalogue's search would be sent over http. */
+    private fun allowed(search: Search): Search? {
+        // A template that cannot be expanded keeps failing when it is searched, as it always did.
+        val probe = try { search.expand(CatalogueQuery("x")) } catch (_: OpdsSearchError) { return search } catch (_: IllegalArgumentException) { return search }
+        val downgrade = config.baseUrl.startsWith("https://", ignoreCase = true) && probe.startsWith("http://", ignoreCase = true)
+        return search.takeUnless { downgrade }
     }
 
     override suspend fun search(search: CatalogueSearch, query: CatalogueQuery) = request {

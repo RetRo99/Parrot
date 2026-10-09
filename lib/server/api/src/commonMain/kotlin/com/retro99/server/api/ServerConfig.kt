@@ -18,4 +18,6 @@ data class ServerConfig(
     val enabled: Boolean = true,
     /** Preset-supplied presentation hint. Never inferred from the address or provider name. */
     val listEntriesAreBooks: Boolean = false,
+    /** Preset-supplied search address, used instead of the one the catalogue advertises. */
+    val searchTemplate: String? = null,
 )

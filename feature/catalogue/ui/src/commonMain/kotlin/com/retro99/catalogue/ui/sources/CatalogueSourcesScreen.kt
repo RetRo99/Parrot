@@ -191,6 +191,7 @@ fun CatalogueSourcesScreen(
                 initialAddress = target.preset?.address.orEmpty(),
                 needsAccount = target.preset?.needsAccount == true,
                 listEntriesAreBooks = target.preset?.listEntriesAreBooks == true,
+                searchTemplate = target.preset?.searchTemplate,
             )
         }
     }
