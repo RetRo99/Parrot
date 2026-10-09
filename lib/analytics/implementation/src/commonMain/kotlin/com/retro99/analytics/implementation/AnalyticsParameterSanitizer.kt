@@ -236,8 +236,10 @@ private val SAFE_BOOK_SORT_CONFIGS = setOf(
 private val SAFE_BOOK_VIEW_MODES = setOf("list", "grid")
 private val SAFE_BUBBLE_SIDES = setOf("start", "end")
 private val SAFE_MEDIA_TYPES = setOf("ebook", "audiobook", "readaloud")
+/** Every `TtsPlaybackAction.analyticsValue`; a value missing here drops silently. */
 private val SAFE_TTS_ACTIONS = setOf(
-    "controls", "sentence_tap", "chapter", "resume", "preview_resume", "active_playback",
+    "controls", "sentence_tap", "chapter", "resume", "preview_resume", "settings_change",
+    "active_playback",
 )
 private val SAFE_TTS_OUTCOMES = setOf("attempted", "succeeded", "failed", "cancelled")
 private val SAFE_TTS_REASON_CODES = setOf(
