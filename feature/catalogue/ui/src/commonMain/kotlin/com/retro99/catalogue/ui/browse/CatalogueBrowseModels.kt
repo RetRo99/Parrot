@@ -34,6 +34,7 @@ data class CatalogueBrowseState(
     val navigation: CatalogueBrowseNavigation? = null,
     /** The catalogue was turned off or removed, or the profile changed: the screen closes. */
     val closed: Boolean = false,
+    val downloadNotice: String? = null,
 )
 
 sealed interface CatalogueBrowseContent {
@@ -168,6 +169,20 @@ private fun CatalogueMediaType?.isCataloguePage(): Boolean =
 internal fun CataloguePublication.pageLink(): CatalogueLink? =
     links.firstOrNull { it.target != null && it.mediaType.isCataloguePage() }
         ?: links.firstOrNull { it.target != null && it.mediaType == null }
+
+/**
+ * Conservative opt-in rule for link-only book lists: a paginated feed or search result,
+ * a plain-text entry body, and a queryless resource link. Query links remain navigation
+ * (author/subject searches); an unpaginated navigation feed, including the start page,
+ * remains folders. No provider names, path patterns, titles or image bytes are consulted.
+ */
+fun linkedBookEntries(flagged: Boolean, feed: CatalogueFeedDocument, searchResults: Boolean = false): List<CataloguePublication> {
+    if (!flagged || (!searchResults && listOf(feed.pagination.first, feed.pagination.next, feed.pagination.previous, feed.pagination.last).all { it == null })) return emptyList()
+    return feed.navigation.filter { entry ->
+        val body = entry.content?.takeIf { it.format == com.retro99.server.api.CatalogueDescription.Format.Text }?.body.display() ?: entry.summary.display()
+        entry.acquisitionChoices.isEmpty() && !body.isNullOrBlank() && entry.pageLink()?.resolvedHref?.let { '?' !in it && '#' !in it } == true
+    }
+}
 
 /** What opening a place turned out to be, by the Phase 1 grouping rule (plan §11.7, Still open 1). */
 enum class CatalogueOpening {

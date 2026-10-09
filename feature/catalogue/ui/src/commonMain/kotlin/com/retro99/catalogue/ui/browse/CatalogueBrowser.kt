@@ -7,6 +7,9 @@ import com.retro99.base.result.AppError
 import com.retro99.base.result.AppResult
 import com.retro99.catalogue.domain.CatalogueEntryIdentity
 import com.retro99.catalogue.domain.CatalogueLibraryLookup
+import com.retro99.catalogue.domain.*
+import com.retro99.catalogue.ui.downloads.ListDownloadState
+import com.retro99.catalogue.ui.publication.bookFileGroups
 import com.retro99.catalogue.ui.navigation.CatalogueBookPlace
 import com.retro99.catalogue.ui.navigation.CataloguePlace
 import com.retro99.server.api.CatalogueDocument
@@ -30,6 +33,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * One page of a catalogue and everything the user can do on it: page through its books, search,
@@ -48,6 +54,7 @@ class CatalogueBrowser(
     private val library: CatalogueLibraryLookup,
     private val scope: CoroutineScope,
     private val maxPages: Int = MAX_LOADED_PAGES,
+    private val queue: CatalogueAcquisitionManager? = null,
 ) {
     private sealed interface PageRequest {
         data object Root : PageRequest
@@ -55,7 +62,7 @@ class CatalogueBrowser(
         data class Search(val query: String) : PageRequest
     }
 
-    private class BookEntry(val key: String, val publication: CataloguePublication, val listing: CatalogueTarget, var inLibrary: Boolean)
+    private class BookEntry(val key: String, val publication: CataloguePublication, val listing: CatalogueTarget, var inLibrary: Boolean, val linked: Boolean = false)
     private class FolderEntry(val key: String, val entry: CataloguePublication, val link: CatalogueLink)
     private class ShelfEntry(val key: String, val title: String, val seeAll: CatalogueLink?, val books: List<BookEntry>)
 
@@ -119,12 +126,23 @@ class CatalogueBrowser(
     private var signIn: CatalogueSignInState? = null
     private var navigation: CatalogueBrowseNavigation? = null
     private val sourceJob: Job
+    private var queueJob: Job? = null
+    private var acquisitions = emptyList<CatalogueAcquisition>()
+    private val preparing = mutableMapOf<String, Job>()
+    private var downloadNotice: String? = null
 
     private val _state = MutableStateFlow(CatalogueBrowseState(title = start?.title))
     val state: StateFlow<CatalogueBrowseState> = _state.asStateFlow()
 
     init {
         sourceJob = scope.launch { gateway.observeSource(sourceId).collect(::onSource) }
+        queueJob = queue?.let { manager -> scope.launch { manager.observeAcquisitions().collect { rows ->
+            if (!open) return@collect
+            acquisitions = rows.filter { it.sourceId == sourceId }
+            allEntries().forEach { entry -> if (acquisition(entry)?.state == AcquisitionState.Done) entry.inLibrary = true }
+            publish()
+            onReturn()
+        } } }
     }
 
     // --- the catalogue ------------------------------------------------------------------
@@ -160,10 +178,13 @@ class CatalogueBrowser(
     fun cancel() {
         cancelled = true
         sourceJob.cancel()
+        queueJob?.cancel()
         stopRequests()
     }
 
     private fun stopRequests() {
+        preparing.values.forEach { it.cancel() }
+        preparing.clear()
         base.cancelRequests()
         search?.cancelRequests()
     }
@@ -249,7 +270,8 @@ class CatalogueBrowser(
         val opening = if (list.opening) decideCatalogueOpening(start?.fromEntryWithoutFiles == true, feed) else CatalogueOpening.Page
         if (opening == CatalogueOpening.OneBook) return replaceWithBook(feed.context, feed.publications)
 
-        val inLibrary = inLibrary(feed.publications + feed.groups.flatMap { it.publications })
+        val linked = linkedBookEntries(source?.listEntriesAreBooks == true, feed, list.query != null)
+        val inLibrary = inLibrary(feed.publications + linked + feed.groups.flatMap { it.publications })
         if (!list.isCurrent(generation)) return
         val shelves = feed.groups.withIndex().filter { it.value.publications.isNotEmpty() }.map { (index, group) ->
             ShelfEntry(
@@ -259,31 +281,33 @@ class CatalogueBrowser(
                 books = group.publications.mapIndexed { book, publication -> publication.entry("l${list.id}-s$index-$book", feed.context, inLibrary) },
             )
         }
-        val folders = (feed.navigation + feed.groups.flatMap { it.navigation }).mapIndexedNotNull { index, entry ->
+        val folders = (feed.navigation.filterNot { it in linked } + feed.groups.flatMap { it.navigation }).mapIndexedNotNull { index, entry ->
             entry.pageLink()?.let { FolderEntry("l${list.id}-f$index", entry, it) }
         }
         list.header = Header(feed, shelves, folders, sameBookCount = feed.publications.size.takeIf { opening == CatalogueOpening.SameBookList })
         list.pages = listOf(page(list, FIRST_PAGE, list.first, feed, inLibrary))
-        list.phase = if (shelves.isEmpty() && folders.isEmpty() && feed.publications.isEmpty()) Phase.Empty else Phase.Loaded
+        list.phase = if (shelves.isEmpty() && folders.isEmpty() && list.pages.all { it.books.isEmpty() }) Phase.Empty else Phase.Loaded
         if (list === base && start != null && pageTitle == null) pageTitle = feed.metadata.title.display()?.takeIf(String::isNotBlank)
         publish()
     }
 
     private fun replaceWithBook(listing: CatalogueTarget, publications: List<CataloguePublication>) {
-        navigation = CatalogueBrowseNavigation.ReplaceWithBook(CatalogueBookPlace(listing, publications))
+        navigation = CatalogueBrowseNavigation.ReplaceWithBook(CatalogueBookPlace(listing, publications, start?.listingIdentity))
         publish()
     }
 
     private fun page(list: BookList, number: Int, request: PageRequest, feed: CatalogueFeedDocument, inLibrary: Set<String>) = Page(
         number = number,
         request = request,
-        books = feed.publications.mapIndexed { index, publication -> publication.entry("l${list.id}-p$number-$index", feed.context, inLibrary) },
+        books = (feed.publications + linkedBookEntries(source?.listEntriesAreBooks == true, feed, list.query != null)).mapIndexed { index, publication ->
+            publication.entry("l${list.id}-p$number-$index", feed.context, inLibrary, linked = publication in feed.navigation)
+        },
         next = feed.pagination.next?.takeIf { it.target != null },
         savedCopyAt = feed.fetchStatus.savedCopyAt,
     )
 
-    private fun CataloguePublication.entry(key: String, listing: CatalogueTarget, inLibrary: Set<String>) =
-        BookEntry(key, this, listing, publicationKey in inLibrary)
+    private fun CataloguePublication.entry(key: String, listing: CatalogueTarget, inLibrary: Set<String>, linked: Boolean = false) =
+        BookEntry(key, this, listing, publicationKey in inLibrary, linked)
 
     /** One question for the whole page. A lookup that fails only means no row says "In your library". */
     private suspend fun inLibrary(publications: List<CataloguePublication>): Set<String> {
@@ -353,7 +377,7 @@ class CatalogueBrowser(
         publish()
         list.jobs += scope.launch {
             val feed = fetchPage(PageRequest.Target(target))
-            val inLibrary = feed?.let { inLibrary(it.publications) }.orEmpty()
+            val inLibrary = feed?.let { inLibrary(it.publications + linkedBookEntries(source?.listEntriesAreBooks == true, it, list.query != null)) }.orEmpty()
             if (!list.isCurrent(generation)) return@launch
             if (feed == null || list.pages.lastOrNull() !== last) {
                 list.more = Load.Failed
@@ -378,7 +402,7 @@ class CatalogueBrowser(
         publish()
         list.jobs += scope.launch {
             val feed = fetchPage(request)
-            val inLibrary = feed?.let { inLibrary(it.publications) }.orEmpty()
+            val inLibrary = feed?.let { inLibrary(it.publications + linkedBookEntries(source?.listEntriesAreBooks == true, it, list.query != null)) }.orEmpty()
             if (!list.isCurrent(generation)) return@launch
             if (feed == null || list.pages.firstOrNull() !== first) {
                 list.earlierLoad = Load.Failed
@@ -485,9 +509,78 @@ class CatalogueBrowser(
         val list = current
         val entry = (list.pages.flatMap { it.books } + list.header?.shelves.orEmpty().flatMap { it.books }).firstOrNull { it.key == key } ?: return
         if (!open) return
+        if (entry.linked) {
+            openPage(entry.publication.pageLink() ?: return, entry.publication.displayTitle(), fromEntryWithoutFiles = true, listingIdentity = entry.publication.publicationKey)
+            return
+        }
         navigation = CatalogueBrowseNavigation.OpenBook(CatalogueBookPlace(entry.listing, listOf(entry.publication)))
         publish()
     }
+
+    private fun allEntries() = listOfNotNull(base, search).flatMap { list -> list.pages.flatMap { it.books } + list.header?.shelves.orEmpty().flatMap { it.books } }
+    private fun acquisition(entry: BookEntry) = acquisitions.lastOrNull { it.publicationKey == entry.publication.publicationKey || it.detailIdentity == entry.publication.publicationKey }
+
+    /** Only the tapped row's details are fetched. A queue owns the download after request(). */
+    fun downloadBook(key: String) {
+        val manager = queue ?: return
+        val entry = allEntries().firstOrNull { it.key == key } ?: return
+        if (!open || entry.inLibrary || key in preparing || acquisition(entry)?.let { it.state.isRunning || it.state == AcquisitionState.Waiting || it.state == AcquisitionState.Done } == true) return
+        val list = current
+        val generation = list.generation
+        val job = scope.launch(start = CoroutineStart.LAZY) {
+            try {
+                val repository = gateway.repository(sourceId) ?: return@launch
+                val full = entry.publication.links.firstOrNull { link -> link.target != null && "alternate" in link.relations &&
+                    (link.mediaType?.subtype == "opds-publication+json" || link.mediaType?.parameters?.get("type") == "entry") }
+                val detail = if (entry.linked) entry.publication.pageLink() else full
+                val host = detail?.let(::unconfirmedLocalHost)
+                if (host != null) { openBook(key); return@launch }
+                val result = repository.getDocument(detail?.target ?: entry.listing)
+                currentCoroutineContext().ensureActive()
+                if (!list.isCurrent(generation)) return@launch
+                result.fold(success = { document ->
+                    if (localHostOf(document) != null) { openBook(key); return@fold }
+                    val available = when (document) {
+                        is CataloguePublicationDocument -> listOf(document.publication)
+                        is CatalogueFeedDocument -> document.publications + document.groups.flatMap { it.publications }
+                    }
+                    val publications = if (entry.linked || document is CataloguePublicationDocument) available else available.filter { it.publicationKey == entry.publication.publicationKey }
+                    val file = bookFileGroups(publications).flatMap { it.files }.firstOrNull { it.best }
+                    val locator = file?.let { (repository as? com.retro99.server.api.CatalogueAcquisitionRepository)?.locate(document, it.publication, it.choice) }
+                    if (publications.size != 1 || file == null || locator == null) {
+                        if (publications.isNotEmpty()) navigation = CatalogueBrowseNavigation.OpenBook(CatalogueBookPlace(document.context, publications, entry.publication.publicationKey.takeIf { entry.linked }))
+                        else openBook(key)
+                        return@fold
+                    }
+                    val outcome = manager.request(CatalogueAcquisitionRequest(sourceId, locator.publicationKey, locator.representationKey,
+                        entry.publication.publicationKey.takeIf { it != locator.publicationKey }, locator.documentUrl,
+                        file.publication.displayTitle(), file.publication.displayAuthor(), file.publication.images.firstOrNull()?.href,
+                        source?.name.orEmpty(), file.size, file.publication.rights.display(), file.publication.updated))
+                    currentCoroutineContext().ensureActive()
+                    if (!list.isCurrent(generation)) return@fold
+                    when (outcome) {
+                        is CatalogueRequestOutcome.Queued -> downloadNotice = entry.publication.displayTitle()
+                        is CatalogueRequestOutcome.InLibrary -> entry.inLibrary = true
+                    }
+                }, failure = { openBook(key) })
+            } catch (cancelled: CancellationException) { throw cancelled }
+              catch (_: Exception) { if (list.isCurrent(generation)) openBook(key) }
+            finally { preparing.remove(key); if (open) publish() }
+        }
+        preparing[key] = job
+        list.jobs += job
+        publish()
+        job.start()
+    }
+
+    fun cancelDownload(key: String) {
+        if (!open) return
+        preparing.remove(key)?.let { it.cancel(); publish(); return }
+        val entry = allEntries().firstOrNull { it.key == key } ?: return
+        val row = acquisition(entry) ?: return
+        if (row.state == AcquisitionState.Waiting || row.state == AcquisitionState.Downloading) scope.launch { queue?.cancel(row.requestId) }
+    }
+    fun noticeHandled() { downloadNotice = null; publish() }
 
     fun openFolder(key: String) {
         val folder = current.header?.folders?.firstOrNull { it.key == key } ?: return
@@ -499,12 +592,12 @@ class CatalogueBrowser(
         openPage(shelf.seeAll ?: return, shelf.title, fromEntryWithoutFiles = false)
     }
 
-    private fun openPage(link: CatalogueLink, title: String, fromEntryWithoutFiles: Boolean) {
+    private fun openPage(link: CatalogueLink, title: String, fromEntryWithoutFiles: Boolean, listingIdentity: String? = null) {
         val target = link.target ?: return
         if (!open) return
         val host = source?.let { localNetworkHostLeaving(it.address, link.resolvedHref.orEmpty()) }
         follow(link) {
-            navigation = CatalogueBrowseNavigation.OpenPage(CataloguePlace(target, title.takeIf(String::isNotBlank), fromEntryWithoutFiles, host))
+            navigation = CatalogueBrowseNavigation.OpenPage(CataloguePlace(target, title.takeIf(String::isNotBlank), fromEntryWithoutFiles, host, listingIdentity))
             publish()
         }
     }
@@ -612,6 +705,7 @@ class CatalogueBrowser(
             signIn = signIn,
             navigation = navigation,
             closed = closed,
+            downloadNotice = downloadNotice,
         )
     }
 
@@ -663,10 +757,18 @@ class CatalogueBrowser(
     private fun BookEntry.row(siblings: Set<String>?) = CatalogueBookRow(
         key = key,
         title = publication.displayTitle(),
-        author = publication.displayAuthor(),
-        cover = publication.images.firstOrNull()?.let { CatalogueImageModel(sourceId, it.href) },
+        author = if (linked) publication.content?.body.display() ?: publication.summary.display() else publication.displayAuthor(),
+        cover = if (linked) null else publication.images.firstOrNull()?.let { CatalogueImageModel(sourceId, it.href) },
         inLibrary = inLibrary,
         telling = publication.tellingLine().takeIf { siblings == null || publication.sameBookKey() in siblings },
+        download = when {
+            acquisition(this)?.state == AcquisitionState.Done || inLibrary -> ListDownloadState.InLibrary
+            acquisition(this)?.state == AcquisitionState.Waiting -> ListDownloadState.Waiting
+            acquisition(this)?.state == AcquisitionState.Downloading -> acquisition(this)!!.let { ListDownloadState.Downloading(it.bytesSoFar, it.expectedSizeBytes?.takeIf { size -> size > 0 }) }
+            acquisition(this)?.state == AcquisitionState.Checking || acquisition(this)?.state == AcquisitionState.Adding -> ListDownloadState.Adding
+            key in preparing -> ListDownloadState.GettingReady
+            else -> ListDownloadState.Available
+        },
     )
 
     private fun sheet(list: BookList, sheet: FilterSheet): CatalogueFilterSheet? {

@@ -549,6 +549,7 @@ fun HomeNavigation(
                         CatalogueBrowseScreen(
                             sourceId = destination.sourceId,
                             targetRef = destination.targetRef,
+                            onDownloads = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueDownloads)) },
                             onBack = { requestBack("toolbar_back") },
                             onOpenPage = { reference ->
                                 intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueBrowse(destination.sourceId, reference)))

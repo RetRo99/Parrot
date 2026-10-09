@@ -190,6 +190,7 @@ fun CatalogueSourcesScreen(
                 allowHttp = CatalogueHttpPolicy.allowHttp,
                 initialAddress = target.preset?.address.orEmpty(),
                 needsAccount = target.preset?.needsAccount == true,
+                listEntriesAreBooks = target.preset?.listEntriesAreBooks == true,
             )
         }
     }

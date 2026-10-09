@@ -48,11 +48,16 @@ class RegistryCatalogueAddStore(
         .filter { it.type == ServerType.Opds }
         .mapTo(mutableSetOf()) { it.baseUrl }
 
-    override suspend fun addValidated(name: String, address: String, account: OpdsAccountDetails?): String = addMutex.withLock {
+    override suspend fun addValidated(name: String, address: String, account: OpdsAccountDetails?): String = add(name, address, account, false)
+
+    override suspend fun addPresetValidated(name: String, address: String, account: OpdsAccountDetails?, listEntriesAreBooks: Boolean): String = add(name, address, account, listEntriesAreBooks)
+
+    private suspend fun add(name: String, address: String, account: OpdsAccountDetails?, listEntriesAreBooks: Boolean): String = addMutex.withLock {
         if (existingAddresses().any { it == address }) throw DuplicateCatalogueAddressException()
         val source = registry.addServer(name, ServerType.Opds, address)
         try {
             currentCoroutineContext().ensureActive()
+            if (listEntriesAreBooks) registry.updateServer(source.copy(listEntriesAreBooks = true))
             if (account != null) accountEditor.saveAccount(source.id, account)
             currentCoroutineContext().ensureActive()
             source.id

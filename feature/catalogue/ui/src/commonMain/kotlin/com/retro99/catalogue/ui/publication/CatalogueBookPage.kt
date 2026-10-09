@@ -34,7 +34,7 @@ class CatalogueBookPage(
     private var libraryJob: Job? = null
     private var loading = true
     private var target = place?.listing
-    private val identities get() = (publications + place?.publications.orEmpty()).map { CatalogueEntryIdentity(it.publicationKey) }.distinct()
+    private val identities get() = ((publications + place?.publications.orEmpty()).map { CatalogueEntryIdentity(it.publicationKey) } + listOfNotNull(place?.listingIdentity?.let(::CatalogueEntryIdentity))).distinct()
     private val acquisition get() = rows.lastOrNull { it.sourceId == sourceId && (it.publicationKey in identities.map { id -> id.publicationKey } || it.detailIdentity in identities.map { id -> id.publicationKey }) }
 
     init {
@@ -148,7 +148,7 @@ class CatalogueBookPage(
             ?: return
         _state.value = _state.value.copy(chooseFile = false)
         requestJob = scope.launch {
-             val result = queue.request(CatalogueAcquisitionRequest(sourceId, locator.publicationKey, locator.representationKey, place?.publications?.singleOrNull()?.publicationKey?.takeIf { it != locator.publicationKey }, locator.documentUrl,
+              val result = queue.request(CatalogueAcquisitionRequest(sourceId, locator.publicationKey, locator.representationKey, (place?.listingIdentity ?: place?.publications?.singleOrNull()?.publicationKey)?.takeIf { it != locator.publicationKey }, locator.documentUrl,
                 file.publication.displayTitle(), file.publication.displayAuthor(), file.publication.images.firstOrNull()?.href, source?.name.orEmpty(), file.size,
                 file.publication.rights.display(), file.publication.updated))
             if (!active) return@launch

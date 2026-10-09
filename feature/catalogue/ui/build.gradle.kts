@@ -49,6 +49,8 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.coroutines.test)
+            implementation(projects.lib.opds.api)
+            implementation(projects.lib.opds.implementation)
         }
         named("androidHostTest") {
             dependencies {

@@ -16,4 +16,6 @@ data class ServerConfig(
     val addedAt: Long,                 // Timestamp when server was added
     val lastConnectedAt: Long? = null, // Last successful connection
     val enabled: Boolean = true,
+    /** Preset-supplied presentation hint. Never inferred from the address or provider name. */
+    val listEntriesAreBooks: Boolean = false,
 )

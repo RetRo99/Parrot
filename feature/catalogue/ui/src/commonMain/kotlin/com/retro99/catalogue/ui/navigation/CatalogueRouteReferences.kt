@@ -20,6 +20,7 @@ data class CataloguePlace(
     val title: String? = null,
     val fromEntryWithoutFiles: Boolean = false,
     val localNetworkHost: String? = null,
+    val listingIdentity: String? = null,
 ) {
     override fun toString() = "CataloguePlace(redacted)"
 }
@@ -28,7 +29,7 @@ data class CataloguePlace(
  * A book in a catalogue: the page it is listed on and its entry there. Several entries when
  * they are the editions of one book.
  */
-data class CatalogueBookPlace(val listing: CatalogueTarget, val publications: List<CataloguePublication>) {
+data class CatalogueBookPlace(val listing: CatalogueTarget, val publications: List<CataloguePublication>, val listingIdentity: String? = null) {
     override fun toString() = "CatalogueBookPlace(redacted)"
 }
 

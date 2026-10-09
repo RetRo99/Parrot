@@ -18,6 +18,7 @@ data class CataloguePreset(
     val accountLabel: String,
     val needsAccount: Boolean,
     val termsUrl: String?,
+    val listEntriesAreBooks: Boolean = false,
 ) {
     val host: String get() = catalogueDisplayHost(address)
 }
@@ -56,6 +57,7 @@ fun parseCataloguePresets(json: String): List<CataloguePreset> {
             accountLabel = required("accountLabel"),
             needsAccount = requireNotNull(entry["needsAccount"]?.jsonPrimitive?.boolean) { "Missing preset field: needsAccount" },
             termsUrl = termsUrl,
+            listEntriesAreBooks = entry["listEntriesAreBooks"]?.jsonPrimitive?.boolean ?: false,
         )
     }
     require(presets.map { it.id }.distinct().size == presets.size) { "Preset ids must be unique" }

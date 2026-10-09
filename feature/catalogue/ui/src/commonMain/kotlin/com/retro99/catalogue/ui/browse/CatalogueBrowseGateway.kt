@@ -30,7 +30,7 @@ import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 
 /** The catalogue a browser screen shows, while it can be browsed. */
-data class CatalogueBrowseSource(val profileId: String, val name: String, val address: String) {
+data class CatalogueBrowseSource(val profileId: String, val name: String, val address: String, val listEntriesAreBooks: Boolean = false) {
     override fun toString() = "CatalogueBrowseSource(redacted)"
 }
 
@@ -63,7 +63,7 @@ class RegistryCatalogueBrowseGateway(
         watchReferences()
         return combine(users.observeActiveProfile(), sources.observeSources()) { profile, all ->
             val source = all.firstOrNull { it.config.id == sourceId && it.config.enabled && it.status.access != ServerAccessState.TurnedOff }
-            if (profile == null || source == null) null else CatalogueBrowseSource(profile.id, source.config.name, source.config.baseUrl)
+            if (profile == null || source == null) null else CatalogueBrowseSource(profile.id, source.config.name, source.config.baseUrl, source.config.listEntriesAreBooks)
         }.distinctUntilChanged()
     }
 

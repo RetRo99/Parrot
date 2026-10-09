@@ -52,6 +52,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +66,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -111,6 +117,9 @@ import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 import resources.translations.*
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 
 /** What the user can do on the browser screen. Every action has a default so a fixture names only what it needs. */
 class CatalogueBrowseActions(
@@ -153,10 +162,21 @@ fun CatalogueBrowseScreen(
     onOpenBook: (reference: String) -> Unit = {},
     onReplaceWithBook: (reference: String) -> Unit = {},
     onCatalogueSettings: () -> Unit = {},
+    onDownloads: () -> Unit = {},
 ) {
     val viewModel: CatalogueBrowseViewModel = koinViewModel { parametersOf(sourceId, targetRef.orEmpty()) }
     val browser = viewModel.browser
     val state by browser.state.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
+    val currentDownloads by rememberUpdatedState(onDownloads)
+    val view = stringResource(StringRes.catalogue_view)
+    LaunchedEffect(browser) {
+        browser.state.map { it.downloadNotice }.distinctUntilChanged().filterNotNull().collect { title ->
+            browser.noticeHandled()
+            val message = org.jetbrains.compose.resources.getString(StringRes.catalogue_download_notice, title)
+            if (snackbar.showSnackbar(message, view, duration = SnackbarDuration.Short) == SnackbarResult.ActionPerformed) currentDownloads()
+        }
+    }
     val isEink = Ember.style.isEink
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) { browser.onReturn() }
     LaunchedEffect(isEink) { browser.setAutoLoad(!isEink) }
@@ -181,6 +201,7 @@ fun CatalogueBrowseScreen(
             }
         }
     }
+    Box(modifier.fillMaxSize()) {
     CatalogueBrowseContentScreen(
         state = state,
         actions = remember(browser, onBack, onCatalogueSettings) {
@@ -194,6 +215,8 @@ fun CatalogueBrowseScreen(
                 onChooseFilter = browser::chooseFilter,
                 onCloseFilter = browser::closeFilter,
                 onOpenBook = browser::openBook,
+                onDownloadBook = browser::downloadBook,
+                onCancelDownload = browser::cancelDownload,
                 onOpenFolder = browser::openFolder,
                 onSeeAll = browser::openSeeAll,
                 onLoadMore = browser::loadMore,
@@ -211,6 +234,10 @@ fun CatalogueBrowseScreen(
         modifier = modifier,
         listState = listState,
     )
+    SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding()) { data ->
+        Snackbar(data, containerColor = Ember.colors.ink, contentColor = Ember.colors.bg, actionColor = Ember.colors.bg)
+    }
+    }
 }
 
 /** The browser screen for a given state. Fixtures draw this directly. */

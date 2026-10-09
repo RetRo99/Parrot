@@ -21,6 +21,7 @@ import org.koin.core.annotation.Provided
 class CatalogueBrowseViewModel(
     gateway: CatalogueBrowseGateway,
     @Provided library: CatalogueLibraryLookup,
+    @Provided queue: com.retro99.catalogue.domain.CatalogueAcquisitionManager,
     private val references: CatalogueRouteReferences,
     @InjectedParam private val sourceId: String,
     @InjectedParam targetRef: String,
@@ -31,6 +32,7 @@ class CatalogueBrowseViewModel(
         gateway = gateway,
         library = library,
         scope = viewModelScope,
+        queue = queue,
     )
 
     /** First visible item and its offset, per list ([CatalogueBrowseState.listId]). */

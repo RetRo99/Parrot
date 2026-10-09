@@ -2,7 +2,8 @@
   {
     "id": "project-gutenberg",
     "name": "Project Gutenberg",
-    "address": "https://www.gutenberg.org/ebooks/search.opds/",
+    "address": "https://www.gutenberg.org/ebooks.opds/",
+    "listEntriesAreBooks": true,
     "description": "A volunteer-run library of older books, mostly ones whose US copyright has expired. Books come as EPUB files you can read in Parrot.",
     "shortDescription": "Older books, mostly ones whose US copyright has expired.",
     "accountLabel": "No account needed",
