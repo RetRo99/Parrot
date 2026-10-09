@@ -510,16 +510,14 @@ class AndroidTtsController(
             engine.pause()
             return
         }
-        val isResuming = engine.currentSentence.value != null
-        attempts.request(if (isResuming) TtsPlaybackAction.RESUME else TtsPlaybackAction.CONTROLS) { attempt ->
-            if (isResuming) {
+        attempts.onPlayPressed(
+            resume = { attempt ->
                 attempts.armStartupTimeout(attempt)
                 engine.resume()
                 null
-            } else {
-                startPlayback(attempt)
-            }
-        }
+            },
+            freshStart = { attempt -> startPlayback(attempt) },
+        )
     }
 
     override fun pause() {

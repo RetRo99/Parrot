@@ -80,6 +80,116 @@ class TtsPlaybackAttemptsTest {
         assertTrue(uncaught.isEmpty())
     }
 
+    // ---- TTS-F06: a setting changed while narration is paused ----
+
+    @Test
+    fun `a speed change while paused plays the paused sentence again at the new speed`() = runTest {
+        val session = pausedOnSentenceThree()
+        audioSource.requests.clear()
+
+        session.setRate(1.5f)
+        runCurrent()
+        session.togglePlayback()
+        runCurrent()
+        startedPlaying()
+        runCurrent()
+
+        assertEquals(3, session.engine.currentSentenceIndex)
+        assertEquals(sentences[3], session.engine.currentSentence.value)
+        assertEquals("Sentence 3.", audioSource.requests.firstOrNull()?.text)
+        assertTrue(
+            audioSource.requests.isNotEmpty() && audioSource.requests.all { it.rate == 1.5f },
+            "synthesis after the change: ${audioSource.requests}",
+        )
+        assertTrue(uncaught.isEmpty())
+    }
+
+    @Test
+    fun `a voice change while paused plays the paused sentence again in the new voice`() = runTest {
+        val session = pausedOnSentenceThree()
+        audioSource.requests.clear()
+
+        session.selectVoice(OTHER_VOICE_ID)
+        runCurrent()
+        session.togglePlayback()
+        runCurrent()
+        startedPlaying()
+        runCurrent()
+
+        assertEquals(3, session.engine.currentSentenceIndex)
+        assertEquals(sentences[3], session.engine.currentSentence.value)
+        assertEquals("Sentence 3.", audioSource.requests.firstOrNull()?.text)
+        assertTrue(
+            audioSource.requests.isNotEmpty() &&
+                    audioSource.requests.all { it.voiceId == OTHER_VOICE_ID },
+            "synthesis after the change: ${audioSource.requests}",
+        )
+        assertTrue(uncaught.isEmpty())
+    }
+
+    @Test
+    fun `a pitch change while paused plays the paused sentence again at the new pitch`() = runTest {
+        val session = pausedOnSentenceThree()
+        audioSource.requests.clear()
+
+        session.setPitch(1.4f)
+        runCurrent()
+        session.togglePlayback()
+        runCurrent()
+        startedPlaying()
+        runCurrent()
+
+        assertEquals(3, session.engine.currentSentenceIndex)
+        assertEquals(sentences[3], session.engine.currentSentence.value)
+        assertEquals("Sentence 3.", audioSource.requests.firstOrNull()?.text)
+        assertTrue(
+            audioSource.requests.isNotEmpty() && audioSource.requests.all { it.pitch == 1.4f },
+            "synthesis after the change: ${audioSource.requests}",
+        )
+        assertTrue(uncaught.isEmpty())
+    }
+
+    @Test
+    fun `the paused sentence survives the change itself, before play is pressed`() = runTest {
+        val session = pausedOnSentenceThree()
+
+        session.setRate(1.5f)
+        runCurrent()
+
+        assertEquals(3, session.engine.currentSentenceIndex)
+        assertEquals(sentences[3], session.engine.currentSentence.value)
+        assertEquals(sentences.size, session.engine.sentenceCount.value)
+    }
+
+    @Test
+    fun `the play after a paused change reports one resume attempt and one success`() = runTest {
+        val session = pausedOnSentenceThree()
+        session.setRate(1.5f)
+        runCurrent()
+        session.outcomes.clear()
+
+        session.togglePlayback()
+        runCurrent()
+        startedPlaying()
+        runCurrent()
+
+        assertEquals(listOf("attempted:resume", "succeeded:resume"), session.outcomes)
+        assertTrue(uncaught.isEmpty())
+    }
+
+    @Test
+    fun `a settings change with nothing loaded does nothing`() = runTest {
+        val session = newSession()
+
+        session.setRate(1.5f)
+        runCurrent()
+
+        assertEquals(-1, session.engine.currentSentenceIndex)
+        assertEquals(emptyList(), session.outcomes)
+        assertEquals(emptyList(), audioSource.requests)
+        assertTrue(player.commands.isEmpty(), "player commands: ${player.commands}")
+    }
+
     // ---- fixture ----
 
     /**
@@ -93,9 +203,10 @@ class TtsPlaybackAttemptsTest {
         /** Every playback operation the attempts reported, in order. */
         val outcomes = mutableListOf<String>()
 
-        var voiceId: String? = VOICE_ID
-        var rate: Float = 1f
-        var pitch: Float = 1f
+        /** The settings the user has chosen, as the controller's own fields hold them. */
+        private var chosenVoiceId: String? = VOICE_ID
+        private var chosenRate: Float = 1f
+        private var chosenPitch: Float = 1f
 
         val attempts: TtsPlaybackAttempts = TtsPlaybackAttempts(
             scope = scope,
@@ -108,31 +219,93 @@ class TtsPlaybackAttemptsTest {
         /** Mirrors the controller's user-start path: sentences, then a fresh playFrom. */
         fun userStart(index: Int) {
             attempts.request(TtsPlaybackAction.CONTROLS) { attempt ->
-                attempts.armStartupTimeout(attempt)
-                engine.setPlaybackOperationCorrelationId(attempt.correlationId)
-                engine.setSentences(sentences)
-                engine.playFrom(
-                    index = index,
-                    voiceId = voiceId,
-                    rate = rate,
-                    pitch = pitch,
-                    completeChapterOnEnd = true,
-                    showPlaybackNotification = false,
-                )
-                null
+                freshStart(attempt, index)
             }
+        }
+
+        /** `AndroidTtsController.togglePlayback`. */
+        fun togglePlayback() {
+            if (engine.isPlaying.value) {
+                engine.pause()
+                player.reportPlaying(false)
+                return
+            }
+            attempts.onPlayPressed(
+                resume = { attempt ->
+                    attempts.armStartupTimeout(attempt)
+                    engine.resume()
+                    null
+                },
+                freshStart = { attempt -> freshStart(attempt, index = null) },
+            )
+        }
+
+        /** `AndroidTtsController.setRate`. */
+        fun setRate(rate: Float) {
+            chosenRate = rate
+            attempts.onSettingsChanged()
+        }
+
+        /** `AndroidTtsController.setPitch`. */
+        fun setPitch(pitch: Float) {
+            chosenPitch = pitch
+            attempts.onSettingsChanged()
+        }
+
+        /** `AndroidTtsController.selectVoice`. */
+        fun selectVoice(voiceId: String?) {
+            chosenVoiceId = voiceId
+            attempts.onSettingsChanged()
+        }
+
+        /**
+         * `AndroidTtsController.startPlayback`: the sentence list is handed over again and
+         * playback starts at [index], or at the first visible sentence when it is null.
+         */
+        private suspend fun freshStart(
+            attempt: TtsPlaybackAttempt,
+            index: Int?,
+        ): TtsPlaybackFailureReason? {
+            attempts.armStartupTimeout(attempt)
+            engine.setPlaybackOperationCorrelationId(attempt.correlationId)
+            engine.setSentences(sentences)
+            engine.playFrom(
+                index = index ?: FIRST_VISIBLE_SENTENCE_INDEX,
+                voiceId = chosenVoiceId,
+                rate = chosenRate,
+                pitch = chosenPitch,
+                completeChapterOnEnd = true,
+                showPlaybackNotification = false,
+            )
+            return null
         }
 
         suspend fun restartAtIndex(index: Int) {
             engine.playFrom(
                 index = index,
-                voiceId = voiceId,
-                rate = rate,
-                pitch = pitch,
+                voiceId = chosenVoiceId,
+                rate = chosenRate,
+                pitch = chosenPitch,
                 completeChapterOnEnd = true,
                 showPlaybackNotification = false,
             )
         }
+    }
+
+    /** Narration played from the top of the chapter to sentence 3, then paused there. */
+    private fun TestScope.pausedOnSentenceThree(): Session {
+        val session = startedSession(fromIndex = 0)
+        repeat(3) {
+            player.finishCurrentItem()
+            runCurrent()
+        }
+        assertEquals(3, session.engine.currentSentenceIndex, "did not reach sentence 3")
+
+        session.togglePlayback()
+        runCurrent()
+        assertEquals(false, session.engine.isPlaying.value, "did not pause")
+        session.outcomes.clear()
+        return session
     }
 
     /** A session playing [fromIndex], with the player reporting what a real one reports. */
@@ -188,6 +361,10 @@ class TtsPlaybackAttemptsTest {
 
     private companion object {
         const val VOICE_ID = "en-us"
+        const val OTHER_VOICE_ID = "en-gb"
         const val START_TIMEOUT_MS = 30_000L
+
+        /** What `resolveStartIndex` returns with no visible sentence: the top of the page. */
+        const val FIRST_VISIBLE_SENTENCE_INDEX = 0
     }
 }

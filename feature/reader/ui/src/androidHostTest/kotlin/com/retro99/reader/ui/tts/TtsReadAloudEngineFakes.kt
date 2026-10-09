@@ -182,7 +182,17 @@ internal class FakeSentenceAudioSource(private val directory: File) : TtsSentenc
 
     val requestedTexts = mutableListOf<String>()
 
+    /** Every request with the settings it was made with, in order. */
+    val requests = mutableListOf<SynthesisRequest>()
+
     var durationMs: Long? = 1_000L
+
+    data class SynthesisRequest(
+        val text: String,
+        val voiceId: String?,
+        val rate: Float,
+        val pitch: Float,
+    )
 
     override suspend fun synthesize(
         text: String,
@@ -191,6 +201,7 @@ internal class FakeSentenceAudioSource(private val directory: File) : TtsSentenc
         pitch: Float,
     ): TtsSynthesisResult {
         requestedTexts += text
+        requests += SynthesisRequest(text = text, voiceId = voiceId, rate = rate, pitch = pitch)
         yield()
         if (text in throwingTexts) throw IOException("synthesis failed for \"$text\"")
         if (text in failingTexts) {

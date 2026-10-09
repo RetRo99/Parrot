@@ -101,6 +101,20 @@ internal class TtsPlaybackAttempts(
         }
     }
 
+    /**
+     * The user pressed play with nothing playing: either the engine still holds a sentence
+     * and resumes it, or playback starts fresh.
+     */
+    fun onPlayPressed(
+        resume: suspend (TtsPlaybackAttempt) -> TtsPlaybackFailureReason?,
+        freshStart: suspend (TtsPlaybackAttempt) -> TtsPlaybackFailureReason?,
+    ) {
+        val isResuming = engine.currentSentence.value != null
+        request(if (isResuming) TtsPlaybackAction.RESUME else TtsPlaybackAction.CONTROLS) { attempt ->
+            if (isResuming) resume(attempt) else freshStart(attempt)
+        }
+    }
+
     /** The voice, the speed or the pitch changed while a chapter is loaded. */
     fun onSettingsChanged() {
         val index = engine.currentSentenceIndex
