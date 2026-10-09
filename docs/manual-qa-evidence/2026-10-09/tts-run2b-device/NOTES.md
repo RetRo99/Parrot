@@ -120,3 +120,51 @@ in order — three attempts, each with its own correlation id, the first two sup
 
 Three attempts, three terminal outcomes, one per correlation id, and no attempt got two —
 the supersede path behaves as `6e919edb` describes.
+
+### Step 4 — the same with Kokoro — F06 passed; F07 passed on the second attempt
+
+Voice changed to **Kokoro · Heart** while paused at sentence 125, Rate 1.5×: the sentence
+stayed at 125 (a third TTS-F06 data point, this time across engines). Kokoro takes
+2.5–9 s per sentence on this phone, so every step below was given time rather than tapped
+again.
+
+**4a, F06 with Kokoro — passed.** Play → resumed at 125 and read on to **137**
+(`Kokoro synthesize start: sid=0 speed=1.5` lines throughout, so the rate reaches the
+engine). Paused at **sentence 137**. Rate − → 1.4×, **sentence still 137**. Play →
+**started at sentence 137**, `Kokoro synthesize start: … speed=1.4`:
+
+    20:35:16.959 tts_playback_operation {tts_action=resume, tts_outcome=attempted}
+    20:35:25.669 tts_playback_operation {tts_action=resume, tts_outcome=succeeded, duration_ms=8711}
+
+**4b, F07 with Kokoro, first attempt — the tap fell in a synthesis gap, so it took the
+*paused* path.** With Kokoro, playback repeatedly reaches `state=ENDED` / `isPlaying=false`
+for a second or two while the next sentence is still synthesising. My Rate − tap at
+20:35:50.851 landed 61 ms inside such a gap (`ENDED` at 20:35:50.790), so the controller saw
+`isPlaying == false` and took the paused branch: **only `tts_rate_changed{rate=1.3}`, no
+attempted, no terminal outcome, no `settings_change`** — correct for the paused path, but
+not the check I was after. Two things followed, recorded and not investigated:
+  - the already-queued clips kept synthesising at the **old** `speed=1.4` for the next 23 s
+    while the sheet read 1.3×, and
+  - at 20:36:13.616 the player went `ENDED` and **never resumed**: narration stopped
+    silently at sentence 145 of 151 mid-chapter, with no failure event at the time.
+  - the next Play press then **timed out**: `tts_action=resume, attempted` at 20:38:12.800
+    with no Kokoro synthesis at all, then
+    `failed, duration_ms=30029, tts_reason_code=start_timeout` at 20:38:42.826. The 30 s
+    deadline fired exactly as `6e919edb` intends — the thing that failed is the Kokoro
+    resume itself, not the tracking. One more Play press recovered it:
+    `tts_action=controls, is_retry=true` attempted 20:39:46.783 / succeeded 20:39:49.132,
+    now synthesising at `speed=1.3`. **This is the one `failed` outcome in the whole run.**
+
+**4c, F07 with Kokoro, second attempt, tap placed inside a confirmed playing window —
+passed.** Rate − at 20:40:06 while the log's last `onIsPlayingChanged` said
+`isPlaying=true`. Narration continued; synthesis switched to `speed=1.2`
+(`E1-kokoro-heart-playing-after-speed-change.png`). Operation lines, in order:
+
+    20:40:06.989 tts_rate_changed {rate=1.2}
+    20:40:06.991 tts_playback_operation {tts_outcome=attempted}                      # corr 11a0bfe7
+    20:40:17.935 tts_playback_operation {tts_outcome=succeeded, duration_ms=10945}   # corr 11a0bfe7
+
+One attempted, one terminal outcome, one correlation id, breadcrumbs
+`entry_point=settings_change` — the same shape as the System-voice case, just ten seconds
+slower because Kokoro has to synthesise first. `tts_action` is absent from the event here
+too.
