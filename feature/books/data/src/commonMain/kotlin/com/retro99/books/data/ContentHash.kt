@@ -4,7 +4,11 @@ internal const val CONTENT_HASH_ALGORITHM = "sha-256-v1"
 
 internal const val HASH_BUFFER_SIZE = 8192
 
+/** Hashes the file in [HASH_BUFFER_SIZE] chunks; the file is never held in memory whole. */
 internal expect fun calculateFileContentHash(filePath: String): String
+
+/** The file's size in bytes, or 0 when there is no file. */
+internal expect fun fileSizeBytes(filePath: String): Long
 
 internal expect class Sha256Digest() {
     fun update(bytes: ByteArray, offset: Int, length: Int)

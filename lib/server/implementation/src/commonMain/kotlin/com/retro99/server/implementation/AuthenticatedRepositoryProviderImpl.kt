@@ -24,7 +24,7 @@ class AuthenticatedRepositoryProviderImpl(
     override fun observeBooksRepositories(): Flow<List<ServerBooksRepository>> {
         return serverRegistry.observeAuthenticatedServers()
             .map { servers ->
-                servers.map { server ->
+                servers.filter { it.type.getCapabilities().contributesToLibrary }.map { server ->
                     booksRepositoryFactory.create(server)
                 }
             }
@@ -32,7 +32,7 @@ class AuthenticatedRepositoryProviderImpl(
 
     override suspend fun getBooksRepositories(): List<ServerBooksRepository> {
         val servers = serverRegistry.getAuthenticatedServers()
-        return servers.map { booksRepositoryFactory.create(it) }
+        return servers.filter { it.type.getCapabilities().contributesToLibrary }.map { booksRepositoryFactory.create(it) }
     }
 
     override suspend fun getBooksRepository(serverId: String): ServerBooksRepository? {
@@ -40,6 +40,7 @@ class AuthenticatedRepositoryProviderImpl(
             return null
         }
         val server = serverRegistry.getServer(serverId) ?: return null
+        if (!server.type.getCapabilities().contributesToLibrary) return null
         return booksRepositoryFactory.create(server)
     }
 
@@ -48,6 +49,7 @@ class AuthenticatedRepositoryProviderImpl(
             return null
         }
         val server = serverRegistry.getServer(serverId) ?: return null
+        if (!server.type.getCapabilities().supportsReaderRepository) return null
         return readerRepositoryFactory.create(server)
     }
 

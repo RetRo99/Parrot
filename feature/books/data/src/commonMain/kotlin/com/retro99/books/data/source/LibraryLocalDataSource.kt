@@ -1,5 +1,6 @@
 package com.retro99.books.data.source
 
+import com.github.michaelbull.result.onSuccess
 import com.retro99.base.result.AppResult
 import com.retro99.base.result.CompletableResult
 import com.retro99.books.data.model.LibraryBookJsonCodec
@@ -13,9 +14,15 @@ import com.retro99.database.api.library.DeviceFileEntity
 import com.retro99.database.api.library.DeviceFilesDatabase
 import com.retro99.database.api.library.LibraryBookEntity
 import com.retro99.database.api.library.LibraryBooksDatabase
+import com.retro99.database.api.library.LibraryImportJournalDatabase
+import com.retro99.database.api.library.LibraryImportJournalEntry
 import com.retro99.database.api.sync.SyncOutboxEntry
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 import kotlin.time.Clock
@@ -30,19 +37,108 @@ internal class LibraryLocalDataSource(
     @Provided private val cloudFilesDatabase: CloudFilesDatabase,
     @Provided private val databaseExecutor: DatabaseExecutor,
     @Provided private val fileStore: BookFileTransferFileStore,
+    @Provided private val importJournal: LibraryImportJournalDatabase,
 ) : LibraryLocalSource, DeviceLibraryRepository {
 
-    override suspend fun addImportedFile(file: ImportedFileCandidate): AppResult<String> {
-        // Whatever happens, the staged copy is gone afterwards: moved into the library,
-        // or deleted.
-        return databaseExecutor.executeDatabaseOperation {
-            val matchId = findBookWithContent(file.contentHashAlgorithm, file.contentHash)
-            if (matchId != null) {
-                attachToExistingBook(matchId, file)
-            } else {
-                createBook(file)
+    // One import at a time: the duplicate lookup and the write that follows must not
+    // interleave with another import of the same bytes.
+    private val importMutex = Mutex()
+
+    override suspend fun addStagedFile(file: ImportedFileCandidate): AppResult<AddedLibraryFile> {
+        return importMutex.withLock {
+            // Once the file starts moving, finish: a cancellation that lands after the rows
+            // are committed must not undo the move and leave them pointing at nothing.
+            withContext(NonCancellable) {
+                databaseExecutor.executeDatabaseOperation {
+                    // Whatever an earlier process left half-done could be mistaken for this
+                    // import's own files, so it is settled first.
+                    settleJournal()
+                    val matchId = findBookWithContent(file.contentHashAlgorithm, file.contentHash)
+                    if (matchId != null) {
+                        AddedLibraryFile(attachToExistingBook(matchId, file), isNewBook = false)
+                    } else {
+                        AddedLibraryFile(createBook(file), isNewBook = true)
+                    }
+                }.onSuccess {
+                    // The staged copy is used up: moved into the library, or a duplicate.
+                    // After a failure it stays (or is put back) so the import can be retried.
+                    deleteQuietly(file.stagedPath)
+                }
             }
-        }.also { fileStore.delete(file.stagedPath) }
+        }
+    }
+
+    override suspend fun reconcileInterruptedImports() {
+        importMutex.withLock {
+            withContext(NonCancellable) { databaseExecutor.executeDatabaseOperation { settleJournal() } }
+        }
+    }
+
+    override suspend fun findBookWithDeviceFile(algorithm: String, hash: String): String? =
+        deviceFilesDatabase.findByContentHash(algorithm, hash)?.libraryBookId
+
+    /**
+     * Must hold [importMutex], so no import of this process is between its journal entry and
+     * its rows. An entry whose device-file row exists was committed; the rest never were.
+     */
+    private suspend fun settleJournal() {
+        importJournal.getAll().forEach { entry ->
+            val committed = deviceFilesDatabase.getDeviceFile(entry.libraryBookId, entry.mediaType)
+                ?.filePath == entry.libraryPath
+            if (!committed) {
+                deleteQuietly(entry.libraryPath)
+                // The cover belongs to the book this import was creating. A book that is
+                // there owns its cover, whoever wrote it.
+                val coverPath = entry.coverPath
+                if (coverPath != null && libraryBooksDatabase.getLibraryBookById(entry.libraryBookId) == null) {
+                    deleteQuietly(coverPath)
+                }
+            }
+            importJournal.clear(entry.entryId)
+        }
+    }
+
+    /**
+     * Records the move before it happens and forgets it once [commit] has written the rows.
+     * A failure here undoes its own work, so the entry is forgotten then too; only a process
+     * that dies in between leaves it for [settleJournal].
+     */
+    private suspend fun <T> journaled(
+        libraryBookId: String,
+        mediaType: String,
+        libraryPath: String,
+        coverPath: String?,
+        commit: suspend () -> T,
+    ): T {
+        val entryId = Uuid.random().toString()
+        importJournal.record(
+            LibraryImportJournalEntry(
+                entryId = entryId,
+                libraryBookId = libraryBookId,
+                mediaType = mediaType,
+                libraryPath = libraryPath,
+                coverPath = coverPath,
+                createdAt = Clock.System.now().toEpochMilliseconds(),
+            ),
+        )
+        // Only an exception is undone by the import itself. Anything else that stops it here
+        // is the process going away, and the entry must still be there afterwards.
+        val result = try {
+            commit()
+        } catch (exception: Exception) {
+            forget(entryId)
+            throw exception
+        }
+        forget(entryId)
+        return result
+    }
+
+    private suspend fun forget(entryId: String) {
+        try {
+            importJournal.clear(entryId)
+        } catch (_: Exception) {
+            // The rows decide what the entry means, so one that stays is settled correctly later.
+        }
     }
 
     override fun observeLibrary(): Flow<List<LibraryBookRecord>> = combine(
@@ -84,7 +180,13 @@ internal class LibraryLocalDataSource(
 
     override suspend fun keepDeviceFilesAsImports(libraryBookId: String): CompletableResult {
         return databaseExecutor.executeDatabaseOperation {
-            deviceFilesDatabase.setOriginForBook(libraryBookId, DeviceFileEntity.ORIGIN_IMPORT)
+            // Only copies that came from Parrot Cloud are at risk from its removal. A
+            // catalogue download keeps its origin, so it is never backed up automatically.
+            deviceFilesDatabase.getDeviceFiles(libraryBookId)
+                .filter { file -> file.origin == DeviceFileEntity.ORIGIN_CLOUD_DOWNLOAD }
+                .forEach { file ->
+                    deviceFilesDatabase.upsertDeviceFile(file.copy(origin = DeviceFileEntity.ORIGIN_IMPORT))
+                }
         }
     }
 
@@ -105,47 +207,93 @@ internal class LibraryLocalDataSource(
             return libraryBookId
         }
         val destination = fileStore.libraryFilePath(libraryBookId, file.mediaType)
-        fileStore.moveToImportedStore(file.stagedPath, destination)
-        deviceFilesDatabase.upsertDeviceFile(file.toDeviceFile(libraryBookId, destination))
+        journaled(libraryBookId, file.mediaType, destination, coverPath = null) {
+            var moved = false
+            try {
+                fileStore.moveToImportedStore(file.stagedPath, destination)
+                moved = true
+                deviceFilesDatabase.upsertDeviceFile(file.toDeviceFile(libraryBookId, destination))
+            } catch (exception: Exception) {
+                undoMove(moved, destination, file.stagedPath)
+                throw exception
+            }
+        }
         return libraryBookId
     }
 
     private suspend fun createBook(file: ImportedFileCandidate): String {
         val libraryBookId = Uuid.random().toString()
         val destination = fileStore.libraryFilePath(libraryBookId, file.mediaType)
-        val coverPath = file.metadata.coverBytes?.let { bytes ->
-            fileStore.writeCover(libraryBookId, bytes)
-        }
-        fileStore.moveToImportedStore(file.stagedPath, destination)
-        val book = LibraryBookEntity(
+        val coverBytes = file.metadata.coverBytes
+        journaled(
             libraryBookId = libraryBookId,
-            title = file.metadata.title,
-            author = file.metadata.author,
-            description = file.metadata.description,
-            coverPath = coverPath,
-            publicationDate = file.metadata.publicationDate,
-            sourceContentHash = file.contentHash,
-            sourceContentHashAlgorithm = file.contentHashAlgorithm,
-            addedAt = now(),
-            metadataJson = LibraryBookMetadataJson.encode(isbn = file.metadata.isbn),
-        )
-        try {
-            libraryBooksDatabase.insertImportedBook(
-                book = book,
-                file = file.toDeviceFile(libraryBookId, destination),
-                outboxEntry = SyncOutboxEntry.new(
-                    entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
-                    entityId = libraryBookId,
-                    operation = SyncOutboxEntry.OPERATION_UPSERT,
-                    payload = LibraryBookJsonCodec.encode(book, format = file.mediaType),
-                ),
-            )
-        } catch (exception: Exception) {
-            fileStore.delete(destination)
-            coverPath?.let { path -> fileStore.delete(path) }
-            throw exception
+            mediaType = file.mediaType,
+            libraryPath = destination,
+            coverPath = coverBytes?.let { fileStore.coverPath(libraryBookId) },
+        ) {
+            var coverPath: String? = null
+            var moved = false
+            try {
+                coverPath = coverBytes?.let { bytes -> fileStore.writeCover(libraryBookId, bytes) }
+                fileStore.moveToImportedStore(file.stagedPath, destination)
+                moved = true
+                val book = LibraryBookEntity(
+                    libraryBookId = libraryBookId,
+                    title = file.metadata.title,
+                    author = file.metadata.author,
+                    description = file.metadata.description,
+                    coverPath = coverPath,
+                    publicationDate = file.metadata.publicationDate,
+                    sourceContentHash = file.contentHash,
+                    sourceContentHashAlgorithm = file.contentHashAlgorithm,
+                    addedAt = now(),
+                    metadataJson = LibraryBookMetadataJson.encode(isbn = file.metadata.isbn),
+                )
+                val deviceFile = file.toDeviceFile(libraryBookId, destination)
+                // Every origin syncs the book's details the same way. Only the file differs:
+                // a catalogue download is never uploaded automatically.
+                libraryBooksDatabase.insertImportedBook(
+                    book = book,
+                    file = deviceFile,
+                    outboxEntry = SyncOutboxEntry.new(
+                        entityType = SyncOutboxEntry.ENTITY_TYPE_LIBRARY_BOOK,
+                        entityId = libraryBookId,
+                        operation = SyncOutboxEntry.OPERATION_UPSERT,
+                        payload = LibraryBookJsonCodec.encode(book, format = file.mediaType),
+                    ),
+                )
+            } catch (exception: Exception) {
+                undoMove(moved, destination, file.stagedPath)
+                coverPath?.let { path -> deleteQuietly(path) }
+                throw exception
+            }
         }
         return libraryBookId
+    }
+
+    /**
+     * Leaves no library file without a row. A finished move is put back in staging, so the
+     * bytes are there for a retry; a move that failed part-way has its leftovers deleted.
+     * No row points at [libraryPath] yet, so nothing else can be using it.
+     */
+    private suspend fun undoMove(moved: Boolean, libraryPath: String, stagedPath: String) {
+        if (!moved) {
+            deleteQuietly(libraryPath)
+            return
+        }
+        try {
+            fileStore.moveToImportedStore(libraryPath, stagedPath)
+        } catch (_: Exception) {
+            deleteQuietly(libraryPath)
+        }
+    }
+
+    /** Cleanup must not turn a finished import into a failure, or hide the real one. */
+    private suspend fun deleteQuietly(path: String) {
+        try {
+            fileStore.delete(path)
+        } catch (_: Exception) {
+        }
     }
 
     private fun ImportedFileCandidate.toDeviceFile(libraryBookId: String, path: String) =
@@ -156,7 +304,7 @@ internal class LibraryLocalDataSource(
             fileSize = fileSize,
             contentHash = contentHash,
             contentHashAlgorithm = contentHashAlgorithm,
-            origin = DeviceFileEntity.ORIGIN_IMPORT,
+            origin = origin,
             addedAt = now(),
         )
 

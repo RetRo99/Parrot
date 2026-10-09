@@ -29,6 +29,7 @@ class LibraryImportTest {
         cloudFilesDatabase = cloudFiles,
         databaseExecutor = DirectDatabaseExecutor,
         fileStore = fileStore,
+        importJournal = FakeLibraryImportJournal(),
     )
 
     @Test

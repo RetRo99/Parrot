@@ -1,0 +1,110 @@
+-- Catalogue downloads in progress and recently finished. Device-only: never synced.
+-- detail_url is where the publication is listed, kept only so the download link can be
+-- found again; it is cleared when the request completes.
+CREATE TABLE IF NOT EXISTS catalogue_acquisitions (
+    request_id TEXT NOT NULL PRIMARY KEY,
+    source_id TEXT NOT NULL,
+    publication_key TEXT NOT NULL,
+    detail_identity TEXT,
+    detail_url TEXT,
+    representation_key TEXT NOT NULL,
+    title TEXT NOT NULL,
+    author TEXT,
+    cover_reference TEXT,
+    catalogue_name TEXT NOT NULL,
+    state TEXT NOT NULL,
+    queue_position INTEGER NOT NULL,
+    staging_path TEXT,
+    expected_size_bytes INTEGER,
+    bytes_so_far INTEGER NOT NULL DEFAULT 0,
+    local_hash TEXT,
+    library_book_id TEXT,
+    failure_reason TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    completed_at INTEGER,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    rights_text TEXT,
+    catalogue_updated TEXT,
+    needed_bytes INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalogue_acquisitions_queue
+ON catalogue_acquisitions(state, queue_position);
+
+CREATE INDEX IF NOT EXISTS idx_catalogue_acquisitions_request
+ON catalogue_acquisitions(source_id, publication_key, representation_key);
+
+insertCatalogueAcquisition:
+INSERT INTO catalogue_acquisitions(
+    request_id, source_id, publication_key, detail_identity, detail_url, representation_key,
+    title, author, cover_reference, catalogue_name, state, queue_position, staging_path,
+    expected_size_bytes, bytes_so_far, local_hash, library_book_id, failure_reason,
+    created_at, updated_at, completed_at, attempts, rights_text, catalogue_updated, needed_bytes
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateCatalogueAcquisition:
+UPDATE catalogue_acquisitions SET
+    detail_url = ?,
+    state = ?,
+    queue_position = ?,
+    staging_path = ?,
+    expected_size_bytes = ?,
+    bytes_so_far = ?,
+    local_hash = ?,
+    library_book_id = ?,
+    failure_reason = ?,
+    updated_at = ?,
+    completed_at = ?,
+    attempts = ?,
+    needed_bytes = ?
+WHERE request_id = ?;
+
+updateCatalogueAcquisitionProgress:
+UPDATE catalogue_acquisitions SET
+    bytes_so_far = ?,
+    expected_size_bytes = ?,
+    updated_at = ?
+WHERE request_id = ? AND state = 'downloading';
+
+getCatalogueAcquisition:
+SELECT * FROM catalogue_acquisitions WHERE request_id = ?;
+
+findUnfinishedCatalogueAcquisition:
+SELECT * FROM catalogue_acquisitions
+WHERE source_id = ? AND publication_key = ? AND representation_key = ? AND state != 'done'
+ORDER BY queue_position ASC
+LIMIT 1;
+
+getAllCatalogueAcquisitions:
+SELECT * FROM catalogue_acquisitions ORDER BY queue_position ASC;
+
+getCatalogueAcquisitionsBySource:
+SELECT * FROM catalogue_acquisitions WHERE source_id = ? ORDER BY queue_position ASC;
+
+getCatalogueAcquisitionsByStates:
+SELECT * FROM catalogue_acquisitions WHERE state IN ? ORDER BY queue_position ASC;
+
+getCatalogueAcquisitionsCompletedSince:
+SELECT * FROM catalogue_acquisitions
+WHERE state = 'done' AND completed_at >= ?
+ORDER BY completed_at DESC;
+
+maxCatalogueAcquisitionQueuePosition:
+SELECT MAX(queue_position) FROM catalogue_acquisitions;
+
+deleteCatalogueAcquisition:
+DELETE FROM catalogue_acquisitions WHERE request_id = ?;
+
+deleteCompletedCatalogueAcquisitionsForBook:
+DELETE FROM catalogue_acquisitions WHERE state = 'done' AND library_book_id = ?;
+
+moveCatalogueAcquisitionsToBook:
+UPDATE catalogue_acquisitions SET library_book_id = ? WHERE library_book_id = ?;
+
+deleteCompletedCatalogueAcquisitions:
+DELETE FROM catalogue_acquisitions WHERE state = 'done';
+
+deleteCatalogueAcquisitionsCompletedBefore:
+DELETE FROM catalogue_acquisitions WHERE state = 'done' AND completed_at < ?;
+

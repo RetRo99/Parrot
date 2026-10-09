@@ -15,5 +15,9 @@ data class ServerConfig(
     val baseUrl: String,               // Base URL (e.g., "https://books.example.com")
     val addedAt: Long,                 // Timestamp when server was added
     val lastConnectedAt: Long? = null, // Last successful connection
+    val enabled: Boolean = true,
+    /** Preset-supplied presentation hint. Never inferred from the address or provider name. */
+    val listEntriesAreBooks: Boolean = false,
+    /** Preset-supplied search address, used instead of the one the catalogue advertises. */
+    val searchTemplate: String? = null,
 )
-

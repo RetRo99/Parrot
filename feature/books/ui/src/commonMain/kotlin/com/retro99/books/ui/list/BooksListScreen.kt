@@ -165,6 +165,7 @@ fun BooksListScreen(
     onInitialImportRequestConsumed: (Long) -> Unit = {},
     onNavigateToLinkReview: () -> Unit = {},
     onNavigateToParrotCloud: () -> Unit = {},
+    onNavigateToGetBooks: () -> Unit = {},
     onOpenImportedBook: (String) -> Unit = {},
     viewModel: BooksListViewModel = koinViewModel { parametersOf(onNavigateToBookDetail) },
 ) {
@@ -191,6 +192,7 @@ fun BooksListScreen(
             onInitialImportRequestConsumed = onInitialImportRequestConsumed,
             onNavigateToLinkReview = onNavigateToLinkReview,
             onNavigateToParrotCloud = onNavigateToParrotCloud,
+            onNavigateToGetBooks = onNavigateToGetBooks,
             onOpenImportedBook = onOpenImportedBook,
         )
     }
@@ -209,6 +211,7 @@ private fun BooksListScreenContent(
     onInitialImportRequestConsumed: (Long) -> Unit = {},
     onNavigateToLinkReview: () -> Unit = {},
     onNavigateToParrotCloud: () -> Unit = {},
+    onNavigateToGetBooks: () -> Unit = {},
     onOpenImportedBook: (String) -> Unit = {},
 ) {
     var openAfterImport by rememberSaveable { mutableStateOf(false) }
@@ -562,6 +565,7 @@ private fun BooksListScreenContent(
                 },
                 onCloseSearch = closeSearch,
                 onAddClick = { filePickerLauncher.launch() },
+                onGetBooksClick = onNavigateToGetBooks,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }

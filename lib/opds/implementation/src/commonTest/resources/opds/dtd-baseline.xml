@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Security spike: what does this parser actually do with a small
+     internal DTD entity tree? Recorded behavior (Phase 0): a DOCDECL event is
+     delivered and internal entities ARE EXPANDED (expandEntities=true) or
+     delivered as resolved ENTITY_REF events (expandEntities=false) — no
+     built-in DTD rejection. Phase 1 policy: stop at the DOCDECL event.
+
+     Value tree (bounded, 4 levels): a -> "A", b -> "&a;&a;", c -> "&b;&b;",
+     d -> "&c;&c;" ; so "&d;" is AAAAAAAA (8 A's) when entities are resolved. -->
+<!DOCTYPE entry [
+  <!ENTITY a "A">
+  <!ENTITY b "&a;&a;">
+  <!ENTITY c "&b;&b;">
+  <!ENTITY d "&c;&c;">
+]>
+<entry>
+  <id>urn:synthesis:dtd-baseline:1</id>
+  <title>DTD baseline</title>
+  <summary>value: &d;</summary>
+</entry>

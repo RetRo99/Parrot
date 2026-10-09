@@ -11,6 +11,12 @@ import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerCredentials
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerType
+import com.retro99.server.api.OpdsCredentialStore
+import com.retro99.server.api.OpdsAccountDetails
+import com.retro99.server.api.CatalogueAccountEditor
+import com.retro99.server.api.CatalogueAccessStore
+import com.retro99.server.api.CatalogueWorkController
+import io.ktor.http.Url
 import com.retro99.user.api.UserRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,12 +39,17 @@ import org.koin.core.annotation.Single
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-@Single(binds = [ServerRegistry::class])
+@Single(binds = [ServerRegistry::class, CatalogueAccountEditor::class])
 class ServerRegistryImpl(
     private val preferences: Preferences,
     @Provided private val userRegistry: UserRegistry,
     @Provided private val authStateProviders: List<ServerAuthStateProvider>,
-) : ServerRegistry {
+    // No default values on these: the generated Koin module leaves a parameter that has one
+    // alone, and the registry would then clear stores and cancel work nobody else uses.
+    @Provided private val opdsCredentials: OpdsCredentialStore,
+    @Provided private val catalogueAccess: CatalogueAccessStore,
+    @Provided private val catalogueWork: List<CatalogueWorkController>,
+) : ServerRegistry, CatalogueAccountEditor {
 
     private val logger = Logger.withTag("ServerRegistry")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -100,18 +111,17 @@ class ServerRegistryImpl(
     private fun loadFromPreferences(userId: String) {
         // Load servers for this user
         val serversKey = PreferencesKey.UserScoped(userId, PreferencesKey.RegisteredServers.name)
-        val servers = preferences.getObject<List<ServerConfig>>(serversKey)
-        if (servers != null) {
-            _servers.value = servers.associateBy { it.id }
-        } else {
-            _servers.value = emptyMap()
-        }
+        val catalogueKey = PreferencesKey.UserScoped(userId, PreferencesKey.CatalogueSources.name)
+        val servers = preferences.getObject<List<ServerConfig>>(serversKey).orEmpty()
+            .filter { it.type != ServerType.Opds } +
+            preferences.getObject<List<ServerConfig>>(catalogueKey).orEmpty().filter { it.type == ServerType.Opds }
+        _servers.value = servers.associateBy { it.id }
 
         // Load credentials for this user
         val credentialsKey = PreferencesKey.UserScoped(userId, PreferencesKey.ServerCredentials.name)
         val credentials = preferences.getObject<List<ServerCredentials>>(credentialsKey)
         if (credentials != null) {
-            _credentials.value = credentials.associateBy { it.serverId }
+            _credentials.value = credentials.filter { _servers.value[it.serverId]?.type != ServerType.Opds }.associateBy { it.serverId }
         } else {
             _credentials.value = emptyMap()
         }
@@ -123,8 +133,9 @@ class ServerRegistryImpl(
         return _servers.map { it.values.toList().sortedBy { server -> server.name } }
     }
 
-    override suspend fun getAllServers(): List<ServerConfig> {
-        return _servers.value.values.toList()
+    override suspend fun getAllServers(): List<ServerConfig> = mutex.withLock {
+        ensureCurrentUser()
+        _servers.value.values.toList()
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -145,11 +156,17 @@ class ServerRegistryImpl(
         type: ServerType,
         baseUrl: String,
     ): ServerConfig = mutex.withLock {
+        ensureCurrentUser()
+        val previousType = _servers.value[id]?.type
+        check(type != ServerType.Opds || previousType == null) { "Catalogue source id already exists" }
+        check(previousType == null || (previousType == ServerType.Opds) == (type == ServerType.Opds)) {
+            "Cannot change between library server and catalogue source"
+        }
         val config = ServerConfig(
             id = id,
             name = name,
             type = type,
-            baseUrl = baseUrl.trimEnd('/'),
+            baseUrl = if (type == ServerType.Opds) baseUrl else baseUrl.trimEnd('/'),
             addedAt = Clock.System.now().toEpochMilliseconds(),
         )
 
@@ -158,19 +175,58 @@ class ServerRegistryImpl(
             previousValue = previousServers,
             updatedValue = previousServers + (config.id to config),
             update = { _servers.value = it },
-            persist = ::persistServers,
+            persist = { persistServersFor(type) },
         )
 
         config
     }
 
     override suspend fun updateServer(config: ServerConfig) = mutex.withLock {
+        ensureCurrentUser()
+        if (config.type == ServerType.Opds) {
+            val previous = _servers.value[config.id]
+            check(previous?.type == ServerType.Opds) { "Catalogue source must already exist" }
+            val profileId = currentUserId ?: error("No active profile")
+            // To another scheme, host or port. A change of path or query is the same catalogue server.
+            val moved = previous.baseUrl != config.baseUrl && !sameOrigin(previous.baseUrl, config.baseUrl)
+            if (previous.baseUrl != config.baseUrl || previous.enabled && !config.enabled) {
+                // Fail closed before publishing a retargeted address. Losing optional
+                // credentials on a failed config write is safer than sending them elsewhere.
+                cancelCatalogueWork(profileId, config.id)
+                if (moved) opdsCredentials.remove(profileId, config.id)
+            }
+            // What a preset said about its own catalogue says nothing about another one. A
+            // search address kept across a move would send what the user types to the old host.
+            val stored = if (moved) config.copy(searchTemplate = null, listEntriesAreBooks = false) else config
+            persistStateMutation(
+                previousValue = _servers.value,
+                updatedValue = _servers.value + (config.id to stored),
+                update = { _servers.value = it },
+                persist = ::persistCatalogueSources,
+            )
+            return@withLock
+        }
+        check(_servers.value[config.id]?.type != ServerType.Opds) { "Cannot change catalogue source type" }
         _servers.update { it + (config.id to config) }
         persistServers()
     }
 
     override suspend fun removeServer(serverId: String) = mutex.withLock {
+        ensureCurrentUser()
         val server = _servers.value[serverId]
+        if (server?.type == ServerType.Opds) {
+            val profileId = currentUserId ?: error("No active profile")
+            catalogueWork.forEach { it.forget(profileId, serverId) }
+            persistStateMutation(
+                previousValue = _servers.value,
+                updatedValue = _servers.value - serverId,
+                update = { _servers.value = it },
+                persist = ::persistCatalogueSources,
+            )
+            opdsCredentials.remove(profileId, serverId)
+            catalogueAccess.remove(profileId, serverId)
+            return@withLock
+        }
         authStateProviders.firstOrNull { provider -> provider.serverType == server?.type }
             ?.clearAuthentication(server ?: return@withLock)
         _servers.update { it - serverId }
@@ -180,8 +236,9 @@ class ServerRegistryImpl(
         persistCredentials()
     }
 
-    override suspend fun getServer(serverId: String): ServerConfig? {
-        return _servers.value[serverId]
+    override suspend fun getServer(serverId: String): ServerConfig? = mutex.withLock {
+        ensureCurrentUser()
+        _servers.value[serverId]
     }
 
     // ==================== Authentication State ====================
@@ -203,7 +260,7 @@ class ServerRegistryImpl(
     override fun observeAuthState(serverId: String): Flow<ServerAuthState> {
         return _servers.map { servers -> servers[serverId] }
             .flatMapLatest { server ->
-                if (server == null) {
+                if (server == null || server.type == ServerType.Opds) {
                     flowOf(ServerAuthState.NotAuthenticated(serverId))
                 } else {
                     val provider = authStateProviders.firstOrNull { authProvider ->
@@ -227,6 +284,7 @@ class ServerRegistryImpl(
 
     override suspend fun isAuthenticated(serverId: String): Boolean {
         val server = _servers.value[serverId] ?: return false
+        if (server.type == ServerType.Opds) return false
         val provider = authStateProviders.firstOrNull { authProvider ->
             authProvider.serverType == server.type
         }
@@ -262,7 +320,9 @@ class ServerRegistryImpl(
     // ==================== Credentials Management ====================
 
     override suspend fun saveCredentials(credentials: ServerCredentials) = mutex.withLock {
+        ensureCurrentUser()
         val server = _servers.value[credentials.serverId]
+        check(server?.type != ServerType.Opds) { "Catalogue credentials must use OpdsCredentialStore" }
         check(authStateProviders.none { provider -> provider.serverType == server?.type }) {
             "Managed servers do not store ServerCredentials"
         }
@@ -276,11 +336,18 @@ class ServerRegistryImpl(
     }
 
     override suspend fun getCredentials(serverId: String): ServerCredentials? {
+        if (_servers.value[serverId]?.type == ServerType.Opds) return null
         return _credentials.value[serverId]
     }
 
     override suspend fun clearCredentials(serverId: String) = mutex.withLock {
+        ensureCurrentUser()
         val server = _servers.value[serverId]
+        if (server?.type == ServerType.Opds) {
+            val profileId = currentUserId ?: return@withLock
+            forgetCatalogueAccount(profileId, serverId)
+            return@withLock
+        }
         val provider = authStateProviders.firstOrNull { authProvider ->
             authProvider.serverType == server?.type
         }
@@ -291,9 +358,23 @@ class ServerRegistryImpl(
         persistCredentials()
     }
 
+    override suspend fun saveAccount(sourceId: String, details: OpdsAccountDetails) = mutex.withLock {
+        ensureCurrentUser()
+        check(_servers.value[sourceId]?.type == ServerType.Opds) { "Account details belong to a catalogue source" }
+        val profileId = currentUserId ?: error("No active profile")
+        if (opdsCredentials.get(profileId, sourceId) == details) return@withLock
+        // Stop first: nothing started under the old details may finish under the new ones.
+        cancelCatalogueWork(profileId, sourceId)
+        opdsCredentials.save(profileId, sourceId, details)
+    }
+
     override suspend fun clearAllCredentials() = mutex.withLock {
+        ensureCurrentUser()
         val servers = _servers.value.values.toList()
         servers.forEach { server ->
+            if (server.type == ServerType.Opds) {
+                currentUserId?.let { profileId -> forgetCatalogueAccount(profileId, server.id) }
+            }
             authStateProviders.firstOrNull { provider -> provider.serverType == server.type }
                 ?.clearAuthentication(server)
         }
@@ -302,16 +383,58 @@ class ServerRegistryImpl(
     }
 
     override suspend fun deactivateServer(serverId: String) {
+        val server = getServer(serverId)
+        if (server?.type == ServerType.Opds) {
+            updateServer(server.copy(enabled = false))
+            return
+        }
         clearCredentials(serverId)
     }
 
     // ==================== Persistence ====================
 
+    private fun ensureCurrentUser() {
+        val profileId = userRegistry.getActiveProfileId()
+        if (profileId != currentUserId) reloadForUserInternal(profileId)
+    }
+
+    private suspend fun cancelCatalogueWork(profileId: String, sourceId: String) {
+        catalogueWork.forEach { it.cancel(profileId, sourceId) }
+    }
+
+    /**
+     * Signing out of a catalogue. One that never had account details has nothing private to
+     * lose, so its downloads and saved pages are left alone.
+     */
+    private suspend fun forgetCatalogueAccount(profileId: String, sourceId: String) {
+        if (opdsCredentials.get(profileId, sourceId) == null) return
+        catalogueWork.forEach { it.forget(profileId, sourceId) }
+        opdsCredentials.remove(profileId, sourceId)
+    }
+
+    private fun sameOrigin(first: String, second: String): Boolean = try {
+        val a = Url(first)
+        val b = Url(second)
+        a.protocol == b.protocol && a.host.equals(b.host, ignoreCase = true) && a.port == b.port
+    } catch (_: IllegalArgumentException) {
+        false
+    }
+
     private fun persistServers() {
         val userId = currentUserId ?: return
-        val serversList = _servers.value.values.toList()
+        val serversList = _servers.value.values.filter { it.type != ServerType.Opds }
         val key = PreferencesKey.UserScoped(userId, PreferencesKey.RegisteredServers.name)
         preferences.putObject(key, serversList)
+    }
+
+    private fun persistServersFor(type: ServerType) {
+        if (type == ServerType.Opds) persistCatalogueSources() else persistServers()
+    }
+
+    private fun persistCatalogueSources() {
+        val userId = currentUserId ?: return
+        val key = PreferencesKey.UserScoped(userId, PreferencesKey.CatalogueSources.name)
+        preferences.putObject(key, _servers.value.values.filter { it.type == ServerType.Opds })
     }
 
     private fun persistCredentials() {

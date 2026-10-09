@@ -108,6 +108,47 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
     @Serializable
     data object Statistics : HomeDestination
 
+    /** "Get books": the user's book catalogues and the ones to start with. */
+    @Serializable
+    data object CatalogueSources : HomeDestination
+
+    /**
+     * One page of a catalogue. [targetRef] is a short in-memory reference to the page, or null
+     * for the catalogue's first page. Never the page's address: it can hold a key (plan §10.6).
+     */
+    @Serializable
+    data class CatalogueBrowse(
+        val sourceId: String,
+        val targetRef: String? = null,
+    ) : HomeDestination {
+        init {
+            requireCatalogueRouteArgument(sourceId)
+            targetRef?.let(::requireCatalogueRouteArgument)
+        }
+    }
+
+    /** A book's page in a catalogue. [publicationRef] is a short in-memory reference, as above. */
+    @Serializable
+    data class CataloguePublication(
+        val sourceId: String,
+        val publicationRef: String,
+    ) : HomeDestination {
+        init {
+            requireCatalogueRouteArgument(sourceId)
+            requireCatalogueRouteArgument(publicationRef)
+        }
+    }
+
+    /** Downloads from catalogues: running, waiting, failed and just finished. */
+    @Serializable
+    data object CatalogueDownloads : HomeDestination
+
+    /** Only the catalogue id is restored, never its address or account details. */
+    @Serializable
+    data class CatalogueSettings(val sourceId: String, val editAccount: Boolean = false) : HomeDestination {
+        init { requireCatalogueRouteArgument(sourceId) }
+    }
+
     /**
      * Destinations where the floating continue-reading bubble must stay hidden:
      * settings-style screens (it would cover rows, toggles, and buttons) and the
@@ -124,8 +165,26 @@ sealed interface HomeDestination : NavKey, BottomSheetDestination, BottomBarDest
             this is LinkPicker ||
             this is Positions ||
             this is LinkReview ||
-            this is NotesHighlights
+            this is NotesHighlights ||
+            this is CatalogueSources ||
+            this is CatalogueBrowse ||
+            this is CataloguePublication ||
+            this is CatalogueDownloads
+            || this is CatalogueSettings
 }
+
+/**
+ * A catalogue route argument is an id or a reference: letters, digits, "-" and "_", at most 64.
+ * That shape cannot hold an address or account details, so neither can end up in saved
+ * navigation state. The refused value is not repeated in the message.
+ */
+private fun requireCatalogueRouteArgument(value: String) {
+    require(value.length in 1..MAX_CATALOGUE_ROUTE_ARGUMENT_LENGTH && value.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '-' || it == '_' }) {
+        "A catalogue route takes an id or a reference, not an address"
+    }
+}
+
+private const val MAX_CATALOGUE_ROUTE_ARGUMENT_LENGTH = 64
 
 /** Returns whether this destination already restores the requested Reader route. */
 internal fun HomeDestination?.isReaderFor(

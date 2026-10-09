@@ -8,6 +8,9 @@ import com.retro99.base.ui.di.BaseUiModule
 import com.retro99.books.data.di.BooksDataModule
 import com.retro99.books.domain.di.BooksDomainModule
 import com.retro99.books.ui.di.BooksUiModule
+import com.retro99.catalogue.data.di.CatalogueDataModule
+import com.retro99.catalogue.domain.di.CatalogueDomainModule
+import com.retro99.catalogue.ui.di.CatalogueUiModule
 import com.retro99.cloud.implementation.di.CloudModule
 import com.retro99.cloudaccount.data.di.CloudAccountDataModule
 import com.retro99.cloudaccount.domain.di.CloudAccountDomainModule
@@ -30,6 +33,7 @@ import com.retro99.server.audiobookshelf.di.AudiobookshelfModule
 import com.retro99.server.local.di.LocalServerModule
 import com.retro99.server.parrotcloud.di.ParrotCloudModule
 import com.retro99.server.storyteller.di.StorytellerModule
+import com.retro99.server.opds.di.OpdsServerModule
 import com.retro99.settings.data.di.SettingsDataModule
 import com.retro99.settings.domain.di.SettingsDomainModule
 import com.retro99.settings.ui.di.SettingsUiModule
@@ -66,6 +70,7 @@ import org.koin.core.annotation.Module
         AudiobookshelfModule::class,
         LocalServerModule::class,
         ParrotCloudModule::class,
+        OpdsServerModule::class,
         // Feature modules
         AuthDomainModule::class,
         AuthDataModule::class,
@@ -82,6 +87,9 @@ import org.koin.core.annotation.Module
         BooksDomainModule::class,
         BooksDataModule::class,
         BooksUiModule::class,
+        CatalogueDomainModule::class,
+        CatalogueDataModule::class,
+        CatalogueUiModule::class,
         ReaderDomainModule::class,
         ReaderDataModule::class,
         ReaderUiModule::class,

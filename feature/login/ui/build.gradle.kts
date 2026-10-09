@@ -40,6 +40,7 @@ kotlin {
             implementation(projects.baseUi)
             implementation(projects.translations)
             implementation(projects.feature.login.domain)
+            implementation(projects.feature.catalogue.ui)
             implementation(projects.lib.analytics.api)
         }
 

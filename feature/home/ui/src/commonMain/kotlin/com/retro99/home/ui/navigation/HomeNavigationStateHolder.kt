@@ -134,6 +134,16 @@ class HomeNavigationStateHolder(
     }
 
     /**
+     * Put [destination] in the place of the screen that is open: Back from it goes to where
+     * that screen would have gone. A tab's root is never replaced.
+     */
+    fun replaceCurrent(destination: HomeDestination) {
+        val stack = currentBackStack
+        if (stack.size > 1) stack.removeLastOrNull()
+        stack.add(destination)
+    }
+
+    /**
      * Switch to a different tab.
      */
     fun switchTab(tab: HomeTab) {

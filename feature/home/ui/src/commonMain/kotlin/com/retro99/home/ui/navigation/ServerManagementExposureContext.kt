@@ -39,4 +39,9 @@ internal fun HomeDestination.analyticsScreenName(): String = when (this) {
     HomeDestination.SyncAndBackup -> "sync_and_backup"
     HomeDestination.Diagnostics -> "diagnostics"
     HomeDestination.Statistics -> "statistics"
+    HomeDestination.CatalogueSources -> "catalogue_sources"
+    is HomeDestination.CatalogueBrowse -> "catalogue_browse"
+    is HomeDestination.CataloguePublication -> "catalogue_publication"
+    HomeDestination.CatalogueDownloads -> "catalogue_downloads"
+    is HomeDestination.CatalogueSettings -> "catalogue_settings"
 }

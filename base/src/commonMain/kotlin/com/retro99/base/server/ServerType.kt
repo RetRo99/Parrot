@@ -27,6 +27,10 @@ enum class ServerType(
         identifier = PARROT_CLOUD_SERVER_ID,
         displayName = "Parrot Cloud",
     ),
+    Opds(
+        identifier = "opds",
+        displayName = "OPDS",
+    ),
     Local(
         identifier = LOCAL_SERVER_ID,
         displayName = "Local",

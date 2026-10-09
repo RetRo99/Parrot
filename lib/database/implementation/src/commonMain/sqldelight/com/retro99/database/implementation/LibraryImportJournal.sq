@@ -1,0 +1,22 @@
+-- One row per import that is moving a file into the library right now. Written before the
+-- file moves and deleted after the library rows are committed, so a row found at start is an
+-- import a dead process left half-done. Device-only: never synced.
+CREATE TABLE IF NOT EXISTS library_import_journal (
+    entry_id TEXT NOT NULL PRIMARY KEY,
+    library_book_id TEXT NOT NULL,
+    media_type TEXT NOT NULL,
+    library_path TEXT NOT NULL,
+    cover_path TEXT,
+    created_at INTEGER NOT NULL
+);
+
+insertLibraryImportJournalEntry:
+INSERT OR REPLACE INTO library_import_journal(
+    entry_id, library_book_id, media_type, library_path, cover_path, created_at
+) VALUES (?, ?, ?, ?, ?, ?);
+
+getLibraryImportJournalEntries:
+SELECT * FROM library_import_journal ORDER BY created_at ASC, entry_id ASC;
+
+deleteLibraryImportJournalEntry:
+DELETE FROM library_import_journal WHERE entry_id = ?;

@@ -145,6 +145,26 @@ class HomeNavigationStateHolderTest {
         assertEquals(HomeTab.Series, state.currentTab)
     }
 
+    @Test
+    fun replacingTheOpenScreenKeepsWhatIsUnderItAndNeverRemovesATabRoot() {
+        val state = state(HomeRootBackPolicy.entries.first())
+        val root = state.currentDestination
+        val list = HomeDestination.CatalogueBrowse("source")
+        state.navigateTo(list)
+        state.navigateTo(HomeDestination.CatalogueBrowse("source", "r1"))
+
+        // A catalogue page that turned out to be one book gives way to the book's page.
+        val book = HomeDestination.CataloguePublication("source", "r2")
+        state.replaceCurrent(book)
+        assertEquals(listOf(root, list, book), state.currentBackStack.toList())
+        assertTrue(state.goBack())
+        assertEquals(list, state.currentDestination)
+
+        assertTrue(state.goBack())
+        state.replaceCurrent(book)
+        assertEquals(listOf(root, book), state.currentBackStack.toList())
+    }
+
     private fun state(
         policy: HomeRootBackPolicy,
         startTab: HomeTab = HomeTab.DEFAULT,

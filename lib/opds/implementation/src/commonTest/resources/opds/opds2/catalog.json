@@ -1,0 +1,82 @@
+{
+  "_comment": "Synthetic OPDS 2.0 feed (§3.2 research notes): navigation, publications, groups, facets, pagination links, and a URI-template search link as used by OPDS2 catalogues. All content invented.",
+  "metadata": {
+    "title": "Example Catalogue — Root",
+    "identifier": "urn:uuid:77777777-8888-9999-aaaa-bbbbbbbbbbbb",
+    "modified": "2026-10-08T00:00:00Z",
+    "attribution": { "name": "Example Catalogue", "href": "http://catalogue.example.org/" },
+    "language": "en"
+  },
+  "links": [
+    { "rel": "self", "type": "application/opds+json", "href": "/opds/2/root.json" },
+    { "rel": "next", "type": "application/opds+json", "href": "/opds/2/root.json?pag=2" },
+    { "rel": "search", "type": "application/opds-publication+json", "href": "{?query,title}" }
+  ],
+  "navigation": [
+    { "href": "/opds/2/new.json", "title": "New publications", "rel": "http://opds-spec.org/sort/new", "type": "application/opds+json" },
+    { "href": "/opds/2/genres.json", "title": "Genres" },
+    { "href": "/opds/2/by-author.json", "title": "Authors" }
+  ],
+  "publications": [
+    {
+      "metadata": {
+        "identifier": "urn:uuid:88888888-9999-aaaa-bbbb-cccccccccccc",
+        "title": "River Narrative",
+        "language": ["en", "de"],
+        "author": [
+          "Casey Script",
+          { "name": "Emery Quill", "role": "author" },
+          { "name": "Gordon Manifold", "role": "editor" }
+        ],
+        "publisher": { "name": "Synth Press" },
+        "published": "2026-03-01",
+        "description": "<p>One book, <em>three</em> contributors in {mixed} forms.</p>"
+      },
+      "images": [
+        { "href": "/covers/river-low.png", "width": 300, "height": 450 },
+        { "href": "/covers/river-high.png", "width": 600, "height": 900 }
+      ],
+      "links": [
+        { "rel": "self", "href": "/opds/2/publications/river.json", "type": "application/opds-publication+json" },
+        { "rel": "http://opds-spec.org/acquisition", "href": "/files/river.epub", "type": "application/epub+zip" }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "metadata": { "title": "Visitors" },
+      "links": [
+        { "href": "/opds/2/visitors.json", "title": "All visitor publications", "type": "application/opds+json", "rel": "self" }
+      ],
+      "publications": []
+    },
+    {
+      "metadata": { "title": "Residents" },
+      "links": [
+        { "href": "/opds/2/residents.json", "title": "All resident publications", "type": "application/opds+json", "rel": "self" }
+      ],
+      "publications": [
+        {
+          "metadata": {
+            "identifier": "urn:uuid:99999999-aaaa-bbbb-cccc-dddddddddddd",
+            "title": "Second Narrative",
+            "language": "en",
+            "author": "Kim Synth"
+          },
+          "links": [
+            { "rel": "http://opds-spec.org/acquisition", "href": "/files/second.epub", "type": "application/epub+zip" }
+          ]
+        }
+      ]
+    }
+  ],
+  "facets": [
+    {
+      "metadata": { "name": "Genre" },
+      "links": [
+        { "href": "/opds/2/root.json?genre=fiction", "title": "Fiction", "active": true },
+        { "href": "/opds/2/root.json?genre=essays", "title": "Essays" }
+      ]
+    }
+  ]
+}

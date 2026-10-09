@@ -85,6 +85,7 @@ kotlin {
             implementation(projects.lib.server.api)
             implementation(projects.lib.server.implementation)
             implementation(projects.lib.serverStoryteller)
+            implementation(projects.lib.serverOpds)
             implementation(projects.lib.serverAudiobookshelf)
             implementation(projects.lib.serverLocal)
             implementation(projects.lib.serverParrotCloud)
@@ -96,6 +97,9 @@ kotlin {
             implementation(projects.feature.cloudAccount.ui)
             implementation(projects.feature.sync.domain)
             implementation(projects.feature.sync.data)
+            implementation(projects.feature.catalogue.domain)
+            implementation(projects.feature.catalogue.data)
+            implementation(projects.feature.catalogue.ui)
             implementation(projects.feature.auth.domain)
             implementation(projects.feature.auth.data)
             implementation(projects.feature.login.ui)
@@ -125,6 +129,12 @@ kotlin {
         named("androidHostTest") {
             dependencies {
                 implementation(libs.kotlin.testJunit)
+                // The real-graph tests swap the database, the network and the clock for local ones.
+                implementation(libs.coroutines.test)
+                implementation(libs.sqldelight.sqlite.driver)
+                implementation(libs.ktor.client.mock)
+                // To check that the limit shown to the user is the one the transport enforces.
+                implementation(projects.lib.opds.api)
             }
         }
     }

@@ -1,0 +1,16 @@
+<!-- Security spike: an XML comment BEFORE the declaration — the comment is
+     the first thing in the file, the declaration the second, so this file is
+     malformed for one reason only (document-order violation) and contains no
+     DOCTYPE/_entities. Kept as a dedicated fixture so this recorded failure
+     ("Unexpected START_DOCUMENT in state START_DOC") can never be confused
+     with the DOCTYPE behavior tested by dtd-baseline.xml: a file with the
+     leading comment and NO DTD fails identically.
+
+     Recorded behavior (Phase 0, both targets): a clean XmlException at line 6
+     (the first thing after the displaced declaration). No content delivered. -->
+<?xml version="1.0" encoding="utf-8"?>
+<entry>
+  <id>urn:synthesis:misplaced-comment:1</id>
+  <title>Comment before declaration</title>
+  <summary>This document is misordered no matter what features the parser has.</summary>
+</entry>

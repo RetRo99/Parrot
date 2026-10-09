@@ -1,0 +1,52 @@
+{
+  "_comment": "Synthetic OPDS 2.0 publication document (per the OPDS 2.0 living standard, plan §2.2): self identity, localized title field, contributor string/object forms, responsive images, direct EPUB link, indirect acquisition tree via properties.indirectAcquisition, priced buy link, and an alternate OPDS1 link. All content invented.",
+  "metadata": {
+    "identifier": "urn:uuid:eeeeeeee-ffff-0000-1111-222222222222",
+    "title": { "und": "Localized Landscape", "de": "Lokalisierte Landschaft" },
+    "language": ["en"],
+    "author": [
+      "Gray Script",
+      { "name": "Emery Quill", "role": "author" }
+    ],
+    "translator": {
+      "name": "Hesta Vane",
+      "href": "http://catalogue.example.org/people/vane"
+    },
+    "publisher": "Synth Press",
+    "published": "2026-02-20T00:00:00Z",
+    "description": "<p>Indirect acquisition: an HTML flow ends in the EPUB.</p>",
+    "rights": "Synthetic rights text."
+  },
+  "images": [
+    { "href": "/covers/landscape.png?w=300", "width": 300, "height": 450 },
+    { "href": "/covers/landscape.png?w=900", "width": 900, "height": 1350 }
+  ],
+  "links": [
+    { "rel": "self", "href": "/opds/2/publications/landscape.json", "type": "application/opds-publication+json" },
+    {
+      "rel": "http://opds-spec.org/acquisition",
+      "href": "/flows/landscape-licence",
+      "type": "text/html",
+      "properties": {
+        "indirectAcquisition": [
+          {
+            "type": "text/html",
+            "child": [
+              { "type": "application/epub+zip", "href": "/files/landscape.epub" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "rel": "buy",
+      "href": "/flow/buy/landscape",
+      "type": "text/html",
+      "properties": {
+        "priceValue": 12.5,
+        "currency": "EUR"
+      }
+    },
+    { "rel": "alternate", "href": "/opds/1/publications/landscape.opds", "type": "application/atom+xml;profile=opds-catalog;kind=acquisition" }
+  ]
+}

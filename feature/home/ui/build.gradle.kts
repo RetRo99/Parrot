@@ -46,6 +46,7 @@ kotlin {
             implementation(projects.feature.reader.ui)
             implementation(projects.feature.reader.domain)
             implementation(projects.feature.saved.ui)
+            implementation(projects.feature.catalogue.ui)
             implementation(projects.feature.settings.ui)
             implementation(projects.feature.auth.domain)
             implementation(projects.feature.cloudAccount.ui)

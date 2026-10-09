@@ -18,6 +18,8 @@ internal actual fun calculateFileContentHash(filePath: String): String {
     return digest.digest().toHexString()
 }
 
+internal actual fun fileSizeBytes(filePath: String): Long = File(filePath).length()
+
 internal actual class Sha256Digest actual constructor() {
     private val messageDigest = MessageDigest.getInstance("SHA-256")
 

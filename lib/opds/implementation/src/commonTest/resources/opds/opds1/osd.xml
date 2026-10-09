@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Synthetic OpenSearch 1.1 description in the OPDS1 search shape: two Url rules,
+  the first an OPDS acquisition feed with `{searchTerms}` plus the optional
+  `{startPage?}` parameter, the second an HTML fallback. Modeled on the OpenSearch
+  1.1 parameter rules cited in the plan (§2.4 sources; RFC fixtures reused with
+  the OpenSearch/others' own notices in the module README).
+-->
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Example Catalogue</ShortName>
+  <Description>Search the synthetic example catalogue.</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <Url type="application/atom+xml;profile=opds-catalog;kind=acquisition"
+       template="https://catalogue.example.org/opds/search?q={searchTerms}&amp;p={startPage?}"/>
+  <Url type="text/html"
+       template="https://catalogue.example.org/search/{searchTerms}"/>
+</OpenSearchDescription>

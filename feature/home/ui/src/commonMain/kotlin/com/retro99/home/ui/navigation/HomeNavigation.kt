@@ -45,6 +45,11 @@ import com.retro99.books.ui.links.LinkPickerScreen
 import com.retro99.books.ui.links.LinkReviewScreen
 import com.retro99.books.ui.list.BooksListScreen
 import com.retro99.books.ui.positions.PositionsScreen
+import com.retro99.catalogue.ui.browse.CatalogueBrowseScreen
+import com.retro99.catalogue.ui.CatalogueDownloadsScreen
+import com.retro99.catalogue.ui.CataloguePublicationScreen
+import com.retro99.catalogue.ui.sources.CatalogueSourcesScreen
+import com.retro99.catalogue.ui.settings.CatalogueSettingsScreen
 import com.retro99.books.ui.series.detail.SeriesDetailScreen
 import com.retro99.cloudaccount.ui.CloudAccountScreen
 import com.retro99.home.ui.appsettings.AppSettingsScreen
@@ -77,6 +82,7 @@ fun HomeNavigation(
 ) {
     // Navigation state managed by Nav3's rememberNavBackStack for automatic persistence
     val navigationState = rememberHomeNavigationState()
+    com.retro99.catalogue.ui.downloads.CatalogueDownloadAnnouncements()
 
     // UI state from ViewModel (currently reading, bubble position)
     val uiState by viewModel.viewState.collectAsState()
@@ -343,6 +349,9 @@ fun HomeNavigation(
                                 )
                             },
                             onSearchActiveChanged = { active -> isLibrarySearchActive = active },
+                            onNavigateToGetBooks = {
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSources))
+                            },
                             onNavigateToLinkReview = {
                                 intentDispatcher(
                                     HomeNavigationIntent.NavigateTo(HomeDestination.LinkReview),
@@ -522,6 +531,69 @@ fun HomeNavigation(
                         LinkReviewScreen(onBack = { requestBack("toolbar_back") })
                     }
 
+                    entry<HomeDestination.CatalogueSources> {
+                        CatalogueSourcesScreen(
+                            onBack = { requestBack("toolbar_back") },
+                            onBrowseCatalogue = { sourceId ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueBrowse(sourceId)))
+                            },
+                            onDownloads = {
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueDownloads))
+                            },
+                            onCatalogueSettings = { sourceId ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSettings(sourceId)))
+                            },
+                        )
+                    }
+
+                    entry<HomeDestination.CatalogueBrowse> { destination ->
+                        CatalogueBrowseScreen(
+                            sourceId = destination.sourceId,
+                            targetRef = destination.targetRef,
+                            onDownloads = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueDownloads)) },
+                            onBack = { requestBack("toolbar_back") },
+                            onOpenPage = { reference ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueBrowse(destination.sourceId, reference)))
+                            },
+                            onOpenBook = { reference ->
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CataloguePublication(destination.sourceId, reference)))
+                            },
+                            // The page turned out to be one book: Back from the book skips it.
+                            onReplaceWithBook = { reference ->
+                                navigationState.replaceCurrent(HomeDestination.CataloguePublication(destination.sourceId, reference))
+                            },
+                            onCatalogueSettings = {
+                                intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSettings(destination.sourceId)))
+                            },
+                        )
+                    }
+
+                    entry<HomeDestination.CataloguePublication> { destination ->
+                        CataloguePublicationScreen(
+                            sourceId = destination.sourceId,
+                            publicationRef = destination.publicationRef,
+                            onBack = { requestBack("toolbar_back") },
+                            onCatalogueRoot = { navigationState.replaceCurrent(HomeDestination.CatalogueBrowse(destination.sourceId)) },
+                            onDownloads = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueDownloads)) },
+                            onRead = { bookId -> intentDispatcher(HomeNavigationIntent.RequestOpenReader(com.retro99.base.server.LOCAL_SERVER_ID, bookId, BookType.EBOOK)) },
+                            onCatalogueSettings = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSettings(destination.sourceId))) },
+                        )
+                    }
+
+                    entry<HomeDestination.CatalogueDownloads> {
+                        CatalogueDownloadsScreen(onBack = { requestBack("toolbar_back") },
+                            onRead = { bookId -> intentDispatcher(HomeNavigationIntent.RequestOpenReader(com.retro99.base.server.LOCAL_SERVER_ID, bookId, BookType.EBOOK)) })
+                    }
+
+                    entry<HomeDestination.CatalogueSettings> { destination ->
+                        CatalogueSettingsScreen(
+                            sourceId = destination.sourceId,
+                            initiallyEditAccount = destination.editAccount,
+                            onBack = { requestBack("toolbar_back") },
+                            onBrowse = { sourceId -> intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueBrowse(sourceId))) },
+                        )
+                    }
+
                     entry<HomeDestination.Positions> { destination ->
                         PositionsScreen(
                             serverId = destination.serverId,
@@ -626,6 +698,8 @@ fun HomeNavigation(
 
                     entry<HomeDestination.ServerManagement> {
                         ServerManagementScreen(
+                            onBrowseCatalogue = { sourceId -> intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueBrowse(sourceId))) },
+                            onCatalogueSettings = { sourceId, editAccount -> intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSettings(sourceId, editAccount))) },
                             onNavigateToLogin = onNavigateToLogin,
                             failedLoginServerIds = failedExistingServerLoginIds,
                             onBack = { requestBack("toolbar_back") },

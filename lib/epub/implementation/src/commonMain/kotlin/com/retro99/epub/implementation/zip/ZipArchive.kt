@@ -22,6 +22,22 @@ data class ZipEntry(
     val compressedSize: Long,
     val uncompressedSize: Long,
     val localHeaderOffset: Long,
+    /** General purpose bit flags; bit 0 set means the entry's data is encrypted. */
+    val flags: Int = 0,
+)
+
+/**
+ * What the end of the archive says about its layout. A plain ZIP has its directory right
+ * before the end record, and nothing after that record's comment.
+ */
+data class ZipLayout(
+    val declaredEntryCount: Long,
+    val directoryOffset: Long,
+    val directorySize: Long,
+    /** Where the end record (or the ZIP64 records before it) begins. */
+    val directoryLimit: Long,
+    /** Bytes in the file after the end record and its comment. */
+    val trailingBytes: Long,
 )
 
 /**
@@ -32,6 +48,9 @@ data class ZipEntry(
 class ZipArchive private constructor(
     private val source: RandomAccessSource,
     val entries: Map<String, ZipEntry>,
+    /** Every directory record in directory order, repeated names included. */
+    val directoryEntries: List<ZipEntry>,
+    val layout: ZipLayout,
 ) : AutoCloseable {
 
     /**
@@ -102,6 +121,8 @@ class ZipArchive private constructor(
             }
             if (endIndex < 0) throw ZipFormatException("No end of central directory")
 
+            val commentLength = tail.uint16(endIndex + 20)
+            var directoryLimit = tailStart + endIndex
             var entryCount = tail.uint16(endIndex + 10).toLong()
             var directorySize = tail.uint32(endIndex + 12)
             var directoryOffset = tail.uint32(endIndex + 16)
@@ -116,23 +137,35 @@ class ZipArchive private constructor(
                     entryCount = zip64End.int64(32)
                     directorySize = zip64End.int64(40)
                     directoryOffset = zip64End.int64(48)
+                    directoryLimit = locator.int64(8)
                 }
             }
             if (directorySize > MAX_DIRECTORY_BYTES) {
                 throw ZipFormatException("Central directory too large")
             }
             val directory = source.readFully(directoryOffset, directorySize.toInt())
-            return ZipArchive(source, parseDirectory(directory, entryCount))
+            val all = parseDirectory(directory, entryCount)
+            val byName = LinkedHashMap<String, ZipEntry>()
+            all.forEach { entry -> byName[entry.name] = entry }
+            val layout = ZipLayout(
+                declaredEntryCount = entryCount,
+                directoryOffset = directoryOffset,
+                directorySize = directorySize,
+                directoryLimit = directoryLimit,
+                trailingBytes = source.size - (endPosition + END_SIZE + commentLength),
+            )
+            return ZipArchive(source, byName, all, layout)
         }
 
-        private fun parseDirectory(directory: ByteArray, entryCount: Long): Map<String, ZipEntry> {
-            val entries = LinkedHashMap<String, ZipEntry>()
+        private fun parseDirectory(directory: ByteArray, entryCount: Long): List<ZipEntry> {
+            val entries = ArrayList<ZipEntry>()
             var offset = 0
             var index = 0L
             while (index < entryCount && offset + CENTRAL_HEADER_SIZE <= directory.size) {
                 if (directory.int32(offset) != CENTRAL_HEADER_SIGNATURE) {
                     throw ZipFormatException("Bad central directory entry")
                 }
+                val flags = directory.uint16(offset + 8)
                 val method = directory.uint16(offset + 10)
                 var compressedSize = directory.uint32(offset + 20)
                 var uncompressedSize = directory.uint32(offset + 24)
@@ -167,12 +200,13 @@ class ZipArchive private constructor(
                     extra += 4 + size
                 }
 
-                entries[name] = ZipEntry(
+                entries += ZipEntry(
                     name = name,
                     method = method,
                     compressedSize = compressedSize,
                     uncompressedSize = uncompressedSize,
                     localHeaderOffset = localHeaderOffset,
+                    flags = flags,
                 )
                 offset = extraEnd + commentLength
                 index++

@@ -29,6 +29,7 @@ class CompositeNetworkClientFactory(
 
     override suspend fun createForServerId(serverId: String): ServerNetworkClient? {
         val serverConfig = serverRegistry.getServer(serverId) ?: return null
+        if (serverConfig.type == ServerType.Opds) return null
         return create(serverConfig)
     }
 }

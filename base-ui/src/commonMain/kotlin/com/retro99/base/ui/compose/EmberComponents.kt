@@ -109,6 +109,7 @@ fun EmberCover(
     modifier: Modifier = Modifier,
     elevation: Dp = 0.dp,
     fallbackLabel: String? = contentDescription,
+    fallback: (@Composable BoxScope.() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     val colors = Ember.colors
@@ -140,6 +141,9 @@ fun EmberCover(
             )
         }
         if (!imageLoaded) {
+            if (fallback != null) {
+                fallback()
+            } else {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -156,6 +160,7 @@ fun EmberCover(
                         overflow = TextOverflow.Clip,
                     )
                 }
+            }
             }
         }
         content()

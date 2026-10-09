@@ -5,10 +5,15 @@ import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.DiagnosticContext
 import com.retro99.analytics.api.ServerManagementAnalyticsEvent
 import com.retro99.base.ui.BaseViewModel
+import com.retro99.catalogue.ui.settings.CatalogueSettingsGateway
+import com.retro99.settings.domain.usecase.LogoutUseCase
+import kotlinx.coroutines.flow.first
 import com.retro99.server.api.ServerAuthState
 import com.retro99.server.api.ServerConfig
 import com.retro99.server.api.ServerRegistry
 import com.retro99.server.api.ServerType
+import com.retro99.server.api.CatalogueAccessProvider
+import com.retro99.server.api.getCapabilities
 import com.retro99.settings.ui.servers.model.ServerWithStatusUiModel
 import com.retro99.settings.ui.servers.model.toUiModel
 import kotlinx.coroutines.CancellationException
@@ -24,16 +29,27 @@ import org.koin.core.annotation.Provided
 class ServerManagementViewModel(
     @Provided private val serverRegistry: ServerRegistry,
     @Provided private val analytics: Analytics,
+    @Provided private val catalogueAccessProvider: CatalogueAccessProvider,
+    @Provided private val catalogueSettings: CatalogueSettingsGateway,
+    @Provided private val logoutAll: LogoutUseCase,
     @InjectedParam private val onNavigateToLogin: (String?, Boolean) -> Unit,
     @InjectedParam private val stopPlaybackForServer: (String, DiagnosticContext) -> Unit,
 ) : BaseViewModel<ServerManagementViewState, ServerManagementIntent>(ServerManagementViewState()) {
 
     init {
+        viewModelScope.launch {
+            catalogueAccessProvider.observeSources().collect { sources ->
+                updateState { it.copy(catalogueSources = sources.map { mapCatalogueSource(it.config, it.status) }) }
+            }
+        }
         observeServers()
     }
 
     override fun onIntent(intent: ServerManagementIntent) {
         when (intent) {
+            ServerManagementIntent.OnSignOutEverything -> signOutEverything()
+            is ServerManagementIntent.OnTurnOnCatalogue -> catalogueAction(intent.sourceId, turnOn = true)
+            is ServerManagementIntent.OnRetryCatalogue -> catalogueAction(intent.sourceId, turnOn = false)
             is ServerManagementIntent.OnLoginClick ->
                 onLoginClick(intent.serverId, intent.serverType, intent.isRetry)
             is ServerManagementIntent.OnLogoutClick -> onLogoutClick(intent.serverId, intent.serverType)
@@ -42,7 +58,7 @@ class ServerManagementViewModel(
                 config.copy(name = intent.name.trim())
             }
             is ServerManagementIntent.OnChangeAddress -> updateServerConfig(intent.serverId) { config ->
-                config.copy(baseUrl = normalizeServerAddress(intent.baseUrl))
+                config.copy(baseUrl = if (config.type == ServerType.Opds) intent.baseUrl else normalizeServerAddress(intent.baseUrl))
             }
             ServerManagementIntent.RetryFailedOperation -> retryFailedOperation()
             ServerManagementIntent.DismissOperationFailure -> dismissOperationFailure()
@@ -55,13 +71,15 @@ class ServerManagementViewModel(
     }
 
     private fun observeServers(isRetry: Boolean = false) {
+        // Catalogue state is not translated into ServerAuthState. Legacy cards remain
+        // library-only; catalogue presentation/navigation is deliberately Phase 4.
         val source = flow {
             combine(
                 serverRegistry.observeAllServers(),
                 serverRegistry.observeAllAuthStates(),
             ) { servers, authStates ->
                 servers
-                    .filter { server -> server.type != ServerType.Local }
+                    .filter { server -> server.type != ServerType.Local && !server.type.getCapabilities().supportsCatalogueBrowsing }
                     .map { server ->
                         ServerWithStatusUiModel(
                             server = server.toUiModel(),
@@ -110,6 +128,7 @@ class ServerManagementViewModel(
     }
 
     private fun onLoginClick(serverId: String, serverType: ServerType, isRetry: Boolean) {
+        if (serverType.getCapabilities().supportsCatalogueBrowsing) return
         analytics.logEvent(
             ServerManagementAnalyticsEvent.ServerLoginAttempted(
                 serverType = serverType.identifier,
@@ -133,6 +152,43 @@ class ServerManagementViewModel(
     }
 
     private var operationInProgress = false
+
+    private fun signOutEverything() {
+        if (operationInProgress) return
+        operationInProgress = true
+        updateState { it.copy(isOperationInProgress = true, catalogueOperationFailed = false) }
+        viewModelScope.launch {
+            try {
+                logoutAll()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                updateState { it.copy(catalogueOperationFailed = true) }
+            } finally {
+                operationInProgress = false
+                updateState { it.copy(isOperationInProgress = false) }
+            }
+        }
+    }
+
+    private fun catalogueAction(sourceId: String, turnOn: Boolean) {
+        if (operationInProgress) return
+        operationInProgress = true
+        updateState { it.copy(isOperationInProgress = true, catalogueOperationFailed = false) }
+        viewModelScope.launch {
+            try {
+                val source = catalogueSettings.observeSource(sourceId).first() ?: return@launch
+                if (turnOn) catalogueSettings.setEnabled(source, true) else catalogueSettings.retry(source)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                updateState { it.copy(catalogueOperationFailed = true) }
+            } finally {
+                operationInProgress = false
+                updateState { it.copy(isOperationInProgress = false) }
+            }
+        }
+    }
 
     private fun onLogoutClick(serverId: String, serverType: ServerType, isRetry: Boolean = false) {
         runMutation(

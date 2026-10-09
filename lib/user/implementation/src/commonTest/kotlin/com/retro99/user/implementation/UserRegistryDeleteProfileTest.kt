@@ -18,6 +18,24 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class UserRegistryDeleteProfileTest {
+    @Test fun deleting_profile_removes_catalogue_sources_accounts_and_status_only_for_that_profile() = runTest {
+        val preferences = FakePreferences()
+        val registry = UserRegistryImpl(preferences, ProfileWorkRegistryImpl())
+        registry.createProfile("a", "A", null)
+        registry.createProfile("b", "B", null)
+        registry.setActiveProfile("b")
+        val keys = listOf(PreferencesKey.CatalogueSources, PreferencesKey.OpdsCredentials, PreferencesKey.CatalogueAccessStatus)
+        keys.forEach { key ->
+            preferences.putString(PreferencesKey.UserScoped("a", key.name), "private-a")
+            preferences.putString(PreferencesKey.UserScoped("b", key.name), "private-b")
+        }
+        registry.deleteProfile("a")
+        keys.forEach { key ->
+            assertNull(preferences.getStringOrNull(PreferencesKey.UserScoped("a", key.name)))
+            assertEquals("private-b", preferences.getStringOrNull(PreferencesKey.UserScoped("b", key.name)))
+        }
+    }
+
     @Test
     @OptIn(ExperimentalCoroutinesApi::class)
     fun deletingActiveProfileActivatesMostRecentlyUsedRemainingProfileFirst() = runTest {
@@ -28,7 +46,7 @@ class UserRegistryDeleteProfileTest {
             putObject(PreferencesKey.UserProfiles, listOf(toDelete, fallback, other))
             putString(PreferencesKey.ActiveProfileId, toDelete.id)
         }
-        val registry = UserRegistryImpl(preferences)
+        val registry = UserRegistryImpl(preferences, ProfileWorkRegistryImpl())
         val observedActiveProfileIds = mutableListOf<String?>()
         val observer = backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) {
             registry.observeActiveProfile().collect { profile ->
@@ -57,7 +75,7 @@ class UserRegistryDeleteProfileTest {
             putObject(PreferencesKey.UserProfiles, listOf(active, toDelete))
             putString(PreferencesKey.ActiveProfileId, active.id)
         }
-        val registry = UserRegistryImpl(preferences)
+        val registry = UserRegistryImpl(preferences, ProfileWorkRegistryImpl())
 
         registry.deleteProfile(toDelete.id)
 
@@ -73,7 +91,7 @@ class UserRegistryDeleteProfileTest {
             putObject(PreferencesKey.UserProfiles, listOf(active))
             putString(PreferencesKey.ActiveProfileId, active.id)
         }
-        val registry = UserRegistryImpl(preferences)
+        val registry = UserRegistryImpl(preferences, ProfileWorkRegistryImpl())
 
         registry.deleteProfile(active.id)
 

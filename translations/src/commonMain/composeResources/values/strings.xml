@@ -1223,6 +1223,7 @@
     <string name="books_dock_search" tools:ignore="MissingTranslation">Search your library</string>
     <string name="books_dock_add" tools:ignore="MissingTranslation">Add</string>
     <string name="books_dock_add_description" tools:ignore="MissingTranslation">Add books</string>
+    <string name="books_dock_get_books" tools:ignore="MissingTranslation">Get books</string>
     <string name="books_dock_close_search" tools:ignore="MissingTranslation">Close search</string>
     <string name="books_search_recent_title" tools:ignore="MissingTranslation">RECENT SEARCHES</string>
     <string name="books_search_recent_clear" tools:ignore="MissingTranslation">Clear</string>
@@ -1757,4 +1758,318 @@
     <string name="saved_filter_words">Words</string>
     <string name="saved_kind_word">Word</string>
     <string name="saved_bar_word_removed">Word removed</string>
+    <!-- Book catalogues (OPDS). Copy is verbatim from design/ember/catalogues/CATALOGUE_PROMPT.md; do not reword it here. -->
+    <!-- Where the design says "this phone", the string takes the device name: "this phone" / "this tablet" / "this iPhone" / "this device". -->
+    <!-- §1 Names and paging -->
+    <string name="catalogue_type_name" tools:ignore="MissingTranslation">Book catalogue</string>
+    <string name="catalogue_type_name_with_protocol" tools:ignore="MissingTranslation">Book catalogue · OPDS</string>
+    <string name="catalogue_get_books" tools:ignore="MissingTranslation">Get books</string>
+    <string name="catalogue_browse" tools:ignore="MissingTranslation">Browse</string>
+    <string name="catalogue_downloads_title" tools:ignore="MissingTranslation">Downloads</string>
+    <string name="catalogue_downloads_empty_title" tools:ignore="MissingTranslation">No downloads</string>
+    <string name="catalogue_downloads_empty_body" tools:ignore="MissingTranslation">Books you download from a catalogue appear here while they download. Finished books are in your Library.</string>
+    <string name="catalogue_downloads_footer" tools:ignore="MissingTranslation">Finished downloads are in your Library. They stay there even if you remove the catalogue.</string>
+    <string name="catalogue_loading_more" tools:ignore="MissingTranslation">Loading more…</string>
+    <string name="catalogue_load_more" tools:ignore="MissingTranslation">Load more</string>
+    <!-- §2 A1 Choose a file. %1$d is the file's number in catalogue order. -->
+    <string name="catalogue_choose_file_title" tools:ignore="MissingTranslation">Choose a file</string>
+    <string name="catalogue_from" tools:ignore="MissingTranslation">From</string>
+    <string name="catalogue_rights" tools:ignore="MissingTranslation">Rights</string>
+    <string name="catalogue_other_files" tools:ignore="MissingTranslation">Other files (%1$d)</string>
+    <string name="catalogue_book_download" tools:ignore="MissingTranslation">Download · EPUB</string>
+    <string name="catalogue_book_download_size" tools:ignore="MissingTranslation">Download · EPUB · %1$s</string>
+    <string name="catalogue_download_notice" tools:ignore="MissingTranslation">Downloading %1$s</string>
+    <string name="catalogue_view" tools:ignore="MissingTranslation">View</string>
+    <string name="catalogue_announce_progress" tools:ignore="MissingTranslation">%1$s, %2$d% downloaded</string>
+    <string name="catalogue_announce_waiting" tools:ignore="MissingTranslation">%1$s will download next</string>
+    <string name="catalogue_announce_done" tools:ignore="MissingTranslation">%1$s is in your library</string>
+    <string name="catalogue_announce_failed" tools:ignore="MissingTranslation">Couldn't download %1$s. %2$s</string>
+    <string name="catalogue_announce_cancelled" tools:ignore="MissingTranslation">Download of %1$s cancelled</string>
+    <string name="catalogue_a11y_book_download" tools:ignore="MissingTranslation">Download %1$s, EPUB</string>
+    <string name="catalogue_a11y_book_download_size" tools:ignore="MissingTranslation">Download %1$s, EPUB, %2$s</string>
+    <string name="catalogue_a11y_other_files" tools:ignore="MissingTranslation">Other files, %1$d, opens file choice</string>
+    <string name="catalogue_choose_file_intro" tools:ignore="MissingTranslation">Names come from the catalogue. The first one is the best match for Parrot.</string>
+    <string name="catalogue_file_fallback_label" tools:ignore="MissingTranslation">EPUB file %1$d</string>
+    <string name="catalogue_file_size_unknown" tools:ignore="MissingTranslation">Size unknown</string>
+    <string name="catalogue_file_best" tools:ignore="MissingTranslation">Best</string>
+    <string name="catalogue_cant_open_in_parrot" tools:ignore="MissingTranslation">Can't be opened in Parrot</string>
+    <string name="catalogue_download" tools:ignore="MissingTranslation">Download</string>
+    <!-- %1$s is a size, "0.6 MB" -->
+    <string name="catalogue_download_with_size" tools:ignore="MissingTranslation">Download · %1$s</string>
+    <!-- §3 Several editions -->
+    <string name="catalogue_editions_intro" tools:ignore="MissingTranslation">This book has %1$d editions in the catalogue.</string>
+    <string name="catalogue_edition_fallback_label" tools:ignore="MissingTranslation">Edition %1$d</string>
+    <!-- §2 A4 Rights: our own line, only under the catalogue's rights text -->
+    <string name="catalogue_rights_law_note" tools:ignore="MissingTranslation">Check the law where you live before sharing.</string>
+    <!-- §2 A8 Presets -->
+    <string name="catalogue_another_catalogue" tools:ignore="MissingTranslation">Another catalogue</string>
+    <!-- §3 Download states, shared by list rows, the book page and Downloads -->
+    <string name="catalogue_state_getting_ready" tools:ignore="MissingTranslation">Getting ready…</string>
+    <string name="catalogue_state_waiting" tools:ignore="MissingTranslation">Waiting to download…</string>
+    <string name="catalogue_waiting_two_others" tools:ignore="MissingTranslation">Two other books are downloading. This one starts next.</string>
+    <string name="catalogue_waiting_one_other" tools:ignore="MissingTranslation">Another book is downloading. This one starts next.</string>
+    <string name="catalogue_state_downloading" tools:ignore="MissingTranslation">Downloading…</string>
+    <!-- %1$s is the amount so far without its unit, %2$s the full size: "0.5 of 1.2 MB" -->
+    <string name="catalogue_progress_of_size" tools:ignore="MissingTranslation">%1$s of %2$s</string>
+    <!-- %1$s is a size, "1.4 MB" -->
+    <string name="catalogue_downloading_so_far" tools:ignore="MissingTranslation">Downloading · %1$s so far</string>
+    <string name="catalogue_so_far" tools:ignore="MissingTranslation">%1$s so far</string>
+    <string name="catalogue_state_adding" tools:ignore="MissingTranslation">Adding to library…</string>
+    <string name="catalogue_adding_detail" tools:ignore="MissingTranslation">Checking the file and preparing it for reading.</string>
+    <string name="catalogue_in_library" tools:ignore="MissingTranslation">✓ In your library</string>
+    <!-- %1$s is when: "just now" -->
+    <string name="catalogue_in_library_downloaded" tools:ignore="MissingTranslation">✓ In your library · downloaded %1$s</string>
+    <string name="catalogue_just_now" tools:ignore="MissingTranslation">just now</string>
+    <string name="catalogue_read_now" tools:ignore="MissingTranslation">Read now</string>
+    <string name="catalogue_open" tools:ignore="MissingTranslation">Open</string>
+    <string name="catalogue_cancel" tools:ignore="MissingTranslation">Cancel</string>
+    <string name="catalogue_download_keeps_going" tools:ignore="MissingTranslation">Keeps going if you leave this screen.</string>
+    <string name="catalogue_download_keep_open_ios" tools:ignore="MissingTranslation">Keep Parrot open until this finishes. iPhone pauses downloads soon after you leave the app.</string>
+    <!-- §3 First load, empty folder -->
+    <string name="catalogue_opening" tools:ignore="MissingTranslation">Opening %1$s…</string>
+    <string name="catalogue_empty_folder_title" tools:ignore="MissingTranslation">Nothing here yet</string>
+    <string name="catalogue_empty_folder_body" tools:ignore="MissingTranslation">This part of the catalogue has no books right now.</string>
+    <string name="catalogue_go_back" tools:ignore="MissingTranslation">Go back</string>
+    <!-- §3 Search. %1$s is the query, %2$s the catalogue -->
+    <string name="catalogue_search_in" tools:ignore="MissingTranslation">“%1$s” in %2$s</string>
+    <string name="catalogue_search_no_results_title" tools:ignore="MissingTranslation">No books found for “%1$s”</string>
+    <string name="catalogue_search_no_results_body" tools:ignore="MissingTranslation">Check the spelling, or try the author's name.</string>
+    <string name="catalogue_clear_search" tools:ignore="MissingTranslation">Clear search</string>
+    <!-- §3 Filter picker. Search: %1$s is the group name, lower-case when shown -->
+    <plurals name="catalogue_filter_options" tools:ignore="MissingTranslation">
+        <item quantity="one">%1$d option</item>
+        <item quantity="other">%1$d options</item>
+    </plurals>
+    <!-- §3 Get books -->
+    <string name="catalogue_sources_lead_empty" tools:ignore="MissingTranslation">Add a book catalogue to browse it and download books straight into your library.</string>
+    <string name="catalogue_sources_section_start" tools:ignore="MissingTranslation">Start with one of these</string>
+    <string name="catalogue_sources_lead" tools:ignore="MissingTranslation">Browse book catalogues and download books straight into your library.</string>
+    <string name="catalogue_sources_section_yours" tools:ignore="MissingTranslation">Your catalogues</string>
+    <string name="catalogue_sources_section_add" tools:ignore="MissingTranslation">Add a catalogue</string>
+    <string name="catalogue_add_library_title" tools:ignore="MissingTranslation">Add a library</string>
+    <string name="catalogue_add_question" tools:ignore="MissingTranslation">What are you connecting?</string>
+    <string name="catalogue_add_address_label" tools:ignore="MissingTranslation">Catalogue address</string>
+    <string name="catalogue_opds_card_description" tools:ignore="MissingTranslation">Browse and download books from a catalogue address.</string>
+    <string name="catalogue_another_catalogue_description" tools:ignore="MissingTranslation">Calibre, Kavita, Komga or any OPDS address.</string>
+    <string name="catalogue_add_by_address" tools:ignore="MissingTranslation">Add by address</string>
+    <string name="catalogue_add_address_helper" tools:ignore="MissingTranslation">The catalogue’s OPDS address, often ending in /opds.</string>
+    <string name="catalogue_needs_account" tools:ignore="MissingTranslation">Needs an account</string>
+    <string name="catalogue_needs_account_helper" tools:ignore="MissingTranslation">Turn on only if the catalogue asks you to sign in.</string>
+    <string name="catalogue_no_account_needed" tools:ignore="MissingTranslation">No account needed</string>
+    <string name="catalogue_add_storyteller_subtitle" tools:ignore="MissingTranslation">Your read-along server.</string>
+    <string name="catalogue_add_audiobookshelf_subtitle" tools:ignore="MissingTranslation">Your audiobook and ebook server.</string>
+    <string name="catalogue_add_checking" tools:ignore="MissingTranslation">Checking address…</string>
+    <string name="catalogue_add_signing_in" tools:ignore="MissingTranslation">Signing in…</string>
+    <string name="catalogue_downloads_count_accessibility" tools:ignore="MissingTranslation">Downloads, %1$d active or failed</string>
+    <string name="catalogue_add_error_wrong_credentials" tools:ignore="MissingTranslation">Username or password is incorrect.</string>
+    <!-- TODO-design: no copy is specified for trying to add an address that is already saved. -->
+    <string name="catalogue_add_error_duplicate" tools:ignore="MissingTranslation">This catalogue is already in Get books.</string>
+    <string name="catalogue_add_error_save_failed" tools:ignore="MissingTranslation">Couldn't add this catalogue. Try again.</string>
+    <!-- §3 Preset detail. %1$s is the preset's name -->
+    <string name="catalogue_address_label" tools:ignore="MissingTranslation">Address</string>
+    <string name="catalogue_preset_terms_link" tools:ignore="MissingTranslation">%1$s's terms of use</string>
+    <string name="catalogue_preset_not_part_note" tools:ignore="MissingTranslation">Parrot isn't part of %1$s. What you can do with a book depends on its rights and on the law where you live.</string>
+    <string name="catalogue_add_catalogue" tools:ignore="MissingTranslation">Add catalogue</string>
+    <!-- §3 Download failed reasons -->
+    <string name="catalogue_failure_connection" tools:ignore="MissingTranslation">Couldn't finish · the connection was lost</string>
+    <!-- %1$s is the file's size, %2$s the limit -->
+    <string name="catalogue_failure_too_large" tools:ignore="MissingTranslation">Too large to add · %1$s (the limit is %2$s)</string>
+    <!-- %1$s is the device name, %2$s the size needed -->
+    <string name="catalogue_failure_storage" tools:ignore="MissingTranslation">Not enough space on %1$s · needs %2$s</string>
+    <string name="catalogue_failure_invalid" tools:ignore="MissingTranslation">This file isn't a book Parrot can open</string>
+    <string name="catalogue_failure_protected" tools:ignore="MissingTranslation">This file is protected (DRM) and can't be opened</string>
+    <string name="catalogue_failure_refused" tools:ignore="MissingTranslation">%1$s didn't allow this download</string>
+    <string name="catalogue_failure_interrupted" tools:ignore="MissingTranslation">Stopped when Parrot closed</string>
+    <string name="catalogue_failure_sign_in" tools:ignore="MissingTranslation">Sign-in needed for %1$s</string>
+    <string name="catalogue_retry" tools:ignore="MissingTranslation">Retry</string>
+    <string name="catalogue_dismiss" tools:ignore="MissingTranslation">Dismiss</string>
+    <string name="catalogue_start_again" tools:ignore="MissingTranslation">Start again</string>
+    <string name="catalogue_sign_in" tools:ignore="MissingTranslation">Sign in</string>
+    <!-- §4 Libraries rows. %1$s in "ago" lines is how long, "3 weeks" -->
+    <string name="catalogue_status_public" tools:ignore="MissingTranslation">Ready · no account needed</string>
+    <string name="catalogue_status_signed_in" tools:ignore="MissingTranslation">Signed in as %1$s</string>
+    <string name="catalogue_status_sign_in_needed_title" tools:ignore="MissingTranslation">Sign-in needed</string>
+    <string name="catalogue_status_sign_in_needed_body" tools:ignore="MissingTranslation">This catalogue now asks for your account.</string>
+    <string name="catalogue_status_sign_in_needed_body_patron" tools:ignore="MissingTranslation">This catalogue now asks for your patron account.</string>
+    <string name="catalogue_add_account_details" tools:ignore="MissingTranslation">Add account details</string>
+    <string name="catalogue_status_unsupported_title" tools:ignore="MissingTranslation">Sign-in method not supported</string>
+    <string name="catalogue_status_unsupported_body" tools:ignore="MissingTranslation">This catalogue changed how you sign in. Parrot can't open it until that's supported.</string>
+    <string name="catalogue_details" tools:ignore="MissingTranslation">Details</string>
+    <string name="catalogue_status_off_title" tools:ignore="MissingTranslation">Turned off</string>
+    <string name="catalogue_status_off_body" tools:ignore="MissingTranslation">Browsing and downloads are paused</string>
+    <string name="catalogue_turn_on" tools:ignore="MissingTranslation">Turn on</string>
+    <string name="catalogue_status_error_body" tools:ignore="MissingTranslation">The catalogue didn't answer. It may be offline.</string>
+    <string name="catalogue_try_again" tools:ignore="MissingTranslation">Try again</string>
+    <!-- §4 Catalogue settings -->
+    <string name="catalogue_libraries_title" tools:ignore="MissingTranslation">Libraries</string>
+    <string name="catalogue_settings_header_time" tools:ignore="MissingTranslation">Book catalogue · OPDS · checked %1$s</string>
+    <string name="catalogue_checked_time" tools:ignore="MissingTranslation">Checked %1$s</string>
+    <string name="catalogue_error_time" tools:ignore="MissingTranslation">Couldn't reach it · %1$s</string>
+    <!-- TODO-design: the editAddress board promises to keep account details on every change; Phase 2 clears them on origin changes. -->
+    <string name="catalogue_edit_address_origin_warning" tools:ignore="MissingTranslation">Changing the host, port or scheme removes your saved account details. Downloaded books stay.</string>
+    <string name="catalogue_address_show" tools:ignore="MissingTranslation">Show</string>
+    <string name="catalogue_address_hide" tools:ignore="MissingTranslation">Hide</string>
+    <string name="catalogue_edit_address" tools:ignore="MissingTranslation">Edit address</string>
+    <string name="catalogue_settings_group_account" tools:ignore="MissingTranslation">Account</string>
+    <string name="catalogue_account_none_title" tools:ignore="MissingTranslation">No account</string>
+    <string name="catalogue_account_none_body" tools:ignore="MissingTranslation">This catalogue doesn't need one.</string>
+    <!-- %1$s is the device name -->
+    <string name="catalogue_account_saved_on_device" tools:ignore="MissingTranslation">Saved on %1$s only.</string>
+    <string name="catalogue_edit_account_details" tools:ignore="MissingTranslation">Edit account details</string>
+    <string name="catalogue_remove_account_details" tools:ignore="MissingTranslation">Remove account details</string>
+    <string name="catalogue_remove_account_title" tools:ignore="MissingTranslation">Remove account details for %1$s?</string>
+    <string name="catalogue_remove_account_body" tools:ignore="MissingTranslation">You'll browse it without an account. Downloaded books stay.</string>
+    <string name="catalogue_remove" tools:ignore="MissingTranslation">Remove</string>
+    <string name="catalogue_settings_group_catalogue" tools:ignore="MissingTranslation">Catalogue</string>
+    <string name="catalogue_use_this_catalogue" tools:ignore="MissingTranslation">Use this catalogue</string>
+    <string name="catalogue_use_this_catalogue_on" tools:ignore="MissingTranslation">Turn off to pause browsing and downloads.</string>
+    <string name="catalogue_use_this_catalogue_off" tools:ignore="MissingTranslation">Off. Browsing and downloads are paused.</string>
+    <string name="catalogue_remove_catalogue_row" tools:ignore="MissingTranslation">Remove catalogue…</string>
+    <string name="catalogue_turned_off_note" tools:ignore="MissingTranslation">Turned off. Browsing and downloads from this catalogue are paused. Books you downloaded stay in your library.</string>
+    <!-- §9 A1 Was working, now unsupported -->
+    <string name="catalogue_unsupported_note_title" tools:ignore="MissingTranslation">Can't be browsed right now</string>
+    <string name="catalogue_unsupported_note_body" tools:ignore="MissingTranslation">This catalogue now uses a sign-in method Parrot doesn't support yet. Parrot can sign in with a username and password. Books you downloaded stay in your library.</string>
+    <!-- §4 Edit address dialog -->
+    <string name="catalogue_edit_address_helper" tools:ignore="MissingTranslation">The full address, including any key it needs.</string>
+    <string name="catalogue_save" tools:ignore="MissingTranslation">Save</string>
+    <!-- §4 Remove dialog. %1$d is the number of books, %2$s the device name. The design gives the plural only; "one" follows it. -->
+    <string name="catalogue_remove_title" tools:ignore="MissingTranslation">Remove %1$s?</string>
+    <plurals name="catalogue_remove_body_count" tools:ignore="MissingTranslation">
+        <item quantity="one">It will no longer appear in Get books, and its account details are deleted from %2$s. The book you downloaded from it stays in your library.</item>
+        <item quantity="other">It will no longer appear in Get books, and its account details are deleted from %2$s. The %1$d books you downloaded from it stay in your library.</item>
+    </plurals>
+    <!-- %1$s is the device name -->
+    <string name="catalogue_remove_body_none" tools:ignore="MissingTranslation">It will no longer appear in Get books, and its account details are deleted from %1$s. Books you downloaded from it stay in your library.</string>
+    <string name="catalogue_remove_catalogue" tools:ignore="MissingTranslation">Remove catalogue</string>
+    <!-- §5 Field errors on Add -->
+    <string name="catalogue_add_error_web_page" tools:ignore="MissingTranslation">This is a web page, not a catalogue. On that site, look for a link called “OPDS” and paste that address.</string>
+    <string name="catalogue_add_error_unreachable" tools:ignore="MissingTranslation">Can't reach this address. Check it for typos, and that the catalogue is running and on the same network.</string>
+    <string name="catalogue_add_error_invalid" tools:ignore="MissingTranslation">This address answered, but not with a book catalogue Parrot can read. Check that it's the OPDS address.</string>
+    <string name="catalogue_add_error_sign_in_needed" tools:ignore="MissingTranslation">This catalogue needs an account. Enter your username and password to add it.</string>
+    <!-- §5 Dialogs -->
+    <string name="catalogue_http_title" tools:ignore="MissingTranslation">This catalogue isn't secure</string>
+    <string name="catalogue_http_body" tools:ignore="MissingTranslation">It uses an http:// address, so others on your network could see what you browse and download. You can't use a password with it.</string>
+    <string name="catalogue_add_anyway" tools:ignore="MissingTranslation">Add anyway</string>
+    <string name="catalogue_http_blocked_title" tools:ignore="MissingTranslation">This catalogue can't be added</string>
+    <!-- %1$s is the device name: "this iPhone" -->
+    <string name="catalogue_http_blocked_body" tools:ignore="MissingTranslation">On %1$s, Parrot can only use secure addresses that start with https://. Ask whoever runs the catalogue for an https:// address.</string>
+    <string name="catalogue_ok" tools:ignore="MissingTranslation">OK</string>
+    <string name="catalogue_password_http_title" tools:ignore="MissingTranslation">Passwords need a secure address</string>
+    <string name="catalogue_password_http_body" tools:ignore="MissingTranslation">This catalogue uses http://, so your password would travel without protection. Use an https:// address, or add the catalogue without an account.</string>
+    <!-- §9 A2 The catalogue shows nothing without an account -->
+    <string name="catalogue_password_http_blocked_body" tools:ignore="MissingTranslation">This catalogue needs an account for everything, and it uses http://, so your password would travel without protection. It can't be used until it has an https:// address.</string>
+    <string name="catalogue_change_address" tools:ignore="MissingTranslation">Change address</string>
+    <string name="catalogue_add_without_account" tools:ignore="MissingTranslation">Add without an account</string>
+    <string name="catalogue_certificate_title" tools:ignore="MissingTranslation">Can't check this catalogue</string>
+    <!-- %1$s is the host -->
+    <string name="catalogue_certificate_body" tools:ignore="MissingTranslation">Its security certificate isn't trusted, so Parrot can't be sure it's really %1$s. If it's your own server, give it a valid certificate and try again.</string>
+    <string name="catalogue_unsupported_sign_in_body" tools:ignore="MissingTranslation">This catalogue uses a sign-in method Parrot doesn't support yet. You can still add it and browse anything it shows without an account.</string>
+    <!-- §9 A1 The catalogue's first page itself asks for an unsupported sign-in -->
+    <string name="catalogue_unsupported_blocked_title" tools:ignore="MissingTranslation">Can't add this catalogue yet</string>
+    <string name="catalogue_unsupported_blocked_body" tools:ignore="MissingTranslation">It asks you to sign in before showing anything, and uses a sign-in method Parrot doesn't support yet. Parrot can sign in with a username and password.</string>
+    <string name="catalogue_local_network_title" tools:ignore="MissingTranslation">Open a device on your network?</string>
+    <string name="catalogue_local_network_body" tools:ignore="MissingTranslation">This link leads away from %1$s to a device on your home network. Only open it if you expected that.</string>
+    <string name="catalogue_local_network_dont_open" tools:ignore="MissingTranslation">Don't open</string>
+    <string name="catalogue_sign_out_all_detail" tools:ignore="MissingTranslation">Book catalogues: account details are removed too. Catalogues that don't need an account stay, so you can keep browsing.</string>
+    <!-- TODO-design: this checkout has no logout-all dialog entry point; the board supplies its dialog, not an entry label. -->
+    <string name="catalogue_sign_out_everything" tools:ignore="MissingTranslation">Sign out of everything…</string>
+    <string name="catalogue_sign_out_everything_title" tools:ignore="MissingTranslation">Sign out of everything?</string>
+    <string name="catalogue_sign_out_everything_body" tools:ignore="MissingTranslation">You'll be signed out of every server on %1$s. Your downloaded books stay.</string>
+    <string name="catalogue_rate_limited_title" tools:ignore="MissingTranslation">Too many requests</string>
+    <string name="catalogue_rate_limited_body" tools:ignore="MissingTranslation">%1$s asked apps to slow down for a moment. Try again in about a minute.</string>
+    <!-- §5 Sign-in sheet. Body: %1$s is the device name -->
+    <string name="catalogue_sign_in_title" tools:ignore="MissingTranslation">Sign in to %1$s</string>
+    <string name="catalogue_sign_in_body" tools:ignore="MissingTranslation">This part of the catalogue needs an account. Your details are saved on %1$s only.</string>
+    <string name="catalogue_username" tools:ignore="MissingTranslation">Username</string>
+    <string name="catalogue_password" tools:ignore="MissingTranslation">Password</string>
+    <string name="catalogue_password_helper" tools:ignore="MissingTranslation">Leave empty if this catalogue has no password.</string>
+    <!-- §9 A3 Same book listed several times. %1$s is the catalogue, %2$d how many times -->
+    <string name="catalogue_listed_times" tools:ignore="MissingTranslation">%1$s lists this book %2$d times. They may be different editions or files.</string>
+    <!-- The "telling" line: edition label, year, file count, joined with " · " in code -->
+    <string name="catalogue_telling_published" tools:ignore="MissingTranslation">Published %1$s</string>
+    <plurals name="catalogue_telling_files" tools:ignore="MissingTranslation">
+        <item quantity="one">%1$d file</item>
+        <item quantity="other">%1$d files</item>
+    </plurals>
+    <string name="catalogue_telling_none" tools:ignore="MissingTranslation">No edition details</string>
+    <!-- §9 B5 Offline, no saved copy -->
+    <string name="catalogue_offline_none_title" tools:ignore="MissingTranslation">You're offline</string>
+    <string name="catalogue_offline_none_body" tools:ignore="MissingTranslation">This page hasn't been opened before, so there's no saved copy to show. Pages you've opened are kept for when you're offline.</string>
+    <!-- §10 "Can't be downloaded here" card. %1$s is the provider: the seller or lender when the entry names one, else the catalogue -->
+    <string name="catalogue_blocked_title" tools:ignore="MissingTranslation">Can't be downloaded here</string>
+    <string name="catalogue_blocked_sold" tools:ignore="MissingTranslation">This book is sold on %1$s's site. Parrot can only add books that the catalogue lets you download.</string>
+    <string name="catalogue_blocked_subscription" tools:ignore="MissingTranslation">This book is part of a subscription on %1$s's site. Parrot can only add books that the catalogue lets you download.</string>
+    <string name="catalogue_blocked_borrow" tools:ignore="MissingTranslation">This book can be borrowed on %1$s's site, but not downloaded here. Parrot can only add books that the catalogue lets you download.</string>
+    <string name="catalogue_open_provider_page" tools:ignore="MissingTranslation">Open provider page</string>
+    <string name="catalogue_blocked_sample_title" tools:ignore="MissingTranslation">Only a sample is available</string>
+    <string name="catalogue_blocked_sample_body" tools:ignore="MissingTranslation">The catalogue offers only a sample of this book.</string>
+    <!-- %1$s is a format name below, or the catalogue's own type label -->
+    <string name="catalogue_blocked_format" tools:ignore="MissingTranslation">This book is only available as %1$s, which Parrot can't open.</string>
+    <string name="catalogue_blocked_format_unknown" tools:ignore="MissingTranslation">This book is only available in a format Parrot can't open.</string>
+    <string name="catalogue_blocked_protected" tools:ignore="MissingTranslation">This book's file is protected (DRM), so Parrot can't open it.</string>
+    <string name="catalogue_format_pdf" tools:ignore="MissingTranslation">PDF</string>
+    <string name="catalogue_format_mobi" tools:ignore="MissingTranslation">MOBI</string>
+    <string name="catalogue_format_azw3" tools:ignore="MissingTranslation">a Kindle file (AZW3)</string>
+    <string name="catalogue_format_audiobook" tools:ignore="MissingTranslation">an audiobook</string>
+    <!-- §6 Accessibility labels -->
+    <string name="catalogue_a11y_download" tools:ignore="MissingTranslation">Download %1$s</string>
+    <!-- §9 A3: %2$s is the telling line -->
+    <string name="catalogue_a11y_download_telling" tools:ignore="MissingTranslation">Download %1$s, %2$s</string>
+    <string name="catalogue_a11y_cancel_download_of" tools:ignore="MissingTranslation">Cancel download of %1$s</string>
+    <!-- Announced once when the size is unknown -->
+    <string name="catalogue_a11y_cancel_download" tools:ignore="MissingTranslation">Cancel download</string>
+    <string name="catalogue_a11y_read" tools:ignore="MissingTranslation">Read %1$s</string>
+    <!-- File option: label, size -->
+    <string name="catalogue_a11y_file_option" tools:ignore="MissingTranslation">%1$s, %2$s</string>
+    <string name="catalogue_a11y_file_option_best" tools:ignore="MissingTranslation">%1$s, %2$s, best match</string>
+    <string name="catalogue_a11y_file_option_unavailable" tools:ignore="MissingTranslation">%1$s, %2$s, can't be opened in Parrot, unavailable</string>
+    <!-- Filter chip: group, current value -->
+    <string name="catalogue_a11y_filter_chip" tools:ignore="MissingTranslation">%1$s: %2$s. Change</string>
+    <string name="catalogue_a11y_retry" tools:ignore="MissingTranslation">Retry %1$s</string>
+    <string name="catalogue_a11y_start_again" tools:ignore="MissingTranslation">Start downloading %1$s again</string>
+    <string name="catalogue_a11y_dismiss" tools:ignore="MissingTranslation">Dismiss %1$s</string>
+    <string name="catalogue_a11y_open" tools:ignore="MissingTranslation">Open %1$s</string>
+    <!-- Libraries card: name, status -->
+    <string name="catalogue_a11y_library_card" tools:ignore="MissingTranslation">%1$s, book catalogue, %2$s</string>
+    <string name="catalogue_a11y_browse" tools:ignore="MissingTranslation">Browse %1$s</string>
+    <string name="catalogue_a11y_add_account_details" tools:ignore="MissingTranslation">Add account details for %1$s</string>
+    <string name="catalogue_a11y_turn_on" tools:ignore="MissingTranslation">Turn on %1$s</string>
+    <string name="catalogue_a11y_try_again" tools:ignore="MissingTranslation">Try %1$s again</string>
+    <string name="catalogue_a11y_details" tools:ignore="MissingTranslation">Details for %1$s</string>
+    <string name="catalogue_a11y_address_show" tools:ignore="MissingTranslation">Show full address</string>
+    <string name="catalogue_a11y_address_hide" tools:ignore="MissingTranslation">Hide key in address</string>
+    <!-- Preset row: name, note -->
+    <string name="catalogue_a11y_try_loading_again" tools:ignore="MissingTranslation">Try loading this page again</string>
+    <string name="catalogue_a11y_open_provider_page" tools:ignore="MissingTranslation">Open %1$s page, opens in browser</string>
+    <!-- Catalogue browser (design prompt §11.2, §11.3, §11.5, §11.11) -->
+    <string name="catalogue_search_catalogue" tools:ignore="MissingTranslation">Search %1$s</string>
+    <string name="catalogue_see_all" tools:ignore="MissingTranslation">See all</string>
+    <string name="catalogue_a11y_see_all" tools:ignore="MissingTranslation">See all, %1$s</string>
+    <string name="catalogue_a11y_folder" tools:ignore="MissingTranslation">%1$s, folder</string>
+    <string name="catalogue_unknown_author" tools:ignore="MissingTranslation">Unknown author</string>
+    <string name="catalogue_list_failed_lead" tools:ignore="MissingTranslation">Couldn't load more books.</string>
+    <string name="catalogue_list_failed_rest" tools:ignore="MissingTranslation">The ones above are still here.</string>
+    <string name="catalogue_a11y_try_loading_more" tools:ignore="MissingTranslation">Try loading more books again</string>
+    <string name="catalogue_a11y_loading_more" tools:ignore="MissingTranslation">Loading more books</string>
+    <string name="catalogue_a11y_load_more" tools:ignore="MissingTranslation">Load more books</string>
+    <string name="catalogue_page_failed_title" tools:ignore="MissingTranslation">Couldn't open this page</string>
+    <string name="catalogue_page_failed_timed_out" tools:ignore="MissingTranslation">%1$s took too long to answer.</string>
+    <string name="catalogue_page_failed_catalogue_error" tools:ignore="MissingTranslation">%1$s had a problem on its side. Try again in a few minutes.</string>
+    <string name="catalogue_page_failed_not_allowed" tools:ignore="MissingTranslation">%1$s doesn't allow access to this page.</string>
+    <string name="catalogue_page_failed_not_found" tools:ignore="MissingTranslation">This page no longer exists in %1$s.</string>
+    <string name="catalogue_page_failed_too_large" tools:ignore="MissingTranslation">This page is too large for Parrot to open.</string>
+    <string name="catalogue_page_failed_not_a_catalogue" tools:ignore="MissingTranslation">This address no longer returns a book catalogue. It may have moved.</string>
+    <string name="catalogue_page_failed_certificate" tools:ignore="MissingTranslation">%1$s's security certificate is no longer trusted, so Parrot stopped loading it.</string>
+    <string name="catalogue_catalogue_settings" tools:ignore="MissingTranslation">Catalogue settings</string>
+    <string name="catalogue_a11y_open_settings" tools:ignore="MissingTranslation">Open %1$s settings</string>
+    <string name="catalogue_offline_banner_lead" tools:ignore="MissingTranslation">You're offline.</string>
+    <string name="catalogue_offline_banner_rest" tools:ignore="MissingTranslation">Showing the copy saved %1$s. Connect to the internet to download books.</string>
+    <string name="catalogue_time_minutes_ago" tools:ignore="MissingTranslation">%1$d min ago</string>
+    <string name="catalogue_time_hours_ago" tools:ignore="MissingTranslation">%1$d h ago</string>
+    <string name="catalogue_time_yesterday" tools:ignore="MissingTranslation">yesterday</string>
+    <string name="catalogue_time_days_ago" tools:ignore="MissingTranslation">%1$d days ago</string>
+    <string name="catalogue_time_on_date" tools:ignore="MissingTranslation">on %1$s</string>
+    <!-- TODO-design: no copy yet for the rows a long list shows once its earliest pages were dropped (20-page limit). -->
+    <string name="catalogue_load_earlier" tools:ignore="MissingTranslation">Load earlier books</string>
+    <string name="catalogue_list_failed_earlier_rest" tools:ignore="MissingTranslation">The ones below are still here.</string>
 </resources>

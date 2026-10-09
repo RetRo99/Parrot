@@ -2,6 +2,10 @@ package com.retro99.login.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigationevent.NavigationEventInfo
@@ -11,6 +15,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.retro99.base.ui.BaseScreen
+import com.retro99.catalogue.ui.sources.CatalogueStandaloneAddScreen
 import com.retro99.login.ui.login.LoginScreen
 import com.retro99.login.ui.welcome.WelcomeScreen
 import org.koin.compose.viewmodel.koinViewModel
@@ -38,6 +43,8 @@ fun LoginNavigation(
 ) {
     BaseScreen(viewModel = viewModel) { state, intentDispatcher ->
         val rootWelcomeBackState = rememberNavigationEventState(NavigationEventInfo.None)
+        val catalogueAddBackState = rememberNavigationEventState(NavigationEventInfo.None)
+        var showCatalogueAdd by remember { mutableStateOf(false) }
         val isRootWelcomeBackEnabled =
             state.backStack == listOf(LoginDestination.Welcome) && onRootBack != null
 
@@ -55,7 +62,15 @@ fun LoginNavigation(
             }
         }
 
-        NavDisplay(
+        if (showCatalogueAdd) {
+            CatalogueStandaloneAddScreen(
+                onBack = { showCatalogueAdd = false },
+                onCatalogueAdded = {
+                    showCatalogueAdd = false
+                    onGuestModeSelected()
+                },
+            )
+        } else NavDisplay(
             backStack = state.backStack,
             onBack = {
                 when {
@@ -93,6 +108,7 @@ fun LoginNavigation(
                         onSignInFailure = onLoginFailure,
                         existingServerId = existingServerId,
                         isRetryOrigin = isRetryOrigin,
+                        onCatalogueAddSelected = { showCatalogueAdd = true },
                         draft = viewModel.loginDraft,
                         onBackClick = {
                             if (state.backStack.size <= 1 && onBack != null) {
@@ -112,6 +128,12 @@ fun LoginNavigation(
             onBackCompleted = {
                 onRootBack?.let(viewModel::onWelcomeSystemBack)
             },
+        )
+
+        NavigationBackHandler(
+            state = catalogueAddBackState,
+            isBackEnabled = showCatalogueAdd,
+            onBackCompleted = { showCatalogueAdd = false },
         )
     }
 }

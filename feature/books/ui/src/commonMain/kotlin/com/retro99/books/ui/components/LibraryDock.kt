@@ -37,8 +37,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +64,8 @@ import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
 import resources.translations.books_dock_add
 import resources.translations.books_dock_add_description
+import resources.translations.books_dock_get_books
+import resources.translations.books_empty_import_cta
 import resources.translations.books_dock_search
 
 private val DockHeight = 56.dp
@@ -109,6 +117,7 @@ fun LibraryDock(
     onSearchSubmitted: () -> Unit,
     onCloseSearch: () -> Unit,
     onAddClick: () -> Unit,
+    onGetBooksClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val insetsModifier = if (isSearchActive) {
@@ -142,7 +151,7 @@ fun LibraryDock(
         if (isSearchActive) {
             CloseSearchButton(onClick = onCloseSearch)
         } else {
-            AddButton(onClick = onAddClick)
+            AddButton(onImportClick = onAddClick, onGetBooksClick = onGetBooksClick)
         }
     }
 }
@@ -253,40 +262,54 @@ private fun CloseSearchButton(
 
 @Composable
 private fun AddButton(
-    onClick: () -> Unit,
+    onImportClick: () -> Unit,
+    onGetBooksClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = Ember.colors
     val description = stringResource(StringRes.books_dock_add_description)
+    var menuExpanded by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = modifier
-            .dockShadow()
-            .height(DockHeight)
-            .clip(DockShape)
-            .background(colors.accent)
-            .clickable(onClick = onClick)
-            .semantics {
-                contentDescription = description
-                role = Role.Button
-            }
-            .padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Outlined.Add,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = colors.onAccent,
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = stringResource(StringRes.books_dock_add),
-            style = Ember.type.meta.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
-            color = colors.onAccent,
-            maxLines = 1,
-        )
+    Box {
+        Row(
+            modifier = modifier
+                .dockShadow()
+                .height(DockHeight)
+                .clip(DockShape)
+                .background(colors.accent)
+                .clickable { menuExpanded = true }
+                .semantics {
+                    contentDescription = description
+                    role = Role.Button
+                }
+                .padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Add,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = colors.onAccent,
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(StringRes.books_dock_add),
+                style = Ember.type.meta.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                color = colors.onAccent,
+                maxLines = 1,
+            )
+        }
+        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(StringRes.books_dock_get_books), color = colors.ink) },
+                onClick = { menuExpanded = false; onGetBooksClick() },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(StringRes.books_empty_import_cta), color = colors.ink) },
+                onClick = { menuExpanded = false; onImportClick() },
+            )
+        }
     }
 }
 

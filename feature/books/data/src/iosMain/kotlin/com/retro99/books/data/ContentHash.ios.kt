@@ -17,6 +17,7 @@ import platform.CoreCrypto.CC_SHA256_Final
 import platform.CoreCrypto.CC_SHA256_Init
 import platform.CoreCrypto.CC_SHA256_Update
 import platform.Foundation.NSFileHandle
+import platform.Foundation.NSFileManager
 import platform.Foundation.closeFile
 import platform.Foundation.fileHandleForReadingAtPath
 import platform.Foundation.readDataOfLength
@@ -41,6 +42,11 @@ internal actual fun calculateFileContentHash(filePath: String): String {
     }
     return digest.digest().toHexString()
 }
+
+@OptIn(ExperimentalForeignApi::class)
+internal actual fun fileSizeBytes(filePath: String): Long =
+    (NSFileManager.defaultManager.attributesOfItemAtPath(filePath, error = null)?.get("NSFileSize") as? Long)
+        ?: 0L
 
 @OptIn(ExperimentalForeignApi::class)
 internal actual class Sha256Digest actual constructor() {

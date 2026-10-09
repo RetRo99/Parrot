@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,6 +46,7 @@ fun EmberTextField(
     enabled: Boolean = true,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     focusRequester: FocusRequester? = null,
+    labelStyle: TextStyle = Ember.type.meta.copy(fontSize = 13.sp),
 ) {
     var focused by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(16.dp)
@@ -64,7 +66,7 @@ fun EmberTextField(
     ) {
         Text(
             text = label,
-            style = Ember.type.meta.copy(fontSize = 13.sp),
+            style = labelStyle,
             color = Ember.colors.ink2,
         )
         BasicTextField(

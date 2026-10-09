@@ -40,3 +40,29 @@ Additional positions scenarios: `apply-start`, `apply-no-match`, `apply-not-supp
 `python3 tools/ember-fixtures/smoke.py --serial emulator-5554` verifies submit-only E-ink
 search, caller Back, and search/scroll restoration after killing only the fixture process.
 It uses the optional `--ez longlist true` fixture scenario, not production data.
+
+## Book catalogue (OPDS) fixtures
+
+One fixture per design board (`design/ember/catalogues/screens/opds-<view>-<theme>.png`),
+drawn by the production catalogue composables from in-memory state. The list lives in
+`src/main/kotlin/com/retro99/parrot/fixtures/CatalogueFixtures.kt`. To add a board, add one
+line there:
+```
+fixture(view = "browsePlain", expect = "a text only this board shows") { /* the composable */ }
+```
+`view` is the board name without `opds-`. `expect` must be on screen for the capture to pass.
+Keep both as literals on the `fixture(` line: the capture script reads them from the file.
+
+Build, then capture every fixture in Day and E-ink:
+```
+./gradlew :tools:ember-fixtures:assembleDebug
+python3 tools/ember-fixtures/catalogue_capture.py --serial emulator-5554
+```
+Captures go to `design/screens/catalogue-<view>-<theme>.png`, each with its UI hierarchy as
+`.xml`. Options: `--views browsePlain detail` for some fixtures only, `--themes day eink night`,
+`--list` to print the fixtures without a device. Real targets require `--allow-device`.
+Look at one fixture by hand:
+```
+adb -s emulator-5554 shell am start -n com.retro99.parrot.fixtures/.FixtureActivity --es theme eink --es catalogue descriptionText
+```
+`descriptionText` is not a board: it draws a sanitized description and proves the harness.

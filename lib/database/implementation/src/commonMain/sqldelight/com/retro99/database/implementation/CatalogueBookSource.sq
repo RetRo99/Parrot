@@ -1,0 +1,71 @@
+-- Where a library book was acquired from. A book can have several rows. Never holds the
+-- catalogue's full address, a download link, a header or a password: catalogue_origin is
+-- scheme, host and port only.
+CREATE TABLE IF NOT EXISTS catalogue_book_sources (
+    id TEXT NOT NULL PRIMARY KEY,
+    library_book_id TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    catalogue_name TEXT NOT NULL,
+    catalogue_origin TEXT NOT NULL,
+    publication_key TEXT NOT NULL,
+    detail_identity TEXT,
+    selected_format TEXT NOT NULL,
+    rights_text TEXT,
+    catalogue_updated TEXT,
+    content_hash TEXT NOT NULL,
+    acquired_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalogue_book_sources_publication
+ON catalogue_book_sources(source_id, publication_key);
+
+CREATE INDEX IF NOT EXISTS idx_catalogue_book_sources_book
+ON catalogue_book_sources(library_book_id);
+
+CREATE INDEX IF NOT EXISTS idx_catalogue_book_sources_detail
+ON catalogue_book_sources(source_id, detail_identity);
+
+insertCatalogueBookSource:
+INSERT INTO catalogue_book_sources(
+    id, library_book_id, source_id, catalogue_name, catalogue_origin, publication_key,
+    detail_identity, selected_format, rights_text, catalogue_updated, content_hash, acquired_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- The id is the download request's id, so writing the same request's row again changes nothing.
+insertCatalogueBookSourceIfAbsent:
+INSERT OR IGNORE INTO catalogue_book_sources(
+    id, library_book_id, source_id, catalogue_name, catalogue_origin, publication_key,
+    detail_identity, selected_format, rights_text, catalogue_updated, content_hash, acquired_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- "In your library": a row counts only while its library book still exists and has a file on
+-- this device. A book kept without its file can be downloaded again: the same bytes go back
+-- to that book. A listing entry and the edition downloaded from it can carry different
+-- identities, so both columns match.
+findCatalogueBooksInLibrary:
+SELECT s.publication_key, s.detail_identity, s.library_book_id
+FROM catalogue_book_sources s
+JOIN library_books b ON b.library_book_id = s.library_book_id AND b.deleted_at IS NULL
+WHERE s.source_id = :sourceId
+AND (s.publication_key IN :identities OR s.detail_identity IN :identities)
+AND EXISTS (SELECT 1 FROM device_files f WHERE f.library_book_id = s.library_book_id)
+ORDER BY s.acquired_at ASC, s.id ASC;
+
+getCatalogueBookSourcesForBook:
+SELECT * FROM catalogue_book_sources WHERE library_book_id = ? ORDER BY acquired_at ASC, id ASC;
+
+getCatalogueBookSourcesForSource:
+SELECT * FROM catalogue_book_sources WHERE source_id = ? ORDER BY acquired_at ASC, id ASC;
+
+countCatalogueBooksForSource:
+SELECT COUNT(DISTINCT library_book_id) FROM catalogue_book_sources WHERE source_id = ?;
+
+moveCatalogueBookSources:
+UPDATE catalogue_book_sources SET library_book_id = ? WHERE library_book_id = ?;
+
+deleteCatalogueBookSource:
+DELETE FROM catalogue_book_sources WHERE id = ?;
+
+deleteCatalogueBookSourcesForBook:
+DELETE FROM catalogue_book_sources WHERE library_book_id = ?;
+

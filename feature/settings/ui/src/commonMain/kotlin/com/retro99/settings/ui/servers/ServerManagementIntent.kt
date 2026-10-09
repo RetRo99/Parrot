@@ -4,6 +4,9 @@ import com.retro99.base.ui.BaseIntent
 import com.retro99.server.api.ServerType
 
 sealed interface ServerManagementIntent : BaseIntent {
+    data class OnTurnOnCatalogue(val sourceId: String) : ServerManagementIntent
+    data class OnRetryCatalogue(val sourceId: String) : ServerManagementIntent
+    data object OnSignOutEverything : ServerManagementIntent
     data class OnLoginClick(
         val serverId: String,
         val serverType: ServerType,

@@ -2,7 +2,8 @@
 -- DEVICE FILES TABLE (a library book's copies on this device)
 -- ============================================
 -- One row per (book, media type). Always read file_path from here; never
--- rebuild a path from the book id. origin is 'import' or 'cloud_download'.
+-- rebuild a path from the book id. origin is 'import', 'cloud_download' or
+-- 'catalogue_download'.
 
 CREATE TABLE IF NOT EXISTS device_files (
     library_book_id TEXT NOT NULL,

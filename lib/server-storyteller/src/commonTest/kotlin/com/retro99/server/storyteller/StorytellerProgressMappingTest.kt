@@ -17,7 +17,7 @@ import kotlin.test.assertNull
 
 class StorytellerProgressMappingTest {
     @Test
-    fun `the payload ignores origin, observation time and text anchor`() {
+    fun `the payload ignores origin observation time and text anchor`() {
         // Given
         val plain = ServerPosition(
             bookUuid = "book-1",
