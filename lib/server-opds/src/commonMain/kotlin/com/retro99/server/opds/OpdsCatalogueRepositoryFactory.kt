@@ -48,10 +48,22 @@ class OpdsCatalogueRepositoryFactory(
             baseUrl = address,
             addedAt = 0,
         )
+        // An address the transport cannot even take apart (a port that is not a number, an
+        // unclosed bracket) is not a catalogue. It must not escape as an exception: the
+        // exception's message would carry the address into whatever reports it.
+        val engine = engines.create()
+        val transport = try {
+            KtorOpdsTransport(engine, address)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            engine.close()
+            return CatalogueConnectionResult.Unreachable
+        }
         val repository = OpdsCatalogueRepository(
             profileId = profileId,
             config = config,
-            transport = KtorOpdsTransport(engines.create(), address),
+            transport = transport,
             credentials = credentials,
             access = access,
             isCurrent = { true },

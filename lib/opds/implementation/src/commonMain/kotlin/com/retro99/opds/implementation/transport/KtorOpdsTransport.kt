@@ -189,6 +189,8 @@ class KtorOpdsTransport(
         if (!value.startsWith("$scheme://", true) || value.any { it.isWhitespace() || it.code < 32 }) return OpdsTransportError.Code.MALFORMED_URL
         val authority = value.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#')
         if ('@' in authority) return OpdsTransportError.Code.MALFORMED_URL
+        // The URL parser fills in "localhost" for a missing host and reads past an unclosed bracket.
+        if (authority.substringBefore(':').isEmpty() || authority.startsWith('[') != (']' in authority)) return OpdsTransportError.Code.MALFORMED_URL
         val url = try { Url(value) } catch (_: Exception) { return OpdsTransportError.Code.MALFORMED_URL }
         if (url.host.isEmpty() || '%' in url.host || url.user != null || url.password != null) return OpdsTransportError.Code.MALFORMED_URL
         if (scheme == "http" && !allowHttp) return OpdsTransportError.Code.CLEARTEXT_NOT_ALLOWED

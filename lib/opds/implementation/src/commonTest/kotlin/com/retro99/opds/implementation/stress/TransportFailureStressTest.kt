@@ -259,6 +259,28 @@ class TransportFailureStressTest {
         transport.close()
     }
 
+    @Test fun an_address_with_no_host_or_an_unclosed_bracket_is_refused_and_does_not_become_localhost() = runTest {
+        val engine = MockEngine { fail("must not reach the engine") }
+        val transport = KtorOpdsTransport(engine, root)
+
+        for (address in listOf("https://", "https:///opds", "https://:8443/opds", "https://[::1/opds", "https://::1]/opds", "http://", "https://?q=1", "https://#top")) {
+            assertEquals(OpdsTransportError.Code.MALFORMED_URL, code(transport.fetch(OpdsRequest(address, allowCleartext = true))), address)
+            assertEquals(OpdsTransportError.Code.MALFORMED_URL, code(transport.download(download(address).copy(allowCleartext = true), CountingSink())), address)
+        }
+        transport.close()
+    }
+
+    @Test fun bracketed_and_plain_hosts_with_and_without_a_port_are_still_asked() = runTest {
+        val engine = MockEngine { respond(ByteReadChannel(ByteArray(1))) }
+        val transport = KtorOpdsTransport(engine, root)
+
+        val addresses = listOf("https://[2001:db8::1]/opds", "https://[2001:db8::1]:8443/opds", "https://books.example:8443/opds", "https://books.example")
+        addresses.forEach { address -> assertIs<OpdsFetchResult.Response>(transport.fetch(OpdsRequest(address)), address) }
+
+        assertEquals(addresses.size, engine.requestHistory.size)
+        transport.close()
+    }
+
     // --- throttling ---------------------------------------------------------------------
 
     @Test fun retry_after_in_seconds_as_a_date_and_huge_is_read_safely_for_pages_and_files() = runTest {
