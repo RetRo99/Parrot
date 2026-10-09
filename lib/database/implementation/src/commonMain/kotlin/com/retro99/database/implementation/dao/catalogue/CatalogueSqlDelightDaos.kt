@@ -1,7 +1,5 @@
 package com.retro99.database.implementation.dao.catalogue
 
-import app.cash.sqldelight.coroutines.asFlow
-import app.cash.sqldelight.coroutines.mapToList
 import com.retro99.database.api.catalogue.CatalogueAcquisitionEntity
 import com.retro99.database.api.catalogue.CatalogueAcquisitionsDatabase
 import com.retro99.database.api.catalogue.CatalogueBookSourceEntity
@@ -16,8 +14,6 @@ import com.retro99.database.implementation.Catalogue_book_sources
 import com.retro99.database.implementation.Catalogue_documents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 /** [database] is asked on every call, so a profile switch is never served from a stale handle. */
@@ -128,21 +124,6 @@ internal class CatalogueAcquisitionsSqlDelightDao(
         (queries.maxCatalogueAcquisitionQueuePosition().executeAsOne().MAX ?: 0L) + 1L
     }
 
-    override suspend fun interruptRunning(updatedAt: Long): Int = withContext(Dispatchers.IO) {
-        val database = database()
-        database.transactionWithResult {
-            val running = database.catalogueAcquisitionQueries.getCatalogueAcquisitionsByStates(
-                listOf(
-                    CatalogueAcquisitionEntity.STATE_DOWNLOADING,
-                    CatalogueAcquisitionEntity.STATE_CHECKING,
-                    CatalogueAcquisitionEntity.STATE_ADDING,
-                ),
-            ).executeAsList().size
-            database.catalogueAcquisitionQueries.interruptRunningCatalogueAcquisitions(updatedAt)
-            running
-        }
-    }
-
     override suspend fun delete(requestId: String) = withContext(Dispatchers.IO) {
         queries.deleteCatalogueAcquisition(requestId)
         Unit
@@ -157,17 +138,6 @@ internal class CatalogueAcquisitionsSqlDelightDao(
         queries.deleteCatalogueAcquisitionsCompletedBefore(beforeMillis)
         Unit
     }
-
-    override suspend fun deleteAll() = withContext(Dispatchers.IO) {
-        queries.deleteAllCatalogueAcquisitions()
-        Unit
-    }
-
-    override fun observeAll(): Flow<List<CatalogueAcquisitionEntity>> =
-        queries.getAllCatalogueAcquisitions()
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { rows -> rows.map(Catalogue_acquisitions::toEntity) }
 }
 
 internal class CatalogueBookSourcesSqlDelightDao(
@@ -229,45 +199,16 @@ internal class CatalogueBookSourcesSqlDelightDao(
                 .map(Catalogue_book_sources::toEntity)
         }
 
-    override suspend fun getForPublication(
-        sourceId: String,
-        publicationKey: String,
-    ): List<CatalogueBookSourceEntity> = withContext(Dispatchers.IO) {
-        queries.getCatalogueBookSourcesForPublication(sourceId, publicationKey).executeAsList()
-            .map(Catalogue_book_sources::toEntity)
-    }
-
     override suspend fun getForSource(sourceId: String): List<CatalogueBookSourceEntity> =
         withContext(Dispatchers.IO) {
             queries.getCatalogueBookSourcesForSource(sourceId).executeAsList()
                 .map(Catalogue_book_sources::toEntity)
         }
 
-    override fun observeForSource(sourceId: String): Flow<List<CatalogueBookSourceEntity>> =
-        queries.observeCatalogueBookSourcesForSource(sourceId)
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { rows -> rows.map(Catalogue_book_sources::toEntity) }
-
     override suspend fun countBooksForSource(sourceId: String): Long = withContext(Dispatchers.IO) {
         queries.countCatalogueBooksForSource(sourceId).executeAsOne()
     }
 
-    override suspend fun moveToBook(fromLibraryBookId: String, toLibraryBookId: String) =
-        withContext(Dispatchers.IO) {
-            queries.moveCatalogueBookSources(toLibraryBookId, fromLibraryBookId)
-            Unit
-        }
-
-    override suspend fun deleteForBook(libraryBookId: String) = withContext(Dispatchers.IO) {
-        queries.deleteCatalogueBookSourcesForBook(libraryBookId)
-        Unit
-    }
-
-    override suspend fun deleteAll() = withContext(Dispatchers.IO) {
-        queries.deleteAllCatalogueBookSources()
-        Unit
-    }
 }
 
 internal class CatalogueDocumentsSqlDelightDao(
@@ -330,10 +271,6 @@ internal class CatalogueDocumentsSqlDelightDao(
             Unit
         }
 
-    override suspend fun deleteAll() = withContext(Dispatchers.IO) {
-        queries.deleteAllCatalogueDocuments()
-        Unit
-    }
 }
 
 private const val MAX_IDENTITIES_PER_QUERY = 400

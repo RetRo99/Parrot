@@ -14,8 +14,6 @@ data class OpdsMediaType(
 
     fun parameter(name: String): String? = parameters[name.lowercase()]
 
-    fun hasProfile(value: String): Boolean = parameter("profile")?.contains(value, ignoreCase = true) == true
-
     /** `kind=navigation`/`acquisition` and similar sub-clues parse as parameters. */
     val kindParameter: String? get() = parameter("kind")
 

@@ -76,9 +76,7 @@ data class OpdsPagination(
     val next: OpdsLink? = null,
     val previous: OpdsLink? = null,
     val last: OpdsLink? = null,
-) {
-    val hasPagination: Boolean get() = first != null || next != null || previous != null || last != null
-}
+)
 
 data class OpdsGroup(
     val title: OpdsText,

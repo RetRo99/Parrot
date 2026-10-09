@@ -39,9 +39,6 @@ data class OpdsLink(
     /** Retained declaring base, including inherited xml:base, especially for templates. */
     val effectiveBaseUri: String? = null,
 ) {
-    /** Standard + documented alias relations for acquisition (plan §2.2). */
-    val acquisitionRelations: Set<String> get() = relations.filterToRelations()
-
     fun hasAcquisitionRelation(): Boolean = ACQUISITION_RELATIONS.intersect(relations.toSet()).isNotEmpty()
 
     /** True when this link advertises a direct-open EPUB payload (§5.1). */
@@ -66,9 +63,6 @@ data class OpdsLink(
         )
     }
 }
-
-private fun List<String>.filterToRelations(): Set<String> =
-    filter { OpdsLink.ACQUISITION_RELATIONS.contains(it) }.toSet()
 
 data class OpdsPrice(val value: Double, val currency: String)
 

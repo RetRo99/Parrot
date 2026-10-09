@@ -47,5 +47,4 @@ internal class MemoryDocuments(private val activeProfile: () -> String?) : Catal
     override suspend fun deleteOtherGenerations(sourceId: String, accessGeneration: Long) {
         table().removeAll { it.sourceId == sourceId && it.accessGeneration != accessGeneration }
     }
-    override suspend fun deleteAll() { table().clear() }
 }

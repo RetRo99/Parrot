@@ -16,10 +16,6 @@ fun interface CatalogueAddressValidator {
     suspend fun validate(address: String, account: OpdsAccountDetails?): CatalogueValidation
 }
 
-fun interface CatalogueAddCompletion {
-    fun onCatalogueAdded(sourceId: String)
-}
-
 /** The only persistence edge used by the add flow. Implementations save accounts via the editor. */
 interface CatalogueAddStore {
     suspend fun existingAddresses(): Set<String>

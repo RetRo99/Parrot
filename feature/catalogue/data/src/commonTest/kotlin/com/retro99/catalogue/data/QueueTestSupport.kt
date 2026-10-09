@@ -23,8 +23,6 @@ import com.retro99.user.implementation.ProfileWorkRegistryImpl
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -129,8 +127,6 @@ internal class FakeAcquisitionsDatabase(private val world: TestWorld) : Catalogu
 
     override suspend fun nextQueuePosition() = (table().values.maxOfOrNull { it.queuePosition } ?: 0L) + 1
 
-    override suspend fun interruptRunning(updatedAt: Long): Int = error("The queue interrupts row by row")
-
     /** Runs after a row is deleted: the instant a cancel has landed. */
     var afterDelete: (String) -> Unit = {}
 
@@ -150,12 +146,6 @@ internal class FakeAcquisitionsDatabase(private val world: TestWorld) : Catalogu
             row.state == CatalogueAcquisitionEntity.STATE_DONE && (row.completedAt ?: Long.MAX_VALUE) < beforeMillis
         }
     }
-
-    override suspend fun deleteAll() {
-        table().clear()
-    }
-
-    override fun observeAll(): Flow<List<CatalogueAcquisitionEntity>> = flowOf(emptyList())
 }
 
 /** Staging files as sizes and a running checksum, so large "files" cost no memory. */
@@ -266,21 +256,10 @@ internal class FakeBookSourcesDatabase(private val world: TestWorld) : Catalogue
 
     override suspend fun getForBook(libraryBookId: String) = table().filter { it.libraryBookId == libraryBookId }
 
-    override suspend fun getForPublication(sourceId: String, publicationKey: String) =
-        table().filter { it.sourceId == sourceId && it.publicationKey == publicationKey }
-
     override suspend fun getForSource(sourceId: String) = table().filter { it.sourceId == sourceId }
-
-    override fun observeForSource(sourceId: String): Flow<List<CatalogueBookSourceEntity>> = flowOf(emptyList())
 
     override suspend fun countBooksForSource(sourceId: String) =
         table().filter { it.sourceId == sourceId }.distinctBy { it.libraryBookId }.size.toLong()
-
-    override suspend fun moveToBook(fromLibraryBookId: String, toLibraryBookId: String) = error("unused")
-
-    override suspend fun deleteForBook(libraryBookId: String) = error("unused")
-
-    override suspend fun deleteAll() = error("unused")
 }
 
 internal class FakeFileSource(private val world: TestWorld) : AcquisitionFileSource {

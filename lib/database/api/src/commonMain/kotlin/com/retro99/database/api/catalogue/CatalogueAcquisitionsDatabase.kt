@@ -1,7 +1,5 @@
 package com.retro99.database.api.catalogue
 
-import kotlinx.coroutines.flow.Flow
-
 /**
  * The durable catalogue download queue of the open profile database. Callers fence every
  * call with `ProfileDatabaseSession.withProfile`.
@@ -37,16 +35,9 @@ interface CatalogueAcquisitionsDatabase {
     /** One more than the highest position in use, so a new request goes last. */
     suspend fun nextQueuePosition(): Long
 
-    /** Marks every downloading, checking or adding request interrupted. Returns how many. */
-    suspend fun interruptRunning(updatedAt: Long): Int
-
     suspend fun delete(requestId: String)
 
     suspend fun deleteCompleted()
 
     suspend fun deleteCompletedBefore(beforeMillis: Long)
-
-    suspend fun deleteAll()
-
-    fun observeAll(): Flow<List<CatalogueAcquisitionEntity>>
 }

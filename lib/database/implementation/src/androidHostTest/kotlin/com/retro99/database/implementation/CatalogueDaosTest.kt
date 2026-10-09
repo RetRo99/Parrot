@@ -105,35 +105,6 @@ class CatalogueDaosTest {
     }
 
     @Test
-    fun `interrupting touches only downloading, checking and adding`() = runBlocking {
-        // Given
-        val states = listOf(
-            CatalogueAcquisitionEntity.STATE_WAITING,
-            CatalogueAcquisitionEntity.STATE_DOWNLOADING,
-            CatalogueAcquisitionEntity.STATE_CHECKING,
-            CatalogueAcquisitionEntity.STATE_ADDING,
-            CatalogueAcquisitionEntity.STATE_DONE,
-            CatalogueAcquisitionEntity.STATE_FAILED,
-            CatalogueAcquisitionEntity.STATE_INTERRUPTED,
-        )
-        states.forEachIndexed { index, state ->
-            acquisitions.insert(acquisition(state, position = index.toLong(), state = state))
-        }
-
-        // When
-        val interrupted = acquisitions.interruptRunning(updatedAt = 500)
-
-        // Then
-        assertEquals(3, interrupted)
-        assertEquals(
-            listOf("waiting", "interrupted", "interrupted", "interrupted", "done", "failed", "interrupted"),
-            acquisitions.getAll().map { it.state },
-        )
-        assertEquals(500L, acquisitions.get(CatalogueAcquisitionEntity.STATE_CHECKING)?.updatedAt)
-        assertEquals(10L, acquisitions.get(CatalogueAcquisitionEntity.STATE_WAITING)?.updatedAt)
-    }
-
-    @Test
     fun `progress is written only while the request is downloading`() = runBlocking {
         // Given
         acquisitions.insert(acquisition("dl", position = 1, state = CatalogueAcquisitionEntity.STATE_DOWNLOADING))
@@ -185,8 +156,6 @@ class CatalogueDaosTest {
 
         // Then
         assertEquals(listOf("p1", "p2"), sources.getForBook("lib-1").map { it.id })
-        assertEquals(listOf("p1"), sources.getForPublication("source-1", "urn:book:1").map { it.id })
-        assertEquals(emptyList(), sources.getForPublication("source-2", "urn:book:1"))
         assertEquals(2L, sources.countBooksForSource("source-1"))
         assertEquals(source("p1", "lib-1", "source-1", "urn:book:1", 1), sources.getForBook("lib-1").first())
     }
@@ -343,26 +312,6 @@ class CatalogueDaosTest {
 
         // Then
         assertEquals(listOf(plain), journal.getAll())
-    }
-
-    @Test
-    fun `provenance follows a merged book and goes with a deleted one`() = runBlocking {
-        // Given
-        sources.insert(source("p1", book = "lib-1", sourceId = "source-1", publication = "urn:book:1", at = 1))
-        sources.insert(source("p2", book = "lib-2", sourceId = "source-1", publication = "urn:book:2", at = 2))
-
-        // When
-        sources.moveToBook(fromLibraryBookId = "lib-1", toLibraryBookId = "lib-2")
-
-        // Then
-        assertEquals(listOf("p1", "p2"), sources.getForBook("lib-2").map { it.id })
-        assertEquals(1L, sources.countBooksForSource("source-1"))
-
-        // When
-        sources.deleteForBook("lib-2")
-
-        // Then
-        assertEquals(emptyList(), sources.getForSource("source-1"))
     }
 
     @Test

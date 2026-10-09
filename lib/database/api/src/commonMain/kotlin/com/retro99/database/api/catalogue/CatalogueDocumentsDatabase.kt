@@ -19,6 +19,4 @@ interface CatalogueDocumentsDatabase {
 
     /** Drops what was saved under earlier sign-in details of this source. */
     suspend fun deleteOtherGenerations(sourceId: String, accessGeneration: Long)
-
-    suspend fun deleteAll()
 }

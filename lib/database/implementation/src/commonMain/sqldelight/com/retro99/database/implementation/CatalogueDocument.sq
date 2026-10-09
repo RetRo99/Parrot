@@ -48,5 +48,3 @@ DELETE FROM catalogue_documents WHERE source_id = ?;
 deleteCatalogueDocumentsOfOtherGenerations:
 DELETE FROM catalogue_documents WHERE source_id = ? AND access_generation != ?;
 
-deleteAllCatalogueDocuments:
-DELETE FROM catalogue_documents;

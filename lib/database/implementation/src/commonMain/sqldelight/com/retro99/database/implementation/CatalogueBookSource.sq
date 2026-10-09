@@ -54,15 +54,7 @@ ORDER BY s.acquired_at ASC, s.id ASC;
 getCatalogueBookSourcesForBook:
 SELECT * FROM catalogue_book_sources WHERE library_book_id = ? ORDER BY acquired_at ASC, id ASC;
 
-getCatalogueBookSourcesForPublication:
-SELECT * FROM catalogue_book_sources
-WHERE source_id = ? AND publication_key = ?
-ORDER BY acquired_at ASC, id ASC;
-
 getCatalogueBookSourcesForSource:
-SELECT * FROM catalogue_book_sources WHERE source_id = ? ORDER BY acquired_at ASC, id ASC;
-
-observeCatalogueBookSourcesForSource:
 SELECT * FROM catalogue_book_sources WHERE source_id = ? ORDER BY acquired_at ASC, id ASC;
 
 countCatalogueBooksForSource:
@@ -77,5 +69,3 @@ DELETE FROM catalogue_book_sources WHERE id = ?;
 deleteCatalogueBookSourcesForBook:
 DELETE FROM catalogue_book_sources WHERE library_book_id = ?;
 
-deleteAllCatalogueBookSources:
-DELETE FROM catalogue_book_sources;

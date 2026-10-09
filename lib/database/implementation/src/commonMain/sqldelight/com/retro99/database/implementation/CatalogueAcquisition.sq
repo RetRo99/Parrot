@@ -93,10 +93,6 @@ ORDER BY completed_at DESC;
 maxCatalogueAcquisitionQueuePosition:
 SELECT MAX(queue_position) FROM catalogue_acquisitions;
 
-interruptRunningCatalogueAcquisitions:
-UPDATE catalogue_acquisitions SET state = 'interrupted', updated_at = ?
-WHERE state IN ('downloading', 'checking', 'adding');
-
 deleteCatalogueAcquisition:
 DELETE FROM catalogue_acquisitions WHERE request_id = ?;
 
@@ -112,5 +108,3 @@ DELETE FROM catalogue_acquisitions WHERE state = 'done';
 deleteCatalogueAcquisitionsCompletedBefore:
 DELETE FROM catalogue_acquisitions WHERE state = 'done' AND completed_at < ?;
 
-deleteAllCatalogueAcquisitions:
-DELETE FROM catalogue_acquisitions;
