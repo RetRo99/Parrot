@@ -112,9 +112,13 @@ class TtsSynthesizerRouter(
  * Whether anything can speak, for the readiness gate in front of the word speaker and the
  * voice list. The router's three engines all need Android, so the decision lives here, apart
  * from them, and is tested on the host.
+ *
+ * An installed, usable neural pack is ready at once: it needs no system engine, and waiting on
+ * one that is missing or slow to initialise is what hid the word speaker on a neural-only
+ * phone. With no neural pack the system engine is waited for, as before.
  */
 internal suspend fun awaitSynthesizerReady(
     timeoutMs: Long,
     isNeuralPackUsable: () -> Boolean,
     awaitSystemReady: suspend (Long) -> Boolean,
-): Boolean = awaitSystemReady(timeoutMs)
+): Boolean = isNeuralPackUsable() || awaitSystemReady(timeoutMs)
