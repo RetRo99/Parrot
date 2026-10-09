@@ -141,8 +141,46 @@ problem, Books Domain/Sync Data iOS test compilation failures and ineffective
 sign-out cleaner are untouched. Updated-copy/sample acquisition and the complete
 custom-server Android/iOS Phase 4 gate remain deferred. No new TODO-design strings.
 
+## Emulator continuation and preset-effect fix
+
+The independent fresh-profile run on `emulator-5554` reproduced the profile
+activation crash; relaunch recovered. The Library had 0 books and Get books had
+no registered catalogue. Built-in presets now appeared.
+
+The first preset-add attempt stayed Checking with no completion. Its
+`LaunchedEffect(flow, presetCheck)` set `presetCheck = null` before the suspending
+submit, cancelling itself. A regression test holds validation pending and proves
+the request key is consumed only after validation/persistence; the production
+effect now uses that ordering. Both catalogue host/simulator tests and QA APK
+assembly pass after the fix.
+
+Retest: adding built-in Project Gutenberg succeeded. Its first page showed
+Popular/Latest/Random folders, and Popular showed title-cover book rows with
+independent download icons. Title search **failed at the search response (403)**.
+The live OpenSearch descriptor advertises
+`http://m.gutenberg.org/ebooks/search.opds/?query={searchTerms}`. An independent
+HTTPS GET of the www-host title search returns 200, but production follows the
+advertised template. No provider-specific rewrite or HTTPS/address substitution
+was added. Therefore the exact uninterrupted requested journey is **not PASS**.
+
+After clearing search, the Pride and Prejudice row's download action correctly
+opened its book page: the live detail feed has two publications/editions (without
+images and with images). This verifies multi-edition fallback, not direct
+single-edition row queueing. Downloading the default 0.6 MB EPUB on the book page
+showed live progress and a View notice. The notice expired before automation
+could tap it; Downloads was reached through Get books instead.
+
+Downloads showed `In your library` and Open. Open entered Reader and rendered
+the cover; right-edge page taps advanced to usable book content (Page 2 of 27).
+Returning to Downloads showed the empty state, confirming completed-row purge
+on leave without removing the library book. Direct single-edition row queueing
+and search-result rows remain controller/parser-test evidence, not a successful
+live-provider demonstration.
+
 ## Final checks
 
-Pending: independent emulator journey; final app assembly/framework link after
-this report is committed. Results will be recorded below without replacing the
-earlier Samsung failure/interruption.
+Before the preset-effect follow-up, the exact combined command
+`./gradlew :androidApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64 --max-workers=2`
+passed in 1m 52s after the initial report commit. It will be repeated on the
+final follow-up commit; the final outcome/counts and second-book check will be
+appended without replacing the earlier failures.

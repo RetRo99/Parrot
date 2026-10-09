@@ -203,8 +203,7 @@ fun CatalogueSourcesScreen(
     LaunchedEffect(flow, presetCheck) {
         val preset = presetCheck ?: return@LaunchedEffect
         if (flow != null && addTarget?.preset?.id == preset.id) {
-            presetCheck = null
-            flow.submit(name = preset.name)
+            submitCataloguePreset(flow, preset.name) { presetCheck = null }
         }
     }
     LaunchedEffect(addState.addedSourceId) {
