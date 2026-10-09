@@ -679,6 +679,7 @@ return OpdsLink(
     relations = relations,
     mediaType = mediaTypeParser.parse(attributes["type"]),
     title = attributes["title"]?.takeIf { it.isNotBlank() }?.let { state.tagged(it, attributes) },
+    lengthBytes = attributes["length"]?.toLongOrNull()?.takeIf { it >= 0 },
     extras = attributes
         .filterKeys { it !in KNOWN_LINK_ATTRIBUTES && it != "xml:base" }
         .takeIf { it.isNotEmpty() }
@@ -730,4 +731,4 @@ private const val EXTRA_BUDGET = 20
 private const val EXTRA_VALUE_CHARS = 200
 private const val IMAGE_RELATION = "http://opds-spec.org/image"
 private const val THUMBNAIL_RELATION = "http://opds-spec.org/image-thumbnail"
-private val KNOWN_LINK_ATTRIBUTES = setOf("href", "rel", "type", "title")
+private val KNOWN_LINK_ATTRIBUTES = setOf("href", "rel", "type", "title", "length")
