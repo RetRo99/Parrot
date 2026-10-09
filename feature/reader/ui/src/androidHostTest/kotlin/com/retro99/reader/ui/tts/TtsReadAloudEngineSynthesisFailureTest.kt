@@ -98,6 +98,52 @@ class TtsReadAloudEngineSynthesisFailureTest {
     fun `seeking onto a sentence whose synthesis throws reports one failure`() =
         runChapterSeekCase(FailureMode.THROWN)
 
+    /**
+     * A user start that fails must stay a thrown [TtsPlaybackStartException] and emit
+     * nothing on `playbackFailures`, so the user sees one Failed outcome and not two.
+     * `AndroidTtsController.requestPlayback` turns the throw into one Failed
+     * (`AndroidTtsController.kt:689-713`), and its `playbackFailures` collector
+     * (`:240-263`) would turn any event into a second one: when the catch has already
+     * cleared the attempt, that collector takes its `else` branch and emits an
+     * ACTIVE_PLAYBACK Failed of its own.
+     */
+    @Test
+    fun `a user start whose synthesis fails throws and emits no failure event`() = runTest {
+        val engine = createEngine()
+        val failures = collectFailures(engine)
+        audioSource.failingTexts += sentences[0].text
+        engine.setSentences(sentences)
+
+        var thrown: Throwable? = null
+        launch {
+            try {
+                engine.playFrom(
+                    index = 0,
+                    voiceId = VOICE_ID,
+                    rate = 1f,
+                    pitch = 1f,
+                    completeChapterOnEnd = true,
+                    showPlaybackNotification = false,
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                thrown = error
+            }
+        }
+        advanceUntilIdle()
+
+        assertEquals(
+            TtsPlaybackFailureReason.SYNTHESIS_FAILED,
+            (thrown as? TtsPlaybackStartException)?.reasonCode,
+            "expected a TtsPlaybackStartException out of playFrom, got $thrown",
+        )
+        assertEquals(emptyList(), failures, "the user-start path must emit no failure event")
+        assertEquals(emptyList(), uncaught.map { error -> error.toString() })
+        assertEquals(-1, engine.currentSentenceIndex)
+        assertEquals(false, engine.isLoading.value)
+    }
+
     private fun runAutoAdvanceCase(mode: FailureMode) = runTest {
         val engine = createEngine()
         val failures = collectFailures(engine)

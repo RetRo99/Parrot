@@ -286,7 +286,7 @@ class TtsReadAloudEngine(
             }
             return
         }
-        scope.launch {
+        launchEngineStart {
             playFrom(next, voiceId, rate, pitch, completeChapterOnEnd)
         }
     }
@@ -294,9 +294,44 @@ class TtsReadAloudEngine(
     fun skipToPreviousSentence() {
         val previous = currentIndex - 1
         if (previous < 0) return
-        scope.launch {
+        launchEngineStart {
             playFrom(previous, voiceId, rate, pitch, completeChapterOnEnd)
         }
+    }
+
+    /**
+     * Starts a sentence the user did not ask for: auto-advance, a skip, a seek. There is
+     * no playback attempt waiting on it, so a failure must be reported rather than
+     * thrown: the engine's scope has no exception handler, and an uncaught throw here
+     * killed the app (TTS-F01) and reported nothing (TTS-F02).
+     *
+     * A user request keeps going through [playFrom] directly, so
+     * `AndroidTtsController.requestPlayback` still sees [TtsPlaybackStartException] and
+     * still produces exactly one outcome for it.
+     */
+    private fun launchEngineStart(start: suspend () -> Unit) {
+        scope.launch {
+            try {
+                start()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                reportStartFailure(error)
+            }
+        }
+    }
+
+    private fun reportStartFailure(error: Exception) {
+        val reasonCode = (error as? TtsPlaybackStartException)?.reasonCode
+            ?: TtsPlaybackFailureReason.UNEXPECTED_ERROR
+        stopInternal()
+        _playbackFailures.tryEmit(
+            PlaybackFailure(
+                correlationId = playbackOperationCorrelationId,
+                reasonCode = reasonCode,
+                error = error,
+            ),
+        )
     }
 
     private suspend fun startSentence(
@@ -574,7 +609,7 @@ class TtsReadAloudEngine(
 
         val next = currentIndex + 1
         if (next <= sentences.lastIndex) {
-            scope.launch {
+            launchEngineStart {
                 startSentence(next)
             }
         } else {
@@ -601,7 +636,7 @@ class TtsReadAloudEngine(
             return
         }
 
-        scope.launch {
+        launchEngineStart {
             startSentence(
                 index = target.sentenceIndex,
                 sentenceProgress = target.sentenceProgress,
