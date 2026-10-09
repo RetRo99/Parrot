@@ -15,6 +15,7 @@ internal class ReaderTtsSentenceProgress(
 ) {
 
     suspend fun onCurrentSentence(sentence: TtsSentence?) {
-        if (sentence != null) showSentenceNumber(sentence.index + 1)
+        // Reported for a null sentence too: a stop has no position to show (TTS-F24).
+        showSentenceNumber(sentence?.let { it.index + 1 })
     }
 }
