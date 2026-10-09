@@ -47,3 +47,36 @@ One line per check, written as the run went.
 - Sheet control centres used for the rest of the run (from the dump, sheet fully open):
   Play/Pause (540, 1110) · Rate − (189, 1643) · Rate + (398, 1643) · Change voice
   (915, 1337) · Close (954, 639) · Stop listening (188, 2206).
+
+### Step 2 — a setting changed while paused (TTS-F06), System voice — PASSED
+
+The sheet's "Sentence 1 of 0" becomes a real count ("Sentence 63 of 151") as soon as
+playback starts, so TTS-F24's zero is confined to the not-yet-played state.
+
+**2a, speed.** System voice, Rate 1×. Play → read from sentence 60-odd to **63**, on to
+**69**; the start logged `tts_action=controls` attempted 20:26:32.744 / succeeded
+20:26:34.348. Paused at **sentence 69**, Rate 1× (`C1-f06-paused-sentence-69-rate-1.png`).
+Rate + once → **Rate 1.1×, sentence still 69**, and the only log line is
+`tts_rate_changed{rate=1.1}` at 20:27:23.929 — no `engine.stop`, no synthesis
+(`C2-f06-rate-1.1-still-sentence-69.png`). Play → **restarted at sentence 69** and ran on to
+73; fresh `TtsRouter: synthesize` lines from 20:27:54.836; operation lines exactly:
+
+    20:27:54.822 tts_playback_operation {tts_action=resume, tts_outcome=attempted}
+    20:27:55.126 tts_playback_operation {tts_action=resume, tts_outcome=succeeded, duration_ms=306}
+
+One attempted, one succeeded, **action `resume`** — not the `controls` that TTS-F06
+originally produced. The position is kept and the press is reported as a resume: the fix
+works on the phone. *Differs from the brief in one detail:* the `synthesize` log line prints
+`voice=` and `engine=` only, it carries **no rate field**, so "the new rate in the log" can
+only be read from `tts_rate_changed{rate=1.1}` and from the sheet, not from the synthesize
+lines; the lines themselves are fresh (new timestamps after the play press).
+
+**2b, voice.** Continued at Rate 1.1×, paused at **sentence 82**
+(`C3-f06-paused-sentence-82-before-voice-change.png`). Voices → United Kingdom → Voice 1;
+`tts_voice_selected{is_neural=false}` at 20:29:24.934, and back on the sheet **the sentence
+is still 82**, again with no stop and no synthesis. Play → **started at sentence 82**, and
+the synthesize lines now carry the new voice (`voice=en-GB-language`, where before the
+change they were `voice=null`). Operation lines exactly:
+
+    20:29:53.020 tts_playback_operation {tts_action=resume, tts_outcome=attempted}
+    20:29:53.908 tts_playback_operation {tts_action=resume, tts_outcome=succeeded, duration_ms=889}
