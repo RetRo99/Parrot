@@ -9,17 +9,31 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 
-@Single
+/**
+ * The one synthesis call read-aloud makes. Lets a host test drive synthesis outcomes:
+ * [TtsAudioGenerator] itself needs [TtsAudioCache], which needs an Android `Context`.
+ */
+interface TtsSentenceAudioSource {
+
+    suspend fun synthesize(
+        text: String,
+        voiceId: String?,
+        rate: Float,
+        pitch: Float,
+    ): TtsSynthesisResult
+}
+
+@Single(binds = [TtsAudioGenerator::class, TtsSentenceAudioSource::class])
 class TtsAudioGenerator(
     private val synthesizer: TtsSynthesizer,
     private val cache: TtsAudioCache,
-) {
+) : TtsSentenceAudioSource {
 
     private val lockRegistryMutex = Mutex()
     private val synthesisLocks = mutableMapOf<String, LockEntry>()
     private val synthesisSemaphore = Semaphore(MAX_CONCURRENT_SYNTHESIS)
 
-    suspend fun synthesize(
+    override suspend fun synthesize(
         text: String,
         voiceId: String?,
         rate: Float,

@@ -1,20 +1,8 @@
 package com.retro99.reader.ui.tts
 
-import android.content.Context
-import android.net.Uri
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.PlaybackParameters
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
 import com.retro99.books.domain.model.BookType
 import com.retro99.reader.ui.navigator.TtsPlaybackFailureReason
-import com.retro99.reader.ui.playback.ForegroundServiceController
 import com.retro99.reader.ui.playback.MediaPlaybackController
-import com.retro99.reader.ui.playback.setArtworkDataIfSmall
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -30,9 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
 import java.io.File
+import kotlin.coroutines.CoroutineContext
 
 data class TtsPlaybackInfo(
     val serverId: String,
@@ -50,11 +38,12 @@ class TtsPlaybackStartException(
 
 @Single
 class TtsReadAloudEngine(
-    @Provided private val context: Context,
     private val synthesizer: TtsSynthesizer,
-    private val audioGenerator: TtsAudioGenerator,
+    private val audioGenerator: TtsSentenceAudioSource,
     private val mediaPlaybackController: MediaPlaybackController,
-    private val foregroundServiceController: ForegroundServiceController,
+    private val playerProvider: TtsEnginePlayerProvider,
+    /** The engine's own context; a host test supplies a test dispatcher here. */
+    mainContext: CoroutineContext = Dispatchers.Main.immediate,
 ) : AutoCloseable {
 
     data class PlaybackFailure(
@@ -63,8 +52,8 @@ class TtsReadAloudEngine(
         val error: Throwable,
     )
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private var player: ExoPlayer? = null
+    private val scope = CoroutineScope(SupervisorJob() + mainContext)
+    private var player: TtsEnginePlayer? = null
     private var ownsPlayer = false
 
     private var sentences: List<TtsSentence> = emptyList()
@@ -116,62 +105,50 @@ class TtsReadAloudEngine(
     private val _finishedSentences = MutableSharedFlow<TtsSentence>(extraBufferCapacity = 16)
     val finishedSentences: SharedFlow<TtsSentence> = _finishedSentences.asSharedFlow()
 
-    private val playerListener = object : Player.Listener {
-        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            if (mediaItem != null && !mediaItem.mediaId.startsWith(TTS_MEDIA_ID_PREFIX)) {
+    private val playerListener = object : TtsEnginePlayerListener {
+        override fun onItemTransition(mediaId: String?, isAutoAdvance: Boolean) {
+            if (mediaId != null && !mediaId.startsWith(TTS_MEDIA_ID_PREFIX)) {
                 detachForExternalPlayback()
                 return
             }
 
-            val index = mediaItem?.let(::sentenceIndexForMediaItem) ?: return
-            // AUTO: the previous item played out; seeks and new playlists don't.
-            val auto = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
-            heard.onTransition(index, auto)?.let(::emitFinished)
+            val index = mediaId?.let(::sentenceIndexForMediaId) ?: return
+            heard.onTransition(index, isAutoAdvance)?.let(::emitFinished)
             // The old playlist moving on mustn't steal the pending target.
-            if (auto && pendingStartToken != null) return
+            if (isAutoAdvance && pendingStartToken != null) return
             onSentenceStarted(index)
         }
 
-        override fun onPositionDiscontinuity(
-            oldPosition: Player.PositionInfo,
-            newPosition: Player.PositionInfo,
-            reason: Int,
-        ) {
-            if (
-                reason == Player.DISCONTINUITY_REASON_SEEK ||
-                reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT
-            ) {
-                heard.onSeek(newPosition.positionMs)
-            }
+        override fun onSeeked(positionMs: Long) {
+            heard.onSeek(positionMs)
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
         }
 
-        override fun onPlaybackStateChanged(playbackState: Int) {
-            when (playbackState) {
-                Player.STATE_ENDED -> onSentenceCompleted()
-                Player.STATE_READY -> {
-                    val mediaItemIndex = player?.currentMediaItem?.let(::sentenceIndexForMediaItem)
-                    if (mediaItemIndex != null && mediaItemIndex != currentIndex) {
-                        onSentenceStarted(mediaItemIndex)
-                    }
-                    val durationMs = player?.duration?.coerceAtLeast(0L) ?: 0L
-                    if (currentIndex >= 0 && durationMs > 0L) {
-                        updateSentenceDuration(currentIndex, durationMs)
-                    }
-                    val startProgress = pendingSentenceProgress
-                    pendingSentenceProgress = null
-                    if (startProgress != null && startProgress > 0.0 && durationMs > 0L) {
-                        player?.seekTo((durationMs * startProgress).toLong())
-                    }
-                    _isLoading.value = false
-                }
-            }
+        override fun onEnded() {
+            onSentenceCompleted()
         }
 
-        override fun onPlayerError(error: PlaybackException) {
+        override fun onReady() {
+            val mediaItemIndex = player?.currentMediaId?.let(::sentenceIndexForMediaId)
+            if (mediaItemIndex != null && mediaItemIndex != currentIndex) {
+                onSentenceStarted(mediaItemIndex)
+            }
+            val durationMs = player?.durationMs?.coerceAtLeast(0L) ?: 0L
+            if (currentIndex >= 0 && durationMs > 0L) {
+                updateSentenceDuration(currentIndex, durationMs)
+            }
+            val startProgress = pendingSentenceProgress
+            pendingSentenceProgress = null
+            if (startProgress != null && startProgress > 0.0 && durationMs > 0L) {
+                player?.seekTo((durationMs * startProgress).toLong())
+            }
+            _isLoading.value = false
+        }
+
+        override fun onError(error: Throwable) {
             _playbackFailures.tryEmit(
                 PlaybackFailure(
                     correlationId = playbackOperationCorrelationId,
@@ -241,7 +218,7 @@ class TtsReadAloudEngine(
         cancelActiveSynthesis()
         player?.run {
             stop()
-            clearMediaItems()
+            clearItems()
         }
         _isPlaying.value = false
         _isLoading.value = false
@@ -378,23 +355,20 @@ class TtsReadAloudEngine(
         } else {
             DEFAULT_PLAYBACK_PITCH
         }
-        playbackPlayer.playbackParameters = PlaybackParameters(
-            DEFAULT_PLAYBACK_SPEED,
-            playbackPitch,
-        )
+        playbackPlayer.setPlaybackPitch(playbackPitch)
         pendingSentenceProgress = sentenceProgress.coerceIn(0.0, 1.0)
         val playlist = buildPlaylist(index)
         queuedSentenceIndices.clear()
         queuedSentenceIndices.addAll(index until index + playlist.size)
         if (pendingStartToken == token) pendingStartToken = null
         heard.onPlaylistStarted(index, sentenceProgress)
-        playbackPlayer.setMediaItems(playlist)
+        playbackPlayer.setItems(playlist)
         playbackPlayer.prepare()
         playbackPlayer.play()
         prefetch(index + 1)
     }
 
-    private suspend fun ensurePlayer(): ExoPlayer? {
+    private suspend fun ensurePlayer(): TtsEnginePlayer? {
         return if (showPlaybackNotification) {
             ensureNotificationPlayer()
         } else {
@@ -402,17 +376,8 @@ class TtsReadAloudEngine(
         }
     }
 
-    private suspend fun ensureNotificationPlayer(): ExoPlayer? {
-        var servicePlayer = mediaPlaybackController.currentPlayer
-        if (servicePlayer == null) {
-            val serviceReady = mediaPlaybackController.prepareServiceReady()
-            if (!foregroundServiceController.startService()) return null
-            servicePlayer = mediaPlaybackController.awaitServiceReady(serviceReady)
-            if (servicePlayer == null) {
-                foregroundServiceController.stopService()
-                return null
-            }
-        }
+    private suspend fun ensureNotificationPlayer(): TtsEnginePlayer? {
+        val servicePlayer = playerProvider.notificationPlayer() ?: return null
 
         attachPlayer(servicePlayer, ownsPlayer = false)
         val info = playbackInfo
@@ -437,19 +402,17 @@ class TtsReadAloudEngine(
         return servicePlayer
     }
 
-    private fun ensureLocalPlayer(): ExoPlayer {
+    private fun ensureLocalPlayer(): TtsEnginePlayer {
         val currentPlayer = player
         if (currentPlayer != null && ownsPlayer) return currentPlayer
 
         releaseCurrentPlayer(stopSharedPlayer = true)
-        val localPlayer = ExoPlayer.Builder(context).build().apply {
-            setAudioAttributes(createAudioAttributes(), true)
-        }
+        val localPlayer = playerProvider.createLocalPlayer()
         attachPlayer(localPlayer, ownsPlayer = true)
         return localPlayer
     }
 
-    private fun attachPlayer(nextPlayer: ExoPlayer, ownsPlayer: Boolean) {
+    private fun attachPlayer(nextPlayer: TtsEnginePlayer, ownsPlayer: Boolean) {
         if (player === nextPlayer) return
         releaseCurrentPlayer(stopSharedPlayer = false)
         player = nextPlayer
@@ -462,7 +425,7 @@ class TtsReadAloudEngine(
         currentPlayer.removeListener(playerListener)
         if (ownsPlayer) {
             currentPlayer.stop()
-            currentPlayer.clearMediaItems()
+            currentPlayer.clearItems()
             currentPlayer.release()
         } else if (stopSharedPlayer) {
             mediaPlaybackController.stop()
@@ -471,28 +434,17 @@ class TtsReadAloudEngine(
         ownsPlayer = false
     }
 
-    private fun createMediaItem(file: File, index: Int): MediaItem {
+    private fun createPlayerItem(file: File, index: Int): TtsEnginePlayerItem {
         val info = playbackInfo
-        val metadata = MediaMetadata.Builder()
-            .setTitle(info?.chapterTitle ?: info?.bookTitle ?: DEFAULT_BOOK_TITLE)
-            .setArtist(info?.bookTitle ?: DEFAULT_APP_NAME)
-            .setDisplayTitle(info?.chapterTitle ?: info?.bookTitle ?: DEFAULT_BOOK_TITLE)
-            .apply {
-                setArtworkDataIfSmall(info?.coverArtwork, TAG)
-            }
-            .build()
-        return MediaItem.Builder()
-            .setMediaId("tts:${info?.bookUuid.orEmpty()}:$index")
-            .setUri(Uri.fromFile(file))
-            .setMediaMetadata(metadata)
-            .build()
+        return TtsEnginePlayerItem(
+            mediaId = "tts:${info?.bookUuid.orEmpty()}:$index",
+            file = file,
+            title = info?.chapterTitle ?: info?.bookTitle ?: DEFAULT_BOOK_TITLE,
+            artist = info?.bookTitle ?: DEFAULT_APP_NAME,
+            displayTitle = info?.chapterTitle ?: info?.bookTitle ?: DEFAULT_BOOK_TITLE,
+            artworkData = info?.coverArtwork,
+        )
     }
-
-    private fun createAudioAttributes(): AudioAttributes =
-        AudioAttributes.Builder()
-            .setUsage(C.USAGE_MEDIA)
-            .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
-            .build()
 
     private suspend fun getOrSynthesize(index: Int): File? {
         readyFiles[index]
@@ -615,7 +567,7 @@ class TtsReadAloudEngine(
     }
 
     private fun onSentenceCompleted() {
-        if (player?.hasNextMediaItem() == true) return
+        if (player?.hasNextItem() == true) return
         heard.onEnded()?.let(::emitFinished)
         // A seek or skip target is being prepared; it starts on its own.
         if (pendingStartToken != null) return
@@ -639,7 +591,7 @@ class TtsReadAloudEngine(
 
         val target = chapterTimeline.locate(positionMs)
         val currentPlayer = player
-        val currentDurationMs = currentPlayer?.duration ?: 0L
+        val currentDurationMs = currentPlayer?.durationMs ?: 0L
         if (
             target.sentenceIndex == currentIndex &&
             currentPlayer != null &&
@@ -673,7 +625,7 @@ class TtsReadAloudEngine(
         val currentPlayer = player
         if (currentPlayer != null && ownsPlayer) {
             currentPlayer.stop()
-            currentPlayer.clearMediaItems()
+            currentPlayer.clearItems()
         } else if (currentPlayer != null) {
             releaseCurrentPlayer(stopSharedPlayer = true)
         }
@@ -705,7 +657,7 @@ class TtsReadAloudEngine(
         currentIndex = index
         _currentSentence.value = sentences.getOrNull(index)
         _isLoading.value = false
-        val durationMs = player?.duration?.coerceAtLeast(0L) ?: 0L
+        val durationMs = player?.durationMs?.coerceAtLeast(0L) ?: 0L
         if (durationMs > 0L) {
             updateSentenceDuration(index, durationMs)
         }
@@ -735,14 +687,14 @@ class TtsReadAloudEngine(
         }
     }
 
-    private fun buildPlaylist(startIndex: Int): List<MediaItem> {
-        val playlist = mutableListOf<MediaItem>()
+    private fun buildPlaylist(startIndex: Int): List<TtsEnginePlayerItem> {
+        val playlist = mutableListOf<TtsEnginePlayerItem>()
         var index = startIndex
         while (index <= sentences.lastIndex) {
             val file = readyFiles[index]
                 ?.takeIf { candidate -> candidate.exists() && candidate.length() > 0L }
                 ?: break
-            playlist += createMediaItem(file, index)
+            playlist += createPlayerItem(file, index)
             index++
         }
         return playlist
@@ -750,31 +702,29 @@ class TtsReadAloudEngine(
 
     private fun appendReadyFilesToPlaylist() {
         val playbackPlayer = player ?: return
-        if (currentIndex < 0 || playbackPlayer.mediaItemCount == 0) return
+        if (currentIndex < 0 || playbackPlayer.itemCount == 0) return
 
         var index = (queuedSentenceIndices.maxOrNull() ?: currentIndex) + 1
         while (index <= sentences.lastIndex) {
             val file = readyFiles[index]
                 ?.takeIf { candidate -> candidate.exists() && candidate.length() > 0L }
                 ?: break
-            playbackPlayer.addMediaItem(createMediaItem(file, index))
+            playbackPlayer.addItem(createPlayerItem(file, index))
             queuedSentenceIndices += index
             index++
         }
     }
 
-    private fun sentenceIndexForMediaItem(mediaItem: MediaItem): Int? {
-        if (!mediaItem.mediaId.startsWith(TTS_MEDIA_ID_PREFIX)) return null
-        return mediaItem.mediaId.substringAfterLast(':').toIntOrNull()
+    private fun sentenceIndexForMediaId(mediaId: String): Int? {
+        if (!mediaId.startsWith(TTS_MEDIA_ID_PREFIX)) return null
+        return mediaId.substringAfterLast(':').toIntOrNull()
     }
 
     private companion object {
-        const val TAG = "TtsReadAloudEngine"
         const val DEFAULT_BOOK_TITLE = "Reading Aloud"
         const val DEFAULT_APP_NAME = "Parrot"
         const val TTS_MEDIA_ID_PREFIX = "tts:"
         const val PREFETCH_AHEAD = 4
-        const val DEFAULT_PLAYBACK_SPEED = 1f
         const val DEFAULT_PLAYBACK_PITCH = 1f
         const val MIN_PLAYBACK_PITCH = 0.25f
         const val MAX_PLAYBACK_PITCH = 4f
