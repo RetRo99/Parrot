@@ -29,6 +29,15 @@ internal typealias TtsConnectionOpener =
 internal typealias TtsHardLink = (source: File, destination: File) -> Boolean
 
 /**
+ * What the clean-up needs to know about one pack: its directory name and whether a
+ * version directory holds a model the engines could load.
+ */
+internal class TtsPackRules(
+    val modelId: String,
+    val isVersionComplete: (File) -> Boolean,
+)
+
+/**
  * All of [TtsModelManager]'s download, verification, update and delete logic, with the
  * Android pieces it used to reach for — the files directory, the manifest address, the
  * trusted connection opener, the clock, the free-space check, the hard link and the
@@ -48,7 +57,14 @@ internal class TtsModelStore(
     private val logInfo: (String) -> Unit,
     private val logWarning: (String, Throwable?) -> Unit,
     private val manifestFetchTimeoutMs: Long = MANIFEST_FETCH_TIMEOUT_MS,
+    extraPacks: List<TtsPackRules> = emptyList(),
 ) {
+
+    /** Every pack the clean-up sweeps. */
+    private val packs: List<TtsPackRules> = listOf(
+        TtsPackRules(KOKORO_MODEL_ID) { dir -> isComplete(kokoroModelFiles(dir)) },
+        TtsPackRules(SUPERTONIC_MODEL_ID) { dir -> isComplete(supertonicModelFiles(dir)) },
+    ) + extraPacks
 
     /**
      * Manifest fetches live here rather than in the caller's job: the fetch itself is a

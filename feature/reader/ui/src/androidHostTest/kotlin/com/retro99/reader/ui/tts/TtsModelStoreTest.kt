@@ -2,11 +2,16 @@ package com.retro99.reader.ui.tts
 
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.AnalyticsEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runTest
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Files
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -265,7 +270,154 @@ class TtsModelStoreTest {
 
     // endregion
 
+    // region TTS-F05: what an abandoned download leaves behind
+
+    @Test
+    fun `after three failed attempts the partial is kept and a later call resumes from it`() =
+        runTest {
+            // Given a host that cuts every answer short
+            publishVersion(VERSION_1, modelBytes = MODEL_V1)
+            server.truncateEveryAnswer(VERSION_1, MODEL_NAME, afterBytes = MODEL_V1.size / 4)
+            val store = newStore()
+
+            // When all three attempts fail
+            assertNull(store.ensureModel(MODEL_ID, ::testFiles, ::isComplete, null, false))
+
+            // Then the bytes are still there to resume from
+            assertEquals(listOf("$MODEL_NAME.part"), partialFiles(VERSION_1))
+            val keptBytes = File(versionDir(VERSION_1), "$MODEL_NAME.part").length()
+            assertTrue(keptBytes > 0L)
+
+            // And a later call resumes rather than starting over
+            server.serveEveryAnswerWhole()
+            assertNotNull(store.ensureModel(MODEL_ID, ::testFiles, ::isComplete, null, false))
+            val lastAttempt = server.requestsFor(VERSION_1, MODEL_NAME).last()
+            assertEquals(keptBytes.toInt(), resumeOffset(lastAttempt.range))
+            assertEquals(VERSION_1, store.activeVersion(MODEL_ID))
+        }
+
+    @Test
+    fun `an incomplete folder of a version that is not current is deleted on a refresh`() =
+        runTest {
+            // Given leftovers from a version the manifest has moved on from
+            publishVersion(VERSION_1, modelBytes = MODEL_V1)
+            writePartial(OLD_VERSION, MODEL_NAME, ageMs = 0L)
+            val store = newStore()
+
+            // When
+            store.refreshManifestIfStale()
+
+            // Then
+            assertFalse(versionDir(OLD_VERSION).exists(), "the abandoned folder is still there")
+        }
+
+    @Test
+    fun `a complete folder that is not current is kept, an incomplete one is not`() = runTest {
+        // Given the active version, the previous one the update logic keeps, and a wreck
+        publishVersion(VERSION_2, modelBytes = MODEL_V2)
+        writeCompleteVersion(VERSION_1)
+        writeCompleteVersion(VERSION_2)
+        markActive(VERSION_2)
+        writePartial(OLD_VERSION, MODEL_NAME, ageMs = 0L)
+        val store = newStore()
+
+        // When
+        store.refreshManifestIfStale()
+
+        // Then
+        assertFalse(versionDir(OLD_VERSION).exists())
+        assertBytes(MODEL_V1, File(versionDir(VERSION_1), MODEL_NAME))
+        assertBytes(MODEL_V1, File(versionDir(VERSION_2), MODEL_NAME))
+        assertEquals(VERSION_2, store.activeVersion(MODEL_ID))
+    }
+
+    @Test
+    fun `a current version partial is kept for a week and no longer`() = runTest {
+        // Given two partials of the version the manifest is on
+        publishVersion(VERSION_1, modelBytes = MODEL_V1)
+        writePartial(VERSION_1, MODEL_NAME, ageMs = EIGHT_DAYS_MS)
+        writePartial(VERSION_1, TOKENS_NAME, ageMs = SIX_DAYS_MS)
+        val store = newStore()
+
+        // When
+        store.refreshManifestIfStale()
+
+        // Then
+        assertEquals(listOf("$TOKENS_NAME.part"), partialFiles(VERSION_1))
+    }
+
+    @Test
+    fun `the active version and the version kept after an update survive the clean-up`() =
+        runTest {
+            // Given an update, so both versions are on disk and one is active
+            publishVersion(VERSION_1, modelBytes = MODEL_V1)
+            val store = newStore()
+            assertNotNull(store.ensureModel(MODEL_ID, ::testFiles, ::isComplete, null, false))
+            publishVersion(VERSION_2, modelBytes = MODEL_V2)
+            assertNotNull(store.ensureModel(MODEL_ID, ::testFiles, ::isComplete, null, true))
+            // And a manifest that has moved on past both of them
+            publishVersion(VERSION_3, modelBytes = MODEL_V2)
+
+            // When
+            store.refreshManifestIfStale()
+
+            // Then
+            assertBytes(MODEL_V1, File(versionDir(VERSION_1), MODEL_NAME))
+            assertBytes(TOKENS, File(versionDir(VERSION_1), TOKENS_NAME))
+            assertBytes(MODEL_V2, File(versionDir(VERSION_2), MODEL_NAME))
+            assertBytes(TOKENS, File(versionDir(VERSION_2), TOKENS_NAME))
+            assertEquals(VERSION_2, store.activeVersion(MODEL_ID))
+            assertNotNull(store.activeModelFiles(MODEL_ID, ::testFiles, ::isComplete))
+        }
+
+    @Test
+    fun `a clean-up during an install leaves the install's own files alone`() = runTest {
+        // Given an install of the current version, served slowly
+        publishVersion(VERSION_1, modelBytes = MODEL_V1)
+        server.throttle(VERSION_1, MODEL_NAME, millisPerBlock = 700L)
+        val store = newStore()
+        val transferStarted = CountDownLatch(1)
+        val install = CoroutineScope(Dispatchers.IO).async {
+            store.ensureModel(MODEL_ID, ::testFiles, ::isComplete, { update ->
+                val downloaded = (update as? TtsPreparationProgress.Downloading)?.downloadedBytes
+                if (downloaded != null && downloaded > 0L) transferStarted.countDown()
+            }, false)
+        }
+        assertTrue(transferStarted.await(20, TimeUnit.SECONDS), "the transfer never started")
+
+        // When the manifest moves on and a refresh sweeps while that install is running
+        publishVersion(VERSION_2, modelBytes = MODEL_V2)
+        File(File(root, TtsModelStore.MODELS_DIR_NAME), "manifest.json").delete()
+        store.refreshManifestIfStale()
+        assertTrue(install.isActive, "the install was already over, the case proves nothing")
+
+        // Then the install finishes and owns its directory
+        val files = install.await()
+        assertNotNull(files)
+        assertBytes(MODEL_V1, files.model)
+        assertEquals(VERSION_1, store.activeVersion(MODEL_ID))
+    }
+
+    // endregion
+
     // region harness
+
+    private fun writeCompleteVersion(version: String) {
+        val dir = versionDir(version).apply { mkdirs() }
+        File(dir, MODEL_NAME).writeBytes(MODEL_V1)
+        File(dir, TOKENS_NAME).writeBytes(TOKENS)
+    }
+
+    private fun markActive(version: String) {
+        File(modelRoot().apply { mkdirs() }, TtsModelStore.ACTIVE_MARKER_NAME).writeText(version)
+    }
+
+    private fun writePartial(version: String, name: String, ageMs: Long) {
+        val dir = versionDir(version).apply { mkdirs() }
+        val partial = File(dir, "$name.part")
+        partial.writeBytes(MODEL_V1.copyOfRange(0, 1024))
+        partial.setLastModified(nowMs - ageMs)
+    }
 
     /** A cached manifest for [version], last written a day and an hour ago. */
     private fun seedStaleCachedManifest(version: String) {
@@ -307,6 +459,7 @@ class TtsModelStoreTest {
         logInfo = {},
         logWarning = { _, _ -> },
         manifestFetchTimeoutMs = manifestFetchTimeoutMs,
+        extraPacks = listOf(TtsPackRules(MODEL_ID) { dir -> isComplete(testFiles(dir)) }),
     )
 
     /**
@@ -403,6 +556,10 @@ class TtsModelStoreTest {
         private const val TOKENS_NAME = "tokens.txt"
         private const val VERSION_1 = "1.0.0"
         private const val VERSION_2 = "2.0.0"
+        private const val VERSION_3 = "3.0.0"
+        private const val OLD_VERSION = "0.9.0"
+        private const val SIX_DAYS_MS = 6L * 24L * 60L * 60L * 1_000L
+        private const val EIGHT_DAYS_MS = 8L * 24L * 60L * 60L * 1_000L
         private const val PLENTY_OF_SPACE = 8L * 1024L * 1024L * 1024L
         /** The owner's rule: about five seconds, with a second of slack for the machine. */
         private const val MANIFEST_WAIT_BUDGET_MS = 6_000L

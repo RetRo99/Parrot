@@ -24,6 +24,9 @@ internal class TtsModelStoreServer {
     /** One-shot: the named asset's next answer stops after this many bytes. */
     private val truncateAfter = ConcurrentHashMap<String, Int>()
 
+    /** Lasting: every answer for the named asset stops after this many bytes. */
+    private val truncateAlways = ConcurrentHashMap<String, Int>()
+
     /** Milliseconds of pause before each 64 KB block of the named asset. */
     private val throttle = ConcurrentHashMap<String, Long>()
 
@@ -53,6 +56,15 @@ internal class TtsModelStoreServer {
 
     fun truncateNextAnswer(version: String, name: String, afterBytes: Int) {
         truncateAfter["$version/$name"] = afterBytes
+    }
+
+    fun truncateEveryAnswer(version: String, name: String, afterBytes: Int) {
+        truncateAlways["$version/$name"] = afterBytes
+    }
+
+    fun serveEveryAnswerWhole() {
+        truncateAlways.clear()
+        truncateAfter.clear()
     }
 
     fun throttle(version: String, name: String, millisPerBlock: Long) {
@@ -110,7 +122,8 @@ internal class TtsModelStoreServer {
             } else {
                 exchange.sendResponseHeaders(200, body.size.toLong())
             }
-            val limit = truncateAfter.remove(path)?.coerceAtMost(body.size) ?: body.size
+            val limit = (truncateAfter.remove(path) ?: truncateAlways[path] ?: body.size)
+                .coerceAtMost(body.size)
             val pausePerBlock = throttle[path] ?: 0L
             var written = 0
             while (written < limit) {
