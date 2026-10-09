@@ -1082,61 +1082,54 @@ class ReaderViewModel(
     private fun initTts(keepNarrationActive: Boolean = false) {
         observeTtsPlaybackOperations()
         viewModelScope.launch {
-            bookController.currentLocator.first()
-            val hasContent = ttsController.hasReadableContent()
-            if (!hasContent) return@launch
+            ttsSetup().run(keepNarrationActive)
+        }
+    }
 
+    private fun ttsSetup(): ReaderTtsSetup = ReaderTtsSetup(
+        ttsController = ttsController,
+        locators = bookController.currentLocator,
+        readSettings = {
             val settings = getReaderSettingsUseCase().first()
-            val availableVoices = ttsController.availableVoices()
-            val savedVoice = availableVoices
-                .firstOrNull { voice -> voice.id == settings.ttsVoiceId }
-            val selectedVoiceId = settings.ttsVoiceId?.takeIf {
-                savedVoice != null &&
-                        (
-                                savedVoice.neuralVoicePackage != NeuralVoicePackage.SUPERTONIC ||
-                                        currentViewState().hasAcceptedSupertonicTerms
-                                )
-            }
-            if (!keepNarrationActive) activeNarrationController = ttsController
-            updateState { state ->
-                state.copy(
-                    isTtsReadAloud = true,
-                    showNoAudioMessage = false,
-                    ttsVoices = availableVoices,
-                    selectedTtsVoiceId = selectedVoiceId,
-                )
-            }
-
-            observeNarrationPlaybackState(ttsController)
-
-            observeTtsPreviewState()
-            observeTtsSentenceProgress()
-            observeTtsVoicePreparationState()
-
-            ttsController.selectVoice(selectedVoiceId)
-            if (settings.ttsVoiceId != selectedVoiceId) {
+            ReaderTtsSetupSettings(
+                voiceId = settings.ttsVoiceId,
+                isTtsEnabled = settings.ttsEnabled,
+            )
+        },
+        hasAcceptedSupertonicTerms = { currentViewState().hasAcceptedSupertonicTerms },
+        actions = ReaderTtsSetupActions(
+            takeOverNarration = { activeNarrationController = ttsController },
+            showVoices = { voices, selectedVoiceId ->
+                updateState { state ->
+                    state.copy(
+                        showNoAudioMessage = false,
+                        ttsVoices = voices,
+                        selectedTtsVoiceId = selectedVoiceId,
+                    )
+                }
+            },
+            startCollectors = {
+                observeNarrationPlaybackState(ttsController)
+                observeTtsPreviewState()
+                observeTtsSentenceProgress()
+                observeTtsVoicePreparationState()
+            },
+            markReadAloudAvailable = {
+                updateState { state -> state.copy(isTtsReadAloud = true) }
+            },
+            saveSelectedVoice = { readVoiceId, selectedVoiceId ->
                 saveReaderSettingsUpdate { latestSettings ->
-                    if (latestSettings.ttsVoiceId == settings.ttsVoiceId) {
+                    if (latestSettings.ttsVoiceId == readVoiceId) {
                         latestSettings.copy(ttsVoiceId = selectedVoiceId)
                     } else {
                         latestSettings
                     }
                 }
-            }
-            if (settings.ttsEnabled && !keepNarrationActive) {
-                enableTtsSentencePlayback()
-            }
-            val selectedVoice = availableVoices
-                .firstOrNull { voice -> voice.id == selectedVoiceId }
-            if (
-                settings.ttsEnabled &&
-                selectedVoice?.isNeural == true &&
-                !selectedVoice.needsDownload
-            ) {
-                prepareTtsVoice(selectedVoice.id)
-            }
-        }
-    }
+            },
+            enableSentencePlayback = { enableTtsSentencePlayback() },
+            prepareVoice = { voiceId -> prepareTtsVoice(voiceId) },
+        ),
+    )
 
     private fun observeTtsPlaybackOperations() {
         if (isObservingTtsPlaybackOperations) return
