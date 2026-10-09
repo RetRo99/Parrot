@@ -197,7 +197,68 @@ class TtsModelStoreTest {
 
     // endregion
 
+    // region TTS-F04: the manifest wait
+
+    @Test
+    fun `a manifest host that never answers releases the caller inside about five seconds`() =
+        runTest {
+            // Given a cached manifest from yesterday and a host that accepts and goes quiet
+            seedStaleCachedManifest(VERSION_1)
+            val silent = TtsModelStoreServer.SilentHost()
+            val store = newStore(manifestUrl = silent.address)
+
+            try {
+                // When
+                val startedAt = System.nanoTime()
+                store.refreshManifestIfStale()
+                val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L
+
+                // Then
+                assertTrue(
+                    elapsedMs <= MANIFEST_WAIT_BUDGET_MS,
+                    "refreshManifestIfStale took ${elapsedMs}ms, " +
+                        "expected at most ${MANIFEST_WAIT_BUDGET_MS}ms",
+                )
+                assertEquals(VERSION_1, store.cachedManifest()?.model(MODEL_ID)?.version)
+            } finally {
+                silent.stop()
+            }
+        }
+
+    @Test
+    fun `a manifest that answers inside the limit is used`() = runTest {
+        // Given
+        seedStaleCachedManifest(VERSION_1)
+        publishVersion(VERSION_2, modelBytes = MODEL_V2)
+        server.manifestDelayMs = 2_000L
+        val store = newStore()
+
+        // When
+        val startedAt = System.nanoTime()
+        store.refreshManifestIfStale()
+        val elapsedMs = (System.nanoTime() - startedAt) / 1_000_000L
+
+        // Then
+        assertTrue(elapsedMs >= 2_000L, "the answer was not waited for: ${elapsedMs}ms")
+        assertEquals(VERSION_2, store.cachedManifest()?.model(MODEL_ID)?.version)
+    }
+
+    // endregion
+
     // region harness
+
+    /** A cached manifest for [version], last written a day and an hour ago. */
+    private fun seedStaleCachedManifest(version: String) {
+        val cacheFile = File(File(root, TtsModelStore.MODELS_DIR_NAME), "manifest.json")
+        cacheFile.parentFile?.mkdirs()
+        cacheFile.writeText(
+            manifestBody(
+                version = version,
+                files = listOf(manifestFile(version, MODEL_NAME, MODEL_V1, null)),
+            ),
+        )
+        cacheFile.setLastModified(nowMs - 25L * 60L * 60L * 1_000L)
+    }
 
     internal class TestFiles(val dir: File) {
         val model: File get() = File(dir, MODEL_NAME)
@@ -210,9 +271,11 @@ class TtsModelStoreTest {
         files.model.isFile && files.model.length() > 0L &&
             files.tokens.isFile && files.tokens.length() > 0L
 
-    private fun newStore(): TtsModelStore = TtsModelStore(
+    private fun newStore(
+        manifestUrl: String = server.manifestAddress,
+    ): TtsModelStore = TtsModelStore(
         rootDirectory = root,
-        manifestUrl = server.manifestAddress,
+        manifestUrl = manifestUrl,
         openConnection = ::openLocalConnection,
         now = { nowMs },
         usableSpaceBytes = { PLENTY_OF_SPACE },
@@ -319,6 +382,8 @@ class TtsModelStoreTest {
         private const val VERSION_1 = "1.0.0"
         private const val VERSION_2 = "2.0.0"
         private const val PLENTY_OF_SPACE = 8L * 1024L * 1024L * 1024L
+        /** The owner's rule: about five seconds, with a second of slack for the machine. */
+        private const val MANIFEST_WAIT_BUDGET_MS = 6_000L
         private const val PRODUCTION_CONNECT_TIMEOUT_MS = 30_000
         private const val PRODUCTION_READ_TIMEOUT_MS = 60_000
         private const val WRONG_SHA256 =

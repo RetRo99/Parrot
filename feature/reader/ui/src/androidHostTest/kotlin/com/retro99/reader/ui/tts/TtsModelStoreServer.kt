@@ -127,6 +127,39 @@ internal class TtsModelStoreServer {
         }
     }
 
+    /**
+     * Accepts the connection and never answers, like a captive portal: the client sits in
+     * its read until its own read timeout.
+     */
+    internal class SilentHost {
+
+        private val socket = java.net.ServerSocket(0, 8, java.net.InetAddress.getByName("127.0.0.1"))
+        private val held = CopyOnWriteArrayList<java.net.Socket>()
+
+        @Volatile
+        private var running = true
+
+        val address: String get() = "http://127.0.0.1:${socket.localPort}/manifest.json"
+
+        init {
+            Thread {
+                while (running) {
+                    try {
+                        held += socket.accept()
+                    } catch (ignored: Exception) {
+                        return@Thread
+                    }
+                }
+            }.apply { isDaemon = true }.start()
+        }
+
+        fun stop() {
+            running = false
+            held.forEach { connection -> runCatching { connection.close() } }
+            runCatching { socket.close() }
+        }
+    }
+
     companion object {
         private const val MANIFEST_PATH = "manifest.json"
         private const val BLOCK = 64 * 1024
