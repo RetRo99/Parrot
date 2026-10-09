@@ -9,6 +9,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -133,6 +134,56 @@ class SpeakWordCoordinatorTest {
         assertEquals(listOf("synthesize", "stop", "synthesize", "play", "stop"), events)
         assertEquals(1, player.played.size)
         assertEquals(SpeakWordState.Idle, coordinator.state.value)
+    }
+
+    @Test
+    fun `a clip that never ends is given up on and narration resumes`() = runTest {
+        val events = mutableListOf<String>()
+        val source = FakeWordAudioSource(events)
+        // The player the device shows when audio focus is refused: no end, no error, ever.
+        val player = FakeWordPlayer(events).apply { gate = CompletableDeferred() }
+        val narration = FakeInterruption(events, "narration", playing = true)
+        val coordinator = coordinator(source, player, listOf(narration))
+        val failures = collectFailures(coordinator)
+
+        coordinator.speak(word(text = "word", voiceId = "kokoro:0", isNeural = true))
+        runCurrent()
+        assertEquals(SpeakWordState.Speaking, coordinator.state.value)
+
+        advanceTimeBy(9_000)
+        assertEquals(SpeakWordState.Speaking, coordinator.state.value)
+        assertEquals(0, narration.resumes)
+
+        advanceTimeBy(2_000)
+        advanceUntilIdle()
+        runCurrent()
+
+        assertEquals(listOf("synthesize", "pause:narration", "play", "stop", "resume:narration"), events)
+        assertEquals(SpeakWordState.Idle, coordinator.state.value)
+        assertEquals(1, narration.resumes)
+        assertEquals(listOf(SpeakWordFailure(voiceId = "kokoro:0", isNeural = true)), failures)
+    }
+
+    @Test
+    fun `a clip that ends before the limit reports no failure`() = runTest {
+        val events = mutableListOf<String>()
+        val source = FakeWordAudioSource(events)
+        val player = FakeWordPlayer(events).apply { gate = CompletableDeferred() }
+        val narration = FakeInterruption(events, "narration", playing = true)
+        val coordinator = coordinator(source, player, listOf(narration))
+        val failures = collectFailures(coordinator)
+
+        coordinator.speak(word(text = "word"))
+        runCurrent()
+        advanceTimeBy(2_000)
+        player.gate?.complete(Unit)
+        advanceUntilIdle()
+        runCurrent()
+
+        assertEquals(listOf("synthesize", "pause:narration", "play", "stop", "resume:narration"), events)
+        assertEquals(SpeakWordState.Idle, coordinator.state.value)
+        assertEquals(1, narration.resumes)
+        assertTrue(failures.isEmpty())
     }
 
     @Test
