@@ -124,11 +124,7 @@ internal class TtsPlaybackAttempts(
             when {
                 // The audio in the player was made with the old setting: synthesise the
                 // paused sentence and everything after it again, never resume (TTS-F06).
-                pausedIndex != null -> {
-                    armStartupTimeout(attempt)
-                    restartAtIndex(pausedIndex)
-                    null
-                }
+                pausedIndex != null -> restart(attempt, pausedIndex)
 
                 isResuming -> resume(attempt)
                 else -> freshStart(attempt)
@@ -141,15 +137,37 @@ internal class TtsPlaybackAttempts(
         val index = engine.currentSentenceIndex
         if (index < 0) return
 
-        if (engine.isPlaying.value) {
-            scope.launch {
-                restartAtIndex(index)
+        // A restart in flight has already stopped the old audio, so isPlaying can be
+        // false while the session is still a playing one.
+        if (engine.isPlaying.value || isRestartActive) {
+            // One more change supersedes the restart in flight: it ends as cancelled, and
+            // the new one gets its own attempt and its own single terminal outcome.
+            if (isRestartActive) cancelActive()
+            request(TtsPlaybackAction.SETTINGS_CHANGE) { attempt ->
+                restart(attempt, index)
             }
         } else {
             // The position is kept: the next play starts this same sentence, from its
             // start, with the new setting (TTS-F06). engine.stop() threw it away.
             pausedSettingsChangeIndex = index
         }
+    }
+
+    private val isRestartActive: Boolean
+        get() = active?.action == TtsPlaybackAction.SETTINGS_CHANGE
+
+    /**
+     * Synthesises [index] again with the settings in force now, as a tracked start: the
+     * deadline covers it and the engine labels its own failures with this attempt.
+     */
+    private suspend fun restart(
+        attempt: TtsPlaybackAttempt,
+        index: Int,
+    ): TtsPlaybackFailureReason? {
+        armStartupTimeout(attempt)
+        engine.setPlaybackOperationCorrelationId(attempt.correlationId)
+        restartAtIndex(index)
+        return null
     }
 
     fun armStartupTimeout(attempt: TtsPlaybackAttempt) {
