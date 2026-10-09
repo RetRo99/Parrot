@@ -104,6 +104,10 @@ Where the setting is, if you decide to allow http catalogues on iPhone:
 
 - [ ] Start a download and put Parrot in the background for a minute. See what state the
       download is in when you return. There is no background download.
+- [ ] Download from a server that compresses its answers (gzip). If a download fails on
+      iPhone only, with "Try again", look at this first: Parrot compares the bytes it received
+      with the declared length, and iOS may unpack a compressed answer while still reporting
+      the packed length. Not seen, not tested; it follows from reading the code.
 - [ ] After a download, check in Settings → General → iPhone Storage that Parrot's size grew
       by about the book's size and not by twice that.
 - [ ] Back up the iPhone (encrypted) with a catalogue account saved, and restore to another
