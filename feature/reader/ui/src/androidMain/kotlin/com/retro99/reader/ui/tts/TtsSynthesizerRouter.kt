@@ -16,8 +16,14 @@ class TtsSynthesizerRouter(
                 kokoroSynthesizer.isReady() ||
                 supertonicSynthesizer.isReady()
 
-    override suspend fun awaitReady(timeoutMs: Long): Boolean =
-        systemSynthesizer.awaitReady(timeoutMs)
+    override suspend fun awaitReady(timeoutMs: Long): Boolean = awaitSynthesizerReady(
+        timeoutMs = timeoutMs,
+        isNeuralPackUsable = {
+            kokoroSynthesizer.availableVoices().any { voice -> voice.isDownloaded } ||
+                    supertonicSynthesizer.availableVoices().any { voice -> voice.isDownloaded }
+        },
+        awaitSystemReady = { timeout -> systemSynthesizer.awaitReady(timeout) },
+    )
 
     override fun availableVoices(): List<TtsVoice> =
         systemSynthesizer.availableVoices() +
@@ -101,3 +107,14 @@ class TtsSynthesizerRouter(
         supertonicSynthesizer.release()
     }
 }
+
+/**
+ * Whether anything can speak, for the readiness gate in front of the word speaker and the
+ * voice list. The router's three engines all need Android, so the decision lives here, apart
+ * from them, and is tested on the host.
+ */
+internal suspend fun awaitSynthesizerReady(
+    timeoutMs: Long,
+    isNeuralPackUsable: () -> Boolean,
+    awaitSystemReady: suspend (Long) -> Boolean,
+): Boolean = awaitSystemReady(timeoutMs)
