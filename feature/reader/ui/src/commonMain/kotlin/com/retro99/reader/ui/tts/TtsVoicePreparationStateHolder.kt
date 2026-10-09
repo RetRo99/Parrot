@@ -76,7 +76,13 @@ class TtsVoicePreparationStateHolder {
      * and reads Idle as "cancelled", so clearing early would turn a success into one.
      */
     fun clearFinishedState() {
-        // Stub: nothing clears a terminal state today, which is the finding.
+        mutableState.update { currentState ->
+            if (currentState is TtsVoicePreparationState.Running) {
+                currentState
+            } else {
+                TtsVoicePreparationState.Idle
+            }
+        }
     }
 
     private fun updateTerminalState(

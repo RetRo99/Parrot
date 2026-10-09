@@ -102,6 +102,7 @@ import com.retro99.reader.ui.tts.NeuralVoicePackage
 import com.retro99.reader.ui.tts.SupertonicTermsStore
 import com.retro99.reader.ui.tts.TtsPreparationProgress
 import com.retro99.reader.ui.tts.TtsVoicePreparationState
+import com.retro99.reader.ui.tts.TtsVoicePreparationStateHolder
 import com.retro99.reader.ui.tts.neuralVoicePackage
 import com.retro99.statistics.domain.ActiveSessionTimer
 import com.retro99.statistics.domain.usecase.SaveReadingSessionUseCase
@@ -1666,6 +1667,9 @@ class ReaderViewModel(
     }
 
     private fun observeTtsVoicePreparationState() {
+        // The holder is app-wide: drop a finished download's result before collecting, so this
+        // reader does not show a failure banner for a download it never started (TTS-F18).
+        getKoin().get<TtsVoicePreparationStateHolder>().clearFinishedState()
         ttsController.voicePreparationState
             .onEach { preparationState ->
                 when (preparationState) {
