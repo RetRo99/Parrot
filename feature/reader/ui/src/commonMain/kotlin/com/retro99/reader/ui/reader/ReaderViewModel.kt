@@ -82,6 +82,7 @@ import com.retro99.reader.domain.usecase.SaveReadingProgressUseCase
 import com.retro99.reader.domain.usecase.SetCurrentlyReadingUseCase
 import com.retro99.reader.ui.di.InitialAudioPosition
 import com.retro99.reader.ui.di.ReaderScope
+import com.retro99.reader.ui.di.ReaderScopeLease
 import com.retro99.reader.ui.model.PositionConflictUiModel
 import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.ReaderSettingsUiModel
@@ -234,8 +235,22 @@ class ReaderViewModel(
     )
     private var continueReadingOpenResolved = false
 
+    /**
+     * Two reader screens for one book share this scope, so neither may close it or the
+     * controllers in it while the other is alive (TTS-F10). The lease counts the holders;
+     * the hold is given back in [onCleared].
+     */
+    private val readerScopeLease: ReaderScopeLease by lazy { getKoin().get() }
+
+    /** True once this reader has a hold to give back; a reader that never opened the scope
+     * must not decrement another one's. */
+    private var hasReaderScopeHold = false
+
     private val readerScope: Scope by lazy {
-        getKoin().getOrCreateScope<ReaderScope>(bookUuid).apply {
+        hasReaderScopeHold = true
+        readerScopeLease.acquire(bookUuid) {
+            getKoin().getOrCreateScope<ReaderScope>(bookUuid)
+        }.apply {
             viewState.value.publicationState?.let { pubState ->
                 val initialPositionMs = pubState.position?.audioTimestampMs
                 val initialHref = pubState.position?.href
@@ -250,21 +265,24 @@ class ReaderViewModel(
         }
     }
 
+    // These three are reader-scoped and therefore shared with any other screen open on the
+    // same book, so the lease closes them when the last screen lets go — not this
+    // ViewModel's addCloseable, which closed them under the survivor (TTS-F10).
     private val bookController: BookController by lazy {
         readerScope.get<BookController>().also {
-            addCloseable(it)
+            readerScopeLease.addCloseable(bookUuid, it)
         }
     }
 
     private val audioController: AudioController by lazy {
         readerScope.get<AudioController>().also {
-            addCloseable(it)
+            readerScopeLease.addCloseable(bookUuid, it)
         }
     }
 
     private val ttsController: TtsController by lazy {
         readerScope.get<TtsController>().also { controller ->
-            addCloseable(controller)
+            readerScopeLease.addCloseable(bookUuid, controller)
         }
     }
 
@@ -278,7 +296,7 @@ class ReaderViewModel(
 
     private val syncCoordinator: ReaderSyncCoordinator by lazy {
         readerScope.get<ReaderSyncCoordinator>().also {
-            addCloseable(it)
+            readerScopeLease.addCloseable(bookUuid, it)
         }
     }
 
@@ -3201,7 +3219,7 @@ class ReaderViewModel(
         currentBookTargetCheckpoint?.cancel()
         routineSyncScheduler.close()
         super.onCleared()
-        readerScope.close()
+        if (hasReaderScopeHold) readerScopeLease.release(bookUuid)
     }
 
     @OptIn(ExperimentalUuidApi::class)

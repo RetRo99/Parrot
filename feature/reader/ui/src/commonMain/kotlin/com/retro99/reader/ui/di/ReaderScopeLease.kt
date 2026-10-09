@@ -40,7 +40,10 @@ class ReaderScopeLease {
 
     /** Gives a hold back. Nothing closes until the last one. */
     fun release(bookUuid: String) {
-        val hold = holds.remove(bookUuid) ?: return
+        val hold = holds[bookUuid] ?: return
+        hold.holders--
+        if (hold.holders > 0) return
+        holds.remove(bookUuid)
         hold.closeables.forEach { it.close() }
         hold.scope.close()
     }
