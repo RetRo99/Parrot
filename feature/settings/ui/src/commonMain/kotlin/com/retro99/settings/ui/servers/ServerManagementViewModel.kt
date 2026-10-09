@@ -24,6 +24,8 @@ import kotlinx.coroutines.launch
 import org.koin.core.annotation.InjectedParam
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @KoinViewModel
 class ServerManagementViewModel(
@@ -159,6 +161,7 @@ class ServerManagementViewModel(
         updateState { it.copy(isOperationInProgress = true, catalogueOperationFailed = false) }
         viewModelScope.launch {
             try {
+                silenceServersSignedOutOfEverything()
                 logoutAll()
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -169,6 +172,33 @@ class ServerManagementViewModel(
                 updateState { it.copy(isOperationInProgress = false) }
             }
         }
+    }
+
+    /**
+     * "Sign out of everything" signs out of every remote server and never of the local
+     * library, so the audio it stops is every remote server's and never a local book's
+     * (QA-BUG-0049, decision 4). It goes through the same per-server rule as a single
+     * logout: only one media session can be active, so at most one of these stops anything.
+     */
+    @OptIn(ExperimentalUuidApi::class)
+    private suspend fun silenceServersSignedOutOfEverything() {
+        val correlationId = Uuid.random().toString()
+        serverRegistry.getAllServers()
+            .filter { server -> server.type != ServerType.Local }
+            .forEach { server ->
+                stopPlaybackForServer(
+                    server.id,
+                    DiagnosticContext(
+                        screen = "server_management",
+                        action = "sign_out_everything",
+                        operation = "server_logout_all",
+                        stage = "started",
+                        outcome = "started",
+                        serverType = server.type.identifier,
+                        correlationId = correlationId,
+                    ),
+                )
+            }
     }
 
     private fun catalogueAction(sourceId: String, turnOn: Boolean) {
