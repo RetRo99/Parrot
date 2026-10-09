@@ -600,14 +600,17 @@ private class EntryAssembler(
     val otherContributors: MutableList<OpdsContributor> = mutableListOf()
     val identifiers: MutableList<OpdsIdentifier> = mutableListOf()
     val links: MutableList<OpdsLink> = mutableListOf()
-    val images: MutableList<OpdsImage> = mutableListOf()
+    private val covers: MutableList<OpdsImage> = mutableListOf()
+    private val thumbnails: MutableList<OpdsImage> = mutableListOf()
+
+    /** Covers before thumbnails, each in the order the entry lists them. */
+    val images: List<OpdsImage> get() = covers + thumbnails
 
     fun registerLink(link: OpdsLink) {
-        val rel = link.relations.firstOrNull().orEmpty()
-        val isImage = rel == IMAGE_RELATION || rel == THUMBNAIL_RELATION ||
-            rel.endsWith("/image") || rel.endsWith("/image-thumbnail")
-        if (isImage && images.size < IMAGE_BUDGET) {
-            images.add(OpdsImage(link.rawHref, link.mediaType))
+        val isThumbnail = link.relations.any { rel -> rel in THUMBNAIL_RELATIONS || rel.endsWith("/image-thumbnail") }
+        val isCover = !isThumbnail && link.relations.any { rel -> rel in COVER_RELATIONS || rel.endsWith("/image") }
+        if ((isCover || isThumbnail) && covers.size + thumbnails.size < IMAGE_BUDGET) {
+            (if (isCover) covers else thumbnails).add(OpdsImage(link.rawHref, link.mediaType))
         }
         if (links.size < LINK_BUDGET) {
             links.add(link)
@@ -729,6 +732,12 @@ private const val IMAGE_BUDGET = 50
 private const val LINK_BUDGET = 500
 private const val EXTRA_BUDGET = 20
 private const val EXTRA_VALUE_CHARS = 200
-private const val IMAGE_RELATION = "http://opds-spec.org/image"
-private const val THUMBNAIL_RELATION = "http://opds-spec.org/image-thumbnail"
+/** OPDS 1.1 and 1.2, then what OPDS 1.0 and Stanza-era catalogues (Calibre among them) still send. */
+private val COVER_RELATIONS = setOf("http://opds-spec.org/image", "http://opds-spec.org/cover", "x-stanza-cover-image")
+private val THUMBNAIL_RELATIONS = setOf(
+    "http://opds-spec.org/image/thumbnail",
+    "http://opds-spec.org/thumbnail",
+    "x-stanza-cover-image-thumbnail",
+    "http://opds-spec.org/image-thumbnail",
+)
 private val KNOWN_LINK_ATTRIBUTES = setOf("href", "rel", "type", "title", "length")
