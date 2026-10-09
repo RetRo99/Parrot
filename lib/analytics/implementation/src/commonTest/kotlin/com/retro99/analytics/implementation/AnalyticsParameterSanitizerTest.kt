@@ -21,6 +21,46 @@ import com.retro99.analytics.api.CloudAccountObservation
 class AnalyticsParameterSanitizerTest {
 
     @Test
+    fun ttsPlaybackSettingsChangeKeepsItsAction() {
+        // A restart caused by a voice, speed or pitch change: on the phone this event
+        // reached the provider with no tts_action at all, where a controls or resume start
+        // carried one (TTS-F27).
+        val attempt = ReaderAnalyticsEvent.TtsPlaybackOperation(
+            action = "settings_change",
+            outcome = "attempted",
+            isRetry = false,
+        )
+        val success = ReaderAnalyticsEvent.TtsPlaybackOperation(
+            action = "settings_change",
+            outcome = "succeeded",
+            isRetry = false,
+            durationMs = 10_945L,
+        )
+
+        assertEquals(
+            mapOf(
+                "operation" to "tts_playback",
+                "tts_action" to "settings_change",
+                "tts_outcome" to "attempted",
+                "is_retry" to false,
+                "media_type" to "ebook",
+            ),
+            sanitizeAnalyticsParameters(attempt.parameters),
+        )
+        assertEquals(
+            mapOf(
+                "operation" to "tts_playback",
+                "tts_action" to "settings_change",
+                "tts_outcome" to "succeeded",
+                "is_retry" to false,
+                "media_type" to "ebook",
+                "duration_ms" to 10_945L,
+            ),
+            sanitizeAnalyticsParameters(success.parameters),
+        )
+    }
+
+    @Test
     fun ttsPlaybackOutcomesKeepOnlyAllowlistedDimensions() {
         val attempt = ReaderAnalyticsEvent.TtsPlaybackOperation(
             action = "controls",
