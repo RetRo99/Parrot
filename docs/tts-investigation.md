@@ -349,6 +349,7 @@ effect on a user, not on the code.
 - **Confidence:** medium — the window is one dispatch; the existing `SpeakWordCoordinatorTest` covers `speak`-replaces-`speak` but not `stop`-then-`speak`.
 - **Severity for a user:** wrong audio / stuck state.
 - **How a test could catch it:** add a case to `SpeakWordCoordinatorTest` on a `StandardTestDispatcher`: `speak(a)`, `stop()`, `speak(b)` with no advancing in between, then assert the interruption is paused once, is resumed only after b finishes, and the state order is `Preparing → Speaking → Idle`.
+- **Fixed:** `b48309c2` (run 3b) — `stop()` cancels without forgetting the job, so the next `speak()` joins the stopped request's cleanup; it still does not suspend its caller. Tests committed failing in `683b5871`. The finding's literal case (the stopped word is *Speaking*) **passed before the fix**: cancelling the fake player's `await` is one dispatch, so the cleanup still landed first. The case that failed holds the stopped word in *synthesis* with the source on its own dispatcher, which is what the real `TtsWordAudioSource` does (`withContext(Dispatchers.IO)`): `expected:<[synthesize, stop, synthesize, pause:narration, play, stop, resume:narration]> but was:<[synthesize, synthesize, stop, pause:narration, play, stop, resume:narration]>`.
 
 ### TTS-F09 — A word clip that never completes leaves narration paused indefinitely
 
@@ -360,6 +361,7 @@ effect on a user, not on the code.
 - **Confidence:** medium. Raise it by holding audio focus from another app and tapping a word.
 - **Severity for a user:** stuck state.
 - **How a test could catch it:** `SpeakWordCoordinatorTest` with a `WordPlayer` whose `play` never returns: assert the coordinator gives up within a bounded time and resumes the interruption. That assertion fails today, which is the finding.
+- **Fixed:** `de593fae` (run 3b) — `player.play` runs inside `withTimeoutOrNull(WORD_PLAYBACK_TIMEOUT_MS)`, 10 s, a named constant beside the coordinator; past the limit the `finally` stops the player, resumes exactly what this run paused and returns to `Idle`, and one `SpeakWordFailure` is emitted. Test committed failing in `27dae308` with `expected:<[synthesize, pause:narration, play, stop, resume:narration]> but was:<[synthesize, pause:narration, play]>`. A clip that ends inside the limit reports nothing, which passed before the fix.
 
 ### TTS-F10 — Two reader ViewModels share one reader scope: duplicated TTS events, and a controller closed under the survivor
 
@@ -405,6 +407,7 @@ effect on a user, not on the code.
 - **Confidence:** medium-high for the code path; frequency depends on how often the platform engine is missing.
 - **Severity for a user:** silent failure (a feature silently absent).
 - **How a test could catch it:** unit test on `TtsSynthesizerRouter` (new `TtsSynthesizerRouterTest`) asserting `awaitReady()` is true when only a neural engine is ready, mirroring `isReady()`.
+- **Fixed:** `5b5ac563` (run 3b) — the decision is the top-level `internal awaitSynthesizerReady(timeoutMs, isNeuralPackUsable, awaitSystemReady)`, now `isNeuralPackUsable() || awaitSystemReady(timeoutMs)`: an installed pack is ready at once and the system wait is not called at all; with no pack the system engine is waited for as before. Note the neural check is **not** the engines' `isReady()`, which means only "engine loaded in memory" (`engine != null`) for both `SherpaOnnxSynthesizer` and `SupertonicOnnxSynthesizer`; the router asks "pack installed and usable" via `availableVoices().isDownloaded`. Tests committed failing in `f5401995` (`Expected value to be true.` and `expected:<[]> but was:<[3000]>`); the two system-engine cases passed before the fix.
 
 ### TTS-F14 — A chapter with no readable sentences fails every start with a retry that cannot succeed
 
@@ -462,6 +465,7 @@ effect on a user, not on the code.
 - **Confidence:** medium.
 - **Severity for a user:** cosmetic.
 - **How a test could catch it:** extend `TtsVoicePreparationStateHolderTest` with "a terminal state is consumed once" semantics; manual: fail a download, reopen the reader, open Voices.
+- **Fixed:** `3adba5d7` (run 3b) — the holder gained `clearFinishedState()`, which puts `Complete` or `Failed` back to `Idle` and leaves a `Running` preparation and its progress untouched, and `ReaderViewModel.observeTtsVoicePreparationState` calls it once before it collects. Nothing clears the state when a download *finishes*: `awaitVoicePreparation` still reads the result from the holder and reads `Idle` as "cancelled". Tests committed failing in `b88c7a37` (`expected:<Idle> but was:<Failed(voicePackage=KOKORO)>`, same for `Complete`); the `Running` case passed before the fix. No ViewModel-level test: nothing in the suite constructs `ReaderViewModel`.
 
 ### TTS-F19 — A cancelled pack download produces no outcome, and queued post-download work is dropped silently
 

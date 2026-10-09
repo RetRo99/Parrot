@@ -98,7 +98,7 @@ class TtsSentenceChunkerTest {
     }
 
     @Test
-    fun `chunk does not split after a price's decimals (current behaviour)`() {
+    fun `chunk does not split after a price's decimals - current behaviour`() {
         // When
         val result = TtsSentenceChunker.chunk("Dr. Smith paid \$3.50. He left.")
 
@@ -119,7 +119,7 @@ class TtsSentenceChunkerTest {
     }
 
     @Test
-    fun `chunk splits at three dots inside a sentence (current behaviour)`() {
+    fun `chunk splits at three dots inside a sentence - current behaviour`() {
         // When
         val result = TtsSentenceChunker.chunk("He paused ... then spoke again.")
 
@@ -148,7 +148,7 @@ class TtsSentenceChunkerTest {
     }
 
     @Test
-    fun `chunk does not split Japanese punctuation (current behaviour)`() {
+    fun `chunk does not split Japanese punctuation - current behaviour`() {
         // When
         val result = TtsSentenceChunker.chunk("これは本です。それはペンですか？")
 

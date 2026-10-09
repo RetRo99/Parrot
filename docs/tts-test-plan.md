@@ -23,7 +23,7 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | 2b | Restart on a settings change; the chapter a completion belongs to | F06, F07, F16, QA-0095 (third case) | Opus | done |
 | 2c | The synthesis gap between sentences; the action on the restart's event | F26, F27 | Opus | done |
 | 3a | The sentence audio cache: a testable store, failed synthesis, the trim, the word clip, the Kokoro voice number | F03, F12, F17, F21 | Opus | done |
-| 3b | The rest of the small pure-logic gaps, plus the sentence chunker cases | F08, F09, F13, F18 | Sonnet | not started |
+| 3b | The rest of the small pure-logic gaps, plus the sentence chunker cases | F08, F09, F13, F18 | Sonnet | done |
 | 4 | Voice pack download and delete | F04, F05, F19, F20 | Opus | |
 | 5 | Reader screen and lifecycle | F10, F11, F14, F23, F24, F25, QA-0049, QA-0100 | Opus | |
 | 6 | Manual device pass and new cases in `manual-qa-test-plan.md` | all | Sonnet, with the owner's phone | |
@@ -142,7 +142,7 @@ trimmer tests `09690022`, failing test `b1ba6dd3` → fix `fbbf89e7` (F21); fail
 `d423e617` → fix `d720979d` (F17). Reader ui host tests 344/344, composeApp 57/57. No
 earlier test was edited.
 
-### Run 3b: the rest of the pure logic — not started
+### Run 3b: the rest of the pure logic — done
 
 - `SpeakWordCoordinatorTest`: stop then speak with no dispatch in between (F08); a
   player that never finishes is given up on and narration resumes (F09).
@@ -152,6 +152,17 @@ earlier test was edited.
   observer (F18).
 - `TtsSentenceChunkerTest` additions: numbers, quotes, non-Latin text, a sentence with
   no terminator, empty and whitespace-only input.
+
+Failing test `683b5871` → fix `b48309c2` (F08); failing test `27dae308` → fix `de593fae`
+(F09); failing tests `f5401995` → fix `5b5ac563` (F13); failing tests `b88c7a37` → fix
+`3adba5d7` (F18); ten chunker cases pinned in `949fa619`, three of them named
+"- current behaviour" and no chunker change — the suffix carries no brackets because
+Kotlin/Native rejects a test name containing "()". `TtsSynthesizerRouterTest` covers readiness
+only; routing by voice id prefix and the fallback voice are still untested, both needing
+the three Android engines. Reader ui host tests 365/365, reader ui iOS 283/283 (266 before
+this run), composeApp 57/57. One earlier test was retimed, not weakened: the F08 ordering
+case moved from `advanceUntilIdle` to `runCurrent` once F09's limit existed, since it
+holds both clips open on purpose.
 
 ### Run 4: voice packs (new `TtsModelManagerTest`)
 
@@ -207,6 +218,7 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
   all: the control row takes about 0.9 s to finish expanding, and a tap sent ~300 ms after
   the reveal (run 2b's timing) lands before the button has its hitbox and is swallowed.
   Reveal, wait ~0.9 s, then act. Still worth one human-finger pass, but nothing is blocked.
+- Phone ringer must be on, not silent; run 3a's check heard nothing.
 - Cold first Kokoro start timed against the 30 second start deadline (F15).
 - Double-tap a sentence to start, and to jump while playing (manual QA case 160). **Done
   in run 2c on the Samsung, 2026-10-09: both passed, one try each**
