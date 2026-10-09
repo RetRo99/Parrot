@@ -56,30 +56,36 @@ class DownloadAnnouncementTracker {
     }
 }
 
-@Single
-class CatalogueDownloadAnnouncer(@Provided queue: CatalogueAcquisitionManager, @Provided users: UserRegistry) {
+/**
+ * Starts watching the queue on first use, and only then asks for [scope]: constructing it needs
+ * no main dispatcher, so it can be made by the dependency graph on a host without one.
+ */
+class CatalogueDownloadAnnouncer(
+    private val queue: CatalogueAcquisitionManager,
+    private val users: UserRegistry,
+    private val scope: () -> CoroutineScope,
+) {
     private data class Visibility(val keys: Set<String>, val all: Boolean)
     private val owners = mutableMapOf<Any, Visibility>()
     private val channel = Channel<DownloadAnnouncement>(Channel.UNLIMITED)
-    val events = channel.receiveAsFlow()
+    val events get() = started.let { channel.receiveAsFlow() }
     private val tracker = DownloadAnnouncementTracker()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    init {
-        scope.launch {
-            users.observeActiveProfile().map { it?.id }.distinctUntilChanged().collectLatest { profile ->
-                tracker.reset(); owners.clear()
-                while (channel.tryReceive().isSuccess) { /* Never announce an old profile's title. */ }
-                if (profile != null) queue.observeAcquisitions().collect { rows ->
-                    tracker.update(rows, owners.values.flatMap { it.keys }.toSet(), owners.values.any { it.all }).forEach { channel.send(it) }
-                }
+    private val started by lazy { start() }
+    private fun start() = scope().launch {
+        users.observeActiveProfile().map { it?.id }.distinctUntilChanged().collectLatest { profile ->
+            tracker.reset(); owners.clear()
+            while (channel.tryReceive().isSuccess) { /* Never announce an old profile's title. */ }
+            if (profile != null) queue.observeAcquisitions().collect { rows ->
+                tracker.update(rows, owners.values.flatMap { it.keys }.toSet(), owners.values.any { it.all }).forEach { channel.send(it) }
             }
         }
     }
     fun visible(owner: Any, sourceId: String, keys: Collection<String>, all: Boolean = false) {
+        started
         owners[owner] = Visibility(keys.mapTo(mutableSetOf()) { "$sourceId\u0000$it" }, all)
     }
     fun hidden(owner: Any) { owners.remove(owner) }
-    fun cancelled(title: String) { channel.trySend(DownloadAnnouncement.Cancelled(title)) }
+    fun cancelled(title: String) { started; channel.trySend(DownloadAnnouncement.Cancelled(title)) }
 }
 
 /** Installed once in the app shell, so completion/failure is announced beyond catalogue routes. */
