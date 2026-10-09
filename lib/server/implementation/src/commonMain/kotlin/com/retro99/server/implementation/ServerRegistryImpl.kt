@@ -187,15 +187,20 @@ class ServerRegistryImpl(
             val previous = _servers.value[config.id]
             check(previous?.type == ServerType.Opds) { "Catalogue source must already exist" }
             val profileId = currentUserId ?: error("No active profile")
+            // To another scheme, host or port. A change of path or query is the same catalogue server.
+            val moved = previous.baseUrl != config.baseUrl && !sameOrigin(previous.baseUrl, config.baseUrl)
             if (previous.baseUrl != config.baseUrl || previous.enabled && !config.enabled) {
                 // Fail closed before publishing a retargeted address. Losing optional
                 // credentials on a failed config write is safer than sending them elsewhere.
                 cancelCatalogueWork(profileId, config.id)
-                if (previous.baseUrl != config.baseUrl && !sameOrigin(previous.baseUrl, config.baseUrl)) opdsCredentials.remove(profileId, config.id)
+                if (moved) opdsCredentials.remove(profileId, config.id)
             }
+            // What a preset said about its own catalogue says nothing about another one. A
+            // search address kept across a move would send what the user types to the old host.
+            val stored = if (moved) config.copy(searchTemplate = null, listEntriesAreBooks = false) else config
             persistStateMutation(
                 previousValue = _servers.value,
-                updatedValue = _servers.value + (config.id to config),
+                updatedValue = _servers.value + (config.id to stored),
                 update = { _servers.value = it },
                 persist = ::persistCatalogueSources,
             )
