@@ -1,8 +1,5 @@
 package com.retro99.reader.ui.tts
 
-import android.system.ErrnoException
-import android.system.Os
-import android.util.Log
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.ReaderAnalyticsEvent
 import kotlinx.coroutines.CancellationException
@@ -23,10 +20,14 @@ import java.util.zip.ZipInputStream
 internal typealias TtsConnectionOpener =
     (String, HttpURLConnection.() -> Unit) -> HttpURLConnection
 
+/** Links [source] to [destination], false when the filesystem refuses. */
+internal typealias TtsHardLink = (source: File, destination: File) -> Boolean
+
 /**
  * All of [TtsModelManager]'s download, verification, update and delete logic, with the
  * Android pieces it used to reach for — the files directory, the manifest address, the
- * trusted connection opener, the clock and the free-space check — injected instead.
+ * trusted connection opener, the clock, the free-space check, the hard link and the
+ * log — injected instead.
  *
  * [TtsModelManager] keeps the public surface and passes today's values, so this class
  * can be driven from a host test against a local server and a temporary directory.
@@ -38,6 +39,9 @@ internal class TtsModelStore(
     private val now: () -> Long,
     private val usableSpaceBytes: () -> Long,
     private val analytics: Analytics,
+    private val hardLink: TtsHardLink,
+    private val logInfo: (String) -> Unit,
+    private val logWarning: (String, Throwable?) -> Unit,
 ) {
 
     fun isKokoroModelDownloaded(): Boolean =
@@ -160,7 +164,10 @@ internal class TtsModelStore(
             try {
                 val entry = loadManifestEntry(modelId)
                 if (entry == null) {
-                    Log.w(TAG, "No manifest available for $modelId, using local files if complete")
+                    logWarning(
+                        "No manifest available for $modelId, using local files if complete",
+                        null,
+                    )
                     return@withContext activeFiles ?: adoptLocalModel(modelId, files, isComplete)
                 }
                 if (activeFiles != null && activeVersion(modelId) == entry.version) {
@@ -227,8 +234,7 @@ internal class TtsModelStore(
             return false
         }
 
-        Log.i(
-            TAG,
+        logInfo(
             "Downloading ${entry.id} ${entry.version} " +
                     "(${missingFiles.size} files, $remainingBytes bytes)",
         )
@@ -246,8 +252,7 @@ internal class TtsModelStore(
             }
             installedBytes += file.size
             reporter.report(installedBytes)
-            Log.i(
-                TAG,
+            logInfo(
                 "Prepared ${file.path} (${file.size} bytes) in " +
                         "${now() - startedAt}ms",
             )
@@ -274,17 +279,13 @@ internal class TtsModelStore(
         val destination = targetDir.resolveInside(file.path)
         destination.delete()
         destination.parentFile?.mkdirs()
+        if (hardLink(source, destination)) return true
         return try {
-            Os.link(source.absolutePath, destination.absolutePath)
+            source.copyTo(destination, overwrite = true)
             true
-        } catch (error: ErrnoException) {
-            try {
-                source.copyTo(destination, overwrite = true)
-                true
-            } catch (copyError: Exception) {
-                destination.delete()
-                false
-            }
+        } catch (copyError: Exception) {
+            destination.delete()
+            false
         }
     }
 
@@ -321,8 +322,11 @@ internal class TtsModelStore(
                 throw error
             } catch (error: Exception) {
                 lastError = error
-                Log.w(TAG, "Download attempt ${attempt + 1}/${MAX_DOWNLOAD_ATTEMPTS} " +
-                        "failed for ${file.path}", error)
+                logWarning(
+                    "Download attempt ${attempt + 1}/$MAX_DOWNLOAD_ATTEMPTS " +
+                            "failed for ${file.path}",
+                    error,
+                )
                 if (attempt < MAX_DOWNLOAD_ATTEMPTS - 1) {
                     delay(RETRY_BACKOFF_MS * (attempt + 1))
                 }
@@ -569,7 +573,7 @@ internal class TtsModelStore(
     private fun TtsModelManifest.trustedModel(modelId: String): TtsModelManifestEntry? {
         val entry = model(modelId) ?: return null
         val violation = TtsModelManifestValidator.violation(entry) ?: return entry
-        Log.w(TAG, "Rejected manifest entry for $modelId: $violation")
+        logWarning("Rejected manifest entry for $modelId: $violation", null)
         return null
     }
 
@@ -577,18 +581,18 @@ internal class TtsModelStore(
         val connection = try {
             openConnection(manifestUrl) {}
         } catch (error: IOException) {
-            Log.w(TAG, "Manifest fetch failed", error)
+            logWarning("Manifest fetch failed", error)
             return cachedManifest()
         }
         try {
             if (connection.responseCode !in HTTP_SUCCESS_RANGE) {
-                Log.w(TAG, "Manifest fetch failed with HTTP ${connection.responseCode}")
+                logWarning("Manifest fetch failed with HTTP ${connection.responseCode}", null)
                 return cachedManifest()
             }
             val body = connection.inputStream.bufferedReader().use { reader -> reader.readText() }
             val manifest = TtsModelManifest.parse(body)
             if (manifest == null) {
-                Log.w(TAG, "Manifest could not be parsed")
+                logWarning("Manifest could not be parsed", null)
                 return cachedManifest()
             }
             manifestInMemory = manifest
@@ -597,7 +601,7 @@ internal class TtsModelStore(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            Log.w(TAG, "Manifest fetch failed", error)
+            logWarning("Manifest fetch failed", error)
             return cachedManifest()
         } finally {
             connection.disconnect()
@@ -610,7 +614,7 @@ internal class TtsModelStore(
             parent?.mkdirs()
             manifestCacheFile.writeText(body)
         } catch (error: Exception) {
-            Log.w(TAG, "Failed to cache manifest", error)
+            logWarning("Failed to cache manifest", error)
         }
     }
 
@@ -717,7 +721,6 @@ internal class TtsModelStore(
         private const val BUFFER_SIZE = 1 shl 16
         private const val DISK_MARGIN_BYTES = 64L * 1024L * 1024L
         private const val HTTP_RANGE_NOT_SATISFIABLE = 416
-        private const val TAG = "TtsModelManager"
         private val HTTP_SUCCESS_RANGE = 200..299
     }
 }

@@ -1,6 +1,9 @@
 package com.retro99.reader.ui.tts
 
 import android.content.Context
+import android.system.ErrnoException
+import android.system.Os
+import android.util.Log
 import com.retro99.analytics.api.Analytics
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Single
@@ -54,6 +57,9 @@ class TtsModelManager(
             now = { System.currentTimeMillis() },
             usableSpaceBytes = { context.filesDir.usableSpace },
             analytics = analytics,
+            hardLink = ::hardLink,
+            logInfo = { message -> Log.i(TAG, message) },
+            logWarning = { message, error -> Log.w(TAG, message, error) },
         )
     }
 
@@ -114,6 +120,14 @@ class TtsModelManager(
         File(context.cacheDir, "sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2.part"),
     )
 
+    /** A hard link, so keeping the previous version after an update is nearly free. */
+    private fun hardLink(source: File, destination: File): Boolean = try {
+        Os.link(source.absolutePath, destination.absolutePath)
+        true
+    } catch (error: ErrnoException) {
+        false
+    }
+
     /**
      * Follows redirects by hand so every hop must be https on a GitHub host;
      * automatic following would let a redirect hand us any server's bytes.
@@ -153,6 +167,7 @@ class TtsModelManager(
         const val MANIFEST_URL =
             "https://github.com/RetRo99/tts-models/releases/latest/download/manifest.json"
 
+        private const val TAG = "TtsModelManager"
         private const val CONNECT_TIMEOUT_MS = 30_000
         private const val READ_TIMEOUT_MS = 60_000
         private val HTTP_REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
