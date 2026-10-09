@@ -24,8 +24,9 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | 2c | The synthesis gap between sentences; the action on the restart's event | F26, F27 | Opus | done |
 | 3a | The sentence audio cache: a testable store, failed synthesis, the trim, the word clip, the Kokoro voice number | F03, F12, F17, F21 | Opus | done |
 | 3b | The rest of the small pure-logic gaps, plus the sentence chunker cases | F08, F09, F13, F18 | Sonnet | done |
-| 4 | Voice pack download and delete | F04, F05, F19, F20 | Opus | |
-| 5 | Reader screen and lifecycle | F10, F11, F14, F23, F24, F25, QA-0049, QA-0100 | Opus | |
+| 4 | Voice pack download and delete | F04, F05, F20 | Opus | done |
+| 5a | Read-aloud stopping and the highlight it leaves | F23, F24, F14 | Opus | not started |
+| 5b | Two readers, the pending voice, logout, the chapter mismatch | QA-0049, QA-0100, F10, F11, F19, F25 | Opus | not started |
 | 6 | Manual device pass and new cases in `manual-qa-test-plan.md` | all | Sonnet, with the owner's phone | |
 
 Run 1 is first because it is a crash on every Kokoro synthesis and it blocks every other
@@ -164,39 +165,68 @@ this run), composeApp 57/57. One earlier test was retimed, not weakened: the F08
 case moved from `advanceUntilIdle` to `runCurrent` once F09's limit existed, since it
 holds both clips open on purpose.
 
-### Run 4: voice packs (new `TtsModelManagerTest`)
+### Run 4: voice packs (`TtsModelStoreTest`) — done
 
-Needs the manifest address to be injectable; tests run against a local server.
+Needed the manifest address, the directory, the connection opener, the clock, the
+free-space check, the hard link and the log to be injectable; the tests run against a
+local server on 127.0.0.1 (the JDK's `HttpServer`, no new libraries).
 
-- A server that accepts and never answers: refresh returns within about 6 seconds and
-  the cached manifest is used (F04).
-- Download that fails three times: no orphan partial files, or they are reclaimable
-  from the card (F05, product decision 3).
-- Interrupted download resumes and the final checksum is verified.
-- Checksum mismatch: nothing installed, clear failed state.
+- A host that accepts and never answers: refresh returns within about 6 seconds and the
+  cached manifest is used (F04).
+- A host that answers after 2 seconds: that manifest is used.
+- An answer arriving after the deadline does not replace the cached manifest (F04).
+- Three failed attempts: the current version's partial is kept and the next call resumes
+  from exactly those bytes (F05, product decision 3).
+- An incomplete folder of a version that is not current is deleted on a refresh; a
+  complete one is kept (F05).
+- A current-version partial is kept for a week and no longer (F05).
+- The active version and the version kept after an update survive the clean-up (F05).
+- A clean-up that lands during an install leaves that install's files alone (F05).
+- Interrupted transfer resumes from the partial file and the final checksum is verified.
+- Checksum mismatch: nothing installed, the call fails, no partial left.
+- An update installs beside the old version, reuses unchanged files and moves the marker
+  only at the end; a failed update leaves the old version active and usable.
 - Delete while downloading: end state is consistently "not installed" (F20).
-- Cancel from the notification clears the pending voice selection and reports one
-  cancelled outcome (F19).
-- Update while the old version is loaded: old version keeps working until the switch.
+- `deleteModel` removes the pack and the marker.
 
-### Run 5: reader screen
+Done 2026-10-09. Seam `c15d7305` and `64c0ac69` (`TtsModelStore`, with `TtsModelManager`
+keeping its constructor, its Koin binding and every public function); seven
+characterization cases green `308cc34e`; failing test `73b2eda3` -> fix `0f9732a9`
+(F04); three failing tests `49c240ee` -> fix `03b20ffd` (F05); F20 **passed before any
+fix**, recorded in `55b6d3bc`, no product code and no change to the foreground service.
+Reader ui host tests 382/382, settings ui 20/20, composeApp 57/57. No earlier test was
+edited. The class uses real sockets and real time and takes about 33 seconds.
+
+F19 moved to run 5b: it lives in `ReaderViewModel`, which run 4 did not touch.
+
+### Run 5a: what read-aloud offers and what it leaves behind — not started
 
 - Book opens on a page with no text, then moves to a text chapter: read-aloud becomes
   available, and a play press never does nothing silently (F23).
 - No sentence position is shown while the count is zero; position is cleared when the
   engine stops (F24).
+- Chapter with no sentences: behaviour per product decision 2 (F14).
+- After Stop listening, the last sentence's highlight stays on the page (seen in run 2a,
+  not yet a finding).
+
+### Run 5b: two readers, the pending voice, logout, the chapter mismatch — not started
+
 - Two reader screens for one book: one terminal event per start; closing one does not
   break the other (F10, QA-0100).
 - Starting TTS setup twice gives one finished-sentence callback per sentence (F11).
-- Chapter with no sentences: behaviour per product decision 2 (F14).
 - Logout while reading: behaviour per product decision 4 (QA-0049).
-- After Stop listening, the last sentence's highlight stays on the page (seen in run 2a, not yet a finding).
+- A cancelled or failed pack download clears the pending voice selection and reports one
+  cancelled outcome (F19). Run 4 left one case for this: a delete during a download makes
+  the install report failure rather than cancellation, so the card shows a failed
+  download after the user deleted the pack themselves.
 - A player "ended" callback arriving after a stop starts nothing (F25, found in run 2b).
 - The chapter on screen and the chapter being narrated can be different ones: the sentence
   highlight then navigates across the spine boundary, the locator href changes, and the
   locator collector stops narration mid-chapter with no event. Seen in run 2b's step 5 and
   again in run 2c (21:19:51, `docs/manual-qa-evidence/2026-10-09/tts-run2c/NOTES.md`
   §"Recorded, not investigated"). Not filed as a finding yet.
+- Decision 5, the 30 second start deadline: arm it after the engine is loaded, so loading
+  the model does not count against it (F15).
 
 ### Run 6: manual device pass
 
@@ -230,8 +260,16 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
    Recommended: yes.
 2. F14: a chapter with nothing to read. Recommended: move on to the next chapter with
    text; show a message only if the book has none.
-3. F05: failed download leftovers. Recommended: keep them for resume, and show a
-   "Remove partial download" action on the card.
+3. F05: failed download leftovers. **Decided by the owner, 2026-10-09, and done in run 4
+   (`03b20ffd`):** partial files of the manifest's current version are kept so a retry
+   resumes; partial files and incomplete version folders of any other version are
+   deleted; a current-version partial nothing has written to for 7 days is deleted. The
+   sweep runs on every manifest refresh and at the start of every install, and never on a
+   pack whose install is in progress. No new buttons and no new screen text, so the
+   earlier "Remove partial download" action is dropped. Also decided: opening the voice
+   list never waits more than about 5 seconds for the manifest (F04), and deleting a pack
+   while it downloads must end with the pack cleanly not installed and no download still
+   running (F20).
 4. QA-0049: should logging out of a server stop narration? Recommended: stop it only
    when the book being read came from that server; a local book keeps reading.
 5. F15: should loading the model count against the 30 second start deadline?

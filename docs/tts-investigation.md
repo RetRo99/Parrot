@@ -163,6 +163,13 @@ and records the live one in a `.active` marker (`:517-532`).
   `notificationPermissionHandler.ensurePermission()`; the service owns the progress
   notification, a Cancel action, and marks the state holder Complete/Failed/Idle.
 
+Run 4 moved all of this out of `TtsModelManager` into `TtsModelStore`
+(`c15d7305`, `64c0ac69`), which takes the root directory, the manifest address, a
+connection opener, a clock, the free-space check, the hard link and the log; the manager
+keeps its constructor, its Koin binding and every public function and passes today's
+values, and the host-trust check and the redirect following stay in it. The line numbers
+above are the ones from before that move.
+
 ### 1.6 Concurrency: which guard protects what
 
 | Guard | Where | Protects |
@@ -301,6 +308,7 @@ effect on a user, not on the code.
 - **Confidence:** high — a direct consequence of `withTimeoutOrNull` semantics plus a body with no suspension points.
 - **Severity for a user:** stuck state.
 - **How a test could catch it:** unit test on `TtsModelManager` (new `TtsModelManagerTest`) against a local `ServerSocket` that accepts and never replies, asserting `refreshManifestIfStale()` returns within about 6 s. Testability limit worth noting in the plan: `MANIFEST_URL` is a `const` (`:773-774`), so the URL has to become injectable first.
+- **Fixed:** `0f9732a9` (run 4) — the fetch runs as one shared job on the store's own IO scope and the caller waits on `await`, a suspension point, so the five second deadline fires for real; a fetch the caller gave up on is marked abandoned and drops its answer instead of writing it over the cache, and the manifest request gets its own ten second connect and read timeouts. `TtsModelStoreTest` failed first with `refreshManifestIfStale took 60010ms, expected at most 6000ms`; the same case now measures 5030 ms. The seam it needed is `c15d7305` and `64c0ac69` (`TtsModelStore`).
 
 ### TTS-F05 — Abandoned `.part` files are never cleaned up and the user cannot reclaim the space
 
@@ -312,6 +320,7 @@ effect on a user, not on the code.
 - **Confidence:** medium-high.
 - **Severity for a user:** silent failure (disk usage).
 - **How a test could catch it:** `TtsModelManagerTest` with a stubbed download that always fails, asserting the version directory holds no orphaned partial after `ensureKokoroModel` returns null; manual: interrupt a download, then compare the app's `tts-models` size against a card that says "not downloaded".
+- **Fixed:** `03b20ffd` (run 4), to the owner's rule rather than the recommendation: partials of the manifest's current version are kept so a retry resumes, partials and incomplete version directories of any other version are removed, and a current-version partial nothing has written to for seven days is removed. The sweep runs on every manifest refresh and at the start of every install, never on a pack whose install holds its lock, and it steps over the active version and the complete previous version the update logic keeps. No new buttons or screen text. Three `TtsModelStoreTest` cases failed first (`the abandoned folder is still there`; `expected:<[tokens.txt.part]> but was:<[model.bin.part, tokens.txt.part]>`; `Expected value to be false.`) and three more were written as guards that passed before and after.
 
 ### TTS-F06 — Changing voice, speed or pitch while narration is paused throws the paused position away
 
@@ -489,6 +498,7 @@ effect on a user, not on the code.
 - **Confidence:** low — `derivePackState` (`VoicePackState.kt:49-58`) shows `Downloading` instead of the Delete affordance, so the sequence is probably unreachable through the UI; I could not confirm every entry point respects that.
 - **Severity for a user:** stuck state.
 - **How a test could catch it:** `TtsModelManagerTest` running a stubbed install concurrently with `deleteModel`, asserting the end state is consistently "not installed".
+- **Run 4, 2026-10-09: test passed before fix, no change.** `55b6d3bc` deletes a pack while its download is running and the end state is already clean: not installed, no `.active`, not one file left under the pack root, and the install returns a failure rather than success. `downloadFile` resolves the partial file's path once before its attempt loop, so once the delete has taken the parent directory away all three attempts fail to open it and nothing recreates it. No product code and no change to `TtsVoicePreparationForegroundService`. What remains is cosmetic and belongs to run 5b: the install reports failure rather than cancellation, so the card shows a failed download after the user deleted the pack themselves.
 
 ### TTS-F21 — The word path rewrites a shared cache file in place
 
