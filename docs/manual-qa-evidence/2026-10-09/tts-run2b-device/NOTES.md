@@ -14,3 +14,27 @@ One line per check, written as the run went.
 ## Log
 
 - Build `:androidApp:assembleDebug` succeeded; APK installed on `RFCWC0SSVDM`.
+- Book: *Alice's Adventures in Wonderland* (Gutenberg, public domain), on-device eBook,
+  opened at Chapter IV, page 7 of 13. `feature_exposed{feature_name=tts, is_available=true}`.
+
+### Step 1 — opening the sheet
+
+- Control row revealed by a tap at the middle of the page. A `uiautomator` dump taken while
+  it was up gives the four buttons at y 2001–2159: Contents `[53,2001][280,2159]`, Search
+  `[301,…]`, **Listen `[550,2001][778,2159]`, the only one with `long-clickable="true"`**,
+  Display `[799,…]`. Listen centre = **(664, 2080)**.
+- **The whole of run 2b's "Listen does nothing" is a tap-timing artefact.** A tap sent
+  ~300–400 ms after the reveal (run 2b's timing, and my own first try) lands while the row
+  is still expanding and hits nothing: no card, no log line, exactly run 2b's symptom
+  (`B1-short-tap-too-early-no-card.png`). The row needs ~0.9 s to settle. With the reveal
+  tap, `sleep 0.9`, then the Listen tap, it works every time.
+- **Short tap on Listen → the compact now-playing card appears** (yes), and the Listen
+  button relabels itself *Audio* — `B2-short-tap-card-appears.png`. No audio starts. The
+  card reads "Voice · sentence 1 of 0" (the known TTS-F24 zero count).
+- **Tap on the compact card → the full Listening sheet opens** (yes, first try) —
+  `B3-sheet-open-system-voice-rate-1.png`. (The card sits in the bottom bar and is drawn at
+  zero height while the control row is up, so this route needs the row to have auto-hidden;
+  (664, 2080) hits the card once it has.)
+- **Voice and rate when the sheet first opened: System voice, "On this phone", Rate 1×,
+  Pitch Normal.** The sheet also says "This book has no narration — reading with your
+  device voice."
