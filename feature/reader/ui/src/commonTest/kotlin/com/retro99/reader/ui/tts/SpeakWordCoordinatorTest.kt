@@ -210,13 +210,13 @@ class SpeakWordCoordinatorTest {
         // The dismissal's stop and the next word's tap, with no dispatch in between.
         coordinator.stop()
         coordinator.speak(word(text = "second"))
-        advanceUntilIdle()
+        // runCurrent, not advanceUntilIdle: both clips are held open here, and advancing virtual
+        // time would spend the word playback limit (TTS-F09) instead of this case's ordering.
+        runCurrent()
         secondSynthesis.complete(Unit)
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(SpeakWordState.Speaking, coordinator.state.value)
         secondClip.complete(Unit)
-        advanceUntilIdle()
-        // The state collector runs in backgroundScope, which advanceUntilIdle does not dispatch.
         runCurrent()
 
         assertEquals(
