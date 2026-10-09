@@ -574,12 +574,13 @@ fun HomeNavigation(
                             onCatalogueRoot = { navigationState.replaceCurrent(HomeDestination.CatalogueBrowse(destination.sourceId)) },
                             onDownloads = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueDownloads)) },
                             onRead = { bookId -> intentDispatcher(HomeNavigationIntent.RequestOpenReader(com.retro99.base.server.LOCAL_SERVER_ID, bookId, BookType.EBOOK)) },
-                            onCatalogueSettings = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.ServerManagement)) },
+                            onCatalogueSettings = { intentDispatcher(HomeNavigationIntent.NavigateTo(HomeDestination.CatalogueSettings(destination.sourceId))) },
                         )
                     }
 
                     entry<HomeDestination.CatalogueDownloads> {
-                        CatalogueDownloadsScreen(onBack = { requestBack("toolbar_back") })
+                        CatalogueDownloadsScreen(onBack = { requestBack("toolbar_back") },
+                            onRead = { bookId -> intentDispatcher(HomeNavigationIntent.RequestOpenReader(com.retro99.base.server.LOCAL_SERVER_ID, bookId, BookType.EBOOK)) })
                     }
 
                     entry<HomeDestination.CatalogueSettings> { destination ->
