@@ -289,6 +289,7 @@ effect on a user, not on the code.
 - **Confidence:** medium-high for the missing delete (plainly visible); medium that `save()` leaves a non-empty partial rather than nothing. Raise it by stubbing the sherpa `OfflineTts` wrapper, or by filling the emulator's data partition.
 - **Severity for a user:** wrong audio.
 - **How a test could catch it:** unit test on `TtsAudioGenerator` (new `TtsAudioGeneratorTest`) with a fake `TtsSynthesizer` that writes a few bytes to `outputFile` and returns `ERROR`: assert `cache.get(key)` is null afterwards — a non-success result must never leave a cache entry.
+- **Fixed:** `854fb40f` (run 3a) — `TtsAudioGeneratorCore` deletes the output file on every outcome that is not a stored success and on a throw, so the rule holds for every synthesizer; the two neural engines' save-failed branch deletes as well. `TtsAudioGeneratorTest` failed first on all three outcomes (`expected null, but was:<…wav>`) and on the retry count (`expected:<2> but was:<1>`).
 
 ### TTS-F04 — The manifest refresh timeout cannot fire, so opening the voice list can block for up to 90 s
 
@@ -392,6 +393,7 @@ effect on a user, not on the code.
 - **Confidence:** low. Raise it with a unit test that trims to a tiny budget while a playlist holds a file.
 - **Severity for a user:** stuck state (playback stops).
 - **How a test could catch it:** unit test on `TtsAudioCache` (new `TtsAudioCacheTest`) for eviction order and key composition, plus an engine-level test that a trimmed file re-synthesises instead of erroring.
+- **Fixed:** `fb5c6e83` (run 3a) — `trim` never evicts a file whose last-modified time is inside `RECENTLY_USED_WINDOW_MS` (10 minutes, refreshed by every cache hit), even if that leaves the cache over its limit. `TtsAudioCacheStoreTest` failed first with `recent-2.wav was used a moment ago and must survive`; older files are still evicted oldest first.
 
 ### TTS-F13 — Router readiness is decided by the system engine alone, so a neural-only setup loses the word speaker
 
@@ -448,6 +450,7 @@ effect on a user, not on the code.
 - **Confidence:** low — I could not check the native behaviour and found no path that writes such an id today.
 - **Severity for a user:** unknown, potentially crash.
 - **How a test could catch it:** a pure unit test over `parseSpeakerId` equivalent to `SupertonicOnnxSynthesizerTest`, asserting the clamp; the helper has to become `internal` first.
+- **Fixed:** `d720979d` (run 3a) — the helper is now the top-level `parseKokoroSpeakerId` (with `KOKORO_VOICES` beside it) and coerces into `KOKORO_VOICES.indices`. `SherpaOnnxSynthesizerTest` failed first with `99 must be clamped into 0..10, was 99`; the negative, empty, unparseable and null cases passed before the fix.
 
 ### TTS-F18 — Preparation terminal states are never cleared, so a stale failure banner can reappear
 
@@ -492,6 +495,7 @@ effect on a user, not on the code.
 - **Confidence:** low — the key collision needs a single-word sentence, and POSIX rename keeps an open descriptor valid.
 - **Severity for a user:** cosmetic.
 - **How a test could catch it:** a `WavSilenceTrimmer` unit test (there is none today) covering a failed rename and a non-PCM file, plus a cache test asserting word and sentence audio do not share a key.
+- **Fixed:** `fbbf89e7` (run 3a) — the clip step is the internal `prepareWordClipFile`, which copies the cached WAV to `<key>-word.wav` in the same cache directory and trims the copy, so the cache entry is never rewritten and no `.trim` rename lands on it; the copy stays in the cache directory so `trim` still evicts it. `TtsWordClipFileTest` failed first with `the cache entry must not be rewritten. Array sizes differ. Expected size is 48044, actual size is 18604.` `WavSilenceTrimmerTest` (new, green) pins the trimmer itself.
 
 ---
 

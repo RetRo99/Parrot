@@ -22,7 +22,8 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | 2a | Read-aloud engine seam and host harness; failures after start | F01, F02, QA-0095 (first two cases) | Opus | done |
 | 2b | Restart on a settings change; the chapter a completion belongs to | F06, F07, F16, QA-0095 (third case) | Opus | done |
 | 2c | The synthesis gap between sentences; the action on the restart's event | F26, F27 | Opus | done |
-| 3 | Small pure-logic gaps | F03, F08, F09, F12, F13, F17, F18, F21 | Sonnet | |
+| 3a | The sentence audio cache: a testable store, failed synthesis, the trim, the word clip, the Kokoro voice number | F03, F12, F17, F21 | Opus | done |
+| 3b | The rest of the small pure-logic gaps, plus the sentence chunker cases | F08, F09, F13, F18 | Sonnet | not started |
 | 4 | Voice pack download and delete | F04, F05, F19, F20 | Opus | |
 | 5 | Reader screen and lifecycle | F10, F11, F14, F23, F24, F25, QA-0049, QA-0100 | Opus | |
 | 6 | Manual device pass and new cases in `manual-qa-test-plan.md` | all | Sonnet, with the owner's phone | |
@@ -122,17 +123,31 @@ analytics 75/75. No earlier test was edited. Device pass on the Samsung SM-S921B
 chapter read to its end after a mid-gap change, and the double-tap of case 160, all passed;
 no `failed` outcome in the run.
 
-### Run 3: pure logic
+### Run 3a: the sentence audio cache — done
 
-- `TtsAudioGeneratorTest`: a failed synthesis that wrote bytes leaves no cache entry (F03).
-- `TtsAudioCacheTest`: key changes with voice, rate, pitch and text; trim order; a file
-  in use is not evicted (F12); word and sentence audio do not share a key (F21).
-- `WavSilenceTrimmerTest`: normal trim, all-silence, non-PCM input, failed rename (F21).
+- `TtsAudioCacheStoreTest`: the file logic moved into `TtsAudioCacheStore` (the directory and
+  a clock are injected); key composition, hit rules, eviction order, WAV duration parse.
+- `TtsAudioGeneratorTest`: a failed, cancelled or throwing synthesis that wrote bytes leaves
+  no cache entry, and the sentence is synthesised again (F03).
+- `TtsAudioCacheStoreTest`: a file used in the last 10 minutes is not evicted (F12).
+- `WavSilenceTrimmerTest`: normal trim, all-silence, no silence, non-PCM and malformed input,
+  no `.trim` left behind. `TtsWordClipFileTest`: the word path trims a copy, never the cache
+  entry, and the key still resolves to the sentence audio (F21).
+- `SherpaOnnxSynthesizerTest`: the Kokoro speaker id is clamped to the voices that exist (F17).
+
+Done 2026-10-09. `TtsAudioCacheStore` and `TtsAudioGeneratorCore` are the Context-free seams
+(`d71cc725`, `94a33e19`); `TtsAudioCache` keeps its constructor and Koin bindings. Failing
+test `f253bdc0` → fix `854fb40f` (F03); failing test `442db329` → fix `fb5c6e83` (F12);
+trimmer tests `09690022`, failing test `b1ba6dd3` → fix `fbbf89e7` (F21); failing test
+`d423e617` → fix `d720979d` (F17). Reader ui host tests 344/344, composeApp 57/57. No
+earlier test was edited.
+
+### Run 3b: the rest of the pure logic — not started
+
 - `SpeakWordCoordinatorTest`: stop then speak with no dispatch in between (F08); a
   player that never finishes is given up on and narration resumes (F09).
 - `TtsSynthesizerRouterTest`: ready when only a neural engine is ready (F13); routing by
   voice id prefix; fallback voice.
-- Kokoro speaker id is clamped to the voices that exist (F17).
 - `TtsVoicePreparationStateHolderTest`: a terminal state is not replayed to a new
   observer (F18).
 - `TtsSentenceChunkerTest` additions: numbers, quotes, non-Latin text, a sentence with
