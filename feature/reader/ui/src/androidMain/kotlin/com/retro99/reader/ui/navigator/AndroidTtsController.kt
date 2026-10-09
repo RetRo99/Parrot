@@ -157,7 +157,8 @@ class AndroidTtsController(
 
     private inner class ReadAloudWordInterruption : WordAudioInterruption {
 
-        override fun isPlayingNow(): Boolean = engine.isPlaying.value
+        // A gap between sentences is still narration to interrupt and resume (TTS-F26).
+        override fun isPlayingNow(): Boolean = engine.isSessionRunning.value
 
         override fun pause() {
             this@AndroidTtsController.pause()
@@ -233,9 +234,11 @@ class AndroidTtsController(
 
     override fun previewVoice(voiceId: String?, text: String) {
         if (text.isBlank()) return
+        // A gap between sentences counts as narration: the preview pauses it and the
+        // preview's end resumes it, as it would mid-sentence (TTS-F26).
         resumeNarrationAfterPreview =
-            resumeNarrationAfterPreview || engine.isPlaying.value
-        if (engine.isPlaying.value) {
+            resumeNarrationAfterPreview || engine.isSessionRunning.value
+        if (engine.isSessionRunning.value) {
             engine.pause()
         }
 
@@ -506,7 +509,9 @@ class AndroidTtsController(
     }
 
     override fun togglePlayback() {
-        if (engine.isPlaying.value) {
+        // A session waiting for its next sentence is a playing one: the button pauses it,
+        // it does not try to start it again (TTS-F26).
+        if (engine.isSessionRunning.value) {
             engine.pause()
             return
         }

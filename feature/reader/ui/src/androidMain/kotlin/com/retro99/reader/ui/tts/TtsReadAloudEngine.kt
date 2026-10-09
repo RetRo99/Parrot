@@ -92,16 +92,32 @@ class TtsReadAloudEngine(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
+    private val _isSessionRunning = MutableStateFlow(false)
+
     /**
-     * Whether a narration session is running, which is not the same question as
-     * [isPlaying]: a slow voice leaves gaps where the clip that was playing has ended and
-     * the next one is still being synthesised.
+     * Whether narration is running, which is not the same question as [isPlaying]: a slow
+     * voice leaves gaps where the clip that was playing has ended and the next one is
+     * still being synthesised, and for that second or two no audio is audible although
+     * nothing was paused, stopped or finished (TTS-F26).
      *
-     * Placeholder, so the gap tests of run 2c fail on the behaviour rather than on a
-     * missing name: it still answers "is audio audible", which is what every caller asks
-     * today.
+     * True from an accepted start until [pause], [stop], a failure or the end of the
+     * chapter, gaps included. Every decision about a running session — a settings change,
+     * the play/pause button, the preview, the word speaker — asks this, not [isPlaying].
      */
-    val isSessionRunning: StateFlow<Boolean> get() = isPlaying
+    val isSessionRunning: StateFlow<Boolean> = _isSessionRunning.asStateFlow()
+
+    /** The user asked for silence; only an explicit play or start lifts it. */
+    private var isPauseRequested = false
+
+    /** A sentence is on its way to the player: synthesis, then the play call. */
+    private var isStartingSentence = false
+
+    /**
+     * The player ran out of audio. It does not leave that state for a play call, and an
+     * item appended behind it does not undo it either, so the engine has to start the
+     * sentence again rather than wait for a player that will never move.
+     */
+    private var playerReachedEndOfQueue = false
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -136,9 +152,13 @@ class TtsReadAloudEngine(
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
+            // Audio is audible: the start this session was waiting for has landed.
+            if (isPlaying) isStartingSentence = false
+            updateSessionRunning()
         }
 
         override fun onEnded() {
+            playerReachedEndOfQueue = true
             onSentenceCompleted()
         }
 
@@ -235,6 +255,7 @@ class TtsReadAloudEngine(
         _isLoading.value = false
         _currentSentence.value = null
         _currentSentenceDurationMs.value = 0L
+        clearSessionState()
     }
 
     suspend fun playFrom(
@@ -246,6 +267,8 @@ class TtsReadAloudEngine(
         showPlaybackNotification: Boolean = this.showPlaybackNotification,
     ) {
         if (sentences.isEmpty()) return
+        // An explicit start, so whatever the user paused earlier no longer holds.
+        isPauseRequested = false
         val effectiveRate = TtsSpeechRate.coerce(rate)
         val playbackTargetChanged =
             this.showPlaybackNotification != showPlaybackNotification
@@ -275,13 +298,30 @@ class TtsReadAloudEngine(
         startSentence(index.coerceIn(0, sentences.lastIndex))
     }
 
+    /**
+     * Silence until an explicit play. A pause inside a synthesis gap also stops the
+     * sentence being made from starting when it arrives (TTS-F26).
+     */
     fun pause() {
+        isPauseRequested = true
+        updateSessionRunning()
         player?.pause()
     }
 
     fun resume() {
         if (currentIndex < 0) return
-        player?.play()
+        isPauseRequested = false
+        updateSessionRunning()
+        // A sentence already on its way plays itself now the pause is lifted.
+        if (isStartingSentence) return
+        val playbackPlayer = player
+        if (playbackPlayer == null || playerReachedEndOfQueue) {
+            // The player ran out of audio and will not move for a play call; the
+            // sentence is started again, from the clip that was already made.
+            launchEngineStart { startSentence(currentIndex) }
+            return
+        }
+        playbackPlayer.play()
     }
 
     fun stop() {
@@ -321,6 +361,9 @@ class TtsReadAloudEngine(
      * still produces exactly one outcome for it.
      */
     private fun launchEngineStart(start: suspend () -> Unit) {
+        // The session is running from here, through the gap this start has to cross.
+        isStartingSentence = true
+        updateSessionRunning()
         scope.launch {
             try {
                 start()
@@ -357,6 +400,8 @@ class TtsReadAloudEngine(
 
         val token = ++generation
         pendingStartToken = token
+        isStartingSentence = true
+        updateSessionRunning()
         cancelActiveSynthesis()
         cancelPrefetch(exceptIndex = index)
         currentIndex = index
@@ -409,8 +454,17 @@ class TtsReadAloudEngine(
         if (pendingStartToken == token) pendingStartToken = null
         heard.onPlaylistStarted(index, sentenceProgress)
         playbackPlayer.setItems(playlist)
+        playerReachedEndOfQueue = false
         playbackPlayer.prepare()
-        playbackPlayer.play()
+        if (isPauseRequested) {
+            // Paused while this sentence was being made: it waits, prepared and silent,
+            // for the play press (TTS-F26).
+            isStartingSentence = false
+            updateSessionRunning()
+            _isLoading.value = false
+        } else {
+            playbackPlayer.play()
+        }
         prefetch(index + 1)
     }
 
@@ -612,8 +666,15 @@ class TtsReadAloudEngine(
         activeSynthesisJob = null
     }
 
+    /**
+     * The player ran out of audio. The engine moves on itself rather than leaving it to
+     * the player: a clip appended in the window just before the end-of-queue callback
+     * (5 ms, on the phone of 2026-10-09) is behind a player that has already finished and
+     * will never be played, which left narration silent mid-chapter with no event at all
+     * (TTS-F26). Starting the next sentence again costs nothing — its clip is already in
+     * [readyFiles], and [buildPlaylist] re-queues it and everything ready after it.
+     */
     private fun onSentenceCompleted() {
-        if (player?.hasNextItem() == true) return
         heard.onEnded()?.let(::emitFinished)
         // A seek or skip target is being prepared; it starts on its own.
         if (pendingStartToken != null) return
@@ -668,6 +729,7 @@ class TtsReadAloudEngine(
         queuedSentenceIndices.clear()
         cancelPrefetch()
         cancelActiveSynthesis()
+        clearSessionState()
         val currentPlayer = player
         if (currentPlayer != null && ownsPlayer) {
             currentPlayer.stop()
@@ -690,6 +752,7 @@ class TtsReadAloudEngine(
         queuedSentenceIndices.clear()
         cancelPrefetch()
         cancelActiveSynthesis()
+        clearSessionState()
         releaseCurrentPlayer(stopSharedPlayer = false)
     }
 
@@ -709,6 +772,19 @@ class TtsReadAloudEngine(
         }
         updatePlaybackTimeline()
         prefetch(index + 1)
+    }
+
+    /** No session: nothing paused, nothing starting, no player state to carry over. */
+    private fun clearSessionState() {
+        isPauseRequested = false
+        isStartingSentence = false
+        playerReachedEndOfQueue = false
+        updateSessionRunning()
+    }
+
+    private fun updateSessionRunning() {
+        _isSessionRunning.value =
+            !isPauseRequested && (_isPlaying.value || isStartingSentence)
     }
 
     private fun emitFinished(index: Int) {

@@ -137,9 +137,10 @@ internal class TtsPlaybackAttempts(
         val index = engine.currentSentenceIndex
         if (index < 0) return
 
-        // A restart in flight has already stopped the old audio, so isPlaying can be
-        // false while the session is still a playing one.
-        if (engine.isPlaying.value || isRestartActive) {
+        // isSessionRunning, not isPlaying: a restart in flight has already stopped the old
+        // audio, and a slow voice leaves gaps between sentences where nothing is audible
+        // although narration is running (TTS-F26).
+        if (engine.isSessionRunning.value || isRestartActive) {
             // One more change supersedes the restart in flight: it ends as cancelled, and
             // the new one gets its own attempt and its own single terminal outcome.
             if (isRestartActive) cancelActive()
