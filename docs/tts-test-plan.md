@@ -19,14 +19,16 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | Run | What | Findings | Model | Status |
 | --- | --- | --- | --- | --- |
 | 1 | Neural voice crash: callback shape, host guard test, device check | F22 | Opus | done |
-| 2 | Read-aloud engine test harness; failures after start; restart on settings change | F01, F02, F06, F07, F16, QA-0095 | Opus | |
+| 2a | Read-aloud engine seam and host harness; failures after start | F01, F02, QA-0095 (first two cases) | Opus | done |
+| 2b | Restart on a settings change; the chapter a completion belongs to | F06, F07, F16, QA-0095 (third case) | Opus | not started |
 | 3 | Small pure-logic gaps | F03, F08, F09, F12, F13, F17, F18, F21 | Sonnet | |
 | 4 | Voice pack download and delete | F04, F05, F19, F20 | Opus | |
 | 5 | Reader screen and lifecycle | F10, F11, F14, F23, F24, QA-0049, QA-0100 | Opus | |
 | 6 | Manual device pass and new cases in `manual-qa-test-plan.md` | all | Sonnet, with the owner's phone | |
 
 Run 1 is first because it is a crash on every Kokoro synthesis and it blocks every other
-Kokoro check. Run 2 is second because the harness it builds is reused by runs 3 and 5.
+Kokoro check. Run 2 is second because the harness it builds is reused by runs 3 and 5;
+2a builds that harness and 2b uses it.
 
 ## Tests to write, by run
 
@@ -46,21 +48,32 @@ Done 2026-10-09. The guard test was committed failing (`2cc762a4`), the fix is
 Samsung SM-S921B: `docs/manual-qa-evidence/2026-10-09/tts-f22-fix/`. Supertonic was not
 run on the device, as planned; it is covered by the shared host test only.
 
-### Run 2: engine (new `TtsReadAloudEngineTest`, `AndroidTtsControllerTest`)
+### Run 2a: engine seam and failures after start (`TtsReadAloudEngineTest`)
 
-Needs a seam first: the engine builds its own ExoPlayer and is a singleton, so the
-player and the generator must be replaceable by fakes without changing behaviour.
+Needed a seam first: the engine built its own ExoPlayer and is a singleton, so the
+player and the generator had to be replaceable by fakes without changing behaviour.
 
+- Start, pause, resume, stop, two quick starts, skips at both ends, a player error:
+  characterization tests, written and committed green before any change.
 - Sentence 2 fails synthesis during auto-advance: no uncaught exception, one
   `PlaybackFailure(SYNTHESIS_FAILED)`, engine stopped (F01, F02).
 - Same for skip next, skip previous, seek to chapter position (F01).
+
+Done 2026-10-09. Seam `c2c62cef` (`TtsEnginePlayer`, `TtsEnginePlayerProvider`,
+`TtsSentenceAudioSource`, injectable engine context), ten characterization tests green
+`64796984`, eight failing tests `5c5a6b0e`, fix `fc9e4804`. Reader ui host tests 299/299.
+Device smoke on the Samsung SM-S921B: `docs/manual-qa-evidence/2026-10-09/tts-run2a/`.
+
+### Run 2b: settings changes mid-playback (`AndroidTtsControllerTest`)
+
 - Rate, pitch or voice change while playing: one `Attempted` and one terminal outcome;
   a failing new voice gives `Failed`, not silence (F07).
 - Rate, pitch or voice change while paused: the paused sentence is kept and play
   resumes on it (F06).
 - Chapter completion carries the chapter that finished (F16).
-- Start, pause, resume, stop, two quick starts: characterization tests, written and
-  committed green before any change.
+
+`restartForSettingsChange` is the last QA-BUG-0095 case: it calls `engine.playFrom` from
+its own bare `launch`, which run 2a deliberately left alone.
 
 ### Run 3: pure logic
 

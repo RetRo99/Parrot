@@ -263,6 +263,7 @@ effect on a user, not on the code.
 - **Confidence:** high that the throw is uncaught on those paths and that no handler exists; medium that every one of them is reachable with a real engine (auto-advance is the easiest). Raise it with the unit test below, which needs no device.
 - **Severity for a user:** crash.
 - **How a test could catch it:** unit test on `TtsReadAloudEngine` (new `TtsReadAloudEngineTest`, androidHostTest) with a fake `TtsAudioGenerator` that succeeds for sentence 0 and returns `TtsSynthesisResult(ERROR)` for sentence 1, plus a fake player: call `setSentences` + `playFrom(0, …)`, drive the sentence-ended callback, and assert no uncaught exception escapes the engine scope and that one `playbackFailures` value is emitted.
+- **Fixed:** `fc9e4804` (run 2a) — the four paths go through `launchEngineStart`, which stops and emits one `PlaybackFailure`; tests committed failing in `5c5a6b0e`, seam in `c2c62cef`.
 
 ### TTS-F02 — A mid-playback synthesis failure emits no outcome at all; narration just stops
 
@@ -274,6 +275,7 @@ effect on a user, not on the code.
 - **Confidence:** high — `_playbackFailures.tryEmit` appears exactly once in the file, in the player-error callback.
 - **Severity for a user:** silent failure (plus analytics).
 - **How a test could catch it:** the same `TtsReadAloudEngineTest` fixture as TTS-F01, asserting a `PlaybackFailure` with `SYNTHESIS_FAILED` is emitted when a mid-chapter sentence fails.
+- **Fixed:** `fc9e4804` (run 2a) — one `PlaybackFailure(SYNTHESIS_FAILED)` with the current correlation id on each of those four paths; the user-start path still emits none, so it keeps producing exactly one `Failed`. Remaining gap: `restartForSettingsChange` (TTS-F07, run 2b).
 
 ### TTS-F03 — A failed neural save leaves a partial WAV that is served as a valid cache hit
 
@@ -504,7 +506,7 @@ and the only teardown that could stop it is the reader-scoped controller, whose 
 leaving the reader. Logout therefore leaves TTS narration and its media notification running.
 Severity for a user: stuck state — audio continues after the session is over.
 
-### QA-BUG-0095 — start failures lack outcomes: **PARTLY FIXED**
+### QA-BUG-0095 — start failures lack outcomes: **PARTLY FIXED** (one case left)
 
 Fixed for user-initiated starts. `requestPlayback` (`AndroidTtsController.kt:689-713`)
 emits `Attempted` and exactly one of `Succeeded`/`Failed`/`Cancelled`; permission denial is
@@ -513,16 +515,20 @@ and before `engine.resume()` on the resume path (`:574`); `stop()` and
 `disableSentencePlayback()` cancel the pending request (`:591-594`, `:506-512`); and
 `TtsPlaybackOperationLifecycle` owns both the job and the deadline.
 
-Still open, all of it outside a user request:
-1. A synthesis failure after a successful start emits no outcome at all — `_playbackFailures`
-   is produced only by `onPlayerError` (`TtsReadAloudEngine.kt:174-183`), while the synthesis
-   failure paths at `:346-367` and `:506-540` emit nothing (TTS-F02).
-2. Those same paths throw into bare `launch` blocks (`:312`, `:320`, `:625`, `:652`) with no
-   handler anywhere in the repository, so the likely outcome is a crash rather than a missing
-   event (TTS-F01).
+Fixed in run 2a (`fc9e4804`), both outside a user request:
+1. A synthesis failure after a successful start emitted no outcome at all — `_playbackFailures`
+   was produced only by `onPlayerError`, while the synthesis failure paths emitted nothing
+   (TTS-F02). They now emit one `PlaybackFailure(SYNTHESIS_FAILED)` with the current
+   correlation id, which the controller turns into one `Failed` through its existing
+   collector (`AndroidTtsController.kt:240-263`).
+2. Those same paths threw into bare `launch` blocks with no handler anywhere in the
+   repository, so the likely outcome was a crash rather than a missing event (TTS-F01).
+   `launchEngineStart` now catches everything but `CancellationException`.
+
+Still open:
 3. Restarts for a voice, speed or pitch change bypass the attempt machinery entirely
    (`AndroidTtsController.kt:610-620`), so they have neither outcomes nor a start deadline
-   (TTS-F07).
+   (TTS-F07, run 2b).
 
 ### QA-BUG-0100 — one successful start reported twice: **PRESENT** (cause narrowed)
 
