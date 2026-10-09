@@ -47,7 +47,7 @@ fun downloadFailureText(row: CatalogueAcquisition, deviceName: String = catalogu
 }
 
 /** A failure line reads "20 MB", not "20.0 MB": the exact size is not the point there. */
-private fun failureSize(bytes: Long) = catalogueSize(bytes).replace(".0 MB", " MB")
+private fun failureSize(bytes: Long) = catalogueSize(bytes).replace(".0 MB", " MB").replace(".0 KB", " KB")
 
 @Composable
 fun CatalogueDownloadsContent(rows: List<DownloadRow>, onBack: () -> Unit = {}, onAction: (String) -> Unit = {}, modifier: Modifier = Modifier,

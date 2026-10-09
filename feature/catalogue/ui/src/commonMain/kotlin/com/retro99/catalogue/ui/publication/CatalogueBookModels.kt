@@ -75,14 +75,39 @@ fun bookBlocked(publications: List<CataloguePublication>): BookBlocked? {
         ?: BookBlocked(CatalogueUnavailableReason.UnsupportedFormat, null, null, null)
 }
 
-/** Decimal MB, one decimal place, as in the catalogue boards. */
-fun catalogueSize(bytes: Long): String {
-    val tenths = ((bytes.coerceAtLeast(0) + 50_000) / 100_000)
-    return "${tenths / 10}.${tenths % 10} MB"
+private const val KILOBYTE = 1_000L
+private const val MEGABYTE = 1_000_000L
+
+/** Exact bytes, so no unit at all. */
+private const val BYTE = 1L
+
+/** A kilobyte size that would round up to "1000.0 KB" is a megabyte instead. */
+private const val SMALLEST_MEGABYTE = MEGABYTE - KILOBYTE / 20
+
+private fun unitOf(bytes: Long): Long = when {
+    bytes < KILOBYTE -> BYTE
+    bytes < SMALLEST_MEGABYTE -> KILOBYTE
+    else -> MEGABYTE
+}
+
+private fun written(bytes: Long, unit: Long): String {
+    if (unit == BYTE) return if (bytes == 1L) "1 byte" else "$bytes bytes"
+    val tenths = (bytes + unit / 20) / (unit / 10)
+    return "${tenths / 10}.${tenths % 10} ${if (unit == KILOBYTE) "KB" else "MB"}"
 }
 
 /**
- * The "so far" half of "0.0 of 24.8 MB". Only the total carries the unit, so this half is
- * written in whatever unit [total] is in.
+ * Decimal MB, one decimal place, as in the catalogue boards — but only from a megabyte up.
+ * Smaller sizes are written in kilobytes, and sizes below a kilobyte in bytes, so a 23 KB book
+ * does not read "0.0 MB".
  */
-fun catalogueSizeSoFar(bytes: Long, total: Long): String = catalogueSize(bytes).removeSuffix(" MB")
+fun catalogueSize(bytes: Long): String = bytes.coerceAtLeast(0).let { written(it, unitOf(it)) }
+
+/**
+ * The "so far" half of "0.0 of 24.8 MB". Only the total carries the unit, so this half is
+ * written in the total's unit and without it.
+ */
+fun catalogueSizeSoFar(bytes: Long, total: Long): String {
+    val unit = unitOf(total.coerceAtLeast(0))
+    return written(bytes.coerceAtLeast(0), unit).substringBefore(' ')
+}
