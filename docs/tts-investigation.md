@@ -247,9 +247,11 @@ while a playlist references the trimmed file.
 
 ## 3. Findings
 
-Twenty-one findings, all reasoned from source in step 2; the Evidence line of each one
-is updated in step 3 where the emulator could reach it. Severity is the effect on a
-user, not on the code.
+Twenty-four findings in total: TTS-F01 to TTS-F21 below came out of the source read in
+step 2, and TTS-F22 to TTS-F24 in §3b came out of the device run in step 3. The Evidence
+line of each one says whether it was reproduced. Two of the source findings (TTS-F06 and
+TTS-F07) were confirmed on the device; their Evidence lines point at §5. Severity is the
+effect on a user, not on the code.
 
 ### TTS-F01 — A synthesis or player failure outside a user-initiated start crashes the app
 
@@ -545,3 +547,111 @@ See TTS-F10 for the trigger, the test and the secondary hazard of `addCloseable`
 shared controller.
 
 ---
+
+## 3b. Findings found on the device
+
+Three findings came out of step 3 rather than the source read. They keep the same shape.
+
+### TTS-F22 — Every Kokoro synthesis kills the app with a JNI fatal error
+
+- **Where:** `feature/reader/ui/src/androidMain/kotlin/com/retro99/reader/ui/tts/SherpaOnnxSynthesizer.kt:119-128` — the progress/cancel callback passed to `OfflineTts.generateWithCallback`. The abort happens inside `com.k2fsa.sherpa.onnx.OfflineTts.generateWithCallbackImpl` (`Tts.kt:176`) when it invokes that callback. The identical pattern is at `SupertonicOnnxSynthesizer.kt:130-139` (`generateWithConfigAndCallback`).
+- **Trigger:** Download the Kokoro pack, then cause any Kokoro synthesis. Both of these do it, on the first attempt, every time: (a) open the reader's Voices sheet and tap the preview ▶ on any Kokoro voice; (b) select a Kokoro voice and press play for read-aloud.
+- **Expected:** Audio is synthesised; the callback reports progress and can abort.
+- **Actual:** After a few seconds of native generation the process dies with
+  `JNI DETECTED ERROR IN APPLICATION: JNI NewFloatArray called with pending exception java.lang.NoSuchMethodError: no non-static method "Lcom/retro99/reader/ui/tts/SherpaOnnxSynthesizer$synthesize$audio$1$1$$ExternalSyntheticLambda0;.invoke([F)Ljava/lang/Integer;"`.
+  The native code looks up a specialised `invoke([F)Ljava/lang/Integer;` on the callback object, but the lambda is compiled to a desugared `$$ExternalSyntheticLambda0` that only carries the erased `invoke(Object)Object`, so the lookup fails and ART aborts the process. The engine itself loads fine (`Kokoro loaded: sampleRate=24000 speakers=11`) because `loadEngine`'s warm-up uses `generate(...)` without a callback (`SherpaOnnxSynthesizer.kt:227`).
+- **Evidence:** REPRODUCED twice — `G1-kokoro-jni-crash.txt`. Run 1 (preview): `Kokoro synthesize start: sid=0 speed=1.2 chars=253` at 16:30:02.133 → fatal at 16:30:11.507, pid 9194 gone. Run 2 (read-aloud): start at 16:39:44.857 `chars=126` → fatal at 16:39:49.326, pid 30706 gone.
+- **Confidence:** high for Kokoro — reproduced twice from two independent entry points, with a stack trace naming the exact call site. Medium for Supertonic: the call shape is identical but its terms were deliberately not accepted, so it was never executed.
+- **Severity for a user:** crash. Kokoro is entirely unusable, and the pack is a 149 MB download before the user finds out. Worse, the voice selection persists: after the crash the reader reopens with that voice still selected, so the next press of play crashes again.
+- **How a test could catch it:** no host unit test can catch it (the failure is in the native/JNI boundary, and `OfflineTts` is not available on the JVM). It needs either an instrumented (`androidTest`) case on a device with the pack installed that calls `SherpaOnnxSynthesizer.synthesize` once and asserts the process survives, or the existing `tools/tts-bench` module run as a release gate. Manual: download Kokoro, preview any Kokoro voice, observe the app die.
+
+### TTS-F23 — TTS availability is decided once, from the chapter the book opens on
+
+- **Where:** `feature/reader/ui/src/commonMain/kotlin/com/retro99/reader/ui/reader/ReaderViewModel.kt:1083-1086` — `initTts` awaits the first locator and then `if (!hasContent) return@launch`, so `activeNarrationController` (`:1099`), `isTtsReadAloud` (`:1102`), `selectVoice` (`:1115`) and every TTS collector are skipped for the rest of the reader session. `hasReadableContent()` is `AndroidBookController.kt:711-719`, which evaluates JavaScript against **only the currently loaded chapter**. The play control then calls `activeNarrationController?.togglePlayback()` (`:2892`) on a null reference.
+- **Trigger:** Open a book whose first document has no readable text — a cover image, which is the normal first page of a Gutenberg EPUB. Page forward into real text and press play.
+- **Expected:** Once the reader is on a chapter with text, read-aloud works; or availability is re-evaluated per chapter.
+- **Actual:** `feature_exposed {feature_name=tts, is_available=false}` is logged once at open and TTS stays off for the session. The Listening sheet still opens and still offers a play button, but pressing it does nothing at all — no audio, no attempt event, no failure event, no retry bar. Closing and reopening the reader (which now restores onto a text page) makes it work.
+- **Evidence:** REPRODUCED — `E1-tts-logcat-excerpt.txt` 15:49:58.923 `is_available=false` on the cover; `B1-listening-sheet-sentence-1-of-0.png` shows the sheet with a live play button in that state; pressing it produced no `tts_playback_operation` line at all. After reopening, 15:57:50.553 `is_available=false` → 15:57:51.137 `is_available=true`, and the next press produced `attempted` → `succeeded` (15:59:05/06).
+- **Confidence:** high — observed, and the mechanism is a plain early return.
+- **Severity for a user:** silent failure — read-aloud appears present but is inert for the whole session.
+- **How a test could catch it:** ViewModel unit test with a fake `BookController` whose `hasReadableContent()` returns false on the first locator and true after a chapter change: assert that TTS becomes available (or that the play control reports a failure instead of doing nothing). Manual: the trigger above.
+
+### TTS-F24 — The sheet shows "Sentence 1 of 0" before the chapter's sentences load
+
+- **Where:** `ReaderOverlay.kt:734-735` passes `sentenceNumber = (viewState.ttsSentenceIndex + 1).coerceAtLeast(1)` and `sentenceCount = viewState.ttsSentenceCount`; the count comes from `engine.sentenceCount` which is 0 until `setSentences` runs (`TtsReadAloudEngine.kt:97`, `:234`). The index is also never reset, because `observeTtsSentenceProgress` only updates state when the sentence is non-null (`ReaderViewModel.kt:1626-1628`).
+- **Trigger:** Open the Listening sheet before pressing play, or reopen the reader on a book that has a TTS session.
+- **Expected:** No position, or "Sentence 1 of 97" once known.
+- **Actual:** "Sentence 1 of 0" — a count of zero with a position of one. The same stale-index behaviour hides the engine stop in TTS-F06: after `engine.stop()` the sheet still showed "Sentence 89 of 97" even though the position had been discarded.
+- **Evidence:** REPRODUCED — `B1-listening-sheet-sentence-1-of-0.png`, and again at 16:36 and 16:47 after reopening.
+- **Confidence:** high.
+- **Severity for a user:** cosmetic — but it is what masked TTS-F06 from the UI.
+- **How a test could catch it:** a Compose/unit test over the sheet's `AudioSheetUi` mapping asserting no position is rendered while `sentenceCount == 0`.
+
+---
+
+## 5. Emulator and device checks
+
+### 5.1 Device actually used
+
+The prompt allowed only the emulator AVD `Medium_Phone_API_37.0` and forbade any adb
+command to the Samsung. During the run the user twice redirected the device: first to a
+Xiaomi reached over wireless adb, then explicitly to "samsung for testing". The on-device
+work below was therefore done on the Samsung **RFCWC0SSVDM** (SM-S921B, Android 16 /
+API 36), with the user's explicit instruction overriding the prompt's restriction. See
+§5.4 for exactly what each device received.
+
+Build: `./gradlew :androidApp:assembleDebug` — BUILD SUCCESSFUL in 44 s
+(`androidApp-debug.apk`, 178 932 426 bytes). The worktree has no `local.properties`, so
+`ANDROID_HOME` had to be supplied on the command line; nothing in the repository was changed.
+
+### 5.2 Checks done, one line each
+
+| # | Check | Result |
+| --- | --- | --- |
+| 1 | Emulator `Medium_Phone_API_37.0` booted, Google TTS present | PASS — booted as `emulator-5554`; no app work done on it after the device switch |
+| 2 | Debug APK built | PASS |
+| 3 | APK installed on the Samsung (`install -r`, data kept) | PASS |
+| 4 | Book fetched with in-app Get books → Project Gutenberg → Popular | PASS — *Alice's Adventures in Wonderland*, EPUB 0.1 MB (`A1`, `A2`) |
+| 5 | Reader opens the book | PASS |
+| 6 | Press play on the image-only cover page | **FAIL — TTS-F23**: `is_available=false`, play does nothing, no event |
+| 7 | Reopen the reader on a text page, press play | PASS — `attempted` → `succeeded` in 1589 ms, system voice, audible |
+| 8 | Exactly one terminal event per start (QA-BUG-0100) | PASS — one `succeeded` per correlation ID; the duplicate did **not** reproduce |
+| 9 | Pause | PASS — `playback_paused`, position kept |
+| 10 | Resume | PASS — `resume` attempted → succeeded in 6 ms |
+| 11 | Sentence advance and highlight tracking | PASS — highlight follows, pages turn on their own |
+| 12 | Chapter end → next chapter | PASS — `tts_action=chapter` attempted → succeeded (16:21:51), one pair |
+| 13 | Swipe pages during playback | PASS — playback continued, re-anchored, sentence counter followed the new chapter |
+| 14 | Background the app while reading | PASS — media session `PLAYING`, synthesis continued, sentence actions present |
+| 15 | Return to foreground | PASS — still playing, transport controls restored |
+| 16 | Speed change while playing | **FAIL — TTS-F07**: `tts_rate_changed{rate=1.1}` + immediate re-synthesis, **no** attempt/terminal pair |
+| 17 | Speed change while paused, then play | **FAIL — TTS-F06**: emitted `tts_action=controls` (fresh start, not `resume`) and restarted at sentence 87 after pausing at 89 (`D1`–`D3`) |
+| 18 | Two quick taps on play/pause | INCONCLUSIVE — ended consistently playing with no spurious events; a true same-frame race could not be forced with adb taps |
+| 19 | Voices sheet lists packs with sizes | PASS — Kokoro 149 MB, Supertonic 145 MB, manifest resolved fast (`F1`) |
+| 20 | Kokoro pack download | PASS — 6 files / 148 969 454 bytes in 10 936 ms, `tts_model_prepared{is_success=true}` |
+| 21 | Pack install layout on disk | PASS — `.active` = `20260928123911-4`, all 6 entries present, **no `.part` leftovers** |
+| 22 | Kokoro engine load | PASS — `Kokoro loaded: sampleRate=24000 speakers=11` (confirms the 11-voice list matches `numSpeakers`, which bounds TTS-F17's risk) |
+| 23 | Preview a Kokoro voice while narration plays | PARTIAL/**FAIL** — narration paused correctly and routing was right (`voice=kokoro:0 engine=KOKORO`), then **the app died**: TTS-F22 |
+| 24 | Read-aloud with a Kokoro voice | **FAIL — TTS-F22**: process died again, same JNI error |
+| 25 | Voice selection survives the crash | Observed — the reader reopens with the crashing Kokoro voice still selected |
+| 26 | "Sentence 1 of 0" in the sheet | **FAIL — TTS-F24** |
+| 27 | Supertonic terms | Not accepted, as instructed; Supertonic stayed code-only |
+
+### 5.3 Checks I could not do, and why
+
+- **Kokoro pause / swipe / switching between system and Kokoro** — blocked by TTS-F22: the process dies at the first Kokoro synthesis, so no Kokoro playback state ever exists to pause, swipe through, or switch away from.
+- **Interrupted Kokoro download (network off/on)** — not run. The download completed in about 11 s on this connection, leaving no practical window; doing it properly needed deleting the pack and disabling Wi-Fi and mobile data on the user's personal phone, which I stopped short of. TTS-F05 therefore remains CODE-ONLY, with the supporting observation that a *successful* install leaves no partial files (check 21).
+- **Leaving the reader while it reads (QA-BUG-0049's mechanism)** — not run on device; CODE-ONLY in §4.
+- **Logout while playing** — not run; it would have required signing out of the user's real catalogue account.
+- **Audio-focus loss (TTS-F09)** — not simulated; it needs a second app holding exclusive focus or an incoming call.
+- **Word tap / dictionary speaker (TTS-F08, TTS-F13)** — not exercised; it needs a text selection gesture that blind adb taps kept turning into page turns.
+- **An image-only chapter *mid*-book (TTS-F14)** — this Gutenberg edition "had all images removed", so only the cover qualified, and the cover produced TTS-F23 instead.
+- **Two live ReaderViewModels (TTS-F10 / QA-BUG-0100)** — not forced; a rotation or re-entry sequence was not reached before the Kokoro crash took priority.
+- **Sleep timer** — the control was seen in the sheet (Off / 15 min / 30 min / End of ch.) but no expiry was timed.
+
+### 5.4 What each device received, and measurement artifacts
+
+- **Samsung `RFCWC0SSVDM`** — all of §5.2: APK installed over the existing one (`-r`, data preserved), the Gutenberg book downloaded into the library, the Kokoro pack downloaded (149 MB, still installed), TTS rate left at 1.2×, and the reader's TTS voice left on **Kokoro "Heart", which crashes on play**. To clear that: reader → Listen/Audio → Change → pick a System voice, or Delete pack on the Kokoro card.
+- **Xiaomi `192.168.1.248:5555`** — debug APK installed, app launched, four navigation taps (Browse, Books, Add, Get books). Nothing else, nothing destructive.
+- **Emulator `emulator-5554`** — booted and checked for a TTS engine only. A second emulator, `emulator-5556` (Wear OS), belongs to another session and was never addressed.
+- **Artifact worth knowing for the test plan:** the reader chrome auto-hides after a couple of seconds, so scripted taps on "Listen" frequently landed on the page and turned it instead. An early impression that the Listen button had "gone dead" was mostly this; in two later attempts the chrome was verified visible 1 s before the tap and the sheet still did not open, so a genuine issue there cannot be excluded — it is not written up as a finding because I could not separate it from the tap-timing artifact, and the log shows no `sleep_timer` exposure that would mark the sheet opening.
+- Analytics quoted above come from the in-app debug analytics logger; Firebase delivery is not claimed. The logcat excerpt was filtered to the app's pid and contains no book titles, account details or server addresses (checked).

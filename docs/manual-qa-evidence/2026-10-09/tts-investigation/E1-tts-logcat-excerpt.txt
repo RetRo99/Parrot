@@ -1,0 +1,320 @@
+10-09 15:49:58.923 D/čič   ( 9194): Analytics Event: feature_exposed | Params: {feature_name=tts, screen=reader, is_available=false}
+10-09 15:57:50.553 D/čič   ( 9194): Analytics Event: feature_exposed | Params: {feature_name=tts, screen=reader, is_available=false}
+10-09 15:57:51.137 D/čič   ( 9194): Analytics Event: feature_exposed | Params: {feature_name=tts, screen=reader, is_available=true}
+10-09 15:59:05.321 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 15:59:05.574 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:06.431 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:409)
+10-09 15:59:06.431 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:399)
+10-09 15:59:06.431 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.startSentence(TtsReadAloudEngine.kt:369)
+10-09 15:59:06.431 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.access$startSentence(TtsReadAloudEngine.kt:51)
+10-09 15:59:06.431 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine$startSentence$1.invokeSuspend(TtsReadAloudEngine.kt:17)
+10-09 15:59:06.614 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:06.627 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:06.809 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:06.810 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:06.908 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=1589}
+10-09 15:59:06.939 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:06.983 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:07.051 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:07.052 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:07.169 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:08.354 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:08.501 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:11.144 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:11.298 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:12.078 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:12.226 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:13.009 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:13.196 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:14.447 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:14.588 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:15.451 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:15.614 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:16.919 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:17.059 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:17.956 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:18.121 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:20.147 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:20.283 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:21.412 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:21.548 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:23.578 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:23.717 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:24.548 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:24.679 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:26.118 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:26.261 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:27.081 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:27.243 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:28.166 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:28.308 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:29.242 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:29.411 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:30.574 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:30.715 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:31.515 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:31.680 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:33.359 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:33.496 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:34.426 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:34.570 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:35.982 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:36.118 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:37.101 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:37.245 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:43.698 D/čič   ( 9194): Analytics Event: playback_paused
+10-09 15:59:44.226 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=chapter, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 15:59:44.251 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:44.499 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:409)
+10-09 15:59:44.499 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:399)
+10-09 15:59:44.499 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.startSentence(TtsReadAloudEngine.kt:369)
+10-09 15:59:44.499 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.access$startSentence(TtsReadAloudEngine.kt:51)
+10-09 15:59:44.499 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine$startSentence$1.invokeSuspend(TtsReadAloudEngine.kt:17)
+10-09 15:59:44.526 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:44.532 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:44.595 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=chapter, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=371}
+10-09 15:59:44.977 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:44.978 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:45.220 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:45.269 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:45.643 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:45.691 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:45.864 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:47.003 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:47.359 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 15:59:58.932 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 15:59:59.065 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:00:03.903 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:00:04.041 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:00:15.493 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:00:16.004 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:00:19.572 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:00:19.998 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:00:27.910 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:00:28.188 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:00:28.809 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:00:29.116 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:00:29.971 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:00:30.417 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:00:44.232 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:00:44.625 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:00:54.909 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:00:55.401 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:01:00.220 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:01:00.680 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:01:03.238 D/čič   ( 9194): Analytics Event: playback_paused
+10-09 16:01:07.814 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=resume, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 16:01:07.819 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=resume, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=6}
+10-09 16:01:11.331 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:01:11.590 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:01:23.330 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:01:23.441 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:01:32.499 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:01:32.799 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:01:47.143 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:01:47.355 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:01:59.246 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:01:59.509 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:03.383 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:03.556 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:04.036 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:04.213 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:10.536 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:10.710 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:12.903 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:13.102 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:18.166 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:18.312 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:20.137 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:20.337 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:22.346 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:22.895 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:24.490 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:24.846 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:27.434 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:27.728 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:28.689 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:28.860 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:31.592 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:31.796 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:46.835 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:47.116 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:02:54.805 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:02:55.234 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:03:01.346 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:03:01.556 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:03:03.209 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:03:03.467 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:03:06.016 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:03:06.344 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:03:10.656 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:03:10.909 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:03:22.093 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:03:23.056 D/čič   ( 9194): Analytics Event: playback_paused
+10-09 16:13:10.306 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 16:13:10.466 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:409)
+10-09 16:13:10.466 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:399)
+10-09 16:13:10.466 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.startSentence(TtsReadAloudEngine.kt:369)
+10-09 16:13:10.466 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.access$startSentence(TtsReadAloudEngine.kt:51)
+10-09 16:13:10.466 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine$startSentence$1.invokeSuspend(TtsReadAloudEngine.kt:17)
+10-09 16:13:10.545 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:10.582 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:10.586 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:10.588 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:10.590 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:10.735 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=428}
+10-09 16:13:14.178 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:14.720 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:19.547 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:19.781 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:24.659 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:24.973 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:29.748 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:29.881 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:31.966 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:32.162 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:36.338 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:36.658 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:39.611 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:39.809 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:43.991 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:44.337 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:45.254 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:45.394 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:47.340 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:47.532 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:53.965 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:54.279 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:13:56.420 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:13:56.890 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:03.930 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:04.102 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:05.399 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:05.525 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:07.990 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:08.259 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:14.067 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:14.541 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:26.065 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:26.481 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:27.647 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:28.082 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:28.244 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:28.725 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:32.943 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:33.429 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:45.137 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:45.435 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:14:55.422 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:14:55.903 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:15:06.583 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:15:06.985 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:15:19.213 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:15:19.693 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:15:32.396 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:15:32.605 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:15:38.501 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:15:38.729 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:15:51.569 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:15:51.789 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:16:01.794 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:16:02.164 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:16:14.358 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:16:14.870 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:16:17.276 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:16:17.693 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:16:20.683 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:16:21.013 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:16:23.960 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:16:24.450 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:16:32.663 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:16:33.187 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:16:46.022 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:16:46.329 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:16:56.070 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:16:56.670 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:17:02.415 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:17:02.557 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:17:15.701 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:17:15.841 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:17:29.995 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:17:30.215 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:17:36.553 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:17:36.943 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:17:53.866 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:17:54.343 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:17:54.389 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:17:54.501 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:17:55.614 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:17:55.967 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:17:59.046 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:17:59.412 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:18:09.135 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:18:09.700 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:18:22.750 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:18:23.085 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:18:24.811 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:18:25.011 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:18:32.771 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:18:33.055 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:18:40.962 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:18:41.381 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:18:56.111 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:18:56.559 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:02.981 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:03.240 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:05.863 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:06.127 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:09.846 D/čič   ( 9194): Analytics Event: tts_rate_changed | Params: {rate=1.1}
+10-09 16:19:09.855 D/čič   ( 9194): Analytics Event: playback_paused
+10-09 16:19:09.855 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:10.228 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:10.232 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:10.596 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:10.640 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:10.979 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:11.029 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:11.208 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:11.251 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:11.429 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:15.163 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:15.587 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:23.735 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:24.187 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:33.672 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:19:33.905 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:19:35.753 D/čič   ( 9194): Analytics Event: playback_paused
+10-09 16:19:40.239 D/čič   ( 9194): Analytics Event: tts_rate_changed | Params: {rate=1.2}
+10-09 16:20:33.879 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-09 16:20:33.925 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:20:34.203 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:409)
+10-09 16:20:34.203 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:399)
+10-09 16:20:34.203 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.startSentence(TtsReadAloudEngine.kt:369)
+10-09 16:20:34.203 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.access$startSentence(TtsReadAloudEngine.kt:51)
+10-09 16:20:34.203 D/ForegroundServiceController( 9194): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine$startSentence$1.invokeSuspend(TtsReadAloudEngine.kt:17)
+10-09 16:20:34.241 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:20:34.250 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:20:34.331 D/čič   ( 9194): Analytics Event: tts_playback_operation | Params: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=452}
+10-09 16:20:34.490 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:20:34.491 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:20:34.818 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:20:34.818 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:20:35.173 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:20:35.221 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:20:35.393 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:20:36.777 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:20:37.014 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:20:41.216 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:20:41.614 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:20:49.082 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:20:49.505 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:20:58.217 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:20:58.476 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:21:02.098 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:21:02.533 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:21:05.955 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:21:06.311 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:21:15.357 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:21:15.578 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-09 16:21:25.999 I/TtsRouter( 9194): synthesize voice=null engine=SYSTEM
+10-09 16:21:26.129 W/TtsReadAloudEngine( 9194): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
