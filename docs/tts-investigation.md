@@ -247,8 +247,9 @@ while a playlist references the trimmed file.
 
 ## 3. Findings
 
-Twenty-four findings in total: TTS-F01 to TTS-F21 below came out of the source read in
-step 2, and TTS-F22 to TTS-F24 in §3b came out of the device run in step 3. The Evidence
+Twenty-five findings in total: TTS-F01 to TTS-F21 below came out of the source read in
+step 2, TTS-F22 to TTS-F24 in §3b came out of the device run in step 3, and TTS-F25 in §3c
+came out of writing run 2b's tests. The Evidence
 line of each one says whether it was reproduced. Two of the source findings (TTS-F06 and
 TTS-F07) were confirmed on the device; their Evidence lines point at §5. Severity is the
 effect on a user, not on the code.
@@ -275,7 +276,7 @@ effect on a user, not on the code.
 - **Confidence:** high — `_playbackFailures.tryEmit` appears exactly once in the file, in the player-error callback.
 - **Severity for a user:** silent failure (plus analytics).
 - **How a test could catch it:** the same `TtsReadAloudEngineTest` fixture as TTS-F01, asserting a `PlaybackFailure` with `SYNTHESIS_FAILED` is emitted when a mid-chapter sentence fails.
-- **Fixed:** `fc9e4804` (run 2a) — one `PlaybackFailure(SYNTHESIS_FAILED)` with the current correlation id on each of those four paths; the user-start path still emits none, so it keeps producing exactly one `Failed`. Remaining gap: `restartForSettingsChange` (TTS-F07, run 2b).
+- **Fixed:** `fc9e4804` (run 2a) — one `PlaybackFailure(SYNTHESIS_FAILED)` with the current correlation id on each of those four paths; the user-start path still emits none, so it keeps producing exactly one `Failed`. The last gap, `restartForSettingsChange`, was closed in run 2b (`6e919edb`, TTS-F07).
 
 ### TTS-F03 — A failed neural save leaves a partial WAV that is served as a valid cache hit
 
@@ -320,6 +321,7 @@ effect on a user, not on the code.
 - **Confidence:** high.
 - **Severity for a user:** stuck state / wrong position.
 - **How a test could catch it:** unit test on `AndroidTtsController` (new `AndroidTtsControllerTest`, androidHostTest, fake engine) asserting `setRate` while not playing records the rate without calling `engine.stop()`; manual: the trigger above, checking which sentence is highlighted after resuming.
+- **Fixed:** `480a4773` (run 2b) — the paused change keeps the position instead of stopping the engine, and the next play press restarts that same sentence from its start through `engine.playFrom`, so the audio made with the old setting is re-synthesised rather than resumed; the press reports `resume`. Tests committed failing in `4bc7cdc8` (`TtsPlaybackAttemptsTest`, six cases), seam in `381f6340`.
 
 ### TTS-F07 — A speed or voice change during playback restarts synthesis outside the attempt machinery
 
@@ -331,6 +333,7 @@ effect on a user, not on the code.
 - **Confidence:** high for the missing outcomes — the call simply does not go through `requestPlayback`.
 - **Severity for a user:** silent failure; analytics only in the success case.
 - **How a test could catch it:** `AndroidTtsControllerTest` — change the rate while the fake engine reports playing and assert an `Attempted` plus one terminal outcome on `playbackOperations`.
+- **Fixed:** `6e919edb` (run 2b) — the restart is a tracked operation reporting the new `TtsPlaybackAction.SETTINGS_CHANGE`: one `Attempted`, exactly one terminal outcome, `isPlaybackStartPending` set while it runs, the 30 s deadline armed before synthesis, and the engine given this attempt's correlation id. A second change supersedes the restart in flight (`Cancelled`), so one attempt never gets two terminal outcomes. Tests committed failing in `af95f1f2` (four cases).
 
 ### TTS-F08 — `stopWord()` immediately followed by `speakWord()` can resume narration under the new word
 
@@ -430,6 +433,7 @@ effect on a user, not on the code.
 - **Confidence:** low — the locator collector stops the engine on a chapter change (`:205-212`), which closes most of the window. I could not rule out the remaining race by reading alone and did not construct it on the emulator.
 - **Severity for a user:** wrong audio (a chapter replayed or skipped) at worst; otherwise analytics only.
 - **How a test could catch it:** make the engine emit the completed chapter's href instead of `Unit` and assert it in an engine unit test; manual steps cannot reliably hit the window.
+- **Outcome:** **not reproducible in a test, left as is** (run 2b, `ac507841`). `TtsReadAloudEngineChapterCompletionTest` tries the window and both cases pass unchanged: the locator collector stops the engine on a chapter change, and a stopped engine emits no completion at all, so the engine never reports a chapter under the next one's name. What is left is the controller labelling the event with `lastLocator?.href` at the moment its *collector* runs (`AndroidTtsController.kt:153-154`), which a host test cannot reach — the controller needs fifteen Android dependencies, which is why run 2b tests `TtsPlaybackAttempts` instead. `finishedSentences` already labels with `engineChapterHref`, the source the finding asks for. No product code changed for this finding.
 
 ### TTS-F17 — Kokoro speaker ids are not clamped to the voices that exist
 
@@ -506,7 +510,7 @@ and the only teardown that could stop it is the reader-scoped controller, whose 
 leaving the reader. Logout therefore leaves TTS narration and its media notification running.
 Severity for a user: stuck state — audio continues after the session is over.
 
-### QA-BUG-0095 — start failures lack outcomes: **PARTLY FIXED** (one case left)
+### QA-BUG-0095 — start failures lack outcomes: **FIXED**
 
 Fixed for user-initiated starts. `requestPlayback` (`AndroidTtsController.kt:689-713`)
 emits `Attempted` and exactly one of `Succeeded`/`Failed`/`Cancelled`; permission denial is
@@ -525,10 +529,17 @@ Fixed in run 2a (`fc9e4804`), both outside a user request:
    repository, so the likely outcome was a crash rather than a missing event (TTS-F01).
    `launchEngineStart` now catches everything but `CancellationException`.
 
-Still open:
-3. Restarts for a voice, speed or pitch change bypass the attempt machinery entirely
-   (`AndroidTtsController.kt:610-620`), so they have neither outcomes nor a start deadline
-   (TTS-F07, run 2b).
+Fixed in run 2b (`6e919edb`):
+3. Restarts for a voice, speed or pitch change bypassed the attempt machinery entirely, so
+   they had neither outcomes nor a start deadline (TTS-F07). The restart now goes through
+   the same machinery as a user start, reporting `settings_change`: one `Attempted`, exactly
+   one terminal outcome, the pending flag set while it runs, the 30 s deadline armed before
+   synthesis, and the engine labelled with that attempt's correlation id. A second change
+   supersedes the restart in flight as `Cancelled(operation_cancelled)`.
+
+QA-BUG-0095 has no open case left. The bookkeeping now lives in
+`TtsPlaybackAttempts` (androidMain, `navigator/`), covered by
+`TtsPlaybackAttemptsTest`.
 
 ### QA-BUG-0100 — one successful start reported twice: **PRESENT** (cause narrowed)
 
@@ -593,6 +604,20 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Confidence:** high.
 - **Severity for a user:** cosmetic — but it is what masked TTS-F06 from the UI.
 - **How a test could catch it:** a Compose/unit test over the sheet's `AudioSheetUi` mapping asserting no position is rendered while `sentenceCount == 0`.
+
+## 3c. Finding found while testing
+
+### TTS-F25 — A player "ended" callback arriving after a stop starts narration nobody asked for
+
+- **Where:** `TtsReadAloudEngine.kt:604-622` — `onSentenceCompleted()` computes `next = currentIndex + 1` with no guard on `currentIndex`. After `stopInternal()` the index is `-1`, so `next` is `0` and `launchEngineStart { startSentence(0) }` runs.
+- **Trigger:** The last item of a playlist ends at about the same moment the engine is stopped — a swipe into the next chapter, Stop listening, or a failure path — so the player's `ENDED` callback, already posted to the looper, is delivered after `stopInternal`. The sentence list loaded by then may belong to the *next* chapter.
+- **Expected:** A sentence completing with no current sentence starts nothing.
+- **Actual:** Narration starts at sentence 0 of whatever chapter is loaded, with no user request, no attempt and no outcome.
+- **Evidence:** Shown in a host test, with the caveat that the fake player delivers `onEnded` unconditionally: `TtsReadAloudEngineChapterCompletionTest."a chapter abandoned by a locator move does not complete at all"` asserts `currentSentenceIndex == 0` after a stop. Whether a real ExoPlayer can still deliver `ENDED` after `stop()` + `clearItems()` is not confirmed — callbacks are posted to the application looper, which makes it plausible, but it was not seen on a device.
+- **Confidence:** high that the guard is missing; medium that the callback is deliverable after the stop.
+- **Severity for a user:** wrong audio (a chapter read from its start unasked).
+- **How a test could catch it:** the test above, once the fake only reports `ENDED` while it has items; the product guard is `if (currentIndex < 0) return` in `onSentenceCompleted`.
+- **Status:** not fixed — found by run 2b's TTS-F16 test, outside that run's scope. Candidate for run 5.
 
 ---
 

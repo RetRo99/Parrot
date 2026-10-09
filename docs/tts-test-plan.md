@@ -1,6 +1,6 @@
 # TTS testing plan
 
-Source: `docs/tts-investigation.md` (24 findings, TTS-F01 to TTS-F24, plus QA-BUG-0049,
+Source: `docs/tts-investigation.md` (25 findings, TTS-F01 to TTS-F25, plus QA-BUG-0049,
 0095, 0100). Android only; TTS on iPhone is a stub. Branch `tts/investigation`.
 
 ## How each run works
@@ -20,10 +20,10 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | --- | --- | --- | --- | --- |
 | 1 | Neural voice crash: callback shape, host guard test, device check | F22 | Opus | done |
 | 2a | Read-aloud engine seam and host harness; failures after start | F01, F02, QA-0095 (first two cases) | Opus | done |
-| 2b | Restart on a settings change; the chapter a completion belongs to | F06, F07, F16, QA-0095 (third case) | Opus | not started |
+| 2b | Restart on a settings change; the chapter a completion belongs to | F06, F07, F16, QA-0095 (third case) | Opus | done |
 | 3 | Small pure-logic gaps | F03, F08, F09, F12, F13, F17, F18, F21 | Sonnet | |
 | 4 | Voice pack download and delete | F04, F05, F19, F20 | Opus | |
-| 5 | Reader screen and lifecycle | F10, F11, F14, F23, F24, QA-0049, QA-0100 | Opus | |
+| 5 | Reader screen and lifecycle | F10, F11, F14, F23, F24, F25, QA-0049, QA-0100 | Opus | |
 | 6 | Manual device pass and new cases in `manual-qa-test-plan.md` | all | Sonnet, with the owner's phone | |
 
 Run 1 is first because it is a crash on every Kokoro synthesis and it blocks every other
@@ -75,6 +75,17 @@ Device smoke on the Samsung SM-S921B: `docs/manual-qa-evidence/2026-10-09/tts-ru
 `restartForSettingsChange` is the last QA-BUG-0095 case: it calls `engine.playFrom` from
 its own bare `launch`, which run 2a deliberately left alone.
 
+Done 2026-10-09, as `TtsPlaybackAttemptsTest` rather than `AndroidTtsControllerTest`:
+`AndroidTtsController` takes fifteen dependencies, most of them concrete Android classes
+(`EpubPublication`, `TtsPreviewPlayer`, `TtsWordPlayer`, `TtsModelManager`,
+`NotificationPermissionHandler`, `SupertonicTermsStore`, `Context`), so option (b) of the
+run brief was taken: the attempt bookkeeping and the settings-change decision moved into
+`TtsPlaybackAttempts` (`381f6340`), which needs only the run 2a engine and a scope. Six
+failing F06 tests `4bc7cdc8`, fix `480a4773`; four failing F07 tests `af95f1f2`, fix
+`6e919edb` (new action value `settings_change`). F16 is **not reproducible in a test** and
+no product code changed for it (`ac507841`); its test recorded a separate hazard, TTS-F25.
+Reader ui host tests 312/312.
+
 ### Run 3: pure logic
 
 - `TtsAudioGeneratorTest`: a failed synthesis that wrote bytes leaves no cache entry (F03).
@@ -117,6 +128,8 @@ Needs the manifest address to be injectable; tests run against a local server.
 - Starting TTS setup twice gives one finished-sentence callback per sentence (F11).
 - Chapter with no sentences: behaviour per product decision 2 (F14).
 - Logout while reading: behaviour per product decision 4 (QA-0049).
+- After Stop listening, the last sentence's highlight stays on the page (seen in run 2a, not yet a finding).
+- A player "ended" callback arriving after a stop starts nothing (F25, found in run 2b).
 
 ### Run 6: manual device pass
 
