@@ -127,16 +127,14 @@ class SupertonicOnnxSynthesizer(
                 withContext(Dispatchers.IO) {
                     val activeEngine = engine
                         ?: throw CancellationException("Supertonic engine released")
-                    activeEngine.generateWithConfigAndCallback(text, generationConfig) {
-                        if (
+                    activeEngine.generateWithConfigAndCallback(
+                        text,
+                        generationConfig,
+                        neuralGenerationCallback {
                             requestJob?.isActive == false ||
-                            cancellationGeneration.get() != requestGeneration
-                        ) {
-                            1
-                        } else {
-                            0
-                        }
-                    }
+                                    cancellationGeneration.get() != requestGeneration
+                        },
+                    )
                 }
             }
             if (requestJob?.isActive == false) {
