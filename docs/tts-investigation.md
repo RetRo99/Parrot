@@ -303,7 +303,7 @@ effect on a user, not on the code.
 - **Trigger:** Start the Kokoro pack download, keep the network off until all three attempts fail, then leave the sheet.
 - **Expected:** Either a visible resumable download, or the partial bytes are reclaimable.
 - **Actual:** Up to the full pack size (about 150 MB for Kokoro) stays in `filesDir/tts-models/<model>/<version>/*.part` while the card says the pack is not downloaded. A later download does resume from it, so the bytes are not lost forever — but if the manifest version moves on, the stale version directory is only removed by `deleteOutdatedVersions` (`:534-540`), which runs **after** a successful install, so a user who never retries keeps the bytes with no in-app way to free them.
-- **Evidence:** see §5.
+- **Evidence:** CODE-ONLY. Supporting observation from §5 check 21: a *successful* install leaves no partial files behind, so the leak is specific to the abandoned-failure path, which was not induced on device.
 - **Confidence:** medium-high.
 - **Severity for a user:** silent failure (disk usage).
 - **How a test could catch it:** `TtsModelManagerTest` with a stubbed download that always fails, asserting the version directory holds no orphaned partial after `ensureKokoroModel` returns null; manual: interrupt a download, then compare the app's `tts-models` size against a card that says "not downloaded".
@@ -314,7 +314,7 @@ effect on a user, not on the code.
 - **Trigger:** Start narration mid-chapter, pause, change the speed (or pick a different voice), then press play.
 - **Expected:** Playback resumes at the sentence it was paused on, with the new setting.
 - **Actual:** The engine is stopped, so `togglePlayback` (`:571`) sees `currentSentence == null`, treats the next press as a fresh `CONTROLS` start, and `resolveStartIndex()` (`:866-870`) restarts from the first *visible* sentence. The user silently loses their place within the page.
-- **Evidence:** see §5.
+- **Evidence:** REPRODUCED — `D1-paused-sentence-89.png` (paused at sentence 89), `D2-rate-changed-while-paused.png` (rate now 1.2×, sheet still claims 89), `D3-restarted-at-sentence-87.png` (restarted at 87). The decisive signal is in `E1-tts-logcat-excerpt.txt`: the play after the paused rate change emitted `tts_action=controls` at 16:20:33, where a plain pause/resume had emitted `tts_action=resume` at 16:01:07.
 - **Confidence:** high.
 - **Severity for a user:** stuck state / wrong position.
 - **How a test could catch it:** unit test on `AndroidTtsController` (new `AndroidTtsControllerTest`, androidHostTest, fake engine) asserting `setRate` while not playing records the rate without calling `engine.stop()`; manual: the trigger above, checking which sentence is highlighted after resuming.
@@ -325,7 +325,7 @@ effect on a user, not on the code.
 - **Trigger:** Change the speed (or the voice) while narration plays; worst case with a voice whose synthesis then fails.
 - **Expected:** The restart is an operation with an attempt and a terminal outcome, like every other start.
 - **Actual:** No `Attempted`, no `Succeeded`, no `Failed`; `isPlaybackStartPending` stays false so the UI shows no progress; no 30 s deadline covers it; and if the new synthesis fails, narration stops with no event (TTS-F02) and may crash (TTS-F01).
-- **Evidence:** CODE-ONLY.
+- **Evidence:** REPRODUCED — `E1-tts-logcat-excerpt.txt` at 16:19:09: tapping Rate + during playback logged `tts_rate_changed{rate=1.1}` and five fresh `TtsRouter: synthesize` lines within 1.4 s, with **no** `tts_playback_operation` line of any outcome for the restart.
 - **Confidence:** high for the missing outcomes — the call simply does not go through `requestPlayback`.
 - **Severity for a user:** silent failure; analytics only in the success case.
 - **How a test could catch it:** `AndroidTtsControllerTest` — change the rate while the fake engine reports playing and assert an `Attempted` plus one terminal outcome on `playbackOperations`.
@@ -402,7 +402,7 @@ effect on a user, not on the code.
 - **Trigger:** Open a chapter that is images only or empty — cover pages and plates in Gutenberg EPUBs are the ordinary case — and press play.
 - **Expected:** A clear "nothing to read on this page" state, or an automatic move to the next chapter with content.
 - **Actual:** A failed start with a Retry affordance that fails identically every time, and one `failed(content_unavailable)` per press.
-- **Evidence:** see §5.
+- **Evidence:** CODE-ONLY — not checked on device: the Gutenberg edition used "had all images removed", so only the cover qualified, and the cover produced TTS-F23 instead.
 - **Confidence:** medium — the mechanism is clear; the user-visible wording was not checked on device.
 - **Severity for a user:** silent failure / a confusing dead end.
 - **How a test could catch it:** `AndroidTtsControllerTest` with a fake `BookController` returning no sentences: assert one `Failed(CONTENT_UNAVAILABLE)` and no engine start; manual: open an image-only chapter and press play.
@@ -413,7 +413,7 @@ effect on a user, not on the code.
 - **Trigger:** Select a Kokoro voice, force-stop the app so the engine is cold, reopen the book and press play once on slow hardware.
 - **Expected:** The start completes, or reports progress; a cold model load should not be charged against a 30 s user-start deadline.
 - **Actual:** If load plus the first sentence exceeds 30 s, `onStartupTimeout` (`:126-136`) reports `Failed(START_TIMEOUT)` and calls `engine.stop()`, so the press looks broken while the model was loading correctly. `docs/tts-preparation-benchmarks.md:19` measures engine load at about 0.9 s on the benchmark phone, so real hardware has a comfortable margin; software-rendered emulators are the realistic risk.
-- **Evidence:** see §5.
+- **Evidence:** CODE-ONLY — the deadline could not be measured, because on this build the first Kokoro synthesis never completes at all (TTS-F22). For scale, the pack download took 10.9 s and the engine load about 2 s, both well inside the 30 s window.
 - **Confidence:** low for ordinary devices, medium for slow ones.
 - **Severity for a user:** silent failure (a start that looks broken).
 - **How a test could catch it:** `AndroidTtsControllerTest` with a fake engine that never becomes active, asserting `Failed(START_TIMEOUT)` after the virtual 30 s; manual: measure the cold first start from `logcat -s SherpaOnnxTts` timestamps.
