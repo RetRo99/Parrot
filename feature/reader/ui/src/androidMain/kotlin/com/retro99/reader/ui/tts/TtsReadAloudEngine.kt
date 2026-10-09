@@ -112,6 +112,9 @@ class TtsReadAloudEngine(
     /** A sentence is on its way to the player: synthesis, then the play call. */
     private var isStartingSentence = false
 
+    /** Audio has already been audible in this session, so a wait is a gap, not a start. */
+    private var hasPlayedInSession = false
+
     /**
      * The player ran out of audio. It does not leave that state for a play call, and an
      * item appended behind it does not undo it either, so the engine has to start the
@@ -153,7 +156,10 @@ class TtsReadAloudEngine(
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
             // Audio is audible: the start this session was waiting for has landed.
-            if (isPlaying) isStartingSentence = false
+            if (isPlaying) {
+                isStartingSentence = false
+                hasPlayedInSession = true
+            }
             updateSessionRunning()
         }
 
@@ -405,7 +411,10 @@ class TtsReadAloudEngine(
         cancelActiveSynthesis()
         cancelPrefetch(exceptIndex = index)
         currentIndex = index
-        _isLoading.value = true
+        // Only a start with nothing audible yet is "preparing". A gap inside a running
+        // session is not: the UI disables the play/pause button while this is true, which
+        // left it dead for a second or two every sentence of a slow voice (TTS-F26).
+        _isLoading.value = !hasPlayedInSession
         _currentSentenceDurationMs.value = 0L
         _currentSentence.value = sentence
 
@@ -779,6 +788,7 @@ class TtsReadAloudEngine(
         isPauseRequested = false
         isStartingSentence = false
         playerReachedEndOfQueue = false
+        hasPlayedInSession = false
         updateSessionRunning()
     }
 
