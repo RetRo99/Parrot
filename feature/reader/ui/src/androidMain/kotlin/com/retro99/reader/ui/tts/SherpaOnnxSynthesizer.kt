@@ -149,6 +149,9 @@ class SherpaOnnxSynthesizer(
             if (saved && outputFile.exists() && outputFile.length() > 0) {
                 TtsSynthesisResult(TtsSynthesisStatus.SUCCESS, outputFile)
             } else {
+                // The output file is the cache entry: a partial save must leave nothing
+                // behind, as every other failure path here does (TTS-F03).
+                outputFile.delete()
                 TtsSynthesisResult(
                     status = TtsSynthesisStatus.ERROR,
                     error = "Kokoro failed to save audio",

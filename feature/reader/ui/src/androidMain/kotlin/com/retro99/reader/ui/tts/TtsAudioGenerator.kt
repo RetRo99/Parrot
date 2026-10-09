@@ -80,14 +80,19 @@ internal class TtsAudioGeneratorCore(
                 }
 
                 val outputFile = cache.fileFor(key)
-                val result = synthesisSemaphore.withPermit {
-                    synthesizer.synthesize(
-                        text = text,
-                        voiceId = voiceId,
-                        rate = effectiveRate,
-                        pitch = pitch,
-                        outputFile = outputFile,
-                    )
+                val result = try {
+                    synthesisSemaphore.withPermit {
+                        synthesizer.synthesize(
+                            text = text,
+                            voiceId = voiceId,
+                            rate = effectiveRate,
+                            pitch = pitch,
+                            outputFile = outputFile,
+                        )
+                    }
+                } catch (error: Throwable) {
+                    outputFile.delete()
+                    throw error
                 }
                 val resultFile = result.file
                 if (
@@ -100,6 +105,10 @@ internal class TtsAudioGeneratorCore(
                         durationMs = result.durationMs ?: cache.durationMs(resultFile),
                     )
                 }
+                // TTS-F03: the output file is the cache entry, so anything a failed or
+                // cancelled synthesis left there would be served as a valid hit forever.
+                // The rule holds here for every synthesizer, whatever each one deletes.
+                outputFile.delete()
                 result
             }
         }
