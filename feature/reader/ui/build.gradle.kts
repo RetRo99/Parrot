@@ -21,6 +21,11 @@ kotlin {
             enable = true
         }
 
+        optimization {
+            consumerKeepRules.file("consumer-rules.pro")
+            consumerKeepRules.publish = true
+        }
+
         withHostTest {}
     }
 
