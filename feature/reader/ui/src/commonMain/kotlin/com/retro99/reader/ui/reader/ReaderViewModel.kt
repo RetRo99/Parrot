@@ -1192,7 +1192,7 @@ class ReaderViewModel(
         if (selectedVoice?.needsDownload == true) {
             // Picking a voice that is not downloaded fetches its package, then selects it.
             updateState { state -> state.copy(pendingTtsVoiceId = selectedVoice.id) }
-            prepareTtsVoice(selectedVoice.id, onPrepared = { selectTtsVoice(selectedVoice.id) })
+            prepareTtsVoice(selectedVoice.id)
             return
         }
         val isNeural = selectedVoice?.isNeural == true
@@ -1278,17 +1278,13 @@ class ReaderViewModel(
             .firstOrNull { voice -> voice.neuralVoicePackage == voicePackage }
             ?.id
             ?: return
-        val pendingVoiceId = currentViewState().pendingTtsVoiceId
-            ?.takeIf { pending -> pending.neuralVoicePackage() == voicePackage }
-        prepareTtsVoice(
-            voiceId,
-            onPrepared = pendingVoiceId?.let { pending -> { selectTtsVoice(pending) } },
-        )
+        // Whether the voice is selected once it arrives is pendingTtsVoiceId's business, as
+        // for any other download; retrying does not have an opinion of its own (TTS-F19).
+        prepareTtsVoice(voiceId)
     }
 
     private fun prepareTtsVoice(
         voiceId: String,
-        onPrepared: (() -> Unit)? = null,
         updateToLatest: Boolean = false,
     ) {
         val voicePackage = voiceId.neuralVoicePackage() ?: return
@@ -1326,11 +1322,20 @@ class ReaderViewModel(
                     failedTtsVoicePackage = null,
                 )
             }
+            // Cancelled until something else happens: the notification's Cancel, the
+            // sheet's Cancel and a delete of the pack all cancel this job, and a cancelled
+            // job never reaches the assignment below (TTS-F19).
+            var end = TtsVoicePreparationEnd.Cancelled
             try {
                 val isPrepared = ttsController.prepareVoice(voiceId, updateToLatest) { progress ->
                     updateState { state ->
                         state.copy(ttsVoicePreparationProgress = progress)
                     }
+                }
+                end = if (isPrepared) {
+                    TtsVoicePreparationEnd.Prepared
+                } else {
+                    TtsVoicePreparationEnd.Failed
                 }
                 if (isPrepared) {
                     val refreshedVoices = ttsController.availableVoices()
@@ -1340,31 +1345,61 @@ class ReaderViewModel(
                             failedTtsVoicePackage = null,
                         )
                     }
-                    onPrepared?.invoke()
-                } else {
-                    updateState { state ->
-                        state.copy(
-                            failedTtsVoicePackage = voicePackage,
-                            ttsPreviewingVoiceId = null,
-                            isTtsPreviewPlaying = false,
-                        )
-                    }
                 }
             } finally {
                 if (ttsPreparationJob === runningJob) {
-                    updateState { state ->
-                        state.copy(
-                            isTtsVoicePreparing = false,
-                            preparingTtsVoicePackage = null,
-                            ttsVoicePreparationProgress = null,
-                        )
+                    // A failure the user's own cancellation caused is a cancellation: a
+                    // delete of a downloading pack made the card show a failed download.
+                    val resolvedEnd = if (runningJob?.isCancelled == true) {
+                        TtsVoicePreparationEnd.Cancelled
+                    } else {
+                        end
                     }
+                    applyTtsVoicePreparationEnd(resolvedEnd, voicePackage)
                     ttsPreparationJob = null
                 }
             }
         }
         ttsPreparationJob = preparationJob
         preparationJob.start()
+    }
+
+    /**
+     * The sheet after a preparation ends: no progress, and whatever
+     * [resolveTtsVoicePreparationEnd] says about the voice that was waiting for it.
+     *
+     * A user-cancelled download reports no outcome, which is what the sheet's own Cancel
+     * reports: the notification's Cancel now does the same thing, not a different thing.
+     */
+    private fun applyTtsVoicePreparationEnd(
+        end: TtsVoicePreparationEnd,
+        voicePackage: NeuralVoicePackage,
+    ) {
+        val decision = resolveTtsVoicePreparationEnd(end, currentViewState().pendingTtsVoiceId)
+        updateState { state ->
+            state.copy(
+                isTtsVoicePreparing = false,
+                preparingTtsVoicePackage = null,
+                ttsVoicePreparationProgress = null,
+                pendingTtsVoiceId = if (decision.clearPendingSelection) {
+                    null
+                } else {
+                    state.pendingTtsVoiceId
+                },
+                failedTtsVoicePackage = if (decision.showFailedPackage) voicePackage else null,
+                ttsPreviewingVoiceId = if (decision.showFailedPackage) {
+                    null
+                } else {
+                    state.ttsPreviewingVoiceId
+                },
+                isTtsPreviewPlaying = if (decision.showFailedPackage) {
+                    false
+                } else {
+                    state.isTtsPreviewPlaying
+                },
+            )
+        }
+        decision.selectVoiceId?.let { voiceId -> selectTtsVoice(voiceId) }
     }
 
     private fun deleteNeuralVoicePackage(voicePackage: NeuralVoicePackage) {
@@ -1376,6 +1411,9 @@ class ReaderViewModel(
                 state.copy(
                     deletingTtsVoicePackage = voicePackage,
                     pendingTtsVoiceId = null,
+                    // A delete the user asked for is not a failed download, even if the
+                    // install it cancelled reported one first (run 4's leftover card).
+                    failedTtsVoicePackage = null,
                     failedTtsVoicePackageDeletion = null,
                 )
             }

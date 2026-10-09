@@ -44,10 +44,8 @@ internal fun resolveTtsVoicePreparationEnd(
 ): TtsVoicePreparationEndDecision = when (end) {
     TtsVoicePreparationEnd.Prepared ->
         TtsVoicePreparationEndDecision(selectVoiceId = pendingVoiceId)
-    // Today's behaviour, so the tests can be seen failing: a failure keeps the pending
-    // selection, and a cancellation leaves the sheet exactly as it was.
     TtsVoicePreparationEnd.Failed ->
-        TtsVoicePreparationEndDecision(showFailedPackage = true)
+        TtsVoicePreparationEndDecision(clearPendingSelection = true, showFailedPackage = true)
     TtsVoicePreparationEnd.Cancelled ->
-        TtsVoicePreparationEndDecision()
+        TtsVoicePreparationEndDecision(clearPendingSelection = true)
 }
