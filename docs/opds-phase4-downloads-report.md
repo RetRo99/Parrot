@@ -135,6 +135,8 @@ Outside the permitted implementation folders, changes are limited to:
 
 - `lib/server/api/.../ServerConfig.kt` and its new serialization test;
 - this report and the Phase 4 status link in the implementation plan.
+- Samsung QA results, bug register, run note and a sanitized evidence note for
+  the actually observed profile-activation crash (QA-BUG-0101).
 
 The four known Books UI test failures, composeApp iOS **test** FirebaseCore link
 problem, Books Domain/Sync Data iOS test compilation failures and ineffective
@@ -181,6 +183,64 @@ live-provider demonstration.
 
 Before the preset-effect follow-up, the exact combined command
 `./gradlew :androidApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64 --max-workers=2`
-passed in 1m 52s after the initial report commit. It will be repeated on the
-final follow-up commit; the final outcome/counts and second-book check will be
-appended without replacing the earlier failures.
+passed in 1m 52s after the initial report commit. The repeat on the final
+follow-up commit, exact counts and second-book check are recorded below without
+replacing the earlier failures.
+
+### Final results (source `703c82fb`)
+
+The combined app-build command passed again, **BUILD SUCCESSFUL in 1m 14s**.
+Android assemble was up to date after the successful QA assembly; the iOS
+framework link executed. No OOM/heap override or project memory change was needed.
+Final QA/app APK SHA-256:
+`632a1dad51d2dc40f2e3393dd142d068f15df3162fa75c9246f7293c5128f515`.
+
+| Touched module | Android host passed/total | iOS simulator passed/total |
+|---|---:|---:|
+| feature/catalogue/ui | 131/131 | 129/129 |
+| feature/home/ui | 84/84 | 90/90 |
+| lib/server/api | 43/43 | 43/43 |
+| translations | No configured tests; Android compiled | No configured tests; native compiled |
+| tools/ember-fixtures | No test sources; testDebugUnitTest NO-SOURCE, APK built | Android-only tool |
+
+Final/relevant successful commands (all Gradle invocations use `--max-workers=2`):
+
+```sh
+./gradlew :feature:catalogue:ui:testAndroidHostTest :feature:home:ui:testAndroidHostTest :lib:server:api:testAndroidHostTest :tools:ember-fixtures:testDebugUnitTest :tools:ember-fixtures:assembleDebug --max-workers=2
+./gradlew :feature:catalogue:ui:testAndroidHostTest :feature:home:ui:testAndroidHostTest :lib:server:api:testAndroidHostTest :feature:catalogue:ui:iosSimulatorArm64Test :feature:home:ui:iosSimulatorArm64Test :lib:server:api:iosSimulatorArm64Test --max-workers=2
+./gradlew :feature:catalogue:ui:testAndroidHostTest :feature:home:ui:testAndroidHostTest :lib:server:api:testAndroidHostTest :androidApp:assembleDebug :tools:ember-fixtures:assembleDebug --max-workers=2
+./gradlew :feature:catalogue:ui:iosSimulatorArm64Test :feature:home:ui:iosSimulatorArm64Test :lib:server:api:iosSimulatorArm64Test :tools:ember-fixtures:testDebugUnitTest --max-workers=2
+./gradlew :feature:catalogue:ui:testAndroidHostTest :feature:catalogue:ui:iosSimulatorArm64Test :androidApp:assembleDebug --max-workers=2
+./gradlew :androidApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64 --max-workers=2
+python3 tools/ember-fixtures/check_catalogue_assets.py androidApp/build/outputs/apk/debug/androidApp-debug.apk
+python3 tools/ember-fixtures/check_catalogue_assets.py tools/ember-fixtures/build/outputs/apk/debug/ember-fixtures-debug.apk
+python3 tools/ember-fixtures/catalogue_capture.py --serial emulator-5554 --views downloads downloadsFailed downloadsEmpty listStates --themes day eink --skip-install
+python3 tools/ember-fixtures/catalogue_capture.py --serial emulator-5554 --views listStates --themes night --skip-install
+git diff --check
+```
+
+The first native announcement compilation failed (NSAttributedString initializer);
+it was corrected to Foundation's `create`, then all three module simulator suites
+passed. Expected compile-red test runs are not counted as successful suites.
+Fixture capture hit install-overlay/idle timeouts during intermediate attempts;
+the initial required set and the final full Day/E-ink set plus Night list states
+all completed. The final corrected Day/E-ink failure boards were compared again;
+no further visual polishing was performed.
+
+The second requested download was initiated from Moby Dick's book page (default
+0.7 MB EPUB), showed progress and completed. On return to Popular, both it and
+Pride and Prejudice showed In your library with no download icon; Library showed
+exactly **2 books** in the disposable profile. The original emulator profile was
+restored; switching again hit the same unrelated profile/database crash, and
+relaunch recovered the original **5-book** Library and prior continue-reading
+position. QA books/source remain only in the separate disposable profile.
+
+Samsung remains stopped at the updater; its disposable profile and active-profile
+restoration are still pending. No complete Samsung/Phase 4 provider gate or audible
+screen-reader pass is claimed. The exact emulator journey remains partial at
+title search (403) and direct row queueing (two-edition fallback), despite the
+successful independent Downloads/Reader/second-download checks.
+
+Implementation steps 1–4 are complete; live-provider acceptance is **partial**.
+The committed report precedes both combined long builds, and this final update
+records their outcomes. The only untracked path left is the untouched `.opencode/`.

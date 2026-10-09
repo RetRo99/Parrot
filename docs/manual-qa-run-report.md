@@ -467,6 +467,21 @@ Case 438 remains partial, not signed off: case-775 drag bounds/cancel/rotation, 
 - Existing post-fix Samsung evidence is hash-matched: the final combined build (`d1f52024…`, source tree `88f44a5f`) performed Add Server twice and observed both Login events and breadcrumbs as `server_management/add_server_button`. This is the recorded prior retest, not a new Samsung run. In this review, serial `RFCWC0SSVDM` was absent from ADB; no phone interaction occurred. Relevant origin-handoff code has not changed since the retested tree; subsequent `HomeNavigation` changes were UI-only.
 - The final combined case-443 row remains PASS based on that separate post-fix Samsung evidence; the older `107d017c` row is not a full attribution PASS. See [reconciliation evidence](manual-qa-evidence/2026-09-29/qa-bug-0079-case-443-attribution-reconciliation.txt). Firebase Analytics ingestion remains waived; local logs are not Firebase delivery evidence.
 
+## Targeted Phase 4 continuation — 2026-10-09
+
+The current request authorizes catalogue implementation and a demo-phone smoke,
+not completion of the historical ordered/critical/full QA passes. On Samsung
+RFCWC0SSVDM/SM-S921B, Android 16, a disposable profile activation crashed in Books
+database access (QA-BUG-0101). Relaunch reached the fresh empty Library and Get
+books. The APK's missing preset JSON was identified and fixed. The corrected APK
+was update-installed, then a system-update screen took foreground. Device work
+stopped; updater/system settings and original profile/books were untouched. The
+disposable profile remains and restoring the active baseline is pending the user
+returning to Parrot. Functional, Analytics and diagnostics dispositions are in
+[the sanitized observation](manual-qa-evidence/2026-10-09/opds-samsung-profile-blocker.txt)
+and the case ledger. Independent emulator checks in
+[the Downloads report](opds-phase4-downloads-report.md) do not upgrade Samsung status.
+
 ## Final summary
 
 **Latest order update:** The risk-prioritized Samsung runtime gate is case 13: verify Welcome under `es-ES` before any later device case, then continue with the local-EPUB case 417 path and case 425 local-EPUB visual variant as documented above. The 783-case catalogue is not complete. The historical group-K case 444 checkpoint below does not supersede this current gate.

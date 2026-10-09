@@ -1,0 +1,34 @@
+Targeted Phase 4 run; not sign-off of the 783-case programme.
+Device: Samsung RFCWC0SSVDM, SM-S921B, Android 16 (ADB inventory confirmed).
+Package: com.retro99.parrot, debug update-installed; no data clearing/uninstall.
+Initial source: bc7abeb1 plus the then-uncommitted announcement/fencing changes,
+subsequently committed as b7e51a80. Initial crashing APK hash was not retained.
+
+2026-10-09 09:10:57 device log time, PID 19760:
+Settings -> Add disposable profile -> confirm -> automatic activation -> crash.
+Sanitized causal frames:
+  org.koin.core.error.InstanceCreationException: BooksListViewModel
+  Caused by java.lang.IllegalStateException:
+    No active user profile. Cannot access database.
+  DatabaseManager.getDatabase(DatabaseManager.kt:85)
+  FavoritesSqlDelightDao.observeAllFavorites(FavoritesSqlDelightDao.kt:55)
+  BooksListViewModel.observeFavorites(BooksListViewModel.kt:413)
+  BooksListViewModel.<init>(BooksListViewModel.kt:104)
+
+Relaunch recovered to Welcome in the disposable profile. Local-file picker was
+cancelled without selecting/modifying a file. Library showed 0 books.
+Library -> Add -> Get books succeeded. Presets were absent. Actual APK ZIP lacked
+the JSON; enabling Android resources fixed packaging. Later corrected APK hash:
+  e43b43a6445cf4b72369b695817c2036034320d39aa0d161cfe32e8074faee25
+Update install succeeded. A system-update screen then took foreground; stopped
+without interacting with it. No Samsung preset-add/download/reader retest claimed.
+
+Functional: FAIL for profile activation; PASS only for observed relaunch recovery.
+Analytics: NOT RUN (no delivery/schema evaluation in this targeted run).
+Diagnostics: local fatal/cause observed; Crashlytics delivery/symbolication BLOCKED
+(no Firebase-enabled QA/provider/backend verification for this debug run).
+Cleanup: disposable profile remains; original profile/books not removed. Restore
+original active profile after user returns the phone to Parrot. No system settings,
+permissions, updater, unrelated files or accounts were changed.
+Emulator evidence is separate, in opds-phase4-downloads-report.md; not Samsung proof.
+QA-BUG-0101 remains open; unrelated production code was not changed.

@@ -2,6 +2,17 @@
 
 Keep every entry, including fixed and duplicate observations. These first findings are confirmed by source inspection; whether the current Firebase build actually delivered the sensitive values is unverified until the blocked runtime payload checks are performed.
 
+## QA-BUG-0101 — Fresh profile activation crashes Books while the database is closed (2026-10-09)
+
+- **Status:** CONFIRMED / OPEN; found during the user-requested Phase 4 smoke, not a new ordered critical pass.
+- **Severity / impact:** High; automatic activation after Add profile crashes the app. Relaunch recovers, but activation is not a PASS.
+- **Cases:** 413 (Add/automatic activation), adjacent 409 (switch). Historical passing variants remain intact; this is new failed evidence.
+- **Device/build:** Samsung RFCWC0SSVDM, SM-S921B, Android 16; debug source `bc7abeb1` plus the announcement/fencing changes later committed as `b7e51a80`. Initial APK hash not retained.
+- **Reproduction:** Settings → Add disposable profile → confirm → crash before Get books. `BooksListViewModel.observeFavorites` reaches `DatabaseManager.getDatabase` with no active user profile.
+- **Recovery:** Cold launch recovered to the fresh profile; cancelled local-file picker reached an empty Library. The original profile/books were not removed.
+- **Evidence:** [Sanitized causal stack and exact limits](manual-qa-evidence/2026-10-09/opds-samsung-profile-blocker.txt).
+- **Fix/retest:** NOT RUN; outside catalogue implementation scope. Samsung then entered a system-update screen, which was left untouched. Analytics NOT RUN; Crashlytics delivery/symbolication BLOCKED. Disposable profile/baseline restoration remains pending return to Parrot.
+
 ## QA-BUG-0001 — Analytics event parameters are forwarded without privacy filtering
 
 - **Severity / impact:** Medium; potential privacy exposure and high-cardinality telemetry, and values can also appear in debug logs.
