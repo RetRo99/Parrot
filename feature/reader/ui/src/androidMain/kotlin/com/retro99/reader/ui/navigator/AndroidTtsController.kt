@@ -501,9 +501,6 @@ class AndroidTtsController(
                 sentences = emptyList()
                 sentencesChapterHref = null
             }
-            if (sentences.isEmpty() && !loadChapterSentences(chapterHref)) {
-                return@request TtsPlaybackFailureReason.CONTENT_UNAVAILABLE
-            }
             startPlayback(attempt, sentenceIndex = 0)
         }
     }
@@ -596,14 +593,37 @@ class AndroidTtsController(
         }
     }
 
+    /**
+     * Starts where there is something to read: here, or in the next chapter that has text
+     * (TTS-F14). The decision itself is [startAtFirstChapterWithText], so it can be tested.
+     */
     private suspend fun startPlayback(
         attempt: TtsPlaybackAttempt,
         sentenceIndex: Int? = null,
     ): TtsPlaybackFailureReason? {
-        if (sentences.isEmpty() && !loadChapterSentences()) {
-            return TtsPlaybackFailureReason.CONTENT_UNAVAILABLE
-        }
+        val readingOrder = bookController.readingOrderHrefs()
+        return startAtFirstChapterWithText(
+            maxChapterMoves = readingOrder.size,
+            hasSentencesHere = { sentences.isNotEmpty() || loadChapterSentences() },
+            startHere = { startLoadedPlayback(attempt, sentenceIndex) },
+            goToNextChapter = { goToNextChapter(readingOrder) },
+            startAtChapterStart = { startLoadedPlayback(attempt, sentenceIndex = 0) },
+        )
+    }
 
+    /** Moves one chapter forward in the spine; false at the end of the book. */
+    private suspend fun goToNextChapter(readingOrder: List<String>): Boolean {
+        val currentHref = lastLocator?.href ?: return false
+        val currentIndex = readingOrder.indexOf(currentHref)
+        if (currentIndex < 0) return false
+        val nextHref = readingOrder.getOrNull(currentIndex + 1) ?: return false
+        return awaitChapter(nextHref)
+    }
+
+    private suspend fun startLoadedPlayback(
+        attempt: TtsPlaybackAttempt,
+        sentenceIndex: Int? = null,
+    ): TtsPlaybackFailureReason? {
         val settings = getReaderSettingsUseCase().first()
         voiceId = settings.ttsVoiceId
         rate = TtsSpeechRate.coerce(settings.ttsRate)

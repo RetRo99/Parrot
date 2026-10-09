@@ -708,6 +708,9 @@ class AndroidBookController internal constructor() : BookController {
         }
     }
 
+    override suspend fun readingOrderHrefs(): List<String> =
+        publication?.readingOrderHrefs().orEmpty()
+
     override suspend fun hasReadableContent(): Boolean {
         return withNavigatorOrNull { nav ->
             val rawResult = nav.evaluateJavascript(
