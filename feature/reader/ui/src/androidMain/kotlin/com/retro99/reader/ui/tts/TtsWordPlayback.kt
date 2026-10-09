@@ -122,10 +122,8 @@ class TtsWordAudioSource(
             if (result.status != TtsSynthesisStatus.SUCCESS || file == null || !file.exists()) {
                 return null
             }
-            // Trim the engine's padding while the file is fresh (it is also the cache entry);
-            // Supertonic pads a word with ~0.35 s + ~0.5 s of silence (bench 2026-10-05).
-            val trimmed = withContext(Dispatchers.IO) { trimWavSilence(file) }
-            return FileWordAudioClip(trimmed)
+            val clip = withContext(Dispatchers.IO) { prepareWordClipFile(file) }
+            return FileWordAudioClip(clip)
         } finally {
             engine.resumePrefetchAfterWord()
         }
@@ -135,6 +133,13 @@ class TtsWordAudioSource(
         const val WORD_PITCH = 1f
     }
 }
+
+/**
+ * The clip the word player plays, out of the file the audio cache holds. Trim the engine's
+ * padding while the file is fresh: Supertonic pads a word with ~0.35 s + ~0.5 s of silence
+ * (bench 2026-10-05).
+ */
+internal fun prepareWordClipFile(cacheFile: File): File = trimWavSilence(cacheFile)
 
 /** Recorded narration and the audiobook share the service player, so one interruption covers both. */
 class MediaPlaybackWordInterruption(
