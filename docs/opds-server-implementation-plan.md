@@ -1395,6 +1395,16 @@ counts, captures, build outcomes, and remaining differences.
 
 **Run report of the Phase 4 foundations run (2026-10-08, branch `opds/phase4-screens`).**
 
+**Downloads/list-action run (2026-10-09):** queue-backed Downloads, separate
+list-row download/cancel targets, data-flagged book-link rows, catalogue-settings
+links and app-wide download announcements are implemented. The Android APK's
+missing preset data was found on Samsung and fixed; packaging checks and touched
+module host/simulator tests pass. Samsung's fresh-profile check hit an unrelated
+Books/database race, recovered on relaunch, and was later interrupted by a system
+update screen. Full Phase 4 gate is not claimed. See
+[the Downloads report](opds-phase4-downloads-report.md) for exact outcomes and
+final verification.
+
 Foundations only: no catalogue screen is reachable by a user after this run.
 
 ```text
