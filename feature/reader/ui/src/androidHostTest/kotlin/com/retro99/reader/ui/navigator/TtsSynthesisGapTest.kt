@@ -90,6 +90,21 @@ class TtsSynthesisGapTest {
         )
     }
 
+    @Test
+    fun `the gap is not a preparing state, so the play pause control stays live`() = runTest {
+        val session = inTheGap()
+
+        // `ReaderAudioSheet` and `ReaderOverlay` both disable the play/pause button with
+        // `enabled = !isLoading`. On the phone the whole gap reported as loading, so the
+        // button was dead for one to two seconds every sentence and the pause below never
+        // reached `togglePlayback` at all.
+        assertEquals(
+            false,
+            session.engine.isLoading.value,
+            "the gap reports as preparing, which disables the sheet's play/pause button",
+        )
+    }
+
     // ---- b: a setting changed in the gap ----
 
     @Test
