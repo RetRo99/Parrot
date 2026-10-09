@@ -25,8 +25,10 @@ class TtsPlaybackOperationReports {
 
     /** True the first time this outcome of this attempt is offered, false after that. */
     fun claim(correlationId: String, outcome: String): Boolean {
-        // Today's behaviour, so the test can be seen failing: every collector reports.
-        reported.addLast("$correlationId/$outcome")
+        val pair = "$correlationId/$outcome"
+        if (reported.contains(pair)) return false
+        reported.addLast(pair)
+        while (reported.size > MAX_REMEMBERED) reported.removeFirst()
         return true
     }
 

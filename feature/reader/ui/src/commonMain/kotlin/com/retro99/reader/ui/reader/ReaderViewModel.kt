@@ -300,6 +300,13 @@ class ReaderViewModel(
         }
     }
 
+    private val ttsOperationReporter: ReaderTtsOperationReporter by lazy {
+        ReaderTtsOperationReporter(
+            reports = readerScope.get<TtsPlaybackOperationReports>(),
+            analytics = analytics,
+        )
+    }
+
     private val readingSpeedTracker: ReadingSpeedTracker by lazy {
         readerScope.get<ReadingSpeedTracker>()
     }
@@ -1154,63 +1161,21 @@ class ReaderViewModel(
         isObservingTtsPlaybackOperations = true
         ttsController.playbackOperations
             .onEach { operation ->
-                val action = operation.action.analyticsValue
-                val outcome = when (operation) {
-                    is TtsPlaybackOperation.Attempted -> "attempted"
-                    is TtsPlaybackOperation.Succeeded -> "succeeded"
-                    is TtsPlaybackOperation.Failed -> "failed"
-                    is TtsPlaybackOperation.Cancelled -> "cancelled"
-                }
-                val stage = if (operation is TtsPlaybackOperation.Attempted) "start" else "terminal"
-                val durationMs = when (operation) {
-                    is TtsPlaybackOperation.Attempted -> null
-                    is TtsPlaybackOperation.Succeeded -> operation.durationMs
-                    is TtsPlaybackOperation.Failed -> operation.durationMs
-                    is TtsPlaybackOperation.Cancelled -> operation.durationMs
-                }
-                val reasonCode = when (operation) {
-                    is TtsPlaybackOperation.Failed -> operation.reasonCode.analyticsValue
-                    is TtsPlaybackOperation.Cancelled -> operation.reasonCode.analyticsValue
-                    else -> null
-                }
-                analytics.logEvent(
-                    ReaderAnalyticsEvent.TtsPlaybackOperation(
-                        action = action,
-                        outcome = outcome,
-                        isRetry = operation.isRetry,
-                        durationMs = durationMs,
-                        reasonCode = reasonCode,
-                    ),
-                )
-                val context = DiagnosticContext(
-                    screen = "reader",
-                    sourceScreen = "reader",
-                    entryPoint = action,
-                    action = "start_tts_playback",
-                    operation = "tts_playback",
-                    stage = stage,
-                    outcome = outcome,
-                    reasonCode = reasonCode,
-                    mediaType = "ebook",
-                    correlationId = operation.correlationId,
-                )
+                // What the outcome does to this screen: each screen has its own banner and
+                // its own usage session, so both of these belong to every collector.
                 when (operation) {
-                    is TtsPlaybackOperation.Attempted -> {
+                    is TtsPlaybackOperation.Attempted ->
                         updateState { it.copy(showTtsPlaybackFailed = false) }
-                        analytics.logBreadcrumb(context)
-                    }
-                    is TtsPlaybackOperation.Succeeded -> analytics.logBreadcrumb(context)
                     is TtsPlaybackOperation.Failed -> {
                         usageSession.checkpoint(UsageEndReason.Error)
-                        if (operation.error != null) {
-                            analytics.logException(operation.error, context)
-                        } else {
-                            analytics.logBreadcrumb(context)
-                        }
                         updateState { it.copy(showTtsPlaybackFailed = true) }
                     }
-                    is TtsPlaybackOperation.Cancelled -> analytics.logBreadcrumb(context)
+                    is TtsPlaybackOperation.Succeeded,
+                    is TtsPlaybackOperation.Cancelled -> Unit
                 }
+                // The report belongs to the attempt, not to the screen: a second reader of
+                // the same book shares the record and reports nothing (QA-BUG-0100).
+                ttsOperationReporter.report(operation)
             }
             .launchIn(viewModelScope)
     }
