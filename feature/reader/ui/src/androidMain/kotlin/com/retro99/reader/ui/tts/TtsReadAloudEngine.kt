@@ -92,6 +92,17 @@ class TtsReadAloudEngine(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
+    /**
+     * Whether a narration session is running, which is not the same question as
+     * [isPlaying]: a slow voice leaves gaps where the clip that was playing has ended and
+     * the next one is still being synthesised.
+     *
+     * Placeholder, so the gap tests of run 2c fail on the behaviour rather than on a
+     * missing name: it still answers "is audio audible", which is what every caller asks
+     * today.
+     */
+    val isSessionRunning: StateFlow<Boolean> get() = isPlaying
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
