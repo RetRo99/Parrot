@@ -135,11 +135,24 @@ class TtsWordAudioSource(
 }
 
 /**
- * The clip the word player plays, out of the file the audio cache holds. Trim the engine's
- * padding while the file is fresh: Supertonic pads a word with ~0.35 s + ~0.5 s of silence
- * (bench 2026-10-05).
+ * The clip the word player plays, out of the file the audio cache holds. The engine's padding
+ * is trimmed (Supertonic pads a word with ~0.35 s + ~0.5 s of silence, bench 2026-10-05), but
+ * off a copy: the cached file is the sentence entry read-aloud may be playing, and rewriting
+ * it under the engine's player is TTS-F21. The copy keeps its own name in the same directory,
+ * so no lookup can land on it and the cache's own trim still evicts it.
  */
-internal fun prepareWordClipFile(cacheFile: File): File = trimWavSilence(cacheFile)
+internal fun prepareWordClipFile(cacheFile: File): File {
+    val copy = File(cacheFile.parentFile, "${cacheFile.nameWithoutExtension}$WORD_CLIP_SUFFIX")
+    return try {
+        cacheFile.copyTo(copy, overwrite = true)
+        trimWavSilence(copy)
+    } catch (_: Exception) {
+        copy.delete()
+        cacheFile
+    }
+}
+
+private const val WORD_CLIP_SUFFIX = "-word.wav"
 
 /** Recorded narration and the audiobook share the service player, so one interruption covers both. */
 class MediaPlaybackWordInterruption(
