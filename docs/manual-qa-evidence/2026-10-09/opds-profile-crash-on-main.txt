@@ -1,0 +1,15 @@
+Profile-switch crash: reproduced on main (078ab8ef), not caused by the catalogue branch.
+Emulator emulator-5554 (API 37), debug APK built from a clean worktree of main, fresh install.
+Steps: Welcome -> Open book files on this phone -> Back (Library) -> Settings -> Add profile
+"Second" -> confirm. Result: process dies immediately.
+Logcat: Koin InstanceCreationException for BooksListViewModel, caused by
+IllegalStateException "No active user profile. Cannot access database."
+Cause: DatabaseManager follows the active profile on its own coroutine (Dispatchers.Default,
+under its mutex, opening the new profile's database file). The UI follows the same flow on the
+main thread and builds BooksListViewModel for the new profile at once; its first read
+(DatabaseManager.getDatabase(), synchronous) can run before the switch finished, when
+currentDatabase is null. The catalogue branch only adds ProfileWorkRegistry calls before the
+active-profile value is set; the order of "set value" and "database switch" is unchanged.
+Smallest fix (not made here): make the database accessor wait for the active profile's
+database (open it on demand under the same mutex), or have the Books list start its
+observation from DatabaseManager's own ready state instead of the registry flow.

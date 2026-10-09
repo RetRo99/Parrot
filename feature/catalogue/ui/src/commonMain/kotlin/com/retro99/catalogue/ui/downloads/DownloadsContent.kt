@@ -1,6 +1,7 @@
 package com.retro99.catalogue.ui.downloads
 
 import androidx.compose.foundation.*
+import com.retro99.catalogue.ui.browse.CatalogueMessage
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -51,8 +52,7 @@ fun CatalogueDownloadsContent(rows: List<DownloadRow>, onBack: () -> Unit = {}, 
     Column(modifier.fillMaxSize().background(Ember.colors.bg)) {
         EmberTopBar(title = stringResource(StringRes.catalogue_downloads_title), onBack = onBack)
         if (rows.isEmpty()) {
-            EmberEmptyState(title = stringResource(StringRes.catalogue_downloads_empty_title), message = stringResource(StringRes.catalogue_downloads_empty_body),
-                icon = Icons.Outlined.Download, modifier = Modifier.fillMaxWidth().padding(top = 44.dp))
+            CatalogueMessage(Icons.Outlined.Download, stringResource(StringRes.catalogue_downloads_empty_title), stringResource(StringRes.catalogue_downloads_empty_body), Modifier.padding(top = 44.dp))
         } else {
             LazyColumn(contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(rows, key = { it.acquisition.requestId }) { row -> DownloadCard(row, { onAction(row.acquisition.requestId) }, deviceName, limit) }

@@ -98,10 +98,9 @@ import com.retro99.base.ui.compose.Ember
 import com.retro99.base.ui.compose.EmberBottomSheet
 import com.retro99.base.ui.compose.EmberChevron
 import com.retro99.base.ui.compose.EmberDialog
+import com.retro99.catalogue.ui.settings.CatalogueActionButton
 import com.retro99.base.ui.compose.EmberDialogAction
 import com.retro99.base.ui.compose.EmberDialogActionStyle
-import com.retro99.base.ui.compose.EmberEmptyState
-import com.retro99.base.ui.compose.EmberSectionLabel
 import com.retro99.base.ui.compose.EmberTextField
 import com.retro99.base.ui.compose.EmberTopBar
 import com.retro99.catalogue.ui.add.catalogueDeviceName
@@ -318,12 +317,12 @@ fun CatalogueBrowseContentScreen(
             onDismissRequest = actions.onDismissLocalNetwork,
             title = stringResource(StringRes.catalogue_local_network_title),
             body = AnnotatedString(stringResource(StringRes.catalogue_local_network_body, catalogue)),
-            actions = listOf(
-                EmberDialogAction(stringResource(StringRes.catalogue_open), onClick = actions.onConfirmLocalNetwork),
-                EmberDialogAction(stringResource(StringRes.catalogue_local_network_dont_open), EmberDialogActionStyle.Main, onClick = actions.onDismissLocalNetwork),
-            ),
+            actions = emptyList(),
         ) {
             Text(host, style = Ember.type.meta.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            // The safe choice is the filled one, above the one that leaves.
+            CatalogueActionButton(stringResource(StringRes.catalogue_local_network_dont_open), actions.onDismissLocalNetwork, filled = true, modifier = Modifier.fillMaxWidth())
+            CatalogueActionButton(stringResource(StringRes.catalogue_open), actions.onConfirmLocalNetwork, modifier = Modifier.fillMaxWidth(), border = false)
         }
     }
     state.signIn?.let { SignInSheet(catalogue, it, actions, deviceName) }
@@ -450,12 +449,8 @@ private fun Message(
     linkLabel: String? = null,
     onLink: () -> Unit = {},
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(top = 44.dp).semantics(mergeDescendants = false) { liveRegion = LiveRegionMode.Polite },
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        // The shared empty and error pattern: icon tile, title, one sentence.
-        EmberEmptyState(title = title, message = body, icon = icon, modifier = Modifier.semantics { heading() })
+    CatalogueMessage(icon, title, body, Modifier.fillMaxSize().padding(top = 44.dp).semantics(mergeDescendants = false) { liveRegion = LiveRegionMode.Polite }) {
+        Spacer(Modifier.height(22.dp))
         SoftButton(button, onButton, buttonLabel)
         if (link != null) {
             TextButton(onClick = onLink, modifier = Modifier.padding(top = 6.dp).semantics { if (linkLabel != null) contentDescription = linkLabel }) {
@@ -473,7 +468,7 @@ private fun SoftButton(text: String, onClick: () -> Unit, label: String? = null)
         shape = CircleShape,
         colors = ButtonDefaults.buttonColors(
             containerColor = if (eink) Ember.colors.accent else Ember.colors.navActive,
-            contentColor = if (eink) Ember.colors.onAccent else Ember.colors.navActiveContent,
+            contentColor = if (eink) Ember.colors.onAccent else Ember.colors.accentText,
         ),
         contentPadding = PaddingValues(horizontal = 22.dp, vertical = 12.dp),
         modifier = Modifier.heightIn(min = 48.dp).semantics { if (label != null) contentDescription = label },
@@ -551,7 +546,7 @@ private fun LoadedPage(
         if (content.folders.isNotEmpty()) {
             if (content.shelves.isNotEmpty()) {
                 item(key = "browse") {
-                    EmberSectionLabel(stringResource(StringRes.catalogue_browse), Modifier.padding(horizontal = Side).padding(top = 6.dp, bottom = 10.dp).semantics { heading() })
+                    Text(stringResource(StringRes.catalogue_browse).uppercase(), style = Ember.type.eyebrow.copy(fontSize = if (Ember.style.isEink) 13.sp else 11.sp, letterSpacing = 1.5.sp), color = if (Ember.style.isEink) Ember.colors.ink else Ember.colors.accentText, modifier = Modifier.padding(horizontal = Side).padding(top = 6.dp, bottom = 10.dp).semantics { heading() })
                 }
             }
             item(key = "folders") { Folders(content.folders, actions) }

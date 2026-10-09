@@ -36,7 +36,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
+import com.retro99.base.ui.compose.EmberBottomSheet
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.role
@@ -98,7 +99,9 @@ import resources.translations.catalogue_add_address_label
 import resources.translations.catalogue_add_anyway
 import resources.translations.catalogue_add_by_address
 import resources.translations.catalogue_add_catalogue
+import resources.translations.catalogue_add_audiobookshelf_subtitle
 import resources.translations.catalogue_add_checking
+import resources.translations.catalogue_add_storyteller_subtitle
 import resources.translations.catalogue_add_error_duplicate
 import resources.translations.catalogue_add_error_invalid
 import resources.translations.catalogue_add_error_save_failed
@@ -568,10 +571,16 @@ fun PresetDetailScreen(
             enabled = !isChecking,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 16.dp).height(56.dp),
             shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(containerColor = Ember.colors.accent, contentColor = Ember.colors.onAccent),
+            colors = accentButtonColors(),
         ) {
-            if (isChecking) CircularProgressIndicator(Modifier.size(20.dp), color = Ember.colors.onAccent, strokeWidth = 2.dp)
-            else Text(stringResource(StringRes.catalogue_add_catalogue), style = Ember.type.meta.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold))
+            if (isChecking) {
+                if (!Ember.style.isEink) {
+                    CircularProgressIndicator(Modifier.size(20.dp), color = Ember.colors.onAccent, strokeWidth = 2.dp)
+                    Spacer(Modifier.width(10.dp))
+                }
+                Text(stringResource(StringRes.catalogue_add_checking), modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    style = Ember.type.meta.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold))
+            } else Text(stringResource(StringRes.catalogue_add_catalogue), style = Ember.type.meta.copy(fontSize = 17.sp, fontWeight = FontWeight.Bold))
         }
     }
 }
@@ -603,11 +612,13 @@ fun CatalogueAddScreenContent(
             Text(stringResource(StringRes.catalogue_add_question), style = Ember.type.meta.copy(fontSize = 17.sp), color = Ember.colors.ink2)
             AddLibraryKindRow(
                 title = "Storyteller",
+                subtitle = stringResource(StringRes.catalogue_add_storyteller_subtitle),
                 enabled = state.isEditable,
                 onClick = onSelectOtherLibrary,
             )
             AddLibraryKindRow(
                 title = "Audiobookshelf",
+                subtitle = stringResource(StringRes.catalogue_add_audiobookshelf_subtitle),
                 enabled = state.isEditable,
                 onClick = onSelectOtherLibrary,
             )
@@ -670,7 +681,7 @@ fun CatalogueAddScreenContent(
             enabled = state.isEditable && state.address.isNotBlank(),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 16.dp).height(56.dp),
             shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(containerColor = Ember.colors.accent, contentColor = Ember.colors.onAccent),
+            colors = accentButtonColors(),
         ) {
             if (state.phase != CatalogueAddPhase.Idle) {
                 if (!Ember.style.isEink) {
@@ -688,7 +699,7 @@ fun CatalogueAddScreenContent(
 }
 
 @Composable
-private fun AddLibraryKindRow(title: String, enabled: Boolean, onClick: () -> Unit) {
+private fun AddLibraryKindRow(title: String, subtitle: String, enabled: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Ember.colors.surface)
             .border(if (Ember.style.isEink) 2.dp else 1.dp, Ember.colors.line, RoundedCornerShape(14.dp))
@@ -698,7 +709,10 @@ private fun AddLibraryKindRow(title: String, enabled: Boolean, onClick: () -> Un
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Box(Modifier.size(20.dp).border(if (Ember.style.isEink) 2.dp else 1.dp, Ember.colors.ink2, CircleShape))
-        Text(title, style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink)
+        Column {
+            Text(title, style = Ember.type.meta.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink)
+            Text(subtitle, style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 19.sp), color = Ember.colors.ink2)
+        }
     }
 }
 
@@ -800,16 +814,12 @@ fun CatalogueSignInSheet(
     requestErrorFocus: Boolean = true,
 ) {
     val passwordFocusRequester = remember { FocusRequester() }.takeIf { requestErrorFocus }
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = Ember.colors.surface,
-        contentWindowInsets = { WindowInsets.navigationBars },
-    ) {
+    EmberBottomSheet(onDismiss = onDismiss) {
         Column(
             modifier = Modifier.fillMaxWidth().imePadding().padding(horizontal = 22.dp).padding(bottom = 18.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(stringResource(StringRes.catalogue_sign_in_title, preset.name), style = Ember.type.screenTitle.copy(fontSize = 25.sp, lineHeight = 31.sp), color = Ember.colors.ink)
+            Text(stringResource(StringRes.catalogue_sign_in_title, preset.name), style = Ember.type.screenTitle.copy(fontSize = 25.sp, lineHeight = 31.sp), color = Ember.colors.ink, modifier = Modifier.semantics { heading() })
             Text(stringResource(StringRes.catalogue_sign_in_body, deviceName), style = Ember.type.meta.copy(fontSize = 15.sp, lineHeight = 22.sp), color = Ember.colors.ink2)
             EmberTextField(
                 value = state.username,
@@ -833,7 +843,7 @@ fun CatalogueSignInSheet(
                 enabled = state.isEditable,
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = CircleShape,
-                colors = ButtonDefaults.buttonColors(containerColor = Ember.colors.accent, contentColor = Ember.colors.onAccent),
+                colors = accentButtonColors(),
             ) {
                 if (state.phase != CatalogueAddPhase.Idle && !Ember.style.isEink) {
                     CircularProgressIndicator(Modifier.size(20.dp), color = Ember.colors.onAccent, strokeWidth = 2.dp)
@@ -939,3 +949,12 @@ internal fun addErrorMessage(error: CatalogueAddError): String = when (error) {
     CatalogueAddError.DuplicateAddress -> stringResource(StringRes.catalogue_add_error_duplicate)
     CatalogueAddError.SaveFailed -> stringResource(StringRes.catalogue_add_error_save_failed)
 }
+
+/** A busy or not yet usable accent button keeps its look: 60% in Day and Night, unchanged in E-ink. */
+@Composable
+private fun accentButtonColors() = ButtonDefaults.buttonColors(
+    containerColor = Ember.colors.accent,
+    contentColor = Ember.colors.onAccent,
+    disabledContainerColor = if (Ember.style.isEink) Ember.colors.accent else Ember.colors.accent.copy(alpha = 0.6f),
+    disabledContentColor = Ember.colors.onAccent,
+)

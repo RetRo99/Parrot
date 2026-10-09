@@ -1861,6 +1861,8 @@
     <string name="catalogue_needs_account" tools:ignore="MissingTranslation">Needs an account</string>
     <string name="catalogue_needs_account_helper" tools:ignore="MissingTranslation">Turn on only if the catalogue asks you to sign in.</string>
     <string name="catalogue_no_account_needed" tools:ignore="MissingTranslation">No account needed</string>
+    <string name="catalogue_add_storyteller_subtitle" tools:ignore="MissingTranslation">Your read-along server.</string>
+    <string name="catalogue_add_audiobookshelf_subtitle" tools:ignore="MissingTranslation">Your audiobook and ebook server.</string>
     <string name="catalogue_add_checking" tools:ignore="MissingTranslation">Checking address…</string>
     <string name="catalogue_add_signing_in" tools:ignore="MissingTranslation">Signing in…</string>
     <string name="catalogue_downloads_count_accessibility" tools:ignore="MissingTranslation">Downloads, %1$d active or failed</string>
