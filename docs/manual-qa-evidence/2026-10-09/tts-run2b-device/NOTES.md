@@ -80,3 +80,43 @@ change they were `voice=null`). Operation lines exactly:
 
     20:29:53.020 tts_playback_operation {tts_action=resume, tts_outcome=attempted}
     20:29:53.908 tts_playback_operation {tts_action=resume, tts_outcome=succeeded, duration_ms=889}
+
+### Step 3 — a setting changed while playing (TTS-F07), System voice — PASSED
+
+**3a, one speed change.** Playing at Rate 1.1× on **sentence 100**. Rate + → 1.2×.
+Narration **carried on from the same sentence** (100 → 103 four seconds later, still
+`Pause` on the button, no gap in the position stream). Operation lines, in order:
+
+    20:31:24.528 tts_rate_changed {rate=1.2}
+    20:31:24.530 tts_playback_operation {tts_outcome=attempted}
+    20:31:24.910 tts_playback_operation {tts_outcome=succeeded, duration_ms=381}
+
+One attempted, one terminal outcome — the restart is inside the attempt machinery now,
+which is exactly what TTS-F07 was about. *Differs from the brief:* the
+`tts_playback_operation` **event carries no `tts_action` parameter at all** for this
+restart (where the `controls` and `resume` starts above both printed one). The action is
+not lost — the paired diagnostic breadcrumbs say
+`entry_point=settings_change action=start_tts_playback`, both under one
+`correlation_id=d1657584-…` — it simply is not on the analytics event. Recorded, not
+investigated.
+
+**3b, three changes as fast as possible.** Three `input tap` on Rate + back to back
+(1.2× → 1.5×, all three landed within 90 ms). **Still playing afterwards**, sentence 108,
+Rate 1.5×, no crash, **no `failed` outcome anywhere**
+(`D1-f07-still-playing-after-three-quick-changes.png`). Every operation line of this step,
+in order — three attempts, each with its own correlation id, the first two superseded:
+
+    20:31:51.747 tts_rate_changed {rate=1.3}
+    20:31:51.748 tts_playback_operation {tts_outcome=attempted}                     # corr 1edb9e34
+    20:31:51.797 tts_rate_changed {rate=1.4}
+    20:31:51.798 tts_playback_operation {tts_outcome=cancelled, duration_ms=51,
+                                         tts_reason_code=operation_cancelled}       # corr 1edb9e34
+    20:31:51.799 tts_playback_operation {tts_outcome=attempted}                     # corr 970c299f
+    20:31:51.833 tts_rate_changed {rate=1.5}
+    20:31:51.834 tts_playback_operation {tts_outcome=cancelled, duration_ms=35,
+                                         tts_reason_code=operation_cancelled}       # corr 970c299f
+    20:31:51.835 tts_playback_operation {tts_outcome=attempted}                     # corr a0473e8f
+    20:31:52.187 tts_playback_operation {tts_outcome=succeeded, duration_ms=353}    # corr a0473e8f
+
+Three attempts, three terminal outcomes, one per correlation id, and no attempt got two —
+the supersede path behaves as `6e919edb` describes.
