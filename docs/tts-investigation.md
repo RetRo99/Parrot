@@ -383,6 +383,7 @@ effect on a user, not on the code.
 - **Confidence:** medium. The duplicate-collector mechanism is certain; what is unproven is which user action produces two live ViewModels. Raise it by starting TTS, rotating the device or re-entering the reader from Continue reading, and counting `tts_playback_operation` lines per correlation ID.
 - **Severity for a user:** analytics only for the duplicate; stuck state if the shared controller is closed under a live screen.
 - **How a test could catch it:** unit test at the ViewModel/Koin boundary asserting that `getOrCreateScope<ReaderScope>(bookUuid)` resolves the same `TtsController` for two ViewModels and that closing one does not close it for the other; manual: the rotation steps above with the debug analytics log.
+- **Fixed:** `489e85e0` and `bb53daa9` (run 5b). `ReaderScopeLease` (commonMain, `di/`) counts the holders of one book's scope: `ReaderViewModel` takes a hold when it first opens the scope, gives it back in `onCleared`, and registers `BookController`, `AudioController`, `TtsController` and `ReaderSyncCoordinator` with the lease instead of its own `addCloseable`, so the screen cleared first no longer closes them under the survivor. The duplicate report is gone separately: the reader-scoped `TtsPlaybackOperationReports` remembers (correlation id, outcome) pairs — the last 64, oldest dropped — and `ReaderTtsOperationReporter` reports nothing for a pair that has been reported, so one start gives one event and one breadcrumb however many screens are collecting. Tests committed failing in `816782f8` (`The surviving reader's controller was closed under it`) and `70405f01` (`expected:<[attempted, succeeded]> but was:<[attempted, attempted, succeeded, succeeded]>`). What makes two readers possible is now known and is not a configuration change: `rememberHomeTabEntries` (`HomeTabNavDisplay.kt:18-54`) keeps a `ViewModelStore` per back-stack entry **for every tab**, not only the selected one, and `HomeNavigationStateHolder.navigateTo` (`:128-130`) appends without de-duplicating. So a reader left alive in one tab plus a second open of the same book in another tab — from the Continue-reading bubble (`HomeNavigation.kt:766-776`), the now-playing card (`:305-315`), the library or a series (`:344`, `:389`, `:451`, `:519`) — gives two live ViewModels. A deep link uses `navigateToReplacing`, which only clears Reader entries from its own tab (`HomeNavigationStateHolder.kt:170-182`), so it can do the same. A rotation cannot: `rememberViewModelStoreNavEntryDecorator` hands the same store back for an unchanged entry key.
 
 ### TTS-F11 — Only the playback-operations collector is guarded against a second initialisation
 
@@ -394,6 +395,7 @@ effect on a user, not on the code.
 - **Confidence:** low that a second `initTts` is reachable today — the two call sites are mutually exclusive branches and `retry()` only runs after a failure that never reached `initTts`. High that nothing structurally prevents it, which makes it a latent regression beside a guard that exists for one sibling.
 - **Severity for a user:** analytics only (double-counted recap sentences).
 - **How a test could catch it:** ViewModel unit test that drives initialisation twice and asserts `onSentenceFinished` fires once per finished sentence.
+- **Closed by run 5a, no product change (run 5b).** `d031cd37` moved the collectors into `ReaderTtsSetup.run`, which starts them once per run, so the question is only whether a second `initTts` is reachable. It is not. The two call sites are the mutually exclusive branches of one `openPublication`, `initTts` is the last statement of each, and nothing after it can throw into the `onFailure` that sets `error`. `error` is written in exactly two places (`ReaderViewModel.kt:775`, `:909`), both on an open failure that happens before `initTts`, and `retry()` is reachable only from the error view. No failing test could be written for it, so no product code changed. It stays a latent regression: nothing structurally stops a third caller of `initTts` from duplicating four collectors and double-counting recap sentences.
 
 ### TTS-F12 — The cache trim can delete a WAV that is already queued in the player
 
@@ -488,6 +490,7 @@ effect on a user, not on the code.
 - **Confidence:** medium.
 - **Severity for a user:** analytics only, with a cosmetic leftover.
 - **How a test could catch it:** ViewModel unit test that cancels via the holder going `Idle` and asserts `pendingTtsVoiceId` is cleared; manual: the trigger above, then inspect the card.
+- **Fixed:** `b3cf627c` (run 5b). A preparation now ends as `Prepared`, `Failed` or `Cancelled`, and `resolveTtsVoicePreparationEnd` (commonMain, `reader/`, in the pattern of `ReaderTtsSetup`) is the one place that decides what that does to the sheet: a cancellation — the sheet's Cancel, the notification's Cancel, or a delete of the pack being installed — clears the pending voice selection, a failure clears it and shows the failed card, and a completion selects the voice that was waiting. `prepareTtsVoice` lost its `onPrepared` callback; every caller used it to select the voice the user had tapped, which is `pendingTtsVoiceId`, so the decision reads that. Tests committed failing in `26157b6e` (`The sheet keeps a selection that cannot happen`, twice). **No outcome is reported for a user-cancelled download**, deliberately: the sheet's own Cancel reports nothing, and the notification path was made to do the same thing rather than a different one. Run 4's leftover — a card showing a failed download after the user deleted the pack mid-download — is fixed here too: a cancelled preparation is not reported as a failure even when the install reported one first, and starting a delete clears the banner for that pack. One consequence to watch: retrying a failed download no longer re-selects the voice, because the failure cleared the pending selection.
 
 ### TTS-F20 — Deleting a pack is not mutually excluded from the service that is downloading it
 
@@ -517,7 +520,52 @@ effect on a user, not on the code.
 
 ## 4. Status of the three logged bugs
 
-### QA-BUG-0049 — logout leaves playback running: **PRESENT**
+### QA-BUG-0049 — logout leaves playback running: **FIXED** (`ee2cb24c`, completed in run 5b)
+
+The product rule is decision 4: logging out of a server stops the audio that belongs to
+that server and leaves other audio alone. `ee2cb24c` implemented it —
+`NowPlayingProvider.stopForServer` (commonMain, `playback/`) stops only when
+`nowPlayingInfo.serverId` matches, and `HomeNavigationViewModel.stopPlaybackForServer`
+(`:87-110`) wraps it in breadcrumbs — so the paragraphs below, written before it, are out
+of date. Run 5b checked each of the three questions it leaves open and closed the two
+that were gaps.
+
+**a. Does every logout entry point reach it?** Two of three did not.
+`ServerManagementViewModel.onLogoutClick` (`:193`) did, through `beforeMutation`.
+`signOutEverything` (`:156`) reached no playback path at all, and neither does
+`LogoutUseCase.logoutAll` (auth domain) — whose only caller,
+`RootNavigationViewModel.handleLogout` (`composeApp/.../RootNavigationViewModel.kt:386`),
+is wired to `RootNavigationIntent.OnLogout`, which nothing in the UI dispatches today.
+Fixed in `32fb773f`: `signOutEverything` asks the same per-server stop for every remote
+server before it signs out, and never for the local library, so a local book keeps reading.
+Only one media session can be active, so at most one of those stops anything. Test
+committed failing in `b53aa6d6` (`expected:<[storyteller, abs]> but was:<[]>`).
+
+**b. Is device-voice read-aloud covered?** Already yes, and no product code changed for it.
+Read-aloud always runs with the media notification: `startLoadedPlayback`
+(`AndroidTtsController.kt:620-660`) refuses without the notification permission and always
+asks for `showPlaybackNotification = true`, so `ensureNotificationPlayer`
+(`TtsReadAloudEngine.kt:488-511`) always calls `setCurrentPlayingBook` with
+`epubPublication.serverId` — the server's id for a server book, `LOCAL_SERVER_ID` for one
+from the local library. On its own player read-aloud reports nothing as now playing, but it
+never starts there. Four of the five tests in `LogoutStopsReadAloudTest` passed before any
+fix and are kept.
+
+**c. Does `stop()` stop the read-aloud engine?** It did not. The engine is a `@Single` that
+outlives the reader on purpose and the reader-scoped controller's `close()`
+(`AndroidTtsController.kt:634-640`) deliberately never calls `engine.stop()`, so
+`MediaPlaybackController.stop()` silenced the service player while leaving the engine with a
+live session, its synthesis in flight and its claim on that player — from which it can
+restart. Fixed in `32fb773f`: `AndroidNowPlayingProvider.stop()` stops the engine through a
+`ReadAloudPlayback` seam as well as the media session, so the one existing rule reaches
+both and no second mechanism was added. Test committed failing in `b53aa6d6`
+(`Read-aloud keeps running after the logout`).
+
+Not done here and still open: the server-data wipe on logout (the `TODO` in
+`LogoutUseCase.invoke`), and the on-device check, which needs the owner's account — added to
+the run 6 list in `tts-test-plan.md`.
+
+The pre-`ee2cb24c` reading, kept for the record:
 
 Nothing on either logout path touches playback. `ServerManagementViewModel.signOutEverything`
 (`feature/settings/ui/src/commonMain/kotlin/com/retro99/settings/ui/servers/ServerManagementViewModel.kt:156-172`)
@@ -564,7 +612,25 @@ QA-BUG-0095 has no open case left. The bookkeeping now lives in
 `TtsPlaybackAttempts` (androidMain, `navigator/`), covered by
 `TtsPlaybackAttemptsTest`.
 
-### QA-BUG-0100 — one successful start reported twice: **PRESENT** (cause narrowed)
+### QA-BUG-0100 — one successful start reported twice: **FIXED** (`bb53daa9`, run 5b)
+
+The remaining cause below was the right one and is now closed. The duplicate was
+reproduced at the reporting boundary — two collectors of one shared flow gave
+`[attempted, attempted, succeeded, succeeded]` under one correlation id, exactly what the
+Samsung recorded — and the mapping from an operation to its event and breadcrumb moved out
+of `ReaderViewModel` into `ReaderTtsOperationReporter`, beside a reader-scoped
+`TtsPlaybackOperationReports` that remembers which (correlation id, outcome) pairs have been
+reported. A second reader of the same book shares that record and reports nothing. The
+record holds the last 64 pairs — 32 attempts, each with one `attempted` and one terminal
+outcome — and drops the oldest past that, so a long reading session cannot grow it. What the
+outcome does to a screen, the failure banner and the usage session, stays per screen,
+because each screen has its own. Tests committed failing in `70405f01`. A separate
+composeApp test (`ReaderScopeWiringTest`, `9a08572d`) now resolves the reader scope from the
+real generated graph; nothing did before, and it immediately caught the record being
+annotated `@Scope` without `@Scoped`, which would have thrown
+`NoDefinitionFoundException` the first time a reader collected an operation.
+
+The reading that led there, kept for the record:
 
 Not fixed, but the candidate causes can now be separated.
 

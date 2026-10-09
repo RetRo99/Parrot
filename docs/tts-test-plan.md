@@ -26,7 +26,8 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | 3b | The rest of the small pure-logic gaps, plus the sentence chunker cases | F08, F09, F13, F18 | Sonnet | done |
 | 4 | Voice pack download and delete | F04, F05, F20 | Opus | done |
 | 5a | Read-aloud stopping and the highlight it leaves | F23, F24, F14 | Opus | done |
-| 5b | Two readers, the pending voice, logout, the chapter mismatch | QA-0049, QA-0100, F10, F11, F19, F25 | Opus | not started |
+| 5b | Two readers, the pending voice, logout | QA-0049, QA-0100, F10, F11, F19 | Opus | done |
+| 5c | The stop when the page and the narrated chapter differ; the start deadline | F25, F15, decision 5 | Opus | not started |
 | 6 | Manual device pass and new cases in `manual-qa-test-plan.md` | all | Sonnet, with the owner's phone | |
 
 Run 1 is first because it is a crash on every Kokoro synthesis and it blocks every other
@@ -240,16 +241,27 @@ pure suspend function the controller hands its four moves to, following run 2b's
 with `TtsPlaybackAttempts`: the attempt bookkeeping that gives "one attempt, one outcome"
 is already tested there, so these tests cover only the walk.
 
-### Run 5b: two readers, the pending voice, logout, the chapter mismatch — not started
+### Run 5b: two readers, the pending voice, logout — done
 
 - Two reader screens for one book: one terminal event per start; closing one does not
-  break the other (F10, QA-0100).
+  break the other (F10, QA-0100). **Done.** `ReaderScopeLeaseTest` at the Koin level with a
+  minimal module, `ReaderTtsOperationReporterTest` with two collectors of one shared flow,
+  and `ReaderScopeWiringTest` against the real app graph. Fixes `489e85e0`, `bb53daa9`,
+  `9a08572d`.
 - Starting TTS setup twice gives one finished-sentence callback per sentence (F11).
-- Logout while reading: behaviour per product decision 4 (QA-0049).
-- A cancelled or failed pack download clears the pending voice selection and reports one
-  cancelled outcome (F19). Run 4 left one case for this: a delete during a download makes
-  the install report failure rather than cancellation, so the card shows a failed
-  download after the user deleted the pack themselves.
+  **Closed by run 5a, no test and no product change:** a second `initTts` is not reachable
+  — see TTS-F11 in `tts-investigation.md` for why.
+- Logout while reading: behaviour per product decision 4 (QA-0049). **Done.** The rule was
+  already `ee2cb24c`'s; two of its three entry/coverage questions were gaps and are fixed in
+  `32fb773f`. `SignOutEverythingPlaybackTest`, `LogoutStopsReadAloudTest`. The device check
+  is in run 6 because it needs the owner's account.
+- A cancelled or failed pack download clears the pending voice selection (F19), and run 4's
+  leftover — a delete during a download leaving the card showing a failed download — with
+  it. **Done,** `b3cf627c`, `ReaderTtsVoicePreparationEndTest`. A user-cancelled download
+  reports no outcome, which is what the sheet's own Cancel reports.
+
+### Run 5c: the stop when the page and the narrated chapter differ; the start deadline — not started
+
 - A player "ended" callback arriving after a stop starts nothing (F25, found in run 2b).
 - The chapter on screen and the chapter being narrated can be different ones: the sentence
   highlight then navigates across the spine boundary, the locator href changes, and the
@@ -270,6 +282,8 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
 - Audio focus lost to a call or another player, during narration and during a word.
 - Tap a word during narration, dismiss, tap another immediately.
 - Rotate the device and re-enter the reader while reading; count events per start.
+- Log out of a server while its book is being read aloud, and while a local book is being
+  read aloud.
 - Sleep timer expiry in foreground and with the screen locked.
 - The Listen button opening the sheet: **settled on the device, 2026-10-09, no longer a
   blocker.** All three routes work on the Samsung — a short tap shows the compact
@@ -307,8 +321,13 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
    list never waits more than about 5 seconds for the manifest (F04), and deleting a pack
    while it downloads must end with the pack cleanly not installed and no download still
    running (F20).
-4. QA-0049: should logging out of a server stop narration? Recommended: stop it only
-   when the book being read came from that server; a local book keeps reading.
+4. QA-0049: should logging out of a server stop narration? **Already implemented by
+   `ee2cb24c`: only the logged-out server's audio stops.** `NowPlayingProvider.stopForServer`
+   stops only when the active session's `serverId` matches, so a local book and another
+   server's book keep reading. Run 5b completed it (`32fb773f`): "sign out of everything"
+   asks the same per-server stop for every remote server and never for the local library,
+   and the stop reaches the read-aloud engine as well as the media session. The on-device
+   check needs the owner's account and is in the run 6 list.
 5. F15: should loading the model count against the 30 second start deadline?
    Recommended: no, arm the deadline after the engine is loaded.
 6. Supertonic terms must be accepted on the test phone by the owner before any
