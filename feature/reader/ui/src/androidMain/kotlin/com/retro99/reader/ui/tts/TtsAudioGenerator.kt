@@ -25,8 +25,35 @@ interface TtsSentenceAudioSource {
 
 @Single(binds = [TtsAudioGenerator::class, TtsSentenceAudioSource::class])
 class TtsAudioGenerator(
+    synthesizer: TtsSynthesizer,
+    cache: TtsAudioCache,
+) : TtsSentenceAudioSource {
+
+    private val core = TtsAudioGeneratorCore(synthesizer = synthesizer, cache = cache.store)
+
+    override suspend fun synthesize(
+        text: String,
+        voiceId: String?,
+        rate: Float,
+        pitch: Float,
+    ): TtsSynthesisResult = core.synthesize(text = text, voiceId = voiceId, rate = rate, pitch = pitch)
+
+    /** The cached WAV for identical text and parameters, or null. Skips the synthesis gate. */
+    fun findCached(
+        text: String,
+        voiceId: String?,
+        rate: Float,
+        pitch: Float,
+    ): File? = core.findCached(text = text, voiceId = voiceId, rate = rate, pitch = pitch)
+}
+
+/**
+ * The generation logic, with the cache as the Context-free [TtsAudioCacheStore], so a host
+ * test can drive synthesis outcomes against a real cache directory.
+ */
+internal class TtsAudioGeneratorCore(
     private val synthesizer: TtsSynthesizer,
-    private val cache: TtsAudioCache,
+    private val cache: TtsAudioCacheStore,
 ) : TtsSentenceAudioSource {
 
     private val lockRegistryMutex = Mutex()
@@ -78,7 +105,6 @@ class TtsAudioGenerator(
         }
     }
 
-    /** The cached WAV for identical text and parameters, or null. Skips the synthesis gate. */
     fun findCached(
         text: String,
         voiceId: String?,
