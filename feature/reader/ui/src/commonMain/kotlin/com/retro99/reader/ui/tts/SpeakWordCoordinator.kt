@@ -117,9 +117,9 @@ class SpeakWordCoordinator(
     }
 
     fun stop() {
-        val running = job ?: return
-        job = null
-        running.cancel()
+        // Cancel without blocking the caller, and keep the job: a speak() right after this must
+        // still join the cancelled request's cleanup, or that cleanup lands on the new word.
+        job?.cancel()
     }
 
     fun close() = stop()
