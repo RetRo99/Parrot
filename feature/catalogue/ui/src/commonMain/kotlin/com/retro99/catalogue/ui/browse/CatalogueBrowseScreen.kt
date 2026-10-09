@@ -36,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
@@ -99,6 +100,9 @@ import com.retro99.base.ui.compose.EmberTextField
 import com.retro99.base.ui.compose.EmberTopBar
 import com.retro99.catalogue.ui.add.catalogueDeviceName
 import com.retro99.catalogue.ui.cover.CatalogueCover
+import com.retro99.catalogue.ui.downloads.ListDownloadState
+import com.retro99.catalogue.ui.publication.catalogueMegabytes
+import com.retro99.base.ui.compose.EmberProgress
 import com.retro99.catalogue.ui.sources.CataloguePasswordField
 import com.retro99.translations.PluralRes
 import com.retro99.translations.StringRes
@@ -119,6 +123,8 @@ class CatalogueBrowseActions(
     val onChooseFilter: (Int) -> Unit = {},
     val onCloseFilter: () -> Unit = {},
     val onOpenBook: (String) -> Unit = {},
+    val onDownloadBook: (String) -> Unit = {},
+    val onCancelDownload: (String) -> Unit = {},
     val onOpenFolder: (String) -> Unit = {},
     val onSeeAll: (String) -> Unit = {},
     val onLoadMore: () -> Unit = {},
@@ -522,7 +528,7 @@ private fun LoadedPage(
         if (content.earlier != CataloguePaging.None) {
             item(key = "earlier") { PagingRow(content.earlier, earlier = true, onLoad = actions.onLoadEarlier) }
         }
-        items(content.books, key = { it.key }) { book -> BookRow(book) { actions.onOpenBook(book.key) } }
+        items(content.books, key = { it.key }) { book -> BookRow(book, actions) }
         if (content.more != CataloguePaging.None) {
             item(key = "more") { PagingRow(content.more, earlier = false, onLoad = actions.onLoadMore) }
         }
@@ -654,23 +660,50 @@ private fun tellingText(telling: CatalogueTellingLine): String = buildList {
 }.joinToString(" · ")
 
 @Composable
-private fun BookRow(book: CatalogueBookRow, onClick: () -> Unit) {
+private fun BookRow(book: CatalogueBookRow, actions: CatalogueBrowseActions) {
     val author = book.author ?: stringResource(StringRes.catalogue_unknown_author)
     val telling = book.telling?.let { tellingText(it) }
     val inLibrary = stringResource(StringRes.catalogue_in_library)
-    // "<title>, <author>, <telling line>, <status>", without the tick.
-    val label = listOfNotNull(book.title, author, telling, inLibrary.removePrefix("✓").trim().takeIf { book.inLibrary }).joinToString(", ")
-    Column(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick).padding(horizontal = Side).clearAndSetSemantics { contentDescription = label }) {
+    val download = book.download
+    val status = when (download) {
+        ListDownloadState.Available -> null
+        ListDownloadState.GettingReady -> stringResource(StringRes.catalogue_state_getting_ready)
+        ListDownloadState.Waiting -> stringResource(StringRes.catalogue_state_waiting)
+        ListDownloadState.Adding -> stringResource(StringRes.catalogue_state_adding)
+        ListDownloadState.InLibrary -> inLibrary
+        is ListDownloadState.Downloading -> download.total?.takeIf { it > 0 }?.let { "${(download.bytes * 100 / it).coerceIn(0, 100)}%" }
+            ?: stringResource(StringRes.catalogue_downloading_so_far, catalogueMegabytes(download.bytes))
+    }
+    val label = listOfNotNull(book.title, author, telling, status?.removePrefix("✓")?.trim()).joinToString(", ")
+    Column(Modifier.fillMaxWidth().padding(horizontal = Side)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.weight(1f).clickable(role = Role.Button) { actions.onOpenBook(book.key) }.clearAndSetSemantics { contentDescription = label }, verticalAlignment = Alignment.CenterVertically) {
             CatalogueCover(book.cover, book.title, Modifier.size(width = 52.dp, height = 76.dp))
             Column(Modifier.weight(1f).padding(start = 14.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(book.title, style = Ember.type.meta.copy(fontSize = 17.sp, lineHeight = 21.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(author, style = Ember.type.meta.copy(fontSize = 14.sp), color = Ember.colors.ink2, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (telling != null) Text(telling, style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 17.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink)
-                if (book.inLibrary) Text(inLibrary, style = Ember.type.meta.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = if (Ember.style.isEink) Ember.colors.ink else Ember.colors.success)
+                if (download is ListDownloadState.Downloading && download.total != null && download.total > 0) {
+                    Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        EmberProgress(progress = (download.bytes.toFloat() / download.total).coerceIn(0f, 1f), modifier = Modifier.weight(1f), height = Ember.style.detailProgressHeight)
+                        Text(status.orEmpty(), style = Ember.type.meta.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold), color = Ember.colors.ink2)
+                    }
+                } else if (status != null) Text(status, style = Ember.type.meta.copy(fontSize = 14.sp, lineHeight = 18.sp, fontWeight = if (download == ListDownloadState.InLibrary) FontWeight.Bold else FontWeight.Normal),
+                    color = if (download == ListDownloadState.InLibrary && !Ember.style.isEink) Ember.colors.success else Ember.colors.ink2)
             }
-            // Room for the row's download button, its progress and its cancel button.
-            Spacer(Modifier.width(ROW_ACTION_WIDTH))
+            }
+            Box(Modifier.width(ROW_ACTION_WIDTH), contentAlignment = Alignment.CenterEnd) {
+                if (download != ListDownloadState.Adding && download != ListDownloadState.InLibrary) {
+                    val available = download == ListDownloadState.Available
+                    val actionLabel = if (!available) stringResource(StringRes.catalogue_a11y_cancel_download_of, book.title)
+                        else if (telling == null) stringResource(StringRes.catalogue_a11y_download, book.title)
+                        else stringResource(StringRes.catalogue_a11y_download_telling, book.title, telling)
+                    IconButton(onClick = { if (available) actions.onDownloadBook(book.key) else actions.onCancelDownload(book.key) },
+                        modifier = Modifier.size(48.dp).border(Ember.style.border, Ember.colors.line, CircleShape)) {
+                        Icon(if (available) Icons.Outlined.Download else Icons.Outlined.Close, actionLabel, tint = Ember.colors.ink2, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
         }
         HorizontalDivider(color = Ember.colors.line, thickness = if (Ember.style.isEink) 2.dp else 1.dp)
     }

@@ -16,6 +16,7 @@ import com.retro99.catalogue.ui.browse.CataloguePageFailure
 import com.retro99.catalogue.ui.browse.CataloguePaging
 import com.retro99.catalogue.ui.browse.CatalogueShelf
 import com.retro99.catalogue.ui.browse.CatalogueTellingLine
+import com.retro99.catalogue.ui.downloads.ListDownloadState
 
 /**
  * The catalogue browser's boards (design/ember/catalogues/screens/opds-browse … editionsList),
@@ -68,6 +69,14 @@ private fun failed(reason: CataloguePageFailure) =
     CatalogueBrowseState(catalogueName = GUTENBERG, title = "By subject", content = CatalogueBrowseContent.Failed(reason))
 
 private fun browseState(view: String): CatalogueBrowseState = when (view) {
+    "listStates" -> CatalogueBrowseState(catalogueName = GUTENBERG, title = "Popular", content = CatalogueBrowseContent.Loaded(books = listOf(
+        row("The War of the Worlds", "H. G. Wells").copy(download = ListDownloadState.GettingReady),
+        row("Middlemarch", "George Eliot").copy(download = ListDownloadState.Downloading(420_000, 1_000_000)),
+        row("The Time Machine", "H. G. Wells").copy(download = ListDownloadState.Downloading(1_400_000, null)),
+        row("Emma", "Jane Austen").copy(download = ListDownloadState.Waiting),
+        row("Dracula", "Bram Stoker").copy(download = ListDownloadState.Adding),
+        row("Treasure Island", "Robert Louis Stevenson", inLibrary = true),
+    )))
     "browse" -> CatalogueBrowseState(catalogueName = GUTENBERG, searchAvailable = true, content = root)
     "localNet" -> CatalogueBrowseState(catalogueName = GUTENBERG, searchAvailable = true, content = root, localNetworkHost = "192.168.1.20")
     "browsePlain" -> CatalogueBrowseState(

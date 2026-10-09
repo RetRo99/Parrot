@@ -26,6 +26,7 @@ parser.add_argument("--output", default="design/screens")
 parser.add_argument("--themes", nargs="+", default=["day", "eink"], choices=["day", "eink", "night"])
 parser.add_argument("--views", nargs="+", default=None, help="Only these fixtures (default: all)")
 parser.add_argument("--list", action="store_true", help="Print the fixtures and exit")
+parser.add_argument("--skip-install", action="store_true", help="Use the fixture APK already installed on the target")
 args = parser.parse_args()
 if args.list:
     print("\n".join(fixtures))
@@ -69,7 +70,8 @@ run("wait-for-device")
 assert run("shell", "getprop", "sys.boot_completed", capture=True).strip() == b"1", "Target has not booted yet"
 # A fresh emulator covers the first full-screen app with a "Viewing full screen" notice.
 run("shell", "settings", "put", "secure", "immersive_mode_confirmations", "confirmed")
-run("install", "--no-streaming", "-r", str(root / "tools/ember-fixtures/build/outputs/apk/debug/ember-fixtures-debug.apk"))
+if not args.skip_install:
+    run("install", "--no-streaming", "-r", str(root / "tools/ember-fixtures/build/outputs/apk/debug/ember-fixtures-debug.apk"))
 for theme in args.themes:
     for view in args.views or fixtures:
         # The fixture registry is UTF-8 Kotlin source; decode Kotlin/JSON-style

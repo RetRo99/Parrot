@@ -62,6 +62,10 @@ class CatalogueFixture(val view: String, val expect: String, val content: @Compo
 private fun fixture(view: String, expect: String, content: @Composable () -> Unit) = CatalogueFixture(view, expect, content)
 
 val catalogueFixtures: List<CatalogueFixture> = listOf(
+    fixture(view = "downloads", expect = "Stopped when Parrot closed") { CatalogueDownloadsBoard("downloads") },
+    fixture(view = "downloadsFailed", expect = "the connection was lost") { CatalogueDownloadsBoard("downloadsFailed") },
+    fixture(view = "downloadsEmpty", expect = "No downloads") { CatalogueDownloadsBoard("downloadsEmpty") },
+    fixture(view = "listStates", expect = "Getting ready…") { CatalogueBrowseBoard("listStates") },
     fixture(view = "detail", expect = "Other files (3)") { CatalogueBookBoard("detail") },
     fixture(view = "detailWait", expect = "Two other books are downloading.") { CatalogueBookBoard("detailWait") },
     fixture(view = "detailWaitOne", expect = "Another book is downloading.") { CatalogueBookBoard("detailWaitOne") },

@@ -25,6 +25,7 @@ fun CatalogueCover(
     image: CatalogueImageModel?,
     title: String,
     modifier: Modifier = Modifier,
+    showTitle: Boolean = true,
 ) {
     // The loader builds its own cache key from profile, catalogue and access generation.
     EmberCover(data = image, cacheKey = null, contentDescription = null, modifier = modifier, fallback = {
@@ -34,7 +35,7 @@ fun CatalogueCover(
             contentAlignment = Alignment.BottomStart,
         ) {
             val size = (maxWidth.value * .12f).coerceIn(6f, 16f)
-            Text(
+            if (showTitle) Text(
                 title,
                 style = Ember.type.screenTitle.copy(fontSize = size.sp, lineHeight = (size * 1.15f).sp, fontWeight = FontWeight.Bold),
                 color = Ember.colors.catalogueCoverInk,

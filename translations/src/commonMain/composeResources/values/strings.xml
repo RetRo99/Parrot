@@ -1766,6 +1766,9 @@
     <string name="catalogue_get_books" tools:ignore="MissingTranslation">Get books</string>
     <string name="catalogue_browse" tools:ignore="MissingTranslation">Browse</string>
     <string name="catalogue_downloads_title" tools:ignore="MissingTranslation">Downloads</string>
+    <string name="catalogue_downloads_empty_title" tools:ignore="MissingTranslation">No downloads</string>
+    <string name="catalogue_downloads_empty_body" tools:ignore="MissingTranslation">Books you download from a catalogue appear here while they download. Finished books are in your Library.</string>
+    <string name="catalogue_downloads_footer" tools:ignore="MissingTranslation">Finished downloads are in your Library. They stay there even if you remove the catalogue.</string>
     <string name="catalogue_loading_more" tools:ignore="MissingTranslation">Loading more…</string>
     <string name="catalogue_load_more" tools:ignore="MissingTranslation">Load more</string>
     <!-- §2 A1 Choose a file. %1$d is the file's number in catalogue order. -->

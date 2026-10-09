@@ -101,6 +101,7 @@ data class CatalogueBookRow(
     val inLibrary: Boolean,
     /** Only for a row that has a same-title sibling in the list. */
     val telling: CatalogueTellingLine?,
+    val download: com.retro99.catalogue.ui.downloads.ListDownloadState = if (inLibrary) com.retro99.catalogue.ui.downloads.ListDownloadState.InLibrary else com.retro99.catalogue.ui.downloads.ListDownloadState.Available,
 )
 
 data class CatalogueFolderRow(val key: String, val title: String, val subtitle: String?)
