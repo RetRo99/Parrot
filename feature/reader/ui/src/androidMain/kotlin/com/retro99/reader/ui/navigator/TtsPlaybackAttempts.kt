@@ -47,6 +47,12 @@ internal class TtsPlaybackAttempts(
     private var active: TtsPlaybackAttempt? = null
     private var previousAttemptFailed = false
 
+    /**
+     * Sentence a voice, speed or pitch change was made on while narration was paused. The
+     * next play press restarts it rather than resuming audio made with the old setting.
+     */
+    private var pausedSettingsChangeIndex: Int? = null
+
     private val lifecycle = TtsPlaybackOperationLifecycle(
         scope = scope,
         startupTimeoutMs = startupTimeoutMs,
@@ -109,9 +115,24 @@ internal class TtsPlaybackAttempts(
         resume: suspend (TtsPlaybackAttempt) -> TtsPlaybackFailureReason?,
         freshStart: suspend (TtsPlaybackAttempt) -> TtsPlaybackFailureReason?,
     ) {
+        // Only while the engine still holds that sentence: a chapter change stops it.
+        val pausedIndex = pausedSettingsChangeIndex
+            ?.takeIf { index -> index == engine.currentSentenceIndex }
+        pausedSettingsChangeIndex = null
         val isResuming = engine.currentSentence.value != null
         request(if (isResuming) TtsPlaybackAction.RESUME else TtsPlaybackAction.CONTROLS) { attempt ->
-            if (isResuming) resume(attempt) else freshStart(attempt)
+            when {
+                // The audio in the player was made with the old setting: synthesise the
+                // paused sentence and everything after it again, never resume (TTS-F06).
+                pausedIndex != null -> {
+                    armStartupTimeout(attempt)
+                    restartAtIndex(pausedIndex)
+                    null
+                }
+
+                isResuming -> resume(attempt)
+                else -> freshStart(attempt)
+            }
         }
     }
 
@@ -125,7 +146,9 @@ internal class TtsPlaybackAttempts(
                 restartAtIndex(index)
             }
         } else {
-            engine.stop()
+            // The position is kept: the next play starts this same sentence, from its
+            // start, with the new setting (TTS-F06). engine.stop() threw it away.
+            pausedSettingsChangeIndex = index
         }
     }
 
@@ -162,6 +185,7 @@ internal class TtsPlaybackAttempts(
     }
 
     fun cancelActive() {
+        pausedSettingsChangeIndex = null
         val attempt = active ?: return
         lifecycle.cancelPendingRequest()
         finishCancelled(attempt, TtsPlaybackFailureReason.OPERATION_CANCELLED)
@@ -169,6 +193,7 @@ internal class TtsPlaybackAttempts(
 
     private fun begin(action: TtsPlaybackAction): TtsPlaybackAttempt? {
         if (active != null) return null
+        pausedSettingsChangeIndex = null
         val attempt = TtsPlaybackAttempt(
             correlationId = UUID.randomUUID().toString(),
             action = action,
