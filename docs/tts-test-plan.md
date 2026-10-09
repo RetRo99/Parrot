@@ -1,6 +1,6 @@
 # TTS testing plan
 
-Source: `docs/tts-investigation.md` (25 findings, TTS-F01 to TTS-F25, plus QA-BUG-0049,
+Source: `docs/tts-investigation.md` (27 findings, TTS-F01 to TTS-F27, plus QA-BUG-0049,
 0095, 0100). Android only; TTS on iPhone is a stub. Branch `tts/investigation`.
 
 ## How each run works
@@ -21,6 +21,7 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | 1 | Neural voice crash: callback shape, host guard test, device check | F22 | Opus | done |
 | 2a | Read-aloud engine seam and host harness; failures after start | F01, F02, QA-0095 (first two cases) | Opus | done |
 | 2b | Restart on a settings change; the chapter a completion belongs to | F06, F07, F16, QA-0095 (third case) | Opus | done |
+| 2c | The synthesis gap between sentences; the action on the restart's event | F26, F27 | Opus | done |
 | 3 | Small pure-logic gaps | F03, F08, F09, F12, F13, F17, F18, F21 | Sonnet | |
 | 4 | Voice pack download and delete | F04, F05, F19, F20 | Opus | |
 | 5 | Reader screen and lifecycle | F10, F11, F14, F23, F24, F25, QA-0049, QA-0100 | Opus | |
@@ -93,6 +94,26 @@ experiment (the neighbouring Search button opens on the identical gesture) are i
 `docs/manual-qa-evidence/2026-10-09/tts-run2b/`. The phone was therefore left on whatever
 voice and rate the previous run set, not on a System voice at 1.0.
 
+### Run 2c: the gap between sentences (`TtsSynthesisGapTest`)
+
+- In the gap (sentence N ended in the player, N+1 still being synthesised) the session
+  reports as running, although no audio is audible (F26).
+- A speed change in the gap: one `Attempted` and one terminal outcome with action
+  `settings_change`, and N+1 is synthesised at the new rate (F26).
+- Pause in the gap: the engine ends paused, the arriving clip does not start playing, and
+  the next play press plays it (F26).
+- The device's whole step-4b sequence: a speed change in the gap, then the chapter read to
+  its end at the new rate with one chapter completion — no silent stop (F26).
+- A play press after a clip was appended in the window before the end-of-queue callback
+  resumes inside the test's virtual time instead of sitting until the 30 s deadline (F26).
+- `tts_action=settings_change` survives the analytics allow-list, attempted and terminal
+  (F27).
+
+Done 2026-10-09. Five failing gap tests `32a23af4`, fix `b755094d`
+(`TtsReadAloudEngine.isSessionRunning`, the end-of-queue race in `onSentenceCompleted`,
+`resume()` on a player that has run out of audio); failing sanitizer test `12dd5dff`, fix
+`e4597018`. Reader ui host tests 317/317, analytics 39/39. No earlier test was edited.
+
 ### Run 3: pure logic
 
 - `TtsAudioGeneratorTest`: a failed synthesis that wrote bytes leaves no cache entry (F03).
@@ -159,6 +180,7 @@ Checks the investigation could not do, then a regression pass of sections 9, 10,
   the reveal (run 2b's timing) lands before the button has its hitbox and is swallowed.
   Reveal, wait ~0.9 s, then act. Still worth one human-finger pass, but nothing is blocked.
 - Cold first Kokoro start timed against the 30 second start deadline (F15).
+- Double-tap a sentence to start, and to jump while playing (manual QA case 160).
 
 ## Decisions for the owner
 

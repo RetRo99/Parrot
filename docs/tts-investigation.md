@@ -247,9 +247,10 @@ while a playlist references the trimmed file.
 
 ## 3. Findings
 
-Twenty-five findings in total: TTS-F01 to TTS-F21 below came out of the source read in
-step 2, TTS-F22 to TTS-F24 in §3b came out of the device run in step 3, and TTS-F25 in §3c
-came out of writing run 2b's tests. The Evidence
+Twenty-seven findings in total: TTS-F01 to TTS-F21 below came out of the source read in
+step 2, TTS-F22 to TTS-F24 in §3b came out of the device run in step 3, and TTS-F25 to
+TTS-F27 in §3c came out of writing run 2b's tests (F25) and of run 2b's device pass
+(F26 and F27). The Evidence
 line of each one says whether it was reproduced. Two of the source findings (TTS-F06 and
 TTS-F07) were confirmed on the device; their Evidence lines point at §5. Severity is the
 effect on a user, not on the code.
@@ -620,6 +621,30 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Severity for a user:** wrong audio (a chapter read from its start unasked).
 - **How a test could catch it:** the test above, once the fake only reports `ENDED` while it has items; the product guard is `if (currentIndex < 0) return` in `onSentenceCompleted`.
 - **Status:** not fixed — found by run 2b's TTS-F16 test, outside that run's scope. Candidate for run 5.
+
+### TTS-F26 — A slow voice's gap between sentences reads as "not playing", and narration can die in it
+
+- **Where:** three places, all at commit `433e03e8`. (1) `TtsPlaybackAttempts.kt:136-154` (`onSettingsChanged`) and `AndroidTtsController.kt:508-521` (`togglePlayback`) ask `engine.isPlaying.value`, which is the player's "audio is audible", not "a session is running"; the same question is asked by `AndroidTtsController.kt:160` (`ReadAloudWordInterruption.isPlayingNow`) and `:236-240` (`previewVoice`). (2) `TtsReadAloudEngine.kt:604-605` — `onSentenceCompleted()` returns when `player.hasNextItem()` is true, trusting the player to auto-advance to an item that was appended after it had already finished. (3) `TtsReadAloudEngine.kt:271-274` — `resume()` only calls `player.play()`, which does nothing on a player that has run out of audio.
+- **Trigger:** A voice slow enough that synthesis does not keep up with playback — Kokoro takes 2–9 s per sentence on the Samsung. The player then reaches `state=ENDED` for one to two seconds between sentences while the next clip is still being made. In that window: change the speed; or press pause; or let the next clip be appended in the few milliseconds before the end-of-queue callback is delivered.
+- **Expected:** A session waiting for its next sentence counts as playing for every decision. A speed change in the gap is the same tracked `settings_change` restart it is while audio is audible. A pause in the gap pauses, and the sentence being synthesised does not start playing when it arrives. Narration never ends silently mid-chapter: it continues, or one failure outcome is reported.
+- **Actual:** Three failures, with three different causes. (1) The speed change took the *paused* path: no `attempted`, no terminal outcome, no `settings_change`, and the clips already queued kept the old speed while the sheet showed the new one. (2) Twenty-three seconds later the player went `ENDED` with a clip appended behind it, `hasNextItem()` was true, so the engine returned and left it to a player that had already finished: narration stopped at sentence 145 of 151, mid-chapter, with no event of any kind. (3) The next play press called `resume()`, whose `play()` on the ended player did nothing, so the only thing that ever fired was the 30 s start deadline (`failed`, `start_timeout`); a second press recovered it.
+- **Evidence:** REPRODUCED — on the device in run 2b's re-run, `docs/manual-qa-evidence/2026-10-09/tts-run2b-device/NOTES.md` §"Step 4" 4b and "Differences from Expected" item 3, with `tts-run2b-device-logcat.txt` 20:35:50–20:39:50: `ENDED` 20:35:50.790, `tts_rate_changed{rate=1.3}` 20:35:50.851 with no operation pair, `speed=1.4` synthesis lines continuing to 20:36:13, the appended clip at 20:36:13.611 five milliseconds before `state=ENDED` at 20:36:13.616 and nothing after it, `attempted` 20:38:12.800 then `failed … start_timeout` 20:38:42.826. Then in host tests: all five cases of `TtsSynthesisGapTest` failed before the fix, committed failing in `32a23af4`.
+- **Confidence:** high — reproduced on the device and in five host tests, each failing on its own symptom.
+- **Severity for a user:** narration stops for good mid-chapter with nothing shown, and the obvious recovery (press play) waits 30 s and then reports a failure; a speed change in the gap is also silently not applied to the audio already queued.
+- **How a test could catch it:** a host test that sits inside the gap — a synthesis the test completes by hand, so sentence N has ended in the player while sentence N+1 is still being made — and then asks the session's own question, changes the speed, presses pause, or appends a clip just before the end-of-queue callback. That is `TtsSynthesisGapTest` (five cases).
+- **Fixed:** `b755094d` (run 2c) — `TtsReadAloudEngine.isSessionRunning` is the single answer to "is a session running", true from an accepted start until pause, stop, a failure or the end of the chapter, the gaps included; `isPlaying` keeps its meaning. `onSentenceCompleted` starts the next sentence itself from the clip already synthesised instead of trusting `hasNextItem()`, and `resume()` restarts the sentence when the player has reached the end of its queue. Tests committed failing in `32a23af4`.
+
+### TTS-F27 — `tts_playback_operation` for a settings-change restart carries no `tts_action`
+
+- **Where:** `lib/analytics/implementation/src/commonMain/kotlin/com/retro99/analytics/implementation/AnalyticsParameterSanitizer.kt:239-241` — `SAFE_TTS_ACTIONS` is a fail-closed allow-list and was never extended when `TtsPlaybackAction.SETTINGS_CHANGE` was added in run 2b, so the key is dropped at the provider boundary. The event itself does carry it (`AnalyticsEvent.kt:642-659`), and so does the ViewModel (`ReaderViewModel.kt:1145`).
+- **Trigger:** Change the voice, the speed or the pitch while narration plays, and read the `tts_playback_operation` events.
+- **Expected:** `tts_action=settings_change` on the `attempted` event and on the terminal one, as `controls` and `resume` starts both carry theirs.
+- **Actual:** No `tts_action` parameter at all on either event. The action survives only in the paired diagnostic breadcrumb, as `entry_point=settings_change`, so the analytics event cannot tell a settings-change restart from an unlabelled one.
+- **Evidence:** REPRODUCED — `tts-run2b-device-logcat.txt` 20:31:24.530 and 20:31:24.910 (System voice) and 20:40:06.991 and 20:40:17.935 (Kokoro), against `tts_action=resume` at 20:35:16.959; recorded in that run's "Differences from Expected" item 1. Host test `AnalyticsParameterSanitizerTest.ttsPlaybackSettingsChangeKeepsItsAction` committed failing in `12dd5dff`.
+- **Confidence:** high.
+- **Severity for a user:** none directly — it is a hole in the measurement of the restart path that run 2b added.
+- **How a test could catch it:** the sanitizer test above, one case per action value the product can emit.
+- **Fixed:** `e4597018` (run 2c) — `settings_change` added to `SAFE_TTS_ACTIONS`, which now lists every `TtsPlaybackAction.analyticsValue`.
 
 ---
 
