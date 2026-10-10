@@ -352,6 +352,98 @@ must be fixed rather than the test.
   `after update` trigger runs inside the same statement. Each change applies
   independently, so this is cosmetic.
 
-## Steps 2 to 7
+## Step 2: one file per chapter
+
+`TtsPreparedChapterArchive` (`feature/reader/ui/src/androidMain/.../tts/TtsPreparedChapterArchive.kt`),
+pure logic over `java.io.File` and `java.util.zip`, in the pattern of
+`TtsPreparedStore`: no Android `Context`, no Koin binding yet, nothing injected.
+`TtsPreparedChapterArchiveTest` (androidHostTest, beside `TtsPreparedStoreTest`) is 22
+cases on real temporary files. **21 of the 22 failed against the stub** before the
+implementation; the twenty-second — "a file that is not a zip at all leaves nothing
+behind" — passed fail-closed, because the stub rejected everything.
+
+### The format
+
+A **stored** zip. The audio is already AAC-LC in `.m4a`, so nothing is recompressed and
+the payload is byte-identical through the round trip; the test asserts the entry sizes
+come back at exactly 1,200 and 1,800 bytes.
+
+Entry order is part of the format: **`manifest.json` is always first**, so an unpack
+knows what it is allowed to accept before it writes a single byte. Then one `.m4a` per
+*distinct* sentence key, in manifest order. Duplicate keys share one audio file while
+the manifest keeps their repeated ordered positions — tested.
+
+The name carries hashes only:
+
+```
+tts-prepared/<sha256(chapter href)>/<sha256(voice id, model version, rate, pitch)>.zip
+```
+
+matching the shape the server constrains `relative_path` to. The settings hash
+length-prefixes each part (`"${voice.length}:$voice${model.length}:$model…"`) so no
+voice id can impersonate a delimiter, and rate and pitch are taken at the store's own
+hundredth precision so "same settings" means the same thing here as in
+`TtsPreparedStore.sameSettings`. A test asserts a title-bearing href
+(`"Chapter One: The Beginning.xhtml"`) leaves no trace in the path, and that the same
+chapter at another rate is a different file but the same chapter folder.
+
+**An incomplete chapter is never packed.** A manifest that is not `complete`, or has
+any sentence with a null duration, is refused with `CHAPTER_INCOMPLETE` and no file is
+written at all — tested, including that the destination does not exist afterwards.
+Staging files, `.part` files and stray files in the chapter folder are never packed;
+only `manifest.json` and the files the manifest lists.
+
+### The checks on unpack, each with a test written first
+
+Unpacking trusts nothing — not the entry names, not the declared sizes, not the central
+directory (it reads with `ZipInputStream`, so only local headers are ever consulted).
+
+| Rejection | What triggers it |
+| --- | --- |
+| `MANIFEST_NOT_FIRST` | anything before `manifest.json` |
+| `UNSUPPORTED_VERSION` | a `formatVersion` that is not 2 |
+| `IDENTITY_MISMATCH` | a manifest naming another book id, server id or chapter href |
+| `CHAPTER_INCOMPLETE` | not `complete`, no sentences, or a null duration |
+| `UNSAFE_ENTRY` | any name that is not a plain `<64 hex>.m4a` — covers `../escaped.m4a`, `/etc/passwd`, `nested/<key>.m4a` and `notes.txt` |
+| `UNLISTED_ENTRY` | a well-formed key the manifest does not list |
+| `DUPLICATE_ENTRY` | the same entry name twice |
+| `MISSING_ENTRY` | a sentence the manifest lists that the archive does not carry |
+| `SIZE_MISMATCH` | bytes actually read ≠ the manifest's `bytes` |
+| `TOO_LARGE` | the archive file, or the running total while reading, over the bound (64 MiB by default) |
+| `UNREADABLE` | not a zip, truncated, unparseable manifest, or a manifest with an invalid key, a non-positive size or a non-positive duration |
+
+Two of those deserve a note. **Escaping the target folder is impossible by
+construction**, not by sanitising: the only accepted names are a 64-character lowercase
+hex key plus `.m4a`, which cannot contain a separator or a `..` segment at all. And
+**the size bound is enforced while reading**, not only from the header, so a local
+header that lies about its length cannot fill the disk — the read stops at the declared
+sentence size and the mismatch is then reported.
+
+### What a rejected archive leaves behind
+
+**Nothing.** Everything is written into a staging folder `unpack-<uuid>` beside the
+target, and the target is touched only after every check above has passed — then the
+old folder is removed and the staging folder is moved into place. Three tests pin this:
+a truncated archive, a file that is not a zip at all, and a size-mismatched archive
+aimed at a folder that already holds a good chapter. The third asserts the installed
+audio is still byte-for-byte what it was. Every rejection path also asserts no
+`unpack-…` or `.part` folder survives anywhere under the test root.
+
+A round-trip test installs a packed chapter into a *second* `TtsPreparedStore` and
+reads it back through the store's own API: `state()` returns `Ready(3000)` and
+`lookup()` returns the right duration and file length. That is the real contract — the
+chapter has to be playable by the store on the other device, not merely present.
+
+### Known limits of this step
+
+- Replacing the destination is delete-then-move, so a crash in the gap between them
+  leaves the chapter absent rather than half-written. That matches
+  `TtsPreparedStore`'s own publish and is recoverable by downloading again.
+- No checksum of the archive as a whole is verified here; the cloud layer already
+  verifies a SHA-256 of the uploaded bytes, and Step 3 passes that through.
+- Nothing calls this yet. It has no Koin binding, because nothing injects it until
+  Step 3, so there is no new `@Single` to resolve from the real graph at this step.
+
+## Steps 3 to 7
 
 Not built.

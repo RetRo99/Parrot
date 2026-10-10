@@ -6,9 +6,10 @@ Commits this run (hash + subject, oldest first):
   bec5e38e docs(tts): step 0, the design answers and the baseline
   (one further commit records this hash in the report, which could not name
   its own parent before that parent existed)
-Steps complete this run, and steps complete in total (0-7): Steps 0 and 1 this
-run; 2 of 8 in total (Step 0, Step 1). Steps 2-7 not built. Step 1 is complete as
-written but NOT verified: none of its SQL has been run, see below.
+Steps complete this run, and steps complete in total (0-7): Steps 0, 1 and 2 this
+run; 3 of 8 in total (Step 0, Step 1, Step 2). Steps 3-7 not built. Steps 0 and 2
+are verified by running tests. Step 1 is complete as written but NOT verified at
+all: none of its SQL has been run, see below.
 Step 0: can prepared audio be one more cloud_book_files row (yes/no, what had to
 change); what an older Android app and the iPhone app do with an unknown media
 type (file and line), and how that risk is handled:
@@ -176,23 +177,81 @@ None was touched. Because nothing could be run, I cannot claim they still pass -
 any fails when the owner runs the suite, the wrapper changed existing behaviour and
 the wrapper must be fixed, never the test.
 Step 2: archive format; checks on unpack (list); what a rejected archive leaves
-behind: not built.
+behind:
+  TtsPreparedChapterArchive
+  (feature/reader/ui/src/androidMain/.../tts/TtsPreparedChapterArchive.kt), pure
+  logic over java.io.File and java.util.zip in the pattern of TtsPreparedStore - no
+  Context, nothing injected, no Koin binding yet. TtsPreparedChapterArchiveTest
+  (androidHostTest, beside TtsPreparedStoreTest) is 22 cases on real temporary
+  files. 21 of the 22 FAILED against the stub before the implementation; the
+  twenty-second ("a file that is not a zip at all leaves nothing behind") passed
+  fail-closed because the stub rejected everything.
+  Format: a STORED zip - the audio is already AAC-LC in .m4a, so nothing is
+  recompressed and the payload is byte-identical through the round trip (the test
+  asserts the entries come back at exactly 1,200 and 1,800 bytes). Entry order is
+  part of the format: manifest.json is ALWAYS FIRST, so an unpack knows what it may
+  accept before writing a byte; then one .m4a per distinct sentence key in manifest
+  order, with duplicate keys sharing one file while the manifest keeps their
+  repeated ordered positions. Name:
+  tts-prepared/<sha256(chapter href)>/<sha256(voice id, model version, rate,
+  pitch)>.zip - hashes only, matching the shape the server constrains relative_path
+  to. The settings hash length-prefixes each part so no voice id can impersonate a
+  delimiter, and rate and pitch are taken at the store's own hundredth precision so
+  "same settings" means the same thing here as in TtsPreparedStore.sameSettings. A
+  test asserts a title-bearing href ("Chapter One: The Beginning.xhtml") leaves no
+  trace in the path. An incomplete chapter is NEVER packed: CHAPTER_INCOMPLETE and
+  no file written at all. Staging, .part and stray files in the chapter folder are
+  never packed.
+  Checks on unpack, each with a test written first (it reads with ZipInputStream, so
+  the central directory is never consulted):
+   - MANIFEST_NOT_FIRST: anything before manifest.json.
+   - UNSUPPORTED_VERSION: a formatVersion that is not 2.
+   - IDENTITY_MISMATCH: a manifest naming another book id, server id or chapter href.
+   - CHAPTER_INCOMPLETE: not complete, no sentences, or a null duration.
+   - UNSAFE_ENTRY: any name that is not a plain <64 hex>.m4a. Covers ../escaped.m4a,
+     /etc/passwd, nested/<key>.m4a and notes.txt. Escaping the target folder is
+     impossible BY CONSTRUCTION, not by sanitising: the only accepted name is a
+     64-char lowercase hex key plus .m4a, which cannot contain a separator or a ..
+     segment at all.
+   - UNLISTED_ENTRY: a well-formed key the manifest does not list.
+   - DUPLICATE_ENTRY: the same entry name twice.
+   - MISSING_ENTRY: a sentence the manifest lists that the archive does not carry.
+   - SIZE_MISMATCH: bytes actually read not equal to the manifest's bytes.
+   - TOO_LARGE: the archive file, or the running total WHILE READING, over the bound
+     (64 MiB by default) - so a local header that lies about its length cannot fill
+     the disk.
+   - UNREADABLE: not a zip, truncated, unparseable manifest, or a manifest with an
+     invalid key, a non-positive size or a non-positive duration.
+  What a rejected archive leaves behind: NOTHING. Everything is written into a
+  staging folder unpack-<uuid> beside the target, and the target is touched only
+  after every check passed; then the old folder is removed and staging is moved into
+  place. Three tests pin this - a truncated archive, a file that is not a zip at
+  all, and a size-mismatched archive aimed at a folder that already holds a good
+  chapter (which asserts the installed audio is still byte-for-byte what it was).
+  Every rejection path also asserts no unpack-... or .part folder survives anywhere
+  under the test root. A round-trip test installs a packed chapter into a SECOND
+  TtsPreparedStore and reads it back through the store's own API: state() returns
+  Ready(3000) and lookup() returns the right duration and file length - the real
+  contract is that the chapter is playable by the store on the other device, not
+  merely present.
 Step 3: when a chapter is queued; states built (list); was the existing transfer
 engine reused (yes/no, how): not built.
 Step 4: how a device learns what the cloud holds; download states built (list):
 not built.
 Step 5: row states added (list); new string keys (list); where the "get more
 storage" hook is (file and function): not built.
-Does iPhone behave exactly as before (yes/no) and how I know: yes - not one line of
-Kotlin, Swift or Gradle configuration was changed this run. Everything added is SQL
-or documentation. The iOS reader test task was run anyway and is unchanged at
-357/357. Step 0 also established by reading that prepared-audio rows will be inert
-on iPhone once the feature exists, because iOS runs the same commonMain applier and
-the same LocalBooksRepository.kt:83 relative-path gate.
+Does iPhone behave exactly as before (yes/no) and how I know: yes. The only Kotlin
+added this run is one androidMain file and one androidHostTest file; no commonMain,
+iosMain, Swift or Gradle file was touched, so nothing new is even compiled into the
+iOS binary. The iOS reader test task is unchanged at 357/357 and
+:composeApp:linkDebugFrameworkIosSimulatorArm64 succeeds. Step 0 also established by
+reading that prepared-audio rows will be inert on iPhone once the feature exists,
+because iOS runs the same commonMain applier and the same LocalBooksRepository.kt:83
+relative-path gate.
 Existing app tests edited (name + why), or "none": none.
 Per module, before and after: <module> <passed>/<total> -> <passed>/<total> (one
 line each):
-  feature/reader/ui testAndroidHostTest 545/545 -> 545/545
+  feature/reader/ui testAndroidHostTest 545/545 -> 567/567 (+22, the archive)
   feature/reader/ui iosSimulatorArm64Test 357/357 -> 357/357
   feature/books/data testAndroidHostTest 121/121 -> 121/121
   feature/cloud-account/ui testAndroidHostTest 23/23 -> 23/23
@@ -200,14 +259,21 @@ line each):
   lib/server-parrot-cloud testAndroidHostTest 62/62 -> 62/62
   lib/analytics/implementation testAndroidHostTest 77/77 -> 77/77
   composeApp testAndroidHostTest 64/64 -> 64/64
-  (Counts read from build/test-results XML, zero failures/errors/skips. Before and
-  after are identical because no code was changed this run.)
-Does a test resolve the new classes from the real Koin graph (yes/no, name): no -
-no new class was added this run.
-App build results (Android assemble, iOS framework): not run this run, because no
-Kotlin, Swift or Gradle file was changed, so neither build can have moved. The
-eight-module test suite was run twice, before and after, and compiled and passed
-green both times.
+  (Counts read from build/test-results XML, zero failures/errors/skips throughout.
+  Only reader Android moved, by exactly the 22 new archive tests; every other module
+  is untouched because Steps 0 and 1 added no Kotlin and Step 2 added one androidMain
+  class with no caller yet.)
+Does a test resolve the new classes from the real Koin graph (yes/no, name): no, and
+none is due yet. The one new class, TtsPreparedChapterArchive, is deliberately NOT a
+@Single: nothing injects it until Step 3, so there is no binding that could silently
+resolve to the wrong thing. The brief's rule applies to new @Single classes and there
+are none. When Step 3 injects it, it gets a @Single and a real-graph wiring test in
+the pattern of PreparedChapterJobWiringTest.
+App build results (Android assemble, iOS framework): both SUCCEEDED.
+:androidApp:assembleDebug produced androidApp-debug.apk (184,526,207 bytes) and
+:composeApp:linkDebugFrameworkIosSimulatorArm64 produced ComposeApp.framework. The
+eight-module test suite was run three times - baseline, after Step 1 and after
+Step 2 - and was green every time.
 Server test suite result (passed/total, or "not run"): NOT RUN. 38 new assertions
 written, 0 executed. No container runtime and no Postgres binary on this machine.
 Device used (model + serial), any command sent to another device (yes/no): no
@@ -236,14 +302,13 @@ State the phone was left in (voice, rate, screen, prepared audio deleted yes/no)
 unchanged - the phone was never touched this run. Nothing was installed, no
 setting was altered, and no prepared audio was created, so none needed deleting.
 Why the run ended where it did (finished / out of time / blocked, and on what):
-Finished Step 0 (gate passed, committed) and Step 1 (written, committed), and
-stopped before Step 2. Not blocked - Step 2 is pure host-testable Kotlin and is
-open for the next run. I stopped here because Step 1 is the last thing I can do
-where the inability to execute SQL is a stated, accepted condition of the brief;
-going on to Step 2 would start stacking client code on a server contract that has
-never been exercised. The honest state is that Step 1's value is real but
-unverified, and that is worth handing over cleanly rather than burying under more
-code.
+Finished Steps 0, 1 and 2, each committed, and stopped before Step 3. Not blocked.
+Step 3 is where client code would start depending on the server contract that has
+never been exercised - it reuses the transfer engine's reserve and finalize path
+against reason strings only this run's unrun SQL produces - so it is the right place
+to hand over. Steps 0 and 2 are verified by running tests; Step 1 is written and
+unverified. Stopping here keeps that boundary legible instead of burying an unrun
+migration under a queue, a set of states and a screen that all assume it works.
 Done this run:
   - Created branch tts/prepared-cloud from origin/main ae1c40f8 in the supplied
     worktree, and committed the brief as the first commit.
@@ -253,6 +318,15 @@ Done this run:
     deletes nothing and every block check matches on the blocked hash, which
     prepared audio does not share), and chose triggers over three more RPC renames
     so only one existing function had to be wrapped.
+  - Step 2: wrote TtsPreparedChapterArchive and its 22 host tests, tests first and
+    red first (21 of 22 failed against the stub, the 22nd passed fail-closed). The
+    stored-zip round trip is byte-identical, escaping the target folder is
+    impossible by construction rather than by sanitising, the size bound is checked
+    while reading and not only from the header, and a rejected or truncated archive
+    provably leaves nothing behind - including when it is aimed at a folder that
+    already holds a good chapter. Had to write one archive's local file headers by
+    hand, because ZipOutputStream refuses to emit a duplicate entry name and the
+    duplicate-entry check would otherwise have been untestable.
   - Ran scripts/supabase/test.sh once before changing anything and established that
     the local server tests CANNOT run here, with the reason: no container runtime is
     installed, not merely a stopped daemon.
@@ -265,11 +339,13 @@ Done this run:
     misbehaviours it guards against, and decided to enforce a never-empty
     relative_path with a server CHECK rather than by client convention.
   - Wrote docs/tts-prepared-cloud.md and this report, and committed both.
-Not done or partly done, and why: Steps 2 to 7 are entirely not built, so nothing
-is half-built on the client side. Step 1 is written in full but UNVERIFIED - every
-line of its SQL is unexecuted, which is the one sense in which it is partly done,
-and the brief anticipated exactly this case and told me to write it anyway and say
-so plainly.
+Not done or partly done, and why: Steps 3 to 7 are entirely not built, so nothing is
+half-built: no upload queue, no download, no row state, no string, no analytics event.
+Step 2's archive has no caller and no Koin binding yet, which is the correct state for
+pure logic whose first consumer is Step 3. Step 1 is written in full but UNVERIFIED -
+every line of its SQL is unexecuted, which is the one sense in which anything here is
+partly done, and the brief anticipated exactly this case and told me to write it
+anyway and say so plainly.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none.
 Places the brief was ambiguous and what I chose:
   1. The brief says to stop after Step 0 if "takedown is tied to a single file".
@@ -289,6 +365,13 @@ Places the brief was ambiguous and what I chose:
      through invalidateCloudFile for free.
   3. The brief's verify command names test tasks that "may not exist under exactly
      those names". All eight exist as written; none had to be substituted.
+  4. Step 2 says "a stored zip is enough" but does not fix the entry order. I made
+     manifest.json first a REQUIRED part of the format, rejecting anything else with
+     MANIFEST_NOT_FIRST, because it is what lets an unpack know the allowed names and
+     sizes before writing a single byte instead of buffering the whole archive.
+  5. Step 2 says to check "identifiers", without saying against what. I check the
+     archive's manifest against the PreparedChapterId the caller is installing into,
+     so one book's audio can never be installed into another book's folder.
 Files changed outside supabase, scripts/supabase, lib/server-parrot-cloud,
 feature/books, feature/reader, feature/cloud-account, feature/settings,
 lib/analytics, translations, composeApp tests and docs: none. Six files added, all
@@ -320,7 +403,11 @@ Known problems I am leaving:
      hears that the audio is going very slightly before it hears about the book.
      Each change applies independently, so I believe this is cosmetic, but it has
      not been observed - like everything else in Step 1.
-  6. The never-empty relative_path rule is the single thing protecting older apps.
+  7. Replacing an installed chapter is delete-then-move, so a crash in the gap
+     leaves the chapter absent rather than half-written. That matches
+     TtsPreparedStore's own publish and is recoverable by downloading again, but it
+     is not atomic and I am not claiming it is.
+  8. The never-empty relative_path rule is the single thing protecting older apps.
      If a future change ever relaxes cloud_book_files_prepared_audio_path_check, or
      removes the relativePath.isEmpty() filter at LocalBooksRepository.kt:83, older
      installs break in the three ways listed above. The migration says so in its
