@@ -66,6 +66,10 @@ internal class FakeTtsEnginePlayer : TtsEnginePlayer {
 
     override fun hasNextItem(): Boolean = itemPosition < items.lastIndex
 
+    /** How many listeners are attached, so a test can see the engine let the player go. */
+    val listenerCount: Int
+        get() = listeners.size
+
     override fun addListener(listener: TtsEnginePlayerListener) {
         if (listeners.none { it === listener }) listeners += listener
     }
