@@ -60,10 +60,16 @@ be much smaller.
   measure file sizes, each file's reported duration against the WAV's, and whether the
   join between sentences is audibly worse than with WAV (AAC adds padding at the start
   and end of each file). Write the numbers in the feature document.
-- If durations are off by more than 50 ms per sentence or the joins are clearly worse,
-  try trimming the encoder padding; if that does not work, keep WAV for prepared audio,
-  say so in the document and the report, and continue. The feature matters more than the
-  format.
+- Format decision, revised after the Samsung measurement: prepared audio is AAC. The
+  earlier rule here (fall back to WAV if a file's duration differs by more than 50 ms)
+  was too strict and is withdrawn. Measured: AAC files are about 7 times smaller than WAV
+  and 87 to 127 ms longer, which is the encoder's own silent padding. That extra pause
+  between sentences is accepted. The size matters more: the later cloud backup has a
+  200 MB allowance per account, which WAV would fill in three chapters.
+- The manifest records the encoded file's real duration, so the chapter timeline stays
+  right. Do not try to trim the padding and do not change the player for it.
+- If encoding fails on a device, that sentence's preparation fails; there is no silent
+  fallback to WAV inside a chapter. A chapter is all one format.
 
 ### Step 2: the prepared store
 
