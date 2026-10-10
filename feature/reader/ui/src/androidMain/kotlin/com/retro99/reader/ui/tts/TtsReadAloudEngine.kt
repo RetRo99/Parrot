@@ -137,6 +137,7 @@ class TtsReadAloudEngine(
 
     private val playerListener = object : TtsEnginePlayerListener {
         override fun onItemTransition(mediaId: String?, isAutoAdvance: Boolean) {
+            if (!acceptsPlayerCallbacks || (isAutoAdvance && !isSessionRunning.value)) return
             if (mediaId != null && !mediaId.startsWith(TTS_MEDIA_ID_PREFIX)) {
                 detachForExternalPlayback()
                 return
@@ -154,6 +155,7 @@ class TtsReadAloudEngine(
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (!acceptsPlayerCallbacks) return
             _isPlaying.value = isPlaying
             // Audio is audible: the start this session was waiting for has landed.
             if (isPlaying) {
@@ -169,6 +171,7 @@ class TtsReadAloudEngine(
         }
 
         override fun onReady() {
+            if (!acceptsPlayerCallbacks) return
             val mediaItemIndex = player?.currentMediaId?.let(::sentenceIndexForMediaId)
             if (mediaItemIndex != null && mediaItemIndex != currentIndex) {
                 onSentenceStarted(mediaItemIndex)
@@ -186,6 +189,7 @@ class TtsReadAloudEngine(
         }
 
         override fun onError(error: Throwable) {
+            if (!acceptsPlayerCallbacks) return
             _playbackFailures.tryEmit(
                 PlaybackFailure(
                     correlationId = playbackOperationCorrelationId,
@@ -327,6 +331,9 @@ class TtsReadAloudEngine(
             launchEngineStart { startSentence(currentIndex) }
             return
         }
+        // The explicit resume owns the next playing callback, before audio is audible.
+        isStartingSentence = true
+        updateSessionRunning()
         playbackPlayer.play()
     }
 
@@ -684,6 +691,9 @@ class TtsReadAloudEngine(
      * [readyFiles], and [buildPlaylist] re-queues it and everything ready after it.
      */
     private fun onSentenceCompleted() {
+        // Player callbacks already posted before a stop or pause may still arrive.
+        // The session, not just its index, owns permission to advance (TTS-F25).
+        if (!isSessionRunning.value) return
         heard.onEnded()?.let(::emitFinished)
         // A seek or skip target is being prepared; it starts on its own.
         if (pendingStartToken != null) return
@@ -796,6 +806,10 @@ class TtsReadAloudEngine(
         _isSessionRunning.value =
             !isPauseRequested && (_isPlaying.value || isStartingSentence)
     }
+
+    // A paused playlist may still become ready; a stopped one has no owner at all.
+    private val acceptsPlayerCallbacks: Boolean
+        get() = isSessionRunning.value || isPauseRequested
 
     private fun emitFinished(index: Int) {
         sentences.getOrNull(index)?.let(_finishedSentences::tryEmit)
