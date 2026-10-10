@@ -260,7 +260,19 @@ is already tested there, so these tests cover only the walk.
   it. **Done,** `b3cf627c`, `ReaderTtsVoicePreparationEndTest`. A user-cancelled download
   reports no outcome, which is what the sheet's own Cancel reports.
 
+Run 5b's device pass was cut short at the owner's request and is **inconclusive**: see
+`docs/manual-qa-evidence/2026-10-10/tts-run5b/NOTES.md`. The plain start was the only check
+attempted and it never reached a start — three taps on Play in a book whose reader showed
+`Page 1 of 1` produced no `tts_playback_operation` at all, with no crash and no Koin error.
+Whether that predates run 5b was not established; run 5b's changes do not touch the path
+between the press and `requestPlayback`. Added to run 5c.
+
 ### Run 5c: the stop when the page and the narrated chapter differ; the start deadline — not started
+
+- **First:** a play press that emits no `attempted` at all, seen on the Samsung on
+  2026-10-10. Needs a build from before run 5b to attribute, then a cause. Decision 2 says a
+  play press never does nothing silently, so this is either a regression or a case run 5a's
+  fix does not cover.
 
 - A player "ended" callback arriving after a stop starts nothing (F25, found in run 2b).
 - The chapter on screen and the chapter being narrated can be different ones: the sentence
