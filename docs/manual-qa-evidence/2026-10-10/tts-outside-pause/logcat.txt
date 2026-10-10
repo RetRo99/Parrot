@@ -1,0 +1,539 @@
+10-10 11:51:55.174  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-10 11:51:55.175  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=864cb192-47ba-4d0d-91b9-290463682701
+10-10 11:51:55.547  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:51:55.728  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:51:55.729  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:51:55.730  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=556}
+10-10 11:51:55.730  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=864cb192-47ba-4d0d-91b9-290463682701
+10-10 11:51:59.729  8103  8180 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:00.572  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=started outcome=started media_type=ebook correlation_id=f0d99f3b-1e89-4157-930d-407c0c573441
+10-10 11:52:00.608  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=terminal outcome=succeeded media_type=ebook correlation_id=f0d99f3b-1e89-4157-930d-407c0c573441
+10-10 11:52:02.744  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:07.390  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:09.566  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:17.019  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:28.750  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:30.638  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:36.566  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:39.710  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:47.579  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:49.957  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:52:54.877  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:53:02.517  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:53:04.554  8103  8180 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:53:17.384  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:53:23.718  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:53:31.038  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:53:45.067  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:53:47.201  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:53:52.413  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:53:57.421  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:00.768  8103  8183 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:10.215  8103  8219 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:10.631  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:10.632  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:10.638  8103  8219 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:10.734  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:10.737  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:11.179  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:11.181  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:11.186  8103  8219 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:11.266  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:11.269  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:11.708  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:11.708  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:11.712  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:11.800  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:11.803  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:11.848  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:12.246  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:12.247  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:12.253  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:12.350  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:12.352  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:12.788  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:12.789  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:12.793  8103  8219 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:12.871  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:12.874  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:14.941  8103  8219 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:15.762  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:15.762  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:15.767  8103  8219 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:15.848  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:15.851  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:16.291  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:16.292  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:16.295  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:16.382  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:16.384  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:16.832  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:16.833  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:16.836  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:16.916  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:16.919  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:17.377  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:17.378  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:17.381  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:17.458  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:17.461  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:17.916  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:17.916  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:17.920  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:17.993  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:17.995  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:20.901  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:20.902  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:20.905  8103  8219 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:21.012  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:21.014  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:21.429  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:21.430  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:21.435  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:21.529  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:21.531  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:21.571  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:21.973  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:21.974  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:21.977  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:22.055  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:22.058  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:22.510  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:22.511  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:22.515  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:22.588  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:22.591  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:23.048  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:23.049  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:23.052  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:23.126  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:23.128  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:25.999  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:26.000  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:26.004  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:26.094  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:26.107  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:26.535  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:26.536  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:26.539  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:26.613  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:26.616  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:27.075  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:27.076  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:27.079  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:27.152  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:27.155  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:27.604  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:27.604  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:27.608  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:27.679  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:27.682  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:28.143  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:28.143  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:28.147  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:28.219  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:28.221  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:30.793  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:31.003  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:31.003  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:31.007  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:31.089  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:31.091  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:31.145  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:31.537  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:31.538  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:31.543  8103  8219 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:31.615  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:31.618  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:32.076  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:32.077  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:32.080  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:32.153  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:32.155  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:32.602  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:32.602  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:32.606  8103  8182 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:32.681  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:32.683  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:33.134  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:33.135  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:33.139  8103  8178 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:33.236  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:33.238  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:33.761  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:34.050  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:36.077  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:36.078  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:36.087  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:36.160  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:36.163  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:36.608  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:36.608  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:36.611  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:36.692  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:36.695  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:37.146  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:37.147  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:37.151  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:37.222  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:37.224  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:37.690  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:37.691  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:37.703  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:37.777  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:37.780  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:38.227  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:38.228  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:38.237  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:38.315  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:38.319  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:41.209  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:41.210  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:41.213  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:41.295  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:41.297  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:41.749  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:41.750  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:41.753  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:41.831  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:41.834  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:42.284  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:42.285  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:42.289  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:42.383  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:42.385  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:42.821  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:42.822  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:42.828  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:42.893  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:42.896  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:43.358  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:43.359  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:43.363  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:43.447  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:43.450  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:45.847  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:46.237  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:46.238  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:46.241  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:46.315  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:46.317  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:46.762  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:46.762  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:46.766  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:46.835  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:46.838  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:47.290  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:47.291  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:47.295  8103  8219 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:47.366  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:47.369  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:47.813  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:47.814  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:47.817  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:47.886  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:47.888  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:48.403  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:48.404  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:48.408  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:48.471  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:48.473  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:48.549  8103  9483 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:48.833  8103  9483 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:48.939  8103  9483 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:51.339  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:51.340  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:51.344  8103  9483 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:51.451  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:51.454  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:51.883  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:51.883  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:51.888  8103  9483 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:51.959  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:51.962  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:52.419  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:52.420  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:52.425  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:52.492  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:52.494  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:52.960  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:52.960  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:52.966  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:53.036  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:53.039  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:53.493  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:53.493  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:53.496  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:53.590  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:53.592  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:56.500  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:56.501  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:56.504  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:56.592  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:56.594  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:57.038  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:57.039  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:57.043  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:57.116  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:57.119  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:57.575  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:57.576  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:57.580  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:57.647  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:57.650  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:58.115  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:58.115  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:58.124  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:58.196  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:58.198  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:54:58.658  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:54:58.659  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:54:58.662  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:54:58.740  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:54:58.743  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:01.550  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:01.551  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:01.557  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:01.649  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:01.651  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:02.083  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:02.084  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:02.088  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:02.169  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:02.172  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:02.617  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:02.618  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:02.624  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:02.690  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:02.693  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:03.159  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:03.160  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:03.165  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:03.233  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:03.235  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:03.692  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:03.693  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:03.696  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:03.761  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:03.763  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:06.610  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:06.610  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:06.614  8103  8176 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:06.703  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:06.705  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:07.135  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:07.136  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:07.143  8103  8165 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:07.214  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:07.216  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:07.658  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:07.659  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:07.665  8103  8174 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:07.730  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:07.733  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:08.192  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:08.192  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:08.196  8103  8183 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:08.280  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:08.283  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:08.756  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:08.757  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:08.760  8103  8183 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:08.821  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:08.822  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:09.186  8103  8175 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:11.665  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:11.666  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:11.718  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:11.720  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:26.425  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 11:55:26.457  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:26.460  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-10 11:55:26.970  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-10 11:55:26.970  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=a5ab96f0-e5f2-4dbc-ae20-1a9be9416324
+10-10 11:55:27.084  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:55:27.087  8103  9483 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:27.162  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:55:27.163  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:55:27.164  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=196}
+10-10 11:55:27.165  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=a5ab96f0-e5f2-4dbc-ae20-1a9be9416324
+10-10 11:55:27.516  8103 11798 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:27.983  8103  8180 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:28.515  8103  8178 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:30.438  8103  8178 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:41.385  8103  8178 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 11:55:42.112  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:55:58.660  8103  8103 I SherpaOnnxTts: Kokoro loaded: sampleRate=24000 speakers=11
+10-10 11:56:20.638  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-10 11:56:20.638  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=a8f54da2-6aff-4aaf-bbc6-a6c3eb1c158b
+10-10 11:56:20.639  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-10 11:56:20.649  8103  8178 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:56:20.649  8103  8178 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=233
+10-10 11:56:29.386  8103  8178 I SherpaOnnxTts: Kokoro synthesize done in 8737ms, samples=276559, file=553162 bytes
+10-10 11:56:29.401  8103  8178 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:56:29.401  8103  8178 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=259
+10-10 11:56:29.403  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:56:29.448  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:56:29.450  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:56:29.454  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=resume, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=8816}
+10-10 11:56:29.455  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=resume action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=a8f54da2-6aff-4aaf-bbc6-a6c3eb1c158b
+10-10 11:56:40.767  8103  8178 I SherpaOnnxTts: Kokoro synthesize done in 11366ms, samples=328272, file=656588 bytes
+10-10 11:56:40.768  8103  8178 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:56:40.768  8103  8178 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=29
+10-10 11:56:42.962  8103  8178 I SherpaOnnxTts: Kokoro synthesize done in 2194ms, samples=35032, file=70108 bytes
+10-10 11:56:42.963  8103 11798 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:56:42.963  8103 11798 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=122
+10-10 11:56:49.636  8103 11798 I SherpaOnnxTts: Kokoro synthesize done in 6673ms, samples=148573, file=297190 bytes
+10-10 11:56:49.636  8103  8180 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:56:49.637  8103  8180 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=31
+10-10 11:56:51.935  8103  8180 I SherpaOnnxTts: Kokoro synthesize done in 2298ms, samples=39693, file=79430 bytes
+10-10 11:56:51.936  8103 11798 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:56:51.936  8103 11798 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=73
+10-10 11:56:56.279  8103 11798 I SherpaOnnxTts: Kokoro synthesize done in 4343ms, samples=92176, file=184396 bytes
+10-10 11:56:56.280  8103  8165 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:56:56.280  8103  8165 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=121
+10-10 11:57:02.245  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:57:02.246  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:57:02.304  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:57:02.307  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:57:02.545  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:57:02.546  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:57:02.593  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:57:02.596  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:57:03.603  8103  8178 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:03.603  8103  8178 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=57
+10-10 11:57:06.491  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 11:57:06.494  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:57:07.762  8103  8178 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:07.763  8103  8178 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=29
+10-10 11:57:10.384  8103  8219 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:10.384  8103  8219 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=14
+10-10 11:57:12.325  8103  8219 I SherpaOnnxTts: Kokoro synthesize done in 1940ms, samples=21924, file=43892 bytes
+10-10 11:57:12.342  8103  8219 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:12.342  8103  8219 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=83
+10-10 11:57:12.344  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:57:12.378  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:57:12.380  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:57:13.436  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 11:57:13.439  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:57:18.266  8103  8219 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:18.266  8103  8219 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=16
+10-10 11:57:20.762  8103  8182 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:20.763  8103  8182 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=167
+10-10 11:57:31.345  8103  8165 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:31.346  8103  8165 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=200
+10-10 11:57:44.541  8103 12623 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:44.542  8103 12623 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=19
+10-10 11:57:47.174  8103  8219 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:47.175  8103  8219 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=75
+10-10 11:57:52.426  8103  8182 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:52.426  8103  8182 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=59
+10-10 11:57:57.517  8103  8219 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:57:57.518  8103  8219 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=36
+10-10 11:58:01.292  8103  8176 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:01.293  8103  8176 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=18
+10-10 11:58:03.738  8103  8176 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:03.739  8103  8176 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=82
+10-10 11:58:09.954  8103  8176 I SherpaOnnxTts: Kokoro synthesize done in 6215ms, samples=111001, file=222046 bytes
+10-10 11:58:09.970  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:58:09.970  8103  8176 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:09.970  8103  8176 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=209
+10-10 11:58:10.004  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:58:10.006  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:58:14.766  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 11:58:14.770  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:58:23.034  8103  8176 I SherpaOnnxTts: Kokoro synthesize done in 13064ms, samples=241329, file=482702 bytes
+10-10 11:58:23.046  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:58:23.072  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:58:23.074  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:58:33.303  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 11:58:33.324  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:58:33.326  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-10 11:58:33.832  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-10 11:58:33.833  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=818bb891-b235-45b6-8485-2748225d2348
+10-10 11:58:33.879  8103  8174 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:33.880  8103  8174 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=45
+10-10 11:58:36.321  8103  8174 I SherpaOnnxTts: Kokoro synthesize done in 2441ms, samples=29532, file=59108 bytes
+10-10 11:58:36.386  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:58:36.390  8103  8174 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:36.390  8103  8174 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=172
+10-10 11:58:36.454  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:58:36.456  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:58:36.458  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=2627}
+10-10 11:58:36.459  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=818bb891-b235-45b6-8485-2748225d2348
+10-10 11:58:37.810  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 11:58:37.815  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:58:46.662  8103  8174 I SherpaOnnxTts: Kokoro synthesize done in 10272ms, samples=199448, file=398940 bytes
+10-10 11:58:46.677  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:58:46.680  8103  8174 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:46.680  8103  8174 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=12
+10-10 11:58:46.715  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:58:46.716  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:58:48.461  8103  8174 I SherpaOnnxTts: Kokoro synthesize done in 1781ms, samples=21589, file=43222 bytes
+10-10 11:58:48.461  8103  8178 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:48.461  8103  8178 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=16
+10-10 11:58:50.704  8103  8178 I SherpaOnnxTts: Kokoro synthesize done in 2243ms, samples=29555, file=59154 bytes
+10-10 11:58:50.704  8103  8178 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:50.704  8103  8178 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=23
+10-10 11:58:53.219  8103  8178 I SherpaOnnxTts: Kokoro synthesize done in 2515ms, samples=37035, file=74114 bytes
+10-10 11:58:53.220  8103  8178 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:53.220  8103  8178 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=55
+10-10 11:58:57.530  8103  8178 I SherpaOnnxTts: Kokoro synthesize done in 4310ms, samples=74648, file=149340 bytes
+10-10 11:58:57.531  8103  8219 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:58:57.531  8103  8219 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=41
+10-10 11:59:00.631  8103  8219 I SherpaOnnxTts: Kokoro synthesize done in 3100ms, samples=44117, file=88278 bytes
+10-10 11:59:00.632  8103  8174 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:59:00.632  8103  8174 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=264
+10-10 11:59:03.779  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 11:59:03.782  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:59:16.171  8103  8174 I SherpaOnnxTts: Kokoro synthesize done in 15539ms, samples=296658, file=593360 bytes
+10-10 11:59:16.186  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:59:16.191  8103  8174 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:59:16.191  8103  8174 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=66
+10-10 11:59:16.237  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:59:16.238  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:59:21.299  8103  8174 I SherpaOnnxTts: Kokoro synthesize done in 5108ms, samples=85256, file=170556 bytes
+10-10 11:59:21.300  8103 12559 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:59:21.300  8103 12559 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=147
+10-10 11:59:31.256  8103 12559 I SherpaOnnxTts: Kokoro synthesize done in 9956ms, samples=183303, file=366650 bytes
+10-10 11:59:31.257  8103 12559 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:59:31.257  8103 12559 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=62
+10-10 11:59:36.229  8103 12559 I SherpaOnnxTts: Kokoro synthesize done in 4972ms, samples=82299, file=164642 bytes
+10-10 11:59:36.230  8103  8174 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:59:36.230  8103  8174 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=12
+10-10 11:59:38.163  8103  8174 I SherpaOnnxTts: Kokoro synthesize done in 1933ms, samples=20039, file=40122 bytes
+10-10 11:59:38.163  8103 12559 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:59:38.164  8103 12559 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=140
+10-10 11:59:44.361  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 11:59:44.365  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 11:59:47.145  8103 12559 I SherpaOnnxTts: Kokoro synthesize done in 8980ms, samples=167832, file=335708 bytes
+10-10 11:59:47.158  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 11:59:47.162  8103 12559 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:59:47.162  8103 12559 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=63
+10-10 11:59:47.200  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 11:59:47.201  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 11:59:51.774  8103 12559 I SherpaOnnxTts: Kokoro synthesize done in 4612ms, samples=75353, file=150750 bytes
+10-10 11:59:51.775  8103  8174 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:59:51.775  8103  8174 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=51
+10-10 11:59:56.000  8103  8174 I SherpaOnnxTts: Kokoro synthesize done in 4225ms, samples=71188, file=142420 bytes
+10-10 11:59:56.001  8103 12559 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 11:59:56.001  8103 12559 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=72
+10-10 12:00:00.427  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 12:00:00.431  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 12:00:01.137  8103 12559 I SherpaOnnxTts: Kokoro synthesize done in 5136ms, samples=87221, file=174486 bytes
+10-10 12:00:01.148  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 12:00:01.152  8103 12559 I TtsRouter: synthesize voice=kokoro:0 engine=KOKORO
+10-10 12:00:01.152  8103 12559 I SherpaOnnxTts: Kokoro synthesize start: sid=0 speed=1.0 chars=143
+10-10 12:00:01.213  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 12:00:01.214  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 12:00:04.924  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 12:00:04.927  8103  8103 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 12:00:06.976  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=settings_change, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-10 12:00:06.977  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=32efad5f-3610-437e-837a-6ea153a6548f
+10-10 12:00:06.985  8103  8103 D čič123: SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-10 12:00:11.688  8103  8103 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=settings_change, tts_outcome=cancelled, is_retry=false, media_type=ebook, duration_ms=4712, tts_reason_code=operation_cancelled}
+10-10 12:00:11.688  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=settings_change action=start_tts_playback operation=tts_playback stage=terminal outcome=cancelled reason_code=operation_cancelled media_type=ebook correlation_id=32efad5f-3610-437e-837a-6ea153a6548f
+10-10 12:00:12.738  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reader_close action=save_reading_position operation=reader_position_save stage=started outcome=started media_type=ebook
+10-10 12:00:12.745  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader destination_screen=books entry_point=system_back action=back operation=navigation_back stage=navigation outcome=started correlation_id=8759f143-1eb7-4cb7-8483-265220cbf79e
+10-10 12:00:12.748  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader destination_screen=books entry_point=system_back action=back operation=navigation_back stage=terminal outcome=succeeded correlation_id=8759f143-1eb7-4cb7-8483-265220cbf79e
+10-10 12:00:12.805  8103  8103 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reader_close action=save_reading_position operation=reader_position_save stage=terminal outcome=succeeded media_type=ebook

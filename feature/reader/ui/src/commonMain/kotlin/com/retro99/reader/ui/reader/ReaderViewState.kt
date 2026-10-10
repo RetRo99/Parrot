@@ -11,7 +11,9 @@ import com.retro99.reader.ui.model.PositionUiModel
 import com.retro99.reader.ui.model.TocItemUiModel
 import com.retro99.reader.ui.publication.PublicationState
 import com.retro99.reader.ui.tts.NeuralVoicePackage
+import com.retro99.reader.ui.tts.TtsChapterPreparationState
 import com.retro99.reader.ui.tts.TtsPreparationProgress
+import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
 import com.retro99.reader.ui.tts.TtsVoice
 
 data class ReaderViewState(
@@ -101,6 +103,10 @@ data class ReaderViewState(
     // none. Total of the chapter loaded for it, zero before any sentences are loaded.
     val ttsSentenceNumber: Int? = null,
     val ttsSentenceCount: Int = 0,
+    /** Prepared audio of the chapter on screen, for the current voice, speed and pitch. */
+    val preparedChapterAudio: TtsPreparedChapterAudio = TtsPreparedChapterAudio.NotPrepared,
+    /** The one chapter preparation, whichever chapter it belongs to. */
+    val chapterPreparation: TtsChapterPreparationState = TtsChapterPreparationState.Idle,
     val isListenSheetVisible: Boolean = false,
     val isBookSearchVisible: Boolean = false,
     val bookSearchQuery: String = "",

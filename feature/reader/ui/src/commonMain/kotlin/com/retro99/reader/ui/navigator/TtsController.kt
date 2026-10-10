@@ -2,6 +2,9 @@ package com.retro99.reader.ui.navigator
 
 import com.retro99.reader.ui.tts.NeuralVoicePackage
 import com.retro99.reader.ui.tts.SpeakWordFailure
+import com.retro99.reader.ui.tts.TtsChapterPreparationRequest
+import com.retro99.reader.ui.tts.TtsChapterPreparationState
+import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
 import com.retro99.reader.ui.tts.SpeakWordState
 import com.retro99.reader.ui.tts.TtsPreparationProgress
 import com.retro99.reader.ui.tts.TtsSentence
@@ -134,6 +137,34 @@ interface TtsController : NarrationController {
     fun warmUpWordVoice(language: String) = Unit
 
     val voicePreparationState: Flow<TtsVoicePreparationState>
+
+    /**
+     * Progress of the one chapter preparation, whichever chapter it belongs to. The default
+     * is the answer on a platform without preparation: nothing ever runs.
+     */
+    val chapterPreparation: Flow<TtsChapterPreparationState>
+        get() = flowOf(TtsChapterPreparationState.Idle)
+
+    /** Prepared audio for [chapterHref] with the voice, speed and pitch selected now. */
+    fun preparedChapterAudio(chapterHref: String): Flow<TtsPreparedChapterAudio> =
+        flowOf(TtsPreparedChapterAudio.NotPrepared)
+
+    /**
+     * Prepares the chapter the reader has loaded, using its sentences as they are at the
+     * moment of the press; preparation then continues without the reader.
+     */
+    suspend fun prepareChapter(chapterHref: String): TtsChapterPreparationRequest =
+        TtsChapterPreparationRequest.UNAVAILABLE
+
+    /** Stops the preparation after the sentence in flight; what it prepared is kept. */
+    fun cancelChapterPreparation() = Unit
+
+    suspend fun deletePreparedChapter(chapterHref: String) = Unit
+
+    /** Total bytes of prepared audio on the device, for the Settings row. */
+    suspend fun preparedAudioBytes(): Long = 0L
+
+    suspend fun deleteAllPreparedAudio() = Unit
 
     val playbackOperations: Flow<TtsPlaybackOperation>
 

@@ -261,6 +261,8 @@ private val SAFE_BOOLEAN_KEYS = setOf(
 )
 
 private val SAFE_LONG_KEYS = setOf(
+    /** How many sentences one chapter preparation covered; a count, never an identifier. */
+    "sentence_count",
     "audiobook_duration_ms", "readaloud_duration_ms", "tts_duration_ms",
     "foreground_duration_ms", "background_duration_ms", "playing_duration_ms",
     "buffering_duration_ms", "since_first_launch_ms",
@@ -290,6 +292,7 @@ private val PRODUCT_ENUM_DIMENSIONS = mapOf(
     "load_kind" to setOf("initial_observation"),
     "end_reason" to setOf("checkpoint", "background", "closed", "cleared", "book_changed", "paused", "completed", "error", "source_changed"),
     "content_access" to setOf("on_device"),
+    "voice_kind" to setOf("neural", "system"),
     "completion_method" to setOf("automatic"),
     "backup_scope" to setOf("single", "bulk"),
     "backup_error_category" to setOf("rejected", "transfer_failed", "queue_failed", "authentication_unavailable"),

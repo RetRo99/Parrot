@@ -1,0 +1,20 @@
+--------- beginning of main
+10-10 03:24:09.836 17556 17634 I PreparedAudioProbe: STAGE system_ready
+10-10 03:24:09.904 17556 17634 I PreparedAudioProbe: STAGE system_voice
+10-10 03:24:12.177 17556 17634 I PreparedAudioProbe: STAGE kokoro_ready
+10-10 03:24:14.872 17556 17634 I PreparedAudioProbe: MEASURE index=0 kind=kokoro wav_bytes=76970 m4a_bytes=11190 wav_ms=1602 m4a_ms=1706 delta_ms=104
+10-10 03:24:14.913 17556 17634 I PreparedAudioProbe: TRIM index=0 duration_ms=1706 delta_ms=104 delay_metadata=false padding_metadata=false
+10-10 03:24:18.256 17556 17634 I PreparedAudioProbe: MEASURE index=1 kind=kokoro wav_bytes=99606 m4a_bytes=14050 wav_ms=2074 m4a_ms=2176 delta_ms=102
+10-10 03:24:18.312 17556 17634 I PreparedAudioProbe: TRIM index=1 duration_ms=2176 delta_ms=102 delay_metadata=false padding_metadata=false
+10-10 03:24:22.180 17556 17634 I PreparedAudioProbe: MEASURE index=2 kind=kokoro wav_bytes=127086 m4a_bytes=17690 wav_ms=2646 m4a_ms=2773 delta_ms=127
+10-10 03:24:22.248 17556 17634 I PreparedAudioProbe: TRIM index=2 duration_ms=2773 delta_ms=127 delay_metadata=false padding_metadata=false
+10-10 03:24:29.075 17556 17634 I PreparedAudioProbe: PLAY kind=0 format=wav indices=[0, 1, 2]
+10-10 03:24:36.113 17556 17634 I PreparedAudioProbe: PLAY kind=0 format=m4a indices=[0, 1, 2]
+10-10 03:24:36.681 17556 17634 I PreparedAudioProbe: MEASURE index=3 kind=system wav_bytes=105764 m4a_bytes=14909 wav_ms=2202 m4a_ms=2304 delta_ms=102
+10-10 03:24:36.721 17556 17634 I PreparedAudioProbe: TRIM index=3 duration_ms=2304 delta_ms=102 delay_metadata=false padding_metadata=false
+10-10 03:24:37.230 17556 17634 I PreparedAudioProbe: MEASURE index=4 kind=system wav_bytes=103340 m4a_bytes=14570 wav_ms=2152 m4a_ms=2261 delta_ms=109
+10-10 03:24:37.283 17556 17634 I PreparedAudioProbe: TRIM index=4 duration_ms=2261 delta_ms=109 delay_metadata=false padding_metadata=false
+10-10 03:24:38.145 17556 17634 I PreparedAudioProbe: MEASURE index=5 kind=system wav_bytes=141262 m4a_bytes=19364 wav_ms=2942 m4a_ms=3029 delta_ms=87
+10-10 03:24:38.204 17556 17634 I PreparedAudioProbe: TRIM index=5 duration_ms=3029 delta_ms=87 delay_metadata=false padding_metadata=false
+10-10 03:24:45.725 17556 17634 I PreparedAudioProbe: PLAY kind=1 format=wav indices=[0, 1, 2]
+10-10 03:24:53.615 17556 17634 I PreparedAudioProbe: PLAY kind=1 format=m4a indices=[0, 1, 2]

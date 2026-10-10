@@ -1452,6 +1452,63 @@ class AnalyticsParameterSanitizerTest {
         assertEquals(emptyMap(), sanitized)
         assertFalse("profile_name" in sanitized)
     }
+
+    @Test
+    fun chapterPreparationEventsKeepVoiceKindCountAndOutcome() {
+        val started = sanitizeAnalyticsParameters(
+            ReaderAnalyticsEvent.TtsChapterPreparationStarted(
+                voiceKind = "neural",
+                sentenceCount = 151L,
+            ).parameters,
+        )
+        val ended = sanitizeAnalyticsParameters(
+            ReaderAnalyticsEvent.TtsChapterPreparationEnded(
+                voiceKind = "system",
+                sentenceCount = 42L,
+                outcome = "cancelled",
+                durationMs = 612_000L,
+            ).parameters,
+        )
+
+        assertEquals(
+            mapOf(
+                "operation" to "tts_chapter_preparation",
+                "stage" to "started",
+                "voice_kind" to "neural",
+                "sentence_count" to 151L,
+            ),
+            started,
+        )
+        assertEquals(
+            mapOf(
+                "operation" to "tts_chapter_preparation",
+                "stage" to "ended",
+                "voice_kind" to "system",
+                "sentence_count" to 42L,
+                "outcome" to "cancelled",
+                "duration_ms" to 612_000L,
+            ),
+            ended,
+        )
+    }
+
+    @Test
+    fun chapterPreparationDropsAnythingItDoesNotRecognize() {
+        // Fail-closed: a voice id under voice_kind, a title, a negative count and a
+        // count supplied as text all have to disappear.
+        assertEquals(
+            mapOf("operation" to "tts_chapter_preparation"),
+            sanitizeAnalyticsParameters(
+                mapOf(
+                    "operation" to "tts_chapter_preparation",
+                    "voice_kind" to "en-us-heart-x-low",
+                    "chapter_title" to "Chapter 1",
+                    "sentence_count" to -3L,
+                ),
+            ),
+        )
+        assertFalse("sentence_count" in sanitizeAnalyticsParameters(mapOf("sentence_count" to "151")))
+    }
 }
 
 class DiagnosticPayloadSanitizerTest {

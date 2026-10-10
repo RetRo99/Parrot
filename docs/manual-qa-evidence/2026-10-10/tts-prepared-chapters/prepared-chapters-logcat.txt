@@ -1,0 +1,2026 @@
+Samsung SM-S921B (RFCWC0SSVDM), app process only, filtered to the read-aloud and
+preparation tags. Lines naming a book or chapter title are removed; no sentence text
+is logged by the app (synthesis lines carry a character count only).
+
+===== P&P chapter preparation (397 sentences, cancelled from the notification) =====
+10-10 09:50:49.383 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=50
+10-10 09:50:52.057 I/SherpaOnnxTts(23461): Kokoro synthesize done in 2674ms, samples=79299, file=158642 bytes
+10-10 09:50:52.064 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:50:52.065 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:50:52.417 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:50:52.459 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:50:52.459 D/MediaCodec(23461):   }
+10-10 09:50:52.470 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:50:52.530 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:50:52.530 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:50:52.532 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:50:52.541 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:50:52.541 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:50:53.308 D/MPEG4Writer(23461): reset()
+10-10 09:50:53.308 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:50:53.308 I/MPEG4Writer(23461): Received total/0-length (80/0) buffers and encoded 80 frames. - Audio
+10-10 09:50:53.308 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:50:53.308 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:50:53.308 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:50:53.308 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:50:53.309 I/MPEG4Writer(23461): Duration for 1:Audio track is 3413332 us
+10-10 09:50:53.309 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:50:53.309 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:50:53.311 D/MPEG4Writer(23461): no camera lens information
+10-10 09:50:53.312 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:50:53.316 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:50:53.316 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:50:53.316 D/MPEG4Writer(23461): release()
+10-10 09:50:53.316 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:23589 mOffset:21590 mMdatEndOffset:20521 diff:1999
+10-10 09:50:53.317 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:50:53.317 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:165 #2:173 #3:189 #4:262 #5:481
+10-10 09:50:53.438 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#407] MediaCodec discarded an unknown buffer
+10-10 09:50:53.444 D/MPEG4Writer(23461): reset()
+10-10 09:50:53.445 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:50:53.445 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:50:53.447 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:50:53.672 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=154
+10-10 09:51:00.143 I/SherpaOnnxTts(23461): Kokoro synthesize done in 6471ms, samples=201931, file=403906 bytes
+10-10 09:51:00.145 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:00.145 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:00.156 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:51:00.156 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:51:00.156 D/MediaCodec(23461):   }
+10-10 09:51:00.160 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:51:00.169 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:51:00.169 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:51:00.169 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:51:00.172 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:51:00.172 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:51:02.467 D/MPEG4Writer(23461): reset()
+10-10 09:51:02.467 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:02.467 I/MPEG4Writer(23461): Received total/0-length (200/0) buffers and encoded 200 frames. - Audio
+10-10 09:51:02.467 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:51:02.467 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:51:02.467 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:51:02.467 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:51:02.467 I/MPEG4Writer(23461): Duration for 1:Audio track is 8533332 us
+10-10 09:51:02.468 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:51:02.468 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:51:02.470 D/MPEG4Writer(23461): no camera lens information
+10-10 09:51:02.472 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:51:02.477 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:51:02.477 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:51:02.477 D/MPEG4Writer(23461): release()
+10-10 09:51:02.477 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:54789 mOffset:52790 mMdatEndOffset:51241 diff:1999
+10-10 09:51:02.477 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:51:02.477 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:186 #2:186 #3:198 #4:281 #5:355
+10-10 09:51:02.505 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#929] MediaCodec discarded an unknown buffer
+10-10 09:51:02.505 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#929] MediaCodec discarded an unknown buffer
+10-10 09:51:02.510 D/MPEG4Writer(23461): reset()
+10-10 09:51:02.510 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:02.510 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:51:02.512 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:51:02.659 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=148
+10-10 09:51:10.079 I/SherpaOnnxTts(23461): Kokoro synthesize done in 7420ms, samples=240107, file=480258 bytes
+10-10 09:51:10.081 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:10.081 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:10.093 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:51:10.093 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:51:10.093 D/MediaCodec(23461):   }
+10-10 09:51:10.097 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:51:10.112 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:51:10.112 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:51:10.112 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:51:10.115 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:51:10.115 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:51:12.828 D/MPEG4Writer(23461): reset()
+10-10 09:51:12.828 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:12.828 I/MPEG4Writer(23461): Received total/0-length (237/0) buffers and encoded 237 frames. - Audio
+10-10 09:51:12.828 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:51:12.828 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:51:12.828 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:51:12.829 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:51:12.829 I/MPEG4Writer(23461): Duration for 1:Audio track is 10112000 us
+10-10 09:51:12.829 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:51:12.830 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:51:12.831 D/MPEG4Writer(23461): no camera lens information
+10-10 09:51:12.832 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:51:12.835 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:51:12.835 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:51:12.835 D/MPEG4Writer(23461): release()
+10-10 09:51:12.835 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:64409 mOffset:62410 mMdatEndOffset:60713 diff:1999
+10-10 09:51:12.836 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:51:12.836 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:182 #2:246 #3:259 #4:265 #5:442
+10-10 09:51:12.862 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#422] MediaCodec discarded an unknown buffer
+10-10 09:51:12.867 D/MPEG4Writer(23461): reset()
+10-10 09:51:12.867 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:12.867 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:51:12.870 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:51:13.018 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=138
+10-10 09:51:18.322 I/SherpaOnnxTts(23461): Kokoro synthesize done in 5304ms, samples=167721, file=335486 bytes
+10-10 09:51:18.326 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:18.326 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:18.338 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:51:18.338 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:51:18.338 D/MediaCodec(23461):   }
+10-10 09:51:18.343 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:51:18.355 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:51:18.355 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:51:18.355 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:51:18.360 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:51:18.360 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:51:20.280 D/MPEG4Writer(23461): reset()
+10-10 09:51:20.280 I/MPEG4Writer(23461): Received total/0-length (166/0) buffers and encoded 166 frames. - Audio
+10-10 09:51:20.280 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:20.281 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:51:20.281 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:51:20.281 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:51:20.281 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:51:20.281 I/MPEG4Writer(23461): Duration for 1:Audio track is 7082667 us
+10-10 09:51:20.282 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:51:20.282 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:51:20.285 D/MPEG4Writer(23461): no camera lens information
+10-10 09:51:20.286 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:51:20.291 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:51:20.291 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:51:20.291 D/MPEG4Writer(23461): release()
+10-10 09:51:20.291 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:45949 mOffset:43950 mMdatEndOffset:42537 diff:1999
+10-10 09:51:20.292 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:51:20.292 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:185 #2:254 #3:261 #4:273 #5:279
+10-10 09:51:20.305 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#686] MediaCodec discarded an unknown buffer
+10-10 09:51:20.305 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#686] MediaCodec discarded an unknown buffer
+10-10 09:51:20.309 D/MPEG4Writer(23461): reset()
+10-10 09:51:20.309 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:20.309 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:51:20.311 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:51:20.446 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=26
+10-10 09:51:22.343 I/SherpaOnnxTts(23461): Kokoro synthesize done in 1897ms, samples=42410, file=84864 bytes
+10-10 09:51:22.344 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:22.345 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:22.360 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:51:22.360 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:51:22.360 D/MediaCodec(23461):   }
+10-10 09:51:22.363 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:51:22.370 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:51:22.370 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:51:22.370 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:51:22.375 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:51:22.375 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:51:22.725 D/MPEG4Writer(23461): reset()
+10-10 09:51:22.725 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:22.725 I/MPEG4Writer(23461): Received total/0-length (44/0) buffers and encoded 44 frames. - Audio
+10-10 09:51:22.725 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:51:22.725 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:51:22.725 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:51:22.726 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:51:22.726 I/MPEG4Writer(23461): Duration for 1:Audio track is 1877332 us
+10-10 09:51:22.726 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:51:22.726 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:51:22.726 D/MPEG4Writer(23461): no camera lens information
+10-10 09:51:22.727 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:51:22.728 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:51:22.728 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:51:22.728 D/MPEG4Writer(23461): release()
+10-10 09:51:22.728 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:14229 mOffset:12230 mMdatEndOffset:11305 diff:1999
+10-10 09:51:22.729 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:51:22.729 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:113 #2:114 #3:115 #4:167 #5:200
+10-10 09:51:22.741 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#388] MediaCodec discarded an unknown buffer
+10-10 09:51:22.745 D/MPEG4Writer(23461): reset()
+10-10 09:51:22.745 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:22.745 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:51:22.747 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:51:22.880 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=19
+10-10 09:51:24.557 I/SherpaOnnxTts(23461): Kokoro synthesize done in 1677ms, samples=34839, file=69722 bytes
+10-10 09:51:24.561 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:24.561 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:24.572 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:51:24.572 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:51:24.572 D/MediaCodec(23461):   }
+10-10 09:51:24.574 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:51:24.583 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:51:24.583 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:51:24.583 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:51:24.588 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:51:24.588 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:51:24.941 D/MPEG4Writer(23461): reset()
+10-10 09:51:24.941 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:24.941 I/MPEG4Writer(23461): Received total/0-length (37/0) buffers and encoded 37 frames. - Audio
+10-10 09:51:24.941 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:51:24.941 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:51:24.941 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:51:24.941 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:51:24.941 I/MPEG4Writer(23461): Duration for 1:Audio track is 1578667 us
+10-10 09:51:24.941 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:51:24.941 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:51:24.942 D/MPEG4Writer(23461): no camera lens information
+10-10 09:51:24.942 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:51:24.943 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:51:24.943 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:51:24.943 D/MPEG4Writer(23461): release()
+10-10 09:51:24.943 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:12409 mOffset:10410 mMdatEndOffset:9513 diff:1999
+10-10 09:51:24.943 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:51:24.943 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:98 #2:99 #3:100 #4:100 #5:101
+10-10 09:51:24.954 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#193] MediaCodec discarded an unknown buffer
+10-10 09:51:24.955 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#193] MediaCodec discarded an unknown buffer
+10-10 09:51:24.959 D/MPEG4Writer(23461): reset()
+10-10 09:51:24.959 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:24.959 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:51:24.961 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:51:25.098 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=82
+10-10 09:51:32.085 I/SherpaOnnxTts(23461): Kokoro synthesize done in 6987ms, samples=224202, file=448448 bytes
+10-10 09:51:32.089 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:32.089 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:32.100 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:51:32.100 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:51:32.100 D/MediaCodec(23461):   }
+10-10 09:51:32.103 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:51:32.111 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:51:32.111 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:51:32.111 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:51:32.113 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:51:32.113 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:51:34.776 D/MPEG4Writer(23461): reset()
+10-10 09:51:34.777 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:34.777 I/MPEG4Writer(23461): Received total/0-length (221/0) buffers and encoded 221 frames. - Audio
+10-10 09:51:34.777 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:51:34.777 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:51:34.777 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:51:34.778 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:51:34.778 I/MPEG4Writer(23461): Duration for 1:Audio track is 9429332 us
+10-10 09:51:34.779 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:51:34.779 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:51:34.782 D/MPEG4Writer(23461): no camera lens information
+10-10 09:51:34.783 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:51:34.789 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:51:34.789 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:51:34.789 D/MPEG4Writer(23461): release()
+10-10 09:51:34.789 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:60249 mOffset:58250 mMdatEndOffset:56617 diff:1999
+10-10 09:51:34.790 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:51:34.790 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:259 #2:292 #3:319 #4:356 #5:378
+10-10 09:51:34.818 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#405] MediaCodec discarded an unknown buffer
+10-10 09:51:34.819 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#405] MediaCodec discarded an unknown buffer
+10-10 09:51:34.819 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#405] MediaCodec discarded an unknown buffer
+10-10 09:51:34.825 D/MPEG4Writer(23461): reset()
+10-10 09:51:34.825 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:34.825 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:51:34.827 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:51:34.948 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=17
+10-10 09:51:36.448 I/SherpaOnnxTts(23461): Kokoro synthesize done in 1500ms, samples=33712, file=67468 bytes
+10-10 09:51:36.450 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:36.450 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:36.466 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:51:36.466 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:51:36.466 D/MediaCodec(23461):   }
+10-10 09:51:36.470 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:51:36.478 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:51:36.478 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:51:36.478 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:51:36.484 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:51:36.484 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:51:36.827 D/MPEG4Writer(23461): reset()
+10-10 09:51:36.827 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:36.827 I/MPEG4Writer(23461): Received total/0-length (35/0) buffers and encoded 35 frames. - Audio
+10-10 09:51:36.827 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:51:36.827 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:51:36.827 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:51:36.827 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:51:36.827 I/MPEG4Writer(23461): Duration for 1:Audio track is 1493332 us
+10-10 09:51:36.827 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:51:36.827 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:51:36.828 D/MPEG4Writer(23461): no camera lens information
+10-10 09:51:36.828 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:51:36.829 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:51:36.829 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:51:36.829 D/MPEG4Writer(23461): release()
+10-10 09:51:36.829 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:11889 mOffset:9890 mMdatEndOffset:9001 diff:1999
+10-10 09:51:36.829 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:51:36.829 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:84 #2:87 #3:87 #4:88 #5:162
+10-10 09:51:36.837 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#766] MediaCodec discarded an unknown buffer
+10-10 09:51:36.837 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#766] MediaCodec discarded an unknown buffer
+10-10 09:51:36.837 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#766] MediaCodec discarded an unknown buffer
+10-10 09:51:36.842 D/MPEG4Writer(23461): reset()
+10-10 09:51:36.842 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:36.842 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:51:36.843 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:51:36.953 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=60
+10-10 09:51:42.928 I/SherpaOnnxTts(23461): Kokoro synthesize done in 5975ms, samples=194683, file=389410 bytes
+10-10 09:51:42.931 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:42.931 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:42.943 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:51:42.943 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:51:42.943 D/MediaCodec(23461):   }
+10-10 09:51:42.947 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:51:42.956 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:51:42.956 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:51:42.956 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:51:42.964 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:51:42.964 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:51:45.120 D/MPEG4Writer(23461): reset()
+10-10 09:51:45.120 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:45.120 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:51:45.121 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:51:45.121 I/MPEG4Writer(23461): Received total/0-length (193/0) buffers and encoded 193 frames. - Audio
+10-10 09:51:45.121 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:51:45.121 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:51:45.122 I/MPEG4Writer(23461): Duration for 1:Audio track is 8234667 us
+10-10 09:51:45.122 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:51:45.122 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:51:45.129 D/MPEG4Writer(23461): no camera lens information
+10-10 09:51:45.131 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:51:45.133 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:51:45.133 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:51:45.133 D/MPEG4Writer(23461): release()
+10-10 09:51:45.133 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:52969 mOffset:50970 mMdatEndOffset:49449 diff:1999
+10-10 09:51:45.133 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:51:45.133 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:173 #2:262 #3:333 #4:1067 #5:4447
+10-10 09:51:45.143 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#204] MediaCodec discarded an unknown buffer
+10-10 09:51:45.143 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#204] MediaCodec discarded an unknown buffer
+10-10 09:51:45.143 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#204] MediaCodec discarded an unknown buffer
+10-10 09:51:45.146 D/MPEG4Writer(23461): reset()
+10-10 09:51:45.146 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:45.146 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:51:45.148 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:51:45.284 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=159
+10-10 09:51:53.517 I/SherpaOnnxTts(23461): Kokoro synthesize done in 8233ms, samples=280612, file=561268 bytes
+10-10 09:51:53.521 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:53.522 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:51:53.540 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:51:53.540 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:51:53.540 D/MediaCodec(23461):   }
+10-10 09:51:53.544 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:51:53.555 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:51:53.555 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:51:53.556 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:51:53.561 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:51:53.561 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:51:56.608 D/MPEG4Writer(23461): reset()
+10-10 09:51:56.608 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:56.608 I/MPEG4Writer(23461): Received total/0-length (277/0) buffers and encoded 277 frames. - Audio
+10-10 09:51:56.608 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:51:56.608 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:51:56.608 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:51:56.609 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:51:56.609 I/MPEG4Writer(23461): Duration for 1:Audio track is 11818667 us
+10-10 09:51:56.609 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:51:56.610 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:51:56.611 D/MPEG4Writer(23461): no camera lens information
+10-10 09:51:56.612 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:51:56.616 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:51:56.616 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:51:56.616 D/MPEG4Writer(23461): release()
+10-10 09:51:56.616 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:74809 mOffset:72810 mMdatEndOffset:70953 diff:1999
+10-10 09:51:56.617 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:51:56.617 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:259 #2:262 #3:276 #4:291 #5:783
+10-10 09:51:56.646 D/MPEG4Writer(23461): reset()
+10-10 09:51:56.646 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:51:56.646 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 09:51:56.650 I/MediaCodec(23461): Codec shutdown complete
+10-10 09:51:56.788 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=64
+10-10 09:52:01.643 I/SherpaOnnxTts(23461): Kokoro synthesize done in 4855ms, samples=160022, file=320088 bytes
+10-10 09:52:01.645 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:52:01.645 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 09:52:01.657 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 09:52:01.657 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 09:52:01.657 D/MediaCodec(23461):   }
+10-10 09:52:01.660 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 09:52:01.670 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 09:52:01.670 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 09:52:01.670 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 09:52:01.675 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 09:52:01.675 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 09:52:03.514 D/MPEG4Writer(23461): reset()
+10-10 09:52:03.514 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 09:52:03.514 D/MPEG4Writer(23461): Audio track source stopping
+10-10 09:52:03.514 D/MPEG4Writer(23461): Audio track source stopped
+10-10 09:52:03.514 I/MPEG4Writer(23461): Received total/0-length (159/0) buffers and encoded 159 frames. - Audio
+10-10 09:52:03.514 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 09:52:03.515 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 09:52:03.515 I/MPEG4Writer(23461): Duration for 1:Audio track is 6784000 us
+10-10 09:52:03.515 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 09:52:03.516 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 09:52:03.518 D/MPEG4Writer(23461): no camera lens information
+10-10 09:52:03.521 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 09:52:03.526 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 09:52:03.526 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 09:52:03.526 D/MPEG4Writer(23461): release()
+10-10 09:52:03.526 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:44129 mOffset:42130 mMdatEndOffset:40745 diff:1999
+10-10 09:52:03.526 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 09:52:03.526 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:235 #2:261 #3:282 #4:317 #5:610
+10-10 09:52:03.538 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#253] MediaCodec discarded an unknown buffer
+10-10 09:52:03.538 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#253] MediaCodec discarded an unknown buffer
+... (truncated)
+
+===== Playing the prepared 39-sentence chapter (Kokoro) =====
+10-10 10:03:39.967 D/ForegroundServiceController(23461): 	at com.retro99.reader.ui.tts.ExoTtsEnginePlayerProvider.notificationPlayer(ExoTtsEnginePlayer.kt:164)
+10-10 10:03:39.967 D/ForegroundServiceController(23461): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:489)
+10-10 10:03:39.967 D/ForegroundServiceController(23461): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:482)
+10-10 10:03:40.143 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:03:40.192 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:03:40.208 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:03:40.219 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:03:40.241 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:03:40.247 I/DMCodecAdapterFactory(23461): Creating an asynchronous MediaCodec adapter for track type audio
+10-10 10:03:40.277 I/MediaCodec(23461): MediaCodec will operate in async mode
+10-10 10:03:40.277 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:03:40.278 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:03:48.090 D/CCodecBufferChannel(23461): [c2.android.aac.decoder#547] MediaCodec discarded an unknown buffer
+10-10 10:03:48.091 D/CCodecBufferChannel(23461): [c2.android.aac.decoder#547] MediaCodec discarded an unknown buffer
+10-10 10:03:48.091 D/CCodecBufferChannel(23461): [c2.android.aac.decoder#547] MediaCodec discarded an unknown buffer
+10-10 10:03:48.095 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:03:48.101 I/DMCodecAdapterFactory(23461): Creating an asynchronous MediaCodec adapter for track type audio
+10-10 10:03:48.132 I/MediaCodec(23461): MediaCodec will operate in async mode
+10-10 10:03:48.134 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:03:48.137 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:03:48.532 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:03:49.619 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:03:50.037 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:03:56.398 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:03:56.941 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:03:59.417 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:03:59.933 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:07.371 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:07.781 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:09.455 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:10.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:10.890 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:11.297 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:13.488 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:14.072 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:14.601 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:15.079 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:15.632 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:16.150 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:16.963 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:17.469 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:18.275 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:18.784 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:19.599 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:20.020 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:20.836 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:21.409 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:23.060 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:23.558 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:24.372 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:24.893 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:26.556 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:26.989 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:27.536 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:28.011 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:34.173 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:34.549 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:35.373 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:35.742 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:36.587 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:36.966 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:37.790 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:38.354 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:39.181 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:39.733 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:40.531 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:41.006 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:42.114 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:42.659 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:43.485 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:43.970 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:45.074 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:45.527 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:45.955 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:45.955 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:45.955 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:45.955 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:45.959 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:46.013 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:47.148 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:48.576 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:49.690 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:51.158 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:51.159 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:51.159 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:51.169 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:52.092 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:52.298 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:52.299 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:52.299 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:52.299 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:52.314 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:53.253 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:53.451 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:53.451 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:53.451 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:53.451 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:53.451 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:53.462 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:54.582 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:54.583 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:54.583 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:54.583 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:54.583 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:54.583 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:54.596 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:55.517 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:55.709 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:55.709 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:55.709 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:55.709 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:55.709 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:55.709 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:55.709 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:55.725 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:56.843 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:56.843 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:56.844 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:56.844 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:56.844 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:56.844 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:56.844 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:56.844 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:56.861 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:57.787 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:57.965 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:57.966 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:57.966 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:57.966 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:57.966 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:57.966 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:57.966 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:57.966 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:57.966 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:57.977 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:04:59.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.083 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.084 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:04:59.095 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:00.039 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:01.768 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:02.885 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:04.471 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:05.745 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:07.149 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:08.328 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:09.693 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:11.249 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:13.075 D/MediaCodec(23461): keep callback message for reclaim
+10-10 10:05:13.083 D/CCodecBufferChannel(23461): [c2.android.aac.decoder#995] MediaCodec discarded an unknown buffer
+10-10 10:05:13.083 D/CCodecBufferChannel(23461): [c2.android.aac.decoder#995] MediaCodec discarded an unknown buffer
+10-10 10:05:13.083 D/CCodecBufferChannel(23461): [c2.android.aac.decoder#995] MediaCodec discarded an unknown buffer
+10-10 10:05:13.083 D/CCodecBufferChannel(23461): [c2.android.aac.decoder#995] MediaCodec discarded an unknown buffer
+10-10 10:05:13.085 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:05:13.657 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=31
+10-10 10:05:14.906 I/SherpaOnnxTts(23461): Kokoro synthesize done in 1249ms, samples=22587, file=45218 bytes
+10-10 10:05:14.936 D/ForegroundServiceController(23461): 	at com.retro99.reader.ui.tts.ExoTtsEnginePlayerProvider.notificationPlayer(ExoTtsEnginePlayer.kt:164)
+10-10 10:05:14.936 D/ForegroundServiceController(23461): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:489)
+10-10 10:05:14.936 D/ForegroundServiceController(23461): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:482)
+10-10 10:05:14.960 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:05:14.984 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=218
+10-10 10:05:23.105 I/SherpaOnnxTts(23461): Kokoro synthesize done in 8121ms, samples=259906, file=519856 bytes
+10-10 10:05:23.109 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:05:23.128 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=83
+10-10 10:05:23.382 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:05:26.838 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=227
+10-10 10:05:35.314 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=83
+10-10 10:05:39.301 I/SherpaOnnxTts(23461): Kokoro synthesize done in 3987ms, samples=98684, file=197412 bytes
+10-10 10:05:39.313 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:05:39.340 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=227
+10-10 10:05:48.266 I/SherpaOnnxTts(23461): Kokoro synthesize done in 8926ms, samples=258545, file=517134 bytes
+10-10 10:05:48.277 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:05:48.308 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=61
+10-10 10:05:51.924 I/SherpaOnnxTts(23461): Kokoro synthesize done in 3616ms, samples=89332, file=178708 bytes
+10-10 10:05:51.926 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:05:51.926 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=140
+10-10 10:05:58.176 I/SherpaOnnxTts(23461): Kokoro synthesize done in 6250ms, samples=172552, file=345148 bytes
+10-10 10:05:58.177 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=8
+10-10 10:05:58.177 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:05:59.518 I/SherpaOnnxTts(23461): Kokoro synthesize done in 1341ms, samples=19458, file=38960 bytes
+10-10 10:05:59.519 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=17
+10-10 10:05:59.519 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:06:01.019 I/SherpaOnnxTts(23461): Kokoro synthesize done in 1500ms, samples=24909, file=49862 bytes
+10-10 10:06:01.020 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:06:01.020 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=280
+10-10 10:06:13.589 I/SherpaOnnxTts(23461): Kokoro synthesize done in 12569ms, samples=306234, file=612512 bytes
+10-10 10:06:13.597 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:06:13.619 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=195
+10-10 10:06:23.191 I/SherpaOnnxTts(23461): Kokoro synthesize done in 9571ms, samples=235925, file=471894 bytes
+10-10 10:06:23.191 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=88
+10-10 10:06:23.192 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:06:28.048 I/SherpaOnnxTts(23461): Kokoro synthesize done in 4857ms, samples=115991, file=232026 bytes
+10-10 10:06:28.049 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=109
+10-10 10:06:28.085 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:06:34.266 I/SherpaOnnxTts(23461): Kokoro synthesize done in 6217ms, samples=139813, file=279670 bytes
+10-10 10:06:34.267 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:06:34.267 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=219
+10-10 10:06:43.164 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:43.165 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:43.233 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:06:43.233 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:06:43.233 D/MediaCodec(23461):   }
+10-10 10:06:43.239 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:06:43.264 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:06:43.264 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:06:43.265 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:06:43.271 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:06:43.271 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:06:43.286 D/MPEG4Writer(23461): reset()
+10-10 10:06:43.286 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:43.286 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:06:43.286 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:06:43.286 I/MPEG4Writer(23461): Received total/0-length (25/0) buffers and encoded 25 frames. - Audio
+10-10 10:06:43.286 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:06:43.286 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:06:43.286 I/MPEG4Writer(23461): Duration for 1:Audio track is 1066667 us
+10-10 10:06:43.286 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:06:43.287 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:06:43.287 D/MPEG4Writer(23461): no camera lens information
+10-10 10:06:43.287 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:06:43.287 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:06:43.287 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:06:43.287 D/MPEG4Writer(23461): release()
+10-10 10:06:43.287 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:9289 mOffset:7290 mMdatEndOffset:6441 diff:1999
+10-10 10:06:43.287 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:06:43.287 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:17 #2:18 #3:21 #4:25 #5:45
+10-10 10:06:43.294 D/MPEG4Writer(23461): reset()
+10-10 10:06:43.295 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:43.295 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:06:43.297 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:06:43.365 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:43.365 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:43.375 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:06:43.375 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:06:43.375 D/MediaCodec(23461):   }
+10-10 10:06:43.379 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:06:43.389 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:06:43.389 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:06:43.389 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:06:43.393 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:06:43.393 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:06:45.725 I/SherpaOnnxTts(23461): Kokoro synthesize done in 11458ms, samples=256408, file=512860 bytes
+10-10 10:06:45.726 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=162
+10-10 10:06:45.727 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:06:45.988 D/MPEG4Writer(23461): reset()
+10-10 10:06:45.988 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:45.988 I/MPEG4Writer(23461): Received total/0-length (256/0) buffers and encoded 256 frames. - Audio
+10-10 10:06:45.988 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:06:45.988 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:06:45.988 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:06:45.988 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:06:45.988 I/MPEG4Writer(23461): Duration for 1:Audio track is 10922667 us
+10-10 10:06:45.988 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:06:45.988 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:06:45.988 D/MPEG4Writer(23461): no camera lens information
+10-10 10:06:45.989 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:06:45.989 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:06:45.989 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:06:45.989 D/MPEG4Writer(23461): release()
+10-10 10:06:45.989 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:69349 mOffset:67350 mMdatEndOffset:65577 diff:1999
+10-10 10:06:45.989 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:06:45.989 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:87 #2:114 #3:119 #4:121 #5:128
+10-10 10:06:45.995 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#441] MediaCodec discarded an unknown buffer
+10-10 10:06:45.995 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#441] MediaCodec discarded an unknown buffer
+10-10 10:06:45.995 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#441] MediaCodec discarded an unknown buffer
+10-10 10:06:45.997 D/MPEG4Writer(23461): reset()
+10-10 10:06:45.997 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:45.997 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:06:45.999 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:06:46.067 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:46.067 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:46.081 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:06:46.081 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:06:46.081 D/MediaCodec(23461):   }
+10-10 10:06:46.084 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:06:46.093 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:06:46.094 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:06:46.094 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:06:46.097 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:06:46.097 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:06:47.030 D/MPEG4Writer(23461): reset()
+10-10 10:06:47.030 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:47.030 I/MPEG4Writer(23461): Received total/0-length (99/0) buffers and encoded 99 frames. - Audio
+10-10 10:06:47.030 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:06:47.030 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:06:47.030 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:06:47.030 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:06:47.030 I/MPEG4Writer(23461): Duration for 1:Audio track is 4224000 us
+10-10 10:06:47.030 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:06:47.030 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:06:47.030 D/MPEG4Writer(23461): no camera lens information
+10-10 10:06:47.030 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:06:47.031 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:06:47.031 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:06:47.031 D/MPEG4Writer(23461): release()
+10-10 10:06:47.031 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:28529 mOffset:26530 mMdatEndOffset:25385 diff:1999
+10-10 10:06:47.031 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:06:47.031 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:92 #2:102 #3:105 #4:129 #5:219
+10-10 10:06:47.037 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#353] MediaCodec discarded an unknown buffer
+10-10 10:06:47.037 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#353] MediaCodec discarded an unknown buffer
+10-10 10:06:47.039 D/MPEG4Writer(23461): reset()
+10-10 10:06:47.039 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:47.039 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:06:47.039 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:06:47.106 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:47.106 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:47.118 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:06:47.118 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:06:47.118 D/MediaCodec(23461):   }
+10-10 10:06:47.122 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:06:47.132 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:06:47.132 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:06:47.132 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:06:47.138 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:06:47.138 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:06:49.665 D/MPEG4Writer(23461): reset()
+10-10 10:06:49.665 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:49.665 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:06:49.665 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:06:49.665 I/MPEG4Writer(23461): Received total/0-length (255/0) buffers and encoded 255 frames. - Audio
+10-10 10:06:49.665 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:06:49.665 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:06:49.665 I/MPEG4Writer(23461): Duration for 1:Audio track is 10880000 us
+10-10 10:06:49.665 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:06:49.665 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:06:49.666 D/MPEG4Writer(23461): no camera lens information
+10-10 10:06:49.666 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:06:49.666 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:06:49.666 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:06:49.666 D/MPEG4Writer(23461): release()
+10-10 10:06:49.666 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:69089 mOffset:67090 mMdatEndOffset:65321 diff:1999
+10-10 10:06:49.666 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:06:49.666 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:112 #2:118 #3:123 #4:135 #5:147
+10-10 10:06:49.672 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#420] MediaCodec discarded an unknown buffer
+10-10 10:06:49.672 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#420] MediaCodec discarded an unknown buffer
+10-10 10:06:49.672 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#420] MediaCodec discarded an unknown buffer
+10-10 10:06:49.674 D/MPEG4Writer(23461): reset()
+10-10 10:06:49.674 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:49.674 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:06:49.675 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:06:49.740 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:49.740 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:49.751 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:06:49.752 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:06:49.752 D/MediaCodec(23461):   }
+10-10 10:06:49.756 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:06:49.767 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:06:49.767 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:06:49.767 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:06:49.772 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:06:49.772 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:06:50.413 D/MPEG4Writer(23461): reset()
+10-10 10:06:50.413 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:50.413 I/MPEG4Writer(23461): Received total/0-length (90/0) buffers and encoded 90 frames. - Audio
+10-10 10:06:50.413 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:06:50.413 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:06:50.413 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:06:50.413 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:06:50.413 I/MPEG4Writer(23461): Duration for 1:Audio track is 3840000 us
+10-10 10:06:50.414 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:06:50.414 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:06:50.414 D/MPEG4Writer(23461): no camera lens information
+10-10 10:06:50.414 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:06:50.415 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:06:50.415 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:06:50.415 D/MPEG4Writer(23461): release()
+10-10 10:06:50.415 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:26189 mOffset:24190 mMdatEndOffset:23081 diff:1999
+10-10 10:06:50.415 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:06:50.415 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:49 #2:49 #3:55 #4:64 #5:93
+10-10 10:06:50.423 D/MPEG4Writer(23461): reset()
+10-10 10:06:50.424 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:50.424 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:06:50.425 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:06:50.501 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:50.501 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:06:50.524 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:06:50.525 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:06:50.525 D/MediaCodec(23461):   }
+10-10 10:06:50.534 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:06:50.545 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:06:50.545 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:06:50.545 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:06:50.564 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:06:50.564 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:06:52.231 D/MPEG4Writer(23461): reset()
+10-10 10:06:52.232 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:06:52.232 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:06:52.232 I/MPEG4Writer(23461): Received total/0-length (171/0) buffers and encoded 171 frames. - Audio
+10-10 10:06:52.232 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:06:52.232 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:06:52.232 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:06:52.232 I/MPEG4Writer(23461): Duration for 1:Audio track is 7296000 us
+10-10 10:06:52.232 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:06:52.232 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+... (truncated)
+
+===== Live playback of an unprepared chapter while another chapter prepares =====
+10-10 10:13:04.468 I/SherpaOnnxTts(23461): Kokoro synthesize done in 13706ms, samples=259441, file=518926 bytes
+10-10 10:13:04.475 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:04.476 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:04.497 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:13:04.497 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:13:04.497 D/MediaCodec(23461):   }
+10-10 10:13:04.503 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:13:04.516 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:13:04.517 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:13:04.517 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:13:04.524 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:13:04.524 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:13:07.586 D/MPEG4Writer(23461): reset()
+10-10 10:13:07.586 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:07.586 I/MPEG4Writer(23461): Received total/0-length (256/0) buffers and encoded 256 frames. - Audio
+10-10 10:13:07.586 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:13:07.586 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:13:07.587 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:13:07.587 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:13:07.587 I/MPEG4Writer(23461): Duration for 1:Audio track is 10922667 us
+10-10 10:13:07.588 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:13:07.588 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:13:07.591 D/MPEG4Writer(23461): no camera lens information
+10-10 10:13:07.592 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:13:07.597 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:13:07.597 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:13:07.597 D/MPEG4Writer(23461): release()
+10-10 10:13:07.597 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:69349 mOffset:67350 mMdatEndOffset:65577 diff:1999
+10-10 10:13:07.598 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:13:07.598 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:193 #2:201 #3:216 #4:254 #5:271
+10-10 10:13:07.623 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#542] MediaCodec discarded an unknown buffer
+10-10 10:13:07.623 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#542] MediaCodec discarded an unknown buffer
+10-10 10:13:07.623 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#542] MediaCodec discarded an unknown buffer
+10-10 10:13:07.630 D/MPEG4Writer(23461): reset()
+10-10 10:13:07.630 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:07.630 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:13:07.632 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:13:07.751 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=53
+10-10 10:13:11.735 I/SherpaOnnxTts(23461): Kokoro synthesize done in 3984ms, samples=64820, file=129684 bytes
+10-10 10:13:11.740 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:11.740 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:11.756 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:13:11.756 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:13:11.756 D/MediaCodec(23461):   }
+10-10 10:13:11.760 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:13:11.769 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:13:11.769 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:13:11.770 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:13:11.773 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:13:11.773 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:13:12.441 D/MPEG4Writer(23461): reset()
+10-10 10:13:12.441 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:12.441 I/MPEG4Writer(23461): Received total/0-length (66/0) buffers and encoded 66 frames. - Audio
+10-10 10:13:12.441 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:13:12.441 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:13:12.441 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:13:12.442 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:13:12.442 I/MPEG4Writer(23461): Duration for 1:Audio track is 2816000 us
+10-10 10:13:12.442 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:13:12.442 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:13:12.443 D/MPEG4Writer(23461): no camera lens information
+10-10 10:13:12.444 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:13:12.448 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:13:12.448 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:13:12.448 D/MPEG4Writer(23461): release()
+10-10 10:13:12.448 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:19949 mOffset:17950 mMdatEndOffset:16937 diff:1999
+10-10 10:13:12.448 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:13:12.448 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:105 #2:105 #3:109 #4:112 #5:401
+10-10 10:13:12.465 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#187] MediaCodec discarded an unknown buffer
+10-10 10:13:12.465 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#187] MediaCodec discarded an unknown buffer
+10-10 10:13:12.465 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#187] MediaCodec discarded an unknown buffer
+10-10 10:13:12.469 D/MPEG4Writer(23461): reset()
+10-10 10:13:12.469 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:12.469 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:13:12.470 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:13:12.576 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=48
+10-10 10:13:16.663 I/SherpaOnnxTts(23461): Kokoro synthesize done in 4087ms, samples=61665, file=123374 bytes
+10-10 10:13:16.667 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:16.668 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:16.683 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:13:16.683 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:13:16.683 D/MediaCodec(23461):   }
+10-10 10:13:16.686 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:13:16.697 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:13:16.697 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:13:16.697 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:13:16.703 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:13:16.703 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:13:17.332 D/MPEG4Writer(23461): reset()
+10-10 10:13:17.332 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:17.332 I/MPEG4Writer(23461): Received total/0-length (63/0) buffers and encoded 63 frames. - Audio
+10-10 10:13:17.332 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:13:17.332 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:13:17.332 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:13:17.333 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:13:17.333 I/MPEG4Writer(23461): Duration for 1:Audio track is 2688000 us
+10-10 10:13:17.333 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:13:17.334 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:13:17.336 D/MPEG4Writer(23461): no camera lens information
+10-10 10:13:17.338 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:13:17.343 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:13:17.343 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:13:17.343 D/MPEG4Writer(23461): release()
+10-10 10:13:17.343 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:19169 mOffset:17170 mMdatEndOffset:16169 diff:1999
+10-10 10:13:17.343 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:13:17.343 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:133 #2:152 #3:207 #4:280 #5:390
+10-10 10:13:17.349 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#445] MediaCodec discarded an unknown buffer
+10-10 10:13:17.349 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#445] MediaCodec discarded an unknown buffer
+10-10 10:13:17.349 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#445] MediaCodec discarded an unknown buffer
+10-10 10:13:17.353 D/MPEG4Writer(23461): reset()
+10-10 10:13:17.353 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:17.353 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:13:17.355 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:13:17.439 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=46
+10-10 10:13:21.496 I/SherpaOnnxTts(23461): Kokoro synthesize done in 4057ms, samples=60531, file=121106 bytes
+10-10 10:13:21.497 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=29
+10-10 10:13:21.498 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:21.499 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:21.512 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:13:21.512 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:13:21.512 D/MediaCodec(23461):   }
+10-10 10:13:21.520 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:13:21.532 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:13:21.532 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:13:21.532 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:13:21.549 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:13:21.549 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:13:22.226 D/MPEG4Writer(23461): reset()
+10-10 10:13:22.226 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:22.226 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:13:22.226 I/MPEG4Writer(23461): Received total/0-length (62/0) buffers and encoded 62 frames. - Audio
+10-10 10:13:22.226 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:13:22.226 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:13:22.226 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:13:22.226 I/MPEG4Writer(23461): Duration for 1:Audio track is 2645332 us
+10-10 10:13:22.226 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:13:22.226 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:13:22.227 D/MPEG4Writer(23461): no camera lens information
+10-10 10:13:22.227 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:13:22.227 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:13:22.227 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:13:22.227 D/MPEG4Writer(23461): release()
+10-10 10:13:22.227 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:18909 mOffset:16910 mMdatEndOffset:15913 diff:1999
+10-10 10:13:22.227 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:13:22.227 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:45 #2:46 #3:50 #4:52 #5:1643
+10-10 10:13:22.236 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#44] MediaCodec discarded an unknown buffer
+10-10 10:13:22.236 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#44] MediaCodec discarded an unknown buffer
+10-10 10:13:22.236 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#44] MediaCodec discarded an unknown buffer
+10-10 10:13:22.240 D/MPEG4Writer(23461): reset()
+10-10 10:13:22.240 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:22.240 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:13:22.241 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:13:23.908 I/SherpaOnnxTts(23461): Kokoro synthesize done in 2411ms, samples=29474, file=58992 bytes
+10-10 10:13:23.909 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=146
+10-10 10:13:23.920 D/ForegroundServiceController(23461): 	at com.retro99.reader.ui.tts.ExoTtsEnginePlayerProvider.notificationPlayer(ExoTtsEnginePlayer.kt:164)
+10-10 10:13:23.920 D/ForegroundServiceController(23461): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:489)
+10-10 10:13:23.920 D/ForegroundServiceController(23461): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:482)
+10-10 10:13:23.971 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:13:24.090 W/.retro99.parrot(23461): Long monitor contention with owner DefaultDispatcher-worker-5 (31645) at com.retro99.reader.ui.tts.PreparedSentenceAudio com.retro99.reader.ui.tts.TtsPreparedStore.lookup(java.lang.String, boolean)(TtsPreparedStore.kt:115) waiters=2 in com.retro99.reader.ui.tts.PreparedSentenceAudio com.retro99.reader.ui.tts.TtsPreparedStore.lookup(java.lang.String, boolean) for 107ms
+10-10 10:13:33.898 I/SherpaOnnxTts(23461): Kokoro synthesize done in 9989ms, samples=186191, file=372426 bytes
+10-10 10:13:33.899 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=26
+10-10 10:13:33.903 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:33.903 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:33.919 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:13:33.919 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:13:33.919 D/MediaCodec(23461):   }
+10-10 10:13:33.927 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:13:33.939 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:13:33.939 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:13:33.940 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:13:33.948 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:13:33.948 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:13:35.558 D/MPEG4Writer(23461): reset()
+10-10 10:13:35.558 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:35.558 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:13:35.558 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:13:35.558 I/MPEG4Writer(23461): Received total/0-length (184/0) buffers and encoded 184 frames. - Audio
+10-10 10:13:35.558 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:13:35.558 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:13:35.558 I/MPEG4Writer(23461): Duration for 1:Audio track is 7850667 us
+10-10 10:13:35.558 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:13:35.559 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:13:35.559 D/MPEG4Writer(23461): no camera lens information
+10-10 10:13:35.559 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:13:35.560 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:13:35.560 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:13:35.560 D/MPEG4Writer(23461): release()
+10-10 10:13:35.560 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:50629 mOffset:48630 mMdatEndOffset:47145 diff:1999
+10-10 10:13:35.560 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:13:35.561 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:87 #2:94 #3:100 #4:116 #5:187
+10-10 10:13:35.570 D/MPEG4Writer(23461): reset()
+10-10 10:13:35.570 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:35.570 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:13:35.571 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:13:36.699 I/SherpaOnnxTts(23461): Kokoro synthesize done in 2800ms, samples=38435, file=76914 bytes
+10-10 10:13:36.700 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=247
+10-10 10:13:36.707 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:13:51.361 I/SherpaOnnxTts(23461): Kokoro synthesize done in 14660ms, samples=277122, file=554288 bytes
+10-10 10:13:51.362 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=167
+10-10 10:13:51.363 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:51.364 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:13:51.379 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:13:51.379 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:13:51.379 D/MediaCodec(23461):   }
+10-10 10:13:51.385 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:13:51.396 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:13:51.396 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:13:51.396 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:13:51.404 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:13:51.404 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:13:54.012 D/MPEG4Writer(23461): reset()
+10-10 10:13:54.012 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:54.012 I/MPEG4Writer(23461): Received total/0-length (273/0) buffers and encoded 273 frames. - Audio
+10-10 10:13:54.012 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:13:54.012 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:13:54.012 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:13:54.012 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:13:54.012 I/MPEG4Writer(23461): Duration for 1:Audio track is 11648000 us
+10-10 10:13:54.012 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:13:54.013 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:13:54.013 D/MPEG4Writer(23461): no camera lens information
+10-10 10:13:54.013 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:13:54.014 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:13:54.014 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:13:54.014 D/MPEG4Writer(23461): release()
+10-10 10:13:54.014 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:73769 mOffset:71770 mMdatEndOffset:69929 diff:1999
+10-10 10:13:54.015 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:13:54.015 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:107 #2:108 #3:109 #4:113 #5:417
+10-10 10:13:54.025 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#59] MediaCodec discarded an unknown buffer
+10-10 10:13:54.027 D/MPEG4Writer(23461): reset()
+10-10 10:13:54.027 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:13:54.027 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:13:54.028 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:14:01.799 I/SherpaOnnxTts(23461): Kokoro synthesize done in 10437ms, samples=198048, file=396140 bytes
+10-10 10:14:01.800 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=175
+10-10 10:14:01.808 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:14:12.836 I/SherpaOnnxTts(23461): Kokoro synthesize done in 11036ms, samples=199989, file=400022 bytes
+10-10 10:14:12.837 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=16
+10-10 10:14:12.841 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:14:12.841 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:14:12.861 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:14:12.861 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:14:12.861 D/MediaCodec(23461):   }
+10-10 10:14:12.867 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:14:12.879 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:14:12.879 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:14:12.879 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:14:12.884 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:14:12.884 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:14:14.778 D/MPEG4Writer(23461): reset()
+10-10 10:14:14.778 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:14:14.778 I/MPEG4Writer(23461): Received total/0-length (198/0) buffers and encoded 198 frames. - Audio
+10-10 10:14:14.778 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:14:14.778 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:14:14.778 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:14:14.779 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:14:14.779 I/MPEG4Writer(23461): Duration for 1:Audio track is 8448000 us
+10-10 10:14:14.779 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:14:14.779 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:14:14.779 D/MPEG4Writer(23461): no camera lens information
+10-10 10:14:14.779 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:14:14.780 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:14:14.780 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:14:14.780 D/MPEG4Writer(23461): release()
+10-10 10:14:14.780 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:54269 mOffset:52270 mMdatEndOffset:50729 diff:1999
+10-10 10:14:14.780 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:14:14.780 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:71 #2:76 #3:78 #4:93 #5:187
+10-10 10:14:14.790 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#643] MediaCodec discarded an unknown buffer
+10-10 10:14:14.790 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#643] MediaCodec discarded an unknown buffer
+10-10 10:14:14.792 D/MPEG4Writer(23461): reset()
+10-10 10:14:14.792 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:14:14.792 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:14:14.793 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:14:15.018 I/SherpaOnnxTts(23461): Kokoro synthesize done in 2180ms, samples=25532, file=51108 bytes
+10-10 10:14:15.018 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=102
+10-10 10:14:15.025 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:14:21.972 I/SherpaOnnxTts(23461): Kokoro synthesize done in 6954ms, samples=124934, file=249912 bytes
+10-10 10:14:21.973 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=108
+10-10 10:14:21.975 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:14:21.975 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:14:21.989 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:14:21.989 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:14:21.989 D/MediaCodec(23461):   }
+10-10 10:14:21.993 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:14:22.004 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:14:22.004 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:14:22.004 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:14:22.014 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:14:22.014 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:14:23.225 D/MPEG4Writer(23461): reset()
+10-10 10:14:23.225 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:14:23.225 I/MPEG4Writer(23461): Received total/0-length (125/0) buffers and encoded 125 frames. - Audio
+10-10 10:14:23.225 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:14:23.225 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:14:23.225 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:14:23.225 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:14:23.225 I/MPEG4Writer(23461): Duration for 1:Audio track is 5333332 us
+10-10 10:14:23.225 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:14:23.225 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:14:23.226 D/MPEG4Writer(23461): no camera lens information
+10-10 10:14:23.226 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:14:23.226 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:14:23.226 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:14:23.226 D/MPEG4Writer(23461): release()
+10-10 10:14:23.226 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:35289 mOffset:33290 mMdatEndOffset:32041 diff:1999
+10-10 10:14:23.227 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:14:23.227 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:92 #2:108 #3:131 #4:139 #5:182
+10-10 10:14:23.235 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#594] MediaCodec discarded an unknown buffer
+10-10 10:14:23.235 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#594] MediaCodec discarded an unknown buffer
+10-10 10:14:23.235 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#594] MediaCodec discarded an unknown buffer
+10-10 10:14:23.237 D/MPEG4Writer(23461): reset()
+10-10 10:14:23.237 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:14:23.237 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:14:23.237 I/MediaCodec(23461): Codec shutdown complete
+10-10 10:14:28.569 I/SherpaOnnxTts(23461): Kokoro synthesize done in 6596ms, samples=114068, file=228180 bytes
+10-10 10:14:28.571 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=217
+10-10 10:14:28.578 W/TtsReadAloudEngine(23461): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:14:42.626 I/SherpaOnnxTts(23461): Kokoro synthesize done in 14055ms, samples=263032, file=526108 bytes
+10-10 10:14:42.627 I/SherpaOnnxTts(23461): Kokoro synthesize start: sid=0 speed=1.0 chars=95
+10-10 10:14:42.628 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:14:42.628 D/MediaCodecList(23461): codecHandlesFormat: no format, so no extra checks
+10-10 10:14:42.641 I/MediaCodec(23461): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:14:42.642 D/MediaCodec(23461): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:14:42.642 D/MediaCodec(23461):   }
+10-10 10:14:42.647 D/MPEG4Writer(23461): PreAllocation enabled
+10-10 10:14:42.660 D/MPEG4Writer(23461): fpathconf _PC_FILESIZEBITS:64
+10-10 10:14:42.660 D/MPEG4Writer(23461): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:14:42.660 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper Started
+10-10 10:14:42.667 I/MPEG4Writer(23461): setStartTimestampUs: 0 from Audio track
+10-10 10:14:42.667 I/MPEG4Writer(23461): Earliest track starting time: 0
+10-10 10:14:45.213 D/MPEG4Writer(23461): reset()
+10-10 10:14:45.213 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:14:45.213 I/MPEG4Writer(23461): Received total/0-length (259/0) buffers and encoded 259 frames. - Audio
+10-10 10:14:45.214 D/MPEG4Writer(23461): Audio track source stopping
+10-10 10:14:45.214 I/MPEG4Writer(23461): Audio track drift time: 0 us
+10-10 10:14:45.214 D/MPEG4Writer(23461): Audio track source stopped
+10-10 10:14:45.214 D/MPEG4Writer(23461): Audio track stopped. Status:0. Stop source
+10-10 10:14:45.214 I/MPEG4Writer(23461): Duration for 1:Audio track is 11050667 us
+10-10 10:14:45.214 D/MPEG4Writer(23461): 0 chunks are written in the last batch
+10-10 10:14:45.214 D/MPEG4Writer(23461): WriterThread stopped. Status:0
+10-10 10:14:45.214 D/MPEG4Writer(23461): no camera lens information
+10-10 10:14:45.214 I/MPEG4Writer(23461): Adjust the moov start time from 0 us -> 0 us
+10-10 10:14:45.215 I/MPEG4Writer(23461): The mp4 file will not be streamable.
+10-10 10:14:45.215 I/MPEG4Writer(23461): MOOV atom was written to the file
+10-10 10:14:45.215 D/MPEG4Writer(23461): release()
+10-10 10:14:45.215 D/MPEG4Writer(23461): ftruncate mPreAllocateFileEndOffset:70184 mOffset:68185 mMdatEndOffset:66400 diff:1999
+10-10 10:14:45.215 D/MPEG4Writer(23461): MP4WtrCtrlHlpLooper stopped
+10-10 10:14:45.215 I/MPEG4Writer(23461): Top 5 write durations(microseconds): #1:97 #2:109 #3:111 #4:118 #5:141
+10-10 10:14:45.237 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#250] MediaCodec discarded an unknown buffer
+10-10 10:14:45.237 D/CCodecBufferChannel(23461): [c2.android.aac.encoder#250] MediaCodec discarded an unknown buffer
+10-10 10:14:45.240 D/MPEG4Writer(23461): reset()
+10-10 10:14:45.240 D/MPEG4Writer(23461): Audio track stopping. Stop source
+10-10 10:14:45.240 E/MPEG4Writer(23461): Stop() called but track is not started or stopped
+10-10 10:14:45.241 I/MediaCodec(23461): Codec shutdown complete
+
+===== Continue after a force-stop at 70 of 97 =====
+10-10 10:17:11.981 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=263
+10-10 10:17:25.406 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 13425ms, samples=304769, file=609582 bytes
+10-10 10:17:25.420 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:17:25.422 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:17:25.804 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:17:25.829 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:17:25.829 D/MediaCodec( 9384):   }
+10-10 10:17:25.842 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:17:25.895 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:17:25.895 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:17:25.896 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:17:25.902 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:17:25.902 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:17:29.219 D/MPEG4Writer( 9384): reset()
+10-10 10:17:29.219 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:17:29.219 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:17:29.219 I/MPEG4Writer( 9384): Received total/0-length (300/0) buffers and encoded 300 frames. - Audio
+10-10 10:17:29.219 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:17:29.219 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:17:29.221 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:17:29.221 I/MPEG4Writer( 9384): Duration for 1:Audio track is 12800000 us
+10-10 10:17:29.221 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:17:29.222 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:17:29.223 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:17:29.224 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:17:29.227 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:17:29.227 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:17:29.227 D/MPEG4Writer( 9384): release()
+10-10 10:17:29.227 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:80789 mOffset:78790 mMdatEndOffset:76841 diff:1999
+10-10 10:17:29.228 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:17:29.229 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:226 #2:238 #3:246 #4:289 #5:385
+10-10 10:17:29.336 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#563] MediaCodec discarded an unknown buffer
+10-10 10:17:29.345 D/MPEG4Writer( 9384): reset()
+10-10 10:17:29.345 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:17:29.345 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:17:29.348 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:17:29.562 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=108
+10-10 10:17:36.572 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 7010ms, samples=131056, file=262156 bytes
+10-10 10:17:36.580 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:17:36.580 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:17:36.599 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:17:36.599 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:17:36.599 D/MediaCodec( 9384):   }
+10-10 10:17:36.605 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:17:36.618 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:17:36.618 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:17:36.619 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:17:36.624 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:17:36.624 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:17:38.116 D/MPEG4Writer( 9384): reset()
+10-10 10:17:38.116 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:17:38.116 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:17:38.116 I/MPEG4Writer( 9384): Received total/0-length (130/0) buffers and encoded 130 frames. - Audio
+10-10 10:17:38.116 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:17:38.116 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:17:38.117 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:17:38.117 I/MPEG4Writer( 9384): Duration for 1:Audio track is 5546667 us
+10-10 10:17:38.117 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:17:38.118 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:17:38.120 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:17:38.121 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:17:38.124 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:17:38.124 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:17:38.124 D/MPEG4Writer( 9384): release()
+10-10 10:17:38.124 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:36589 mOffset:34590 mMdatEndOffset:33321 diff:1999
+10-10 10:17:38.125 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:17:38.125 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:129 #2:132 #3:139 #4:199 #5:220
+10-10 10:17:38.139 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#388] MediaCodec discarded an unknown buffer
+10-10 10:17:38.139 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#388] MediaCodec discarded an unknown buffer
+10-10 10:17:38.140 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#388] MediaCodec discarded an unknown buffer
+10-10 10:17:38.144 D/MPEG4Writer( 9384): reset()
+10-10 10:17:38.144 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:17:38.144 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:17:38.146 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:17:38.288 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=259
+10-10 10:17:55.404 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 17116ms, samples=333032, file=666108 bytes
+10-10 10:17:55.409 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:17:55.409 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:17:55.424 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:17:55.424 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:17:55.424 D/MediaCodec( 9384):   }
+10-10 10:17:55.427 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:17:55.441 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:17:55.441 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:17:55.441 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:17:55.448 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:17:55.448 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:17:59.001 D/MPEG4Writer( 9384): reset()
+10-10 10:17:59.001 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:17:59.001 I/MPEG4Writer( 9384): Received total/0-length (328/0) buffers and encoded 328 frames. - Audio
+10-10 10:17:59.001 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:17:59.001 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:17:59.002 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:17:59.002 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:17:59.002 I/MPEG4Writer( 9384): Duration for 1:Audio track is 13994667 us
+10-10 10:17:59.003 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:17:59.003 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:17:59.007 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:17:59.009 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:17:59.014 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:17:59.014 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:17:59.014 D/MPEG4Writer( 9384): release()
+10-10 10:17:59.014 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:88069 mOffset:86070 mMdatEndOffset:84009 diff:1999
+10-10 10:17:59.015 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:17:59.015 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:251 #2:274 #3:444 #4:875 #5:1008
+10-10 10:17:59.046 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#59] MediaCodec discarded an unknown buffer
+10-10 10:17:59.046 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#59] MediaCodec discarded an unknown buffer
+10-10 10:17:59.051 D/MPEG4Writer( 9384): reset()
+10-10 10:17:59.051 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:17:59.051 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:17:59.053 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:17:59.208 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=39
+10-10 10:18:02.450 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 3242ms, samples=47925, file=95894 bytes
+10-10 10:18:02.455 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:02.455 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:02.476 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:18:02.476 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:18:02.476 D/MediaCodec( 9384):   }
+10-10 10:18:02.481 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:18:02.493 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:18:02.493 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:18:02.493 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:18:02.500 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:18:02.500 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:18:02.840 D/MPEG4Writer( 9384): reset()
+10-10 10:18:02.840 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:02.840 I/MPEG4Writer( 9384): Received total/0-length (49/0) buffers and encoded 49 frames. - Audio
+10-10 10:18:02.840 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:18:02.840 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:18:02.840 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:18:02.840 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:18:02.840 I/MPEG4Writer( 9384): Duration for 1:Audio track is 2090667 us
+10-10 10:18:02.841 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:18:02.841 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:18:02.842 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:18:02.842 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:18:02.844 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:18:02.844 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:18:02.844 D/MPEG4Writer( 9384): release()
+10-10 10:18:02.844 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:15529 mOffset:13530 mMdatEndOffset:12585 diff:1999
+10-10 10:18:02.845 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:18:02.845 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:95 #2:106 #3:113 #4:119 #5:160
+10-10 10:18:02.851 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#415] MediaCodec discarded an unknown buffer
+10-10 10:18:02.854 D/MPEG4Writer( 9384): reset()
+10-10 10:18:02.854 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:02.854 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:18:02.855 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:18:02.996 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=25
+10-10 10:18:05.505 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 2509ms, samples=31833, file=63710 bytes
+10-10 10:18:05.509 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:05.510 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:05.538 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:18:05.538 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:18:05.538 D/MediaCodec( 9384):   }
+10-10 10:18:05.542 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:18:05.558 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:18:05.558 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:18:05.559 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:18:05.562 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:18:05.562 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:18:05.911 D/MPEG4Writer( 9384): reset()
+10-10 10:18:05.911 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:05.911 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:18:05.911 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:18:05.911 I/MPEG4Writer( 9384): Received total/0-length (34/0) buffers and encoded 34 frames. - Audio
+10-10 10:18:05.911 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:18:05.911 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:18:05.911 I/MPEG4Writer( 9384): Duration for 1:Audio track is 1450667 us
+10-10 10:18:05.912 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:18:05.912 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:18:05.913 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:18:05.913 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:18:05.914 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:18:05.914 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:18:05.914 D/MPEG4Writer( 9384): release()
+10-10 10:18:05.914 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:11629 mOffset:9630 mMdatEndOffset:8745 diff:1999
+10-10 10:18:05.955 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:18:05.955 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:86 #2:107 #3:116 #4:218 #5:230
+10-10 10:18:05.969 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#860] MediaCodec discarded an unknown buffer
+10-10 10:18:05.969 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#860] MediaCodec discarded an unknown buffer
+10-10 10:18:05.969 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#860] MediaCodec discarded an unknown buffer
+10-10 10:18:05.973 D/MPEG4Writer( 9384): reset()
+10-10 10:18:05.973 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:05.973 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:18:05.975 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:18:06.124 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=53
+10-10 10:18:10.278 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 4154ms, samples=63321, file=126686 bytes
+10-10 10:18:10.280 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:10.280 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:10.296 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:18:10.296 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:18:10.296 D/MediaCodec( 9384):   }
+10-10 10:18:10.303 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:18:10.315 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:18:10.315 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:18:10.315 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:18:10.321 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:18:10.321 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:18:11.027 D/MPEG4Writer( 9384): reset()
+10-10 10:18:11.027 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:11.027 I/MPEG4Writer( 9384): Received total/0-length (64/0) buffers and encoded 64 frames. - Audio
+10-10 10:18:11.027 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:18:11.027 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:18:11.027 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:18:11.028 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:18:11.028 I/MPEG4Writer( 9384): Duration for 1:Audio track is 2730667 us
+10-10 10:18:11.029 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:18:11.029 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:18:11.032 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:18:11.034 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:18:11.039 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:18:11.039 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:18:11.039 D/MPEG4Writer( 9384): release()
+10-10 10:18:11.039 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:19429 mOffset:17430 mMdatEndOffset:16425 diff:1999
+10-10 10:18:11.040 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:18:11.040 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:115 #2:119 #3:144 #4:159 #5:243
+10-10 10:18:11.052 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#336] MediaCodec discarded an unknown buffer
+10-10 10:18:11.053 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#336] MediaCodec discarded an unknown buffer
+10-10 10:18:11.053 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#336] MediaCodec discarded an unknown buffer
+10-10 10:18:11.057 D/MPEG4Writer( 9384): reset()
+10-10 10:18:11.057 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:11.057 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:18:11.059 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:18:11.190 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=188
+10-10 10:18:22.868 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 11678ms, samples=224216, file=448476 bytes
+10-10 10:18:22.876 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:22.876 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:22.898 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:18:22.898 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:18:22.898 D/MediaCodec( 9384):   }
+10-10 10:18:22.903 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:18:22.917 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:18:22.917 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:18:22.918 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:18:22.925 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:18:22.925 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:18:25.533 D/MPEG4Writer( 9384): reset()
+10-10 10:18:25.534 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:25.534 I/MPEG4Writer( 9384): Received total/0-length (221/0) buffers and encoded 221 frames. - Audio
+10-10 10:18:25.534 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:18:25.534 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:18:25.534 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:18:25.535 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:18:25.535 I/MPEG4Writer( 9384): Duration for 1:Audio track is 9429332 us
+10-10 10:18:25.536 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:18:25.536 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:18:25.539 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:18:25.540 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:18:25.546 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:18:25.546 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:18:25.546 D/MPEG4Writer( 9384): release()
+10-10 10:18:25.547 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:60249 mOffset:58250 mMdatEndOffset:56617 diff:1999
+10-10 10:18:25.548 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:18:25.548 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:195 #2:217 #3:263 #4:344 #5:430
+10-10 10:18:25.567 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#172] MediaCodec discarded an unknown buffer
+10-10 10:18:25.567 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#172] MediaCodec discarded an unknown buffer
+10-10 10:18:25.568 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#172] MediaCodec discarded an unknown buffer
+10-10 10:18:25.573 D/MPEG4Writer( 9384): reset()
+10-10 10:18:25.573 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:25.573 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:18:25.575 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:18:25.722 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=226
+10-10 10:18:39.464 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 13742ms, samples=258411, file=516866 bytes
+10-10 10:18:39.473 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:39.473 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:39.498 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:18:39.498 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:18:39.498 D/MediaCodec( 9384):   }
+10-10 10:18:39.503 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:18:39.515 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:18:39.515 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:18:39.515 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:18:39.521 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:18:39.521 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:18:42.525 D/MPEG4Writer( 9384): reset()
+10-10 10:18:42.526 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:42.526 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:18:42.526 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:18:42.526 I/MPEG4Writer( 9384): Received total/0-length (255/0) buffers and encoded 255 frames. - Audio
+10-10 10:18:42.526 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:18:42.527 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:18:42.527 I/MPEG4Writer( 9384): Duration for 1:Audio track is 10880000 us
+10-10 10:18:42.527 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:18:42.527 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:18:42.530 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:18:42.531 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:18:42.537 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:18:42.538 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:18:42.538 D/MPEG4Writer( 9384): release()
+10-10 10:18:42.538 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:69089 mOffset:67090 mMdatEndOffset:65321 diff:1999
+10-10 10:18:42.538 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:18:42.538 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:251 #2:254 #3:273 #4:313 #5:378
+10-10 10:18:42.558 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#107] MediaCodec discarded an unknown buffer
+10-10 10:18:42.558 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#107] MediaCodec discarded an unknown buffer
+10-10 10:18:42.559 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#107] MediaCodec discarded an unknown buffer
+10-10 10:18:42.564 D/MPEG4Writer( 9384): reset()
+10-10 10:18:42.564 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:42.564 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:18:42.566 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:18:42.706 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=37
+10-10 10:18:45.810 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 3104ms, samples=44819, file=89682 bytes
+10-10 10:18:45.813 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:45.813 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:45.826 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:18:45.826 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:18:45.826 D/MediaCodec( 9384):   }
+10-10 10:18:45.830 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:18:45.840 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:18:45.840 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:18:45.840 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:18:45.843 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:18:45.844 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:18:46.207 D/MPEG4Writer( 9384): reset()
+10-10 10:18:46.207 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:46.207 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:18:46.207 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:18:46.208 I/MPEG4Writer( 9384): Received total/0-length (46/0) buffers and encoded 46 frames. - Audio
+10-10 10:18:46.208 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:18:46.208 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:18:46.208 I/MPEG4Writer( 9384): Duration for 1:Audio track is 1962667 us
+10-10 10:18:46.209 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:18:46.209 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:18:46.209 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:18:46.209 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:18:46.210 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:18:46.210 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:18:46.210 D/MPEG4Writer( 9384): release()
+10-10 10:18:46.210 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:14749 mOffset:12750 mMdatEndOffset:11817 diff:1999
+10-10 10:18:46.210 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:18:46.210 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:84 #2:89 #3:91 #4:92 #5:112
+10-10 10:18:46.220 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#226] MediaCodec discarded an unknown buffer
+10-10 10:18:46.223 D/MPEG4Writer( 9384): reset()
+10-10 10:18:46.223 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:46.223 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:18:46.224 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:18:46.365 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=146
+10-10 10:18:55.873 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 9508ms, samples=176709, file=353462 bytes
+10-10 10:18:55.879 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:55.880 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:18:55.897 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:18:55.897 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:18:55.897 D/MediaCodec( 9384):   }
+10-10 10:18:55.903 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:18:55.916 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:18:55.916 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:18:55.916 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:18:55.926 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:18:55.926 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:18:57.505 D/MPEG4Writer( 9384): reset()
+10-10 10:18:57.505 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:57.505 I/MPEG4Writer( 9384): Received total/0-length (175/0) buffers and encoded 175 frames. - Audio
+10-10 10:18:57.505 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:18:57.505 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:18:57.505 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:18:57.505 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:18:57.505 I/MPEG4Writer( 9384): Duration for 1:Audio track is 7466667 us
+10-10 10:18:57.505 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:18:57.505 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:18:57.505 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:18:57.505 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:18:57.506 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:18:57.506 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:18:57.506 D/MPEG4Writer( 9384): release()
+10-10 10:18:57.506 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:48289 mOffset:46290 mMdatEndOffset:44841 diff:1999
+10-10 10:18:57.507 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:18:57.507 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:74 #2:80 #3:113 #4:113 #5:430
+10-10 10:18:57.513 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#476] MediaCodec discarded an unknown buffer
+10-10 10:18:57.514 D/MPEG4Writer( 9384): reset()
+10-10 10:18:57.514 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:18:57.514 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:18:57.515 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:18:57.716 I/SherpaOnnxTts( 9384): Kokoro synthesize start: sid=0 speed=1.0 chars=122
+10-10 10:19:06.418 I/SherpaOnnxTts( 9384): Kokoro synthesize done in 8702ms, samples=155146, file=310336 bytes
+10-10 10:19:06.421 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:19:06.422 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:19:06.437 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:19:06.437 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:19:06.437 D/MediaCodec( 9384):   }
+10-10 10:19:06.440 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:19:06.452 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:19:06.452 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:19:06.452 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:19:06.461 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:19:06.461 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:19:08.042 D/MPEG4Writer( 9384): reset()
+10-10 10:19:08.042 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:19:08.042 I/MPEG4Writer( 9384): Received total/0-length (154/0) buffers and encoded 154 frames. - Audio
+10-10 10:19:08.042 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:19:08.042 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:19:08.042 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:19:08.043 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:19:08.043 I/MPEG4Writer( 9384): Duration for 1:Audio track is 6570667 us
+10-10 10:19:08.044 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:19:08.045 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:19:08.046 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:19:08.047 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:19:08.052 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:19:08.052 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:19:08.052 D/MPEG4Writer( 9384): release()
+10-10 10:19:08.052 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:42829 mOffset:40830 mMdatEndOffset:39465 diff:1999
+10-10 10:19:08.053 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+... (truncated)
+
+===== System-voice preparation of the 39-sentence chapter =====
+10-10 10:26:43.248 I/TextToSpeech( 9384): Create TextToSpeech : caller process id[9384] / name[com.retro99.parrot] / target[null]
+10-10 10:26:43.293 I/TextToSpeech( 9384): com.retro99.parrot is not allowed to bind to private engine.
+10-10 10:26:43.294 I/TextToSpeech( 9384): getHighestRankedPublicEngineName = com.google.android.tts
+10-10 10:26:43.298 I/TextToSpeech( 9384): Sucessfully bound to com.google.android.tts
+10-10 10:26:43.309 I/TextToSpeech( 9384): Connected to TTS engine
+10-10 10:26:43.402 I/TextToSpeech( 9384): Setting up the connection to TTS engine...
+10-10 10:26:44.503 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:44.504 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:44.755 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:26:44.763 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:26:44.763 D/MediaCodec( 9384):   }
+10-10 10:26:44.775 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:26:44.827 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:26:44.828 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:26:44.829 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:26:44.833 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:26:44.833 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:26:45.877 D/MPEG4Writer( 9384): reset()
+10-10 10:26:45.877 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:45.877 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:26:45.877 I/MPEG4Writer( 9384): Received total/0-length (92/0) buffers and encoded 92 frames. - Audio
+10-10 10:26:45.877 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:26:45.877 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:26:45.878 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:26:45.878 I/MPEG4Writer( 9384): Duration for 1:Audio track is 3925332 us
+10-10 10:26:45.878 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:26:45.879 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:26:45.882 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:26:45.884 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:26:45.889 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:26:45.889 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:26:45.889 D/MPEG4Writer( 9384): release()
+10-10 10:26:45.889 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:26819 mOffset:24820 mMdatEndOffset:23703 diff:1999
+10-10 10:26:45.890 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:26:45.890 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:262 #2:264 #3:332 #4:362 #5:561
+10-10 10:26:46.016 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#878] MediaCodec discarded an unknown buffer
+10-10 10:26:46.016 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#878] MediaCodec discarded an unknown buffer
+10-10 10:26:46.016 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#878] MediaCodec discarded an unknown buffer
+10-10 10:26:46.021 D/MPEG4Writer( 9384): reset()
+10-10 10:26:46.021 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:46.021 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:26:46.024 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:26:46.084 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:46.084 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:46.094 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:26:46.094 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:26:46.094 D/MediaCodec( 9384):   }
+10-10 10:26:46.098 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:26:46.113 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:26:46.113 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:26:46.113 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:26:46.121 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:26:46.121 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:26:48.394 D/MPEG4Writer( 9384): reset()
+10-10 10:26:48.394 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:48.394 I/MPEG4Writer( 9384): Received total/0-length (199/0) buffers and encoded 199 frames. - Audio
+10-10 10:26:48.394 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:26:48.394 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:26:48.394 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:26:48.395 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:26:48.395 I/MPEG4Writer( 9384): Duration for 1:Audio track is 8490667 us
+10-10 10:26:48.396 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:26:48.396 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:26:48.398 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:26:48.399 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:26:48.403 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:26:48.404 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:26:48.404 D/MPEG4Writer( 9384): release()
+10-10 10:26:48.404 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:54529 mOffset:52530 mMdatEndOffset:50985 diff:1999
+10-10 10:26:48.405 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:26:48.405 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:197 #2:243 #3:248 #4:337 #5:479
+10-10 10:26:48.423 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#925] MediaCodec discarded an unknown buffer
+10-10 10:26:48.424 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#925] MediaCodec discarded an unknown buffer
+10-10 10:26:48.428 D/MPEG4Writer( 9384): reset()
+10-10 10:26:48.428 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:48.428 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:26:48.430 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:26:48.499 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:48.499 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:48.512 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:26:48.512 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:26:48.512 D/MediaCodec( 9384):   }
+10-10 10:26:48.515 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:26:48.523 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:26:48.523 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:26:48.523 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:26:48.529 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:26:48.529 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:26:51.163 D/MPEG4Writer( 9384): reset()
+10-10 10:26:51.163 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:51.163 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:26:51.163 I/MPEG4Writer( 9384): Received total/0-length (240/0) buffers and encoded 240 frames. - Audio
+10-10 10:26:51.163 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:26:51.163 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:26:51.163 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:26:51.163 I/MPEG4Writer( 9384): Duration for 1:Audio track is 10240000 us
+10-10 10:26:51.164 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:26:51.164 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:26:51.167 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:26:51.169 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:26:51.174 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:26:51.174 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:26:51.174 D/MPEG4Writer( 9384): release()
+10-10 10:26:51.174 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:65189 mOffset:63190 mMdatEndOffset:61481 diff:1999
+10-10 10:26:51.175 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:26:51.175 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:221 #2:244 #3:278 #4:418 #5:466
+10-10 10:26:51.183 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#92] MediaCodec discarded an unknown buffer
+10-10 10:26:51.187 D/MPEG4Writer( 9384): reset()
+10-10 10:26:51.187 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:51.188 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:26:51.189 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:26:51.247 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:51.247 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:51.259 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:26:51.259 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:26:51.259 D/MediaCodec( 9384):   }
+10-10 10:26:51.262 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:26:51.271 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:26:51.271 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:26:51.271 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:26:51.279 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:26:51.279 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:26:53.145 D/MPEG4Writer( 9384): reset()
+10-10 10:26:53.145 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:53.145 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:26:53.145 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:26:53.145 I/MPEG4Writer( 9384): Received total/0-length (177/0) buffers and encoded 177 frames. - Audio
+10-10 10:26:53.145 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:26:53.145 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:26:53.145 I/MPEG4Writer( 9384): Duration for 1:Audio track is 7552000 us
+10-10 10:26:53.146 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:26:53.146 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:26:53.146 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:26:53.146 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:26:53.147 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:26:53.147 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:26:53.147 D/MPEG4Writer( 9384): release()
+10-10 10:26:53.147 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:48809 mOffset:46810 mMdatEndOffset:45353 diff:1999
+10-10 10:26:53.147 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:26:53.147 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:150 #2:154 #3:176 #4:227 #5:236
+10-10 10:26:53.159 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#726] MediaCodec discarded an unknown buffer
+10-10 10:26:53.163 D/MPEG4Writer( 9384): reset()
+10-10 10:26:53.163 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:53.163 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:26:53.165 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:26:53.481 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:53.481 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:53.495 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:26:53.495 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:26:53.495 D/MediaCodec( 9384):   }
+10-10 10:26:53.498 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:26:53.513 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:26:53.513 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:26:53.514 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:26:53.517 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:26:53.517 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:26:54.270 D/MPEG4Writer( 9384): reset()
+10-10 10:26:54.270 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:54.270 I/MPEG4Writer( 9384): Received total/0-length (75/0) buffers and encoded 75 frames. - Audio
+10-10 10:26:54.270 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:26:54.270 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:26:54.270 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:26:54.271 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:26:54.271 I/MPEG4Writer( 9384): Duration for 1:Audio track is 3200000 us
+10-10 10:26:54.272 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:26:54.272 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:26:54.273 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:26:54.274 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:26:54.278 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:26:54.278 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:26:54.278 D/MPEG4Writer( 9384): release()
+10-10 10:26:54.278 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:22289 mOffset:20290 mMdatEndOffset:19241 diff:1999
+10-10 10:26:54.278 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:26:54.278 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:122 #2:134 #3:159 #4:165 #5:188
+10-10 10:26:54.285 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#275] MediaCodec discarded an unknown buffer
+10-10 10:26:54.290 D/MPEG4Writer( 9384): reset()
+10-10 10:26:54.290 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:54.290 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:26:54.291 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:26:54.488 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:54.489 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:54.502 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:26:54.502 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:26:54.502 D/MediaCodec( 9384):   }
+10-10 10:26:54.505 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:26:54.514 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:26:54.514 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:26:54.515 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:26:54.521 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:26:54.522 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:26:54.848 D/MPEG4Writer( 9384): reset()
+10-10 10:26:54.848 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:54.848 I/MPEG4Writer( 9384): Received total/0-length (46/0) buffers and encoded 46 frames. - Audio
+10-10 10:26:54.848 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:26:54.848 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:26:54.848 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:26:54.848 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:26:54.848 I/MPEG4Writer( 9384): Duration for 1:Audio track is 1962667 us
+10-10 10:26:54.849 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:26:54.849 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:26:54.849 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:26:54.849 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:26:54.850 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:26:54.850 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:26:54.850 D/MPEG4Writer( 9384): release()
+10-10 10:26:54.850 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:14840 mOffset:12841 mMdatEndOffset:11908 diff:1999
+10-10 10:26:54.850 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:26:54.850 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:75 #2:76 #3:76 #4:108 #5:127
+10-10 10:26:54.856 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#625] MediaCodec discarded an unknown buffer
+10-10 10:26:54.859 D/MPEG4Writer( 9384): reset()
+10-10 10:26:54.859 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:54.859 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:26:54.860 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:26:55.256 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:55.256 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:55.268 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:26:55.268 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:26:55.268 D/MediaCodec( 9384):   }
+10-10 10:26:55.275 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:26:55.284 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:26:55.284 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:26:55.284 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:26:55.289 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:26:55.289 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:26:57.655 D/MPEG4Writer( 9384): reset()
+10-10 10:26:57.656 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:57.656 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:26:57.656 I/MPEG4Writer( 9384): Received total/0-length (210/0) buffers and encoded 210 frames. - Audio
+10-10 10:26:57.656 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:26:57.656 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:26:57.656 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:26:57.657 I/MPEG4Writer( 9384): Duration for 1:Audio track is 8960000 us
+10-10 10:26:57.657 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:26:57.657 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:26:57.660 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:26:57.662 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:26:57.666 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:26:57.666 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:26:57.666 D/MPEG4Writer( 9384): release()
+10-10 10:26:57.666 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:57389 mOffset:55390 mMdatEndOffset:53801 diff:1999
+10-10 10:26:57.668 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:26:57.668 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:257 #2:295 #3:304 #4:399 #5:487
+10-10 10:26:57.678 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#124] MediaCodec discarded an unknown buffer
+10-10 10:26:57.682 D/MPEG4Writer( 9384): reset()
+10-10 10:26:57.682 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:57.682 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:26:57.685 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:26:57.750 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:57.750 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:57.763 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:26:57.763 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:26:57.763 D/MediaCodec( 9384):   }
+10-10 10:26:57.768 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:26:57.781 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:26:57.781 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:26:57.781 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:26:57.791 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:26:57.791 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:26:58.115 D/MPEG4Writer( 9384): reset()
+10-10 10:26:58.115 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:58.115 I/MPEG4Writer( 9384): Received total/0-length (45/0) buffers and encoded 45 frames. - Audio
+10-10 10:26:58.115 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:26:58.115 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:26:58.115 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:26:58.115 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:26:58.115 I/MPEG4Writer( 9384): Duration for 1:Audio track is 1920000 us
+10-10 10:26:58.116 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:26:58.116 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:26:58.116 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:26:58.116 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:26:58.117 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:26:58.117 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:26:58.117 D/MPEG4Writer( 9384): release()
+10-10 10:26:58.117 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:14536 mOffset:12537 mMdatEndOffset:11608 diff:1999
+10-10 10:26:58.117 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:26:58.117 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:53 #2:58 #3:58 #4:79 #5:90
+10-10 10:26:58.123 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#735] MediaCodec discarded an unknown buffer
+10-10 10:26:58.125 D/MPEG4Writer( 9384): reset()
+10-10 10:26:58.125 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:26:58.125 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:26:58.126 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:26:58.483 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:58.483 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:26:58.493 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:26:58.493 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:26:58.493 D/MediaCodec( 9384):   }
+10-10 10:26:58.497 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:26:58.504 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:26:58.504 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:26:58.504 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:26:58.513 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:26:58.513 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:27:00.422 D/MPEG4Writer( 9384): reset()
+10-10 10:27:00.422 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:27:00.422 I/MPEG4Writer( 9384): Received total/0-length (166/0) buffers and encoded 166 frames. - Audio
+10-10 10:27:00.422 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:27:00.422 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:27:00.422 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:27:00.423 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:27:00.423 I/MPEG4Writer( 9384): Duration for 1:Audio track is 7082667 us
+10-10 10:27:00.423 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:27:00.424 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:27:00.425 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:27:00.426 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:27:00.429 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:27:00.429 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:27:00.429 D/MPEG4Writer( 9384): release()
+10-10 10:27:00.429 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:46047 mOffset:44048 mMdatEndOffset:42635 diff:1999
+10-10 10:27:00.429 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:27:00.429 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:316 #2:317 #3:349 #4:492 #5:768
+10-10 10:27:00.442 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#449] MediaCodec discarded an unknown buffer
+10-10 10:27:00.442 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#449] MediaCodec discarded an unknown buffer
+10-10 10:27:00.445 D/MPEG4Writer( 9384): reset()
+10-10 10:27:00.445 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:27:00.445 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:27:00.447 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:27:00.783 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:27:00.784 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:27:00.795 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:27:00.795 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:27:00.795 D/MediaCodec( 9384):   }
+10-10 10:27:00.799 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:27:00.806 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:27:00.806 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:27:00.806 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:27:00.812 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:27:00.812 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:27:01.545 D/MPEG4Writer( 9384): reset()
+10-10 10:27:01.545 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:27:01.545 I/MPEG4Writer( 9384): Received total/0-length (78/0) buffers and encoded 78 frames. - Audio
+10-10 10:27:01.545 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:27:01.545 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:27:01.545 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:27:01.545 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:27:01.546 I/MPEG4Writer( 9384): Duration for 1:Audio track is 3328000 us
+10-10 10:27:01.546 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:27:01.546 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:27:01.549 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:27:01.550 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:27:01.554 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:27:01.555 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:27:01.555 D/MPEG4Writer( 9384): release()
+10-10 10:27:01.555 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:23069 mOffset:21070 mMdatEndOffset:20009 diff:1999
+10-10 10:27:01.555 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:27:01.555 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:121 #2:141 #3:157 #4:162 #5:196
+10-10 10:27:01.565 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#572] MediaCodec discarded an unknown buffer
+10-10 10:27:01.569 D/MPEG4Writer( 9384): reset()
+10-10 10:27:01.569 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:27:01.569 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:27:01.571 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:27:01.901 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:27:01.902 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:27:01.912 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:27:01.912 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:27:01.912 D/MediaCodec( 9384):   }
+10-10 10:27:01.917 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:27:01.923 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:27:01.923 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:27:01.923 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:27:01.932 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:27:01.932 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:27:03.080 D/MPEG4Writer( 9384): reset()
+10-10 10:27:03.080 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:27:03.080 I/MPEG4Writer( 9384): Received total/0-length (110/0) buffers and encoded 110 frames. - Audio
+10-10 10:27:03.080 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:27:03.080 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:27:03.080 D/MPEG4Writer( 9384): Audio track source stopped
+10-10 10:27:03.081 D/MPEG4Writer( 9384): Audio track stopped. Status:0. Stop source
+10-10 10:27:03.081 I/MPEG4Writer( 9384): Duration for 1:Audio track is 4693332 us
+10-10 10:27:03.081 D/MPEG4Writer( 9384): 0 chunks are written in the last batch
+10-10 10:27:03.082 D/MPEG4Writer( 9384): WriterThread stopped. Status:0
+10-10 10:27:03.083 D/MPEG4Writer( 9384): no camera lens information
+10-10 10:27:03.085 I/MPEG4Writer( 9384): Adjust the moov start time from 0 us -> 0 us
+10-10 10:27:03.088 I/MPEG4Writer( 9384): The mp4 file will not be streamable.
+10-10 10:27:03.088 I/MPEG4Writer( 9384): MOOV atom was written to the file
+10-10 10:27:03.088 D/MPEG4Writer( 9384): release()
+10-10 10:27:03.088 D/MPEG4Writer( 9384): ftruncate mPreAllocateFileEndOffset:31435 mOffset:29436 mMdatEndOffset:28247 diff:1999
+10-10 10:27:03.089 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper stopped
+10-10 10:27:03.089 I/MPEG4Writer( 9384): Top 5 write durations(microseconds): #1:138 #2:138 #3:140 #4:172 #5:175
+10-10 10:27:03.098 D/CCodecBufferChannel( 9384): [c2.android.aac.encoder#785] MediaCodec discarded an unknown buffer
+10-10 10:27:03.101 D/MPEG4Writer( 9384): reset()
+10-10 10:27:03.101 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:27:03.102 E/MPEG4Writer( 9384): Stop() called but track is not started or stopped
+10-10 10:27:03.103 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:27:03.327 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:27:03.327 D/MediaCodecList( 9384): codecHandlesFormat: no format, so no extra checks
+10-10 10:27:03.338 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:27:03.338 D/MediaCodec( 9384): shapeMediaFormat: deltas(0): AMessage(what = 0x00000000) = {
+10-10 10:27:03.338 D/MediaCodec( 9384):   }
+10-10 10:27:03.341 D/MPEG4Writer( 9384): PreAllocation enabled
+10-10 10:27:03.350 D/MPEG4Writer( 9384): fpathconf _PC_FILESIZEBITS:64
+10-10 10:27:03.350 D/MPEG4Writer( 9384): File size limit set to 4503599627370495 bytes implicitly
+10-10 10:27:03.350 D/MPEG4Writer( 9384): MP4WtrCtrlHlpLooper Started
+10-10 10:27:03.357 I/MPEG4Writer( 9384): setStartTimestampUs: 0 from Audio track
+10-10 10:27:03.357 I/MPEG4Writer( 9384): Earliest track starting time: 0
+10-10 10:27:03.705 D/MPEG4Writer( 9384): reset()
+10-10 10:27:03.705 D/MPEG4Writer( 9384): Audio track stopping. Stop source
+10-10 10:27:03.705 I/MPEG4Writer( 9384): Received total/0-length (51/0) buffers and encoded 51 frames. - Audio
+10-10 10:27:03.705 D/MPEG4Writer( 9384): Audio track source stopping
+10-10 10:27:03.705 I/MPEG4Writer( 9384): Audio track drift time: 0 us
+10-10 10:27:03.705 D/MPEG4Writer( 9384): Audio track source stopped
+... (truncated)
+
+===== Playing the system-voice prepared chapter =====
+10-10 10:29:24.276 D/ForegroundServiceController( 9384): 	at com.retro99.reader.ui.tts.ExoTtsEnginePlayerProvider.notificationPlayer(ExoTtsEnginePlayer.kt:164)
+10-10 10:29:24.276 D/ForegroundServiceController( 9384): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensureNotificationPlayer(TtsReadAloudEngine.kt:489)
+10-10 10:29:24.276 D/ForegroundServiceController( 9384): 	at com.retro99.reader.ui.tts.TtsReadAloudEngine.ensurePlayer(TtsReadAloudEngine.kt:482)
+10-10 10:29:24.427 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:24.482 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:24.498 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:24.526 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:24.544 I/DMCodecAdapterFactory( 9384): Creating an asynchronous MediaCodec adapter for track type audio
+10-10 10:29:24.559 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:24.568 I/MediaCodec( 9384): MediaCodec will operate in async mode
+10-10 10:29:24.568 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:29:24.571 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:25.723 D/CCodecBufferChannel( 9384): [c2.android.aac.decoder#360] MediaCodec discarded an unknown buffer
+10-10 10:29:25.723 D/CCodecBufferChannel( 9384): [c2.android.aac.decoder#360] MediaCodec discarded an unknown buffer
+10-10 10:29:25.724 D/CCodecBufferChannel( 9384): [c2.android.aac.decoder#360] MediaCodec discarded an unknown buffer
+10-10 10:29:25.724 D/CCodecBufferChannel( 9384): [c2.android.aac.decoder#360] MediaCodec discarded an unknown buffer
+10-10 10:29:25.727 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:29:25.730 I/DMCodecAdapterFactory( 9384): Creating an asynchronous MediaCodec adapter for track type audio
+10-10 10:29:25.757 I/MediaCodec( 9384): MediaCodec will operate in async mode
+10-10 10:29:25.759 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:29:25.764 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:26.301 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:28.782 D/CCodecBufferChannel( 9384): [c2.android.aac.decoder#360] MediaCodec discarded an unknown buffer
+10-10 10:29:28.782 D/CCodecBufferChannel( 9384): [c2.android.aac.decoder#360] MediaCodec discarded an unknown buffer
+10-10 10:29:28.782 D/CCodecBufferChannel( 9384): [c2.android.aac.decoder#360] MediaCodec discarded an unknown buffer
+10-10 10:29:28.787 I/MediaCodec( 9384): Codec shutdown complete
+10-10 10:29:28.790 I/DMCodecAdapterFactory( 9384): Creating an asynchronous MediaCodec adapter for track type audio
+10-10 10:29:28.816 I/MediaCodec( 9384): MediaCodec will operate in async mode
+10-10 10:29:28.818 I/MediaCodec( 9384): media_quality service unavailable, skipping updatePictureProfile
+10-10 10:29:28.825 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:29.204 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:29.734 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:30.269 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:30.805 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:31.289 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:32.375 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:32.850 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:33.391 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:33.948 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:35.034 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:35.524 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:36.073 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:36.670 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:38.340 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:38.964 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:39.801 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:40.329 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 10:29:41.978 D/MediaCodec( 9384): keep callback message for reclaim
+10-10 10:29:42.587 W/TtsReadAloudEngine( 9384): Skipping embedded artwork (767016 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.

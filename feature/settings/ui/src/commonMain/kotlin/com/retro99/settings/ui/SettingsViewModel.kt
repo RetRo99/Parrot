@@ -11,6 +11,7 @@ import com.retro99.analytics.api.ReaderAnalyticsEvent
 import com.retro99.base.result.AppError
 import com.retro99.base.result.log
 import com.retro99.base.ui.BaseViewModel
+import com.retro99.reader.domain.tts.PreparedAudioStorage
 import com.retro99.reader.domain.usecase.GetCustomReaderFontsUseCase
 import com.retro99.reader.domain.usecase.GetReaderSettingsUseCase
 import com.retro99.reader.domain.usecase.ImportCustomReaderFontUseCase
@@ -27,6 +28,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.koin.core.annotation.KoinViewModel
 import org.koin.core.annotation.Provided
+import org.koin.mp.KoinPlatform.getKoin
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -41,6 +43,16 @@ class SettingsViewModel(
     @Provided private val linkedCopyPropagationSetting: LinkedCopyPropagationSetting,
 ) : BaseViewModel<SettingsViewState, SettingsIntent>(SettingsViewState()) {
 
+    /**
+     * App-wide, like the prepared store it reads, and resolved lazily so this screen's
+     * constructor keeps the shape its tests build (the pattern `ReaderViewModel` uses for
+     * `TtsVoicePreparationStateHolder`).
+     */
+    private val preparedAudioStorage: PreparedAudioStorage by lazy {
+        runCatching { getKoin().getOrNull<PreparedAudioStorage>() }.getOrNull()
+            ?: PreparedAudioStorage.None
+    }
+
     private val saveMutex = Mutex()
     private var persistedReaderSettings = ReaderSettingsUiModel()
     private var pendingSaveCount = 0
@@ -53,10 +65,12 @@ class SettingsViewModel(
         linkedCopyPropagationSetting.observeEnabled()
             .onEach { enabled -> updateState { state -> state.copy(updateLinkedCopies = enabled) } }
             .launchIn(viewModelScope)
+        refreshPreparedAudioTotal()
     }
 
     override fun onIntent(intent: SettingsIntent) {
         when (intent) {
+            SettingsIntent.OnDeleteAllPreparedAudio -> deleteAllPreparedAudio()
             is SettingsIntent.OnSectionToggled -> toggleSection(intent.section)
             is SettingsIntent.OnFontsToggled -> toggleFonts()
             SettingsIntent.OnUndoSettingsChange -> undoSettingsChange()
@@ -668,4 +682,20 @@ class SettingsViewModel(
         val isRetry: Boolean = false,
         val isUndo: Boolean = false,
     )
+
+    private fun refreshPreparedAudioTotal() {
+        viewModelScope.launch {
+            val bytes = preparedAudioStorage.totalBytes()
+            updateState { state -> state.copy(preparedAudioBytes = bytes) }
+        }
+    }
+
+    private fun deleteAllPreparedAudio() {
+        viewModelScope.launch {
+            preparedAudioStorage.deleteAll()
+            val bytes = preparedAudioStorage.totalBytes()
+            updateState { state -> state.copy(preparedAudioBytes = bytes) }
+        }
+    }
+
 }

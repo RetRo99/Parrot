@@ -141,6 +141,7 @@ import com.retro99.reader.ui.di.koinReaderScopeInject
 import com.retro99.reader.ui.navigator.BookController
 import com.retro99.reader.ui.navigator.SavedPageScript
 import com.retro99.reader.ui.reader.ReaderViewState
+import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
 import com.retro99.reader.ui.tts.TtsVoice
 import com.retro99.translations.StringRes
 import org.jetbrains.compose.resources.stringResource
@@ -755,6 +756,18 @@ internal fun ReaderOverlayContent(
                 sleepRemainingMs = viewState.sleepTimerRemainingMs,
                 isAudioOnly = viewState.isAudioOnlyMode,
                 isEink = isEink,
+                preparedChapter = derivePreparedChapterRow(
+                    isReadAloudAvailable = viewState.isTtsReadAloud,
+                    isNarrationSelected = isNarration,
+                    chapterHref = currentPosition?.href,
+                    audio = viewState.preparedChapterAudio,
+                    preparation = viewState.chapterPreparation,
+                    voice = preparedChapterVoice(selectedVoice, viewState.hasAcceptedSupertonicTerms),
+                ),
+                preparedChapterVoiceLabel = (viewState.preparedChapterAudio as? TtsPreparedChapterAudio.OtherSettings)
+                    ?.let { other ->
+                        viewState.ttsVoices.firstOrNull { voice -> voice.id == other.voiceId }?.name
+                    },
             ),
             hasNarration = viewState.isReadAloud,
             canSwitchSource = viewState.canSwitchListenSource,
@@ -787,6 +800,9 @@ internal fun ReaderOverlayContent(
                 onCancelSleepTimer = { intentDispatcher(ReaderIntent.CancelSleepTimer) },
                 onAudioOnly = { intentDispatcher(ReaderIntent.ToggleAudioOnlyMode) },
                 onBookmark = { onSaved(SavedAction.BookmarkSentence) },
+                onPrepareChapter = { intentDispatcher(ReaderIntent.PrepareChapter) },
+                onCancelChapterPreparation = { intentDispatcher(ReaderIntent.CancelChapterPreparation) },
+                onDeletePreparedChapter = { intentDispatcher(ReaderIntent.DeletePreparedChapter) },
                 onSelectSource = { narration ->
                     intentDispatcher(
                         ReaderIntent.SwitchListenSource(

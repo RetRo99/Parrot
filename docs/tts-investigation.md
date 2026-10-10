@@ -443,6 +443,8 @@ effect on a user, not on the code.
 - **Confidence:** low for ordinary devices, medium for slow ones.
 - **Severity for a user:** silent failure (a start that looks broken).
 - **How a test could catch it:** `AndroidTtsControllerTest` with a fake engine that never becomes active, asserting `Failed(START_TIMEOUT)` after the virtual 30 s; manual: measure the cold first start from `logcat -s SherpaOnnxTts` timestamps.
+- **Fixed (run 5c):** `69695a39` — `TtsPlaybackAttempts.prepareStart` loads the selected downloaded neural model under its own 60 s deadline, then arms the existing 30 s synthesis/player deadline; fresh starts, tracked resumes and settings-change restarts share it. Five tests committed failing in `8c3701ba`; system timing, cancellation and pending-state cases were already green.
+- **Samsung check (run 5c):** cold-process start succeeded, but book-open warm-up had already loaded Kokoro 37.291 s before Play; the first player isPlaying signal followed Play by 0.784 s. Cold loading after Play and independent acoustic onset remain unmeasured. Host virtual-time tests, not this device check, establish the separate 60 s/30 s deadlines.
 
 ### TTS-F16 — `chapterCompleted` reports whatever chapter is current, not the one that finished
 
@@ -708,7 +710,10 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Confidence:** high that the guard is missing; medium that the callback is deliverable after the stop.
 - **Severity for a user:** wrong audio (a chapter read from its start unasked).
 - **How a test could catch it:** the test above, once the fake only reports `ENDED` while it has items; the product guard is `if (currentIndex < 0) return` in `onSentenceCompleted`.
-- **Status:** not fixed — found by run 2b's TTS-F16 test, outside that run's scope. Candidate for run 5.
+- **Historical status:** found by run 2b's TTS-F16 test, outside that run's scope; subsequently fixed below.
+- **Fixed (run 5c):** `c10784fb` — completion requires a running session; stopped-player ready, transition, error and playing callbacks cannot revive it, and paused auto-transition cannot advance. Nine failures committed in `94a7e080`, including the explicitly authorized correction to the earlier locator-abandonment assertion; ordinary running completion was already green.
+- **Guard follow-up:** `d71e85f2` retains session ownership through ordinary buffering after audio has played; the new guards otherwise rejected subsequent ready/playing callbacks. New regression committed failing in `4998760d`; no earlier test edited.
+- **Samsung check (run 5c):** five valid Kokoro ENDED-triggered Stops on each build produced zero spontaneous restarts, including the final ownership-fix build (ENDED → IDLE: 86, 83, 87, 74, 77 ms). This stress check does not prove a real posted ENDED arrived after Stop; that ordering is covered by the host fake. Exact timings and build identities are in `manual-qa-evidence/2026-10-10/tts-run5c/`.
 
 ### TTS-F26 — A slow voice's gap between sentences reads as "not playing", and narration can die in it
 
@@ -736,7 +741,84 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Fixed:** `e4597018` (run 2c) — `settings_change` added to `SAFE_TTS_ACTIONS`, which now lists every `TtsPlaybackAction.analyticsValue`.
 - **Device check 2026-10-09 (run 2c):** passed — every settings-change event of the run carries the action, e.g. `{tts_action=settings_change, tts_outcome=attempted}` at 21:19:36.864 and `{tts_action=settings_change, tts_outcome=succeeded, duration_ms=14484}` at 21:19:51.348 (`docs/manual-qa-evidence/2026-10-09/tts-run2c/`).
 
+### TTS-F28 — Arrival in the narrated chapter stops read-aloud as if the user left it
+
+- **Where:** `AndroidTtsController.kt`, `currentLocator` collector: every href change clears the controller's sentences, stops the engine and reloads the displayed chapter.
+- **Trigger:** Narration crosses a chapter boundary, or its highlight brings the displayed page into the chapter whose sentences are already being narrated.
+- **Expected:** Arrival in the narrated chapter leaves playback and its sentence list alone. Navigation to a different chapter still stops and reloads, as does a chapter change with no narration.
+- **Actual:** The locator collector stops the narration it just caught up with; on the phone it stopped 390 ms after a successful settings-change restart.
+- **Evidence:** REPRODUCED — run 2c, 21:19:51.345 playback start, 21:19:51.735 IDLE/service destruction, `docs/manual-qa-evidence/2026-10-09/tts-run2c/NOTES.md` §"Recorded, not investigated". Four host failures committed in `67249314`.
+- **Confidence:** high.
+- **Severity for a user:** narration stops silently during a chapter.
+- **How a test could catch it:** `TtsChapterChangeTest` tests the extracted decision with previous, arriving and narrated hrefs, including delayed arrival after hand-off and skip-ahead.
+- **Fixed:** `790eb981` — `shouldReloadTtsChapter` exempts arrival in the engine's loaded, current chapter. Ordinary navigation and idle changes passed before the fix; the earlier skip-ahead tests pass unedited.
+- **Samsung check (run 5c):** initial System boundary FAIL preserved (IDLE 11:03:25.428, no chapter operation); final ownership-fix build retest PASS, chapter attempted 11:23:44.269 / succeeded 11:23:45.436 (1167 ms), continued through sentence 31/120 until explicit Stop. Initial Kokoro boundary PASS, chapter attempted 11:06:32.435 / succeeded 11:06:32.630 (197 ms), continued through 15/120; deliberate backward chapter swipe stopped it. See `manual-qa-evidence/2026-10-10/tts-run5c/`; the successful retest does not erase the historical failure.
+
 ---
+
+### TTS-F29 — An outside pause retains running intent after audio has played
+
+- **Where:** `TtsReadAloudEngine.updateSessionRunning`, run 5c's `hasPlayedInSession` term (`d71e85f2`); controller toggle, settings, word and preview decisions consume that state.
+- **Trigger:** Notification, lock-screen, headset or focus-driven pause changes player play-when-ready to false without calling engine `pause()`.
+- **Expected:** Outside pause behaves like engine pause, including during synthesis; buffering retains callback ownership. Outside play restores the session.
+- **Actual:** After audible playback the session remains running: one toggle pauses again, settings restart audio, interruption decisions resume it, late ENDED advances, and gap synthesis plays unasked.
+- **Evidence:** Six host failures committed in `ff2f9295`, after the behavior-neutral listener seam `ed82a7e3`. Direct resume, outside resume/advance, late READY and buffering already passed before the fix and were retained unchanged.
+- **Expectations:** Two presses confirmed by the controller-equivalent attempt test; settings restart confirmed; word/preview confirmed at their shared running-state decision (not full Android controller integration).
+- **Confidence:** high for engine and attempts behavior; controller interruption integration inferred from the inspected decision paths, not exercised end-to-end.
+- **Severity for a user:** unsolicited narration after a pause; Play requires an extra press.
+- **How a test could catch it:** `TtsOutsidePauseTest` drives play-when-ready independently of audibility, including a deferred synthesis gap.
+- **Fixed:** `08f0809b` — use player playing intent instead of past audibility; play-when-ready changes set the same pause latch as engine pause, and external resume clears it. `hasPlayedInSession` remains for loading. Paused READY remains allowed through `acceptsPlayerCallbacks`, while ENDED/auto-transition still require running. Existing ownership, late-callback and synthesis-gap tests pass unedited.
+- **Device/build status:** full tests 545/545 reader Android, 357/357 reader iOS, 64/64 composeApp; both app builds passed. Samsung natural System and Kokoro chapter boundaries passed. Outside-pause device checks BLOCKED: dispatch and session-monitor pause had no effect, including one dispatch inside a verified Kokoro synthesis gap. No accepted outside pause was established. See `tts-outside-pause-report.txt` and `manual-qa-evidence/2026-10-10/tts-outside-pause/`; host results are not device evidence.
+
+### TTS-F30 — Read-aloud is stopped about a minute after the screen goes off
+
+- **Where:** `ForegroundServiceController.kt:42` starts `MediaPlaybackService` with `context.startService()`, and nothing in the app ever calls `startForeground`. The one component that would, Media3's `MediaNotificationManager`, bails out first because of TTS-F31, so the service is an ordinary background service for the whole session. At a chapter boundary it was worse: the engine's chapter end released the shared player (`TtsReadAloudEngine.onSentenceCompleted` → `stopInternal` → `MediaPlaybackController.stop()` → `stopSelf()`), and so did the locator move the handover causes (`engine.stop()`), after which the next chapter had to start the service **from the background**, which the system will not promote.
+- **Trigger:** Start read-aloud and lock the phone. Any voice, any book.
+- **Expected:** Read-aloud keeps reading with the screen off for as long as the book has text, as recorded narration is meant to.
+- **Actual:** About 61 s after the activity stops, `ActivityManager` stops the service as an idle app's background service, `onDestroy` releases the media session and the `ExoPlayer`, and audio focus is abandoned. Playback is over; the sentence counter freezes; see TTS-F32 for what the screen then shows.
+- **Evidence:** REPRODUCED on the Samsung on the first try — locked 20:18:18, last sentence started 20:19:18.047, then `W ActivityManager: Stopping service due to app idle: u0a987 -2m46s758ms com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService` at 20:19:18.955 and `MediaPlaybackService.onDestroy` (`:423`) via `ActivityThread.handleStopService` at 20:19:18.961, with `startForegroundCount=0` throughout. The chapter-boundary variant is 21:02:10.123 `onDestroy`, 21:02:11.732 created again, twenty-odd `startForegroundService() not allowed due to mAllowStartForeground false` refusals, then `Stopping service due to app idle` 21:03:09.998 — dead eight sentences into the new chapter. `docs/manual-qa-evidence/2026-10-10/tts-background-playback/`.
+- **Confidence:** high — reproduced on both builds, with the system's own line naming the service.
+- **Severity for a user:** read-aloud cannot be used with the screen off at all, which is most of what it is for.
+- **How a test could catch it:** the service itself can only be shown on a phone. The handover half is host-testable and is `TtsChapterHandoverTest` (five cases): an auto-advancing chapter end keeps the service player and its audio, the stop that follows keeps it too, a chapter end with no auto-advance and Stop listening both let it go, and the next chapter attaches no second listener.
+- **Historical status:** predates `90675a6b`. On a build of it: locked 20:38:02, `Stopping service due to app idle` 20:39:03.708 (61.7 s), frozen at sentence 172 of 300. None of TTS-F25, F26 or F29 is involved.
+- **Fixed:** `522747ed` makes the service a real foreground service by way of TTS-F31; `0d5fd910` keeps the player through an auto-advancing chapter end; `673670f1` stops a `stop()` with nothing loaded from taking the service down. Failing tests committed in `3590f6b7` and `2208659c`; no earlier test edited.
+- **Samsung check 2026-10-10:** passed. System voice sentence 9 → 63 of 347 and Kokoro "Heart" 141 → 183 of 347, each across three minutes locked, `isForeground=true`, zero app-idle stops in the whole run; a chapter boundary crossed with the screen off at 21:40:41 with the service never destroyed.
+
+### TTS-F31 — No media notification for read-aloud, and no play or pause on the session
+
+- **Where:** `MediaPlaybackService.kt:698` — `LibraryCallback` overrides the **deprecated** two-argument `MediaSession.Callback.onConnect(session, controller)` and seeds its result from `super.onConnect(...)`. That default body is `MediaSession.getDeprecatedDefaultConnectionResult()` (media3 1.11.1 `MediaSession.java:1587-1599`), which carries `SessionCommands.EMPTY` and `Player.Commands.EMPTY`. Only `AcceptedResultBuilder(session, controllerInfo)` fills in `DEFAULT_PLAYER_COMMANDS`.
+- **Trigger:** Play anything through `MediaPlaybackService` — read-aloud or recorded narration — and look at the shade, the lock screen and `dumpsys media_session`.
+- **Expected:** A media notification with pause, play and sentence navigation, on the lock screen and in the shade, and a session that offers play and pause to any controller.
+- **Actual:** Two things, one cause. The platform session advertises `actions=176` — `SKIP_TO_PREVIOUS + SKIP_TO_NEXT + SET_RATING` and nothing else, no play, no pause, no seek; which is why TTS-F29's device check could never land an outside pause. And because `COMMAND_GET_TIMELINE` and `COMMAND_GET_CURRENT_MEDIA_ITEM` are not granted either, the `PlayerInfo` Media3's own notification controller receives is filtered to an **empty timeline** (`PlayerInfo.java:890-906`), so `MediaNotificationManager.shouldShowNotification` is false (`:377-385`), `updateNotification` removes the notification instead of posting it (`:197-199`), and `startForeground` (`:533-540`) is never reached — which is TTS-F30.
+- **Evidence:** REPRODUCED on the Samsung: playing read-aloud, `dumpsys notification` listed no Parrot media notification at any point, `dumpsys activity services` showed `startForegroundCount=0`, and `dumpsys media_session` gave `state=PLAYING(3), actions=176, custom actions=[Previous sentence, Next sentence]`. The earlier run had already ruled out Do Not Disturb as the cause by turning it off and seeing no card either. Recorded narration, checked with a downloaded read-along book, had the same two faults (`actions=128`, `startForegroundCount:0`, no notification), so the premise that narration shows one does not hold.
+- **Confidence:** high — the mechanism was read in the media3 1.11.1 sources and both halves were measured on the phone before and after.
+- **Severity for a user:** no lock-screen or shade control of read-aloud at all, no headset or external pause, and, through TTS-F30, no playback with the screen off.
+- **How a test could catch it:** not at host level — it needs a real `MediaSession`. The button layout the notification offers was extracted to a pure `mediaButtonSpecs()` and is covered by `MediaButtonLayoutTest` (three cases).
+- **Historical status:** predates `90675a6b`; `MediaPlaybackService.kt` is byte-identical between it and `ae1c40f8` and the `onConnect` block diffs clean. On a build of `90675a6b`: no notification, `startForegroundCount=0`, `actions=176`.
+- **Fixed:** `522747ed` — seed from `AcceptedResultBuilder(session, controller)`; read-aloud's previous/next sentence move to the slots beside play/pause.
+- **Samsung check 2026-10-10:** passed. `id=1001 channel=default_channel_id actions=3`, service `isForeground=true startForegroundCount=1`, session `actions=7339979` including PAUSE, PLAY_PAUSE, SEEK_TO and STOP. Notification shown on the lock screen and in the shade; pause, play, next and previous all drive it. Screenshots in the evidence folder.
+
+### TTS-F32 — When the player stops existing the screen keeps claiming it plays
+
+- **Where:** `TtsEnginePlayer` has no signal for "this player is gone", so `TtsReadAloudEngine` keeps the wrapper it was handed (`:546`) and the flags behind `updateSessionRunning` (`:818-821`), which only engine calls and player callbacks change — and a released `ExoPlayer` reports nothing. `MediaPlaybackController.onServiceDestroyed` (`:532-542`) clears its own references and has no way to reach the engine.
+- **Trigger:** Anything that takes the player away from outside: the service destroyed (TTS-F30), the player released, `am stopservice`.
+- **Expected:** No running session, `isPlaying` false, the button showing Play, and one press starting the sentence it was on again. A late callback from the gone player starts nothing.
+- **Actual:** `isSessionRunning` stays true, so the bar shows `Pause`; `AndroidTtsController.togglePlayback` (`:536-539`) takes the `engine.pause()` branch; and `pause()` (`:330`) calls `player.pause()` on the released player, which does nothing but log `sending message to a Handler on a dead thread`. The button is dead in both directions — it cannot pause, because nothing plays, and it never reaches the play path. Only "Stop listening" recovers.
+- **Evidence:** REPRODUCED on the Samsung at 20:25:13 — `W MessageQueue: Handler … sending message to a Handler on a dead thread` with the stack `ExoTtsEnginePlayer.pause(ExoTtsEnginePlayer.kt:69)` ← `TtsReadAloudEngine.pause(TtsReadAloudEngine.kt:330)` ← `AndroidTtsController.togglePlayback(AndroidTtsController.kt:538)`, no state change, button still `Pause`. Then three host failures in `TtsPlayerGoneTest`, committed failing in `e37d63e2`.
+- **Confidence:** high.
+- **Severity for a user:** the screen lies about what is happening, and the obvious recovery does nothing.
+- **How a test could catch it:** `TtsPlayerGoneTest`, over the fake player's new `reportPlayerGone()`: after the player goes away nothing is running or audible and the sentence is kept; one press gives one `attempted:resume`/`succeeded:resume` pair on that same sentence and never talks to the gone player; and a late `onEnded`/`onIsPlayingChanged`/`onReady` from it starts nothing and synthesises nothing. `TtsRunningCallbackOwnershipTest` passes unedited, so a player that only buffers is unaffected.
+- **Historical status:** predates `90675a6b` — on a build of it the bar also stayed `Pause` after the freeze and the press produced the same `dead thread` warning. The recent `isSessionRunning` work (F25, F26, F29) is not the cause: before it the stale belief came from `_isPlaying` instead, with the same visible result. What that work does contribute is the `player == null` handling in `resume()`, which is why the recovery needed no new start logic.
+- **Fixed:** `0340dbef` — `TtsEnginePlayerListener.onPlayerGone` (a default no-op, so no other listener changes), raised by `ExoTtsEnginePlayerProvider` from `MediaPlaybackController.addOnServiceDestroyedListener`; the engine ends the session, drops the player without calling into it beyond removing its listener, and keeps `currentIndex`.
+- **Samsung check 2026-10-10:** passed. `am stopservice` while playing sentence 106 of 347 → the bar showed `Play` at once and kept sentence 106; one press gave sentence 108 playing, with the service foreground and the notification back. No `dead thread` warning anywhere in that run.
+
+### Cosmetic, recorded and not fixed — the read-aloud bar's voice label
+
+The read-aloud bar labels a neural voice as a device voice. With Kokoro "Heart" selected
+the bar read **"Device voice · Heart"** while the Listening sheet read
+**"In use: Kokoro · Heart"**; the same was seen for a Supertonic voice, where the bar
+read **"Device voice · F1"** and the sheet **"F1 · Natural"**. Seen on the Samsung
+2026-10-10. No code was changed for it.
 
 ## 5. Emulator and device checks
 

@@ -1,0 +1,70 @@
+--- REPORT ---
+Branch: tts/prepared-chapters
+Commits this run (hash + subject, oldest first):
+31f8d91c docs(tts): preserve prepared-chapters phone evidence unchanged
+94a7e080 test(tts): F25 red "expected:<-1> but was:<0>"
+c10784fb fix(tts): ignore player callbacks without their owning session
+67249314 test(tts): chapter mismatch red "Expected value to be false."
+790eb981 fix(tts): keep narration when its chapter arrives on screen
+8c3701ba test(tts): cold start red "expected:<[attempted, succeeded]> but was:<[attempted, failed]>"
+69695a39 fix(tts): give model loading its own sixty-second start deadline
+702360a9 docs(tts): record run 5c fixes and pre-device checkpoint
+aaa7b1e4 docs(tts): preserve System boundary failure and Kokoro hand-off pass
+4998760d test(tts): callback ownership red "expected:<1> but was:<0>"
+d71e85f2 fix(tts): retain callback ownership through ordinary player buffering
+13ac0530 docs(tts): record buffering guard follow-up before final builds
+59544ebf docs(tts): record final Samsung retests and verified cleanup
+HEAD docs(tts): finalize run 5c report (self-reference; hash resolved in final response)
+Steps complete (1-6): 1-5 complete; step 6 checks/builds and cleanup executed, with cold-after-Play timing unestablished (reader auto-warm-up) and build-specific device coverage listed below.
+Step 1: evidence committed (yes/no), files in it (count), anything left uncommitted and why: yes, 16; original evidence unchanged; no titles beyond the notes' Gutenberg fixtures found in the sanitized original log; no unrelated work left.
+F25: the earlier test rewritten (name) and its failure text; each new test, failed before the fix (yes/no) and the failure text; other callbacks checked and whether each was changed:
+TtsReadAloudEngineChapterCompletionTest: a chapter abandoned by a locator move does not complete at all: yes, "expected:<-1> but was:<0>"; replaced the explicitly authorized wrong assertion.
+TtsLatePlayerCallbacksTest: ended after stop starts nothing and emits nothing: yes, "expected:<-1> but was:<0>".
+ended after a failure stop starts nothing and emits nothing: yes, "expected:<-1> but was:<0>".
+ended after pause does not restart or emit anything: yes, "expected:<0> but was:<1>".
+ended during a running session advances exactly once: no, passed before fix; no change for normal advancement.
+ready after stop cannot restore a stale sentence: yes, "expected:<-1> but was:<0>".
+item transition after stop cannot restore a stale sentence: yes, "expected:<-1> but was:<0>".
+error after stop emits no unsolicited failure: yes, expected the existing command list but actual appended another "stop, clearItems".
+playing callback after stop cannot revive the session: yes, "Expected value to be false.".
+auto transition after pause does not advance or emit anything: yes, "expected:<0> but was:<1>".
+onReady, onItemTransition, onError and onIsPlayingChanged all checked and changed only after these failures; paused readiness remains permitted; explicit resume marks its starting session before play. No tests edited to accommodate the guards.
+TtsRunningCallbackOwnershipTest: buffering does not discard the running sessions player callbacks: yes, "expected:<1> but was:<0>". Follow-up review caught a regression introduced by this run's guards; committed failing in 4998760d, fixed in d71e85f2 by retaining running intent through buffering using hasPlayedInSession. No previously fixed test was edited.
+Chapter mismatch: where the decision now lives; each test, failed before the fix (yes/no) and the failure text; chapter hand-off and skip-ahead still pass (yes/no, which tests):
+commonMain/navigator/TtsChapterChange.kt: shouldReloadTtsChapter; controller calls it before its entire clear/stop/reload block.
+TtsChapterChangeTest: page arriving in the narrated chapter leaves sentences and playback alone: yes, "Expected value to be false.".
+user moving to a different chapter stops and reloads: no, passed before fix; unchanged behavior.
+chapter change with nothing playing reloads sentences: no, passed before fix; unchanged behavior.
+page moving away and back before a stop still recognises the narrated chapter: yes, "Expected value to be false.".
+chapter hand off arriving after narration starts does not stop it: yes, "Expected value to be false.".
+skip ahead reloads before start and leaves the resulting narration alone: yes, "Expected value to be false.".
+initial locator and same chapter never reload: no, passed before fix; unchanged behavior.
+Hand-off and skip-ahead pass: yes, the two named integration-decision cases plus all six earlier TtsChapterSkipTest cases and ordinary engine chapter completion.
+F15: where "load first, then arm" lives; each test, failed before the fix (yes/no) and the failure text; settings-change restart covered (yes/no):
+androidMain/navigator/TtsPlaybackAttempts.kt: prepareStart, used by startLoadedPlayback, toggle resume, preview resume and the attempt-owned settings/paused-settings restart. Both neural warmUp implementations load downloaded packs via ensureLoadedIfDownloaded/loadEngine, so synthesis ensureLoaded sees an already-loaded model. Independent lifecycle timer bounds load at 60 seconds then resets to the original 30 seconds.
+TtsColdStartTest: forty second model load then five second sentence succeeds: yes, "expected:<[attempted, succeeded]> but was:<[attempted, failed]>".
+a hanging model load fails once at sixty seconds: yes, "expected:<[attempted]> but was:<[attempted, failed]>" at 59,999 ms (old failure at 30 seconds).
+system voice start is armed immediately: no, passed before fix; unchanged system deadline.
+stop during model load cancels once with nothing pending: no, passed before fix; existing cancellation retained.
+playback start stays pending throughout the model load: no, passed before fix; existing pending flag retained.
+voice change to a cold neural voice uses the load deadline: yes, "expected:<[attempted, succeeded]> but was:<[attempted, failed]>"; settings-change restart covered: yes.
+supertonic cold load gets the same separate deadline: yes, "expected:<[attempted, succeeded]> but was:<[attempted, failed]>"; host fake only, no terms accepted.
+resume with a cold neural model uses the load deadline: yes, "expected:<40000> but was:<0>".
+Any test edited after its fix (name + why), or "none": none
+Tests from earlier runs edited other than the one named in Step 2 (name + why), or "none": none
+Per module: reader ui Android host 535/535, reader ui iOS 357/357, settings ui 24/24, home ui 84/84, composeApp 64/64, analytics 77/77
+App build results (Android assemble, iOS framework): both final BUILD SUCCESSFUL in 19 s; final requested verification BUILD SUCCESSFUL in 59 s; counts independently summed from build/test-results XML, zero failures/errors/skips.
+Device used (model + serial), any command sent to another device (yes/no): Samsung SM-S921B, RFCWC0SSVDM; no
+Cold Kokoro start: press to model loaded, press to first audio, operation lines: PARTIAL, model warmed on book open 37.291 s before Play; first player audio signal 0.784 s after press; one controls attempted 11:00:36.174 / succeeded 11:00:36.865, duration_ms=693. Not a measurement of cold model loading after Play; no independent acoustic measurement.
+Chapter boundary with a System voice and with Kokoro: kept reading (yes/no each), operation lines: System yes on final build: chapter attempted 11:23:44.269 / succeeded 11:23:45.436, duration_ms=1167, continued through sentence 31/120 until explicit Stop at 11:26:30.964. Earlier initial-build System FAIL preserved: start succeeded 11:03:02.857, IDLE 11:03:25.428 at page crossing, no chapter pair. Kokoro yes on initial build: chapter attempted 11:06:32.435 / succeeded 11:06:32.630, duration_ms=197, continued through 15/120 until deliberate swipe.
+Swipe to a different chapter while reading: stopped (yes/no): yes, manual backward swipes 11:07:28.809, IDLE 11:07:30.062, service destroyed .095, now-playing cleared .097
+Stop at a sentence end, five times: restarted on its own (count): 0 in five final-build Kokoro ENDED-triggered Stops; ENDED → IDLE 86, 83, 87, 74, 77 ms. Also 0 in five initial-build checks (92, 103, 69, 104, 103 ms). An initial missed tap and one final 2654 ms-delayed Stop are excluded from the rapid five; the latter was replaced by a valid end-triggered Stop. No post-Stop playing signal or new operation before each next explicit Play.
+Double-tap inside a prepared chapter: jumped (yes/no), any synthesize line (yes/no): yes, sentence 1 → 4 on page 1/4 of the 39-sentence prepared chapter; no Kokoro synthesize line in playback/jump interval. Host double-tap 11:21:38.848; sentence_tap attempted 11:21:39.190 / succeeded 11:21:39.348, duration_ms=160, final build.
+State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, rate 1.0, Library, playback stopped, prepared audio deleted yes; Settings showed "Nothing prepared yet" and read-only find files/tts-prepared returned exit 0, zero files.
+Done this run: original feature evidence committed unchanged; F25, chapter mismatch/F28 and F15 reproduced test-first and fixed, plus separately reproduced callback-ownership follow-up; all requested tests/builds pass; Samsung hand-offs, deliberate chapter swipe, five end-triggered Stops and prepared jump exercised; decision 5 and finding outcomes recorded. Final installed/local APK SHA-256 match: 93272d636c3617a635de038611b552f3d90a37d4907f433911808a23790b728d. Sanitized process-only log, build/test verification and cleanup evidence committed in docs/manual-qa-evidence/2026-10-10/tts-run5c/; both raw-log captures stopped. Working tree clean at handoff.
+Not done or partly done, and why: cold Kokoro loading after Play not established because reader-open warm-up loaded it first; no independent acoustic first-audio timing. Kokoro boundary and chapter-swipe passes are from the initial build, not repeated on the final ownership-fix build. Supertonic device playback not run, no terms acceptance performed. The wider run 6 manual pass is not claimed complete.
+Tests skipped, ignored or weakened (file + name + reason), or "none": none
+Places the prompt was ambiguous and what I chose: "away and back without a stop in between" is two locator decisions with unchanged narrated href until stop actually executes; away requests stop/reload, return does not. Narrated href is active only while the engine holds a current sentence, avoiding a stale stopped chapter suppressing idle reload. The earlier plan's inert-play attribution is outside this run's explicit three-fix scope and not reopened. Direct word-interruption resume has no armed user-start deadline and is unchanged; all existing armed resume paths use prepareStart.
+Files changed outside feature/reader/ui and docs: none
+Known problems I am leaving: no claim of Firebase ingestion or Crashlytics delivery; prior inert-play attribution remains uninvestigated; initial System boundary failure remains preserved and not independently attributed despite final retest passing; native model construction may not cancel immediately, but its independent timer terminates the attempt once without late playback.
+--- END REPORT ---
