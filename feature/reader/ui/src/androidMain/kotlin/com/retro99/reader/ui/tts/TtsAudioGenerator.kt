@@ -54,7 +54,12 @@ class TtsAudioGenerator(
 internal class TtsAudioGeneratorCore(
     private val synthesizer: TtsSynthesizer,
     private val cache: TtsAudioCacheStore,
+    private val prepared: TtsPreparedStore? = null,
+    private val encoder: TtsPreparedAudioEncoder? = null,
 ) : TtsSentenceAudioSource {
+
+    suspend fun prepareSentence(id: PreparedChapterId, text: String, voiceId: String?, rate: Float, pitch: Float): PreparedAudioEncoding =
+        PreparedAudioEncoding.Failure
 
     private val lockRegistryMutex = Mutex()
     private val synthesisLocks = mutableMapOf<String, LockEntry>()

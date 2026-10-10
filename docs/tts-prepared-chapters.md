@@ -4,6 +4,13 @@
 
 ### Continuation checkpoint
 
+Step 3 red checkpoint (after green Step 2 `0ed7f197`): ten new generator/
+priority tests, seven intended failures before implementation. Prepared-first
+lookup, preparation/cache reuse/skip/failure cleanup, and live overtaking queued
+preparation fail. Existing key-setting misses, uninterrupted background order,
+and permit cleanup characterize existing behavior and pass. No bug-fix tests
+edited; `TtsReadAloudEngine` unchanged.
+
 ### Step 2: prepared store implementation checkpoint
 
 `TtsPreparedStore` is Context-free with root and clock injected;
