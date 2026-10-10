@@ -43,10 +43,11 @@ internal class TtsPlaybackOperationLifecycle(
         job?.cancel()
     }
 
-    fun armStartupTimeout() {
+    fun armStartupTimeout(timeoutMs: Long = startupTimeoutMs) {
+        require(timeoutMs > 0L)
         cancelStartupTimeout()
         val job = scope.launch(start = CoroutineStart.LAZY) {
-            delay(startupTimeoutMs)
+            delay(timeoutMs)
             if (startupTimeoutJob === currentCoroutineContext()[Job]) {
                 startupTimeoutJob = null
                 onStartupTimeout()

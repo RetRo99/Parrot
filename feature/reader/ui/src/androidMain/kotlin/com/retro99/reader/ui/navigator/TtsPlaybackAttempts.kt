@@ -3,8 +3,11 @@ package com.retro99.reader.ui.navigator
 import com.retro99.reader.ui.tts.TtsPlaybackStartException
 import com.retro99.reader.ui.tts.TtsReadAloudEngine
 import com.retro99.reader.ui.tts.TtsSynthesizer
+import com.retro99.reader.ui.tts.neuralVoicePackage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -168,6 +171,8 @@ internal class TtsPlaybackAttempts(
         attempt: TtsPlaybackAttempt,
         index: Int,
     ): TtsPlaybackFailureReason? {
+        // Old audio cannot complete the new voice's attempt while its model is loading.
+        engine.pause()
         prepareStart(attempt)
         engine.setPlaybackOperationCorrelationId(attempt.correlationId)
         restartAtIndex(index)
@@ -181,6 +186,18 @@ internal class TtsPlaybackAttempts(
 
     /** Shared by fresh starts, resumes and settings-change restarts. */
     suspend fun prepareStart(attempt: TtsPlaybackAttempt) {
+        if (active != attempt) return
+        val voiceId = selectedVoiceId()
+        if (synthesizer != null && voiceId.neuralVoicePackage() != null) {
+            // This timer is independent of the load coroutine: even a native load that
+            // cannot cancel immediately gets exactly one failed outcome at the limit.
+            lifecycle.armStartupTimeout(MODEL_LOAD_TIMEOUT_MS)
+            if (!synthesizer.warmUp(voiceId)) {
+                throw TtsPlaybackStartException(TtsPlaybackFailureReason.SYNTHESIS_FAILED)
+            }
+            currentCoroutineContext().ensureActive()
+            if (active != attempt) return
+        }
         armStartupTimeout(attempt)
     }
 
@@ -310,4 +327,8 @@ internal class TtsPlaybackAttempts(
 
     private fun elapsedSince(startedAtMs: Long): Long =
         (nowMs() - startedAtMs).coerceAtLeast(0L)
+
+    private companion object {
+        const val MODEL_LOAD_TIMEOUT_MS = 60_000L
+    }
 }
