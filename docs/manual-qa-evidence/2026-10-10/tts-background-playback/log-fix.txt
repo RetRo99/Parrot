@@ -1,0 +1,760 @@
+10-10 20:52:45.786 20034 20093 D čič   : Active profile changed; switching database
+10-10 20:52:45.818 20034 20093 D čič   : Opened database for active profile
+10-10 20:52:45.914 20034 20118 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:52:45.972 20034 20093 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:52:46.120 20034 20034 D čič   : Set User ID: null (cleared)
+10-10 20:52:46.121 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=splash action=resolve_startup_route operation=check_auth_state stage=started outcome=started
+10-10 20:52:46.213 20034 20034 D čič   : Analytics Event: app_launch_route_resolved | Parameters: {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}
+10-10 20:52:46.213 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded reason_code=auth_state_check_completed
+10-10 20:52:46.256 20034 20034 D ForegroundServiceController: ForegroundServiceController CREATED (new instance)
+10-10 20:52:46.261 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=home action=resolve_continue_reading_target operation=continue_reading_profile_rebind stage=started outcome=started reason_code=initial_load correlation_id=98d8ba9c-81f0-4db1-a916-d5a10a599e53
+10-10 20:52:46.389 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:52:46.390 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:52:46.393 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:52:46.393 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:52:46.411 20034 20115 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:52:46.411 20034 20115 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:52:46.415 20034 20115 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:52:46.416 20034 20114 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:52:46.507 20034 20108 D čič   : Cache returned 19 books
+10-10 20:52:46.662 20034 20108 D čič   : Remote returned 19 books
+10-10 20:52:46.681 20034 20034 D čič   : Analytics Event: home_screen_viewed | Parameters: {screen=home, source_screen=splash, entry_point=app_launch}
+10-10 20:52:46.681 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=screen_view operation=home_route stage=visible outcome=succeeded
+10-10 20:52:46.685 20034 20034 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=local_import, screen=books_library, is_available=true}
+10-10 20:52:46.712 20034 20034 D čič   : Analytics Event: continue_reading_profile_state_resolved | Parameters: {screen=home, action=resolve_continue_reading_target, operation=continue_reading_profile_rebind, stage=terminal, outcome=available, reason_code=initial_load}
+10-10 20:52:46.712 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=home action=resolve_continue_reading_target operation=continue_reading_profile_rebind stage=terminal outcome=available reason_code=initial_load correlation_id=98d8ba9c-81f0-4db1-a916-d5a10a599e53
+10-10 20:52:46.718 20034 20034 D čič   : Cache returned 19 books
+10-10 20:52:46.729 20034 20034 D čič   : Analytics Event: library_load_completed | Parameters: {outcome=succeeded, duration_ms=346, result_count_bucket=six_to_twenty, load_kind=initial_observation}
+10-10 20:52:46.824 20034 20034 D čič   : Remote returned 19 books
+10-10 20:52:46.935 20034 20165 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+10-10 20:52:46.939 20034 20166 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+10-10 20:52:46.957 20034 20160 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+10-10 20:52:46.967 20034 20165 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+10-10 20:52:47.787 20034 20104 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:52:47.789 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:52:47.793 20034 20107 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:52:47.795 20034 20106 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:52:47.795 20034 20189 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:52:47.804 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:52:47.807 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:52:47.807 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:52:47.832 20034 20034 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=backup, screen=books_library, is_available=true}
+10-10 20:52:47.886 20034 20192 D čič   : Cache returned 19 books
+10-10 20:52:47.905 20034 20104 D čič   : Remote returned 19 books
+10-10 20:52:47.905 20034 20034 D čič   : Cache returned 19 books
+10-10 20:52:47.933 20034 20034 D čič   : Remote returned 19 books
+10-10 20:52:48.178 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=2209}
+10-10 20:53:08.436 20034 20106 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:53:09.170 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=738}
+10-10 20:53:18.492 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:53:18.501 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:18.505 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:18.505 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:53:18.508 20034 20119 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:53:18.516 20034 20104 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:18.517 20034 20106 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:18.517 20034 20159 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:53:18.582 20034 20034 D čič   : Cache returned 19 books
+10-10 20:53:18.587 20034 20106 D čič   : Cache returned 19 books
+10-10 20:53:18.603 20034 20034 D čič   : Remote returned 19 books
+10-10 20:53:18.606 20034 20117 D čič   : Remote returned 19 books
+10-10 20:53:25.138  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_UNSPECIFIED (-1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:53:26.965  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_UNSPECIFIED (-1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:53:32.626 20034 20188 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:53:33.496 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=875}
+10-10 20:53:50.918 20034 20114 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:53:53.865 20034 20034 D čič   : Analytics Event: app_visibility_changed | Parameters: {screen=app, action=lifecycle, operation=app_visibility, stage=background, outcome=backgrounded}
+10-10 20:53:53.865 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=app action=lifecycle operation=app_visibility stage=background outcome=backgrounded
+10-10 20:53:53.923 20034 20188 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:53:53.950 20034 20160 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:53:53.959 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:53:53.977 20034 20160 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:53.979 20034 20192 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:53.980 20034 20095 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:53:54.097 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:54.121 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:54.122 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:53:54.129 20034 20192 D čič   : Remote returned 19 books
+10-10 20:53:54.153 20034 20118 D čič   : Cache returned 19 books
+10-10 20:53:54.252 20034 20034 D čič   : Cache returned 19 books
+10-10 20:53:54.304 20034 20034 D čič   : Remote returned 19 books
+10-10 20:53:54.342 20034 20190 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=489}
+10-10 20:53:55.812 20034 20034 D čič   : Analytics Event: app_visibility_changed | Parameters: {screen=app, action=lifecycle, operation=app_visibility, stage=foreground, outcome=foregrounded}
+10-10 20:53:55.813 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=app action=lifecycle operation=app_visibility stage=foreground outcome=foregrounded
+10-10 20:53:55.825 20034 20189 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:53:55.858 20034 20160 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:53:55.862 20034 20160 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:55.863 20034 20160 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:53:55.864 20034 20165 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:55.889 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:53:55.893 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:55.894 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:53:55.894 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:53:55.931 20034 20116 D čič   : Remote returned 19 books
+10-10 20:53:55.958 20034 20034 D čič   : Remote returned 19 books
+10-10 20:53:56.009 20034 20034 D čič   : Cache returned 19 books
+10-10 20:53:56.011 20034 20165 D čič   : Cache returned 19 books
+10-10 20:53:56.162 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=341}
+10-10 20:54:05.018 20034 20160 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=689}
+10-10 20:54:33.819 20034 20034 D čič   : Analytics Event: continue_reading_open_attempted | Parameters: {screen=home, source_screen=home, entry_point=continue_reading_shelf, action=open_continue_reading, operation=continue_reading_open, stage=started, outcome=started, media_type=ebook, is_retry=false}
+10-10 20:54:33.819 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=home source_screen=home entry_point=continue_reading_shelf action=open_continue_reading operation=continue_reading_open stage=started outcome=started media_type=ebook correlation_id=c3f000fd-1d9e-4065-964e-df6adb0da9b0
+10-10 20:54:34.478 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=515}
+10-10 20:54:34.479 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:54:34.594 20034 20034 D čič   : Analytics Event: book_opened | Parameters: {book_type=EBOOK}
+10-10 20:54:34.596 20034 20034 D čič   : Analytics Event: continue_reading_open_completed | Parameters: {screen=reader, source_screen=home, entry_point=continue_reading_shelf, action=open_continue_reading, operation=continue_reading_open, stage=terminal, outcome=succeeded, media_type=ebook}
+10-10 20:54:34.596 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=home entry_point=continue_reading_shelf action=open_continue_reading operation=continue_reading_open stage=terminal outcome=succeeded media_type=ebook correlation_id=c3f000fd-1d9e-4065-964e-df6adb0da9b0
+10-10 20:54:35.200 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:54:35.200 20034 20034 D čič   : Received 2 repositories
+10-10 20:54:35.200 20034 20034 D čič   : Getting books from repo: local
+10-10 20:54:35.200 20034 20034 D čič   : Getting books from repo: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:54:35.200 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:54:35.202 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:54:35.202 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:54:35.214 20034 20034 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=bookmarks, screen=reader, is_available=true}
+10-10 20:54:35.215 20034 20034 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=tts, screen=reader, is_available=false}
+10-10 20:54:35.387 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:54:35.387 20034 20034 D čič   : Received 3 repositories
+10-10 20:54:35.390 20034 20034 D čič   : Getting books from repo: local
+10-10 20:54:35.390 20034 20034 D čič   : Getting books from repo: parrot-cloud
+10-10 20:54:35.390 20034 20034 D čič   : Getting books from repo: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:54:35.390 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:54:35.390 20034 20034 D čič   : Repo parrot-cloud books result: Ok([])
+10-10 20:54:35.390 20034 20034 D čič   : Repo parrot-cloud returned 0 books
+10-10 20:54:35.390 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:54:35.390 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:54:35.418 20034 20034 D čič   : Repo local books result: Ok([ServerBook(uuid=986daab4-7971-429e-8c77-5e016bccd351, serverId=local, title=Fundamental Accessibility Tests: Basic Functionality, description=null, coverUrl=null, authors=[DAISY Consortium], narrators=[], series=[], tags=[], hasEbook=true, hasAudiobook=false, hasReadaloud=false, ebookFilepath=null, audiobookFilepath=null, readaloudFilepath=null, ebookFileSize=87515, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-10-10T18:11:54.037532Z, lastOpenedAt=null, publicationDate=null, isLocal=true, serverType=Local, libraryBookId=986daab4-7971-429e-8c77-5e016bccd351, contentHash=null, contentHashAlgorithm=null, remoteFileAvailability=None, remoteRevision=null, mediaResources=[MediaResource(mediaType=ebook, localPath=null, remoteAvailability=Available, size=87515, contentHash=8141f606cf0ef59d8151d0fe091a2212949434947c74e01da220883114644826, contentHashAlgorithm=sha-256-v1, localOrigin=null, cloudBookFileId=0458d654-1a24-431c-9482-4a9de5dc4156)], language=null, isbn=null, asin=null, audioDurationMs=null, audioTrackDurationsMs=null, rating=null, readaloudStatus=null, readaloudStage=null, readaloudStageProgress=null), ServerBook(uuid=6ff2ee38-6c1e-4b91-88d0-f6d9db888646, serverId=local, title=The Crossing, description=null, coverUrl=null, authors=[Mara Vale], narrators=[], series=[], tags=[], hasEbook=true, hasAudiobook=false, hasReadaloud=false, ebookFilepath=null, audiobookFilepath=null, readaloudFilepath=null, ebookFileSize=2790, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-10-10T18:11:54.363130Z, lastOpenedAt=null, publicationDate=null, isLocal=true, serverType=Local, libraryBookId=6ff2ee38-6c1e-4b91-88d0-f6d9db888646, contentHash=null, contentHashAlgorithm=null, remoteFileAvailability=None, remoteRevision=null, mediaResources=[MediaResource(mediaType=ebook, localPath=null, remoteAvailability=Available, size=2790, contentHash=1bbca7fac582010e708a2694cbbac412074365df56b07b0fe68b525d1466f87c, contentHashAlgorithm=sha-256-v1, localOrigin=null, cloudBookFileId=43bce9c3-45a5-4764-9e5c-5e0251267fdc)], language=null, isbn=null, asin=null, audioDurationMs=null, audioTrackDurationsMs=null, rating=null, readaloudStatus=null, readaloudStage=null, readaloudStageProgress=null)])
+10-10 20:54:35.418 20034 20034 D čič   : Repo local returned 2 books
+10-10 20:54:35.423 20034 20034 D čič   : Cache returned 19 books
+10-10 20:54:35.424 20034 20034 D čič   : Repo 69b9f1dc-1427-4963-b5f2-ecfadfcaa654 books result: Ok([ServerBook(uuid=a4de78d0-2709-45cc-9a9a-d7017595c717, serverId=69b9f1dc-1427-4963-b5f2-ecfadfcaa654, title=<BOOK A>, description=<p><b>In <i><BOOK A></i>, Hugo Award-winner <AUTHOR A>'s delightful new Monk & Robot series gives us hope for the future.</b><br>It's been centuries since the robots of Earth gained self-awareness and laid down their tools; centuries since they wandered, en masse, into the wilderness, never to be seen again; centuries since they faded into myth and urban legend.<br>One day, the life of a tea monk is upended by the arrival of a robot, there to honor the old promise of checking in. The robot cannot go back until the question of "what do people need?" is answered. <br>But the answer to that question depends on who you ask, and how.<br>They're going to need to ask it a <i>lot.</i><br><AUTHOR A>'s new series asks: in a world where people have what they want, does having more matter?<br>At the Publisher's request, this title is being sold without Digital Rights Management Software (DRM) applied.</p>, coverUrl=https://books.retar.si/api/v2/books/a4de78d0-2709-45cc-9a9a-d7017595c717/cover, authors=[<AUTHOR A>], narrators=[], series=[], tags=[], hasEbook=true, hasAudiobook=false, hasReadaloud=false, ebookFilepath=/api/v2/books/a4de78d0-2709-45cc-9a9a-d7017595c717/files?format=ebook, audiobookFilepath=null, readaloudFilepath=null, ebookFileSize=null, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-05-03 19:43:29, lastOpenedAt=null, publicationDate=0101-01-01T00:00:00.000Z, isLocal=false, serverType=Storyteller, libraryBookId=null, contentHash=null, contentHashAlgorithm=null, remoteFileAvailability=None, remoteRevision=null, mediaResources=[], language=en, isbn=null, asin=null, audioDurationMs=null, audioTrackDurationsMs=null, rating=null, readaloudStatus=null, readaloudStage=null, readaloudStageProgress=null), ServerBook(uuid=3c98712e-4e6f-476b-b7a0-7c6938a68884, serverId=69b9f1dc-1427-4963-b5f2-ecfadfcaa654, title=<BOOK B>, description=In *<BOOK B>*, we enter a world where appearances are paramount; where a girl's virginity is auctioned to the highest bidder; where women are trained to beguile the most powerful men; and where love is scorned as illusion. Sayuri's story begins in a poor fishing village in 1929, when, as a nine-year-old with unusual blue-gray eyes, she is taken from her home and sold into slavery to a renowned geisha house. Through her eyes, we see the decadent heart of Gion -- the geisha district of Kyoto -- with its marvelous teahouses and theaters, narrow back alleys, ornate temples, and artists' streets. And we witness her transformation as she learns the rigorous arts of the geisha: dance and music; wearing kimono, elaborate makeup and hair; competing with a jealous rival for men's solicitude and the money that goes with it. But as World War II erupts and the geisha houses are forced to close, Sayuri, with little money and even less food, must reinvent herself all over again to find a rare kind of freedom on her own terms. *<BOOK B>* is a book of nuance and vivid metaphor, of memorable characters rendered with humor and pathos. And though the story is rich with detail and a vast knowledge of history, it is the transparent, seductive voice of Sayuri that the reader remembers., coverUrl=https://books.retar.si/api/v2/books/3c98712e-4e6f-476b-b7a0-7c6938a68884/cover, authors=[<AUTHOR B>], narrators=[], series=[], tags=[Classics, Romance, historical], hasEbook=false, hasAudiobook=false, hasReadaloud=true, ebookFilepath=null, audiobookFilepath=null, readaloudFilepath=/api/v2/books/3c98712e-4e6f-476b-b7a0-7c6938a68884/files?format=readaloud, ebookFileSize=null, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-02-22 15:55:19, lastOpenedAt=null, publicationDate=1997-01-01T00:00:00.000Z, isLocal=false, serverType=Storyteller, libraryBookId=null, contentHash=null, contentHa
+10-10 20:54:35.424 20034 20034 D čič   : Repo 69b9f1dc-1427-4963-b5f2-ecfadfcaa654 returned 19 books
+10-10 20:54:35.425 20034 20034 D čič   : Combined 21 total books from 3 sources
+10-10 20:54:35.703 20034 20034 D čič   : Analytics Event: reader_open_completed | Parameters: {media_type=ebook, entry_point=continue_reading_shelf, outcome=succeeded, duration_ms=1741, is_retry=false}
+10-10 20:54:35.705 20034 20034 D čič   : Analytics Event: reader_position_save_attempted | Parameters: {screen=reader, action=save_reading_position, operation=reader_position_save, stage=started, outcome=started, media_type=ebook, entry_point=position_change, is_retry=false}
+10-10 20:54:35.705 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=position_change action=save_reading_position operation=reader_position_save stage=started outcome=started media_type=ebook
+10-10 20:54:35.753 20034 20034 D čič   : Analytics Event: reader_position_save_succeeded | Parameters: {screen=reader, action=save_reading_position, operation=reader_position_save, stage=terminal, outcome=succeeded, media_type=ebook, entry_point=position_change, is_retry=false}
+10-10 20:54:35.753 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=position_change action=save_reading_position operation=reader_position_save stage=terminal outcome=succeeded media_type=ebook
+10-10 20:54:35.841 20034 20034 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=tts, screen=reader, is_available=true}
+10-10 20:54:39.736 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=888}
+10-10 20:54:49.947  9556  9556 I GestureDetector: obtain mCurrentDownEvent. id: -719931845 caller: com.sec.android.easyonehand.e0.onInputEvent:225 android.view.InputEventReceiver.dispatchInputEvent:369 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:55:03.966 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=28261, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=28261, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 20:55:09.609 20034 20034 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-10 20:55:09.609 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=5bf1569e-ec3c-4f2a-b7b7-66324b24c3b1
+10-10 20:55:09.837 20034 20034 D MediaPlaybackController: prepareServiceReady: creating new deferred
+10-10 20:55:09.838 20034 20034 D ForegroundServiceController: ForegroundServiceController.startService() called
+10-10 20:55:09.838 20034 20034 D ForegroundServiceController: java.lang.Exception: stack trace
+10-10 20:55:09.839 20034 20034 D ForegroundServiceController: ForegroundServiceController.startService() SUCCESS
+10-10 20:55:09.839 20034 20034 D MediaPlaybackController: awaitServiceReady: waiting for deferred (timeout=5000ms)
+10-10 20:55:09.862 20034 20034 D čič123: onCreate() called
+10-10 20:55:09.878 20034 20034 I ExoPlayerImpl: Init 2604b3f [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:55:09.900 20034 20034 D čič123: ExoPlayer created: true
+10-10 20:55:09.906 20034 20034 I MediaSessionImpl: Init 3766337 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:55:09.934 20034 20034 D čič123: MediaLibrarySession created: true
+10-10 20:55:09.936 20034 20034 I MediaController: Init 8e3f03c [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:55:09.940 20034 20034 D čič123: Configuring buttons for media notification controller
+10-10 20:55:09.943 20034 20034 D čič123: Session added to service
+10-10 20:55:09.943 20034 20034 D čič123: MediaNotificationProvider set
+10-10 20:55:09.943 20034 20034 D čič123: Calling controller.onServiceCreated()
+10-10 20:55:09.943 20034 20034 D MediaPlaybackController: onServiceCreated() called
+10-10 20:55:09.943 20034 20034 D MediaPlaybackController: onServiceCreated: _serviceReadyDeferred=CompletableDeferredImpl{Active}@1e5124b
+10-10 20:55:09.943 20034 20034 D MediaPlaybackController: onServiceCreated: completing deferred
+10-10 20:55:09.943 20034 20034 D MediaPlaybackController: awaitServiceReady: result=true, player=true
+10-10 20:55:09.946 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:09.952 20034 20034 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 20:55:09.954 20034 20034 D čič123: onCreate() completed
+10-10 20:55:09.956  1559  6557 I MediaFocusControl: requestAudioFocus() from uid/pid 10987/20034 AA=USAGE_MEDIA/CONTENT_TYPE_SPEECH clientId=android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@6537fc3 callingPack=com.retro99.parrot req=1 flags=0x3 sdk=36
+10-10 20:55:09.958  1559  6557 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 20:55:09.959  1559  6557 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@6537fc3
+10-10 20:55:09.959  1559  6557 I MediaFocusControl: propagateFocusLossFromGain_syncAf gain:1
+10-10 20:55:09.959  1559  6557 I MediaFocusControl: propagateFocusLossFromGain_syncAf empty stack
+10-10 20:55:09.959  1559  6557 D MediaFocusControl: propagateFocusLossFromGainToAll, 1
+10-10 20:55:10.006 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:10.009 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:10.011 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:10.012 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:10.138 20034 20034 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 20:55:10.138 20034 20034 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 20:55:10.140 20034 20034 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=533}
+10-10 20:55:10.140 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=5bf1569e-ec3c-4f2a-b7b7-66324b24c3b1
+10-10 20:55:10.141 20034 20034 D čič   : Analytics Event: playback_started
+10-10 20:55:12.846 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:13.799 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=670}
+10-10 20:55:16.405 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:19.384 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:25.756 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:29.735 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:31.479 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:33.842 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:33.968 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=5645, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=23825, foreground_duration_ms=29470, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 20:55:33.969 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=23825, buffering_duration_ms=532, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:55:34.608 20034 20034 D čič   : Analytics Event: current_book_target_save_attempted | Parameters: {screen=reader, action=save_current_book_target, operation=current_book_target_save, stage=started, outcome=started, entry_point=reading_duration_threshold, book_type=ebook, is_retry=false}
+10-10 20:55:34.610 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=started outcome=started media_type=ebook correlation_id=aeb9bb18-c707-4508-aa5d-01dfde6034d3
+10-10 20:55:34.648 20034 20034 D čič   : Analytics Event: current_book_target_save_completed | Parameters: {screen=reader, action=save_current_book_target, operation=current_book_target_save, stage=terminal, outcome=succeeded, entry_point=reading_duration_threshold, book_type=ebook, is_retry=false}
+10-10 20:55:34.648 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=terminal outcome=succeeded media_type=ebook correlation_id=aeb9bb18-c707-4508-aa5d-01dfde6034d3
+10-10 20:55:37.093 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:39.945 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:42.973 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:44.274 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:45.469 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:46.057 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:47.201 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:49.917 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:55:58.122 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:03.970 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30003, foreground_duration_ms=30003, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 20:56:03.970 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30003, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:56:04.641 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:06.338 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:07.971 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:10.112 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:13.131 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:16.142 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:18.207 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:20.779 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:21.961 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:23.742 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:25.146 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:27.202 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:29.325 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:31.323 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:33.973 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30001, foreground_duration_ms=30001, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 20:56:33.974 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30001, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:56:34.232 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:35.490 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:39.226 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:39.339 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=640}
+10-10 20:56:41.955 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:42.562 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:46.350 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:49.631 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:50.538 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:51.892 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:54.559 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:56:59.986 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:03.975 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30004, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 20:57:03.975 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30004, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:57:04.856 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:09.358 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:10.848 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:14.168 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=10193, foreground_duration_ms=10193, background_duration_ms=0, end_reason=background, content_access=on_device}
+10-10 20:57:14.168 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=10193, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=background}
+10-10 20:57:14.171 20034 20034 D čič   : Analytics Event: app_visibility_changed | Parameters: {screen=app, action=lifecycle, operation=app_visibility, stage=background, outcome=backgrounded}
+10-10 20:57:14.172 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=app action=lifecycle operation=app_visibility stage=background outcome=backgrounded
+10-10 20:57:14.238 20034 20093 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:57:14.809 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:57:14.814 20034 20163 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:57:14.815 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:57:14.817 20034 20119 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:57:14.817 20034 20119 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:57:14.817 20034 20188 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:57:14.817 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:57:14.817 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:57:14.861 20034 23750 D čič   : Remote returned 19 books
+10-10 20:57:14.885 20034 20034 D čič   : Cache returned 19 books
+10-10 20:57:14.888 20034 20167 D čič   : Cache returned 19 books
+10-10 20:57:14.929 20034 23745 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=752}
+10-10 20:57:14.997 20034 20034 D čič   : Remote returned 19 books
+10-10 20:57:18.104 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:20.397 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:21.606 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:29.478 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:32.424 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:33.980 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=19809, foreground_duration_ms=1, background_duration_ms=19808, end_reason=checkpoint, content_access=on_device}
+10-10 20:57:33.982 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=19809, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:57:34.285 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:39.404 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:45.354 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:51.007 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:52.257 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:53.153 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:55.417 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:57.271 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:57:57.693  4238  4314 I ExoPlayerImpl: Init b7483ad [AndroidXMedia3/1.11.0] [e1s, SM-S921B, samsung, 36]
+10-10 20:57:57.735  4238  4314 I ExoPlayerImpl: Init 588f6e2 [AndroidXMedia3/1.11.0] [e1s, SM-S921B, samsung, 36]
+10-10 20:57:58.779 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:57:58.865 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:59.046 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:57:59.655 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:57:59.905 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:00.947 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:01.185 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:01.603 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:01.782 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:03.987 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30007, foreground_duration_ms=0, background_duration_ms=30007, end_reason=checkpoint, content_access=on_device}
+10-10 20:58:03.989 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30007, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:58:04.173 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:04.407 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:05.845 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:06.174 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:08.016 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:08.317 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:08.931 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:09.144 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:09.683 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:10.076 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:11.110 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:11.426 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:14.299 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:14.481 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:17.548 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:17.834 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:19.275 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:19.515 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:21.419 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:21.716 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:24.184 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:24.443 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:24.915 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:25.137 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:27.241 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:27.467 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:28.723 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:28.911 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:31.054 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:31.466 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:33.386 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:33.625 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:33.991 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30007, foreground_duration_ms=0, background_duration_ms=30007, end_reason=checkpoint, content_access=on_device}
+10-10 20:58:33.992 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30007, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:58:35.098 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:35.329 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:36.714 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:36.935 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:37.541 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:37.720 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:39.938 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:40.107 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:42.405 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:42.633 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:43.614 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:43.787 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:44.812 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:45.073 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:45.439 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:45.799 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:46.356 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:46.738 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:48.212 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:48.464 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:48.882  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_NOSENSOR (5) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:58:49.584 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:49.763 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:51.752  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.757  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.759  1260 24300 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][finalizeInternal:3973].
+10-10 20:58:51.802  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.803  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.803  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.803  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.803  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.804  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.805  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.805  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.805  1260 24300 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][destroyInternal:4052].
+10-10 20:58:51.806  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.806  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.808  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.808  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.808  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.808  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.808  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.810  1260 24300 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.815  1260  2291 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:58:51.945 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:52.066 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:56.978 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:57.199 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:58:59.558 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:58:59.776 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:02.388 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:02.699 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:03.994 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30002, foreground_duration_ms=0, background_duration_ms=30002, end_reason=checkpoint, content_access=on_device}
+10-10 20:59:03.995 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30002, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:59:04.891 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:05.079 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:05.866 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:06.273 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:10.424 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:10.742 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:13.633 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:14.022 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:18.894 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:19.177 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:20.315 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:20.472 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:26.697 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:26.877 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:29.807 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:30.194 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:32.652 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:32.935 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:33.998 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30004, foreground_duration_ms=0, background_duration_ms=30004, end_reason=checkpoint, content_access=on_device}
+10-10 20:59:33.999 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30004, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:59:35.106 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:35.448 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:35.640 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:36.006 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:36.397 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:36.587 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:40.621 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:40.848 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:42.915 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:43.308 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:46.674 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:46.921 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:50.999 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:51.230 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:52.330 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:52.659 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:54.302 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:54.545 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:55.907 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:56.103 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:59:58.542 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 20:59:58.724 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:00.753 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:00.841 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:04.000 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30002, foreground_duration_ms=0, background_duration_ms=30002, end_reason=checkpoint, content_access=on_device}
+10-10 21:00:04.000 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30002, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 21:00:04.562 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:04.771 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:06.820 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:06.966 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:08.027 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:08.285 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:08.818 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:08.983 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:09.590 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:09.699 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:10.644 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:10.786 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:11.638 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:11.824 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:14.213 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:14.442 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:16.746 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:17.016 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:17.729 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:17.944 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:18.841 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:19.099 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:19.773 20034 23745 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:20.062 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:20.737  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_NOSENSOR (5) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
+10-10 21:00:21.539 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:21.672 20034 20034 D čič   : Analytics Event: app_visibility_changed | Parameters: {screen=app, action=lifecycle, operation=app_visibility, stage=foreground, outcome=foregrounded}
+10-10 21:00:21.676 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=app action=lifecycle operation=app_visibility stage=foreground outcome=foregrounded
+10-10 21:00:21.761 20034 23745 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 21:00:21.793 20034 23746 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 21:00:21.809 20034 20114 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:00:21.811 20034 20114 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 21:00:21.813 20034 23745 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:00:21.928 20034 23745 D čič   : Cache returned 19 books
+10-10 21:00:22.003 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 21:00:22.012 20034 20119 D čič   : Remote returned 19 books
+10-10 21:00:22.013 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:00:22.015 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:00:22.015 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 21:00:22.073 20034 20034 D čič   : Remote returned 19 books
+10-10 21:00:22.073 20034 20034 D čič   : Cache returned 19 books
+10-10 21:00:22.856 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=1136}
+10-10 21:00:23.400 20034 25500 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:23.580 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:24.973 20034 25500 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:25.201 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:25.638 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=325}
+10-10 21:00:26.953 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:27.065 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:29.349 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:29.493 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:29.912 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:30.172 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:30.974 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:31.117 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:34.007 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30002, foreground_duration_ms=12295, background_duration_ms=17707, end_reason=checkpoint, content_access=on_device}
+10-10 21:00:34.009 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30002, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 21:00:35.365 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:35.652 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:36.500 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:36.800 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:38.149 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:38.368 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:43.791 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:44.002 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:45.299 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:45.518 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:51.116 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:51.528 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:00:57.397 20034 23746 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:00:57.766 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:00.788 20034 20121 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:00.948 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:04.014 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30010, foreground_duration_ms=30010, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:01:04.015 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30010, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 21:01:04.204 20034 20121 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:04.471 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:06.141 20034 20121 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:06.302 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:15.195 20034 20121 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:15.352 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:22.576 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=18566, foreground_duration_ms=18566, background_duration_ms=0, end_reason=background, content_access=on_device}
+10-10 21:01:22.576 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=18566, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=background}
+10-10 21:01:22.581 20034 20034 D čič   : Analytics Event: app_visibility_changed | Parameters: {screen=app, action=lifecycle, operation=app_visibility, stage=background, outcome=backgrounded}
+10-10 21:01:22.581 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=app action=lifecycle operation=app_visibility stage=background outcome=backgrounded
+10-10 21:01:22.651 20034 25500 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 21:01:23.185 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 21:01:23.191 20034 25544 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 21:01:23.193 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:01:23.195 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:01:23.196 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 21:01:23.196 20034 25501 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:01:23.196 20034 25501 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 21:01:23.198 20034 26620 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:01:23.235 20034 26616 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=654}
+10-10 21:01:23.238 20034 26623 D čič   : Remote returned 19 books
+10-10 21:01:23.256 20034 26619 D čič   : Cache returned 19 books
+10-10 21:01:23.265 20034 20034 D čič   : Cache returned 19 books
+10-10 21:01:23.281 20034 20034 D čič   : Remote returned 19 books
+10-10 21:01:23.409 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:23.608 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:24.628 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:24.856 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:29.735 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:29.877 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:31.550 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:31.859 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:33.375 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:33.592 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:34.019 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=11440, foreground_duration_ms=0, background_duration_ms=11440, end_reason=checkpoint, content_access=on_device}
+10-10 21:01:34.021 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=11440, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 21:01:37.210 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:37.427 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:38.813 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:39.095 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:39.401 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:39.699 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:40.661 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:40.856 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:42.799 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:43.044 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:44.583 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:44.873 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:47.026 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:47.220 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:50.730 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:50.953 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:51.946 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:52.346 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:54.686 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:54.881 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:57.345 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:57.648 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:01:58.879 20034 26619 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:01:59.108 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:04.023 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30006, foreground_duration_ms=0, background_duration_ms=30006, end_reason=checkpoint, content_access=on_device}
+10-10 21:02:04.024 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30006, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 21:02:09.933 20034 20034 D čič123: SERVICE onPlaybackStateChanged: state=ENDED, clipsCount=0
+10-10 21:02:09.965 20034 20034 D čič   : Analytics Event: playback_paused
+10-10 21:02:10.012 20034 20034 D čič123: SERVICE onIsPlayingChanged: isPlaying=false, clipsCount=0
+10-10 21:02:10.016 20034 20034 D čič123: SERVICE onPlaybackStateChanged: state=IDLE, clipsCount=0
+10-10 21:02:10.017  1559  6557 I MediaFocusControl: abandonAudioFocus() from uid/pid 10987/20034 clientId=android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@6537fc3 callingPack=com.retro99.parrot
+10-10 21:02:10.017  1559  6557 D MediaFocusControl: abandonAudioFocus, clientId = android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@6537fc3
+10-10 21:02:10.017  1559  6557 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 21:02:10.017  1559  6557 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@6537fc3
+10-10 21:02:10.123 20034 20034 D čič123: onDestroy() called
+10-10 21:02:10.123 20034 20034 D čič123: java.lang.Exception: stack trace
+10-10 21:02:10.125 20034 20034 D MediaPlaybackController: onServiceDestroyed() called
+10-10 21:02:10.125 20034 20034 D MediaPlaybackController: stopForwardingFlows()
+10-10 21:02:10.128 20034 20034 I MediaSessionImpl: Release 3766337 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 21:02:10.132 20034 20034 I MediaController: Release 8e3f03c [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 21:02:10.133 20034 20034 I ExoPlayerImpl: Release 2604b3f [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 21:02:11.113 20034 20034 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-10 21:02:11.114 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=f98ea5d8-7ce4-4944-b05e-712e578cbb3e
+10-10 21:02:11.178 20034 26628 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:11.657 20034 20034 D MediaPlaybackController: prepareServiceReady: creating new deferred
+10-10 21:02:11.659 20034 20034 D ForegroundServiceController: ForegroundServiceController.startService() called
+10-10 21:02:11.659 20034 20034 D ForegroundServiceController: java.lang.Exception: stack trace
+10-10 21:02:11.667 20034 20034 D ForegroundServiceController: ForegroundServiceController.startService() SUCCESS
+10-10 21:02:11.668 20034 20034 D MediaPlaybackController: awaitServiceReady: waiting for deferred (timeout=5000ms)
+10-10 21:02:11.732 20034 20034 D čič123: onCreate() called
+10-10 21:02:11.732 20034 20034 I ExoPlayerImpl: Init ca6d49a [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 21:02:11.739 20034 20034 D čič123: ExoPlayer created: true
+10-10 21:02:11.743 20034 20034 I MediaSessionImpl: Init c4b90c1 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 21:02:11.766 20034 20034 D čič123: MediaLibrarySession created: true
+10-10 21:02:11.767 20034 20034 I MediaController: Init c35cf2 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 21:02:11.770 20034 20034 D čič123: Configuring buttons for media notification controller
+10-10 21:02:11.774 20034 20034 D čič123: Session added to service
+10-10 21:02:11.775 20034 20034 D čič123: MediaNotificationProvider set
+10-10 21:02:11.775 20034 20034 D čič123: Calling controller.onServiceCreated()
+10-10 21:02:11.775 20034 20034 D MediaPlaybackController: onServiceCreated() called
+10-10 21:02:11.776 20034 20034 D MediaPlaybackController: onServiceCreated: _serviceReadyDeferred=CompletableDeferredImpl{Active}@b9096f9
+10-10 21:02:11.778 20034 20034 D MediaPlaybackController: onServiceCreated: completing deferred
+10-10 21:02:11.779 20034 20034 D MediaPlaybackController: awaitServiceReady: result=true, player=true
+10-10 21:02:11.790 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:11.802 20034 20034 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 21:02:11.810  1559  6557 I MediaFocusControl: requestAudioFocus() from uid/pid 10987/20034 AA=USAGE_MEDIA/CONTENT_TYPE_SPEECH clientId=android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@2e6b097 callingPack=com.retro99.parrot req=1 flags=0x3 sdk=36
+10-10 21:02:11.811  1559  6557 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 21:02:11.811  1559  6557 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@2e6b097
+10-10 21:02:11.811  1559  6557 I MediaFocusControl: propagateFocusLossFromGain_syncAf gain:1
+10-10 21:02:11.811  1559  6557 I MediaFocusControl: propagateFocusLossFromGain_syncAf empty stack
+10-10 21:02:11.811  1559  6557 D MediaFocusControl: propagateFocusLossFromGainToAll, 1
+10-10 21:02:11.812 20034 26628 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:11.816 20034 20034 D čič123: onCreate() completed
+10-10 21:02:11.856  1559 30209 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:12.006  1559  1591 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:12.015 20034 20034 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 21:02:12.017 20034 20034 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 21:02:12.021 20034 20034 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=chapter, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=910}
+10-10 21:02:12.022 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=chapter action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=f98ea5d8-7ce4-4944-b05e-712e578cbb3e
+10-10 21:02:12.024 20034 20034 D čič   : Analytics Event: playback_started
+10-10 21:02:12.033  1559 13252 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:12.096 20034 26628 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:12.232 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:12.268  1559  1591 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:12.287  1559  1591 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:12.531 20034 26616 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:12.635 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:12.648  1559 30209 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:12.660  1559  1591 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:13.080 20034 25544 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:13.197 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:13.210  1559  1591 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:13.224  1559  5985 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:13.656 20034 26616 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:13.774 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:13.806  1559  1591 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:13.827  1559  5985 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:14.037 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=549}
+10-10 21:02:14.115 20034 20114 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:14.264 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:14.281  1559  1599 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:14.301  1559  3903 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:14.315  1559  3895 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:14.679 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:14.692  1559  3903 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:14.706  1559  3895 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:20.945 20034 23752 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:21.383 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:21.400  1559  5985 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:21.417  1559 30209 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:34.031 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=27945, foreground_duration_ms=0, background_duration_ms=27945, end_reason=checkpoint, content_access=on_device}
+10-10 21:02:34.033 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=27945, buffering_duration_ms=901, interruption_count_bucket=one, end_reason=checkpoint}
+10-10 21:02:35.175 20034 23752 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:35.598 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:35.616  1559 13252 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:35.633  1559  3316 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:50.033 20034 23752 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:50.411 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:50.427  1559  6265 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:50.444  1559  6265 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:58.724 20034 23752 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:02:59.198 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:02:59.215  1559  6265 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:02:59.233  1559  6265 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:03:04.039 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30009, foreground_duration_ms=0, background_duration_ms=30009, end_reason=checkpoint, content_access=on_device}
+10-10 21:03:04.041 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30009, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 21:03:06.963 20034 23752 I TtsRouter: synthesize voice=null engine=SYSTEM
+10-10 21:03:07.580 20034 20034 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 21:03:07.597  1559  3337 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:03:07.615  1559  8014 W ActivityManager: startForegroundService() not allowed due to mAllowStartForeground false: service com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:03:09.998  1559  1677 W ActivityManager: Stopping service due to app idle: u0a987 -58s338ms com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 21:03:10.005 20034 20034 D čič123: onDestroy() called
+10-10 21:03:10.005 20034 20034 D čič123: java.lang.Exception: stack trace
+10-10 21:03:10.011 20034 20034 D MediaPlaybackController: onServiceDestroyed() called
+10-10 21:03:10.015 20034 20034 D čič   : Analytics Event: playback_paused
+10-10 21:03:10.019 20034 20034 D MediaPlaybackController: stopForwardingFlows()
+10-10 21:03:10.031 20034 20034 I MediaSessionImpl: Release c4b90c1 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 21:03:10.038 20034 20034 I MediaController: Release c35cf2 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 21:03:10.049 20034 20034 I ExoPlayerImpl: Release ca6d49a [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 21:03:10.074  1559  3320 I MediaFocusControl: abandonAudioFocus() from uid/pid 10987/20034 clientId=android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@2e6b097 callingPack=com.retro99.parrot
+10-10 21:03:10.074  1559  3320 D MediaFocusControl: abandonAudioFocus, clientId = android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@2e6b097
+10-10 21:03:10.074  1559  3320 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 21:03:10.074  1559  3320 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@f9c0f72androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@2e6b097
+10-10 21:03:34.047 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=5984, foreground_duration_ms=0, background_duration_ms=5984, end_reason=checkpoint, content_access=on_device}
+10-10 21:03:34.048 20034 20034 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=5984, buffering_duration_ms=0, interruption_count_bucket=one, end_reason=checkpoint}
+10-10 21:04:17.546  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_NOSENSOR (5) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
+10-10 21:04:18.412 20034 20034 D čič   : Analytics Event: app_visibility_changed | Parameters: {screen=app, action=lifecycle, operation=app_visibility, stage=foreground, outcome=foregrounded}
+10-10 21:04:18.413 20034 20034 D čič   : Diagnostic breadcrumb: diagnostic_context screen=app action=lifecycle operation=app_visibility stage=foreground outcome=foregrounded
+10-10 21:04:18.431 20034 26623 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 21:04:18.460 20034 23752 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 21:04:18.474 20034 26623 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:04:18.475 20034 26623 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 21:04:18.477 20034 26620 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:04:18.491 20034 26620 D čič   : Cache returned 19 books
+10-10 21:04:18.542 20034 20034 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 21:04:18.563 20034 20034 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:04:18.566 20034 20034 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 21:04:18.566 20034 20034 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 21:04:18.639 20034 26623 D čič   : Remote returned 19 books
+10-10 21:04:18.649 20034 20034 D čič   : Cache returned 19 books
+10-10 21:04:18.669 20034 20034 D čič   : Remote returned 19 books
+10-10 21:04:19.797 20034 20034 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=1375}
+10-10 21:04:34.093 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=15676, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=15676, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:05:04.101 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30004, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:05:34.110 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30013, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30013, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:05:56.775  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.781  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.789  1260 27706 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][finalizeInternal:3973].
+10-10 21:05:56.806  1260 27706 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][finalizeInternal:4040].
+10-10 21:05:56.826  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.828  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.828  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.828  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.828  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.829  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.829  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.829  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.829  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.829  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.829  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.830  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.830  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.830  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.830  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.830  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.830  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.830  1260 27706 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][destroyInternal:4052].
+10-10 21:05:56.832  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.833  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.835  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.835  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.835  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.835  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.835  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.836  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.836  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.836  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.836  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.836  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.836  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.836  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.836  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.836  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.837  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.838  1260 27706 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:05:56.842  1260  2291 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 21:06:04.117 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30003, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30003, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:06:34.119 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30006, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30006, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:07:04.124 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30003, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30003, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:07:34.124 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30002, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30002, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:08:04.130 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30002, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30002, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:08:34.130 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30004, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:09:04.137 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30004, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 21:09:34.145 20034 20034 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=30011, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=30011, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}

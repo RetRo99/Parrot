@@ -164,4 +164,43 @@ visible result. What the recent work does contribute is the opposite of a cause:
 
 ## 6. What is fixed in this run
 
-Filled in after steps 2 and 3.
+Four commits of product code, each with its failing test committed first. The device
+pass is `manual-qa-evidence/2026-10-10/tts-background-playback/`.
+
+| Fix | Commit | What it does |
+| --- | --- | --- |
+| The session's commands | `522747ed` | `LibraryCallback.onConnect` seeds its result from `ConnectionResult.AcceptedResultBuilder(session, controller)` instead of the deprecated `super.onConnect`. The session now offers play and pause (`actions` 176 → 7339979) and Media3's notification controller can see the timeline, so it posts the notification and, doing so, calls `startForeground`. |
+| The notification's buttons | `522747ed` | `mediaButtonSpecs()` is a pure function, host tested: read-aloud puts previous and next sentence in the two slots beside play/pause and offers no ten second seek inside a sentence; recorded narration keeps exactly the buttons it had. |
+| The chapter handover | `0d5fd910`, `673670f1` | An auto-advancing chapter end keeps the service's player and its audio, and a `stop()` with nothing loaded — which is the locator move that handover causes — leaves the service alone. Without both, the service was stopped and started again from the background, which the system refuses to promote (`startForegroundService() not allowed due to mAllowStartForeground false`), and it was then idle-stopped mid-chapter. |
+| The screen never lying | `e37d63e2`, `0340dbef` | `TtsEnginePlayer` gains one signal, `onPlayerGone`, raised by the player provider when `MediaPlaybackController` says the service is going. The engine ends the session but keeps the sentence, so `isSessionRunning` and `isPlaying` go false, the button shows Play, a late callback from the old player starts nothing, and one press starts the same sentence again through `resume()`'s existing no-player path. |
+
+What the device pass established, with a System voice and with Kokoro "Heart":
+three minutes locked keeps reading (9 → 63 and 141 → 183 of 347); the notification is on
+the lock screen and in the shade with previous sentence, pause/play and next sentence;
+pause and play from it work and play resumes the same sentence; pause from the
+notification then **one** press on Play in the app continues — the device check TTS-F29
+never got; a chapter boundary is crossed with the screen off and the service is never
+destroyed; Stop listening removes the notification, the session and the service; and
+`am stopservice` during playback leaves the button showing Play with one press
+restarting it.
+
+### What is not fixed
+
+1. **Recorded narration still does not play on this phone.** It prepares its chapter and
+   then nothing happens — `state=NONE(0)`, position stuck at `0:00`. Identical on the
+   pre-fix build, so it is not from this run, and changing how recorded narration plays
+   was out of scope. Its session does now carry the full command set.
+2. **A one-page section does not auto-advance.** A seven-sentence, one-page back-matter
+   section was read to its end twice and no next-chapter attempt followed.
+   `ReaderSyncCoordinator.onChapterCompleted` waits for a locator whose href differs
+   from the completed one, which such a section seems not to produce. Multi-page
+   chapters do advance. Shared with the recorded-narration path.
+3. **A chapter end that does not auto-advance now leaves the service up.** That is the
+   price of keeping it through the handover: the notification can sit showing a finished
+   chapter until the app is idle-stopped or the user presses Stop listening.
+4. **Noise at every handover.** The playlist swap takes the player through `IDLE`, so
+   Media3 calls `startForegroundService` on a service that is already foreground and the
+   system logs a refusal. Playback is unaffected.
+5. The cosmetic voice label, recorded as asked and not fixed: the read-aloud bar says
+   "Device voice · Heart" for a Kokoro voice while the Listening sheet says
+   "Kokoro · Heart" (and "Device voice · F1" against "F1 · Natural" for Supertonic).
