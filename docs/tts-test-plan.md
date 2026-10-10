@@ -313,6 +313,8 @@ verified) are recorded in `manual-qa-evidence/2026-10-10/tts-run5c/` and
 `tts-run5c-report.txt`. The older play-press attribution question above is retained, not
 reopened: this run's explicit scope is the three timing fixes and the requested checks.
 
+Run 5c outside-pause follow-up, 2026-10-10: F29, seam `ed82a7e3`, six red tests `ff2f9295` → fix `08f0809b`; four cases already green retained unchanged. Existing buffering ownership, late callbacks and synthesis-gap suites pass unedited. Final verification/device disposition: `tts-outside-pause-report.txt`.
+
 ### Run 6: manual device pass
 
 Checks the investigation could not do, then a regression pass of sections 9, 10, 28,

@@ -756,6 +756,20 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 
 ---
 
+### TTS-F29 — An outside pause retains running intent after audio has played
+
+- **Where:** `TtsReadAloudEngine.updateSessionRunning`, run 5c's `hasPlayedInSession` term (`d71e85f2`); controller toggle, settings, word and preview decisions consume that state.
+- **Trigger:** Notification, lock-screen, headset or focus-driven pause changes player play-when-ready to false without calling engine `pause()`.
+- **Expected:** Outside pause behaves like engine pause, including during synthesis; buffering retains callback ownership. Outside play restores the session.
+- **Actual:** After audible playback the session remains running: one toggle pauses again, settings restart audio, interruption decisions resume it, late ENDED advances, and gap synthesis plays unasked.
+- **Evidence:** Six host failures committed in `ff2f9295`, after the behavior-neutral listener seam `ed82a7e3`. Direct resume, outside resume/advance, late READY and buffering already passed before the fix and were retained unchanged.
+- **Expectations:** Two presses confirmed by the controller-equivalent attempt test; settings restart confirmed; word/preview confirmed at their shared running-state decision (not full Android controller integration).
+- **Confidence:** high for engine and attempts behavior; controller interruption integration inferred from the inspected decision paths, not exercised end-to-end.
+- **Severity for a user:** unsolicited narration after a pause; Play requires an extra press.
+- **How a test could catch it:** `TtsOutsidePauseTest` drives play-when-ready independently of audibility, including a deferred synthesis gap.
+- **Fixed:** `08f0809b` — use player playing intent instead of past audibility; play-when-ready changes set the same pause latch as engine pause, and external resume clears it. `hasPlayedInSession` remains for loading. Paused READY remains allowed through `acceptsPlayerCallbacks`, while ENDED/auto-transition still require running. Existing ownership, late-callback and synthesis-gap tests pass unedited.
+- **Device/build status:** recorded in `tts-outside-pause-report.txt`; host results are not device evidence.
+
 ## 5. Emulator and device checks
 
 ### 5.1 Device actually used

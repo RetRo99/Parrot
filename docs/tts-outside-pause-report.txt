@@ -1,0 +1,42 @@
+--- REPORT ---
+Branch: tts/prepared-chapters
+Commits this run (hash + subject, oldest first):
+ed82a7e3 test(tts): expose player playing intent and outside pause resume seam
+ff2f9295 test(tts): outside pause red "outside pause left session running"
+08f0809b fix(tts): treat outside pause as paused without losing buffering ownership
+Steps complete (1-5): 1-4 complete; 5 pending; final verification pending.
+What was added to the player seam (names): TtsEnginePlayerListener.onPlayWhenReadyChanged; ExoTtsEnginePlayer maps ExoPlayer.onPlayWhenReadyChanged; FakeTtsEnginePlayer.reportOutsidePause and reportOutsideResume.
+Each test in Step 2: failed before the fix (yes/no) and the failure text:
+outside pause is neither running nor audible: yes; "outside pause left session running"
+one toggle resumes same sentence with one operation pair: yes; "expected:<[attempted:resume, succeeded:resume]> but was:<[]>"
+direct resume continues same sentence: no; passed before fix, retained unchanged.
+outside paused settings wait for play on same sentence: yes; "settings change restarted outside-paused narration expected:<[]> but was:<[attempted:settings_change, succeeded:settings_change]>"
+outside resume restores running and normal advancement: no; passed before fix, retained unchanged.
+late ended after outside pause starts nothing: yes; "late ended started outside-paused narration expected:<[pitch:1.0, setItems:tts::0, prepare, play, addItem:tts::1, addItem:tts::2]> but was:<[pitch:1.0, setItems:tts::0, prepare, play, addItem:tts::1, addItem:tts::2, pitch:1.0, setItems:tts::1,tts::2, prepare, play]>"
+late ready after outside pause starts nothing: no; passed before fix, retained unchanged.
+buffering preserves running and callback ownership: no; passed before fix, retained unchanged.
+outside pause in synthesis gap keeps arriving audio silent: yes; "gap synthesis played after outside pause"
+word and preview running decision does not resume outside pause: yes; "interruption resumed outside-paused narration"
+Which of the three expected breakages were real (two presses; restart on a settings change; word speaker and preview), one line each:
+Two presses: confirmed by controller-equivalent toggle and attempts; direct engine resume already worked.
+Restart on a settings change: confirmed by real TtsPlaybackAttempts and engine.
+Word speaker and preview: confirmed at their shared engine-state decision; full controller integrations not exercised.
+The new definition of isSessionRunning, in one line: !isPauseRequested && (_isPlaying.value || isStartingSentence || playerPlayWhenReady)
+Existing tests edited (name + why), or "none": none; only the explicitly requested fake seam was extended.
+TtsRunningCallbackOwnershipTest, TtsLatePlayerCallbacksTest, TtsSynthesisGapTest pass unedited (yes/no each): yes, yes, yes (1, 9, 6 tests).
+Per module: reader ui Android host pending, reader ui iOS pending, composeApp pending
+App build results (Android assemble, iOS framework): pending
+Device used (model + serial), any command sent to another device (yes/no): pending; no
+Outside pause then one Play press, System voice and Kokoro: continued (yes/no each), operation lines: pending
+Outside pause then speed change: anything played before Play (yes/no); same sentence at the new speed after Play (yes/no): pending
+Outside pause then outside play: continued and advanced (yes/no): pending
+Chapter boundary: kept reading (yes/no), System voice and Kokoro: pending
+Outside pause in a Kokoro gap: landed in a gap (yes/no, timestamps), audio started by itself (yes/no): pending
+State the phone was left in (voice, rate, screen): pending
+Done this run: behavior-neutral seam, ten new tests run before fix (six red, four green) committed before engine fix; focused 26 tests pass; F29 and plan updated.
+Not done or partly done, and why: device check and requested full verification pending at pre-device checkpoint.
+Tests skipped, ignored or weakened (file + name + reason), or "none": none
+Places the prompt was ambiguous and what I chose: tested word and preview at the shared running-state decision without extracting or refactoring their Android controller paths; paused READY may update metadata but must not play, matching existing engine pause behavior.
+Files changed outside feature/reader/ui and docs: none
+Known problems I am leaving: device behavior and final builds not yet verified at this checkpoint; no unrelated finding investigated.
+--- END REPORT ---
