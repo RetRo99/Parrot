@@ -2531,27 +2531,20 @@ class ReaderViewModel(
     }
 
     private fun startListening(source: ListenSource, autoPlay: Boolean) {
-        when (source) {
-            ListenSource.NARRATION -> {
-                if (!viewState.value.isReadAloud) return
-                updateState { it.copy(isListening = true) }
-                if (autoPlay && !viewState.value.isPlaying) {
-                    activeNarrationController?.togglePlayback()
-                }
-            }
-
-            ListenSource.DEVICE_VOICE -> {
-                if (!viewState.value.isTtsReadAloud) return
-                // Books with narration use device voice on demand without changing the saved setting.
-                if (!viewState.value.isReadAloud && viewState.value.currentSettings?.ttsEnabled != true) {
-                    setTtsEnabled(true)
-                }
-                updateState { it.copy(isListening = true) }
-                if (autoPlay && !viewState.value.isPlaying) {
-                    activeNarrationController?.togglePlayback()
-                }
-            }
-        }
+        val state = viewState.value
+        ReaderListeningStart(
+            enableReadAloud = { setTtsEnabled(true) },
+            enterListening = { updateState { it.copy(isListening = true) } },
+            requestPlayback = { activeNarrationController?.togglePlayback() },
+        ).start(
+            source = source,
+            hasNarration = state.isReadAloud,
+            readAloudAvailable = state.isTtsReadAloud,
+            voicesLoaded = state.ttsVoices.isNotEmpty(),
+            readAloudEnabled = state.currentSettings?.ttsEnabled == true,
+            isPlaying = state.isPlaying,
+            autoPlay = autoPlay,
+        )
     }
 
     /**

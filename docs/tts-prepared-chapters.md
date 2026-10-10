@@ -2,6 +2,21 @@
 
 ## Run status (2026-10-10)
 
+### Continuation checkpoint
+
+Owner brief committed first as `542736b3`. The clean nested comparison
+worktree was removed with `git worktree remove` after an empty `git status --short`.
+All commands continue in the primary `tts-investigation` worktree.
+
+Dead Play regression pinned before fixing: Listening-sheet Play dispatches
+`StartListening` when `isListening` is false (`ReaderOverlay.kt:767–772`).
+The extracted `ReaderListeningStart` initially preserves the silent
+`ReaderViewModel.kt:2544` availability guard. Its setup-integrated regression
+uses an ebook on an empty chapter with loaded voices and availability false:
+expected exactly one controller request, actual zero. Focused run: 4/5 pass,
+one intended assertion failure. Recorded narration and an unconfigured book
+are pinned separately; no existing test was edited. Fix and phone retest pending.
+
 Branch `tts/prepared-chapters`, based on `e8ed4319`. The supplied worktree was
 detached at that commit. All work and Gradle commands run from that worktree;
 no configuration files are created or edited.

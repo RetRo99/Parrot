@@ -1,32 +1,35 @@
 --- REPORT ---
 Branch: tts/prepared-chapters
-Commits this run (hash + subject, oldest first): 9ca92c97 docs(tts): record prepared chapters gate and test baseline; 65e9eaa3 docs(tts): establish dead Play predates run 5b on Samsung; 7d812f67 test(tts): specify prepared encoding seam (red: four failures); e64bf999 feat(tts): add tested PCM input and atomic prepared encoding core; report-only finalization commit is not self-listed (see git log)
-Steps complete (0-8): 0 comparison complete; 1 partial (host seam only); 2-8 not complete
-Step 0: did the dead Play button reproduce (yes/no, on which entry paths); same on the build of 7045b62b (yes/no); cause (file and line); fixed (yes/no) and the test that failed first: yes, Pride and Prejudice via Continue reading and Library -> Read on both builds; yes on 7045b62b; root cause not established (code leads: ReaderViewModel.kt:2544 and ReaderTtsSetup.kt:68-72); no fix or failing regression test, since it predates run 5b; second book plays on both builds
-Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): not chosen; measurements not run; joins not assessed; no fallback decision; interface, PCM reader and atomic encoding core built, platform codec not built
-Step 2: where prepared audio lives on disk; manifest fields; does any file name or manifest contain sentence text or a title (yes/no): not built
-Step 3: lookup order as built; how a live request overtakes preparation, and the test that shows it; was TtsReadAloudEngine changed (yes/no, why): unchanged; feature not built
-Step 4: what happens on a second request while one runs; what survives an app kill; analytics events and parameters added, and the sanitizer test: not built
-Step 5: new TtsController members; does iPhone behave exactly as before (yes/no) and how I know: none; yes, code unchanged; baseline iOS tests pass
-Step 6: every state of the row that was built (list); every new string key (list); settings row built (yes/no): none; none; no
-Tests from the bug-fix runs edited (name + why), or "none": none
-Per module: reader ui Android host 435/435, reader ui iOS 319/319 (before: 319/319), settings ui 22/22, home ui 84/84, composeApp 59/59, analytics 75/75
-Does a test resolve the new classes from the real Koin graph (yes/no, name): no new classes
-App build results (Android assemble, iOS framework): both successful, baseline and post-change final builds
-Device used (model + serial), any command sent to another device (yes/no): Samsung SM-S921B RFCWC0SSVDM; no
-Kokoro chapter: sentences, time to prepare, size on disk, notification showed progress (yes/no): not run
-Playing the prepared chapter: any synthesize line for it (yes/no); pause, resume, skip, double-tap (result of each): not run
-Live playback while another chapter prepares: time to first audio, kept going (yes/no): not run
-Force-stop and Continue: sentences already there, sentences synthesised after (numbers): not run
-Speed change and back: what the row showed each time: not run
-Delete from the row, settings total, Delete all (result of each): not run
-System voice chapter prepared and played (yes/no): not run
-States of the row seen on the phone (list), and states not reached: none; all, row not built
-State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, 1.0, Library, yes (none created; run-as confirms files/tts-prepared absent); restored baseline APK
-Done this run: branch created; baseline counts recorded; dead Play before/after comparison and privacy-filtered evidence; tests-first encoding seam; ongoing feature document and report
-Not done or partly done, and why: stopped during Step 1 after host seam; native codec and six-sentence phone measurements pending; no downstream work built on an unvalidated format; Steps 2-8 not built
-Tests skipped, ignored or weakened (file + name + reason), or "none": none
-Places the prompt was ambiguous and what I chose: worktree was detached at e8ed4319 rather than on main, branched from requested commit; followed the explicit proceed-if-older instruction after Step 0, without claiming the dead button fixed; old-build comparison used a nested detached worktree with Gradle -p invoked from primary worktree
-Files changed outside feature/reader/ui, feature/settings/ui, lib/analytics, translations, androidApp/src/main/AndroidManifest.xml, composeApp tests and docs: none
-Known problems I am leaving: dead Play on the first book's opening page persists on both builds; source cause unproven; native codec, measurements and complete feature absent; no claim of audible playback verification (player state and logs only)
+Leftover worktree removed (yes/no, why not): yes; clean status, git worktree remove succeeded.
+Dead Play: which guard stopped the press (file and line); test failed before the fix (yes/no) and the failure text; confirmed on the phone (yes/no): ReaderViewModel.kt:2544, isTtsReadAloud false; yes, expected 1 playback request but was 0; no, retest pending.
+Was the cause what the prompt suggested (yes/no), and if not, what it was: yes in the host regression; phone confirmation pending.
+Commits this run (hash + subject, oldest first): 542736b3 docs: commit prepared chapters owner brief; failing regression checkpoint being committed.
+Steps complete this run, and steps complete in total (1-8): none; none (step 1 partial from previous run).
+Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): candidate AAC-LC M4A, not chosen; not measured; unknown; no decision yet.
+Step 2: where prepared audio lives on disk; manifest fields; does any file name or manifest contain sentence text or a title (yes/no): not built.
+Step 3: lookup order as built; how a live request overtakes preparation, and the test that shows it; was TtsReadAloudEngine changed (yes/no, why): not built; no.
+Step 4: what happens on a second request while one runs; what survives an app kill; analytics events and parameters added, and the sanitizer test: not built.
+Step 5: new TtsController members; does iPhone behave exactly as before (yes/no) and how I know: none; iPhone controller untouched, final verification pending.
+Step 6: every state of the row that was built (list); every new string key (list); settings row built (yes/no): not built; none; no.
+Tests from the bug-fix runs edited (name + why), or "none": none.
+Per module: reader ui Android host focused 4/5 (intended red), reader ui iOS not run, settings ui not run, home ui not run, composeApp not run, analytics not run
+Does a test resolve the new classes from the real Koin graph (yes/no, name): no new Koin classes yet.
+App build results (Android assemble, iOS framework): not run yet.
+Device used (model + serial), any command sent to another device (yes/no): Samsung RFCWC0SSVDM connected; model inventory pending; no.
+Kokoro chapter: sentences, time to prepare, size on disk, notification showed progress (yes/no): not built.
+Playing the prepared chapter: any synthesize line for it (yes/no); pause, resume, skip, double-tap (result of each): not built.
+Live playback while another chapter prepares: time to first audio, kept going (yes/no): not built.
+Force-stop and Continue: sentences already there, sentences synthesised after (numbers): not built.
+Speed change and back: what the row showed each time: not built.
+Delete from the row, settings total, Delete all (result of each): not built.
+System voice chapter prepared and played (yes/no): no; not built.
+States of the row seen on the phone (list), and states not reached: none; all not built.
+State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): unchanged so far; only get-state sent.
+Why the run ended where it did (finished / out of time / blocked, and on what): ongoing; checkpoint before fixing the red regression.
+Done this run: brief committed, comparison worktree removed, Play path extracted and regression failed for the expected reason.
+Not done or partly done, and why: fix and native encoder pending; steps 2-8 not started.
+Tests skipped, ignored or weakened (file + name + reason), or "none": none.
+Places the brief was ambiguous and what I chose: none so far.
+Files changed outside feature/reader/ui, feature/settings/ui, lib/analytics, translations, androidApp/src/main/AndroidManifest.xml, composeApp tests and docs: none.
+Known problems I am leaving: deliberately red availability guard at this checkpoint; fix next.
 --- END REPORT ---
