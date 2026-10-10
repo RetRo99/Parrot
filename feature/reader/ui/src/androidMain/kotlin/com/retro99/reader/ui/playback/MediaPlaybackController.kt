@@ -9,6 +9,7 @@ import com.retro99.reader.ui.media.MediaOverlayClip
 import com.retro99.reader.ui.model.AudioLocatorState
 import com.retro99.reader.ui.model.PlaybackState
 import com.retro99.reader.ui.tts.TtsChapterTimeline
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -102,6 +103,10 @@ class MediaPlaybackController {
     // Scope for forwarding service flows to proxy flows
     private val controllerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var forwardingJob: Job? = null
+
+    // Notified just before the service releases its player; not guarded by lock, since
+    // the callbacks reach back into their own components.
+    private val serviceDestroyedListeners = CopyOnWriteArrayList<() -> Unit>()
 
     /**
      * The ExoPlayer instance owned by the service.
@@ -527,10 +532,25 @@ class MediaPlaybackController {
     }
 
     /**
+     * Called before the service's player is released, so whoever is still using that
+     * player can let go of it instead of calling into a dead one (TTS-F32).
+     */
+    fun addOnServiceDestroyedListener(listener: () -> Unit) {
+        serviceDestroyedListeners.addIfAbsent(listener)
+    }
+
+    fun removeOnServiceDestroyedListener(listener: () -> Unit) {
+        serviceDestroyedListeners.remove(listener)
+    }
+
+    /**
      * Called by [MediaPlaybackService] when it's destroyed.
      */
     fun onServiceDestroyed() {
         Log.d(TAG, "onServiceDestroyed() called")
+        // Before the player reference goes, so users of it hear about it while they can
+        // still identify which player went away.
+        serviceDestroyedListeners.forEach { listener -> listener() }
         stopForwardingFlows()
         synchronized(lock) {
             _serviceInstance = null

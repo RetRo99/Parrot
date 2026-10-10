@@ -200,6 +200,10 @@ class TtsReadAloudEngine(
             _isLoading.value = false
         }
 
+        override fun onPlayerGone() {
+            abandonPlayer()
+        }
+
         override fun onError(error: Throwable) {
             if (!acceptsPlayerCallbacks) return
             _playbackFailures.tryEmit(
@@ -350,7 +354,13 @@ class TtsReadAloudEngine(
     }
 
     fun stop() {
-        stopInternal()
+        // With nothing loaded there is no session to end, so this stop must not take the
+        // media service down: it is the locator move a completed chapter causes, which
+        // reaches the controller before the next chapter starts, and a service stopped
+        // here would have to be started again from the background, which the system
+        // refuses to promote (TTS-F30). A stop with a sentence loaded is the user really
+        // stopping, and still lets the service go.
+        stopInternal(keepSharedPlayer = currentIndex < 0)
     }
 
     fun skipToNextSentence() {
@@ -717,7 +727,11 @@ class TtsReadAloudEngine(
             }
         } else {
             val shouldCompleteChapter = completeChapterOnEnd
-            stopInternal()
+            // The next chapter is about to start, so the service has to live through the
+            // handover: a service stopped here and started again a second later is being
+            // started from the background, which the system refuses to promote to the
+            // foreground, and then stops for being idle (TTS-F30).
+            stopInternal(keepSharedPlayer = shouldCompleteChapter)
             if (shouldCompleteChapter) {
                 _chapterCompleted.tryEmit(Unit)
             }
@@ -747,7 +761,13 @@ class TtsReadAloudEngine(
         }
     }
 
-    private fun stopInternal() {
+    /**
+     * Ends the session. [keepSharedPlayer] leaves the media service's player attached and
+     * holding the audio it has, which keeps the media session's timeline non-empty and so
+     * keeps both the notification and the foreground service alive; only the chapter
+     * handover asks for that, because the next chapter starts within a second.
+     */
+    private fun stopInternal(keepSharedPlayer: Boolean = false) {
         generation++
         pendingStartToken = null
         heard.reset()
@@ -765,9 +785,36 @@ class TtsReadAloudEngine(
         if (currentPlayer != null && ownsPlayer) {
             currentPlayer.stop()
             currentPlayer.clearItems()
-        } else if (currentPlayer != null) {
+        } else if (currentPlayer != null && !keepSharedPlayer) {
             releaseCurrentPlayer(stopSharedPlayer = true)
         }
+    }
+
+    /**
+     * The player stopped existing under the engine: its service was destroyed, or it was
+     * released from outside (TTS-F32). There is nothing left to pause, resume or stop, so
+     * the session ends — `isSessionRunning` and `isPlaying` go false and the button shows
+     * Play — but the sentence it was on is kept, so one press starts that same sentence
+     * again through [resume]'s no-player path and a new player is acquired for it.
+     *
+     * Nothing is called on the gone player beyond dropping its listener, which is a local
+     * list removal: anything else would be a message to a dead thread.
+     */
+    private fun abandonPlayer() {
+        val gonePlayer = player ?: return
+        generation++
+        pendingStartToken = null
+        heard.reset()
+        _isPlaying.value = false
+        _isLoading.value = false
+        pendingSentenceProgress = null
+        queuedSentenceIndices.clear()
+        cancelPrefetch()
+        cancelActiveSynthesis()
+        gonePlayer.removeListener(playerListener)
+        player = null
+        ownsPlayer = false
+        clearSessionState()
     }
 
     private fun detachForExternalPlayback() {

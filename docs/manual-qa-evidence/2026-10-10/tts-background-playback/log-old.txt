@@ -1,0 +1,361 @@
+10-10 20:36:00.303 10853 10918 D čič   : Active profile changed; switching database
+10-10 20:36:00.332 10853 10918 D čič   : Opened database for active profile
+10-10 20:36:00.435 10853 10963 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:36:00.483 10853 10982 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:36:00.575 10853 10853 D čič   : Set User ID: null (cleared)
+10-10 20:36:00.575 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=splash action=resolve_startup_route operation=check_auth_state stage=started outcome=started
+10-10 20:36:00.673 10853 10853 D čič   : Analytics Event: app_launch_route_resolved | Parameters: {screen=home, source_screen=splash, entry_point=app_launch, outcome=success}
+10-10 20:36:00.674 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=resolve_startup_route operation=check_auth_state stage=route_selected outcome=succeeded reason_code=auth_state_check_completed
+10-10 20:36:00.715 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=home action=resolve_continue_reading_target operation=continue_reading_profile_rebind stage=started outcome=started reason_code=initial_load correlation_id=b995626d-b559-4b62-9183-ee7d8eebd0d0
+10-10 20:36:00.867 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:00.867 10853 10853 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:00.872 10853 10853 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:00.872 10853 10853 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:36:00.898 10853 10917 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:00.899 10853 10917 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:00.903 10853 10962 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:00.904 10853 10917 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:36:00.979 10853 10962 D čič   : Cache returned 19 books
+10-10 20:36:01.132 10853 10982 D čič   : Remote returned 19 books
+10-10 20:36:01.143 10853 10853 D čič   : Analytics Event: home_screen_viewed | Parameters: {screen=home, source_screen=splash, entry_point=app_launch}
+10-10 20:36:01.144 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=home source_screen=splash entry_point=app_launch action=screen_view operation=home_route stage=visible outcome=succeeded
+10-10 20:36:01.155 10853 10853 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=local_import, screen=books_library, is_available=true}
+10-10 20:36:01.186 10853 10853 D čič   : Analytics Event: continue_reading_profile_state_resolved | Parameters: {screen=home, action=resolve_continue_reading_target, operation=continue_reading_profile_rebind, stage=terminal, outcome=available, reason_code=initial_load}
+10-10 20:36:01.186 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=home action=resolve_continue_reading_target operation=continue_reading_profile_rebind stage=terminal outcome=available reason_code=initial_load correlation_id=b995626d-b559-4b62-9183-ee7d8eebd0d0
+10-10 20:36:01.191 10853 10853 D čič   : Cache returned 19 books
+10-10 20:36:01.204 10853 10853 D čič   : Analytics Event: library_load_completed | Parameters: {outcome=succeeded, duration_ms=343, result_count_bucket=six_to_twenty, load_kind=initial_observation}
+10-10 20:36:01.322 10853 10853 D čič   : Remote returned 19 books
+10-10 20:36:01.370 10853 11059 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+10-10 20:36:01.383 10853 10965 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+10-10 20:36:01.409 10853 10963 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+10-10 20:36:01.415 10853 10963 D čič   : Analytics Event: network_request_failed | Parameters: {error_type=http_error, is_timeout=false, is_connectivity=false, status_code=404}
+10-10 20:36:02.331 10853 10964 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:02.332 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:02.341 10853 10918 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:02.342 10853 10918 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:36:02.343 10853 10984 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:02.367 10853 10853 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:02.371 10853 10853 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:02.371 10853 10853 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:36:02.376 10853 10853 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=backup, screen=books_library, is_available=true}
+10-10 20:36:02.414 10853 11061 D čič   : Cache returned 19 books
+10-10 20:36:02.441 10853 10853 D čič   : Cache returned 19 books
+10-10 20:36:02.474 10853 11033 D čič   : Remote returned 19 books
+10-10 20:36:02.481 10853 10853 D čič   : Remote returned 19 books
+10-10 20:36:02.663 10853 10853 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=2183}
+10-10 20:36:27.953 10853 10853 D čič   : Analytics Event: library_discovery_selected | Parameters: {discovery_route=library, discovery_destination=book}
+10-10 20:36:28.021 10853 10853 D čič   : Analytics Event: book_detail_viewed | Parameters: {source=direct}
+10-10 20:36:28.022 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:28.074 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:28.074 10853 10853 D čič   : Received 2 repositories
+10-10 20:36:28.074 10853 10853 D čič   : Getting books from repo: local
+10-10 20:36:28.074 10853 10853 D čič   : Getting books from repo: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:28.074 10853 10853 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:28.075 10853 10853 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:28.075 10853 10853 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:36:28.077 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:28.077 10853 10853 D čič   : Received 3 repositories
+10-10 20:36:28.094 10853 10853 D čič   : Getting books from repo: local
+10-10 20:36:28.094 10853 10853 D čič   : Getting books from repo: parrot-cloud
+10-10 20:36:28.094 10853 10853 D čič   : Getting books from repo: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:28.094 10853 10853 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:28.094 10853 10853 D čič   : Repo parrot-cloud books result: Ok([])
+10-10 20:36:28.094 10853 10853 D čič   : Repo parrot-cloud returned 0 books
+10-10 20:36:28.095 10853 10853 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:28.095 10853 10853 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:36:28.105 10853 10853 D čič   : Repo local books result: Ok([ServerBook(uuid=986daab4-7971-429e-8c77-5e016bccd351, serverId=local, title=Fundamental Accessibility Tests: Basic Functionality, description=null, coverUrl=null, authors=[DAISY Consortium], narrators=[], series=[], tags=[], hasEbook=true, hasAudiobook=false, hasReadaloud=false, ebookFilepath=null, audiobookFilepath=null, readaloudFilepath=null, ebookFileSize=87515, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-10-10T18:11:54.037532Z, lastOpenedAt=null, publicationDate=null, isLocal=true, serverType=Local, libraryBookId=986daab4-7971-429e-8c77-5e016bccd351, contentHash=null, contentHashAlgorithm=null, remoteFileAvailability=None, remoteRevision=null, mediaResources=[MediaResource(mediaType=ebook, localPath=null, remoteAvailability=Available, size=87515, contentHash=8141f606cf0ef59d8151d0fe091a2212949434947c74e01da220883114644826, contentHashAlgorithm=sha-256-v1, localOrigin=null, cloudBookFileId=0458d654-1a24-431c-9482-4a9de5dc4156)], language=null, isbn=null, asin=null, audioDurationMs=null, audioTrackDurationsMs=null, rating=null, readaloudStatus=null, readaloudStage=null, readaloudStageProgress=null), ServerBook(uuid=6ff2ee38-6c1e-4b91-88d0-f6d9db888646, serverId=local, title=The Crossing, description=null, coverUrl=null, authors=[Mara Vale], narrators=[], series=[], tags=[], hasEbook=true, hasAudiobook=false, hasReadaloud=false, ebookFilepath=null, audiobookFilepath=null, readaloudFilepath=null, ebookFileSize=2790, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-10-10T18:11:54.363130Z, lastOpenedAt=null, publicationDate=null, isLocal=true, serverType=Local, libraryBookId=6ff2ee38-6c1e-4b91-88d0-f6d9db888646, contentHash=null, contentHashAlgorithm=null, remoteFileAvailability=None, remoteRevision=null, mediaResources=[MediaResource(mediaType=ebook, localPath=null, remoteAvailability=Available, size=2790, contentHash=1bbca7fac582010e708a2694cbbac412074365df56b07b0fe68b525d1466f87c, contentHashAlgorithm=sha-256-v1, localOrigin=null, cloudBookFileId=43bce9c3-45a5-4764-9e5c-5e0251267fdc)], language=null, isbn=null, asin=null, audioDurationMs=null, audioTrackDurationsMs=null, rating=null, readaloudStatus=null, readaloudStage=null, readaloudStageProgress=null)])
+10-10 20:36:28.105 10853 10853 D čič   : Repo local returned 2 books
+10-10 20:36:28.135 10853 10853 D čič   : Cache returned 19 books
+10-10 20:36:28.136 10853 10853 D čič   : Repo 69b9f1dc-1427-4963-b5f2-ecfadfcaa654 books result: Ok([ServerBook(uuid=a4de78d0-2709-45cc-9a9a-d7017595c717, serverId=69b9f1dc-1427-4963-b5f2-ecfadfcaa654, title=<BOOK A>, description=<p><b>In <i><BOOK A></i>, Hugo Award-winner <AUTHOR A>'s delightful new Monk & Robot series gives us hope for the future.</b><br>It's been centuries since the robots of Earth gained self-awareness and laid down their tools; centuries since they wandered, en masse, into the wilderness, never to be seen again; centuries since they faded into myth and urban legend.<br>One day, the life of a tea monk is upended by the arrival of a robot, there to honor the old promise of checking in. The robot cannot go back until the question of "what do people need?" is answered. <br>But the answer to that question depends on who you ask, and how.<br>They're going to need to ask it a <i>lot.</i><br><AUTHOR A>'s new series asks: in a world where people have what they want, does having more matter?<br>At the Publisher's request, this title is being sold without Digital Rights Management Software (DRM) applied.</p>, coverUrl=https://books.retar.si/api/v2/books/a4de78d0-2709-45cc-9a9a-d7017595c717/cover, authors=[<AUTHOR A>], narrators=[], series=[], tags=[], hasEbook=true, hasAudiobook=false, hasReadaloud=false, ebookFilepath=/api/v2/books/a4de78d0-2709-45cc-9a9a-d7017595c717/files?format=ebook, audiobookFilepath=null, readaloudFilepath=null, ebookFileSize=null, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-05-03 19:43:29, lastOpenedAt=null, publicationDate=0101-01-01T00:00:00.000Z, isLocal=false, serverType=Storyteller, libraryBookId=null, contentHash=null, contentHashAlgorithm=null, remoteFileAvailability=None, remoteRevision=null, mediaResources=[], language=en, isbn=null, asin=null, audioDurationMs=null, audioTrackDurationsMs=null, rating=null, readaloudStatus=null, readaloudStage=null, readaloudStageProgress=null), ServerBook(uuid=3c98712e-4e6f-476b-b7a0-7c6938a68884, serverId=69b9f1dc-1427-4963-b5f2-ecfadfcaa654, title=<BOOK B>, description=In *<BOOK B>*, we enter a world where appearances are paramount; where a girl's virginity is auctioned to the highest bidder; where women are trained to beguile the most powerful men; and where love is scorned as illusion. Sayuri's story begins in a poor fishing village in 1929, when, as a nine-year-old with unusual blue-gray eyes, she is taken from her home and sold into slavery to a renowned geisha house. Through her eyes, we see the decadent heart of Gion -- the geisha district of Kyoto -- with its marvelous teahouses and theaters, narrow back alleys, ornate temples, and artists' streets. And we witness her transformation as she learns the rigorous arts of the geisha: dance and music; wearing kimono, elaborate makeup and hair; competing with a jealous rival for men's solicitude and the money that goes with it. But as World War II erupts and the geisha houses are forced to close, Sayuri, with little money and even less food, must reinvent herself all over again to find a rare kind of freedom on her own terms. *<BOOK B>* is a book of nuance and vivid metaphor, of memorable characters rendered with humor and pathos. And though the story is rich with detail and a vast knowledge of history, it is the transparent, seductive voice of Sayuri that the reader remembers., coverUrl=https://books.retar.si/api/v2/books/3c98712e-4e6f-476b-b7a0-7c6938a68884/cover, authors=[<AUTHOR B>], narrators=[], series=[], tags=[Classics, Romance, historical], hasEbook=false, hasAudiobook=false, hasReadaloud=true, ebookFilepath=null, audiobookFilepath=null, readaloudFilepath=/api/v2/books/3c98712e-4e6f-476b-b7a0-7c6938a68884/files?format=readaloud, ebookFileSize=null, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-02-22 15:55:19, lastOpenedAt=null, publicationDate=1997-01-01T00:00:00.000Z, isLocal=false, serverType=Storyteller, libraryBookId=null, contentHash=null, contentHa
+10-10 20:36:28.136 10853 10853 D čič   : Repo 69b9f1dc-1427-4963-b5f2-ecfadfcaa654 returned 19 books
+10-10 20:36:28.137 10853 10853 D čič   : Combined 21 total books from 3 sources
+10-10 20:36:46.169 10853 10853 D čič   : Analytics Event: read_button_clicked | Parameters: {book_type=ebook}
+10-10 20:36:46.985 10853 10853 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=652}
+10-10 20:36:46.987 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:47.136 10853 10853 D čič   : Analytics Event: book_opened | Parameters: {book_type=EBOOK}
+10-10 20:36:47.165 10853 10853 D ForegroundServiceController: ForegroundServiceController CREATED (new instance)
+10-10 20:36:47.512 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:47.512 10853 10853 D čič   : Received 2 repositories
+10-10 20:36:47.512 10853 10853 D čič   : Getting books from repo: local
+10-10 20:36:47.512 10853 10853 D čič   : Getting books from repo: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:47.512 10853 10853 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:47.514 10853 10853 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:47.514 10853 10853 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:36:47.542 10853 10853 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=bookmarks, screen=reader, is_available=true}
+10-10 20:36:47.542 10853 10853 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=tts, screen=reader, is_available=false}
+10-10 20:36:47.666 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:36:47.666 10853 10853 D čič   : Received 3 repositories
+10-10 20:36:47.738 10853 10853 D čič   : Getting books from repo: local
+10-10 20:36:47.738 10853 10853 D čič   : Getting books from repo: parrot-cloud
+10-10 20:36:47.738 10853 10853 D čič   : Getting books from repo: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:47.738 10853 10853 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:47.738 10853 10853 D čič   : Repo parrot-cloud books result: Ok([])
+10-10 20:36:47.738 10853 10853 D čič   : Repo parrot-cloud returned 0 books
+10-10 20:36:47.738 10853 10853 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:36:47.739 10853 10853 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:36:47.747 10853 10853 D čič   : Repo local books result: Ok([ServerBook(uuid=986daab4-7971-429e-8c77-5e016bccd351, serverId=local, title=Fundamental Accessibility Tests: Basic Functionality, description=null, coverUrl=null, authors=[DAISY Consortium], narrators=[], series=[], tags=[], hasEbook=true, hasAudiobook=false, hasReadaloud=false, ebookFilepath=null, audiobookFilepath=null, readaloudFilepath=null, ebookFileSize=87515, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-10-10T18:11:54.037532Z, lastOpenedAt=null, publicationDate=null, isLocal=true, serverType=Local, libraryBookId=986daab4-7971-429e-8c77-5e016bccd351, contentHash=null, contentHashAlgorithm=null, remoteFileAvailability=None, remoteRevision=null, mediaResources=[MediaResource(mediaType=ebook, localPath=null, remoteAvailability=Available, size=87515, contentHash=8141f606cf0ef59d8151d0fe091a2212949434947c74e01da220883114644826, contentHashAlgorithm=sha-256-v1, localOrigin=null, cloudBookFileId=0458d654-1a24-431c-9482-4a9de5dc4156)], language=null, isbn=null, asin=null, audioDurationMs=null, audioTrackDurationsMs=null, rating=null, readaloudStatus=null, readaloudStage=null, readaloudStageProgress=null), ServerBook(uuid=6ff2ee38-6c1e-4b91-88d0-f6d9db888646, serverId=local, title=The Crossing, description=null, coverUrl=null, authors=[Mara Vale], narrators=[], series=[], tags=[], hasEbook=true, hasAudiobook=false, hasReadaloud=false, ebookFilepath=null, audiobookFilepath=null, readaloudFilepath=null, ebookFileSize=2790, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-10-10T18:11:54.363130Z, lastOpenedAt=null, publicationDate=null, isLocal=true, serverType=Local, libraryBookId=6ff2ee38-6c1e-4b91-88d0-f6d9db888646, contentHash=null, contentHashAlgorithm=null, remoteFileAvailability=None, remoteRevision=null, mediaResources=[MediaResource(mediaType=ebook, localPath=null, remoteAvailability=Available, size=2790, contentHash=1bbca7fac582010e708a2694cbbac412074365df56b07b0fe68b525d1466f87c, contentHashAlgorithm=sha-256-v1, localOrigin=null, cloudBookFileId=43bce9c3-45a5-4764-9e5c-5e0251267fdc)], language=null, isbn=null, asin=null, audioDurationMs=null, audioTrackDurationsMs=null, rating=null, readaloudStatus=null, readaloudStage=null, readaloudStageProgress=null)])
+10-10 20:36:47.747 10853 10853 D čič   : Repo local returned 2 books
+10-10 20:36:47.781 10853 10853 D čič   : Cache returned 19 books
+10-10 20:36:47.782 10853 10853 D čič   : Repo 69b9f1dc-1427-4963-b5f2-ecfadfcaa654 books result: Ok([ServerBook(uuid=a4de78d0-2709-45cc-9a9a-d7017595c717, serverId=69b9f1dc-1427-4963-b5f2-ecfadfcaa654, title=<BOOK A>, description=<p><b>In <i><BOOK A></i>, Hugo Award-winner <AUTHOR A>'s delightful new Monk & Robot series gives us hope for the future.</b><br>It's been centuries since the robots of Earth gained self-awareness and laid down their tools; centuries since they wandered, en masse, into the wilderness, never to be seen again; centuries since they faded into myth and urban legend.<br>One day, the life of a tea monk is upended by the arrival of a robot, there to honor the old promise of checking in. The robot cannot go back until the question of "what do people need?" is answered. <br>But the answer to that question depends on who you ask, and how.<br>They're going to need to ask it a <i>lot.</i><br><AUTHOR A>'s new series asks: in a world where people have what they want, does having more matter?<br>At the Publisher's request, this title is being sold without Digital Rights Management Software (DRM) applied.</p>, coverUrl=https://books.retar.si/api/v2/books/a4de78d0-2709-45cc-9a9a-d7017595c717/cover, authors=[<AUTHOR A>], narrators=[], series=[], tags=[], hasEbook=true, hasAudiobook=false, hasReadaloud=false, ebookFilepath=/api/v2/books/a4de78d0-2709-45cc-9a9a-d7017595c717/files?format=ebook, audiobookFilepath=null, readaloudFilepath=null, ebookFileSize=null, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-05-03 19:43:29, lastOpenedAt=null, publicationDate=0101-01-01T00:00:00.000Z, isLocal=false, serverType=Storyteller, libraryBookId=null, contentHash=null, contentHashAlgorithm=null, remoteFileAvailability=None, remoteRevision=null, mediaResources=[], language=en, isbn=null, asin=null, audioDurationMs=null, audioTrackDurationsMs=null, rating=null, readaloudStatus=null, readaloudStage=null, readaloudStageProgress=null), ServerBook(uuid=3c98712e-4e6f-476b-b7a0-7c6938a68884, serverId=69b9f1dc-1427-4963-b5f2-ecfadfcaa654, title=<BOOK B>, description=In *<BOOK B>*, we enter a world where appearances are paramount; where a girl's virginity is auctioned to the highest bidder; where women are trained to beguile the most powerful men; and where love is scorned as illusion. Sayuri's story begins in a poor fishing village in 1929, when, as a nine-year-old with unusual blue-gray eyes, she is taken from her home and sold into slavery to a renowned geisha house. Through her eyes, we see the decadent heart of Gion -- the geisha district of Kyoto -- with its marvelous teahouses and theaters, narrow back alleys, ornate temples, and artists' streets. And we witness her transformation as she learns the rigorous arts of the geisha: dance and music; wearing kimono, elaborate makeup and hair; competing with a jealous rival for men's solicitude and the money that goes with it. But as World War II erupts and the geisha houses are forced to close, Sayuri, with little money and even less food, must reinvent herself all over again to find a rare kind of freedom on her own terms. *<BOOK B>* is a book of nuance and vivid metaphor, of memorable characters rendered with humor and pathos. And though the story is rich with detail and a vast knowledge of history, it is the transparent, seductive voice of Sayuri that the reader remembers., coverUrl=https://books.retar.si/api/v2/books/3c98712e-4e6f-476b-b7a0-7c6938a68884/cover, authors=[<AUTHOR B>], narrators=[], series=[], tags=[Classics, Romance, historical], hasEbook=false, hasAudiobook=false, hasReadaloud=true, ebookFilepath=null, audiobookFilepath=null, readaloudFilepath=/api/v2/books/3c98712e-4e6f-476b-b7a0-7c6938a68884/files?format=readaloud, ebookFileSize=null, audiobookFileSize=null, readaloudFileSize=null, createdAt=2026-02-22 15:55:19, lastOpenedAt=null, publicationDate=1997-01-01T00:00:00.000Z, isLocal=false, serverType=Storyteller, libraryBookId=null, contentHash=null, contentHa
+10-10 20:36:47.782 10853 10853 D čič   : Repo 69b9f1dc-1427-4963-b5f2-ecfadfcaa654 returned 19 books
+10-10 20:36:47.782 10853 10853 D čič   : Combined 21 total books from 3 sources
+10-10 20:36:48.045 10853 10853 D čič   : Analytics Event: reader_open_completed | Parameters: {media_type=ebook, outcome=succeeded, duration_ms=1714, is_retry=false}
+10-10 20:36:48.047 10853 10853 D čič   : Analytics Event: reader_position_save_attempted | Parameters: {screen=reader, action=save_reading_position, operation=reader_position_save, stage=started, outcome=started, media_type=ebook, entry_point=position_change, is_retry=false}
+10-10 20:36:48.047 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=position_change action=save_reading_position operation=reader_position_save stage=started outcome=started media_type=ebook
+10-10 20:36:48.101 10853 10853 D čič   : Analytics Event: reader_position_save_succeeded | Parameters: {screen=reader, action=save_reading_position, operation=reader_position_save, stage=terminal, outcome=succeeded, media_type=ebook, entry_point=position_change, is_retry=false}
+10-10 20:36:48.101 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=position_change action=save_reading_position operation=reader_position_save stage=terminal outcome=succeeded media_type=ebook
+10-10 20:36:48.259 10853 10853 D čič   : Analytics Event: feature_exposed | Parameters: {feature_name=tts, screen=reader, is_available=true}
+10-10 20:36:51.756 10853 10853 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=558}
+10-10 20:37:01.321  9556  9556 I GestureDetector: obtain mCurrentDownEvent. id: -401685650 caller: com.sec.android.easyonehand.e0.onInputEvent:225 android.view.InputEventReceiver.dispatchInputEvent:369 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:37:16.342 10853 10853 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=28292, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=0, foreground_duration_ms=28292, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 20:37:24.386 10853 10853 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=attempted, is_retry=false, media_type=ebook}
+10-10 20:37:24.386 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=start outcome=attempted media_type=ebook correlation_id=0865bd59-c631-47b9-a9cc-7be17daf90c5
+10-10 20:37:24.644 10853 10853 D MediaPlaybackController: prepareServiceReady: creating new deferred
+10-10 20:37:24.644 10853 10853 D ForegroundServiceController: ForegroundServiceController.startService() called
+10-10 20:37:24.644 10853 10853 D ForegroundServiceController: java.lang.Exception: stack trace
+10-10 20:37:24.645 10853 10853 D ForegroundServiceController: ForegroundServiceController.startService() SUCCESS
+10-10 20:37:24.646 10853 10853 D MediaPlaybackController: awaitServiceReady: waiting for deferred (timeout=5000ms)
+10-10 20:37:24.663 10853 10853 D čič123: onCreate() called
+10-10 20:37:24.671 10853 10853 I ExoPlayerImpl: Init c7dc4e0 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:37:24.688 10853 10853 D čič123: ExoPlayer created: true
+10-10 20:37:24.693 10853 10853 I MediaSessionImpl: Init d334ff8 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:37:24.730 10853 10853 D čič123: MediaLibrarySession created: true
+10-10 20:37:24.733 10853 10853 I MediaController: Init cd54509 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36]
+10-10 20:37:24.736 10853 10853 D čič123: Configuring buttons for media notification controller
+10-10 20:37:24.738 10853 10853 D čič123: Session added to service
+10-10 20:37:24.738 10853 10853 D čič123: MediaNotificationProvider set
+10-10 20:37:24.738 10853 10853 D čič123: Calling controller.onServiceCreated()
+10-10 20:37:24.738 10853 10853 D MediaPlaybackController: onServiceCreated() called
+10-10 20:37:24.738 10853 10853 D MediaPlaybackController: onServiceCreated: _serviceReadyDeferred=CompletableDeferredImpl{Active}@de5933c
+10-10 20:37:24.739 10853 10853 D MediaPlaybackController: onServiceCreated: completing deferred
+10-10 20:37:24.739 10853 10853 D MediaPlaybackController: awaitServiceReady: result=true, player=true
+10-10 20:37:24.741 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:24.747 10853 10853 D čič123: SERVICE onPlaybackStateChanged: state=BUFFERING, clipsCount=0
+10-10 20:37:24.750 10853 10853 D čič123: onCreate() completed
+10-10 20:37:24.755  1559  3177 I MediaFocusControl: requestAudioFocus() from uid/pid 10987/10853 AA=USAGE_MEDIA/CONTENT_TYPE_SPEECH clientId=android.media.AudioManager@704b5e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@251b727 callingPack=com.retro99.parrot req=1 flags=0x3 sdk=36
+10-10 20:37:24.756  1559  3177 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 20:37:24.756  1559  3177 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@704b5e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@251b727
+10-10 20:37:24.757  1559  3177 I MediaFocusControl: propagateFocusLossFromGain_syncAf gain:1
+10-10 20:37:24.757  1559  3177 I MediaFocusControl: propagateFocusLossFromGain_syncAf empty stack
+10-10 20:37:24.757  1559  3177 D MediaFocusControl: propagateFocusLossFromGainToAll, 1
+10-10 20:37:24.771 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:24.774 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:24.775 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:24.776 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:24.905 10853 10853 D čič123: SERVICE onPlaybackStateChanged: state=READY, clipsCount=0
+10-10 20:37:24.907 10853 10853 D čič123: SERVICE onIsPlayingChanged: isPlaying=true, clipsCount=0
+10-10 20:37:24.908 10853 10853 D čič   : Analytics Event: tts_playback_operation | Parameters: {operation=tts_playback, tts_action=controls, tts_outcome=succeeded, is_retry=false, media_type=ebook, duration_ms=524}
+10-10 20:37:24.908 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader source_screen=reader entry_point=controls action=start_tts_playback operation=tts_playback stage=terminal outcome=succeeded media_type=ebook correlation_id=0865bd59-c631-47b9-a9cc-7be17daf90c5
+10-10 20:37:24.909 10853 10853 D čič   : Analytics Event: playback_started
+10-10 20:37:27.702 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:28.714 10853 10853 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=807}
+10-10 20:37:31.240 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:34.220 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:40.574 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:44.548 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:46.295 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:46.344 10853 10853 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=8048, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=21434, foreground_duration_ms=29482, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 20:37:46.345 10853 10853 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=21434, buffering_duration_ms=524, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:37:47.148 10853 10853 D čič   : Analytics Event: current_book_target_save_attempted | Parameters: {screen=reader, action=save_current_book_target, operation=current_book_target_save, stage=started, outcome=started, entry_point=reading_duration_threshold, book_type=ebook, is_retry=false}
+10-10 20:37:47.149 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=started outcome=started media_type=ebook correlation_id=204abd5b-7559-422d-8761-d45c85f3fa04
+10-10 20:37:47.189 10853 10853 D čič   : Analytics Event: current_book_target_save_completed | Parameters: {screen=reader, action=save_current_book_target, operation=current_book_target_save, stage=terminal, outcome=succeeded, entry_point=reading_duration_threshold, book_type=ebook, is_retry=false}
+10-10 20:37:47.189 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader entry_point=reading_duration_threshold action=save_current_book_target operation=current_book_target_save stage=terminal outcome=succeeded media_type=ebook correlation_id=204abd5b-7559-422d-8761-d45c85f3fa04
+10-10 20:37:48.666 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:51.915 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:54.764 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:57.785 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:37:59.079 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:00.270 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:00.855 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:02.022 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:03.767 10853 10853 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=17423, foreground_duration_ms=17423, background_duration_ms=0, end_reason=background, content_access=on_device}
+10-10 20:38:03.767 10853 10853 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=17423, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=background}
+10-10 20:38:03.784 10853 10853 D čič   : Analytics Event: app_visibility_changed | Parameters: {screen=app, action=lifecycle, operation=app_visibility, stage=background, outcome=backgrounded}
+10-10 20:38:03.784 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=app action=lifecycle operation=app_visibility stage=background outcome=backgrounded
+10-10 20:38:03.893 10853 10983 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:38:04.415 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:38:04.417 10853 10918 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:38:04.433 10853 10853 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:38:04.433 10853 10983 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:38:04.437 10853 11059 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:38:04.437 10853 10918 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:38:04.443 10853 10853 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:38:04.443 10853 10853 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:38:04.563 10853 10918 D čič   : Remote returned 19 books
+10-10 20:38:04.608 10853 10853 D čič   : Remote returned 19 books
+10-10 20:38:04.655 10853 11059 D čič   : Cache returned 19 books
+10-10 20:38:04.699 10853 10962 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=916}
+10-10 20:38:04.705 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:04.813 10853 10853 D čič   : Cache returned 19 books
+10-10 20:38:12.951 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:15.187 10853 10953 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=391}
+10-10 20:38:16.349 10853 10853 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=12579, foreground_duration_ms=1, background_duration_ms=12578, end_reason=checkpoint, content_access=on_device}
+10-10 20:38:16.351 10853 10853 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=12579, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:38:19.498 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:21.236 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:22.792 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:24.921 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:27.979 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:30.974 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:33.074 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:35.612 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:35.628 10853 10953 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=377}
+10-10 20:38:36.780 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:38.612 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:39.980 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:42.068 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:44.179 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:46.150 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:46.354 10853 10853 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30006, foreground_duration_ms=0, background_duration_ms=30006, end_reason=checkpoint, content_access=on_device}
+10-10 20:38:46.354 10853 10853 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30006, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:38:49.081 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:50.318 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:54.046 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:56.815 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:38:57.398 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:39:01.230 10853 10853 W TtsReadAloudEngine: Skipping embedded artwork (709434 bytes); Media3 clones metadata for controller updates and large artwork can OOM low-memory devices.
+10-10 20:39:03.708  1559  1677 W ActivityManager: Stopping service due to app idle: u0a987 -1m39s64ms com.retro99.parrot/com.retro99.reader.ui.playback.MediaPlaybackService
+10-10 20:39:03.720 10853 10853 D čič123: onDestroy() called
+10-10 20:39:03.720 10853 10853 D čič123: java.lang.Exception: stack trace
+10-10 20:39:03.726 10853 10853 D MediaPlaybackController: onServiceDestroyed() called
+10-10 20:39:03.726 10853 10853 D MediaPlaybackController: stopForwardingFlows()
+10-10 20:39:03.741 10853 10853 I MediaSessionImpl: Release d334ff8 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 20:39:03.749 10853 10853 I MediaController: Release cd54509 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 20:39:03.766 10853 10853 I ExoPlayerImpl: Release c7dc4e0 [AndroidXMedia3/1.11.1] [e1s, SM-S921B, samsung, 36] [media3.common, media3.exoplayer, media3.decoder, media3.session, media3.datasource, media3.extractor]
+10-10 20:39:03.789  1559 12448 I MediaFocusControl: abandonAudioFocus() from uid/pid 10987/10853 clientId=android.media.AudioManager@704b5e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@251b727 callingPack=com.retro99.parrot
+10-10 20:39:03.789  1559 12448 D MediaFocusControl: abandonAudioFocus, clientId = android.media.AudioManager@704b5e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@251b727
+10-10 20:39:03.789  1559 12448 D MediaFocusControl: selectFocusStack, uid = 10987, appDevice = 0, device = 2
+10-10 20:39:03.789  1559 12448 I MediaFocusControl: removeFocusStackEntry client:android.media.AudioManager@704b5e6androidx.media3.common.audio.AudioFocusManager$$ExternalSyntheticLambda0@251b727
+10-10 20:39:15.848 10853 10953 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=107}
+10-10 20:39:16.370 10853 10853 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30007, foreground_duration_ms=0, background_duration_ms=30007, end_reason=checkpoint, content_access=on_device}
+10-10 20:39:16.371 10853 10853 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30007, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:39:43.458  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_NOSENSOR (5) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:39:44.302 10853 10853 D čič   : Analytics Event: app_visibility_changed | Parameters: {screen=app, action=lifecycle, operation=app_visibility, stage=foreground, outcome=foregrounded}
+10-10 20:39:44.302 10853 10853 D čič   : Diagnostic breadcrumb: diagnostic_context screen=app action=lifecycle operation=app_visibility stage=foreground outcome=foregrounded
+10-10 20:39:44.325 10853 11059 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:39:44.359 10853 11061 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:39:44.375 10853 11061 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:39:44.376 10853 10962 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:39:44.377 10853 12776 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:39:44.393 10853 10853 D čič   : StorytellerBooksRepository created for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654, baseUrl: https://books.retar.si
+10-10 20:39:44.401 10853 10853 D čič   : getBooks() called for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:39:44.403 10853 10853 D čič   : Fetching from cache for server: 69b9f1dc-1427-4963-b5f2-ecfadfcaa654
+10-10 20:39:44.404 10853 10853 D čič   : Fetching from remote: https://books.retar.si/api/v2/books
+10-10 20:39:44.538 10853 13083 D čič   : Remote returned 19 books
+10-10 20:39:44.546 10853 10853 D čič   : Remote returned 19 books
+10-10 20:39:44.622 10853 10962 D čič   : Cache returned 19 books
+10-10 20:39:44.642 10853 10853 D čič   : Cache returned 19 books
+10-10 20:39:44.945 10853 10853 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=624}
+10-10 20:39:46.373 10853 10853 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30014, foreground_duration_ms=2065, background_duration_ms=27949, end_reason=checkpoint, content_access=on_device}
+10-10 20:39:46.374 10853 10853 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30014, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:39:47.903 10853 10853 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=306}
+10-10 20:40:00.742 10853 10853 W MessageQueue: Handler (android.os.Handler) {23da753} sending message to a Handler on a dead thread
+10-10 20:40:00.742 10853 10853 W MessageQueue: java.lang.IllegalStateException: Handler (android.os.Handler) {23da753} sending message to a Handler on a dead thread
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.media3.common.util.SystemHandlerWrapper$SystemMessage.sendToTarget(SystemHandlerWrapper.java:165)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.media3.exoplayer.ExoPlayerImplInternal.setPlayWhenReady(ExoPlayerImplInternal.java:438)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.media3.exoplayer.ExoPlayerImpl.updatePlayWhenReady(ExoPlayerImpl.java:3088)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.media3.exoplayer.ExoPlayerImpl.setPlayWhenReady(ExoPlayerImpl.java:884)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.media3.common.BasePlayer.pause(BasePlayer.java:118)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.foundation.AbstractClickableNode.performClick(Clickable.kt:1701)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.foundation.ClickableNode.handleUpEvent(Clickable.kt:950)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.foundation.ClickableNode.onPointerEvent-H0pRuoY(Clickable.kt:884)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:445)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:431)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:431)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:431)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.input.pointer.Node.dispatchMainEventPass(HitPathTracker.kt:431)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.input.pointer.NodeParent.dispatchMainEventPass(HitPathTracker.kt:285)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.input.pointer.HitPathTracker.dispatchChanges(HitPathTracker.kt:182)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.input.pointer.PointerInputEventProcessor.process-BIzXfog(PointerInputEventProcessor.kt:116)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.platform.AndroidComposeView.sendMotionEvent-8iAsVTc(AndroidComposeView.android.kt:2869)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.platform.AndroidComposeView.handleMotionEvent-8iAsVTc(AndroidComposeView.android.kt:2809)
+10-10 20:40:00.742 10853 10853 W MessageQueue: 	at androidx.compose.ui.platform.AndroidComposeView.dispatchTouchEvent(AndroidComposeView.android.kt:2630)
+10-10 20:40:16.376 10853 10853 D čič   : Analytics Event: reading_session_summary | Parameters: {reading_duration_ms=0, audiobook_duration_ms=0, readaloud_duration_ms=0, tts_duration_ms=30004, foreground_duration_ms=30004, background_duration_ms=0, end_reason=checkpoint, content_access=on_device}
+10-10 20:40:16.376 10853 10853 D čič   : Analytics Event: playback_session_summary | Parameters: {usage_mode=tts, playing_duration_ms=30004, buffering_duration_ms=0, interruption_count_bucket=zero, end_reason=checkpoint}
+10-10 20:41:39.083  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.088  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.090  1260 13985 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][finalizeInternal:3973].
+10-10 20:41:39.131  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.133  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.133  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.133  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.133  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.134  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.134  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.134  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.134  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.134  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.134  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.135  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.135  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.135  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.135  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.135  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.135  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.138  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.138  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.140  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.141  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.141  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.141  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.141  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.142  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.142  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.142  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.142  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.142  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.142  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.142  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.142  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.142  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.143  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.143  1260 13985 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:39.150  1260  2291 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:48.816 14235 14352 D čič   : Active profile changed; switching database
+10-10 20:41:48.860 14235 14352 D čič   : Opened database for active profile
+10-10 20:41:48.954 14235 14370 D čič   : Diagnostic breadcrumb: diagnostic_context screen=reader operation=session_recap stage=select outcome=engine_unavailable
+10-10 20:41:49.890 14235 14367 D čič   : Analytics Event: sync_run_completed | Parameters: {duration_ms=957}
+10-10 20:41:56.190  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.193  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.194  1260 14410 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][finalizeInternal:3973].
+10-10 20:41:56.217  1260 14410 I WNC]MessageQueue: [dump:235] Msg[0]: Called from [VendorCameraScenario][finalizeInternal:4040].
+10-10 20:41:56.234  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.237  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.237  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.237  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.237  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.238  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.238  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.238  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.238  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.238  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.238  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.239  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.239  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.239  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.239  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.239  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.239  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.241  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.241  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.243  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.243  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.243  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.243  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.243  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.244  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.244  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.244  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.244  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.244  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.244  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.244  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.244  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.244  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.245  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.247  1260 14410 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:41:56.250  1260  2291 I WNC]MessageQueue: [~MessageQueue:37] 
+10-10 20:51:30.925  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_NOSENSOR (5) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:51:45.940  9556  9556 I GestureDetector: obtain mCurrentDownEvent. id: 352488070 caller: com.sec.android.easyonehand.e0.onInputEvent:225 android.view.InputEventReceiver.dispatchInputEvent:369 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:51:56.557  9556  9556 I GestureDetector: obtain mCurrentDownEvent. id: 937684992 caller: com.sec.android.easyonehand.e0.onInputEvent:225 android.view.InputEventReceiver.dispatchInputEvent:369 android.os.MessageQueue.nativePollOnce:-2 
+10-10 20:52:11.500  1559  1659 V WindowManager: Computed rotation=ROTATION_0 (0) for display id=0 based on lastOrientation=SCREEN_ORIENTATION_PORTRAIT (1) and oldRotation=ROTATION_0 (0), caller=com.android.server.wm.WindowManagerService.updateRotationUnchecked:82 com.android.server.wm.DisplayRotation$OrientationListener.onProposedRotationChanged:170 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.finalizeRotation:26 com.android.server.wm.WindowOrientationListener$OrientationSensorJudge.onSensorChanged:406 android.hardware.SystemSensorManager$SensorEventQueue.dispatchSensorEvent:1203 android.os.MessageQueue.nativePollOnce:-2 
