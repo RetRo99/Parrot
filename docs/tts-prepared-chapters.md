@@ -4,6 +4,57 @@
 
 ### Continuation checkpoint
 
+### Step 2: prepared store implementation checkpoint
+
+`TtsPreparedStore` is Context-free with root and clock injected;
+`TtsPreparedAudioStore` is the Android app-wide `@Single` supplying
+`filesDir/tts-prepared`. No DB change. Real-graph `PreparedStoreWiringTest`
+failed before the binding was added; only Android Context is replaced at the
+host boundary (wrapper's store is lazy). Unit tests use actual temporary files.
+
+Layout for the selected format:
+`filesDir/tts-prepared/<sha256(server-id-length:server-id + book-id)>/<sha256(chapter-href)>/`.
+Null server id uses length -1, distinct from an empty server id. Each folder
+holds `manifest.json` and `<existing-sentence-cache-key>.wav`. Keys are supplied
+using `TtsAudioCacheStore.key`, unchanged (voice, model version, hundredth rate
+and pitch, text). Neither folder/file names nor manifests store sentence text
+or book/chapter titles. Book id, server id and chapter href are identifiers
+required in the manifest; they never become path components directly.
+
+Manifest version 1 fields: `formatVersion` (required, even with default 1),
+`bookId`, nullable `serverId`, `chapterHref`, nullable `voiceId`, nullable
+`modelVersion`, `rate`, `pitch`, `createdTimeMs`, ordered `sentences` entries
+(`key`, nullable `durationMs`, `bytes`), `complete`, `totalBytes`, nullable
+`lastUsedTimeMs`. Planned entries have null duration and zero bytes, preserving
+the ordered total for resume without text. Duplicate keys retain repeated
+positions but refer to one file; totalBytes counts distinct audio payloads once.
+Settings comparisons use the cache's hundredth precision. Ready state reports
+audio payload bytes; store total and the 1 GiB enforcement include manifest bytes.
+
+Operations: begin/resume matching settings and keys (a new setting/order
+replaces the old variant), key-only lookup with measured duration and persisted
+last-used time, state (not prepared, partial n/m, ready size, other settings
+including the old voice/model/rate/pitch and partial counts), add via `.part`
+and atomic rename, completion only after all entries exist, chapter/all deletion,
+total size, oldest-created complete-chapter eviction. Active chapter, partials,
+and chapters used in the last ten minutes are protected; the limit may remain
+temporarily exceeded when every candidate is protected, rather than breaking
+playback/resume. No UI state or strings are exposed yet.
+
+Audio and manifests are both atomically replaced. Restart reconciles listed
+file lengths and missing files, downgrades complete to partial if needed,
+removes unlisted/staging files, and retains valid partials. Malformed, missing
+version, unknown version, unsafe metadata or invalid manifest totals are
+not prepared and cleaned. Paths hash hostile ids; symlinks are refused or
+unlinked without following outside targets. Writes and store operations are
+synchronized inside the app singleton. No checksum/fsync guarantee is claimed.
+
+Tests first: 11/11 initial tests failed against the stub; a twelfth
+missing-version regression subsequently failed before adding `@Required`.
+Full verification green: reader Android 456/456, iOS 324/324, settings 22/22,
+home 84/84, composeApp 61/61, analytics 75/75, zero failures/errors/skips.
+Step 2 complete; step 3 not started at this commit.
+
 Step 2 red checkpoint: 11 new `TtsPreparedStoreTest` cases all fail against
 the unimplemented store. They cover ordered/resumable partials, other settings,
 atomic failure, malformed/unknown manifests, orphan cleanup, missing/truncated
@@ -199,7 +250,7 @@ tests. They test publication/cleanup and parsing, not the native codec.
 No prepared store, manifest, UI state, screen text, resource, foreground service
 or analytics event has been added. No encoding measurements have been made.
 
-## Storage and manifest (required, not implemented yet)
+## Previous run: storage and manifest plan (implemented in Step 2 above)
 
 Intended root: `filesDir/tts-prepared`, outside the 128 MB sentence cache.
 One chapter folder under each book, with `manifest.json` and audio files named

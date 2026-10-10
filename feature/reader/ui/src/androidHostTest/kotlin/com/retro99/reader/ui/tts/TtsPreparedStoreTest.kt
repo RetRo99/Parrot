@@ -73,6 +73,14 @@ class TtsPreparedStoreTest {
         }
     }
 
+    @Test fun `a manifest missing its required version is rejected rather than assumed current`() {
+        val directory = store.chapterDirectory(id).apply { mkdirs() }
+        val json = Json { encodeDefaults = true }.encodeToString(manifest())
+        File(directory, "manifest.json").writeText(json.replace("\"formatVersion\":1,", ""))
+        assertEquals(PreparedChapterState.NotPrepared, store.state(id, settings))
+        assertFalse(directory.exists())
+    }
+
     @Test fun `unlisted and staging files are removed but partial entries survive restart`() {
         store.begin(id, settings, listOf(key, second)); store.add(id, key, source, 500)
         val directory = store.chapterDirectory(id)
