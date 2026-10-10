@@ -102,7 +102,10 @@ class TtsChapterPreparationTest {
         assertEquals(listOf("One.", "Two.", "Two.", "Three."), source.attempted)
     }
 
-    @Test fun `cancel stops after the sentence in flight and leaves a valid partial chapter`() = runTest {
+    // Changed in the prepare-time run: this was "cancel stops after the sentence in flight"
+    // and expected "One." to be finished and stored. The owner decided that cancel abandons
+    // the sentence in flight instead, so that sentence is now expected to leave nothing.
+    @Test fun `cancel abandons the sentence in flight and leaves a valid partial chapter`() = runTest {
         source.block = CompletableDeferred()
         val core = core(this)
         core.start(input())
@@ -111,9 +114,10 @@ class TtsChapterPreparationTest {
         source.block?.complete(Unit)
         advanceUntilIdle()
         assertEquals(TtsChapterPreparationState.Cancelled(id.chapterHref), core.state.value)
-        assertEquals(listOf("One."), source.prepared)
+        assertEquals(listOf("One."), source.attempted)
+        assertEquals(emptyList(), source.prepared)
         assertEquals(emptyList(), store.completed)
-        assertTrue(source.key("One.", settings) in store.prepared)
+        assertFalse(source.key("One.", settings) in store.prepared)
     }
 
     @Test fun `not enough free disk space fails before anything is written`() = runTest {
