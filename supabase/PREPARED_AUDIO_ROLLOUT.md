@@ -13,6 +13,33 @@ on `get_storage_usage`. Run every step yourself; nothing here is automated.
 > not optional: run it locally and read the pgTAP output before you apply this
 > anywhere else.
 
+## Status on the linked development project, as of 2026-10-10
+
+Still **not applied**, and the run of 2026-10-10 could not apply it. What that
+run established, so the next one need not rediscover it:
+
+- **Linking needs no password.** `supabase link --project-ref <ref>` succeeds
+  from a fresh worktree with only the stored CLI login: the CLI provisions a
+  temporary login role per connection, so neither a login nor a database
+  password is prompted for. `supabase migration list --linked` then works.
+- **Two migrations are pending, not one.**
+  `20261009000000_parrot_cloud_saved_words.sql` is unapplied as well as this
+  one. It belongs to the saved-words/offline-dictionary feature, not to this
+  work. `supabase db push` and `supabase migration up` both apply the entire
+  pending chain in timestamp order, so neither can apply this migration without
+  also deploying that one. **Decide the saved-words migration first**; there is
+  no CLI route that skips it, and applying this one alone would leave the
+  remote's migration history out of order.
+- **The pgTAP suite cannot run on this machine.** `supabase test db --linked`
+  fails with `DockerRunError`: `--linked` only redirects which database
+  pg_prove is pointed at, and pg_prove itself still runs in a container. No
+  docker, podman, colima, `psql` or `pg_prove` is installed. So step 1 below,
+  and the step 4 verification queries, both need either a container runtime or
+  a `psql` on the machine that runs them.
+
+So the order for the owner is: resolve 20261009000000, install a container
+runtime or `psql`, then step 1.
+
 ## 1. Run it locally first
 
 ```bash
