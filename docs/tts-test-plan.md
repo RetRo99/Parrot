@@ -295,8 +295,11 @@ passed. Neural load uses `warmUp` (downloaded-model-only, both engines), bounded
 independently of the load coroutine, then the existing 30 s synthesis/player deadline.
 Tracked resume and settings restarts share the same sequence. No prepared-chapters
 code or tests were changed, no earlier test other than the named exception was edited,
-and no new test was edited after its fix. Reader host tests pass 534/534 at this stage.
-Full multi-module verification and the short Samsung check remain pending; see
+and no new test was edited after its fix. A follow-up guard regression was committed
+failing in `4998760d` and fixed in `d71e85f2`: an ordinary buffering interval must not
+discard the running session's callback ownership. Full requested verification passes:
+reader host 535/535, reader iOS 357/357, settings 24/24, home 84/84, composeApp 64/64,
+analytics 77/77. The initial builds passed; final build and remaining Samsung checks are pending; see
 `tts-run5c-report.txt`. The older play-press attribution question above is retained, not
 reopened: this run's explicit scope is the three timing fixes and the requested checks.
 

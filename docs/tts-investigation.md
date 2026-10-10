@@ -711,6 +711,7 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **How a test could catch it:** the test above, once the fake only reports `ENDED` while it has items; the product guard is `if (currentIndex < 0) return` in `onSentenceCompleted`.
 - **Status:** not fixed — found by run 2b's TTS-F16 test, outside that run's scope. Candidate for run 5.
 - **Fixed (run 5c):** `c10784fb` — completion requires a running session; stopped-player ready, transition, error and playing callbacks cannot revive it, and paused auto-transition cannot advance. Nine failures committed in `94a7e080`, including the explicitly authorized correction to the earlier locator-abandonment assertion; ordinary running completion was already green.
+- **Guard follow-up:** `d71e85f2` retains session ownership through ordinary buffering after audio has played; the new guards otherwise rejected subsequent ready/playing callbacks. New regression committed failing in `4998760d`; no earlier test edited.
 
 ### TTS-F26 — A slow voice's gap between sentences reads as "not playing", and narration can die in it
 
