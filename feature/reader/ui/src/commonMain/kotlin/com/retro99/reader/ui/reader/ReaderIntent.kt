@@ -174,6 +174,13 @@ sealed interface ReaderIntent : BaseIntent {
     /** Cancels an in-flight voice package download. */
     data object CancelTtsVoicePreparation : ReaderIntent
 
+    /** Prepares the audio of the chapter on screen, so it plays with no waiting. */
+    data object PrepareChapter : ReaderIntent
+
+    data object CancelChapterPreparation : ReaderIntent
+
+    data object DeletePreparedChapter : ReaderIntent
+
     /** Accepts the Supertonic terms, then downloads and selects the given voice. */
     data class AcceptSupertonicTermsAndSelect(val voiceId: String) : ReaderIntent
 

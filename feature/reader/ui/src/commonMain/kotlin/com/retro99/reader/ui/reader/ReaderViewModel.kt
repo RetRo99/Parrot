@@ -129,6 +129,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -548,6 +549,9 @@ class ReaderViewModel(
             ReaderIntent.StopTtsPreview -> stopTtsPreview()
             ReaderIntent.OpenVoiceSettings -> openVoiceSettings()
             ReaderIntent.CancelTtsVoicePreparation -> cancelTtsVoicePreparation()
+            ReaderIntent.PrepareChapter -> prepareChapter()
+            ReaderIntent.CancelChapterPreparation -> ttsController.cancelChapterPreparation()
+            ReaderIntent.DeletePreparedChapter -> deletePreparedChapter()
             is ReaderIntent.AcceptSupertonicTermsAndSelect -> {
                 supertonicTermsStore.acceptCurrentTerms()
                 updateState { state -> state.copy(hasAcceptedSupertonicTerms = true) }
@@ -1138,6 +1142,7 @@ class ReaderViewModel(
                 observeTtsPreviewState()
                 observeTtsSentenceProgress()
                 observeTtsVoicePreparationState()
+                observeChapterPreparation()
             },
             markReadAloudAvailable = {
                 updateState { state -> state.copy(isTtsReadAloud = true) }
@@ -1653,6 +1658,38 @@ class ReaderViewModel(
         ttsController.finishedSentences
             .onEach { finished -> recapCapture?.onSentenceFinished(finished) }
             .launchIn(viewModelScope)
+    }
+
+    /** Forwards the preparation state and the prepared audio of the chapter on screen. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun observeChapterPreparation() {
+        ttsController.chapterPreparation
+            .onEach { preparation -> updateState { state -> state.copy(chapterPreparation = preparation) } }
+            .launchIn(viewModelScope)
+        bookController.currentLocator
+            .map { locator -> locator.href }
+            .distinctUntilChanged()
+            .flatMapLatest { href -> ttsController.preparedChapterAudio(href) }
+            .onEach { audio -> updateState { state -> state.copy(preparedChapterAudio = audio) } }
+            .launchIn(viewModelScope)
+    }
+
+    private fun prepareChapter() {
+        viewModelScope.launch {
+            val chapterHref = bookController.currentLocator.first().href
+            when (preparedChapterPressOutcome(ttsController.prepareChapter(chapterHref))) {
+                PreparedChapterPressOutcome.OPEN_VOICES -> openVoiceSettings()
+                PreparedChapterPressOutcome.SHOW_FAILURE ->
+                    updateState { state -> state.copy(showTtsPlaybackFailed = true) }
+                PreparedChapterPressOutcome.NONE -> Unit
+            }
+        }
+    }
+
+    private fun deletePreparedChapter() {
+        viewModelScope.launch {
+            ttsController.deletePreparedChapter(bookController.currentLocator.first().href)
+        }
     }
 
     private fun observeTtsPreviewState() {

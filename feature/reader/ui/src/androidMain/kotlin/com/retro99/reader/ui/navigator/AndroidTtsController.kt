@@ -13,6 +13,19 @@ import com.retro99.reader.ui.playback.MediaPlaybackController
 import com.retro99.reader.ui.playback.NotificationPermissionHandler
 import com.retro99.reader.ui.publication.EpubPublication
 import com.retro99.reader.ui.tts.NeuralVoicePackage
+import com.retro99.reader.ui.reader.PreparedChapterVoice
+import com.retro99.reader.ui.reader.preparedChapterVoice
+import com.retro99.reader.ui.tts.PreparedChapterId
+import com.retro99.reader.ui.tts.PreparedChapterState
+import com.retro99.reader.ui.tts.PreparedVoiceSettings
+import com.retro99.reader.ui.tts.TtsChapterPreparationForegroundService
+import com.retro99.reader.ui.tts.TtsChapterPreparationInput
+import com.retro99.reader.ui.tts.TtsChapterPreparationJob
+import com.retro99.reader.ui.tts.TtsChapterPreparationRequest
+import com.retro99.reader.ui.tts.TtsChapterPreparationState
+import com.retro99.reader.ui.tts.TtsPreparationVoiceKind
+import com.retro99.reader.ui.tts.TtsPreparedAudioStore
+import com.retro99.reader.ui.tts.TtsPreparedChapterAudio
 import com.retro99.reader.ui.tts.TtsPlaybackInfo
 import com.retro99.reader.ui.tts.TtsPreparationProgress
 import com.retro99.reader.ui.tts.TtsPreviewPlayer
@@ -61,6 +74,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.core.annotation.Provided
 import org.koin.core.annotation.Scope
@@ -79,6 +93,8 @@ class AndroidTtsController(
     private val modelManager: TtsModelManager,
     private val notificationPermissionHandler: NotificationPermissionHandler,
     private val preparationStateHolder: TtsVoicePreparationStateHolder,
+    private val chapterPreparationJob: TtsChapterPreparationJob,
+    private val preparedAudioStore: TtsPreparedAudioStore,
     private val previewPlayer: TtsPreviewPlayer,
     private val wordPlayer: TtsWordPlayer,
     private val mediaPlaybackController: MediaPlaybackController,
@@ -101,6 +117,9 @@ class AndroidTtsController(
     private var coverArtwork: ByteArray? = null
     private var isCoverArtworkLoaded = false
     private val readyChapterHref = MutableStateFlow<String?>(null)
+
+    /** Bumped whenever something other than the job could change what is prepared. */
+    private val preparedAudioRevision = MutableStateFlow(0)
 
     private val attempts = TtsPlaybackAttempts(
         scope = controllerScope,
@@ -546,6 +565,9 @@ class AndroidTtsController(
     }
 
     private fun restartForSettingsChange() {
+        // The voice, speed or pitch decides which prepared audio counts, so the row has to
+        // be read again for the new setting.
+        refreshPreparedAudio()
         attempts.onSettingsChanged()
     }
 
@@ -703,6 +725,128 @@ class AndroidTtsController(
 
     private fun LocatorState.withFragment(fragmentId: String): LocatorState =
         copy(fragments = listOf(fragmentId))
+
+    override val chapterPreparation: Flow<TtsChapterPreparationState> = chapterPreparationJob.state
+
+    /**
+     * Re-read whenever the one preparation moves or the voice, speed or pitch changes: the
+     * store is a few small files, and nothing else can change what is prepared for a chapter.
+     */
+    override fun preparedChapterAudio(chapterHref: String): Flow<TtsPreparedChapterAudio> =
+        combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }
+            .map { withContext(Dispatchers.IO) { readPreparedChapterAudio(chapterHref) } }
+
+    override suspend fun prepareChapter(chapterHref: String): TtsChapterPreparationRequest {
+        val voice = runCatching { synthesizer.availableVoices() }.getOrDefault(emptyList())
+            .firstOrNull { candidate -> candidate.id == voiceId }
+        val usability = preparedChapterVoice(voice, supertonicTermsStore.hasAcceptedCurrentTerms())
+        if (usability != PreparedChapterVoice.USABLE) {
+            return TtsChapterPreparationRequest.VOICE_UNUSABLE
+        }
+        if (!notificationPermissionHandler.ensurePermission()) {
+            return TtsChapterPreparationRequest.NOTIFICATIONS_DENIED
+        }
+        val texts = chapterTextsFor(chapterHref)
+        if (texts.isEmpty()) return TtsChapterPreparationRequest.UNAVAILABLE
+        val request = chapterPreparationJob.start(
+            TtsChapterPreparationInput(
+                id = preparedChapterId(chapterHref),
+                settings = preparedVoiceSettings(),
+                voiceKind = if (voiceId.neuralVoicePackage() != null) {
+                    TtsPreparationVoiceKind.NEURAL
+                } else {
+                    TtsPreparationVoiceKind.SYSTEM
+                },
+                texts = texts,
+            ),
+        )
+        if (request == TtsChapterPreparationRequest.STARTED) {
+            try {
+                ContextCompat.startForegroundService(
+                    context,
+                    TtsChapterPreparationForegroundService.createStartIntent(context),
+                )
+            } catch (error: Exception) {
+                // The work itself is already running in the app-wide job; only the
+                // notification and the process guarantee are lost.
+                Log.e(TAG, "Failed to start chapter preparation service", error)
+            }
+        }
+        refreshPreparedAudio()
+        return request
+    }
+
+    override fun cancelChapterPreparation() {
+        chapterPreparationJob.cancel()
+    }
+
+    override suspend fun deletePreparedChapter(chapterHref: String) {
+        withContext(Dispatchers.IO) {
+            runCatching { preparedAudioStore.store.delete(preparedChapterId(chapterHref)) }
+                .onFailure { error -> Log.e(TAG, "Failed to delete prepared chapter", error) }
+        }
+        refreshPreparedAudio()
+    }
+
+    override suspend fun preparedAudioBytes(): Long = withContext(Dispatchers.IO) {
+        runCatching { preparedAudioStore.store.totalSize() }.getOrDefault(0L)
+    }
+
+    override suspend fun deleteAllPreparedAudio() {
+        withContext(Dispatchers.IO) {
+            runCatching { preparedAudioStore.store.deleteAll() }
+                .onFailure { error -> Log.e(TAG, "Failed to delete prepared audio", error) }
+        }
+        refreshPreparedAudio()
+    }
+
+    private fun refreshPreparedAudio() {
+        preparedAudioRevision.value += 1
+    }
+
+    /** The chapter on screen, as the reader loaded it; never another chapter's text. */
+    private suspend fun chapterTextsFor(chapterHref: String): List<String> {
+        if (sentencesChapterHref == chapterHref && sentences.isNotEmpty()) {
+            return sentences.map { sentence -> sentence.text }
+        }
+        if (lastLocator?.href != chapterHref) return emptyList()
+        return bookController.getChapterSentences().map { sentence -> sentence.text }
+    }
+
+    private fun preparedChapterId(chapterHref: String) = PreparedChapterId(
+        bookId = epubPublication.bookUuid,
+        serverId = epubPublication.serverId,
+        chapterHref = chapterHref,
+    )
+
+    private fun preparedVoiceSettings() = PreparedVoiceSettings(
+        voiceId = voiceId,
+        modelVersion = runCatching { synthesizer.activeModelVersion(voiceId) }.getOrNull(),
+        rate = TtsSpeechRate.coerce(rate),
+        pitch = pitch,
+    )
+
+    private fun readPreparedChapterAudio(chapterHref: String): TtsPreparedChapterAudio {
+        val state = runCatching {
+            preparedAudioStore.store.state(preparedChapterId(chapterHref), preparedVoiceSettings())
+        }.getOrElse { error ->
+            Log.e(TAG, "Failed to read prepared chapter state", error)
+            return TtsPreparedChapterAudio.NotPrepared
+        }
+        return when (state) {
+            PreparedChapterState.NotPrepared -> TtsPreparedChapterAudio.NotPrepared
+            is PreparedChapterState.Partial -> TtsPreparedChapterAudio.Partial(state.done, state.total)
+            is PreparedChapterState.Ready -> TtsPreparedChapterAudio.Ready(state.bytes)
+            is PreparedChapterState.OtherSettings -> TtsPreparedChapterAudio.OtherSettings(
+                voiceId = state.settings.voiceId,
+                rate = state.settings.rate,
+                pitch = state.settings.pitch,
+                done = state.done,
+                total = state.total,
+                complete = state.complete,
+            )
+        }
+    }
 
     private companion object {
         // Covers synthesis/player startup after notification permission is resolved.

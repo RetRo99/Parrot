@@ -4,6 +4,52 @@
 
 ### Continuation checkpoint
 
+### Step 5: reader wiring
+
+`TtsController` (commonMain) gained five members, all with defaults that mean "not
+supported", so `IosTtsController` is untouched and the iPhone behaves exactly as
+before: `chapterPreparation: Flow<TtsChapterPreparationState>` (default always
+Idle), `preparedChapterAudio(chapterHref): Flow<TtsPreparedChapterAudio>` (default
+NotPrepared), `suspend prepareChapter(chapterHref): TtsChapterPreparationRequest`
+(default UNAVAILABLE), `cancelChapterPreparation()`, `suspend
+deletePreparedChapter(chapterHref)`, plus `suspend preparedAudioBytes()` and
+`suspend deleteAllPreparedAudio()` for the Settings row.
+
+`AndroidTtsController` implements them over the app-wide job and the prepared
+store (both injected `@Single`s). `prepareChapter` applies the read-aloud gates in
+order: an undownloaded pack or unaccepted Supertonic terms answers VOICE_UNUSABLE,
+a denied notification permission answers NOTIFICATIONS_DENIED, then the chapter's
+sentences are taken from the chapter the reader has loaded now (the controller's
+own loaded sentences, else `bookController.getChapterSentences()` when the locator
+is on that chapter, never another chapter's text), the job is started, and only
+then the foreground service. Preparation then continues without the reader. The
+prepared-audio flow re-reads the store whenever the job moves or the voice, speed
+or pitch changes (`restartForSettingsChange` bumps a revision). A failed store read
+is logged and reported as not prepared rather than crashing the sheet.
+
+The row decision is pure and in commonMain with commonTest tests, in the pattern of
+`derivePackState`: `derivePreparedChapterRow` in `reader/PreparedChapterRowState.kt`
+returns `PreparedChapterRowState` or null for "not shown" (recorded narration, no
+read-aloud, no chapter). Order: this chapter preparing, another chapter preparing,
+an unusable voice, a failure of this chapter, then what is on disk (ready, partly,
+other settings, not prepared). A chapter that has begun but has no sentence yet
+reads as not prepared, and progress of the chapter on screen wins over a voice that
+became unusable mid-run. `preparedChapterVoice` repeats read-aloud's gates
+(system or non-neural usable, Supertonic needs terms, neural needs its pack) and
+`preparedChapterPressOutcome` maps the request answer to what the screen does
+beyond the row: open the Voices sheet, show read-aloud's own failure feedback, or
+nothing. 14 of the 15 first row tests failed against a stubbed decision function,
+and the press-outcome test failed against a stubbed mapping, before implementation.
+
+`ReaderViewModel` only forwards: `observeChapterPreparation` copies the job state
+into `ReaderViewState.chapterPreparation` and, keyed on the locator's chapter,
+`preparedChapterAudio` into `ReaderViewState.preparedChapterAudio`; the three new
+intents (`PrepareChapter`, `CancelChapterPreparation`, `DeletePreparedChapter`)
+call the controller and route the press outcome through the tested mapping.
+
+Green after step 5: reader Android 500/500, iOS 340/340 (the new commonTest cases
+run on both), settings 22/22, home 84/84, composeApp 63/63, analytics 77/77.
+
 ### Step 4: the preparation job, its service and its analytics
 
 `TtsChapterPreparationJob` is the app-wide `@Single` (its own `SupervisorJob` +
