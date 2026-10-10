@@ -4,18 +4,19 @@ Format switch: production encoder now (class); tests that failed first; existing
 Sample files for listening: copied (yes/no), which sentences, where: not built (step 8 not reached)
 Commits this run (hash + subject, oldest first):
   77d1c689 docs(tts): prepared audio is AAC; withdraw the duration fallback rule
-  <format switch commit>
-Steps complete this run, and steps complete in total (1-8): this run: step 1 re-decided as AAC. In total: 1, 2, 3.
+  66ef6457 feat(tts): prepared audio becomes AAC in .m4a, manifest version 2
+  <step 4 commit>
+Steps complete this run, and steps complete in total (1-8): this run: the format switch (step 1 re-decided as AAC) and step 4. In total: 1, 2, 3, 4.
 Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): AAC-LC mono ~48 kbit/s in .m4a, final. Samsung probe: Kokoro 76,970/11,190 +104; 99,606/14,050 +102; 127,086/17,690 +127. System 105,764/14,909 +102; 103,340/14,570 +109; 141,262/19,364 +87. Joins: not assessed (no audio monitoring available to the agent; not claimed). Fell back to WAV: no - the fallback rule is withdrawn and the WAV-copying binding is deleted.
 Step 2: where prepared audio lives on disk; manifest fields; does any file name or manifest contain sentence text or a title (yes/no): filesDir/tts-prepared/<sha256(server-id-length:server-id+book-id)>/<sha256(chapter-href)>/ with manifest.json and <sentence-cache-key>.m4a. Manifest v2: formatVersion, bookId, serverId, chapterHref, voiceId, modelVersion, rate, pitch, createdTimeMs, ordered sentences(key, durationMs, bytes), complete, totalBytes, lastUsedTimeMs. Text or title: no.
 Step 3: lookup order as built; how a live request overtakes preparation, and the test that shows it; was TtsReadAloudEngine changed (yes/no, why): prepared store -> sentence cache -> synthesis. TtsSynthesisPriorityGate holds one permit with separate FIFO live/background queues; release prefers a live waiter and never interrupts native work in flight. Test: TtsPreparedGeneratorTest "real generator serves live before queued preparation after native work finishes" (order first, live, second). TtsReadAloudEngine changed: no.
-Step 4: what happens on a second request while one runs; what survives an app kill; analytics events and parameters added, and the sanitizer test: not built
+Step 4: what happens on a second request while one runs; what survives an app kill; analytics events and parameters added, and the sanitizer test: a second request is refused with TtsChapterPreparationRequest.ALREADY_PREPARING and never queued; the state flow keeps reporting the running chapter (the row's "preparing another chapter"). An app kill leaves the partial chapter on disk: sentences already prepared are skipped, so the next press resumes. Events: ReaderAnalyticsEvent.TtsChapterPreparationStarted and TtsChapterPreparationEnded with operation=tts_chapter_preparation, stage, voice_kind (neural/system), sentence_count, and outcome + duration_ms on the end event. Sanitizer: voice_kind added as an enum dimension and sentence_count as a safe long; tests chapterPreparationEventsKeepVoiceKindCountAndOutcome (failed first) and chapterPreparationDropsAnythingItDoesNotRecognize.
 Step 5: new TtsController members; does iPhone behave exactly as before (yes/no) and how I know: not built
 Step 6: every state of the row that was built (list); every new string key (list); settings row built (yes/no): not built
 Tests from the bug-fix runs edited (name + why), or "none": none
-Per module: reader ui Android host 472/472, reader ui iOS 324/324, settings ui 22/22, home ui 84/84, composeApp 62/62, analytics 75/75
-Does a test resolve the new classes from the real Koin graph (yes/no, name): yes - PreparedAudioWiringTest, PreparedStoreWiringTest, PreparedGeneratorWiringTest
-App build results (Android assemble, iOS framework): not run since the format switch
+Per module: reader ui Android host 484/484, reader ui iOS 324/324, settings ui 22/22, home ui 84/84, composeApp 63/63, analytics 77/77
+Does a test resolve the new classes from the real Koin graph (yes/no, name): yes - PreparedAudioWiringTest, PreparedStoreWiringTest, PreparedGeneratorWiringTest, PreparedChapterJobWiringTest (checked red with the @Single removed)
+App build results (Android assemble, iOS framework): Android assembleDebug succeeded after step 4; iOS framework not rebuilt yet this run
 Device used (model + serial), any command sent to another device (yes/no): none this run so far; no
 Kokoro chapter: sentences, time to prepare, size on disk, notification showed progress (yes/no): not built
 Playing the prepared chapter: any synthesize line for it (yes/no); pause, resume, skip, double-tap (result of each): not built
@@ -27,10 +28,10 @@ System voice chapter prepared and played (yes/no): not built
 States of the row seen on the phone (list), and states not reached: not built
 State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): untouched this run so far
 Why the run ended where it did (finished / out of time / blocked, and on what): in progress
-Done this run: the format switch to AAC (.m4a, manifest version 2, native encoder as the production binding).
-Not done or partly done, and why: steps 4-8 not started yet in this run.
+Done this run: the format switch to AAC (.m4a, manifest version 2, native encoder as the production binding) and step 4 (the app-wide preparation job, its foreground service, notification strings and the two analytics events with sanitizer entries).
+Not done or partly done, and why: steps 5-8 not started yet in this run.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none
-Places the brief was ambiguous and what I chose: the brief says no other existing test should need editing; the extension and manifest version are asserted literally in TtsPreparedStoreTest and the production class name in PreparedAudioWiringTest, so those two needed mechanical edits, reported above.
+Places the brief was ambiguous and what I chose: "a second request while one runs is refused with a clear state" - one state flow cannot report two chapters, so the refusal is the return value of the request (ALREADY_PREPARING) while the flow keeps reporting the running chapter; the row reads that as "preparing another chapter". The brief says no other existing test should need editing; the extension and manifest version are asserted literally in TtsPreparedStoreTest and the production class name in PreparedAudioWiringTest, so those two needed mechanical edits, reported above.
 Files changed outside feature/reader/ui, feature/settings/ui, lib/analytics, translations, androidApp/src/main/AndroidManifest.xml, composeApp tests and docs: none
 Known problems I am leaving: the AAC encoder itself can only be exercised on a device; host tests pin the no-fallback failure path, not the codec output. Audible join quality remains unassessed.
 --- END REPORT ---

@@ -636,6 +636,41 @@ sealed interface ReaderAnalyticsEvent : AnalyticsEvent {
     }
 
     /**
+     * One press of "Prepare this chapter". Carries the kind of voice and how many sentences
+     * the chapter has; no text, no titles, no book, chapter or voice identifier.
+     */
+    data class TtsChapterPreparationStarted(
+        val voiceKind: String,
+        val sentenceCount: Long,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_chapter_preparation_started"
+        override val parameters: Map<String, Any> = mapOf(
+            "operation" to "tts_chapter_preparation",
+            "stage" to "started",
+            "voice_kind" to voiceKind,
+            "sentence_count" to sentenceCount,
+        )
+    }
+
+    /** How that preparation ended: completed, failed or cancelled, and how long it took. */
+    data class TtsChapterPreparationEnded(
+        val voiceKind: String,
+        val sentenceCount: Long,
+        val outcome: String,
+        val durationMs: Long,
+    ) : ReaderAnalyticsEvent {
+        override val name: String = "tts_chapter_preparation_ended"
+        override val parameters: Map<String, Any> = mapOf(
+            "operation" to "tts_chapter_preparation",
+            "stage" to "ended",
+            "voice_kind" to voiceKind,
+            "sentence_count" to sentenceCount,
+            "outcome" to outcome,
+            "duration_ms" to durationMs,
+        )
+    }
+
+    /**
      * Records one TTS playback attempt or terminal result with bounded, non-content dimensions.
      * Voice IDs, book IDs, narration text and exception messages are intentionally excluded.
      */

@@ -4,6 +4,77 @@
 
 ### Continuation checkpoint
 
+### Step 4: the preparation job, its service and its analytics
+
+`TtsChapterPreparationJob` is the app-wide `@Single` (its own `SupervisorJob` +
+`Dispatchers.IO` scope, so it outlives the reader screen). The pure logic is
+`TtsChapterPreparationCore`, which takes two seams a host test fakes:
+`TtsPreparationSentenceSource` (key, prepare one sentence) over
+`TtsAudioGenerator.preparedKey`/`prepareSentence`, and
+`TtsPreparationChapterStore` (begin, isPrepared, markComplete, enforceLimit) over
+`TtsPreparedStore`. `usableBytes` is `filesDir.usableSpace`.
+
+State (commonMain `TtsChapterPreparationState`, so iOS compiles against it):
+`Idle`, `Running(chapterHref, done, total)`, `Completed(chapterHref)`,
+`Failed(chapterHref, reason)`, `Cancelled(chapterHref)`. Failure reasons:
+`SENTENCE_FAILED`, `NOT_ENOUGH_SPACE`, `VOICE_UNUSABLE`, `NOTIFICATIONS_DENIED`,
+`UNEXPECTED_ERROR`. One press answers with `TtsChapterPreparationRequest`:
+`STARTED`, `ALREADY_PREPARING`, `NOT_ENOUGH_SPACE`, `VOICE_UNUSABLE`,
+`NOTIFICATIONS_DENIED`, `UNAVAILABLE`.
+
+Behaviour: `start` claims the job synchronously (compare-and-set to `Running`)
+before any suspension, so a second press is refused with `ALREADY_PREPARING` and
+nothing is queued; the state flow keeps reporting the chapter that is running,
+which is what the row shows as "preparing another chapter". Sentences already in
+the chapter are skipped, so a press after a cancel or an app kill resumes. A
+failing sentence is retried once; a second failure ends the job as
+`SENTENCE_FAILED` and keeps every sentence already stored. `cancel()` sets a flag
+checked between sentences: the sentence in flight finishes, native synthesis is
+never cut off, and the partial chapter stays valid and resumable. Completion marks
+the manifest complete and then enforces the 1 GiB limit with this chapter as the
+protected active one. Free space is checked before anything is written:
+32 MiB headroom plus 64 kB per sentence (the measured AAC sentences were 11 to
+20 kB), otherwise `NOT_ENOUGH_SPACE` with nothing begun. An empty chapter is
+`UNAVAILABLE`.
+
+`TtsChapterPreparationForegroundService` (declared in
+`androidApp/src/main/AndroidManifest.xml` with `foregroundServiceType="dataSync"`)
+holds the process up and shows progress with a Cancel action; it only watches the
+job's state and stops itself on any non-`Running` state. The notification names no
+book and no chapter. New Android resource strings (translations androidMain):
+`tts_chapter_preparation_channel_name`, `..._channel_description`,
+`..._notification_title`, `..._notification_progress` ("%1$d of %2$d sentences"),
+`..._notification_cancel`.
+
+Analytics: `ReaderAnalyticsEvent.TtsChapterPreparationStarted` and
+`TtsChapterPreparationEnded`, one each per preparation, never per sentence.
+Parameters: `operation=tts_chapter_preparation`, `stage` (started/ended),
+`voice_kind` (neural/system), `sentence_count`, plus `outcome`
+(completed/failed/cancelled) and `duration_ms` on the end event. No text, no
+titles, no book, chapter or voice id. The fail-closed sanitizer gained
+`voice_kind` as an enum dimension (neural, system) and `sentence_count` as a safe
+long; `AnalyticsParameterSanitizerTest.chapterPreparationEventsKeepVoiceKindCountAndOutcome`
+failed before that (voice_kind and the count were dropped) and
+`chapterPreparationDropsAnythingItDoesNotRecognize` pins that a voice id under
+`voice_kind`, a title, a negative count and a count sent as text all disappear.
+
+Tests: 11 of the 12 new `TtsChapterPreparationTest` cases failed against the stub
+core (the twelfth, the empty chapter, passed fail-closed). They cover the full
+pass, skip-and-resume, the refused second request, per-sentence progress, retry
+once then fail, retry then succeed, cancel after the sentence in flight, the disk
+space check, the empty chapter, both analytics events with their outcome, count,
+duration and voice kind, and the job being free again after a terminal state.
+`PreparedChapterJobWiringTest` resolves the job from the real app graph; with the
+`@Single` removed it fails with `NoDefinitionFoundException`, which was checked.
+
+Green after step 4: reader Android 484/484, iOS 324/324, settings 22/22,
+home 84/84, composeApp 63/63, analytics 77/77; zero failures/errors/skips.
+Android `assembleDebug` succeeded. Not built yet in step 4: nothing the user can
+see; the controller, the row and the Settings row are steps 5 and 6. The
+notification-permission and voice-pack/terms gates live in the controller
+(step 5), which is why `VOICE_UNUSABLE` and `NOTIFICATIONS_DENIED` exist as
+request answers the core itself never returns.
+
 ### Step 3: prepared-first playback and synthesis priority
 
 Production `TtsAudioGenerator` now resolves the prepared store and selected

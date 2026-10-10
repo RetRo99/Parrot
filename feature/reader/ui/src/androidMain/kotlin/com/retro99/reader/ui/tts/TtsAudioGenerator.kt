@@ -37,6 +37,10 @@ class TtsAudioGenerator(
     internal suspend fun prepareSentence(id: PreparedChapterId, text: String, voiceId: String?, rate: Float, pitch: Float): PreparedAudioEncoding =
         core.prepareSentence(id, text, voiceId, rate, pitch)
 
+    /** The prepared-store key for one sentence, so a chapter's order can be planned up front. */
+    internal fun preparedKey(text: String, voiceId: String?, rate: Float, pitch: Float): String =
+        core.preparedKey(text, voiceId, rate, pitch)
+
     override suspend fun synthesize(
         text: String,
         voiceId: String?,
@@ -112,6 +116,9 @@ internal class TtsAudioGeneratorCore(
             }
         }
     }
+
+    internal fun preparedKey(text: String, voiceId: String?, rate: Float, pitch: Float): String =
+        cacheKey(text, voiceId, TtsSpeechRate.coerce(rate), pitch)
 
     private val lockRegistryMutex = Mutex()
     private val synthesisLocks = mutableMapOf<String, LockEntry>()

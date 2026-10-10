@@ -84,6 +84,11 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
+        <service
+            android:name="com.retro99.reader.ui.tts.TtsChapterPreparationForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- FileProvider for sharing log files -->
         <provider
             android:name="androidx.core.content.FileProvider"
