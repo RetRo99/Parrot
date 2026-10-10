@@ -22,7 +22,12 @@ empty-chapter skipping and playback outcomes. Six-module verification is green:
 reader Android 440/440, iOS 324/324, settings 22/22, home 84/84,
 composeApp 59/59, analytics 75/75; zero failures/errors/skips from XML.
 Phone baseline rechecked: the empty opening page offers System voice at 1×,
-Play produces no operation. Fixed-build retest pending; builds in progress.
+Play produces no operation. Both Android assemble and iOS framework succeeded.
+Fixed-build Samsung retest (`071d8867` code): Play moved off Page 1 of 1
+into the first chapter with text, showed Pause and Sentence 2 of 397. One
+attempted and one succeeded operation, 1,327 ms, one correlated start/terminal
+breadcrumb. Playback paused after observation. Evidence is in the dated folder
+(`dead-play-fixed-logcat.txt`). The cause matches the proposed guard.
 
 Branch `tts/prepared-chapters`, based on `e8ed4319`. The supplied worktree was
 detached at that commit. All work and Gradle commands run from that worktree;

@@ -1,5 +1,13 @@
 # Prepared chapters: Step 0 comparison
 
+## Continuation: dead Play fix
+
+- Samsung SM-S921B, Android 16, serial RFCWC0SSVDM; Parrot 0.4.5 (21), notification permission already granted. Parrot was foreground; no unrelated app interaction.
+- Before fix: System voice 1×, empty opening Page 1 of 1, Play gave zero playback operations in 3 s (PID 30907).
+- Fix code `071d8867`, installed with `install -r`: same book via Resume, fresh Listen bounds after middle tap and 0.9 s wait; long press opened sheet. Play moved into the first text chapter, showed Pause and Sentence 2 of 397; playback then paused.
+- One attempted and one succeeded event, duration_ms 1327, PID 8576, one correlated start/terminal breadcrumb. See `dead-play-fixed-logcat.txt`; no title or text retained in log.
+- Host regression failed before fix: expected one controller request, got zero. Green six-module XML counts: reader Android 440/440, iOS 324/324, settings 22/22, home 84/84, composeApp 59/59, analytics 75/75, no skips. Android assemble and iOS framework succeeded.
+
 Samsung SM-S921B, RFCWC0SSVDM, package com.retro99.parrot. Every adb command
 explicitly targeted this serial. Install -r only, no uninstall, data clear,
 sign-out, network/ringer changes, or Supertonic terms acceptance.

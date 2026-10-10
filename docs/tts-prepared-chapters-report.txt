@@ -1,9 +1,9 @@
 --- REPORT ---
 Branch: tts/prepared-chapters
 Leftover worktree removed (yes/no, why not): yes; clean status, git worktree remove succeeded.
-Dead Play: which guard stopped the press (file and line); test failed before the fix (yes/no) and the failure text; confirmed on the phone (yes/no): ReaderViewModel.kt:2544, isTtsReadAloud false; yes, expected 1 playback request but was 0; no, retest pending.
-Was the cause what the prompt suggested (yes/no), and if not, what it was: yes in the host regression; phone confirmation pending.
-Commits this run (hash + subject, oldest first): 542736b3 docs: commit prepared chapters owner brief; 8fe3cfdc test(reader): pin empty-chapter Play regression (intentionally red); green fix checkpoint being committed.
+Dead Play: which guard stopped the press (file and line); test failed before the fix (yes/no) and the failure text; confirmed on the phone (yes/no): ReaderViewModel.kt:2544, isTtsReadAloud false; yes, Play must reach the controller even before page availability. Expected <1>, actual <0>; yes, first text chapter, one attempted and one succeeded (1327 ms).
+Was the cause what the prompt suggested (yes/no), and if not, what it was: yes.
+Commits this run (hash + subject, oldest first): 542736b3 docs: commit prepared chapters owner brief; 8fe3cfdc test(reader): pin empty-chapter Play regression (intentionally red); 071d8867 fix(reader): let Play search ahead from an empty chapter; phone evidence checkpoint being committed.
 Steps complete this run, and steps complete in total (1-8): none; none (step 1 partial from previous run).
 Step 1: format chosen; six-sentence measurements (WAV bytes, compressed bytes, duration difference per sentence in ms); joins audibly worse than WAV (yes/no); fell back to WAV (yes/no, why): candidate AAC-LC M4A, not chosen; not measured; unknown; no decision yet.
 Step 2: where prepared audio lives on disk; manifest fields; does any file name or manifest contain sentence text or a title (yes/no): not built.
@@ -14,7 +14,7 @@ Step 6: every state of the row that was built (list); every new string key (list
 Tests from the bug-fix runs edited (name + why), or "none": none.
 Per module: reader ui Android host 440/440, reader ui iOS 324/324, settings ui 22/22, home ui 84/84, composeApp 59/59, analytics 75/75
 Does a test resolve the new classes from the real Koin graph (yes/no, name): no new Koin classes yet.
-App build results (Android assemble, iOS framework): not run yet.
+App build results (Android assemble, iOS framework): both succeeded after Play fix.
 Device used (model + serial), any command sent to another device (yes/no): Samsung SM-S921B (Android 16) RFCWC0SSVDM; no.
 Kokoro chapter: sentences, time to prepare, size on disk, notification showed progress (yes/no): not built.
 Playing the prepared chapter: any synthesize line for it (yes/no); pause, resume, skip, double-tap (result of each): not built.
@@ -24,12 +24,12 @@ Speed change and back: what the row showed each time: not built.
 Delete from the row, settings total, Delete all (result of each): not built.
 System voice chapter prepared and played (yes/no): no; not built.
 States of the row seen on the phone (list), and states not reached: none; all not built.
-State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, 1x, Listening sheet on the empty opening page; no prepared audio created.
+State the phone was left in (voice, rate, screen, prepared audio deleted yes/no): System voice, 1x, Listening sheet in first text chapter, paused; no prepared audio created.
 Why the run ended where it did (finished / out of time / blocked, and on what): ongoing; green fix checkpoint before device retest and step 1.
-Done this run: brief committed, comparison worktree removed, Play path extracted, regression failed for the expected reason and fixed unedited; six-module tests green.
-Not done or partly done, and why: fixed-build phone retest and native encoder pending; steps 2-8 not started.
+Done this run: brief committed, comparison worktree removed, Play path extracted, regression failed for the expected reason and fixed unedited; six-module tests and both builds green; phone confirmed Play fix.
+Not done or partly done, and why: native encoder pending; steps 2-8 not started.
 Tests skipped, ignored or weakened (file + name + reason), or "none": none.
 Places the brief was ambiguous and what I chose: none so far.
 Files changed outside feature/reader/ui, feature/settings/ui, lib/analytics, translations, androidApp/src/main/AndroidManifest.xml, composeApp tests and docs: none.
-Known problems I am leaving: native encoder and measurement not built; device confirmation of Play fix pending.
+Known problems I am leaving: native encoder and measurement not built.
 --- END REPORT ---
