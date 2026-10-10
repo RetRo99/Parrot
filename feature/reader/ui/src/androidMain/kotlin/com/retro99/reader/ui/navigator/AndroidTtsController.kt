@@ -775,8 +775,8 @@ class AndroidTtsController(
 
     /**
      * The device's own average bytes per sentence for the voice selected now, taken from the
-     * manifests of chapters it has already finished. Synthesis *time* is not recorded
-     * anywhere, so only the size half is measured and the time half stays fixed.
+     * manifests of chapters it has already finished, and its own measured synthesis speed
+     * for that voice from the preparation job's record.
      */
     override val preparedChapterMeasured: Flow<PreparedChapterMeasured> =
         combine(chapterPreparationJob.state, preparedAudioRevision) { _, _ -> Unit }
@@ -784,12 +784,16 @@ class AndroidTtsController(
 
     private fun readPreparedChapterMeasured(): PreparedChapterMeasured = runCatching {
         val voice = voiceId
+        val msPerCharacter = chapterPreparationJob.measuredSpeed().msPerCharacter(voice)
         val matching = preparedAudioStore.store.completeChapters()
             .filter { it.settings.voiceId == voice && it.sentences > 0 }
-        if (matching.isEmpty()) return@runCatching PreparedChapterMeasured()
+        if (matching.isEmpty()) return@runCatching PreparedChapterMeasured(msPerCharacter = msPerCharacter)
         val sentences = matching.sumOf { it.sentences.toLong() }
         val bytes = matching.sumOf { it.totalBytes }
-        PreparedChapterMeasured(bytesPerSentence = if (sentences > 0) bytes / sentences else null)
+        PreparedChapterMeasured(
+            bytesPerSentence = if (sentences > 0) bytes / sentences else null,
+            msPerCharacter = msPerCharacter,
+        )
     }.getOrElse { PreparedChapterMeasured() }
 
     override fun preparedChapterCloud(chapterHref: String): Flow<PreparedChapterCloudInputs> =

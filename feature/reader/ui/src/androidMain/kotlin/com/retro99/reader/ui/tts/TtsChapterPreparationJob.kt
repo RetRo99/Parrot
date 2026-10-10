@@ -3,6 +3,7 @@ package com.retro99.reader.ui.tts
 import android.content.Context
 import com.retro99.analytics.api.Analytics
 import com.retro99.analytics.api.ReaderAnalyticsEvent
+import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,13 +32,23 @@ class TtsChapterPreparationJob(
      */
     internal var onPrepared: ((PreparedChapterId, PreparedVoiceSettings) -> Unit)? = null
 
+    /**
+     * This device's measured preparation speed, voice by voice. Its own file beside the
+     * prepared store, never inside it and never in a chapter's manifest.
+     */
+    private val speedFile = TtsPreparationSpeedFile(File(context.filesDir, PREPARATION_SPEED_FILE))
+
     private val core = TtsChapterPreparationCore(
         sentences = GeneratorSentences(generator),
         chapters = StoreChapters(prepared) { id, settings -> onPrepared?.invoke(id, settings) },
         scope = scope,
         analytics = AnalyticsLog(analytics),
         usableBytes = { context.filesDir.usableSpace },
+        speed = speedFile,
     )
+
+    /** What has been measured so far; an empty record when nothing has, or it cannot be read. */
+    internal fun measuredSpeed(): TtsPreparationSpeedRecord = speedFile.read()
 
     val state: StateFlow<TtsChapterPreparationState> = core.state
 
@@ -60,7 +71,16 @@ private class GeneratorSentences(private val generator: TtsAudioGenerator) : Tts
         settings: PreparedVoiceSettings,
     ): PreparedAudioEncoding =
         generator.prepareSentence(id, text, settings.voiceId, settings.rate, settings.pitch)
+
+    override suspend fun prepareMeasured(
+        id: PreparedChapterId,
+        text: String,
+        settings: PreparedVoiceSettings,
+    ): PreparedSentenceWork =
+        generator.prepareSentenceMeasured(id, text, settings.voiceId, settings.rate, settings.pitch)
 }
+
+private const val PREPARATION_SPEED_FILE = "tts-preparation-speed.txt"
 
 private class StoreChapters(
     private val prepared: TtsPreparedAudioStore,

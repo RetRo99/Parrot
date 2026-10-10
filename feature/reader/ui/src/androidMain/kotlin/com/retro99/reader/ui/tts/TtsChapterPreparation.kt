@@ -57,7 +57,6 @@ internal class TtsChapterPreparationCore(
     private val analytics: TtsChapterPreparationAnalytics,
     private val usableBytes: () -> Long,
     private val now: () -> Long = System::currentTimeMillis,
-    @Suppress("UnusedPrivateProperty")
     private val speed: TtsPreparationSpeedLog = TtsPreparationSpeedLog { _, _ -> },
 ) {
     private val mutableState = MutableStateFlow<TtsChapterPreparationState>(TtsChapterPreparationState.Idle)
@@ -118,10 +117,11 @@ internal class TtsChapterPreparationCore(
                 }
                 if (!chapters.isPrepared(input.id, keys[index])) {
                     // One retry: a slow voice occasionally fails a single sentence.
-                    var encoded = sentences.prepare(input.id, text, input.settings)
-                    if (encoded is PreparedAudioEncoding.Failure) {
-                        encoded = sentences.prepare(input.id, text, input.settings)
+                    var work = sentences.prepareMeasured(input.id, text, input.settings)
+                    if (work.encoding is PreparedAudioEncoding.Failure) {
+                        work = sentences.prepareMeasured(input.id, text, input.settings)
                     }
+                    val encoded = work.encoding
                     if (encoded is PreparedAudioEncoding.Failure) {
                         mutableState.value = TtsChapterPreparationState.Failed(
                             input.id.chapterHref,
@@ -129,6 +129,7 @@ internal class TtsChapterPreparationCore(
                         )
                         return
                     }
+                    measured(input, text, work)
                 }
                 done++
                 mutableState.value =
@@ -159,6 +160,15 @@ internal class TtsChapterPreparationCore(
                 ),
             )
         }
+    }
+
+    /** Only a sentence this run generated is a measurement; a failed record is never fatal. */
+    private fun measured(input: TtsChapterPreparationInput, text: String, work: PreparedSentenceWork) {
+        val workMs = work.workMs?.takeIf { it > 0 } ?: return
+        if (text.isEmpty()) return
+        val sample = TtsPreparationSample(workMs = workMs, characters = text.length)
+        runCatching { speed.record(input.settings.voiceId, sample) }
+            .onFailure { error -> Log.e(TAG, "Could not record preparation speed", error) }
     }
 
     /** Enough room for the chapter's compressed audio and the manifest, with headroom. */

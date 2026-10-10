@@ -63,15 +63,20 @@ internal fun preparedChapterEstimate(
     sentenceCount: Int?,
     voiceKind: PreparedVoiceKind,
     measured: PreparedChapterMeasured? = null,
-    @Suppress("UnusedParameter") characterCount: Int? = null,
+    characterCount: Int? = null,
 ): PreparedChapterEstimate? {
     if (sentenceCount == null || sentenceCount <= 0) return null
     val msPerSentence = measured?.msPerSentence?.takeIf { it > 0 }
         ?: FIXED_MS_PER_SENTENCE.getValue(voiceKind)
+    // The device's own speed for this voice is per character, so it needs the chapter's
+    // characters; without both, the fixed figure per sentence stands.
+    val measuredMs = measured?.msPerCharacter?.takeIf { it > 0 }?.let { msPerCharacter ->
+        characterCount?.takeIf { it > 0 }?.let { characters -> (characters * msPerCharacter).toLong() }
+    }
     val bytesPerSentence = measured?.bytesPerSentence?.takeIf { it > 0 }
         ?: FIXED_BYTES_PER_SENTENCE.getValue(voiceKind)
     return PreparedChapterEstimate(
-        minutes = roundedMinutes(sentenceCount * msPerSentence),
+        minutes = roundedMinutes(measuredMs ?: (sentenceCount * msPerSentence)),
         bytes = sentenceCount * bytesPerSentence,
     )
 }

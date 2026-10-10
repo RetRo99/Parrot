@@ -57,5 +57,5 @@ internal fun preparedChapterRowEstimate(
     measured: PreparedChapterMeasured? = null,
 ): PreparedChapterEstimate? {
     if (chapterHref == null || text == null || text.chapterHref != chapterHref) return null
-    return preparedChapterEstimate(text.sentences, voiceKind, measured)
+    return preparedChapterEstimate(text.sentences, voiceKind, measured, text.characters)
 }
