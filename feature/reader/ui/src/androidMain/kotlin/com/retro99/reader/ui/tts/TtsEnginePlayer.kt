@@ -78,6 +78,13 @@ interface TtsEnginePlayerListener {
     /** The current item is ready to play. */
     fun onReady()
 
+    /**
+     * The player the engine was using no longer exists: its service was destroyed or it
+     * was released from outside. It will answer no command and report nothing ever
+     * again, so the engine cannot learn this from any other callback (TTS-F32).
+     */
+    fun onPlayerGone() = Unit
+
     fun onError(error: Throwable)
 }
 

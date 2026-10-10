@@ -105,6 +105,10 @@ internal class FakeTtsEnginePlayer : TtsEnginePlayer {
     }
 
     override fun play() {
+        if (isGone) {
+            commands += "play-on-gone-player"
+            return
+        }
         commands += "play"
         if (!reportsPlaybackItself) return
         // A player whose queue has run out answers a play with nothing: STATE_ENDED is
@@ -119,6 +123,10 @@ internal class FakeTtsEnginePlayer : TtsEnginePlayer {
     }
 
     override fun pause() {
+        if (isGone) {
+            commands += "pause-on-gone-player"
+            return
+        }
         commands += "pause"
         if (reportsPlaybackItself) reportPlaying(false)
     }
@@ -192,6 +200,21 @@ internal class FakeTtsEnginePlayer : TtsEnginePlayer {
         if (reportsPlaybackItself) reportPlaying(false)
     }
 
+    /**
+     * The player was taken away under the engine: the media service was destroyed, or it
+     * was released from outside. Afterwards it answers commands with nothing, the way a
+     * released ExoPlayer does — it only logs "sending message to a Handler on a dead
+     * thread" — and it reports no callback of its own.
+     */
+    fun reportPlayerGone() {
+        forEach { it.onPlayerGone() }
+        isGone = true
+    }
+
+    /** True once [reportPlayerGone] was called: every later command is a no-op. */
+    var isGone: Boolean = false
+        private set
+
     /** The player moved to something that is not read-aloud audio. */
     fun reportExternalItem() {
         forEach { it.onItemTransition("audiobook:1", isAutoAdvance = false) }
@@ -203,8 +226,14 @@ internal class FakeTtsEnginePlayer : TtsEnginePlayer {
 }
 
 internal class FakeTtsEnginePlayerProvider(
-    private val player: FakeTtsEnginePlayer,
+    player: FakeTtsEnginePlayer,
 ) : TtsEnginePlayerProvider {
+
+    /**
+     * The player the next acquisition hands out. A test whose player goes away swaps in a
+     * fresh one, as the production provider does when the service is started again.
+     */
+    var player: FakeTtsEnginePlayer = player
 
     var localPlayersCreated: Int = 0
         private set
