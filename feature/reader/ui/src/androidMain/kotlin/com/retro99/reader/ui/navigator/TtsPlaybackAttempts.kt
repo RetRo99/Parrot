@@ -2,6 +2,7 @@ package com.retro99.reader.ui.navigator
 
 import com.retro99.reader.ui.tts.TtsPlaybackStartException
 import com.retro99.reader.ui.tts.TtsReadAloudEngine
+import com.retro99.reader.ui.tts.TtsSynthesizer
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -34,6 +35,8 @@ internal class TtsPlaybackAttempts(
     startupTimeoutMs: Long,
     private val engine: TtsReadAloudEngine,
     private val nowMs: () -> Long = System::currentTimeMillis,
+    private val synthesizer: TtsSynthesizer? = null,
+    private val selectedVoiceId: () -> String? = { null },
     /** Restarts the given sentence with the settings in force right now. */
     private val restartAtIndex: suspend (Int) -> Unit,
 ) {
@@ -165,7 +168,7 @@ internal class TtsPlaybackAttempts(
         attempt: TtsPlaybackAttempt,
         index: Int,
     ): TtsPlaybackFailureReason? {
-        armStartupTimeout(attempt)
+        prepareStart(attempt)
         engine.setPlaybackOperationCorrelationId(attempt.correlationId)
         restartAtIndex(index)
         return null
@@ -174,6 +177,11 @@ internal class TtsPlaybackAttempts(
     fun armStartupTimeout(attempt: TtsPlaybackAttempt) {
         if (active != attempt) return
         lifecycle.armStartupTimeout()
+    }
+
+    /** Shared by fresh starts, resumes and settings-change restarts. */
+    suspend fun prepareStart(attempt: TtsPlaybackAttempt) {
+        armStartupTimeout(attempt)
     }
 
     private fun onEngineStartedPlaying() {

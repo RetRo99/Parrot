@@ -125,6 +125,8 @@ class AndroidTtsController(
         scope = controllerScope,
         startupTimeoutMs = TTS_PLAYBACK_START_TIMEOUT_MS,
         engine = engine,
+        synthesizer = synthesizer,
+        selectedVoiceId = { voiceId },
         restartAtIndex = { index -> restartAtIndex(index) },
     )
 
@@ -538,7 +540,7 @@ class AndroidTtsController(
         }
         attempts.onPlayPressed(
             resume = { attempt ->
-                attempts.armStartupTimeout(attempt)
+                attempts.prepareStart(attempt)
                 engine.resume()
                 null
             },
@@ -609,7 +611,7 @@ class AndroidTtsController(
         resumeNarrationAfterPreview = false
         if (engine.currentSentence.value != null) {
             attempts.request(TtsPlaybackAction.PREVIEW_RESUME) {
-                attempts.armStartupTimeout(it)
+                attempts.prepareStart(it)
                 engine.resume()
                 null
             }
@@ -659,7 +661,7 @@ class AndroidTtsController(
         if (!notificationPermissionHandler.ensurePermission()) {
             return TtsPlaybackFailureReason.PERMISSION_DENIED
         }
-        attempts.armStartupTimeout(attempt)
+        attempts.prepareStart(attempt)
         engine.setPlaybackOperationCorrelationId(attempt.correlationId)
         engine.setPlaybackInfo(createPlaybackInfo())
         engine.setSentences(sentences)
