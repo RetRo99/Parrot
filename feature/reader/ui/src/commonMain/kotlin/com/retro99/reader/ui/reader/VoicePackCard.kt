@@ -462,7 +462,7 @@ private fun QualityPill(text: String, filled: Boolean, isEink: Boolean, modifier
 
 /** Determinate when [fraction] is set; otherwise an indeterminate block (static on e-ink). */
 @Composable
-private fun PackProgressBar(fraction: Float?, isEink: Boolean) {
+internal fun PackProgressBar(fraction: Float?, isEink: Boolean) {
     val colors = Ember.colors
     val barHeight = if (isEink) 10.dp else 6.dp
     val shape = RoundedCornerShape(barHeight)

@@ -22,6 +22,8 @@ data class SettingsViewState(
     val customFonts: List<FontFamilyUiModel> = emptyList(),
     val expandedSections: Set<SettingsSection> = emptySet(),
     val isFontsExpanded: Boolean = false,
+    /** Total prepared chapter audio on this device; 0 when there is none. */
+    val preparedAudioBytes: Long = 0,
 ) {
     // Convenience accessors for UI
     val theme: ReaderThemeUiModel get() = readerSettings.theme

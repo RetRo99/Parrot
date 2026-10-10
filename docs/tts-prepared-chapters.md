@@ -4,6 +4,58 @@
 
 ### Continuation checkpoint
 
+### Step 6: the screen
+
+In the Listening sheet's `DeviceVoiceBody`, directly below the voice card:
+`PreparedChapterCard` (new file `reader/PreparedChapterCard.kt`), built from
+`VoicePackCard`'s shapes — same card radius, border, `isEink` variants, the same
+`PackProgressBar` (now internal instead of private), `PillButton`/`OutlineButton`,
+the same red failure block, and a `contentDescription` of its title plus its status
+line. Delete asks first, in an `EmberDialog` with a destructive action.
+
+States built, all eight of the brief's rows: not prepared, preparing (counts and a
+determinate bar), preparing another chapter, prepared (size, Delete), prepared for
+other settings (voice name when it is still installed, otherwise just the speed),
+partly prepared (counts, Continue and Delete), failed (one line, Retry) and voice
+not usable (leads to Voices).
+
+Because this project has no Compose render-test harness anywhere and the brief
+forbids new libraries, the row's text and buttons are decided by a pure function,
+`preparedChapterRowUi` in `reader/PreparedChapterRowUi.kt`, and
+`PreparedChapterRowUiTest` (commonTest, beside `VoiceSettingsScreenTest`) asserts
+for every state the exact string resource, its arguments, the progress fraction and
+the ordered list of actions with each button's label. The composable only renders
+that description. Sizes and speeds are their own tested functions
+(`preparedAudioSizeLabel` in reader domain, `preparedRateLabel`).
+
+Settings, Reader settings, Read aloud tab: a "Prepared audio" row under the
+read-aloud switch, hidden on iPhone by the existing `isTtsSupported`, showing the
+total on the device (or "Nothing prepared yet") and offering "Delete all…" behind a
+confirmation. Its decision is the pure `preparedAudioRowContent`, tested in
+`PreparedAudioRowContentTest`. The total and the deletion go through a new reader
+domain interface, `PreparedAudioStorage` (`totalBytes`, `deleteAll`), implemented by
+`AndroidPreparedAudioStorage` (`@Single`) over the prepared store and by
+`IosPreparedAudioStorage` (nothing, deletes nothing). `SettingsViewModel` resolves
+it lazily from Koin, the pattern `ReaderViewModel` uses for
+`TtsVoicePreparationStateHolder`, so no existing settings test had to change;
+`PreparedAudioStorageWiringTest` resolves the interface from the real app graph,
+because that lazy lookup would otherwise fall back to "nothing prepared" in silence.
+
+New string keys (`translations/.../values/strings.xml`, commonMain):
+`reader_tts_prepared_chapter_title`, `_hint`, `_prepare`, `_progress`,
+`_other_busy`, `_ready`, `_partly`, `_continue`, `_other_settings`, `_other_speed`,
+`_prepare_again`, `_failed`, `_failed_space`, `_voice_pack`, `_voice_terms`,
+`_voices`, `_delete_title`, `_delete_message`; `reader_tts_prepared_audio`,
+`reader_tts_prepared_audio_total`, `reader_tts_prepared_audio_empty`,
+`reader_tts_prepared_audio_delete_all`, `reader_tts_prepared_audio_delete_all_title`,
+`reader_tts_prepared_audio_delete_all_message`. Reused: `general_cancel`,
+`general_retry`, `reader_tts_delete`. Android notification strings (androidMain res)
+are listed under step 4.
+
+Green after step 6: reader Android 510/510, iOS 350/350, settings 24/24,
+home 84/84, composeApp 64/64, analytics 77/77; zero failures/errors/skips. Android
+`assembleDebug` and the iOS simulator framework both build.
+
 ### Step 5: reader wiring
 
 `TtsController` (commonMain) gained five members, all with defaults that mean "not
