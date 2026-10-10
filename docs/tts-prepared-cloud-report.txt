@@ -1,124 +1,254 @@
 --- REPORT ---
 Branch: tts/prepared-cloud (worktree .claude/worktrees/tts-investigation)
 Commits this run (hash + subject, oldest first):
-44b10406 docs(tts): the owner's changes to the prepared-cloud brief
-6df96e92 docs(tts): part A stops - another feature's migration is pending
-c2dcaffa docs(tts): parts B and C on the phone, and the run report
-Parts complete (A-D): A stopped at its own step 2 by design; B blocked entirely, not
-started; C complete, all three checks; D nothing to do. No code changed.
-A: linked (yes/no, or the command the owner must run); pending migrations before applying (list):
-Linked: yes, from this worktree, with no login or database password prompt -
-supabase link --project-ref "$(cat supabase/.temp/project-ref)" using the reference
-from the main checkout. The CLI provisions a temporary login role per connection.
-Pending before applying: TWO, not one - 20261009000000_parrot_cloud_saved_words.sql
-and 20261010000000_parrot_cloud_prepared_audio.sql. No remote migration is missing
-from the repository.
-A: baseline suite (files that failed and why, or "all passed except the new file"); applied (yes/no); suite after (passed/total); the 38 new assertions (passed/total):
-Baseline: NOT RUN, and not runnable on this machine. supabase test db --linked fails
-with DockerRunError; --linked only redirects which database pg_prove is pointed at and
-pg_prove itself still runs in a container. No docker, podman, colima, psql or pg_prove
-is installed. Applied: NO. Suite after: not run. The 38 new assertions: 0/38, still
-never executed anywhere. The step-2 and step-4 queries could not be run either, for
-the same reason: there is no SQL session available and no credential was looked for.
-A: corrective migrations written (file names and what each fixed), or "none":
-none - nothing was applied, so nothing could fail.
-A: is the linked project left working for book backups (yes/no) and how I know:
-Yes. It received one link and two read-only commands (projects list, migration list);
-no migration, no row, no reset, no ops script. I know by construction rather than by
-observation: I could not confirm it from the app because the phone is signed out.
-B: signed in (yes/no); allow-list row added (yes/no):
-Signed in: NO. Settings -> Parrot Cloud shows the signed-out form (empty email and
-password fields, "Create an account"). The prompt says not to sign in in that case, so
-nothing was typed. Allow-list row added: no - with no session there is no user id, and
-none was taken from anywhere else.
-B: each of checks 1 to 10, one line: what the row or screen showed, what the server answered, pass or fail:
-1-10 all BLOCKED, not attempted, on two independent things: the app is signed out, so
-there is no account to back up to, no usage breakdown, no quota row; and part A did not
-apply the migration, so no reachable server knows tts_prepared_audio. Every one of
-those checks would have tested the wrong thing. No server answer was obtained for any.
-B: download installed and played with no synthesis (yes/no):
-Not reached (blocked). Separately proven locally in C1: a locally prepared chapter
-played with grep -c 'synthesize start' = 0, so the play-from-prepared-audio path works;
-only the cloud download into it is untested.
-B: storage full: the row's text and action; quota restored to its original value (yes/no); waiting chapter uploaded afterwards (yes/no, what it took):
-Not reached (blocked). No quota was read or written, so nothing needed restoring; the
-account's quota_bytes is untouched.
-B: any crash, retry loop or unasked-for error (yes/no, which):
-No - but across part C, not part B. pid 24620 unchanged from first check to last and
-grep -c 'FATAL EXCEPTION' = 0 for the whole run.
-C: Supertonic: terms accepted, pack downloaded, preview, read-aloud, stop mid-sentence, chapter prepared and played (yes/no each); app stayed alive (yes/no):
-Terms accepted: already accepted on arrival, so the dialog was NOT exercised; deleting
-the pack does not revoke acceptance, so it is only reachable again by clearing app
-data. Pack downloaded: yes, deleted and downloaded again (139M on disk). Preview: yes
-(Supertonic loaded: sampleRate=44100 speakers=10). Read-aloud: yes, 7 sentences. Stop
-mid-sentence: yes, control went to Play at "Sentence 7 of 151". Chapter prepared and
-played: yes, on the 1 KB fixture book, "Ready, plays instantly · 81 kB", then played
-with 0 synthesize calls. App stayed alive: YES - TTS-F22 does not reproduce.
-C: "voice not usable" row: text and where the action leads; "failed" row: text and Retry (seen yes/no each):
-"Voice not usable": NOT SEEN, and it is unreachable this way. VoiceUnusable keys on the
-selected voice (PreparedChapterRowState.kt:35,64) but the app's pack delete always
-moves the selection to the phone's voice first - both confirmations say so - and a
-system voice is not neural, so the branch cannot be entered; the terms variant needs
-acceptance revoked, which deleting the pack does not do. What the row shows instead
-when a chapter's voice is gone is OtherSettings: "Made for F1 (female) at 1×" with
-"Prepare again". Were the state reached, its action opens the Voices sheet (line 85).
-"Failed": SEEN - "Couldn't prepare this chapter." with "Retry", produced by removing
-the Kokoro folder mid-preparation. Retry seen: yes; with the pack still missing it
-opened the Voices sheet rather than looping, and with a usable voice it restarted the
-preparation normally. Cancel also showed Partly, "19 of 151 sentences prepared".
-C: lock screen shows pause and play for read-aloud (yes/no):
-NO. Checked with DND on and again with DND off (the owner allowed changing it), so the
-result does not rest on DND; DND was restored to priority afterwards. No media card on
-the lock screen and none in the lock-screen shade, and dumpsys notification only ever
-listed the two preparation-progress channels. A MediaSession IS published while playing
-(state=PLAYING(3), with Previous/Next sentence actions), so the session exists but
-nothing carries it to the lock screen. Playback itself does continue while locked.
-D: wrong behaviours found (list); fixed here with test first (list); left and why (list):
-Found: (1) after a lock and unlock, read-aloud stops advancing while the mini player
-still reads "Pause" and its play/pause control goes dead - reproduced twice, "Stop
-listening" still recovers it; (2) no media notification for read-aloud, so no lock
-screen pause and play; (3) the read-aloud bar labels a Supertonic voice "Device voice ·
-F1" while the Listening sheet calls it "F1 · Natural".
-Fixed here with test first: none.
-Left and why: all three are in read-aloud and its mini player, not in prepared chapters
-- the brief puts read-aloud outside this work and says to record, not fix. Nothing
-wrong was found in this feature's own code, so part D had nothing to do.
-Existing tests edited (name + why), or "none": none
-Per module after this run: no code changed
-App build results (Android assemble, iOS framework): no code changed
-State the phone was left in (signed in, network, voice packs, voice, rate, screen):
-Signed OUT of Parrot Cloud, as found. Wi-Fi on, mobile data on, DND back to priority.
-Kokoro installed (152M) and Supertonic installed (139M). System voice, rate 1×, pitch
-Normal, sleep timer Off. Library screen. Every prepared chapter this run made was
-deleted (files/tts-prepared holds two empty book folders, 11K). Alice moved 24% -> 25%.
-No command was sent to the Xiaomi that was also attached.
-State the linked project was left in (migrations applied, account quota, allow-list):
-Exactly as found. No migration applied (both 20261009000000 and 20261010000000 still
-pending), no quota read or written, no allow-list row added, no row of any kind written.
-Only a link and two read-only commands touched it. supabase/.temp is still git-ignored
-and nothing from it was committed.
+991d88c6 docs(tts): the owner's decisions of 2026-10-11 in the prepared-cloud brief
+6a391fc6 Merge origin/main into tts/prepared-cloud
+55aee949 test(cloud): make the prepared-audio pgTAP file actually run, and run it
+c11e56cc feat(cloud): uploads are open to every signed-in account
+53f6370e feat(reader): say what preparing a chapter will cost before it starts
+51d875f4 docs(tts): the device evidence, and prepared audio really is in the cloud
+26871778 docs(tts): the run report, and the two findings part E did not fix
+Parts complete (A-F):
+A complete. B complete, all eight steps. C complete as built, then the owner said
+mid-run that the estimate is being done on another branch and told me to keep it and
+stop refining. D checks 1,2,3,4,5,8 done; 6,7,9,10 not done, by the owner's instruction
+to wrap up. E not done: both findings are recorded, neither is fixed. F not done: the
+owner said another agent is writing those two documents.
+A: merged main (yes/no, conflicts); per module after the merge, <module> <passed>/<total>, one line each:
+Merged yes, no conflicts, merge commit 6a391fc6. All green, no failures, no skips:
+feature/reader/ui androidHostTest 667/667 (main baseline 560/560; branch adds 107)
+feature/reader/ui iosSimulatorArm64Test 401/401
+feature/reader/domain androidHostTest 196/196
+lib/epub/implementation androidHostTest 45/45
+feature/books/data androidHostTest 151/151
+feature/cloud-account/ui androidHostTest 28/28
+feature/settings/ui androidHostTest 24/24
+lib/server-parrot-cloud androidHostTest 62/62
+lib/analytics/implementation androidHostTest 80/80
+composeApp androidHostTest 65/65 (main baseline 64/64)
+B: linked (yes/no); pending migrations before applying (list):
+Linked yes, from this worktree, no login and no database password prompt. Pending:
+exactly two, the two decision 2 allows - 20261009000000_parrot_cloud_saved_words.sql and
+20261010000000_parrot_cloud_prepared_audio.sql. No remote migration missing locally.
+B: baseline suite (files that failed and why); applied (yes/no); suite after (passed/total); the 38 prepared-audio assertions (passed/total):
+The suite does not run against a linked project as shipped: all 21 files die with
+"function plan(integer) does not exist". pgTAP is in schema extensions but the CLI's
+temporary role cli_login_postgres has no usage on it (rolinherit=false), and the suite's
+95 "reset role" statements land on that unprivileged role instead of the superuser
+postgres they were written for. Solved without touching the repository or the server, by
+running a scratch copy with "set role postgres" prepended and each "reset role" rewritten
+to it. Baseline then: 20 of 21 files fully pass, 421 assertions; only
+prepared_audio_test.sql fails, expected, its migration being unapplied. Nothing else
+failed, so nothing is recorded as already failing. Applied: YES, both. Suite after:
+476/476 across 22 files, Result PASS. The 38 prepared-audio assertions: 38/38 - the first
+time that SQL has ever executed anywhere.
+B: corrective migrations written (file names and what each fixed), or "none":
+none. The migration 20261010000000 was correct as written. All three first-run failures
+were bugs in this work's own never-executed pgTAP file, which the prompt allows changing:
+it read the private cloud_user_storage while still in role authenticated (no select grant
+there); three quota assertions asked for 209715200 bytes and expected quota_exceeded when
+the 64 MiB per-chapter cap is checked first and answers file_too_large, so the quota case
+was made reachable with a 20 MiB allowance and a 32 MiB chapter, still plan(38); and it
+deleted from storage.objects without the "set local storage.allow_delete_query" that
+storage.protect_delete() requires and five other test files already set.
+B: open uploads: migration file; test failed before it (yes/no); existing assertions changed (file, name, old rule, new rule), or "none":
+Migration supabase/migrations/20261011000000_parrot_cloud_open_uploads.sql.
+cloud_feature_enabled keeps its shape, grants and security definer; its body becomes a
+case: false with no auth.uid(), true for 'uploads', otherwise the same allow-list exists.
+Test written first, supabase/tests/open_uploads_test.sql plan(17), and it DID fail before
+the migration: 9 of 17 failed (1-6, 13-15); the 8 that passed are the ones asserting what
+must not change. Four assertions changed, all in supabase/tests/security_hardening_test.sql,
+count still plan(56):
+1 "an account off the allowlist cannot reserve uploads" -> "an account with no allowlist
+  row is no longer stopped by the gate (20261011000000)". Old: reserve answers
+  uploads_not_enabled. New: it gets past the gate, asserted with a zero-byte file so the
+  answer is invalid_upload_metadata. A real successful reserve here broke test 56 at the
+  end of the file, because that account's reservation writes a sync_changes row the
+  retention-purge assertion counts.
+2 "feature access reports nothing for an account off the allowlist" -> "feature access
+  reports uploads open and recap still allowlisted". Old {"uploads": false, "recap":
+  false}, new {"uploads": true, "recap": false}. A plain inversion.
+3 "Storage refuses writes once the account is off the allowlist" -> "Storage still accepts
+  writes with no uploads allowlist row". Old throws_ok 42501, new lives_ok.
+4 "finalize refuses a reservation once uploads are revoked" -> "uploads stay enabled with
+  the allowlist row gone". Old: finalize answers uploads_not_enabled. Asserted through the
+  gate rather than by calling finalize, because any finalize call settles the reservation
+  and the pending-reservation cap 60 lines below needs it live; tests 30-32 broke twice
+  before this was understood. Both displaced cases are asserted end to end in
+  open_uploads_test.sql instead.
+Quota, size limits, block-list and cross-account isolation all confirmed still in force
+for an account with no allow-list row: quota_exceeded, file_too_large, content_blocked,
+cloud_book_not_owned; anon answers 42501 to all three entry points; recap unchanged.
+B: is the linked project left working for book backups (yes/no) and how I know:
+Yes, and by observation this time, not by construction. Every one of the 20 pre-existing
+test files passes unedited after all three migrations, including book_files,
+finalize_book_upload, non_available_book_delete, orphan_gc, storage_policy,
+stale_upload_cancel, account_deletion and rls_isolation - the whole reserve, upload,
+finalize, restore, delete, takedown and quota path. And on the device a 24.9 MB ebook was
+backed up and restored to a second device during this run.
+C: where the estimate is computed; the figures used per voice kind; tests added (count); new string keys:
+feature/reader/ui/src/commonMain/kotlin/com/retro99/reader/ui/reader/PreparedChapterEstimate.kt,
+pure; rendered by PreparedChapterRowUi.kt on the NotPrepared state only. Figures from the
+six-sentence table in docs/tts-prepared-chapters.md, its M4A columns, that being the
+format the store keeps: System 2500 ms / 16000 B per sentence, Kokoro 2200 ms / 14000 B,
+Supertonic the same as Kokoro because that table never covered it. The document measures
+no synthesis speed at all, so spoken duration stands in for preparation time. The device's
+own average overrides either figure; only the size half is actually measured
+(AndroidTtsController.preparedChapterMeasured averages matching complete manifests),
+because synthesis time is recorded nowhere. 25 tests added, all written first: 19 in
+PreparedChapterEstimateTest.kt, 6 in PreparedChapterRowUiTest.kt. Three new keys:
+reader_tts_prepared_chapter_estimate, reader_tts_prepared_chapter_estimate_hours,
+reader_tts_prepared_chapter_estimate_short.
+D: signed in on the Samsung (yes/no); signed in on the emulator (yes/no, or what it asked for):
+Both yes, both already signed in to the same account on arrival. Decision 6 was never
+exercised: no Google chooser appeared and no password and no verification code was typed
+on either device.
+D: checks 1 to 10, one line each: what the screen showed, what the server answered, pass or fail:
+1 PASS. Imported the repository's Project Gutenberg PrideAndPrejudice.epub (24,846,289 B,
+  illustrated). Auto-backup was off and was turned on; the book still read "Only on this
+  phone" and needed its own "Add to Parrot Cloud". Screen then "On all your devices".
+  Server: ebook rows 2->3 available, sum 90,305 -> 24,936,594; used_bytes the same.
+2 PARTIAL. Every chapter of that book is one 391-sentence spine item and measured
+  preparation is ~8.5 s per sentence, so ~55 min; three distinct 9-sentence books were
+  built from the repository's own 2 KB reader-preview fixture for the repeatable checks.
+  Book A prepared with Kokoro Heart at 1x: estimate shown first, "Under a minute · about
+  130 kB"; row went "1 of 9 sentences" -> "5 of 9" -> "Ready, plays instantly · 219 kB"
+  with a second line "Waiting to back up", prepared in 17 s. Server: cloud_book_files
+  media tts_prepared_audio status available, 222,046 bytes, upload finalized, used_bytes
+  25,160,962 - the upload worked end to end, the first time the app has talked to a server
+  that knows prepared audio. The row kept saying "Waiting to back up" for over five
+  minutes and across reopening the sheet; after a force-stop it read "Backed up to Parrot
+  Cloud". State right, liveness wrong: finding W2.
+3 PASS. "Parrot Cloud storage 25.2 MB of 5.4 GB", with "Books 24.9 MB" and "Prepared
+  audio 222.0 KB". Server 24,938,916 + 222,046 = 25,160,962; the two add up.
+4 PASS. Emulator synced, both books arrived from the cloud, ebook downloaded on request.
+  Before Kokoro was installed the row already read "In Parrot Cloud, made for other
+  settings · 222 kB" with one action, Download. Kokoro installed (149 MB) and Heart
+  selected: "In Parrot Cloud, plays instantly · 222 kB". Downloaded: the store holds 9
+  .m4a files and manifest.json and the inbox is empty, so the archive was verified and
+  unpacked and left nothing behind. Row stale again (W2); after a restart "Ready, plays
+  instantly · 219 kB" and "Backed up to Parrot Cloud". Play reached "Sentence 7 of 9" in
+  25 s with grep -ci 'synthesize start' = 0 and grep -ci 'kokoro' = 0.
+5 PASS for the voice case, not tried for the speed case. With the System voice selected
+  the same row read "In Parrot Cloud, made for other settings · 222 kB" and still offered
+  Download, as it does for local audio. Same voice at another rate was not tried.
+6 NOT DONE (Wi-Fi off, mobile data on).
+7 NOT DONE (storage full). No quota was read or written, so nothing needed restoring.
+8 PASS. The confirmation read "This removes the prepared audio from this device and from
+  Parrot Cloud...", so it mentions the cloud; the earlier confirmation for a chapter that
+  had never been backed up correctly did not. After deleting, the row returned to the
+  plain hint, and the server had NO tts_prepared_audio row at all and used_bytes back to
+  24,938,916 - exactly the 222,046 bytes released. The emulator half (the offer
+  disappearing after a sync) was not checked, the emulator holding a local copy by then.
+9 NOT DONE (removing the book's backup).
+10 NOT DONE as a mid-upload force-stop. Force-stop and reopen was exercised twice, after
+  the upload and after the download, with no crash and no duplicate work; it is what
+  revealed W2.
+D: estimate against reality for the prepared chapter (estimated, actual):
+Estimated "Under a minute · about 130 kB". Actual 17 s and 219 kB. Time right; size under
+by about 40% - the real figure on this device is ~24 kB per sentence, not the 14 kB the
+measurement table gave. Not tuned, the owner having said that work lives on another branch.
+D: download on the emulator installed and played with no synthesis (yes/no):
+Yes. Installed 9 .m4a files plus manifest.json with an empty inbox, and played to sentence
+7 of 9 with zero 'synthesize start' lines and zero Kokoro mentions in the whole logcat.
+D: storage full: the row's text and action; quota restored (yes/no); waiting chapter uploaded afterwards (yes/no, what it took):
+Not done. No quota was read or written at any point, so the account's quota_bytes is
+untouched at its original 5,368,709,120.
+D: any crash, retry loop or unasked-for error (yes/no, which):
+No. grep -c 'FATAL EXCEPTION' = 0 on both devices across the run, no retry loop seen, and
+no error shown for anything the user did not ask for.
+E: wrong behaviours found (list); fixed with test first (list); left and why (list):
+Found, both in this feature's own code:
+W1 the estimate shows the previous chapter's sentence count until read-aloud loads the new
+   one. Opening a 9-sentence chapter straight after a 391-sentence one showed "About 15
+   minutes · about 5 MB"; after pressing Play it corrected to "Under a minute · about 130
+   kB". Cause: viewState.ttsSentenceCount is a controller-level value with no chapter
+   attached, and ReaderOverlay feeds it to preparedChapterEstimate unconditionally.
+W2 the prepared-chapter row's cloud line does not refresh when a transfer finishes. It
+   stayed "Waiting to back up" after the upload was available and finalized on the server,
+   and "Downloading from Parrot Cloud…" after the download was fully installed; both
+   corrected only after an app restart. Cause: AndroidTtsController's preparedChapterAudio
+   and preparedChapterCloud flows re-read only on chapterPreparationJob.state or
+   preparedAudioRevision, and nothing bumps that revision when the transfer engine
+   settles. The seam for the fix is PreparedChapterBackupQueue.watchOutcome, which already
+   observes the transfer to a terminal state but is gated on analytics being non-null and
+   signals nobody; the same is needed in PreparedChapterDownloadQueue, surfaced through
+   TtsPreparedChapterBackup to refreshPreparedAudio().
+Fixed with test first: NONE.
+Left and why: W1 because the owner said mid-run that the estimate is being built on
+another branch, to keep this one and stop refining it. W2 because the owner said to wrap
+up before part E was started; it is a liveness bug only, the state itself being correct,
+and the exact seam and fix are written above and in NOTES.md.
+Also found but outside this work, recorded not fixed: with "Add new books automatically"
+on, a book imported afterwards still read "Only on this phone" and needed its own "Add to
+Parrot Cloud". That is book backup, which the brief puts outside this work.
+F: both documents written (yes/no); anything in the format or contract that would hinder an iPhone app (list or "nothing"):
+No, neither was written: the owner said another agent is writing them. So nothing is
+recorded here about what would hinder an iPhone app; that question is untouched by this
+run.
+Existing app tests edited (name + why), or "none":
+None changed. One existing assertion in PreparedChapterRowUiTest, "not prepared says what
+preparing is for and offers one button", gained a line asserting statusArgs is empty when
+there is no estimate. No existing assertion was altered or removed.
+Per module after this run: <module> <passed>/<total>, one line each:
+From the last complete Gradle run, after the part C commit and with no code changed since
+(the final verify was stopped at the owner's instruction, so these are that run's figures,
+not a fresh one):
+feature/reader/ui androidHostTest 692/692
+feature/reader/ui iosSimulatorArm64Test 426/426
+feature/reader/domain androidHostTest 196/196
+lib/epub/implementation androidHostTest 45/45
+feature/books/data androidHostTest 151/151
+feature/cloud-account/ui androidHostTest 28/28
+feature/settings/ui androidHostTest 24/24
+lib/server-parrot-cloud androidHostTest 62/62
+lib/analytics/implementation androidHostTest 80/80
+composeApp androidHostTest 65/65
+Server suite: 22 files, 476/476, Result PASS, run again as the last verification step.
+App build results (Android assemble, iOS framework):
+Android :androidApp:assembleDebug BUILD SUCCESSFUL, and that APK is the one installed and
+driven on both devices. iOS framework :composeApp:linkDebugFrameworkIosSimulatorArm64 NOT
+RUN this run: it was in the final verify command that was stopped. The iOS test target
+:feature:reader:ui:iosSimulatorArm64Test did compile and pass 426/426, so the shared code
+builds for iOS; the framework link itself is unverified.
+Devices used (model + serial each), any command sent to the Xiaomi (yes/no):
+Samsung SM-S921B serial RFCWC0SSVDM, and the Pixel 10 Pro XL emulator serial
+emulator-5554 (sdk_gphone16k_arm64). A Xiaomi (192.168.1.248:5555, model 2602BPC18G) was
+attached throughout: NO command was sent to it, and every adb call carried -s with one of
+the two allowed serials.
+State each device was left in (signed in, network, voice packs, voice, rate, screen):
+Not restored, by the owner's instruction to wrap up without restoring devices. As left:
+Samsung - signed in, Wi-Fi and mobile data on, Kokoro and Supertonic packs installed,
+voice Kokoro Heart at rate 1x, auto-backup now ON (it was off on arrival), in the reader
+on "Parrot QA Short Book A", prepared audio for that chapter deleted by check 8, three
+extra books in the library (Pride and Prejudice and short book A imported, B and C pushed
+to /sdcard/Download but not imported). Emulator - signed in, Kokoro pack now installed
+(it was not), voice Kokoro Heart at 1x, four books synced from the cloud and short book A
+downloaded with its prepared audio installed locally, in the reader. Neither device is on
+the library screen and neither is on a System voice at rate 1.0.
+State the linked project was left in (migrations applied, account quota):
+Three migrations applied and nothing pending: 20261009000000 (saved words, by decision 2),
+20261010000000 (prepared audio) and 20261011000000 (open uploads). The account's
+quota_bytes is untouched at its original value, never read for writing and never written.
+Data left on it from this run: 4 ebook files (24,938,916 bytes) including the two books
+this run backed up, and no tts_prepared_audio rows, check 8 having removed the only one.
+supabase/.temp is still git-ignored and nothing from it, and no key, password, token,
+project reference or account email, appears in the repository or in this report.
 Not done or partly done, and why:
-The whole of part A past its step 2, and the whole of part B. Part A: the brief says
-stop when any migration other than this work's is pending, and
-20261009000000_parrot_cloud_saved_words.sql is - it belongs to the saved-words feature
-and its own header asks to be deployed ahead of clients that push words. Both db push
-and migration up apply the entire pending chain in timestamp order, so there is no CLI
-route that applies this work's migration without also deploying that one. Independently,
-the pgTAP suite cannot run here at all for want of a container runtime or psql, so
-applying would have meant applying SQL whose 38 assertions have never run - the one
-step the rollout document calls not optional. Part B: the phone is signed out and the
-prompt forbids signing it in. I also wrote the report once at the end rather than at
-the end of each part, to avoid writing the same long file three times; NOTES.md was
-written as I went and committed per part.
+Part D checks 6, 7, 9 and 10, and the speed half of check 5: the owner said to wrap up.
+Part E: both findings recorded, neither fixed - W1 by instruction, W2 for want of time.
+Part F: assigned to another agent. The final Gradle verify and the iOS framework link:
+stopped by instruction. Part C was built in full but is not being refined and its size
+figure is known to be about 40% low.
 Known problems I am leaving:
-The two things that have never happened still have not: the server SQL has never run
-anywhere, and the app has never talked to a server that knows prepared audio. To unblock
-the next run the owner needs to, in this order: decide the saved-words migration
-20261009000000 (it will be applied by any db push that applies this work's); install a
-container runtime or psql so supabase test db and the rollout document's verification
-queries can run; then run the rollout document's step 1 and sign the phone back in to
-Parrot Cloud. The three read-aloud problems above are left unfixed by design. The
-VoiceUnusable row state cannot be reached from the UI on a signed-out device, so it
-stays covered by its unit tests only; the case it exists for - a neural voice synced to
-a phone with no pack - needs a signed-in device to see.
+W2 is the one that matters: the row's cloud line needs an app restart to catch up, so a
+user who prepares a chapter sees "Waiting to back up" indefinitely even though the upload
+has finished. The feature works; it looks as though it does not. W1 shows a stale estimate
+for the chapter just left. The estimate's size figure is 14 kB per sentence against a
+measured 24 kB. Neither device was returned to its found state, and the Samsung's
+auto-backup switch was left on. The three short QA fixture books remain in
+/sdcard/Download on the Samsung and two of them in the library; the development project
+holds the two books this run backed up. Running the pgTAP suite against any linked project
+needs the scratch-copy recipe now written into supabase/PREPARED_AUDIO_ROLLOUT.md - the
+plain command still fails misleadingly.
 --- END REPORT ---

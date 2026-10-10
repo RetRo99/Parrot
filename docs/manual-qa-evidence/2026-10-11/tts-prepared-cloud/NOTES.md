@@ -448,3 +448,68 @@ instead of Kokoro, the same row read "In Parrot Cloud, made for other settings �
 and still offered Download, exactly as it does for local audio. The speed variant
 (same voice, rate other than 1×) was **not** tried — see "not done" below. **PASS for
 the voice case.**
+
+### D8 deleting a backed-up chapter
+
+- The confirmation read "Delete prepared audio? **This removes the prepared audio from
+  this device and from Parrot Cloud.** This chapter will have to be prepared again before
+  it plays instantly." So it mentions the cloud when the chapter is backed up, and the
+  earlier confirmation for a never-backed-up chapter correctly did not.
+- After deleting, the row returned to the plain hint and "Prepare this chapter".
+- Server: **no `tts_prepared_audio` row at all** (not even `deleting`), and
+  `used_bytes` 25,160,962 -> **24,938,916** — exactly the 222,046 bytes released.
+  **PASS.**
+- The emulator half (the download offer disappearing after a sync) was not checked: by
+  then the emulator held a local installed copy, so the row shows Ready rather than an
+  offer, and the case was no longer reachable there.
+
+## Part E: findings, recorded and not fixed
+
+**W1 — the estimate shows the previous chapter's sentence count.** Opening book A's
+9-sentence chapter immediately after leaving the 391-sentence Gutenberg chapter, the row
+read "About 15 minutes · about 5 MB". After pressing Play, so read-aloud loaded the
+chapter, it corrected to "Under a minute · about 130 kB". Cause:
+`viewState.ttsSentenceCount` comes from `ttsController.sentenceCount`, a controller-level
+value with no chapter attached, and `ReaderOverlay.kt` feeds it to
+`preparedChapterEstimate` without checking it belongs to the chapter on screen. The fix
+is a guard — carry the href the count was counted for and show no estimate unless it
+matches — plus clearing the count when the chapter changes. **Not fixed**: the owner said
+mid-run that the estimate is being built on another branch, and to keep this one and stop
+refining it.
+
+**W2 — the row's cloud line does not refresh when a transfer finishes.** Seen twice:
+"Waiting to back up" persisted for over five minutes and across reopening the Listening
+sheet while the server already had the file `available` and the upload `finalized`; and
+"Downloading from Parrot Cloud…" persisted after the archive was fully verified, unpacked
+and installed. Both corrected after `am force-stop` and reopening, so the state is
+computed correctly and only its liveness is wrong. Cause:
+`AndroidTtsController.preparedChapterAudio` and `.preparedChapterCloud` are
+`combine(chapterPreparationJob.state, preparedAudioRevision)`, and **nothing bumps
+`preparedAudioRevision` when the transfer engine settles** — `refreshPreparedAudio()` is
+called on user actions only. The seam for the fix:
+`PreparedChapterBackupQueue.watchOutcome` already observes the transfer to a terminal
+state, but it returns early when `analytics` is null and signals nobody. Give both queues
+an `onSettled: () -> Unit`, call it when the transfer reaches a terminal state
+(ungated by analytics), surface it from `TtsPreparedChapterBackup`, and have
+`AndroidTtsController` set it to `::refreshPreparedAudio`.
+`PreparedChapterBackupQueueTest` and `PreparedChapterDownloadQueueTest` already drive the
+queues with a fake transport, so the test is written there first. **Not fixed**: the owner
+said to wrap up before part E was started.
+
+**Outside this feature, recorded not fixed.** With "Add new books automatically" on, a
+book imported afterwards still read "Only on this phone" and had to be backed up with the
+book's own "Add to Parrot Cloud" action. That is book backup, which the brief puts outside
+this work.
+
+## What this run settled
+
+The two things the brief said had never happened have both now happened:
+
+1. The server SQL has been run. 22 files, 476 assertions, `Result: PASS` against the
+   development project, including the 38 prepared-audio assertions that had never
+   executed anywhere, and all 20 pre-existing files passing unedited.
+2. The app has talked to a server that knows prepared audio, in both directions: a
+   chapter prepared on the Samsung was uploaded, counted against the allowance, listed to
+   a second device with its size, downloaded there, verified, unpacked and played without
+   generating a single sentence; and deleting it from the row released its bytes and
+   removed its row.
