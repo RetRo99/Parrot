@@ -27,7 +27,7 @@ A finding that cannot be shown by an automated test gets a manual case in sectio
 | 4 | Voice pack download and delete | F04, F05, F20 | Opus | done |
 | 5a | Read-aloud stopping and the highlight it leaves | F23, F24, F14 | Opus | done |
 | 5b | Two readers, the pending voice, logout | QA-0049, QA-0100, F10, F11, F19 | Opus | done |
-| 5c | The stop when the page and the narrated chapter differ; the start deadline | F25, F28, F15, decision 5 | GPT-6.1 Sol | code done; final verification/device pending |
+| 5c | The stop when the page and the narrated chapter differ; the start deadline | F25, F28, F15, decision 5 | GPT-6.1 Sol | done; cold-after-Play device timing not established |
 | 6 | Manual device pass and new cases in `manual-qa-test-plan.md` | all | Sonnet, with the owner's phone | |
 
 Run 1 is first because it is a crash on every Kokoro synthesis and it blocks every other
@@ -267,7 +267,7 @@ attempted and it never reached a start — three taps on Play in a book whose re
 Whether that predates run 5b was not established; run 5b's changes do not touch the path
 between the press and `requestPlayback`. Added to run 5c.
 
-### Run 5c: the stop when the page and the narrated chapter differ; the start deadline — code done
+### Run 5c: the stop when the page and the narrated chapter differ; the start deadline — done
 
 - **First:** a play press that emits no `attempted` at all, seen on the Samsung on
   2026-10-10. Needs a build from before run 5b to attribute, then a cause. Decision 2 says a
@@ -278,8 +278,8 @@ between the press and `requestPlayback`. Added to run 5c.
 - The chapter on screen and the chapter being narrated can be different ones: the sentence
   highlight then navigates across the spine boundary, the locator href changes, and the
   locator collector stops narration mid-chapter with no event. Seen in run 2b's step 5 and
-  again in run 2c (21:19:51, `docs/manual-qa-evidence/2026-10-09/tts-run2c/NOTES.md`
-  §"Recorded, not investigated"). Not filed as a finding yet.
+   again in run 2c (21:19:51, `docs/manual-qa-evidence/2026-10-09/tts-run2c/NOTES.md`
+   §"Recorded, not investigated"). Filed and fixed as F28 in this run.
 - Decision 5, the 30 second start deadline: arm it after the engine is loaded, so loading
    the model does not count against it (F15).
 
@@ -299,7 +299,17 @@ and no new test was edited after its fix. A follow-up guard regression was commi
 failing in `4998760d` and fixed in `d71e85f2`: an ordinary buffering interval must not
 discard the running session's callback ownership. Full requested verification passes:
 reader host 535/535, reader iOS 357/357, settings 24/24, home 84/84, composeApp 64/64,
-analytics 77/77. The initial builds passed; final build and remaining Samsung checks are pending; see
+analytics 77/77, zero failures/errors/skips; final verification took 59 s. Final Android
+assemble and iOS simulator framework builds passed in 19 s. Samsung System hand-off
+on the final ownership-fix build kept reading through sentence 31/120; the initial
+System failure is preserved alongside this retest. Kokoro hand-off and deliberate
+chapter swipe passed on the initial build; five end-triggered Stops had zero restarts
+on each build (final ENDED → IDLE: 86, 83, 87, 74, 77 ms).
+The final build's prepared-chapter double-tap jumped 1 → 4 with no synthesis.
+Cold-process Kokoro timing is only partial: book-open warm-up loaded the model before
+Play, and timing uses player isPlaying rather than an acoustic measurement. Evidence
+and cleanup (System voice, 1.0, Library, all prepared audio deleted and zero files
+verified) are recorded in `manual-qa-evidence/2026-10-10/tts-run5c/` and
 `tts-run5c-report.txt`. The older play-press attribution question above is retained, not
 reopened: this run's explicit scope is the three timing fixes and the requested checks.
 

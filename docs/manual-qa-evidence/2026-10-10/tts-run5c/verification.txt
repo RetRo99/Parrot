@@ -1,0 +1,25 @@
+Run 5c final verification after callback-ownership follow-up d71e85f2
+Branch: tts/prepared-chapters; build checkpoint: 13ac0530 (docs-only).
+
+Command:
+ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :feature:reader:ui:testAndroidHostTest :feature:reader:ui:iosSimulatorArm64Test :feature:settings:ui:testAndroidHostTest :feature:home:ui:testAndroidHostTest :composeApp:testAndroidHostTest :lib:analytics:implementation:testAndroidHostTest --max-workers=2 -Pkotlin.daemon.jvmargs=-Xmx6g
+Result: BUILD SUCCESSFUL in 59s; 542 actionable tasks: 74 executed, 468 up-to-date.
+Counts independently summed from TEST-*.xml in each module's build/test-results:
+feature/reader/ui testAndroidHostTest: 535 tests, 0 failures/errors/skips.
+feature/reader/ui iosSimulatorArm64Test: 357 tests, 0 failures/errors/skips.
+feature/settings/ui testAndroidHostTest: 24 tests, 0 failures/errors/skips.
+feature/home/ui testAndroidHostTest: 84 tests, 0 failures/errors/skips.
+composeApp testAndroidHostTest: 64 tests, 0 failures/errors/skips.
+lib/analytics/implementation testAndroidHostTest: 77 tests, 0 failures/errors/skips.
+
+Command:
+ANDROID_HOME=$HOME/Library/Android/sdk ./gradlew :androidApp:assembleDebug :composeApp:linkDebugFrameworkIosSimulatorArm64
+Result: BUILD SUCCESSFUL in 19s; 962 actionable tasks: 76 executed, 886 up-to-date.
+
+Final APK: androidApp/build/outputs/apk/debug/androidApp-debug.apk, 184526207 bytes.
+SHA-256 (local and installed Samsung base.apk independently read and matched):
+93272d636c3617a635de038611b552f3d90a37d4907f433911808a23790b728d
+Installed via adb -s RFCWC0SSVDM install -r, without clearing data.
+Samsung SM-S921B, Android 16, One UI property 80500; Parrot 0.4.5 (21), target SDK 36.
+Final device capture PID 19564; initial capture PID 2771 (different APK, see NOTES.md).
+Other attached phone not targeted. No claim of Firebase ingestion or Crashlytics delivery.

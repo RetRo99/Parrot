@@ -444,6 +444,7 @@ effect on a user, not on the code.
 - **Severity for a user:** silent failure (a start that looks broken).
 - **How a test could catch it:** `AndroidTtsControllerTest` with a fake engine that never becomes active, asserting `Failed(START_TIMEOUT)` after the virtual 30 s; manual: measure the cold first start from `logcat -s SherpaOnnxTts` timestamps.
 - **Fixed (run 5c):** `69695a39` — `TtsPlaybackAttempts.prepareStart` loads the selected downloaded neural model under its own 60 s deadline, then arms the existing 30 s synthesis/player deadline; fresh starts, tracked resumes and settings-change restarts share it. Five tests committed failing in `8c3701ba`; system timing, cancellation and pending-state cases were already green.
+- **Samsung check (run 5c):** cold-process start succeeded, but book-open warm-up had already loaded Kokoro 37.291 s before Play; the first player isPlaying signal followed Play by 0.784 s. Cold loading after Play and independent acoustic onset remain unmeasured. Host virtual-time tests, not this device check, establish the separate 60 s/30 s deadlines.
 
 ### TTS-F16 — `chapterCompleted` reports whatever chapter is current, not the one that finished
 
@@ -709,9 +710,10 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Confidence:** high that the guard is missing; medium that the callback is deliverable after the stop.
 - **Severity for a user:** wrong audio (a chapter read from its start unasked).
 - **How a test could catch it:** the test above, once the fake only reports `ENDED` while it has items; the product guard is `if (currentIndex < 0) return` in `onSentenceCompleted`.
-- **Status:** not fixed — found by run 2b's TTS-F16 test, outside that run's scope. Candidate for run 5.
+- **Historical status:** found by run 2b's TTS-F16 test, outside that run's scope; subsequently fixed below.
 - **Fixed (run 5c):** `c10784fb` — completion requires a running session; stopped-player ready, transition, error and playing callbacks cannot revive it, and paused auto-transition cannot advance. Nine failures committed in `94a7e080`, including the explicitly authorized correction to the earlier locator-abandonment assertion; ordinary running completion was already green.
 - **Guard follow-up:** `d71e85f2` retains session ownership through ordinary buffering after audio has played; the new guards otherwise rejected subsequent ready/playing callbacks. New regression committed failing in `4998760d`; no earlier test edited.
+- **Samsung check (run 5c):** five valid Kokoro ENDED-triggered Stops on each build produced zero spontaneous restarts, including the final ownership-fix build (ENDED → IDLE: 86, 83, 87, 74, 77 ms). This stress check does not prove a real posted ENDED arrived after Stop; that ordering is covered by the host fake. Exact timings and build identities are in `manual-qa-evidence/2026-10-10/tts-run5c/`.
 
 ### TTS-F26 — A slow voice's gap between sentences reads as "not playing", and narration can die in it
 
@@ -750,6 +752,7 @@ Three findings came out of step 3 rather than the source read. They keep the sam
 - **Severity for a user:** narration stops silently during a chapter.
 - **How a test could catch it:** `TtsChapterChangeTest` tests the extracted decision with previous, arriving and narrated hrefs, including delayed arrival after hand-off and skip-ahead.
 - **Fixed:** `790eb981` — `shouldReloadTtsChapter` exempts arrival in the engine's loaded, current chapter. Ordinary navigation and idle changes passed before the fix; the earlier skip-ahead tests pass unedited.
+- **Samsung check (run 5c):** initial System boundary FAIL preserved (IDLE 11:03:25.428, no chapter operation); final ownership-fix build retest PASS, chapter attempted 11:23:44.269 / succeeded 11:23:45.436 (1167 ms), continued through sentence 31/120 until explicit Stop. Initial Kokoro boundary PASS, chapter attempted 11:06:32.435 / succeeded 11:06:32.630 (197 ms), continued through 15/120; deliberate backward chapter swipe stopped it. See `manual-qa-evidence/2026-10-10/tts-run5c/`; the successful retest does not erase the historical failure.
 
 ---
 
