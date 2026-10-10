@@ -6,10 +6,30 @@ Branch `tts/prepared-chapters`, based on `e8ed4319`. The supplied worktree was
 detached at that commit. All work and Gradle commands run from that worktree;
 no configuration files are created or edited.
 
-Step 0 is the gate: reproduce the dead Listening-sheet Play on Samsung
-`RFCWC0SSVDM`, compare `7045b62b` if it reproduces, and do not implement prepared
-chapters on a reader that cannot play. Device checks are pending. Only the
-Samsung is targeted; no Supertonic terms are accepted.
+Step 0 comparison is complete on Samsung `RFCWC0SSVDM` (SM-S921B). The dead
+Listening-sheet Play reproduces for Pride and Prejudice via Continue reading
+and Library → Read, on both the baseline APK built at `e8ed4319` and the APK
+built at `7045b62b`. Each shows Page 1 of 1, Play remains Play, and no
+`tts_playback_operation` or `start_tts_playback` appears in a three-second
+app-process log window after pressing Play. Alice's Adventures in Wonderland
+plays on both APKs: Page 9 of 14 on baseline, Page 8 of 14 on the old build;
+Play becomes Pause, with attempted/succeeded operations (684 ms / 463 ms).
+
+The failure predates run 5b. No lease reversal or product fix is made. Following
+the explicit Step 0 instruction to proceed when it is older, Step 1 may start;
+the feature is not claimed to fix this pre-existing empty-opening-page problem.
+Root cause is not established. A relevant silent guard is
+`ReaderViewModel.kt:2544` (`isTtsReadAloud` false); `ReaderTtsSetup.kt:68–72`
+only marks availability after readable content. Those are code leads, not
+device-confirmed state values. The scope lease cannot explain introduction of
+the failure because the old build does not have it. Five tries were not needed:
+the failure reproduced and the specified old-build comparison was made.
+
+The old APK was built in a nested detached comparison worktree at
+`.claude/worktrees/prepared-chapters-before-5b`; commands were invoked from the
+primary worktree using Gradle `-p`, with ANDROID_HOME and no local.properties.
+Both APKs were installed with `adb -s RFCWC0SSVDM install -r`; baseline restored
+after comparison. No other device was targeted or Supertonic terms accepted.
 
 ## Baseline tests
 
@@ -43,7 +63,7 @@ No new screen strings or resource keys exist in this run yet.
 
 ## Not done
 
-Steps 1–8 await the Step 0 gate. No cloud, server, database migration, library,
+Steps 1–8 remain unbuilt. No cloud, server, database migration, library,
 cache-key change, sentence-cache compression, automatic or whole-book
 preparation, iPhone TTS, TTS-F15 or TTS-F25 changes.
 
