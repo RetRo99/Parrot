@@ -200,6 +200,10 @@ class TtsReadAloudEngine(
             _isLoading.value = false
         }
 
+        override fun onPlayerGone() {
+            abandonPlayer()
+        }
+
         override fun onError(error: Throwable) {
             if (!acceptsPlayerCallbacks) return
             _playbackFailures.tryEmit(
@@ -768,6 +772,33 @@ class TtsReadAloudEngine(
         } else if (currentPlayer != null) {
             releaseCurrentPlayer(stopSharedPlayer = true)
         }
+    }
+
+    /**
+     * The player stopped existing under the engine: its service was destroyed, or it was
+     * released from outside (TTS-F32). There is nothing left to pause, resume or stop, so
+     * the session ends — `isSessionRunning` and `isPlaying` go false and the button shows
+     * Play — but the sentence it was on is kept, so one press starts that same sentence
+     * again through [resume]'s no-player path and a new player is acquired for it.
+     *
+     * Nothing is called on the gone player beyond dropping its listener, which is a local
+     * list removal: anything else would be a message to a dead thread.
+     */
+    private fun abandonPlayer() {
+        val gonePlayer = player ?: return
+        generation++
+        pendingStartToken = null
+        heard.reset()
+        _isPlaying.value = false
+        _isLoading.value = false
+        pendingSentenceProgress = null
+        queuedSentenceIndices.clear()
+        cancelPrefetch()
+        cancelActiveSynthesis()
+        gonePlayer.removeListener(playerListener)
+        player = null
+        ownsPlayer = false
+        clearSessionState()
     }
 
     private fun detachForExternalPlayback() {

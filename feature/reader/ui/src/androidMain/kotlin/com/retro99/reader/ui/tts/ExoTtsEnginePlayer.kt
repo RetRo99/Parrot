@@ -81,6 +81,16 @@ internal class ExoTtsEnginePlayer(private val player: ExoPlayer) : TtsEnginePlay
         player.release()
     }
 
+    /**
+     * The wrapped player is about to stop existing — its service is being destroyed — so
+     * every listener is told before it becomes unusable, and none is kept afterwards.
+     */
+    fun notifyPlayerGone() {
+        val gone = adapters.keys.toList()
+        adapters.clear()
+        gone.forEach(TtsEnginePlayerListener::onPlayerGone)
+    }
+
     private fun mediaItemFor(item: TtsEnginePlayerItem): MediaItem {
         val metadata = MediaMetadata.Builder()
             .setTitle(item.title)
@@ -159,7 +169,17 @@ class ExoTtsEnginePlayerProvider(
 ) : TtsEnginePlayerProvider {
 
     /** One wrapper per service player, so re-acquiring it stays the same instance. */
-    private var servicePlayerWrapper: Pair<ExoPlayer, TtsEnginePlayer>? = null
+    private var servicePlayerWrapper: Pair<ExoPlayer, ExoTtsEnginePlayer>? = null
+
+    init {
+        // The service's player stops existing with the service. Whoever holds the wrapper
+        // has to be told, or it keeps a player that answers nothing (TTS-F32).
+        mediaPlaybackController.addOnServiceDestroyedListener {
+            val wrapper = servicePlayerWrapper?.second
+            servicePlayerWrapper = null
+            wrapper?.notifyPlayerGone()
+        }
+    }
 
     override suspend fun notificationPlayer(): TtsEnginePlayer? {
         var servicePlayer = mediaPlaybackController.currentPlayer
@@ -182,7 +202,7 @@ class ExoTtsEnginePlayerProvider(
         return ExoTtsEnginePlayer(localPlayer)
     }
 
-    private fun wrap(servicePlayer: ExoPlayer): TtsEnginePlayer {
+    private fun wrap(servicePlayer: ExoPlayer): ExoTtsEnginePlayer {
         servicePlayerWrapper?.let { (player, wrapper) ->
             if (player === servicePlayer) return wrapper
         }
