@@ -115,6 +115,9 @@ class TtsReadAloudEngine(
     /** Audio has already been audible in this session, so a wait is a gap, not a start. */
     private var hasPlayedInSession = false
 
+    /** Player intent survives buffering, but not a pause from any control surface. */
+    private var playerPlayWhenReady = false
+
     /**
      * The player ran out of audio. It does not leave that state for a play call, and an
      * item appended behind it does not undo it either, so the engine has to start the
@@ -161,7 +164,16 @@ class TtsReadAloudEngine(
             if (isPlaying) {
                 isStartingSentence = false
                 hasPlayedInSession = true
+                playerPlayWhenReady = true
             }
+            updateSessionRunning()
+        }
+
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean) {
+            if (currentIndex < 0 || !acceptsPlayerCallbacks) return
+            playerPlayWhenReady = playWhenReady
+            isPauseRequested = !playWhenReady
+            if (!playWhenReady) _isPlaying.value = false
             updateSessionRunning()
         }
 
@@ -799,12 +811,13 @@ class TtsReadAloudEngine(
         isStartingSentence = false
         playerReachedEndOfQueue = false
         hasPlayedInSession = false
+        playerPlayWhenReady = false
         updateSessionRunning()
     }
 
     private fun updateSessionRunning() {
         _isSessionRunning.value =
-            !isPauseRequested && (_isPlaying.value || isStartingSentence || hasPlayedInSession)
+            !isPauseRequested && (_isPlaying.value || isStartingSentence || playerPlayWhenReady)
     }
 
     // A paused playlist may still become ready; a stopped one has no owner at all.
